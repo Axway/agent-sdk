@@ -25,7 +25,7 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 }
 
 // Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind {
 		return nil

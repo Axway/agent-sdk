@@ -21,7 +21,7 @@ func NewCRDHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *crdHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *crdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := getActionFromContext(ctx)
 	if resource.Kind != mv1.CredentialRequestDefinitionGVK().Kind {
 		return nil

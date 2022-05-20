@@ -21,7 +21,7 @@ import (
 )
 
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(nil, nil)
+	dcj := newDiscoveryCache(nil, nil, nil)
 
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
@@ -112,13 +112,13 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.Nil(t, err)
 
 	serverAPISvcResponse = emptyAPISvc
-	dcj.updateAPICache()
+	dcj.handleAPISvc()
 	assert.Equal(t, 0, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.False(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	dcj.updateAPICache()
+	dcj.handleAPISvc()
 	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.False(t, IsAPIPublishedByID("2222"))
@@ -166,7 +166,7 @@ func TestDiscoveryCache(t *testing.T) {
 	assert.True(t, IsAPIPublishedByID("2222"))
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
-	dcj.updateAPICache()
+	dcj.handleAPISvc()
 	assert.Equal(t, 2, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/migrate"
-	"github.com/Axway/agent-sdk/pkg/util"
-
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -29,9 +30,14 @@ type discoveryCache struct {
 	migrator             migrate.Migrator
 	logger               log.FieldLogger
 	discoveryCacheLock   *sync.Mutex
+	handlers             []handler.Handler
 }
 
-func newDiscoveryCache(manager resource.Manager, migrations migrate.Migrator) *discoveryCache {
+type discoverFunc func() error
+
+func newDiscoveryCache(
+	manager resource.Manager, migrations migrate.Migrator, handlers []handler.Handler,
+) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("discoveryCache")
@@ -41,7 +47,41 @@ func newDiscoveryCache(manager resource.Manager, migrations migrate.Migrator) *d
 		migrator:             migrations,
 		logger:               logger,
 		discoveryCacheLock:   &sync.Mutex{},
+		handlers:             handlers,
 	}
+}
+
+func (j *discoveryCache) daEndpoints() []discoverFunc {
+	endpoints := []discoverFunc{
+		j.handleCategories,
+		j.handleCRD,
+		j.handleARD,
+		j.handleMarketplaceResources,
+	}
+	return endpoints
+}
+
+func (j *discoveryCache) taEndpoints() []discoverFunc {
+	endpoints := []discoverFunc{
+		j.handleMarketplaceResources,
+	}
+	return endpoints
+}
+
+func (j *discoveryCache) discoveryFuncs() []discoverFunc {
+	endpoints := []discoverFunc{
+		j.handleAPISvc,
+		j.handleServiceInstance,
+	}
+
+	switch agent.cfg.GetAgentType() {
+	case config.DiscoveryAgent:
+		endpoints = append(endpoints, j.daEndpoints()...)
+	case config.TraceabilityAgent:
+		endpoints = append(endpoints, j.taEndpoints()...)
+	}
+
+	return endpoints
 }
 
 // execute rebuilds the discovery cache
@@ -49,37 +89,53 @@ func (j *discoveryCache) execute() error {
 	j.discoveryCacheLock.Lock()
 	defer j.discoveryCacheLock.Unlock()
 
-	j.logger.Trace("executing resource cache update job")
-	err := j.updateAPICache()
-	if err != nil {
-		return err
-	}
+	j.logger.Debug("executing resource cache update job")
 
-	j.updateAPIServiceInstancesCache()
-
-	switch agent.cfg.GetAgentType() {
-	case config.DiscoveryAgent:
-		j.updateCategoryCache()
-		j.updateCRDCache()
-		j.updateARDCache()
-	case config.TraceabilityAgent:
-		j.updateManagedApplicationCache()
-		j.updateAccessRequestCache()
-	}
-
+	discoveryFuncs := j.discoveryFuncs()
 	if j.agentResourceManager != nil {
-		j.agentResourceManager.FetchAgentResource()
+		discoveryFuncs = append(discoveryFuncs, j.agentResourceManager.FetchAgentResource)
+	}
+
+	errCh := make(chan error, len(discoveryFuncs))
+	wg := &sync.WaitGroup{}
+
+	for _, fun := range discoveryFuncs {
+		wg.Add(1)
+
+		go func(f func() error) {
+			defer wg.Done()
+
+			err := f()
+			errCh <- err
+		}(fun)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for e := range errCh {
+		if e != nil {
+			return e
+		}
 	}
 
 	agent.cacheManager.SaveCache()
-	j.logger.Trace("cache has been updated and saved")
+	j.logger.Debug("cache has been updated and saved")
 
 	return nil
 }
 
-func (j *discoveryCache) updateAPICache() error {
-	existingAPIs := make(map[string]bool)
-	apiServices, err := j.fetchAPIServices()
+func (j *discoveryCache) handleAPISvc() error {
+	j.logger.WithField("kind", "APIService").Trace("fetching API Services and updating cache")
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+	svcLink := mv1.NewAPIService("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(svcLink)
+
+	apiServices, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, url, apiServerPageSize,
+	)
 	if err != nil {
 		return err
 	}
@@ -93,35 +149,16 @@ func (j *discoveryCache) updateAPICache() error {
 			}
 		}
 
-		externalAPIID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
-		// skip service without external api id
-		if externalAPIID == "" {
-			continue
-		}
-
-		agent.cacheManager.AddAPIService(svc)
-		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
-		if primaryKey != "" {
-			existingAPIs[primaryKey] = true
-		} else {
-			existingAPIs[externalAPIID] = true
+		if err := j.handleResource(svc); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (j *discoveryCache) fetchAPIServices() ([]*apiV1.ResourceInstance, error) {
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
-
-	return GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetServicesURL(), apiServerPageSize,
-	)
-}
-
-func (j *discoveryCache) updateAPIServiceInstancesCache() {
+func (j *discoveryCache) handleServiceInstance() error {
+	j.logger.WithField("kind", "APIServiceInstance").Trace("fetching API Service Instances and updating cache")
 	j.instanceCacheLock.Lock()
 	defer j.instanceCacheLock.Unlock()
 
@@ -129,159 +166,219 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 		apic.FieldsKey: apiServerFields,
 	}
 
+	svcInstanceLink := mv1.NewAPIServiceInstance("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(svcInstanceLink)
+
 	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetInstancesURL(), apiServerPageSize,
+		query, url, apiServerPageSize,
 	)
 	if err != nil {
-		j.logger.Error(utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances"))
-		return
+		e := utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances")
+		j.logger.Error(e)
+		return e
 	}
 
 	for _, instance := range serviceInstances {
-		id, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-		if id == "" {
-			continue // skip instance without external api id
+		if err := j.handleResource(instance); err != nil {
+			return err
 		}
-		agent.cacheManager.AddAPIServiceInstance(instance)
 	}
+	return nil
 }
 
-func (j *discoveryCache) updateCategoryCache() {
-	j.logger.Trace("updating category cache")
+func (j *discoveryCache) handleCategories() error {
+	j.logger.WithField("kind", "Category").Trace("fetching Categories and updating cache")
 
 	// Update cache with published resources
-	existingCategories := make(map[string]bool)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	categories, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetCategoriesURL(), apiServerPageSize,
+	categoriesLink := catalog.NewCategory("").GetKindLink()
+	url := formatResourceURL(categoriesLink)
+
+	categories, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, url, apiServerPageSize,
 	)
+	if err != nil {
+		return err
+	}
 
 	for _, category := range categories {
-		agent.cacheManager.AddCategory(category)
-		existingCategories[category.Name] = true
+		if err := j.handleResource(category); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (j *discoveryCache) updateARDCache() {
+func (j *discoveryCache) handleARD() error {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return
+		return nil
 	}
-	j.logger.Trace("updating access request definition cache")
+	j.logger.WithField("kind", "AccessRequestDefinition").Trace("fetching AccessRequestDefinitions and updating cache")
 
-	// create an empty accessrequestdef to gen url
-	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink())
-
-	// Update cache with published resources
-	existingARDs := make(map[string]bool)
+	ardLink := mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(ardLink)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	ards, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	ards, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	if err != nil {
+		return err
+	}
 
 	for _, ard := range ards {
-		agent.cacheManager.AddAccessRequestDefinition(ard)
-		existingARDs[ard.Metadata.ID] = true
+		if err := j.handleResource(ard); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (j *discoveryCache) updateManagedApplicationCache() {
+func (j *discoveryCache) handleManagedApp() error {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return
+		return nil
 	}
-	j.logger.Trace("updating managed application cache")
 
-	// Update cache with published resources
-	existingManagedApplications := make(map[string]bool)
+	j.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
+
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
 	}
 
-	managedApps, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetEnvironmentURL()+"/managedapplications", apiServerPageSize,
+	managedAppLink := mv1.NewManagedApplication("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(managedAppLink)
+	managedApps, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, url, apiServerPageSize,
 	)
-
-	for _, managedApp := range managedApps {
-		agent.cacheManager.AddManagedApplication(managedApp)
-		existingManagedApplications[managedApp.Metadata.ID] = true
+	if err != nil {
+		return err
 	}
+
+	for _, app := range managedApps {
+		if err := j.handleResource(app); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (j *discoveryCache) updateCRDCache() {
+func (j *discoveryCache) handleCRD() error {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return
+		return nil
 	}
-	j.logger.Trace("updating credential request definition cache")
 
-	// create an empty credentialrequestdef to gen url
+	j.logger.WithField("kind", "CredentialRequestDefinition").Trace("fetching CredentialRequestDefinitions and updating cache")
+
 	crd := mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), crd)
+	url := formatResourceURL(crd)
 
-	// Update cache with published resources
-	existingCRDs := make(map[string]bool)
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	crds, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	crds, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	if err != nil {
+		return err
+	}
 
 	for _, crd := range crds {
-		agent.cacheManager.AddCredentialRequestDefinition(crd)
-		existingCRDs[crd.Metadata.ID] = true
+		if err := j.handleResource(crd); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (j *discoveryCache) updateAccessRequestCache() {
+func (j *discoveryCache) handleAccessRequest() error {
 	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return
+		return nil
 	}
-	j.logger.Trace("updating access request cache")
 
-	// Update cache with published resources
-	existingAccessRequests := make(map[string]bool)
+	j.logger.WithField("kind", "AccessRequest").Trace("fetching AccessRequests and updating cache")
+
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
 	}
 
-	accessRequests, _ := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
-		query, agent.cfg.GetEnvironmentURL()+"/accessrequests", apiServerPageSize,
+	arLink := mv1.NewAccessRequest("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(arLink)
+	accessRequests, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		query, url, apiServerPageSize,
 	)
 
-	for _, accessRequest := range accessRequests {
-		ar := &mv1.AccessRequest{}
-		ar.FromInstance(accessRequest)
-		agent.cacheManager.AddAccessRequest(ar)
-		existingAccessRequests[accessRequest.Metadata.ID] = true
-		j.addSubscription(ar)
-	}
-}
-
-func (j *discoveryCache) addSubscription(ar *mv1.AccessRequest) {
-	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
-	if subscriptionName == "" {
-		return
+	if err != nil {
+		return err
 	}
 
-	subscription := agent.cacheManager.GetSubscriptionByName(subscriptionName)
-	if subscription == nil {
-		subscription, err := j.fetchSubscription(subscriptionName)
-		if err == nil {
-			agent.cacheManager.AddSubscription(subscription)
+	for _, req := range accessRequests {
+		if err := j.handleResource(req); err != nil {
+			return err
 		}
 	}
+
+	return nil
 }
 
-func (j *discoveryCache) fetchSubscription(subscriptionName string) (*apiV1.ResourceInstance, error) {
-	if subscriptionName == "" {
-		return nil, nil
+func (j *discoveryCache) handleCredential() error {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+		return nil
 	}
 
-	url := fmt.Sprintf(
-		"/catalog/v1alpha1/subscriptions/%s",
-		subscriptionName,
+	j.logger.WithField("kind", "Credential").Trace("fetching Credentials and updating cache")
+
+	credLink := mv1.NewCredential("", agent.cfg.GetEnvironmentName()).GetKindLink()
+	url := formatResourceURL(credLink)
+
+	credentials, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+		nil, url, apiServerPageSize,
 	)
-	return GetCentralClient().GetResource(url)
+
+	if err != nil {
+		return err
+	}
+
+	for _, cred := range credentials {
+		if err := j.handleResource(cred); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (j *discoveryCache) handleMarketplaceResources() error {
+	funcs := []discoverFunc{
+		j.handleManagedApp,
+		j.handleAccessRequest,
+		j.handleCredential,
+	}
+
+	for _, f := range funcs {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (j *discoveryCache) handleResource(ri *apiV1.ResourceInstance) error {
+	for _, h := range j.handlers {
+		ctx := handler.NewEventContext(proto.Event_CREATED, nil, ri.Name, ri.Kind)
+		err := h.Handle(ctx, nil, ri)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func formatResourceURL(s string) string {
+	return fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), s)
 }

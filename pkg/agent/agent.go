@@ -274,7 +274,7 @@ func syncCache() error {
 
 	mig := migrate.NewMigrateAll(migrations...)
 
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig)
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig, newHandlers())
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		err := discoveryCache.execute()
