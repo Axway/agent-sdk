@@ -43,7 +43,7 @@ func TestPollClientStart(t *testing.T) {
 		readyCh: make(chan struct{}),
 	}
 
-	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
+	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop onClientStopCb) *manager {
 		p := newPollManager(cfg, interval, onStop)
 		p.harvester = mockH
 		return p

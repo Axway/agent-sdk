@@ -278,14 +278,9 @@ func syncCache() error {
 		}
 	}
 
-	cacheSync := func() {
+	cacheSync := func() error {
 		agent.cacheManager.Flush()
-		err := discoveryCache.execute()
-		if err != nil {
-			log.Error("failed to sync the discovery cache after encountering an error from harvester. shutting down the agent")
-			cleanUp()
-			os.Exit(1)
-		}
+		return discoveryCache.execute()
 	}
 
 	return startCentralEventProcessor(cacheSync)
@@ -408,7 +403,7 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(cacheSyncFunc func()) error {
+func startCentralEventProcessor(cacheSyncFunc func() error) error {
 	if agent.cfg.IsUsingGRPC() {
 		return startStreamMode(cacheSyncFunc)
 	}
@@ -438,7 +433,7 @@ func newHandlers() []handler.Handler {
 	return handlers
 }
 
-func startPollMode(cacheSyncFunc func()) error {
+func startPollMode(cacheSyncFunc func() error) error {
 	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
@@ -462,7 +457,7 @@ func startPollMode(cacheSyncFunc func()) error {
 	return err
 }
 
-func startStreamMode(cacheSyncFunc func()) error {
+func startStreamMode(cacheSyncFunc func() error) error {
 	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(

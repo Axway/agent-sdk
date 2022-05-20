@@ -173,7 +173,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	if err := m.eventCatchUp(link, events); err != nil {
 		client.cancelStreamCtx()
 		if m.options.onEventSyncError != nil {
-			m.options.onEventSyncError()
+			err = m.options.onEventSyncError()
 		}
 		return subID, err
 	}

@@ -18,12 +18,12 @@ type manager struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	interval  time.Duration
-	onStop    func()
+	onStop    onClientStopCb
 }
 
-type newPollManagerFunc func(cfg *harvester.Config, interval time.Duration, onStop func()) *manager
+type newPollManagerFunc func(cfg *harvester.Config, interval time.Duration, onStop onClientStopCb) *manager
 
-func newPollManager(cfg *harvester.Config, interval time.Duration, onStop func()) *manager {
+func newPollManager(cfg *harvester.Config, interval time.Duration, onStop onClientStopCb) *manager {
 	logger := log.NewFieldLogger().
 		WithComponent("manager").
 		WithPackage("sdk.agent.poller")
@@ -67,6 +67,9 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 				Debug("retrieving harvester events")
 			_, err := m.harvester.ReceiveSyncEvents(topic, seq, eventChan)
 			if err != nil {
+				if m.onStop != nil {
+					err = m.onStop()
+				}
 				return err
 			}
 			m.timer.Reset(m.interval)
@@ -78,9 +81,6 @@ func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 func (m *manager) Stop() {
 	m.timer.Stop()
 	m.cancel()
-	if m.onStop != nil {
-		m.onStop()
-	}
 	m.logger.Debug("poller has been stopped")
 }
 

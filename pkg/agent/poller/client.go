@@ -23,13 +23,15 @@ type PollClient struct {
 	interval           time.Duration
 	listener           events.Listener
 	newListener        events.NewListenerFunc
-	onClientStop       func()
+	onClientStop       onClientStopCb
 	onStreamConnection OnStreamConnection
 	poller             *manager
 	seq                events.SequenceProvider
 	topicSelfLink      string
 	newPollManager     newPollManagerFunc
 }
+
+type onClientStopCb func() error
 
 // OnStreamConnection func for updating the PollClient after connecting to central
 type OnStreamConnection func(*PollClient)
@@ -41,7 +43,7 @@ func NewPollClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
-	onClientStop func(),
+	onClientStop onClientStopCb,
 	handlers ...handler.Handler,
 ) (*PollClient, error) {
 	wt, err := events.GetWatchTopic(cfg, apiClient)
