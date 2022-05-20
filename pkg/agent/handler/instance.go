@@ -26,7 +26,7 @@ func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resour
 		return nil
 	}
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED || action == proto.Event_SUBRESOURCEUPDATED {
 		h.agentCacheManager.AddAPIServiceInstance(resource)
 	}
 
