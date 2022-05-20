@@ -67,7 +67,12 @@ type agentData struct {
 
 var agent agentData
 
+var logger log.FieldLogger
+
 func init() {
+	logger = log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 }
 
@@ -278,9 +283,12 @@ func syncCache() error {
 		}
 	}
 
-	cacheSync := func() error {
+	cacheSync := func() {
 		agent.cacheManager.Flush()
-		return discoveryCache.execute()
+		err := discoveryCache.execute()
+		if err != nil {
+			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
+		}
 	}
 
 	return startCentralEventProcessor(cacheSync)
@@ -379,7 +387,7 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			log.Warnf("could not update the agent status reference, %s", err.Error())
+			logger.Warnf("could not update the agent status reference, %s", err.Error())
 		}
 	}
 }
@@ -393,7 +401,7 @@ func setupSignalProcessor() {
 	go func() {
 		<-sigs
 		cleanUp()
-		log.Info("Stopping agent")
+		logger.Info("Stopping agent")
 		os.Exit(0)
 	}()
 }
@@ -403,7 +411,7 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(cacheSyncFunc func() error) error {
+func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
 		return startStreamMode(cacheSyncFunc)
 	}
@@ -433,7 +441,7 @@ func newHandlers() []handler.Handler {
 	return handlers
 }
 
-func startPollMode(cacheSyncFunc func() error) error {
+func startPollMode(cacheSyncFunc func()) error {
 	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
@@ -457,7 +465,7 @@ func startPollMode(cacheSyncFunc func() error) error {
 	return err
 }
 
-func startStreamMode(cacheSyncFunc func() error) error {
+func startStreamMode(cacheSyncFunc func()) error {
 	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(

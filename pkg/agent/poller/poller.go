@@ -53,28 +53,46 @@ func (m *manager) RegisterWatch(topic string, eventChan chan *proto.Event, errCh
 
 func (m *manager) sync(topic string, eventChan chan *proto.Event) error {
 	if err := m.harvester.EventCatchUp(topic, eventChan); err != nil {
+		m.logger.WithError(err).Error("harvester returned an error when syncing events")
+		m.onHarvesterErr()
 		return err
 	}
 
 	for {
 		select {
 		case <-m.ctx.Done():
+			m.logger.Info("harvester polling has been stopped")
 			return nil
 		case <-m.timer.C:
-			seq := m.sequence.GetSequence()
-			m.logger.
-				WithField("sequenceID", seq).
-				Debug("retrieving harvester events")
-			_, err := m.harvester.ReceiveSyncEvents(topic, seq, eventChan)
-			if err != nil {
-				if m.onStop != nil {
-					err = m.onStop()
-				}
+			if err := m.tick(topic, eventChan); err != nil {
 				return err
 			}
-			m.timer.Reset(m.interval)
 		}
 	}
+}
+
+func (m *manager) tick(topic string, eventChan chan *proto.Event) error {
+	seq := m.sequence.GetSequence()
+	logger := m.logger.WithField("sequenceID", seq)
+	logger.Debug("retrieving harvester events")
+
+	_, err := m.harvester.ReceiveSyncEvents(topic, seq, eventChan)
+	if err != nil {
+		logger.WithError(err).Error("harvester returned an error when syncing events")
+		m.onHarvesterErr()
+		return err
+	}
+
+	m.timer.Reset(m.interval)
+	return nil
+}
+
+func (m *manager) onHarvesterErr() {
+	if m.onStop == nil {
+		return
+	}
+
+	m.onStop()
 }
 
 // Stop stops the poller

@@ -171,9 +171,10 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	m.mutex.Unlock()
 
 	if err := m.eventCatchUp(link, events); err != nil {
+		m.logger.WithError(err).Error("failed to sync events from harvester")
 		client.cancelStreamCtx()
 		if m.options.onEventSyncError != nil {
-			err = m.options.onEventSyncError()
+			m.options.onEventSyncError()
 		}
 		return subID, err
 	}

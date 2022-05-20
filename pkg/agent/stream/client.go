@@ -49,7 +49,7 @@ func NewStreamerClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
-	onEventSyncError func() error,
+	onEventSyncError func(),
 	handlers ...handler.Handler,
 ) (*StreamerClient, error) {
 	tenant := cfg.GetTenantID()

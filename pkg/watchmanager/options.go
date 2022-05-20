@@ -34,7 +34,7 @@ func (f funcOption) apply(opt *watchOptions) {
 	f(opt)
 }
 
-type eventSyncCb func() error
+type eventSyncCb func()
 
 type keepAliveOption struct {
 	time    time.Duration

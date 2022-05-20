@@ -31,7 +31,7 @@ type PollClient struct {
 	newPollManager     newPollManagerFunc
 }
 
-type onClientStopCb func() error
+type onClientStopCb func()
 
 // OnStreamConnection func for updating the PollClient after connecting to central
 type OnStreamConnection func(*PollClient)
