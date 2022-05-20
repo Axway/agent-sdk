@@ -40,6 +40,7 @@ type Properties interface {
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
 	AddStringSliceProperty(name string, defaultVal []string, description string)
+	AddObjectSliceProperty(name string, objectPropertyNames []string)
 
 	// Methods to get the configured properties
 	StringPropertyValue(name string) string
@@ -50,6 +51,7 @@ type Properties interface {
 	BoolPropertyValueOrTrue(name string) bool // Use this method when the default value, no config given, is true
 	BoolFlagValue(name string) bool
 	StringSlicePropertyValue(name string) []string
+	ObjectSlicePropertyValue(name string) []map[string]string
 
 	// Methods to set a property
 	SetStringFlagValue(name string, value string)
@@ -64,9 +66,11 @@ var aliasKeyPrefix string
 
 type properties struct {
 	Properties
-	rootCmd             *cobra.Command
-	secretResolver      SecretPropertyResolver
-	flattenedProperties map[string]string
+	rootCmd                  *cobra.Command
+	envIntfArrayPropValues   map[string][]map[string]string
+	envIntfArrayPropertyKeys map[string]map[string]bool
+	secretResolver           SecretPropertyResolver
+	flattenedProperties      map[string]string
 }
 
 var expansionRegEx *regexp.Regexp
@@ -78,8 +82,9 @@ func init() {
 // NewProperties - Creates a new Properties struct
 func NewProperties(rootCmd *cobra.Command) Properties {
 	cmdprops := &properties{
-		rootCmd:             rootCmd,
-		flattenedProperties: make(map[string]string),
+		rootCmd:                  rootCmd,
+		envIntfArrayPropertyKeys: make(map[string]map[string]bool),
+		flattenedProperties:      make(map[string]string),
 	}
 
 	return cmdprops
@@ -88,9 +93,10 @@ func NewProperties(rootCmd *cobra.Command) Properties {
 // NewPropertiesWithSecretResolver - Creates a new Properties struct with secret resolver for string property/flag
 func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver SecretPropertyResolver) Properties {
 	cmdprops := &properties{
-		rootCmd:             rootCmd,
-		flattenedProperties: make(map[string]string),
-		secretResolver:      secretResolver,
+		rootCmd:                  rootCmd,
+		envIntfArrayPropertyKeys: make(map[string]map[string]bool),
+		flattenedProperties:      make(map[string]string),
+		secretResolver:           secretResolver,
 	}
 
 	return cmdprops
@@ -115,6 +121,20 @@ func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 			panic(err)
 		}
 	}
+}
+
+func (p *properties) AddObjectSliceProperty(envPrefix string, intfPropertyNames []string) {
+	envPrefix = strings.ReplaceAll(envPrefix, ".", "_")
+	envPrefix = strings.ToUpper(envPrefix)
+	if !strings.HasSuffix(envPrefix, "_") {
+		envPrefix += "_"
+	}
+	iPropNames := make(map[string]bool)
+	for _, propName := range intfPropertyNames {
+		iPropNames[propName] = true
+	}
+
+	p.envIntfArrayPropertyKeys[envPrefix] = iPropNames
 }
 
 func (p *properties) AddStringProperty(name string, defaultVal string, description string) {
@@ -197,9 +217,9 @@ func (p *properties) StringSlicePropertyValue(name string) []string {
 
 	// special check to differentiate between yaml and commandline parsing. For commandline, must
 	// turn it into an array ourselves
-	switch val.(type) {
+	switch val := val.(type) {
 	case string:
-		p.addPropertyToFlatMap(name, val.(string))
+		p.addPropertyToFlatMap(name, val)
 		return p.convertStringToSlice(fmt.Sprintf("%v", viper.Get(name)))
 	default:
 		return viper.GetStringSlice(name)
@@ -244,6 +264,7 @@ func (p *properties) parseStringValueForKey(key string) string {
 	}
 	return s
 }
+
 func (p *properties) parseStringValue(key string) string {
 	var s string
 	if aliasKeyPrefix != "" {
@@ -395,4 +416,64 @@ func isDurationLowerLimitEnforced() bool {
 		return ret
 	}
 	return true
+}
+
+// ObjectSlicePropertyValue
+func (p *properties) ObjectSlicePropertyValue(name string) []map[string]string {
+	p.readEnv()
+	name = strings.ReplaceAll(name, ".", "_")
+	name = strings.ToUpper(name)
+	if !strings.HasSuffix(name, "_") {
+		name += "_"
+	}
+	return p.envIntfArrayPropValues[name]
+}
+
+func (p *properties) readEnv() {
+	if p.envIntfArrayPropValues != nil {
+		return
+	}
+
+	envVarsMap := make(map[string]map[string]map[string]string)
+	p.envIntfArrayPropValues = make(map[string][]map[string]string)
+	for _, element := range os.Environ() {
+		variable := strings.SplitN(element, "=", 2)
+		name := variable[0]
+		val := variable[1]
+		for prefix, iPropNames := range p.envIntfArrayPropertyKeys {
+			if strings.HasPrefix(name, prefix) {
+				n := strings.ReplaceAll(name, prefix, "")
+				elements := strings.Split(name, "_")
+				lastSuffix := elements[len(elements)-1]
+				_, ok := envVarsMap[prefix]
+				if !ok {
+					envVarsMap[prefix] = make(map[string]map[string]string)
+				}
+				m, ok := envVarsMap[prefix][lastSuffix]
+				if !ok {
+					m = make(map[string]string)
+				}
+				for pName := range iPropNames {
+					propName := strings.ReplaceAll(pName, ".", "_")
+					propName = strings.ToUpper(propName)
+					if strings.HasPrefix(n, propName) {
+						m[pName] = val
+						envVarsMap[prefix][lastSuffix] = m
+					}
+				}
+			}
+		}
+	}
+
+	for prefix, eVals := range envVarsMap {
+		propValues, ok := p.envIntfArrayPropValues[prefix]
+		if !ok {
+			propValues = make([]map[string]string, 0)
+		}
+
+		for _, val := range eVals {
+			propValues = append(propValues, val)
+		}
+		p.envIntfArrayPropValues[prefix] = propValues
+	}
 }
