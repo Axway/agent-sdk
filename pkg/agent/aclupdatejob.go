@@ -8,7 +8,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -18,28 +17,25 @@ const envACLFormat = "%s-agent-acl"
 type aclUpdateJob struct {
 	jobs.Job
 	lastTeamIDs []string
+	logger      log.FieldLogger
 }
 
 func newACLUpdateJob() *aclUpdateJob {
-	job := &aclUpdateJob{}
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("aclUpdateJob")
+	job := &aclUpdateJob{
+		logger: logger,
+	}
 	return job
 }
 
 func (j *aclUpdateJob) Ready() bool {
-	status := hc.GetStatus(healthcheckEndpoint)
-	ready := status == hc.OK
-	if ready {
-		j.initializeACLJob()
-	}
-	return ready
+	return true
 }
 
 func (j *aclUpdateJob) Status() error {
-	status := hc.GetStatus(healthcheckEndpoint)
-	if status == hc.OK {
-		return nil
-	}
-	return fmt.Errorf("could not establish a connection to APIC to update the acl")
+	return nil
 }
 
 func (j *aclUpdateJob) Execute() error {
@@ -49,7 +45,7 @@ func (j *aclUpdateJob) Execute() error {
 		return nil
 	}
 	if err := j.updateACL(newTeamIDs); err != nil {
-		return err
+		return fmt.Errorf("acl update job failed: %s", err)
 	}
 	j.lastTeamIDs = sort.StringSlice(newTeamIDs)
 	return nil
@@ -112,7 +108,7 @@ func (j *aclUpdateJob) updateACL(teamIDs []string) error {
 	}
 
 	var err error
-	log.Tracef("acl about to be updated")
+	j.logger.Trace("acl about to be updated")
 	acl := j.createACLResource(teamIDs)
 	if currentACL != nil {
 		acl, err = agent.apicClient.UpdateAccessControlList(acl)

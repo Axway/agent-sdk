@@ -8,6 +8,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -34,37 +35,42 @@ func TestPollClientStart(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	poller, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil)
-	poller.poller.harvester = &mockHarvester{}
-	assert.NotNil(t, poller)
+	pollClient, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil)
+	assert.NotNil(t, pollClient)
 	assert.Nil(t, err)
 
-	assert.NotNil(t, poller.Status())
+	mockH := &mockHarvester{
+		readyCh: make(chan struct{}),
+	}
+
+	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop onClientStopCb) *manager {
+		p := newPollManager(cfg, interval, onStop)
+		p.harvester = mockH
+		return p
+	}
 
 	errCh := make(chan error)
 	go func() {
-		err := poller.Start()
+		err := pollClient.Start()
 		errCh <- err
 	}()
 
-	for poller.listener == nil {
-		continue
-	}
+	<-mockH.readyCh
 
 	// assert the poller is healthy
-	assert.Nil(t, poller.Status())
-	assert.Equal(t, hc.OK, poller.Healthcheck("").Result)
+	assert.Nil(t, pollClient.Status())
+	assert.Equal(t, hc.OK, pollClient.Healthcheck("").Result)
 
 	// should stop the poller and write nil to the error channel
-	poller.Stop()
+	pollClient.Stop()
 
 	err = <-errCh
 	assert.Nil(t, err)
 
-	assert.Equal(t, hc.FAIL, poller.Healthcheck("").Result)
-	assert.NotNil(t, poller.Status())
-	poller.poller = nil
-	poller.listener = nil
+	assert.Equal(t, hc.FAIL, pollClient.Healthcheck("").Result)
+	assert.NotNil(t, pollClient.Status())
+	pollClient.poller = nil
+	pollClient.listener = nil
 }
 
 type mockAPIClient struct {
@@ -79,15 +85,15 @@ func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) 
 	return m.ri, m.getErr
 }
 
-func (m mockAPIClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m mockAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.createErr
 }
 
-func (m mockAPIClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
+func (m mockAPIClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return m.ri, m.updateErr
 }
 
-func (m mockAPIClient) DeleteResourceInstance(*apiv1.ResourceInstance) error {
+func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
 
@@ -103,6 +109,7 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 type mockHarvester struct {
 	eventCh chan *proto.Event
 	err     error
+	readyCh chan struct{}
 }
 
 func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
@@ -110,6 +117,10 @@ func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
 }
 
 func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event) (int64, error) {
+	if m.readyCh != nil {
+		m.readyCh <- struct{}{}
+	}
+
 	if m.eventCh != nil {
 		m.eventCh <- &proto.Event{
 			Id: "1",

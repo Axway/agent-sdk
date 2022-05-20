@@ -23,6 +23,7 @@ type Manager interface {
 	// Cache management related methods
 	HasLoadedPersistedCache() bool
 	SaveCache()
+	Flush()
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error
@@ -118,31 +119,33 @@ type cacheManager struct {
 	ardMap                  cache.Cache
 	crdMap                  cache.Cache
 	cacheFilename           string
-	hasLoadedPersistedCache bool
+	isPersistedCacheLoaded  bool
 	isCacheUpdated          bool
+	isPersistedCacheEnabled bool
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
-func NewAgentCacheManager(cfg config.CentralConfig, persistCache bool) Manager {
+func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Manager {
 	logger := log.NewFieldLogger().
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
-		apiMap:                cache.New(),
-		instanceMap:           cache.New(),
-		categoryMap:           cache.New(),
-		managedApplicationMap: cache.New(),
-		accessRequestMap:      cache.New(),
-		subscriptionMap:       cache.New(),
-		sequenceCache:         cache.New(),
-		teams:                 cache.New(),
-		ardMap:                cache.New(),
-		crdMap:                cache.New(),
-		isCacheUpdated:        false,
-		logger:                logger,
+		apiMap:                  cache.New(),
+		instanceMap:             cache.New(),
+		categoryMap:             cache.New(),
+		managedApplicationMap:   cache.New(),
+		accessRequestMap:        cache.New(),
+		subscriptionMap:         cache.New(),
+		sequenceCache:           cache.New(),
+		teams:                   cache.New(),
+		ardMap:                  cache.New(),
+		crdMap:                  cache.New(),
+		isCacheUpdated:          false,
+		logger:                  logger,
+		isPersistedCacheEnabled: persistCacheEnabled,
 	}
 
-	if persistCache {
+	if m.isPersistedCacheEnabled {
 		m.initializePersistedCache(cfg)
 	}
 
@@ -168,12 +171,12 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
 	}
 
-	c.hasLoadedPersistedCache = true
+	c.isPersistedCacheLoaded = true
 	c.isCacheUpdated = false
 	for key := range cacheKeys {
 		loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, key)
 		if isNew {
-			c.hasLoadedPersistedCache = false
+			c.isPersistedCacheLoaded = false
 		}
 		cacheKeys[key](loadedMap)
 	}
@@ -249,11 +252,12 @@ func (c *cacheManager) Execute() error {
 
 // HasLoadedPersistedCache - returns true if the caches are loaded from file
 func (c *cacheManager) HasLoadedPersistedCache() bool {
-	return c.hasLoadedPersistedCache
+	return c.isPersistedCacheLoaded
 }
 
+// SaveCache - writes the cache to a file
 func (c *cacheManager) SaveCache() {
-	if c.persistedCache != nil {
+	if c.persistedCache != nil && c.isPersistedCacheEnabled {
 		c.cacheLock.Lock()
 		defer c.cacheLock.Unlock()
 		c.persistedCache.Save(c.cacheFilename)
@@ -289,4 +293,23 @@ func (c *cacheManager) ApplyResourceReadLock() {
 
 func (c *cacheManager) ReleaseResourceReadLock() {
 	c.resourceCacheReadLock.Unlock()
+}
+
+// Flush empties the persistent cache and all internal caches
+func (c *cacheManager) Flush() {
+	c.logger.Debug("resetting the persistent cache")
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	c.accessRequestMap.Flush()
+	c.apiMap.Flush()
+	c.ardMap.Flush()
+	c.categoryMap.Flush()
+	c.crdMap.Flush()
+	c.instanceMap.Flush()
+	c.managedApplicationMap.Flush()
+	c.sequenceCache.Flush()
+	c.subscriptionMap.Flush()
+
+	c.SaveCache()
 }

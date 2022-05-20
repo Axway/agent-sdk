@@ -21,12 +21,16 @@ import (
 
 var globalHealthChecker *healthChecker
 var statusConfig corecfg.StatusConfig
+var logger log.FieldLogger
 
 func init() {
 	globalHealthChecker = &healthChecker{
 		Checks: make(map[string]*statusCheck, 0),
 		Status: FAIL,
 	}
+	logger = log.NewFieldLogger().
+		WithPackage("sdk.util.healthcheck").
+		WithComponent("healthChecker")
 }
 
 //StartPeriodicHealthCheck - starts a job that runs the periodic healthchecks
@@ -94,7 +98,7 @@ func WaitForReady() error {
 		// Got a tick, we should RunChecks
 		case <-tick:
 			if RunChecks() == OK {
-				log.Trace("Services are Ready")
+				logger.Trace("Services are Ready")
 				return nil
 			}
 		}
@@ -105,12 +109,19 @@ func WaitForReady() error {
 func GetStatus(endpoint string) StatusLevel {
 	statusCheck, ok := globalHealthChecker.Checks[endpoint]
 	if !ok {
+		logger.Debugf("health check endpoint for %s not found in global health checker. Returning %s status", endpoint, FAIL)
 		return FAIL
+	}
+	if statusCheck.Status.Result != OK {
+		logger.
+			WithField("details", statusCheck.Status.Details).
+			WithField("result", statusCheck.Status.Result).
+			Error("health check for %s in not OK", endpoint)
 	}
 	return statusCheck.Status.Result
 }
 
-//RunChecks - loop through all
+// RunChecks - loop through all
 func RunChecks() StatusLevel {
 	passed := true
 	for _, check := range globalHealthChecker.Checks {
@@ -133,9 +144,16 @@ func executeCheck(check *statusCheck) {
 	// Run the check
 	check.Status = check.checker(check.Name)
 	if check.Status.Result == OK {
-		log.Tracef("%s - %s", check.Name, check.Status.Result)
+		logger.
+			WithField("check-name", check.Name).
+			WithField("result", check.Status.Result).
+			Trace("health check is OK")
 	} else {
-		log.Errorf("%s - %s (%s)", check.Name, check.Status.Result, check.Status.Details)
+		logger.
+			WithField("check-name", check.Name).
+			WithField("result", check.Status.Result).
+			WithField("details", check.Status.Details).
+			Error("health check failed")
 	}
 }
 
@@ -227,7 +245,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the data
 	data, err := json.Marshal(globalHealthChecker)
 	if err != nil {
-		log.Errorf("Error hit marshalling the health check data to json: %s", err.Error())
+		logger.WithError(err).Errorf("Error hit marshalling the health check data to json")
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		// If any of the checks failed change the return code to 500
@@ -245,7 +263,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	// Run the checks to get the latest results
 	path := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
 	if len(path) != 2 || path[0] != "status" {
-		log.Errorf("Error getting status for path %s, expected /status/[endpoint]", r.URL.Path)
+		logger.Errorf("Error getting status for path %s, expected /status/[endpoint]", r.URL.Path)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -254,7 +272,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	endpoint := path[1]
 	thisCheck, ok := globalHealthChecker.Checks[endpoint]
 	if !ok {
-		log.Errorf("Check with endpoint of %s is not known", endpoint)
+		logger.Errorf("Check with endpoint of %s is not known", endpoint)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

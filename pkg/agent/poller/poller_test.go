@@ -17,16 +17,18 @@ func TestPollerRegisterWatch(t *testing.T) {
 	wt := mv1.NewWatchTopic("mocktopic")
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	hcfg := harvester.NewConfig(cfg, &mockTokenGetter{}, seq)
-	poller := newPollManager(hcfg, cfg.GetPollInterval())
+	poller := newPollManager(hcfg, cfg.GetPollInterval(), nil)
 
 	eventCh, errCh := make(chan *proto.Event), make(chan error)
-	poller.harvester = &mockHarvester{
+	h := &mockHarvester{
 		eventCh: eventCh,
 	}
 
-	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
-	assert.Nil(t, err)
+	poller.harvester = h
+	poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 
+	evt := <-h.eventCh
+	assert.NotNil(t, evt)
 }
 
 func TestPollerRegisterWatchError(t *testing.T) {
@@ -34,16 +36,15 @@ func TestPollerRegisterWatchError(t *testing.T) {
 	wt := mv1.NewWatchTopic("mocktopic")
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	hcfg := harvester.NewConfig(cfg, &mockTokenGetter{}, seq)
-	poller := newPollManager(hcfg, cfg.GetPollInterval())
+	poller := newPollManager(hcfg, cfg.GetPollInterval(), nil)
 
 	eventCh, errCh := make(chan *proto.Event), make(chan error)
 	poller.harvester = &mockHarvester{
 		err: fmt.Errorf("harvester error"),
 	}
 
-	err := poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
-	assert.Nil(t, err)
+	poller.RegisterWatch(wt.GetSelfLink(), eventCh, errCh)
 
-	err = <-errCh
+	err := <-errCh
 	assert.NotNil(t, err)
 }

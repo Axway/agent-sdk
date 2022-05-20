@@ -49,6 +49,7 @@ func NewStreamerClient(
 	getToken auth.TokenGetter,
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
+	onEventSyncError func(),
 	handlers ...handler.Handler,
 ) (*StreamerClient, error) {
 	tenant := cfg.GetTenantID()
@@ -73,6 +74,7 @@ func NewStreamerClient(
 		wm.WithSyncEvents(seq),
 		wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()),
 		wm.WithProxy(cfg.GetProxyURL()),
+		wm.WithEventSyncError(onEventSyncError),
 	}
 
 	if cfg.GetSingleURL() != "" {
@@ -135,7 +137,6 @@ func (c *StreamerClient) Start() error {
 
 	listenCh := c.listener.Listen()
 
-	// lock the cache until all harvester events have been saved
 	_, err = c.manager.RegisterWatch(c.topicSelfLink, eventCh, eventErrorCh)
 	if err != nil {
 		return err

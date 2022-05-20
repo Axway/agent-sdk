@@ -169,7 +169,7 @@ func (m *mockMPMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]inte
 	return nil
 }
 
-func (m *mockMPMigClient) UpdateResourceInstance(_ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	m.Lock()
 	defer m.Unlock()
 	m.updateCount = m.updateCount + 1

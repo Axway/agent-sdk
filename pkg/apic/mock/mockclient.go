@@ -51,8 +51,9 @@ type Client struct {
 	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
 	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
 	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	UpdateResourceInstanceMock                               func(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	DeleteResourceInstanceMock                               func(ri *v1.ResourceInstance) error
+	UpdateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
+	CreateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
+	DeleteResourceInstanceMock                               func(ri v1.Interface) error
 	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
@@ -331,14 +332,21 @@ func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1al
 	return nil, nil
 }
 
-func (m *Client) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+func (m *Client) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
 	if m.UpdateResourceInstanceMock != nil {
 		return m.UpdateResourceInstanceMock(ri)
 	}
 	return nil, nil
 }
 
-func (m *Client) DeleteResourceInstance(ri *v1.ResourceInstance) error {
+func (m *Client) CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+	if m.CreateResourceInstanceMock != nil {
+		return m.CreateResourceInstanceMock(ri)
+	}
+	return nil, nil
+}
+
+func (m *Client) DeleteResourceInstance(ri v1.Interface) error {
 	if m.DeleteResourceInstanceMock != nil {
 		return m.DeleteResourceInstanceMock(ri)
 	}

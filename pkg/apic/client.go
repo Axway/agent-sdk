@@ -87,15 +87,19 @@ type Client interface {
 	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
 	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
 	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
-	UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
-	DeleteResourceInstance(ri *v1.ResourceInstance) error
+
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*v1.ResourceInstance, error)
+	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
+	IsMarketplaceSubsEnabled() bool
+
+	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
+	CreateOrUpdateResource(ri v1.Interface) (*v1.ResourceInstance, error)
+	CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
+	DeleteResourceInstance(ri v1.Interface) error
+
 	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
-	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
-	CreateOrUpdateResource(v1.Interface) (*v1.ResourceInstance, error)
-	IsMarketplaceSubsEnabled() bool
 }
 
 // New creates a new Client
@@ -760,6 +764,8 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *v1.ResourceInstance, finali
 
 // UpdateResource updates a resource
 func (c *ServiceClient) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	log.DeprecationWarningReplace("UpdateResource", "UpdateResourceInstance")
+
 	response, err := c.ExecuteAPI(http.MethodPut, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
@@ -771,6 +777,8 @@ func (c *ServiceClient) UpdateResource(url string, bts []byte) (*v1.ResourceInst
 
 // CreateResource deletes a resource
 func (c *ServiceClient) CreateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+	log.DeprecationWarningReplace("CreateResource", "CreateResourceInstance")
+
 	response, err := c.ExecuteAPI(http.MethodPost, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
@@ -854,17 +862,21 @@ func (c *ServiceClient) CreateOrUpdateResource(data v1.Interface) (*v1.ResourceI
 	return ri, err
 }
 
-// UpdateResourceInstance - updates a ResourceInstance with instance using it's self link
-func (c *ServiceClient) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if ri.GetSelfLink() == "" {
+// UpdateResourceInstance - updates a ResourceInstance
+func (c *ServiceClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+	inst, err := ri.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	if inst.GetSelfLink() == "" {
 		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
 	}
-	ri.Metadata.ResourceVersion = ""
+	inst.Metadata.ResourceVersion = ""
 	bts, err := json.Marshal(ri)
 	if err != nil {
 		return nil, err
 	}
-	bts, err = c.ExecuteAPI(coreapi.PUT, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
+	bts, err = c.ExecuteAPI(coreapi.PUT, c.createAPIServerURL(inst.GetSelfLink()), nil, bts)
 	if err != nil {
 		return nil, err
 	}
@@ -873,15 +885,42 @@ func (c *ServiceClient) UpdateResourceInstance(ri *v1.ResourceInstance) (*v1.Res
 	return r, err
 }
 
-// DeleteResourceInstance - deletes a ResourceInstance with instance
-func (c *ServiceClient) DeleteResourceInstance(ri *v1.ResourceInstance) error {
-	if ri.GetSelfLink() == "" {
+// DeleteResourceInstance - deletes a ResourceInstance
+func (c *ServiceClient) DeleteResourceInstance(ri v1.Interface) error {
+	inst, err := ri.AsInstance()
+	if err != nil {
+		return err
+	}
+	if inst.GetSelfLink() == "" {
 		return fmt.Errorf("could not remove resource instance, could not get self link")
 	}
 	bts, err := json.Marshal(ri)
 	if err != nil {
 		return err
 	}
-	_, err = c.ExecuteAPI(coreapi.DELETE, c.createAPIServerURL(ri.GetSelfLink()), nil, bts)
+	_, err = c.ExecuteAPI(coreapi.DELETE, c.createAPIServerURL(inst.GetSelfLink()), nil, bts)
 	return err
+}
+
+// CreateResourceInstance - creates a ResourceInstance
+func (c *ServiceClient) CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+	inst, err := ri.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+	if inst.GetKindLink() == "" {
+		return nil, fmt.Errorf("could not create resource instance, could not get self link")
+	}
+	inst.Metadata.ResourceVersion = ""
+	bts, err := json.Marshal(ri)
+	if err != nil {
+		return nil, err
+	}
+	bts, err = c.ExecuteAPI(coreapi.POST, c.createAPIServerURL(inst.GetKindLink()), nil, bts)
+	if err != nil {
+		return nil, err
+	}
+	r := &v1.ResourceInstance{}
+	err = json.Unmarshal(bts, r)
+	return r, err
 }

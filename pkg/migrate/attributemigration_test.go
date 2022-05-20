@@ -134,8 +134,9 @@ func (m *mockAttrMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]s
 	return m.res, nil
 }
 
-func (m *mockAttrMigClient) UpdateResourceInstance(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) UpdateResourceInstance(i v1.Interface) (*apiv1.ResourceInstance, error) {
 	m.updateCalled = true
+	ri, _ := i.AsInstance()
 	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
 	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIID)
 	assert.NotContains(m.t, ri.Attributes, defs.AttrExternalAPIPrimaryKey)

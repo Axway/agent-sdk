@@ -18,8 +18,8 @@ type instanceValidator struct {
 	cacheLock *sync.Mutex
 }
 
-func newInstanceValidator(cacheLock *sync.Mutex) *instanceValidator {
-	return &instanceValidator{cacheLock: cacheLock}
+func newInstanceValidator() *instanceValidator {
+	return &instanceValidator{cacheLock: &sync.Mutex{}}
 }
 
 // Ready -

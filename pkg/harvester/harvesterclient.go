@@ -15,6 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -47,6 +48,7 @@ type Client struct {
 	Cfg    *Config
 	Client api.Client
 	URL    string
+	logger log.FieldLogger
 }
 
 // NewConfig creates a config for harvester connections
@@ -76,17 +78,18 @@ func NewClient(cfg *Config) *Client {
 	if cfg.PageSize == 0 {
 		cfg.PageSize = defaultEventPageSize
 	}
-	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
-	tlsCfg.LoadFrom(cfg.TLSCfg)
-	clientTimeout := cfg.ClientTimeout
-	if clientTimeout == 0 {
-		clientTimeout = util.DefaultKeepAliveTimeout
-	}
+
+	logger := log.NewFieldLogger().
+		WithComponent("Client").
+		WithPackage("harvester")
+
+	harvesterURL := fmt.Sprintf("%s://%s:%d/events", cfg.Protocol, cfg.Host, int(cfg.Port))
 
 	return &Client{
-		URL:    cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(int(cfg.Port)) + "/events",
+		URL:    harvesterURL,
 		Cfg:    cfg,
-		Client: api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout),
+		Client: newSingleEntryClient(cfg),
+		logger: logger,
 	}
 }
 
@@ -116,10 +119,11 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["Content-Type"] = "application/json"
 		res, err := h.Client.Send(req)
 		if err != nil {
+			// send signal to discovery cache
 			return lastID, err
 		}
 
-		if res.Code != 200 {
+		if res.Code != http.StatusOK {
 			return lastID, fmt.Errorf("expected a 200 response but received %d", res.Code)
 		}
 
@@ -189,4 +193,15 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	}
 
 	return h.EventCatchUp(link, events)
+}
+
+func newSingleEntryClient(cfg *Config) api.Client {
+	tlsCfg := corecfg.NewTLSConfig().(*corecfg.TLSConfiguration)
+	tlsCfg.LoadFrom(cfg.TLSCfg)
+	clientTimeout := cfg.ClientTimeout
+	if clientTimeout == 0 {
+		clientTimeout = util.DefaultKeepAliveTimeout
+	}
+
+	return api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout)
 }

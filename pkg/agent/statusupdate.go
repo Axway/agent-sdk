@@ -28,6 +28,7 @@ type agentStatusUpdate struct {
 	currentActivityTime   time.Time
 	immediateStatusChange bool
 	typeOfStatusUpdate    string
+	logger                log.FieldLogger
 }
 
 var periodicStatusUpdate *agentStatusUpdate
@@ -40,7 +41,7 @@ func (su *agentStatusUpdate) Ready() bool {
 		return false
 	}
 
-	log.Trace("Periodic status update is ready")
+	su.logger.Trace("Periodic status update is ready")
 	su.currentActivityTime = time.Now()
 	su.previousActivityTime = su.currentActivityTime
 	return true
@@ -52,25 +53,31 @@ func (su *agentStatusUpdate) Status() error {
 
 func (su *agentStatusUpdate) Execute() error {
 	// only one status update should execute at a time
-	log.Tracef("get status update lock %s", su.typeOfStatusUpdate)
+	su.logger.Tracef("get status update lock %s", su.typeOfStatusUpdate)
 	updateStatusMutex.Lock()
 	defer func() {
-		log.Tracef("return status update lock %s", su.typeOfStatusUpdate)
+		su.logger.Tracef("return status update lock %s", su.typeOfStatusUpdate)
 		updateStatusMutex.Unlock()
 	}()
 
 	// get the status from the health check and jobs
 	status := su.getCombinedStatus()
-	log.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
+	su.logger.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
 
 	// Check to see if this is the immediate status change
 	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
 	if previousStatus != status && (su.immediateStatusChange && previousStatus == AgentRunning || status == AgentRunning) {
-		log.Tracef("Status is changing from %s to %s. Report this change of status immediately.", previousStatus, status)
+		su.logger.
+			WithField("previous-status", previousStatus).
+			WithField("new-status", status).
+			Debug("status is changing")
 		UpdateStatusWithPrevious(status, previousStatus, "")
 	} else if su.typeOfStatusUpdate == periodic {
 		// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
-		log.Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
+		su.logger.
+			WithField("previous-status", previousStatus).
+			WithField("new-status", status).
+			Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
 		UpdateStatusWithPrevious(status, previousStatus, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
@@ -92,13 +99,17 @@ func StartAgentStatusUpdate() {
 // startPeriodicStatusUpdate - start periodic status updates based on report activity frequency config
 func startPeriodicStatusUpdate() {
 	interval := agent.cfg.GetReportActivityFrequency()
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agentStatusUpdate")
 	periodicStatusUpdate = &agentStatusUpdate{
 		typeOfStatusUpdate: periodic,
+		logger:             logger,
 	}
 	_, err := jobs.RegisterIntervalJobWithName(periodicStatusUpdate, interval, "Status Update")
 
 	if err != nil {
-		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(periodic))
+		logger.Error(errors.ErrStartingAgentStatusUpdate.FormatError(periodic))
 	}
 }
 
@@ -106,14 +117,18 @@ func startPeriodicStatusUpdate() {
 // The time interval for this job is hard coded.
 func startImmediateStatusUpdate() {
 	interval := 10 * time.Second
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agentStatusUpdate")
 	immediateStatusUpdate = &agentStatusUpdate{
 		immediateStatusChange: true,
 		typeOfStatusUpdate:    immediate,
+		logger:                logger,
 	}
 	_, err := jobs.RegisterDetachedIntervalJobWithName(immediateStatusUpdate, interval, "Immediate Status Update")
 
 	if err != nil {
-		log.Error(errors.ErrStartingAgentStatusUpdate.FormatError(immediate))
+		logger.Error(errors.ErrStartingAgentStatusUpdate.FormatError(immediate))
 	}
 }
 
@@ -121,6 +136,10 @@ func (su *agentStatusUpdate) getCombinedStatus() string {
 	status := su.getJobPoolStatus()
 	hcStatus := su.getHealthcheckStatus()
 	if hcStatus != AgentRunning {
+		su.logger.
+			WithField("pool-status", status).
+			WithField("healthcheck-status", hcStatus).
+			Info("agent not in running status")
 		status = hcStatus
 	}
 	return status

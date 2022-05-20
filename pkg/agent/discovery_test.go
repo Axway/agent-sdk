@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -18,15 +17,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDiscoveryCache(t *testing.T) {
-	dcj := newDiscoveryCache(nil, true, &sync.Mutex{}, nil)
-	dcj.getHCStatus = func(_ string) hc.StatusLevel {
-		return hc.OK
-	}
+	dcj := newDiscoveryCache(nil, nil)
+
 	attributeKey := "Attr1"
 	attributeValue := "testValue"
 	emptyAPISvc := []v1.ResourceInstance{}
@@ -115,9 +111,6 @@ func TestDiscoveryCache(t *testing.T) {
 	err := InitializeWithAgentFeatures(cfg, afc)
 	assert.Nil(t, err)
 
-	assert.True(t, dcj.Ready())
-	assert.Nil(t, dcj.Status())
-
 	serverAPISvcResponse = emptyAPISvc
 	dcj.updateAPICache()
 	assert.Equal(t, 0, len(agent.cacheManager.GetAPIServiceKeys()))
@@ -151,7 +144,7 @@ func TestDiscoveryCache(t *testing.T) {
 			ri, _ := accReqDef.AsInstance()
 			return ri, nil
 		},
-		DeleteResourceInstanceMock: func(_ *v1.ResourceInstance) error {
+		DeleteResourceInstanceMock: func(_ v1.Interface) error {
 			deleteCalled = true
 			return nil
 		},
@@ -174,10 +167,10 @@ func TestDiscoveryCache(t *testing.T) {
 
 	serverAPISvcResponse = []v1.ResourceInstance{apiSvc1}
 	dcj.updateAPICache()
-	assert.Equal(t, 1, len(agent.cacheManager.GetAPIServiceKeys()))
+	assert.Equal(t, 2, len(agent.cacheManager.GetAPIServiceKeys()))
 	assert.True(t, IsAPIPublishedByID("1111"))
 	assert.True(t, IsAPIPublishedByPrimaryKey("1234"))
-	assert.False(t, IsAPIPublishedByID("2222"))
+	assert.True(t, IsAPIPublishedByID("2222"))
 
 	sb, _ = apic.NewServiceBodyBuilder().
 		SetAPIName("api2").

@@ -34,6 +34,8 @@ func (f funcOption) apply(opt *watchOptions) {
 	f(opt)
 }
 
+type eventSyncCb func()
+
 type keepAliveOption struct {
 	time    time.Duration
 	timeout time.Duration
@@ -47,6 +49,7 @@ type watchOptions struct {
 	keepAlive        keepAliveOption
 	loggerEntry      *logrus.Entry
 	sequenceProvider events.SequenceProvider
+	onEventSyncError eventSyncCb
 }
 
 // newWatchOptions returns the default watchOptions
@@ -59,6 +62,13 @@ func newWatchOptions() *watchOptions {
 			timeout: util.DefaultKeepAliveTimeout,
 		},
 	}
+}
+
+// WithEventSyncError - callback func to invoke when there is an error syncing initial events
+func WithEventSyncError(f eventSyncCb) Option {
+	return funcOption(func(o *watchOptions) {
+		o.onEventSyncError = f
+	})
 }
 
 // WithTLSConfig - sets up the TLS credentials or insecure if nil

@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -61,7 +60,6 @@ type agentData struct {
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
-	instanceCacheLock      *sync.Mutex
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
@@ -69,9 +67,13 @@ type agentData struct {
 
 var agent agentData
 
+var logger log.FieldLogger
+
 func init() {
+	logger = log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
-	agent.instanceCacheLock = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent
@@ -124,7 +126,14 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
-	api.SetConfigAgent(centralCfg.GetEnvironmentName(), centralCfg.IsUsingGRPC(), isRunningInDockerContainer(), centralCfg.GetAgentName(), centralCfg.GetSingleURL(), singleEntryFilter)
+	api.SetConfigAgent(
+		centralCfg.GetEnvironmentName(),
+		centralCfg.IsUsingGRPC(),
+		isRunningInDockerContainer(),
+		centralCfg.GetAgentName(),
+		centralCfg.GetSingleURL(),
+		singleEntryFilter,
+	)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
@@ -144,7 +153,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if centralCfg.GetAgentName() != "" {
 			if agent.agentResourceManager == nil {
-				agent.agentResourceManager, err = resource.NewAgentResourceManager(agent.cfg, agent.apicClient, agent.agentResourceChangeHandler)
+				agent.agentResourceManager, err = resource.NewAgentResourceManager(
+					agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
+				)
 				if err != nil {
 					return err
 				}
@@ -163,7 +174,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			syncCache()
+			err := syncCache()
+			if err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -248,7 +262,6 @@ func UnregisterResourceEventHandler(name string) {
 }
 
 func syncCache() error {
-
 	migrations := []migrate.Migrator{
 		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
 	}
@@ -261,19 +274,24 @@ func syncCache() error {
 
 	mig := migrate.NewMigrateAll(migrations...)
 
-	// register the update cache job
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, false, agent.instanceCacheLock, mig)
-	err := discoveryCache.Execute()
-	if err != nil {
-		return err
-	}
+	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		// trigger early saving for the initialized cache, following save will be done by interval job
-		agent.cacheManager.SaveCache()
+		err := discoveryCache.execute()
+		if err != nil {
+			return err
+		}
 	}
 
-	return startCentralEventProcessor(agent)
+	cacheSync := func() {
+		agent.cacheManager.Flush()
+		err := discoveryCache.execute()
+		if err != nil {
+			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
+		}
+	}
+
+	return startCentralEventProcessor(cacheSync)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -369,7 +387,7 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			log.Warnf("could not update the agent status reference, %s", err.Error())
+			logger.Warnf("could not update the agent status reference, %s", err.Error())
 		}
 	}
 }
@@ -383,7 +401,7 @@ func setupSignalProcessor() {
 	go func() {
 		<-sigs
 		cleanUp()
-		log.Info("Stopping agent")
+		logger.Info("Stopping agent")
 		os.Exit(0)
 	}()
 }
@@ -393,15 +411,15 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(agent agentData) error {
+func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(agent)
+		return startStreamMode(cacheSyncFunc)
 	}
 
-	return startPollMode(agent)
+	return startPollMode(cacheSyncFunc)
 }
 
-func newHandlers(agent agentData) []handler.Handler {
+func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
@@ -423,8 +441,8 @@ func newHandlers(agent agentData) []handler.Handler {
 	return handlers
 }
 
-func startPollMode(agent agentData) error {
-	handlers := newHandlers(agent)
+func startPollMode(cacheSyncFunc func()) error {
+	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
 		agent.apicClient,
@@ -434,6 +452,7 @@ func startPollMode(agent agentData) error {
 		func(p *poller.PollClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
 		},
+		cacheSyncFunc,
 		handlers...,
 	)
 
@@ -441,13 +460,13 @@ func startPollMode(agent agentData) error {
 		return fmt.Errorf("could not start the harvester poll client: %s", err)
 	}
 
-	newEventProcessorJob(pc)
+	newEventProcessorJob(pc, "Poll Client")
 
 	return err
 }
 
-func startStreamMode(agent agentData) error {
-	handlers := newHandlers(agent)
+func startStreamMode(cacheSyncFunc func()) error {
+	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(
 		agent.apicClient,
@@ -457,6 +476,7 @@ func startStreamMode(agent agentData) error {
 		func(s *stream.StreamerClient) {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 		},
+		cacheSyncFunc,
 		handlers...,
 	)
 
@@ -464,7 +484,7 @@ func startStreamMode(agent agentData) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	newEventProcessorJob(sc)
+	newEventProcessorJob(sc, "Stream Client")
 
 	return err
 }
