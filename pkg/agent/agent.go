@@ -427,7 +427,7 @@ func newHandlers() []handler.Handler {
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		handler.NewCRDHandler(agent.cacheManager),
 		handler.NewARDHandler(agent.cacheManager),
-		handler.NewACLHandler(agent.cacheManager),
+		// handler.NewACLHandler(agent.cacheManager),
 		agent.proxyResourceHandler,
 	}
 
