@@ -610,6 +610,11 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		return nil, nil
 	}
 
+	if response.Code == http.StatusConflict {
+		curACL, _ := c.GetResource(acl.GetSelfLink())
+		c.caches.SetAccessControlList(curACL)
+	}
+
 	if response.Code != http.StatusCreated && response.Code != http.StatusOK {
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
