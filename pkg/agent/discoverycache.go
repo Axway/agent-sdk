@@ -10,9 +10,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -25,75 +25,114 @@ const (
 )
 
 type discoveryCache struct {
-	instanceCacheLock    *sync.Mutex
-	agentResourceManager resource.Manager
-	migrator             migrate.Migrator
-	logger               log.FieldLogger
-	discoveryCacheLock   *sync.Mutex
-	handlers             []handler.Handler
+	envName                  string
+	centralURL               string
+	migrator                 migrate.Migrator
+	logger                   log.FieldLogger
+	instanceCacheLock        *sync.Mutex
+	discoveryCacheLock       *sync.Mutex
+	handlers                 []handler.Handler
+	agentType                config.AgentType
+	isMpEnabled              bool
+	client                   resourceClient
+	additionalDiscoveryFuncs []discoverFunc
 }
 
+type resourceClient interface {
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
+}
+
+// discoverFunc is the func definition for discovering resources to cache
 type discoverFunc func() error
 
+// discoveryOpt is a func that updates fields on the discoveryCache
+type discoveryOpt func(dc *discoveryCache)
+
+func withAdditionalDiscoverFuncs(funcs ...discoverFunc) discoveryOpt {
+	return func(dc *discoveryCache) {
+		dc.additionalDiscoveryFuncs = funcs
+	}
+}
+
+func withMigration(mig migrate.Migrator) discoveryOpt {
+	return func(dc *discoveryCache) {
+		dc.migrator = mig
+	}
+}
+
+func withMpEnabled(isEnabled bool) discoveryOpt {
+	return func(dc *discoveryCache) {
+		dc.isMpEnabled = isEnabled
+	}
+}
+
 func newDiscoveryCache(
-	manager resource.Manager, migrations migrate.Migrator, handlers []handler.Handler,
+	cfg config.CentralConfig,
+	client resourceClient,
+	handlers []handler.Handler,
+	opts ...discoveryOpt,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("discoveryCache")
-	return &discoveryCache{
-		instanceCacheLock:    &sync.Mutex{},
-		agentResourceManager: manager,
-		migrator:             migrations,
-		logger:               logger,
-		discoveryCacheLock:   &sync.Mutex{},
-		handlers:             handlers,
+
+	dc := &discoveryCache{
+		agentType:          cfg.GetAgentType(),
+		instanceCacheLock:  &sync.Mutex{},
+		logger:             logger,
+		discoveryCacheLock: &sync.Mutex{},
+		handlers:           handlers,
+		envName:            cfg.GetEnvironmentName(),
+		centralURL:         cfg.GetURL(),
+		client:             client,
+	}
+
+	for _, opt := range opts {
+		opt(dc)
+	}
+	return dc
+}
+
+func (dc *discoveryCache) daFuncs() []discoverFunc {
+	return []discoverFunc{
+		dc.handleAPISvc,
+		dc.handleServiceInstance,
+		dc.handleCategories,
+		dc.handleARD,
+		dc.handleCRD,
+		dc.handleAccessControlList,
+		dc.handleMarketplaceResources,
 	}
 }
 
-func (j *discoveryCache) daEndpoints() []discoverFunc {
-	endpoints := []discoverFunc{
-		j.handleCategories,
-		j.handleCRD,
-		j.handleARD,
-		j.handleMarketplaceResources,
+func (dc *discoveryCache) taFuncs() []discoverFunc {
+	return []discoverFunc{
+		dc.handleAPISvc,
+		dc.handleServiceInstance,
+		dc.handleMarketplaceResources,
 	}
-	return endpoints
 }
 
-func (j *discoveryCache) taEndpoints() []discoverFunc {
-	endpoints := []discoverFunc{
-		j.handleMarketplaceResources,
-	}
-	return endpoints
-}
-
-func (j *discoveryCache) discoveryFuncs() []discoverFunc {
-	endpoints := []discoverFunc{
-		j.handleAPISvc,
-		j.handleServiceInstance,
-	}
-
-	switch agent.cfg.GetAgentType() {
+func (dc *discoveryCache) getDiscoveryFuncs() []discoverFunc {
+	switch dc.agentType {
 	case config.DiscoveryAgent:
-		endpoints = append(endpoints, j.daEndpoints()...)
+		return dc.daFuncs()
 	case config.TraceabilityAgent:
-		endpoints = append(endpoints, j.taEndpoints()...)
+		return dc.taFuncs()
 	}
-
-	return endpoints
+	return nil
 }
 
 // execute rebuilds the discovery cache
-func (j *discoveryCache) execute() error {
-	j.discoveryCacheLock.Lock()
-	defer j.discoveryCacheLock.Unlock()
+func (dc *discoveryCache) execute() error {
+	dc.discoveryCacheLock.Lock()
+	defer dc.discoveryCacheLock.Unlock()
 
-	j.logger.Debug("executing resource cache update job")
+	dc.logger.Debug("executing resource cache update job")
 
-	discoveryFuncs := j.discoveryFuncs()
-	if j.agentResourceManager != nil {
-		discoveryFuncs = append(discoveryFuncs, j.agentResourceManager.FetchAgentResource)
+	discoveryFuncs := dc.getDiscoveryFuncs()
+	if dc.additionalDiscoveryFuncs != nil {
+		discoveryFuncs = append(discoveryFuncs, dc.additionalDiscoveryFuncs...)
 	}
 
 	errCh := make(chan error, len(discoveryFuncs))
@@ -119,21 +158,20 @@ func (j *discoveryCache) execute() error {
 		}
 	}
 
-	agent.cacheManager.SaveCache()
-	j.logger.Debug("cache has been updated and saved")
+	dc.logger.Debug("cache has been updated")
 
 	return nil
 }
 
-func (j *discoveryCache) handleAPISvc() error {
-	j.logger.WithField("kind", "APIService").Trace("fetching API Services and updating cache")
+func (dc *discoveryCache) handleAPISvc() error {
+	dc.logger.WithField("kind", "APIService").Trace("fetching API Services and updating cache")
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
-	svcLink := mv1.NewAPIService("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(svcLink)
+	svcLink := mv1.NewAPIService("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(svcLink)
 
-	apiServices, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	apiServices, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		query, url, apiServerPageSize,
 	)
 	if err != nil {
@@ -141,15 +179,15 @@ func (j *discoveryCache) handleAPISvc() error {
 	}
 
 	for _, svc := range apiServices {
-		if j.migrator != nil {
+		if dc.migrator != nil {
 			var err error
-			svc, err = j.migrator.Migrate(svc)
+			svc, err = dc.migrator.Migrate(svc)
 			if err != nil {
 				return fmt.Errorf("failed to migrate service: %s", err)
 			}
 		}
 
-		if err := j.handleResource(svc); err != nil {
+		if err := dc.handleResource(svc); err != nil {
 			return err
 		}
 	}
@@ -157,37 +195,37 @@ func (j *discoveryCache) handleAPISvc() error {
 	return nil
 }
 
-func (j *discoveryCache) handleServiceInstance() error {
-	j.logger.WithField("kind", "APIServiceInstance").Trace("fetching API Service Instances and updating cache")
-	j.instanceCacheLock.Lock()
-	defer j.instanceCacheLock.Unlock()
+func (dc *discoveryCache) handleServiceInstance() error {
+	dc.logger.WithField("kind", "APIServiceInstance").Trace("fetching API Service Instances and updating cache")
+	dc.instanceCacheLock.Lock()
+	defer dc.instanceCacheLock.Unlock()
 
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	svcInstanceLink := mv1.NewAPIServiceInstance("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(svcInstanceLink)
+	svcInstanceLink := mv1.NewAPIServiceInstance("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(svcInstanceLink)
 
-	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	serviceInstances, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		query, url, apiServerPageSize,
 	)
 	if err != nil {
 		e := utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances")
-		j.logger.Error(e)
+		dc.logger.Error(e)
 		return e
 	}
 
 	for _, instance := range serviceInstances {
-		if err := j.handleResource(instance); err != nil {
+		if err := dc.handleResource(instance); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (j *discoveryCache) handleCategories() error {
-	j.logger.WithField("kind", "Category").Trace("fetching Categories and updating cache")
+func (dc *discoveryCache) handleCategories() error {
+	dc.logger.WithField("kind", "Category").Trace("fetching Categories and updating cache")
 
 	// Update cache with published resources
 	query := map[string]string{
@@ -195,9 +233,9 @@ func (j *discoveryCache) handleCategories() error {
 	}
 
 	categoriesLink := catalog.NewCategory("").GetKindLink()
-	url := formatResourceURL(categoriesLink)
+	url := dc.formatResourceURL(categoriesLink)
 
-	categories, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		query, url, apiServerPageSize,
 	)
 	if err != nil {
@@ -205,32 +243,59 @@ func (j *discoveryCache) handleCategories() error {
 	}
 
 	for _, category := range categories {
-		if err := j.handleResource(category); err != nil {
+		if err := dc.handleResource(category); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (j *discoveryCache) handleARD() error {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return nil
-	}
-	j.logger.WithField("kind", "AccessRequestDefinition").Trace("fetching AccessRequestDefinitions and updating cache")
+func (dc *discoveryCache) handleAccessControlList() error {
+	dc.logger.WithField("kind", "AccessControlList").Trace("fetching AccessControlList and updating cache")
 
-	ardLink := mv1.NewAccessRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(ardLink)
+	// Update cache with published resources
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	ards, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	acl, _ := mv1.NewAccessControlList("", mv1.EnvironmentGVK().Kind, dc.envName)
+	aclLink := acl.GetKindLink()
+	url := dc.formatResourceURL(aclLink)
+
+	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
+		query, url, apiServerPageSize,
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, category := range categories {
+		if err := dc.handleResource(category); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (dc *discoveryCache) handleARD() error {
+	if !dc.isMpEnabled {
+		return nil
+	}
+	dc.logger.WithField("kind", "AccessRequestDefinition").Trace("fetching AccessRequestDefinitions and updating cache")
+
+	ardLink := mv1.NewAccessRequestDefinition("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(ardLink)
+	query := map[string]string{
+		apic.FieldsKey: apiServerFields,
+	}
+
+	ards, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
 	for _, ard := range ards {
-		if err := j.handleResource(ard); err != nil {
+		if err := dc.handleResource(ard); err != nil {
 			return err
 		}
 	}
@@ -238,20 +303,20 @@ func (j *discoveryCache) handleARD() error {
 	return nil
 }
 
-func (j *discoveryCache) handleManagedApp() error {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+func (dc *discoveryCache) handleManagedApp() error {
+	if !dc.isMpEnabled {
 		return nil
 	}
 
-	j.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
+	dc.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
 
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
 	}
 
-	managedAppLink := mv1.NewManagedApplication("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(managedAppLink)
-	managedApps, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	managedAppLink := mv1.NewManagedApplication("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(managedAppLink)
+	managedApps, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		query, url, apiServerPageSize,
 	)
 	if err != nil {
@@ -259,7 +324,7 @@ func (j *discoveryCache) handleManagedApp() error {
 	}
 
 	for _, app := range managedApps {
-		if err := j.handleResource(app); err != nil {
+		if err := dc.handleResource(app); err != nil {
 			return err
 		}
 	}
@@ -267,27 +332,27 @@ func (j *discoveryCache) handleManagedApp() error {
 	return nil
 }
 
-func (j *discoveryCache) handleCRD() error {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+func (dc *discoveryCache) handleCRD() error {
+	if !dc.isMpEnabled {
 		return nil
 	}
 
-	j.logger.WithField("kind", "CredentialRequestDefinition").Trace("fetching CredentialRequestDefinitions and updating cache")
+	dc.logger.WithField("kind", "CredentialRequestDefinition").Trace("fetching CredentialRequestDefinitions and updating cache")
 
-	crd := mv1.NewCredentialRequestDefinition("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(crd)
+	crd := mv1.NewCredentialRequestDefinition("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(crd)
 
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields,
 	}
 
-	crds, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	crds, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
 	for _, crd := range crds {
-		if err := j.handleResource(crd); err != nil {
+		if err := dc.handleResource(crd); err != nil {
 			return err
 		}
 	}
@@ -295,20 +360,20 @@ func (j *discoveryCache) handleCRD() error {
 	return nil
 }
 
-func (j *discoveryCache) handleAccessRequest() error {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+func (dc *discoveryCache) handleAccessRequest() error {
+	if !dc.isMpEnabled {
 		return nil
 	}
 
-	j.logger.WithField("kind", "AccessRequest").Trace("fetching AccessRequests and updating cache")
+	dc.logger.WithField("kind", "AccessRequest").Trace("fetching AccessRequests and updating cache")
 
 	query := map[string]string{
 		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
 	}
 
-	arLink := mv1.NewAccessRequest("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(arLink)
-	accessRequests, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	arLink := mv1.NewAccessRequest("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(arLink)
+	accessRequests, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		query, url, apiServerPageSize,
 	)
 
@@ -317,7 +382,7 @@ func (j *discoveryCache) handleAccessRequest() error {
 	}
 
 	for _, req := range accessRequests {
-		if err := j.handleResource(req); err != nil {
+		if err := dc.handleResource(req); err != nil {
 			return err
 		}
 	}
@@ -325,17 +390,17 @@ func (j *discoveryCache) handleAccessRequest() error {
 	return nil
 }
 
-func (j *discoveryCache) handleCredential() error {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+func (dc *discoveryCache) handleCredential() error {
+	if !dc.isMpEnabled {
 		return nil
 	}
 
-	j.logger.WithField("kind", "Credential").Trace("fetching Credentials and updating cache")
+	dc.logger.WithField("kind", "Credential").Trace("fetching Credentials and updating cache")
 
-	credLink := mv1.NewCredential("", agent.cfg.GetEnvironmentName()).GetKindLink()
-	url := formatResourceURL(credLink)
+	credLink := mv1.NewCredential("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(credLink)
 
-	credentials, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
+	credentials, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
 		nil, url, apiServerPageSize,
 	)
 
@@ -344,18 +409,21 @@ func (j *discoveryCache) handleCredential() error {
 	}
 
 	for _, cred := range credentials {
-		if err := j.handleResource(cred); err != nil {
+		if err := dc.handleResource(cred); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (j *discoveryCache) handleMarketplaceResources() error {
+func (dc *discoveryCache) handleMarketplaceResources() error {
 	funcs := []discoverFunc{
-		j.handleManagedApp,
-		j.handleAccessRequest,
-		j.handleCredential,
+		dc.handleManagedApp,
+		dc.handleAccessRequest,
+	}
+
+	if dc.agentType == config.DiscoveryAgent {
+		funcs = append(funcs, dc.handleCredential)
 	}
 
 	for _, f := range funcs {
@@ -367,9 +435,9 @@ func (j *discoveryCache) handleMarketplaceResources() error {
 	return nil
 }
 
-func (j *discoveryCache) handleResource(ri *apiV1.ResourceInstance) error {
-	for _, h := range j.handlers {
-		ctx := handler.NewEventContext(proto.Event_CREATED, nil, ri.Name, ri.Kind)
+func (dc *discoveryCache) handleResource(ri *apiV1.ResourceInstance) error {
+	ctx := handler.NewEventContext(proto.Event_CREATED, nil, ri.Name, ri.Kind)
+	for _, h := range dc.handlers {
 		err := h.Handle(ctx, nil, ri)
 		if err != nil {
 			return err
@@ -379,6 +447,6 @@ func (j *discoveryCache) handleResource(ri *apiV1.ResourceInstance) error {
 	return nil
 }
 
-func formatResourceURL(s string) string {
-	return fmt.Sprintf("%s/apis%s", agent.cfg.GetURL(), s)
+func (dc *discoveryCache) formatResourceURL(s string) string {
+	return fmt.Sprintf("%s/apis%s", dc.centralURL, s)
 }

@@ -262,6 +262,7 @@ func (c *cacheManager) SaveCache() {
 		defer c.cacheLock.Unlock()
 		c.persistedCache.Save(c.cacheFilename)
 		c.setCacheUpdated(false)
+		c.logger.Debug("persistent cache has been saved")
 	}
 }
 

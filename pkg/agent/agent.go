@@ -273,14 +273,22 @@ func syncCache() error {
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)
-
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig, newHandlers())
+	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
+	discoveryCache := newDiscoveryCache(
+		agent.cfg,
+		GetCentralClient(),
+		newHandlers(),
+		withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource),
+		withMigration(mig),
+		withMpEnabled(isMpEnabled),
+	)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		err := discoveryCache.execute()
 		if err != nil {
 			return err
 		}
+		agent.cacheManager.SaveCache()
 	}
 
 	cacheSync := func() {
@@ -289,6 +297,7 @@ func syncCache() error {
 		if err != nil {
 			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
 		}
+		agent.cacheManager.SaveCache()
 	}
 
 	return startCentralEventProcessor(cacheSync)
@@ -423,19 +432,28 @@ func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
-		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
-		handler.NewCRDHandler(agent.cacheManager),
-		handler.NewARDHandler(agent.cacheManager),
-		handler.NewACLHandler(agent.cacheManager),
 		agent.proxyResourceHandler,
+	}
+
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		handlers = append(
+			handlers,
+			handler.NewCategoryHandler(agent.cacheManager),
+			handler.NewCRDHandler(agent.cacheManager),
+			handler.NewARDHandler(agent.cacheManager),
+			handler.NewACLHandler(agent.cacheManager),
+		)
 	}
 
 	// Register managed application and access handler for traceability agent
 	// For discovery agent, the handlers gets registered while setting up provisioner
 	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
-		handlers = append(handlers, handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
-		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
+		handlers = append(
+			handlers,
+			handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient),
+			handler.NewTraceManagedApplicationHandler(agent.cacheManager),
+		)
 	}
 
 	return handlers
