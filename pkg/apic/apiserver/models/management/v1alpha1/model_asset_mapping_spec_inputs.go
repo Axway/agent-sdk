@@ -12,10 +12,10 @@ package v1alpha1
 // AssetMappingSpecInputs The list of the inputs provided to the template. (management.v1alpha1.AssetMapping)
 type AssetMappingSpecInputs struct {
 	ApiService         string `json:"apiService"`
-	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`
+	ApiServiceRevision string `json:"apiServiceRevision"`
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
 	// name of the stage
-	Stage string `json:"stage"`
+	Stage string `json:"stage,omitempty"`
 	// list of categories for the asset.
 	Categories []string `json:"categories,omitempty"`
 }

@@ -9,7 +9,9 @@
 
 package v1alpha1
 
-// AddOnReferences  (catalog.v1alpha1.AddOn)
-type AddOnReferences struct {
-	Product AddOnReferencesProduct `json:"product,omitempty"`
+// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
+type QuotaSpecLimitTypeLooseOverages struct {
+	// The overage price per unit.
+	Value    float32 `json:"value,omitempty"`
+	Currency string  `json:"currency,omitempty"`
 }

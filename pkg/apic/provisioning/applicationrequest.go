@@ -8,4 +8,6 @@ type ApplicationRequest interface {
 	GetManagedApplicationName() string
 	// GetTeamName gets the owning team name for the managed application
 	GetTeamName() string
+	// GetID returns the ID of the resource for the request
+	GetID() string
 }

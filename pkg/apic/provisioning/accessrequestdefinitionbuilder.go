@@ -12,18 +12,22 @@ import (
 type RegisterAccessRequestDefinition func(accessRequestDefinition *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
 
 type accessRequestDef struct {
-	name         string
-	title        string
-	schema       map[string]interface{}
-	registerFunc RegisterAccessRequestDefinition
-	err          error
+	name                   string
+	title                  string
+	provisionSchema        map[string]interface{}
+	requestSchema          map[string]interface{}
+	provisionEqualsRequest bool
+	registerFunc           RegisterAccessRequestDefinition
+	err                    error
 }
 
 // AccessRequestBuilder - aids in creating a new access request
 type AccessRequestBuilder interface {
 	SetName(name string) AccessRequestBuilder
 	SetTitle(title string) AccessRequestBuilder
-	SetSchema(schema SchemaBuilder) AccessRequestBuilder
+	SetRequestSchema(schema SchemaBuilder) AccessRequestBuilder
+	SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder
+	SetProvisionSchemaToRequestSchema() AccessRequestBuilder
 	Register() (*v1alpha1.AccessRequestDefinition, error)
 }
 
@@ -46,14 +50,44 @@ func (a *accessRequestDef) SetTitle(title string) AccessRequestBuilder {
 	return a
 }
 
-// SetSchema - set the schema to be used for access requests
-func (a *accessRequestDef) SetSchema(schema SchemaBuilder) AccessRequestBuilder {
+// SetRequestSchema - set the schema to be used for access requests request data
+func (a *accessRequestDef) SetRequestSchema(schema SchemaBuilder) AccessRequestBuilder {
 	if a.err != nil {
 		return a
 	}
 
 	if schema != nil {
-		a.schema, a.err = schema.Build()
+		a.requestSchema, a.err = schema.Build()
+	} else {
+		a.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
+	}
+
+	return a
+}
+
+// SetProvisionSchemaToRequestSchema - set the schema to be used for access requests provisioning data
+func (a *accessRequestDef) SetProvisionSchemaToRequestSchema() AccessRequestBuilder {
+	if a.err != nil {
+		return a
+	}
+
+	if a.provisionSchema != nil {
+		a.err = fmt.Errorf("can't duplicate request schema as provisioning schema is set")
+		return a
+	}
+
+	a.provisionEqualsRequest = true
+	return a
+}
+
+// SetProvisionSchema - set the schema to be used for access requests provisioning data
+func (a *accessRequestDef) SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder {
+	if a.err != nil {
+		return a
+	}
+
+	if schema != nil {
+		a.provisionSchema, a.err = schema.Build()
 	} else {
 		a.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -67,8 +101,16 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		return nil, a.err
 	}
 
-	if a.schema == nil {
-		a.schema, _ = NewSchemaBuilder().Build()
+	if a.requestSchema == nil {
+		a.requestSchema, _ = NewSchemaBuilder().Build()
+	}
+
+	if a.provisionSchema == nil {
+		if a.provisionEqualsRequest {
+			a.provisionSchema = util.MergeMapStringInterface(a.requestSchema)
+		} else {
+			a.provisionSchema, _ = NewSchemaBuilder().Build()
+		}
 	}
 
 	if a.title == "" {
@@ -76,7 +118,10 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 	}
 
 	spec := v1alpha1.AccessRequestDefinitionSpec{
-		Schema: a.schema,
+		Schema: a.requestSchema,
+		Provision: &v1alpha1.AccessRequestDefinitionSpecProvision{
+			Schema: a.provisionSchema,
+		},
 	}
 
 	hashInt, _ := util.ComputeHash(spec)

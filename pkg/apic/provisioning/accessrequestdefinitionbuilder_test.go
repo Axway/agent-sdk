@@ -46,17 +46,26 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 				SetName(tt.name)
 
 			if tt.wantErr {
-				builder = builder.SetSchema(nil)
+				builder = builder.SetRequestSchema(nil)
+				builder = builder.SetProvisionSchema(nil)
 			}
 
 			if !tt.noSchema {
-				builder.SetSchema(
-					NewSchemaBuilder().
-						SetName("schema").
-						AddProperty(
-							NewSchemaPropertyBuilder().
-								SetName("prop").
-								IsString()))
+				builder.
+					SetProvisionSchema(
+						NewSchemaBuilder().
+							SetName("schema").
+							AddProperty(
+								NewSchemaPropertyBuilder().
+									SetName("prop").
+									IsString())).
+					SetRequestSchema(
+						NewSchemaBuilder().
+							SetName("schema").
+							AddProperty(
+								NewSchemaPropertyBuilder().
+									SetName("prop").
+									IsString()))
 			}
 
 			_, err := builder.Register()
@@ -67,7 +76,6 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 			} else {
 				assert.Nil(t, err)
 				assert.True(t, registerFuncCalled)
-				// assert.NotNil(t, builtDef)
 			}
 		})
 	}

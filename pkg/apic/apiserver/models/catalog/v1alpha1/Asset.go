@@ -35,11 +35,11 @@ func init() {
 // Asset Resource
 type Asset struct {
 	apiv1.ResourceMeta
-	Icon       interface{}     `json:"icon"`
-	Owner      *apiv1.Owner    `json:"owner"`
-	References AssetReferences `json:"references"`
-	Spec       AssetSpec       `json:"spec"`
-	State      AssetState      `json:"state"`
+	Icon       interface{}  `json:"icon"`
+	Owner      *apiv1.Owner `json:"owner"`
+	References interface{}  `json:"references"`
+	Spec       AssetSpec    `json:"spec"`
+	State      AssetState   `json:"state"`
 }
 
 // NewAsset creates an empty *Asset

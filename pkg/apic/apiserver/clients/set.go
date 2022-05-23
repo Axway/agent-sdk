@@ -52,6 +52,7 @@ type Set struct {
 	AmplifyOAuth2AuthRuleManagementV1alpha1          *management_v1alpha1.UnscopedAmplifyOAuth2AuthRuleClient
 	APIKeyAuthRuleManagementV1alpha1                 *management_v1alpha1.UnscopedAPIKeyAuthRuleClient
 	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
+	ExternalSecretManagementV1alpha1                 *management_v1alpha1.UnscopedExternalSecretClient
 	VirtualServiceManagementV1alpha1                 *management_v1alpha1.UnscopedVirtualServiceClient
 	OAS3DocumentManagementV1alpha1                   *management_v1alpha1.UnscopedOAS3DocumentClient
 	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
@@ -73,7 +74,7 @@ type Set struct {
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
 	ProductPlanCatalogV1alpha1                       *catalog_v1alpha1.ProductPlanClient
-	AddOnCatalogV1alpha1                             *catalog_v1alpha1.UnscopedAddOnClient
+	QuotaCatalogV1alpha1                             *catalog_v1alpha1.UnscopedQuotaClient
 	AssetMappingCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetMappingClient
 	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
 	AssetRequestDefinitionCatalogV1alpha1            *catalog_v1alpha1.UnscopedAssetRequestDefinitionClient
@@ -90,6 +91,7 @@ type Set struct {
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
+	QuotaCatalogV1                                   *catalog_v1.UnscopedQuotaClient
 	DocumentCatalogV1                                *catalog_v1.UnscopedDocumentClient
 	ResourceCatalogV1                                *catalog_v1.UnscopedResourceClient
 	ProductOverviewCatalogV1                         *catalog_v1.UnscopedProductOverviewClient
@@ -253,6 +255,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AssetMapping: %s", err))
 	}
+	s.ExternalSecretManagementV1alpha1, err = management_v1alpha1.NewExternalSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ExternalSecret: %s", err))
+	}
 	s.VirtualServiceManagementV1alpha1, err = management_v1alpha1.NewVirtualServiceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualService: %s", err))
@@ -337,9 +343,9 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlan: %s", err))
 	}
-	s.AddOnCatalogV1alpha1, err = catalog_v1alpha1.NewAddOnClient(b)
+	s.QuotaCatalogV1alpha1, err = catalog_v1alpha1.NewQuotaClient(b)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.AddOn: %s", err))
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Quota: %s", err))
 	}
 	s.AssetMappingCatalogV1alpha1, err = catalog_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {
@@ -404,6 +410,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductReleaseCatalogV1, err = catalog_v1.NewProductReleaseClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.ProductRelease: %s", err))
+	}
+	s.QuotaCatalogV1, err = catalog_v1.NewQuotaClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Quota: %s", err))
 	}
 	s.DocumentCatalogV1, err = catalog_v1.NewDocumentClient(b)
 	if err != nil {

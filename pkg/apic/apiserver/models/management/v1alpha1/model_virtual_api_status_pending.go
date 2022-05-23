@@ -15,12 +15,12 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AddOnStatusSuccess struct for AddOnStatusSuccess
-type AddOnStatusSuccess struct {
+// VirtualApiStatusPending struct for VirtualApiStatusPending
+type VirtualApiStatusPending struct {
 	Type string `json:"type"`
 	// Time when the change occured.
 	Timestamp time.Time `json:"timestamp"`
-	// Details of the result.
-	Detail string                 `json:"detail"`
-	Meta   map[string]interface{} `json:"meta,omitempty"`
+	// message of the pending status
+	Detail string                            `json:"detail"`
+	Meta   map[string]map[string]interface{} `json:"meta,omitempty"`
 }
