@@ -442,7 +442,7 @@ func newHandlers() []handler.Handler {
 			handler.NewCategoryHandler(agent.cacheManager),
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
-			handler.NewACLHandler(agent.cacheManager),
+			// handler.NewACLHandler(agent.cacheManager),
 		)
 	}
 
