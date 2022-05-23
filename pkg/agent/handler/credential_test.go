@@ -247,10 +247,16 @@ func Test_creds(t *testing.T) {
 		appDetails: map[string]interface{}{
 			"def": "456",
 		},
+		credData: map[string]interface{}{
+			"def": "789",
+		},
+		id: "cred-id",
 	}
 
 	assert.Equal(t, c.managedApp, c.GetApplicationName())
 	assert.Equal(t, c.credType, c.GetCredentialType())
+	assert.Equal(t, c.id, c.GetID())
+	assert.Equal(t, c.credData, c.GetCredentialData())
 	assert.Equal(t, c.credDetails["abc"], c.GetCredentialDetailsValue("abc"))
 	assert.Equal(t, c.appDetails["def"], c.GetApplicationDetailsValue("def"))
 
@@ -527,13 +533,6 @@ func newKeyPair() (public string, private string, err error) {
 	}
 
 	return pubKeyBuff.String(), privBuff.String(), nil
-}
-
-type mockEncryptor struct {
-}
-
-func (m mockEncryptor) Encrypt(str string) (string, error) {
-	return "abc", nil
 }
 
 const credAppRefName = "managed-app-name"

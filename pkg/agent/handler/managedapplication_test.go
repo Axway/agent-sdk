@@ -199,10 +199,12 @@ func Test_managedApp(t *testing.T) {
 		managedAppName: "managed-app-name",
 		teamName:       "123",
 		data:           map[string]interface{}{"abc": "123"},
+		id:             "app-id",
 	}
 
 	assert.Equal(t, m.managedAppName, m.GetManagedApplicationName())
 	assert.Equal(t, m.teamName, m.GetTeamName())
+	assert.Equal(t, m.id, m.GetID())
 	assert.Equal(t, m.data["abc"].(string), m.GetApplicationDetailsValue("abc"))
 
 	m.data = nil

@@ -64,6 +64,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		managedAppName: app.Name,
 		teamName:       h.getTeamName(ctx, app.Owner),
 		data:           util.GetAgentDetails(app),
+		id:             app.Metadata.ID,
 	}
 
 	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
@@ -144,12 +145,18 @@ func (h *managedApplication) getTeamName(_ context.Context, owner *v1.Owner) str
 type provManagedApp struct {
 	managedAppName string
 	teamName       string
+	id             string
 	data           map[string]interface{}
 }
 
 // GetManagedApplicationName returns the name of the managed application
 func (a provManagedApp) GetManagedApplicationName() string {
 	return a.managedAppName
+}
+
+// GetTeamName gets the owning team name for the managed application
+func (a provManagedApp) GetID() string {
+	return a.id
 }
 
 // GetTeamName gets the owning team name for the managed application

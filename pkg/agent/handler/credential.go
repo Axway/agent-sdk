@@ -101,7 +101,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Errorf("error getting resource details: %s")
+		logger.WithError(err).Errorf("error getting credential request definition")
 		h.onError(ctx, cred, err)
 		return cred
 	}
@@ -226,6 +226,7 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 type provCreds struct {
 	managedApp  string
 	credType    string
+	id          string
 	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
@@ -240,12 +241,18 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		credType:    cr.Spec.CredentialRequestDefinition,
 		credData:    cr.Spec.Data,
 		managedApp:  cr.Spec.ManagedApplication,
+		id:          cr.Metadata.ID,
 	}
 }
 
 // GetApplicationName gets the name of the managed application
 func (c provCreds) GetApplicationName() string {
 	return c.managedApp
+}
+
+// GetID gets the if of the credential resource
+func (c provCreds) GetID() string {
+	return c.id
 }
 
 // GetCredentialType gets the type of the credential

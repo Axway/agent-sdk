@@ -9,13 +9,13 @@ import (
 
 func TestNewAccessRequestBuilder(t *testing.T) {
 	tests := []struct {
-		name     string
-		noSchema bool
-		wantErr  bool
+		name       string
+		noSchema   bool
+		copySchema bool
+		wantErr    bool
 	}{
 		{
-			name:    "Success",
-			wantErr: false,
+			name: "Success",
 		},
 		{
 			name:    "Fail",
@@ -24,7 +24,10 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 		{
 			name:     "Empty",
 			noSchema: true,
-			wantErr:  false,
+		},
+		{
+			name:       "Copied",
+			copySchema: true,
 		},
 	}
 	for _, tt := range tests {
@@ -51,14 +54,7 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 			}
 
 			if !tt.noSchema {
-				builder.
-					SetProvisionSchema(
-						NewSchemaBuilder().
-							SetName("schema").
-							AddProperty(
-								NewSchemaPropertyBuilder().
-									SetName("prop").
-									IsString())).
+				b := builder.
 					SetRequestSchema(
 						NewSchemaBuilder().
 							SetName("schema").
@@ -66,6 +62,16 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 								NewSchemaPropertyBuilder().
 									SetName("prop").
 									IsString()))
+				if tt.copySchema {
+					b.SetProvisionSchemaToRequestSchema()
+				}
+				b.SetProvisionSchema(
+					NewSchemaBuilder().
+						SetName("schema").
+						AddProperty(
+							NewSchemaPropertyBuilder().
+								SetName("prop").
+								IsString()))
 			}
 
 			_, err := builder.Register()

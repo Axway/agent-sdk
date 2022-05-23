@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -134,7 +133,7 @@ func (m *mockAttrMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]s
 	return m.res, nil
 }
 
-func (m *mockAttrMigClient) UpdateResourceInstance(i v1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) UpdateResourceInstance(i apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	m.updateCalled = true
 	ri, _ := i.AsInstance()
 	assert.NotContains(m.t, ri.Attributes, defs.AttrPreviousAPIServiceRevisionID)
@@ -167,12 +166,12 @@ func (m *mockAttrMigClient) UpdateResourceInstance(i v1.Interface) (*apiv1.Resou
 	return nil, nil
 }
 
-func (m *mockAttrMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockAttrMigClient) CreateSubResource(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }
 
-func (m *mockAttrMigClient) CreateOrUpdateResource(data v1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return m.execRes, nil
 }
 

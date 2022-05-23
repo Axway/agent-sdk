@@ -282,7 +282,7 @@ This is the provisioning interface that the agent is expected to implement.
 type Provisioning interface {
   ApplicationRequestProvision(ApplicationRequest) RequestStatus
   ApplicationRequestDeprovision(ApplicationRequest) RequestStatus
-  AccessRequestProvision(AccessRequest) RequestStatus
+  AccessRequestProvision(AccessRequest) (RequestStatus, AccessData)
   AccessRequestDeprovision(AccessRequest) RequestStatus
   CredentialProvision(CredentialRequest) (RequestStatus, Credential)
   CredentialDeprovision(CredentialRequest) RequestStatus
