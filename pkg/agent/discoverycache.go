@@ -89,7 +89,7 @@ func (j *discoveryCache) updateAPICache() error {
 			var err error
 			svc, err = j.migrator.Migrate(svc)
 			if err != nil {
-				return fmt.Errorf("failed to migrate service: %s", err)
+				j.logger.Debugf("failed to migrate service: %s", err)
 			}
 		}
 
