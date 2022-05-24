@@ -56,7 +56,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 
 	err := m.updateService(ri)
 	if err != nil {
-		return ri, fmt.Errorf("migration marketplace provisioning failed")
+		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
 	}
 
 	return ri, nil
