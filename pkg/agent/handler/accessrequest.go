@@ -124,7 +124,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 
 	status, accessData := h.prov.AccessRequestProvision(req)
 	data := map[string]interface{}{}
-	if accessData == nil {
+	if accessData != nil {
 		if d := accessData.GetData(); d != nil {
 			data = d
 		}
