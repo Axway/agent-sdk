@@ -19,7 +19,6 @@ import (
 
 const (
 	apiServerPageSize = 100
-	apiServerFields   = "metadata,group,kind,name,title,owner,attributes,x-agent-details,finalizers"
 )
 
 type discoveryCache struct {
