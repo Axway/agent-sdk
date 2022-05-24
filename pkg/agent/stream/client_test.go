@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var noop = func() {}
+
 func NewConfig() config.CentralConfiguration {
 	return config.CentralConfiguration{
 		AgentType:     1,
@@ -144,7 +146,7 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 		initDone = true
 	}
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -221,7 +223,7 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 		initDone = true
 	}
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -289,7 +291,7 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 	}
 
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -354,7 +356,7 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	}
 
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
 	assert.NoError(t, err)
 
 	manager := &mockManager{status: true}
@@ -471,7 +473,7 @@ func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
 
-func (m *mockAPIClient) GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockAPIClient) GetAPIV1ResourceInstancesWithPageSize(map[string]string, string, int) ([]*apiv1.ResourceInstance, error) {
 	m.pagedCalled = true
 	return m.paged, m.pagedErr
 }
