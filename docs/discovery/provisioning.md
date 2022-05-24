@@ -18,7 +18,9 @@
       - [RequestStatus return structure](#requeststatus-return-structure)
     - [Application Request Provision and Deprovision](#application-request-provision-and-deprovision)
     - [Access Request Provision and Deprovision](#access-request-provision-and-deprovision)
+      - [Access Request Provisioning](#access-request-provisioning)
     - [Credential Request Provision and Deprovision](#credential-request-provision-and-deprovision)
+      - [Credential Provisioning](#credential-provisioning)
 
 Marketplace Provisioning allows the consumer to create applications, associate products, and create credentials. Amplify Agents SDK watches for API server resources to trigger provisioning events for the agent to handle. The agents can configure data that is required from consumers to provision access or create credentials for the resource in the connected gateway.
 
@@ -52,6 +54,26 @@ func createAccessRequestDefinition(apiName string, tiers []string) {
         SetEnumValues(tiers).
         SetSortEnumValues()).
     Register()
+}
+```
+
+Here are all of the methods allowed on the AccessRequestBuilder
+
+```go
+// AccessRequestBuilder - aids in creating a new access request
+type AccessRequestBuilder interface {
+  // Sets the name of the access request definition
+  SetName(name string) AccessRequestBuilder
+  // Sets the display name of the access request definition
+  SetTitle(title string) AccessRequestBuilder
+  // Sets the Request Schema, data provided by the requestor
+  SetRequestSchema(schema SchemaBuilder) AccessRequestBuilder
+  // Sets the Provision Schema, data provided to the requestor upon provisioning
+  SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder
+  // Helper to replicate the Request Schema into the Provision Schema
+  SetProvisionSchemaToRequestSchema() AccessRequestBuilder
+  // Builds the AccessRequestDefinition and sends it to API Central
+  Register() (*v1alpha1.AccessRequestDefinition, error)
 }
 ```
 
@@ -90,6 +112,28 @@ func createCredentialRequestDefinitions() {
     agent.WithCRDOAuthPublicKey(),                     // its a key based credential, add public key request property
     agent.WithCRDRequestSchemaProperty(oAuthTypeProp), // add a request schema property
   ).Register()
+}
+```
+
+Here are all of the methods allowed on the AccessRequestBuilder
+
+```go
+// CredentialRequestBuilder - aids in creating a new credential request
+type CredentialRequestBuilder interface {
+  // Sets the name of the credential
+  SetName(name string) CredentialRequestBuilder
+  // Sets the display name of this credential in the UI
+  SetTitle(title string) CredentialRequestBuilder
+  // Sets the Request Schema, data supplied by the requestor
+  SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder
+  // Sets the Provision Schema, data provided to the requestor upon provisioning
+  SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
+  // Sets a list of webhook names, separately created in Central, that are called on Credential state transitions
+  SetWebhooks(webhooks []string) CredentialRequestBuilder
+  // Adds a webhook name, separately created in Central, that is called on Credential state transitions
+  AddWebhook(webhook string) CredentialRequestBuilder
+  // Builds the CredentialRequestDefinition and sends it to API Central
+  Register() (*v1alpha1.CredentialRequestDefinition, error)
 }
 ```
 
@@ -346,6 +390,10 @@ type ApplicationRequest interface {
   GetManagedApplicationName() string
   // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication
   GetApplicationDetailsValue(key string) string
+	// GetTeamName gets the owning team name for the managed application
+	GetTeamName() string
+	// GetID returns the ID of the resource for the request
+	GetID() string
 }
 ```
 
@@ -362,20 +410,48 @@ Both provision and deprovision requests will receive an AccessRequest object tha
 ```go
 // AccessRequest - interface for agents to use to get necessary access request details
 type AccessRequest interface {
-  // GetApplicationName returns the name of the managed application for this credential
-  GetApplicationName() string
-  // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
-  GetAccessRequestDetailsValue(key string) string
   // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplications.
   GetApplicationDetailsValue(key string) string
-  // GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
-  GetInstanceDetails() map[string]interface{}
+  // GetApplicationName returns the name of the managed application for this credential
+  GetApplicationName() string
+  // GetID returns the ID of the resource for the request
+  GetID() string
+  // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
+  GetAccessRequestDetailsValue(key string) string
   // GetAccessRequestData returns the map[string]interface{} of data from the request
   GetAccessRequestData() map[string]interface{}
+  // GetAccessRequestProvisioningData returns the interface{} of data from the provisioning response
+  GetAccessRequestProvisioningData() interface{}
+  // GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
+  GetInstanceDetails() map[string]interface{}
 }
 ```
 
 `GetAccessRequestData()` will have the data requested from the Consumer while creating the request.  This data will match the Access Request Definition schema.
+
+`GetAccessRequestProvisioningData()` will have the access data returned by the agent then the AccessRequestProvision method was called.
+
+
+#### Access Request Provisioning
+
+The following method needs to be implemented and will be invoked when a new AccessRequest resource is created in the environment the agent is linked to.
+
+```go
+  AccessRequestProvision(AccessRequest) (RequestStatus, AccessData)
+```
+
+The provision handling expects a response with 2 values, the [RequestStatus](#requeststatus-return-structure) and the AccessData. To create this AccessData object, the Agent SDK providers a builder with the following methods.
+
+
+```go
+// AccessDataBuilder - builder to create new access data to send to Central
+type AccessDataBuilder interface {
+  // Create AccessData that has an unknown data structure
+  SetData(data map[string]interface{}) AccessData
+}
+```
+
+If the AccessRequestDefinition that is being used by this agent does not have or need a Provisioning Schema for the Access Request then the agent implementation can simply return nil as the AccessData
 
 ### Credential Request Provision and Deprovision
 
@@ -386,17 +462,46 @@ Both provision and deprovision requests will receive an CredentialRequest object
 ```go
 // CredentialRequest - interface for agents to use to get necessary credential request details
 type CredentialRequest interface {
-  // GetCredentialType returns the type of credential related to this request
-  GetCredentialType() string
-  // GetApplicationName returns the name of the managed application for this credential
-  GetApplicationName() string
-  // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
-  GetCredentialDetailsValue(key string) string
   // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
   GetApplicationDetailsValue(key string) string
+  // GetApplicationName returns the name of the managed application for this credential
+  GetApplicationName() string
+	// GetID returns the ID of the resource for the request
+	GetID() string
+  // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
+  GetCredentialDetailsValue(key string) string
+  // GetCredentialType returns the type of credential related to this request
+  GetCredentialType() string
   // GetCredentialData returns the map[string]interface{} of data from the request
   GetCredentialData() map[string]interface{}
 }
 ```
 
-`GetCredentialData()` will have the data requested from the Consumer while creating the request.  This data will match the Credential Request Definition request schema.
+`GetCredentialData()` will have the data requested from the Consumer while creating the request.  This data will match the Credential Request Definition request schema
+
+#### Credential Provisioning
+
+The following method needs to be implemented and will be invoked when a new Credential resource is created in the environment the agent is linked to.
+
+```go
+  CredentialProvision(CredentialRequest) (RequestStatus, Credential)
+```
+
+The provision handling expects a response with 2 values, the [RequestStatus](#requeststatus-return-structure) and the Credential. To create this Credential object, the Agent SDK providers a builder with the following methods.
+
+
+```go
+// CredentialBuilder - builder to create new credentials to send to Central
+type CredentialBuilder interface {
+  // Create a Credential that only sets an OAuth Client ID value
+  SetOAuthID(id string) Credential
+  // Create a Credential that sets an OAuth Client ID and Secret value
+  SetOAuthIDAndSecret(id, secret string) Credential
+  // Create a Credential that only sets an API Key value
+  SetAPIKey(key string) Credential
+  // Create a Credential that has a unknown data structure
+  SetCredential(data map[string]interface{}) Credential
+}
+```
+
+All of the builder methods above return the Credential object. The Agent SDK is able to assist in building the credential objects for OAuth and API Key authentication, if the agent needs to supply data that is not one of those known structures the SetCredential method should be used
