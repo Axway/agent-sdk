@@ -6,11 +6,9 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -164,16 +162,12 @@ func (dc *discoveryCache) execute() error {
 }
 
 func (dc *discoveryCache) handleAPISvc() error {
-	dc.logger.WithField("kind", "APIService").Trace("fetching API Services and updating cache")
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
+	logger := dc.logger.WithField("kind", "APIService")
+	logger.Trace("fetching API Services and updating cache")
 	svcLink := mv1.NewAPIService("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(svcLink)
 
-	apiServices, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
+	apiServices, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
@@ -187,8 +181,9 @@ func (dc *discoveryCache) handleAPISvc() error {
 			}
 		}
 
-		if err := dc.handleResource(svc); err != nil {
-			return err
+		action := getAction(svc.Metadata.State)
+		if err := dc.handleResource(svc, action); err != nil {
+			logger.WithError(err).WithField("name", svc.Name).Error("failed to handle api service")
 		}
 	}
 
@@ -200,81 +195,46 @@ func (dc *discoveryCache) handleServiceInstance() error {
 	dc.instanceCacheLock.Lock()
 	defer dc.instanceCacheLock.Unlock()
 
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
-
 	svcInstanceLink := mv1.NewAPIServiceInstance("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(svcInstanceLink)
 
-	serviceInstances, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
+	serviceInstances, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		e := utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances")
 		dc.logger.Error(e)
 		return e
 	}
 
-	for _, instance := range serviceInstances {
-		if err := dc.handleResource(instance); err != nil {
-			return err
-		}
-	}
-	return nil
+	return dc.handleResourcesList(serviceInstances)
 }
 
 func (dc *discoveryCache) handleCategories() error {
 	dc.logger.WithField("kind", "Category").Trace("fetching Categories and updating cache")
 
-	// Update cache with published resources
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
-
 	categoriesLink := catalog.NewCategory("").GetKindLink()
 	url := dc.formatResourceURL(categoriesLink)
 
-	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
+	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
-	for _, category := range categories {
-		if err := dc.handleResource(category); err != nil {
-			return err
-		}
-	}
-	return nil
+	return dc.handleResourcesList(categories)
 }
 
 func (dc *discoveryCache) handleAccessControlList() error {
 	dc.logger.WithField("kind", "AccessControlList").Trace("fetching AccessControlList and updating cache")
 
-	// Update cache with published resources
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
-
 	acl, _ := mv1.NewAccessControlList("", mv1.EnvironmentGVK().Kind, dc.envName)
 	aclLink := acl.GetKindLink()
 	url := dc.formatResourceURL(aclLink)
 
-	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
+	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
-	for _, category := range categories {
-		if err := dc.handleResource(category); err != nil {
-			return err
-		}
-	}
-	return nil
+	return dc.handleResourcesList(categories)
 }
 
 func (dc *discoveryCache) handleARD() error {
@@ -285,51 +245,13 @@ func (dc *discoveryCache) handleARD() error {
 
 	ardLink := mv1.NewAccessRequestDefinition("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(ardLink)
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
 
-	ards, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	ards, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
-	for _, ard := range ards {
-		if err := dc.handleResource(ard); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (dc *discoveryCache) handleManagedApp() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-
-	dc.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
-
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields + "," + defs.MarketplaceSubResource,
-	}
-
-	managedAppLink := mv1.NewManagedApplication("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(managedAppLink)
-	managedApps, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, app := range managedApps {
-		if err := dc.handleResource(app); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return dc.handleResourcesList(ards)
 }
 
 func (dc *discoveryCache) handleCRD() error {
@@ -342,22 +264,29 @@ func (dc *discoveryCache) handleCRD() error {
 	crd := mv1.NewCredentialRequestDefinition("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(crd)
 
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
-	}
-
-	crds, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(query, url, apiServerPageSize)
+	crds, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 	if err != nil {
 		return err
 	}
 
-	for _, crd := range crds {
-		if err := dc.handleResource(crd); err != nil {
-			return err
-		}
+	return dc.handleResourcesList(crds)
+}
+
+func (dc *discoveryCache) handleManagedApp() error {
+	if !dc.isMpEnabled {
+		return nil
 	}
 
-	return nil
+	dc.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
+
+	managedAppLink := mv1.NewManagedApplication("", dc.envName).GetKindLink()
+	url := dc.formatResourceURL(managedAppLink)
+	managedApps, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
+	if err != nil {
+		return err
+	}
+
+	return dc.handleResourcesList(managedApps)
 }
 
 func (dc *discoveryCache) handleAccessRequest() error {
@@ -367,27 +296,15 @@ func (dc *discoveryCache) handleAccessRequest() error {
 
 	dc.logger.WithField("kind", "AccessRequest").Trace("fetching AccessRequests and updating cache")
 
-	query := map[string]string{
-		apic.FieldsKey: apiServerFields + "," + defs.Spec + "," + defs.ReferencesSubResource,
-	}
-
 	arLink := mv1.NewAccessRequest("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(arLink)
-	accessRequests, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		query, url, apiServerPageSize,
-	)
+	accessRequests, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
 
 	if err != nil {
 		return err
 	}
 
-	for _, req := range accessRequests {
-		if err := dc.handleResource(req); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return dc.handleResourcesList(accessRequests)
 }
 
 func (dc *discoveryCache) handleCredential() error {
@@ -395,7 +312,8 @@ func (dc *discoveryCache) handleCredential() error {
 		return nil
 	}
 
-	dc.logger.WithField("kind", "Credential").Trace("fetching Credentials and updating cache")
+	logger := dc.logger.WithField("kind", "Credential")
+	logger.Trace("fetching Credentials and updating cache")
 
 	credLink := mv1.NewCredential("", dc.envName).GetKindLink()
 	url := dc.formatResourceURL(credLink)
@@ -408,12 +326,7 @@ func (dc *discoveryCache) handleCredential() error {
 		return err
 	}
 
-	for _, cred := range credentials {
-		if err := dc.handleResource(cred); err != nil {
-			return err
-		}
-	}
-	return nil
+	return dc.handleResourcesList(credentials)
 }
 
 func (dc *discoveryCache) handleMarketplaceResources() error {
@@ -435,18 +348,38 @@ func (dc *discoveryCache) handleMarketplaceResources() error {
 	return nil
 }
 
-func (dc *discoveryCache) handleResource(ri *apiV1.ResourceInstance) error {
-	ctx := handler.NewEventContext(proto.Event_CREATED, nil, ri.Name, ri.Kind)
+func (dc *discoveryCache) handleResourcesList(list []*apiV1.ResourceInstance) error {
+	for _, ri := range list {
+		action := getAction(ri.Metadata.State)
+		if err := dc.handleResource(ri, action); ri != nil {
+			dc.logger.
+				WithError(err).
+				WithField("kind", ri.Kind).
+				WithField("name", ri.Name).
+				Error("failed to handle resource")
+		}
+	}
+	return nil
+}
+
+func (dc *discoveryCache) handleResource(ri *apiV1.ResourceInstance, action proto.Event_Type) error {
+	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
 	for _, h := range dc.handlers {
 		err := h.Handle(ctx, nil, ri)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
 func (dc *discoveryCache) formatResourceURL(s string) string {
 	return fmt.Sprintf("%s/apis%s", dc.centralURL, s)
+}
+
+func getAction(state string) proto.Event_Type {
+	if state == v1.ResourceDeleting {
+		return proto.Event_UPDATED
+	}
+	return proto.Event_CREATED
 }
