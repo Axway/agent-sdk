@@ -9,7 +9,7 @@ import (
 
 // constants for retry interval for stream job
 const (
-	defaultRetryInterval = 100 * time.Millisecond
+	defaultRetryInterval = 100 * time.Millisecond //TODO - sdb
 	maxRetryInterval     = 5 * time.Minute
 )
 

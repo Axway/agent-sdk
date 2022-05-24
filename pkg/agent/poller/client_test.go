@@ -23,7 +23,7 @@ var cfg = &config.CentralConfiguration{
 	URL:           "http://abc.com",
 	TLS:           &config.TLSConfiguration{},
 	SingleURL:     "https://abc.com",
-	PollInterval:  1 * time.Second,
+	PollInterval:  1 * time.Second, //TODO - sdb : do we care about tests and mocks
 }
 
 func TestPollClientStart(t *testing.T) {

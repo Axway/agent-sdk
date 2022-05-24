@@ -41,7 +41,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		TeamName:     "testteam",
 		TenantID:     "112456",
 		Environment:  "testenvironment",
-		PollInterval: 1 * time.Second,
+		PollInterval: 1 * time.Second, //TODO - sdb - mock client?
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",

@@ -116,7 +116,7 @@ func startPeriodicStatusUpdate() {
 // startImmediateStatusUpdate - start job that will 'immediately' update status.  NOTE : By 'immediately', this means currently 10 seconds.
 // The time interval for this job is hard coded.
 func startImmediateStatusUpdate() {
-	interval := 10 * time.Second
+	interval := 10 * time.Second //TODO - sdb
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("agentStatusUpdate")

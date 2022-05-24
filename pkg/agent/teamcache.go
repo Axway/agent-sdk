@@ -54,7 +54,7 @@ func registerTeamMapCacheJob() {
 	jobs.RegisterIntervalJobWithName(job, getJobInterval(), "Team Cache")
 }
 
-func getJobInterval() time.Duration {
+func getJobInterval() time.Duration { //TODO - sdb : I think this is an hour
 	interval := time.Hour
 	// check for QA env vars
 	if val := os.Getenv(qaTeamCacheInterval); val != "" {

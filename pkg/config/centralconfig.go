@@ -182,7 +182,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
-		CacheStorageInterval:      10 * time.Second,
+		CacheStorageInterval:      10 * time.Second, //TODO - sdb
 	}
 }
 

@@ -13,7 +13,7 @@ type intervalJobProps struct {
 
 type intervalJob struct {
 	baseJob
-	intervalJobProps
+	intervalJobProps //TODO - sdb ??
 }
 
 //newIntervalJob - creates an interval run job
