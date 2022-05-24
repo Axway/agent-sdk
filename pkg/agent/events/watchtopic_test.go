@@ -660,3 +660,7 @@ func (m mockAPIClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.Resourc
 func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
+
+func (m *mockAPIClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
+	return nil, nil
+}

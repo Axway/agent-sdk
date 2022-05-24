@@ -183,15 +183,6 @@ func TestEventListener_handleEvent(t *testing.T) {
 	}
 }
 
-type mockTokenGetter struct {
-	token string
-	err   error
-}
-
-func (m *mockTokenGetter) GetToken() (string, error) {
-	return m.token, m.err
-}
-
 type mockHandler struct {
 	err error
 }

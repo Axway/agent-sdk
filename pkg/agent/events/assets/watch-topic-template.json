@@ -1,0 +1,22 @@
+{
+  "group": "management",
+  "apiVersion": "v1alpha1",
+  "kind": "WatchTopic",
+  "name": "{{.Name}}",
+  "title": "{{.Title}}",
+  "spec": {
+    "filters": [{{range $index, $kind := .Kinds}}{{if $index}},{{end}}
+      {
+        "group": "{{.Group}}",
+        "kind": "{{.Kind}}",
+        "name": "*",
+      {{if ne .ScopeName ""}}"scope": {
+        "kind": "{{if .ScopeKind}}{{.ScopeKind}}{{else}}Environment{{end}}",
+        "name": "{{.ScopeName}}"
+      },{{end}}
+      "type": ["{{ StringsJoin .EventTypes "\",\""}}"]
+        }{{end}}
+      ],
+      "description": "{{.Description}}"
+      }
+    }
