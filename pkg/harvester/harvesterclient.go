@@ -41,6 +41,7 @@ type Config struct {
 	TenantID         string
 	TLSCfg           *tls.Config
 	TokenGetter      func() (string, error)
+	skipPublish      bool
 }
 
 // Client for connecting to harvester
@@ -49,6 +50,7 @@ type Client struct {
 	Client api.Client
 	URL    string
 	logger log.FieldLogger
+	skipPublish bool
 }
 
 // NewConfig creates a config for harvester connections
@@ -67,6 +69,7 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 		TenantID:         cfg.GetTenantID(),
 		TLSCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
 		TokenGetter:      getToken.GetToken,
+		skipPublish:      cfg.IsFetchOnStartupEnabled(),
 	}
 }
 
@@ -86,10 +89,11 @@ func NewClient(cfg *Config) *Client {
 	harvesterURL := fmt.Sprintf("%s://%s:%d/events", cfg.Protocol, cfg.Host, int(cfg.Port))
 
 	return &Client{
-		URL:    harvesterURL,
-		Cfg:    cfg,
-		Client: newSingleEntryClient(cfg),
+		URL:         harvesterURL,
+		Cfg:         cfg,
+		Client:      newSingleEntryClient(cfg),
 		logger: logger,
+		skipPublish: cfg.skipPublish,
 	}
 }
 
@@ -139,7 +143,9 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 
 		for _, event := range pagedEvents {
 			lastID = event.Metadata.GetSequenceID()
-			eventCh <- event.toProtoEvent()
+			if !h.skipPublish {
+				eventCh <- event.toProtoEvent()
+			}
 		}
 		page++
 	}

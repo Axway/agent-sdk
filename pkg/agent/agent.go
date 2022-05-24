@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -12,7 +13,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -63,6 +63,7 @@ type agentData struct {
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
+	streamer               *stream.StreamerClient
 }
 
 var agent agentData
@@ -83,15 +84,18 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 // InitializeWithAgentFeatures - Initializes the agent with agent features
 func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
+
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
 
+	log.Debug("[INIT] Check other agent running")
 	err := checkRunningAgent()
 	if err != nil {
 		return err
 	}
 
+	log.Debug("[INIT] Validate features config")
 	err = config.ValidateConfig(agentFeaturesCfg)
 	if err != nil {
 		return err
@@ -101,6 +105,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
+		log.Debug("[INIT] Validate central configuration")
 		err = config.ValidateConfig(centralCfg)
 		if err != nil {
 			return err
@@ -109,6 +114,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
+		log.Debug("[INIT] Create new cache manager")
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
@@ -126,6 +132,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
+	log.Debug("[INIT] Configure API")
 	api.SetConfigAgent(
 		centralCfg.GetEnvironmentName(),
 		centralCfg.IsUsingGRPC(),
@@ -136,6 +143,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
+		log.Debug("[INIT] Init Token requester")
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
 			return err
@@ -145,6 +153,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
 
 		if util.IsNotTest() {
+			log.Debug("[INIT] Get Environment")
 			err = initEnvResources(centralCfg, agent.apicClient)
 			if err != nil {
 				return err
@@ -153,6 +162,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if centralCfg.GetAgentName() != "" {
 			if agent.agentResourceManager == nil {
+				log.Debug("[INIT] Get Agent resource")
 				agent.agentResourceManager, err = resource.NewAgentResourceManager(
 					agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
 				)
@@ -166,18 +176,25 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	if !agent.isInitialized {
+		log.Debug("[INIT] Setup signal catch")
 		setupSignalProcessor()
 		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
+			log.Debug("[INIT] Start period health check")
 			hc.StartPeriodicHealthCheck()
 		}
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
+			log.Debug("[INIT] Start Agent Status update")
 			StartAgentStatusUpdate()
-			err := syncCache()
+
+			log.Debug("[INIT] Start Sync Cache")
+			err = syncCache()
 			if err != nil {
 				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
 			}
+
+			log.Debug("[INIT] Start Teal ACL Cache")
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -187,6 +204,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 			// Set agent running
 			if agent.agentResourceManager != nil {
+				log.Debug("[INIT] Set agent status to 'running'")
 				UpdateStatusWithPrevious(AgentRunning, "", "")
 			}
 		}
@@ -261,6 +279,24 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
+// HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers
+// this operation is performed in a go routine
+func HandleFetchOnStartupResources() {
+	if agent.cfg != nil {
+		if agent.cfg.IsFetchOnStartupEnabled() {
+			if agent.streamer != nil {
+				go agent.streamer.HandleFetchOnStartupResources()
+			} else {
+				log.Errorf("Handling fetch-on-startup resources will no occur as streamer is not initialized, check the logs for other errors")
+			}
+		} else {
+			log.Warnf("Handling fetch-on-startup resources will no occur as central.grpc.fetchOnStartup.enabled=false")
+		}
+	} else {
+		log.Warnf("Handling fetch-on-startup resources will no occur as config is not set. Test mode: %v", !util.IsNotTest())
+	}
+}
+
 func syncCache() error {
 	migrations := []migrate.Migrator{
 		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
@@ -296,6 +332,7 @@ func syncCache() error {
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
+		log.Debug("[INIT] Webhook Subscription")
 		return client.RegisterSubscriptionWebhook()
 	}
 	return nil
@@ -413,9 +450,10 @@ func cleanUp() {
 
 func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
+		log.Debug("[INIT] Start event processor in streaming mode")
 		return startStreamMode(cacheSyncFunc)
 	}
-
+	log.Debug("[INIT] Start event processor in polling mode")
 	return startPollMode(cacheSyncFunc)
 }
 
@@ -484,6 +522,7 @@ func startStreamMode(cacheSyncFunc func()) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
+	agent.streamer = sc
 	newEventProcessorJob(sc, "Stream Client")
 
 	return err

@@ -40,7 +40,7 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 
 // Handle processes grpc events triggered for ManagedApplications
 func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}

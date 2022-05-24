@@ -104,6 +104,7 @@ func getLoggerFromContext(ctx context.Context) corelog.FieldLogger {
 	return ctx.Value(ctxLogger).(corelog.FieldLogger)
 }
 
-func getActionFromContext(ctx context.Context) proto.Event_Type {
+// GetActionFromContext retrieve event type from the context
+func GetActionFromContext(ctx context.Context) proto.Event_Type {
 	return ctx.Value(ctxAction).(proto.Event_Type)
 }
