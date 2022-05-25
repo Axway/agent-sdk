@@ -279,6 +279,7 @@ func HandleFetchOnStartupResources() {
 	}
 }
 
+// SyncCache -
 func SyncCache() error {
 	migrations := []migrate.Migrator{
 		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
