@@ -203,6 +203,8 @@ type StringPropertyBuilder interface {
   AddEnumValue(value string) StringPropertyBuilder
   // IsEncrypted - Set that this field must be encrypted at rest, used only in credential provisioning schema
   IsEncrypted() StringPropertyBuilder
+  // SetDefaultValue - Define the initial value for the property
+  SetDefaultValue(value string) StringPropertyBuilder
 }
 ```
 
@@ -248,6 +250,8 @@ type NumberPropertyBuilder interface {
   SetMinValue(min float64) NumberPropertyBuilder
   // SetMaxValue - Set the maximum allowed property value
   SetMaxValue(min float64) NumberPropertyBuilder
+  // SetDefaultValue - Define the initial value for the property
+  SetDefaultValue(value float64) NumberPropertyBuilder
 }
 ```
 
@@ -259,7 +263,8 @@ provisioning.NewSchemaPropertyBuilder().
   SetDescription("Description of the Number property.").
   IsNumber().
     SetMinValue(3.14).
-    SetMaxValue(100.5)
+    SetMaxValue(100.5).
+    SetDefaultValue(50.42)
 ```
 
 #### Integer Property Builder
@@ -270,6 +275,8 @@ type IntegerPropertyBuilder interface {
   SetMinValue(min int64) IntegerPropertyBuilder
   // SetMaxValue - Set the maximum allowed property value
   SetMaxValue(min int64) IntegerPropertyBuilder
+  // SetDefaultValue - Define the initial value for the property
+  SetDefaultValue(value int64) IntegerPropertyBuilder
 }
 ```
 
@@ -281,7 +288,8 @@ provisioning.NewSchemaPropertyBuilder().
   SetDescription("Description of the Integer property.").
   IsInteger().
     SetMinValue(10).
-    SetMaxValue(42)
+    SetMaxValue(42).
+    SetDefaultValue(10)
 ```
 
 #### Array Property Builder
@@ -290,7 +298,7 @@ Create an array of property.
 
 ```go
 type ArrayPropertyBuilder interface {
-  // AddItem - Add a item property in the array property
+  // AddItem - Add an item property in the array property
   AddItem(item PropertyBuilder) ArrayPropertyBuilder
   // SetMinItems - Set the minimum number of items in the array property
   SetMinItems(min uint) ArrayPropertyBuilder

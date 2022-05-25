@@ -54,7 +54,7 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 	return true
 }
 
-func isNotStatusSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
+func shouldIgnoreSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
 	if meta == nil {
 		return false
 	}
