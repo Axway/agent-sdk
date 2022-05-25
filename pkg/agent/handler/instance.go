@@ -21,7 +21,7 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.APIServiceInstanceGVK().Kind {
 		return nil
 	}

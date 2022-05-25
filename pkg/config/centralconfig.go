@@ -115,6 +115,10 @@ type CentralConfig interface {
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
+	IsGRPCInsecure() bool
+	IsFetchOnStartupEnabled() bool
+	GetFetchOnStartupPageSize() int
+	GetFetchOnStartupRetention() time.Duration
 	GetCacheStoragePath() string
 	GetCacheStorageInterval() time.Duration
 	SetIsMarketplaceSubsEnabled(enabled bool)
@@ -158,11 +162,20 @@ type CentralConfiguration struct {
 	isMarketplaceSubs         bool
 }
 
+// FetchOnStartup - Fetch on startup config
+type FetchOnStartup struct {
+	Enabled   bool          `config:"enabled"`
+	PageSize  int           `config:"pageSize"`
+	Retention time.Duration `config:"retention"`
+}
+
 // GRPCConfig - Represents the grpc config
 type GRPCConfig struct {
-	Enabled bool   `config:"enabled"`
-	Host    string `config:"host"`
-	Port    int    `config:"port"`
+	Enabled        bool           `config:"enabled"`
+	Host           string         `config:"host"`
+	Port           int            `config:"port"`
+	Insecure       bool           `config:"insecure"`
+	FetchOnStartup FetchOnStartup `config:"fetchOnStartup"`
 }
 
 // NewCentralConfig - Creates the default central config
@@ -182,7 +195,13 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		UsageReporting:            NewUsageReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
-		CacheStorageInterval:      10 * time.Second, //TODO - sdb
+		CacheStorageInterval:      10 * time.Second,
+		GRPCCfg: GRPCConfig{
+			FetchOnStartup: FetchOnStartup{
+				Retention: 10 * time.Minute,
+				PageSize:  20,
+			},
+		},
 	}
 }
 
@@ -481,6 +500,26 @@ func (c *CentralConfiguration) GetGRPCPort() int {
 	return c.GRPCCfg.Port
 }
 
+// IsGRPCInsecure -
+func (c *CentralConfiguration) IsGRPCInsecure() bool {
+	return c.GRPCCfg.Insecure
+}
+
+// IsFetchOnStartupEnabled -
+func (c *CentralConfiguration) IsFetchOnStartupEnabled() bool {
+	return c.GRPCCfg.FetchOnStartup.Enabled
+}
+
+// GetFetchOnStartupPageSize -
+func (c *CentralConfiguration) GetFetchOnStartupPageSize() int {
+	return c.GRPCCfg.FetchOnStartup.PageSize
+}
+
+// GetFetchOnStartupRetention -
+func (c *CentralConfiguration) GetFetchOnStartupRetention() time.Duration {
+	return c.GRPCCfg.FetchOnStartup.Retention
+}
+
 // GetCacheStoragePath -
 func (c *CentralConfiguration) GetCacheStoragePath() string {
 	return c.CacheStoragePath
@@ -531,6 +570,10 @@ const (
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
 	pathGRPCPort                  = "central.grpc.port"
+	pathGRPCInsecure              = "central.grpc.insecure"
+	pathFetchOnStartupEnable      = "central.grpc.fetchOnStartup.enabled"
+	pathFetchOnStartupPageSize    = "central.grpc.fetchOnStartup.pageSize"
+	pathFetchOnStartupRetention   = "central.grpc.fetchOnStartup.retention"
 	pathCacheStoragePath          = "central.cacheStoragePath"
 	pathCacheStorageInterval      = "central.cacheStorageInterval"
 )
@@ -596,6 +639,22 @@ func (c *CentralConfiguration) validateConfig() {
 	}
 	if c.GetJobExecutionTimeout() < 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathJobTimeout))
+	}
+
+	c.validateGRPC()
+
+}
+
+func (c *CentralConfiguration) validateGRPC() {
+
+	if c.IsFetchOnStartupEnabled() {
+		if c.GetFetchOnStartupPageSize() <= 0 {
+			exception.Throw(ErrBadConfig.FormatError(pathFetchOnStartupPageSize))
+		}
+
+		if c.GetFetchOnStartupRetention() <= 0 {
+			exception.Throw(ErrBadConfig.FormatError(pathFetchOnStartupRetention))
+		}
 	}
 }
 
@@ -675,6 +734,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
 	props.AddIntProperty(pathGRPCPort, 0, "Port for Amplify Central gRPC connection")
+	props.AddBoolProperty(pathGRPCInsecure, false, "Controls whether an agent uses a gRPC connection with TLS")
+	props.AddBoolProperty(pathFetchOnStartupEnable, false, "Enable fetching all watched resources on startup")
+	props.AddIntProperty(pathFetchOnStartupPageSize, 20, "When fetching watched resources on startup, how many resource can be returned at once")
+	props.AddDurationProperty(pathFetchOnStartupRetention, 10*time.Minute, "When fetching watched resources on startup, how much time shall they be hold in the cache before evicted")
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file")
 
@@ -736,9 +799,15 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		},
 		ProxyURL: proxyURL,
 		GRPCCfg: GRPCConfig{
-			Enabled: props.BoolPropertyValue(pathGRPCEnabled),
-			Host:    props.StringPropertyValue(pathGRPCHost),
-			Port:    props.IntPropertyValue(pathGRPCPort),
+			Enabled:  props.BoolPropertyValue(pathGRPCEnabled),
+			Host:     props.StringPropertyValue(pathGRPCHost),
+			Port:     props.IntPropertyValue(pathGRPCPort),
+			Insecure: props.BoolPropertyValue(pathGRPCInsecure),
+			FetchOnStartup: FetchOnStartup{
+				Enabled:   props.BoolPropertyValue(pathFetchOnStartupEnable),
+				PageSize:  props.IntPropertyValue(pathFetchOnStartupPageSize),
+				Retention: props.DurationPropertyValue(pathFetchOnStartupRetention),
+			},
 		},
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
@@ -766,5 +835,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 }
 
 func supportsTraceability(agentType AgentType) bool {
-	return agentType == TraceabilityAgent || agentType == GovernanceAgent
+	return agentType == TraceabilityAgent
 }

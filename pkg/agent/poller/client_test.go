@@ -97,6 +97,10 @@ func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
 
+func (m mockAPIClient) GetAPIV1ResourceInstancesWithPageSize(map[string]string, string, int) ([]*apiv1.ResourceInstance, error) {
+	return nil, nil
+}
+
 type mockTokenGetter struct {
 	token string
 	err   error

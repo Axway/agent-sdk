@@ -21,7 +21,7 @@ func NewCategoryHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 func (c *categoryHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != catalog.CategoryGVK().Kind {
 		return nil
 	}
