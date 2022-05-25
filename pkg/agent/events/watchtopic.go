@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -66,8 +65,8 @@ var (
 
 // getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
 func getOrCreateWatchTopic(name, scope string, client APIClient, features watchTopicFeatures) (*mv1.WatchTopic, error) {
-	wt := mv1.NewWatchTopic("")
-	ri, err := client.GetResource(fmt.Sprintf("%s/%s", wt.GetKindLink(), name))
+	wt := mv1.NewWatchTopic(name)
+	ri, err := client.GetResource(wt.GetSelfLink())
 
 	if err == nil {
 		err = wt.FromInstance(ri)
@@ -212,21 +211,6 @@ func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc APIClient) (*mv1.WatchTopic
 	return wt, err
 }
 
-// getCachedWatchTopic checks the cache for a saved WatchTopic ResourceClient
-func getCachedWatchTopic(c cache.GetItem, key string) (*mv1.WatchTopic, error) {
-	item, err := c.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	v, ok := item.(*mv1.WatchTopic)
-	if !ok {
-		return nil, fmt.Errorf("found item for %s, but it is not a *WatchTopic", key)
-	}
-
-	return v, nil
-}
-
 type kindValues struct {
 	v1.GroupKind
 	EventTypes []string
@@ -317,14 +301,11 @@ func GetWatchTopic(cfg config.CentralConfig, client APIClient) (*mv1.WatchTopic,
 	env := cfg.GetEnvironmentName()
 
 	wtName := getWatchTopicName(env, cfg.GetAgentType())
-	wt, err := getCachedWatchTopic(cache.New(), wtName)
-	if err != nil || wt == nil {
-		wt, err = getOrCreateWatchTopic(wtName, env, client, cfg)
-		if err != nil {
-			return nil, err
-		}
-		// cache the watch topic
+	wt, err := getOrCreateWatchTopic(wtName, env, client, cfg)
+	if err != nil {
+		return nil, err
 	}
+
 	return wt, err
 }
 

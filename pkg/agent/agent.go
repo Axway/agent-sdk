@@ -274,13 +274,21 @@ func syncCache() error {
 
 	mig := migrate.NewMigrateAll(migrations...)
 	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
+
+	opts := []discoveryOpt{
+		withMigration(mig),
+		withMpEnabled(isMpEnabled),
+	}
+
+	if agent.agentResourceManager != nil {
+		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
+	}
+
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
 		GetCentralClient(),
 		newHandlers(),
-		withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource),
-		withMigration(mig),
-		withMpEnabled(isMpEnabled),
+		opts...,
 	)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
