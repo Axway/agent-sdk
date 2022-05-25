@@ -145,16 +145,12 @@ The schema builder has the following methods that may be used.
 type SchemaBuilder interface {
   // Set a name for the schema, this is required
   SetName(name string) SchemaBuilder
-
   // Set a description for the schema
   SetDescription(name string) SchemaBuilder
-
   // Add a property, via the SchemaPropertyBuilder, to the schema, call this as many times as needed
   AddProperty(property SchemaPropertyBuilder) SchemaBuilder
-
   // Add a unique key to the schema, call this as many times as needed
   AddUniqueKey(keyName string) SchemaBuilder
-
   // Builds the schema to be used, returns the json schema in a map[string]interface
   Build() (map[string]interface{}, error)
 }
@@ -398,10 +394,10 @@ type ApplicationRequest interface {
   GetManagedApplicationName() string
   // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication
   GetApplicationDetailsValue(key string) string
-	// GetTeamName gets the owning team name for the managed application
-	GetTeamName() string
-	// GetID returns the ID of the resource for the request
-	GetID() string
+  // GetTeamName gets the owning team name for the managed application
+  GetTeamName() string
+  // GetID returns the ID of the resource for the request
+  GetID() string
 }
 ```
 
@@ -474,8 +470,8 @@ type CredentialRequest interface {
   GetApplicationDetailsValue(key string) string
   // GetApplicationName returns the name of the managed application for this credential
   GetApplicationName() string
-	// GetID returns the ID of the resource for the request
-	GetID() string
+  // GetID returns the ID of the resource for the request
+  GetID() string
   // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
   GetCredentialDetailsValue(key string) string
   // GetCredentialType returns the type of credential related to this request
