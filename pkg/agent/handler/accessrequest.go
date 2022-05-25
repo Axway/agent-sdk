@@ -225,7 +225,7 @@ func (r provAccReq) GetApplicationDetailsValue(key string) string {
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
 func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
-	if r.appDetails == nil {
+	if r.accessDetails == nil {
 		return ""
 	}
 
