@@ -126,7 +126,7 @@ func (j *discoveryCache) updateAPIServiceInstancesCache() {
 	defer j.instanceCacheLock.Unlock()
 
 	query := map[string]string{
-		apic.FieldsKey: apiServerFields,
+		apic.FieldsKey: apiServerFields + "," + defs.Spec,
 	}
 
 	serviceInstances, err := GetCentralClient().GetAPIV1ResourceInstancesWithPageSize(
