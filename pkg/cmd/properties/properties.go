@@ -291,6 +291,13 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
+	// Get seconds duration value and check if duration is less than 30s
+	if d.Seconds() < 30 {
+		log.Warnf("config %s has been reset from %s to the lower limit duration of 30s. Please update this value accordingly in your configs", name, s)
+		// Set duration to the lower limit of 30s
+		d, _ = time.ParseDuration("30s")
+	}
+
 	p.addPropertyToFlatMap(name, s)
 	return d
 }
