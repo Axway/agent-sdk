@@ -652,7 +652,6 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, str
 		// get the ID of the Catalog Application
 		if ref.Kind == cv1.ApplicationGVK().Kind {
 			return ref.ID, ref.Name
-			break
 		}
 	}
 
