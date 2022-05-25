@@ -49,7 +49,7 @@ func (a *StatusConfiguration) GetHealthCheckInterval() time.Duration {
 const (
 	pathPort                = "status.port"
 	pathHealthcheckPeriod   = "status.healthCheckPeriod"
-	pathHealthcheckInterval = "status.healthCheckInterval" //TODO - sdb : do we care about tests and mocks
+	pathHealthcheckInterval = "status.healthCheckInterval"
 )
 
 // AddStatusConfigProperties - Adds the command properties needed for Status Config

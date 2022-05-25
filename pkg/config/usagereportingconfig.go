@@ -100,7 +100,7 @@ func (u *UsageReportingConfiguration) validateInterval() {
 	if val := os.Getenv(oldUsageReportingIntervalEnvVar); val != "" {
 		if value, err := time.ParseDuration(val); err == nil {
 			log.DeprecationWarningReplace(oldUsageReportingIntervalEnvVar, newUsageReportingIntervalEnvVar)
-			u.Interval = value //TODO - sdb
+			u.Interval = value
 		}
 	}
 }
@@ -263,7 +263,7 @@ func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig
 	cfg.URL = props.StringPropertyValue(pathUsageReportingURL)
 	cfg.Publish = props.BoolPropertyValue(pathUsageReportingPublish)
 	cfg.PublishMetric = props.BoolPropertyValue(pathUsageReportingPublishMetric)
-	cfg.Interval = props.DurationPropertyValue(pathUsageReportingInterval) //TODO - sdb
+	cfg.Interval = props.DurationPropertyValue(pathUsageReportingInterval)
 	cfg.Offline = props.BoolPropertyValue(pathUsageReportingOffline)
 	cfg.Schedule = props.StringPropertyValue(pathUsageReportingSchedule)
 
