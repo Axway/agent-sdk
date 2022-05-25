@@ -178,11 +178,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
 
-			err = syncCache()
-			if err != nil {
-				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
-			}
-
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -284,7 +279,7 @@ func HandleFetchOnStartupResources() {
 	}
 }
 
-func syncCache() error {
+func SyncCache() error {
 	migrations := []migrate.Migrator{
 		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
 	}
