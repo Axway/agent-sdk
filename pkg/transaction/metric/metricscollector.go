@@ -649,12 +649,12 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) string {
 		return ""
 	}
 
-	// Lookup Subscription
-	appID := ri.Metadata.ID
+	appID := ri.Metadata.ID // default to the managed app id
 	for _, ref := range app.Metadata.References {
 		// get the ID of the Catalog Application
 		if ref.Kind == cv1.ApplicationGVK().Kind {
 			appID = ref.ID
+			break
 		}
 	}
 
