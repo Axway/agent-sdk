@@ -648,18 +648,15 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, str
 		return "", ""
 	}
 
-	appID := ri.Metadata.ID // default to the managed app id
-	appName := ri.Name
 	for _, ref := range app.Metadata.References {
 		// get the ID of the Catalog Application
 		if ref.Kind == cv1.ApplicationGVK().Kind {
-			appID = ref.ID
-			appName = ref.Name
+			return ref.ID, ref.Name
 			break
 		}
 	}
 
-	return appID, appName
+	return ri.Metadata.ID, ri.Name // default to the managed app id
 }
 
 func (c *collector) getConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
