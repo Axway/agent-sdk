@@ -65,8 +65,8 @@ var (
 
 // getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
 func getOrCreateWatchTopic(name, scope string, client APIClient, features watchTopicFeatures) (*mv1.WatchTopic, error) {
-	wt := mv1.NewWatchTopic(name)
-	ri, err := client.GetResource(wt.GetSelfLink())
+	wt := mv1.NewWatchTopic("")
+	ri, err := client.GetResource(fmt.Sprintf("%s/%s", wt.GetKindLink(), name))
 
 	if err == nil {
 		err = wt.FromInstance(ri)
@@ -102,7 +102,7 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 		return createOrUpdateWatchTopic(newWT, client)
 	}
 
-	//compare the generated WT and the existing WT for changes
+	// compare the generated WT and the existing WT for changes
 	if shouldPushUpdate(wt, newWT) {
 		// update the spec in the existing watch topic
 		wt.Spec = newWT.Spec
