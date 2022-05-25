@@ -45,7 +45,7 @@ func NewCredentialHandler(prov credProv, client client) Handler {
 // Handle processes grpc events triggered for Credentials
 func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
+	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 

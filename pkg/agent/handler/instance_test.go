@@ -58,6 +58,44 @@ func TestNewInstanceHandler(t *testing.T) {
 			},
 		},
 		{
+			name:     "should add another API Service Instance",
+			hasError: false,
+			action:   proto.Event_CREATED,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "1234",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: mv1.APIServiceInstanceGVK().Kind,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "should update an API Service Instance subresource",
+			hasError: false,
+			action:   proto.Event_SUBRESOURCEUPDATED,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "12345",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: mv1.APIServiceInstanceGVK().Kind,
+						},
+					},
+				},
+			},
+		},
+		{
 			name:     "should delete an API Service Instance",
 			hasError: false,
 			action:   proto.Event_DELETED,
@@ -101,11 +139,18 @@ func TestNewInstanceHandler(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewInstanceHandler(cacheManager)
-
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
 				assert.NotNil(t, err)
 			} else {
+				if tc.resource.ResourceMeta.GroupVersionKind.GroupKind.Kind == mv1.APIServiceInstanceGVK().Kind &&
+					(tc.action == proto.Event_CREATED ||
+						tc.action == proto.Event_UPDATED ||
+						tc.action == proto.Event_SUBRESOURCEUPDATED) {
+					v, err := cacheManager.GetAPIServiceInstanceByID(tc.resource.Metadata.ID)
+					assert.NoError(t, err)
+					assert.NotNil(t, v)
+				}
 				assert.Nil(t, err)
 			}
 		})
