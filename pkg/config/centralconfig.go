@@ -114,7 +114,7 @@ type CentralConfig interface {
 	GetUsageReportingConfig() UsageReportingConfig
 	IsUsingGRPC() bool
 	GetGRPCHost() string
-	GetGRPCPort() int>
+	GetGRPCPort() int
 	IsGRPCInsecure() bool
 	IsFetchOnStartupEnabled() bool
 	GetFetchOnStartupPageSize() int
