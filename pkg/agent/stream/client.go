@@ -96,12 +96,6 @@ func NewStreamerClient(
 		watchOpts = append(watchOpts, wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()))
 	}
 
-	if cfg.IsGRPCInsecure() {
-		watchOpts = append(watchOpts, wm.WithTLSConfig(nil))
-	} else {
-		watchOpts = append(watchOpts, wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()))
-	}
-
 	if cfg.GetSingleURL() != "" {
 		singleEntryURL, err := url.Parse(cfg.GetSingleURL())
 		if err == nil {
