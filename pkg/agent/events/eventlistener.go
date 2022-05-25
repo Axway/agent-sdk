@@ -22,6 +22,7 @@ type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
+	GetAPIV1ResourceInstancesWithPageSize(map[string]string, string, int) ([]*apiv1.ResourceInstance, error)
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
@@ -126,7 +127,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		return err
 	}
 
-	em.handleResource(ctx, event.Metadata, ri)
+	em.HandleResource(ctx, event.Metadata, ri)
 	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
@@ -138,8 +139,8 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 	return em.client.GetResource(event.Payload.Metadata.SelfLink)
 }
 
-// handleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) handleResource(
+// HandleResource loops through all the handlers and passes the event to each one for processing.
+func (em *EventListener) HandleResource(
 	ctx context.Context,
 	eventMetadata *proto.EventMeta,
 	resource *apiv1.ResourceInstance,

@@ -22,7 +22,7 @@ func NewACLHandler(agentCacheManager agentcache.Manager) Handler {
 
 // Handle processes grpc events triggered for AccessRequests
 func (h *aclHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.AccessControlListGVK().Kind {
 		return nil
 	}

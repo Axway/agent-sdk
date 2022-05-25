@@ -8,11 +8,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -63,6 +64,7 @@ type agentData struct {
 	instanceValidatorJobID string
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
+	streamer               *stream.StreamerClient
 }
 
 var agent agentData
@@ -83,6 +85,7 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 // InitializeWithAgentFeatures - Initializes the agent with agent features
 func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
+
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
@@ -174,10 +177,12 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-			err := syncCache()
+
+			err = syncCache()
 			if err != nil {
 				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
 			}
+
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -259,6 +264,24 @@ func RegisterResourceEventHandler(name string, resourceEventHandler handler.Hand
 // UnregisterResourceEventHandler - removes the specified resource event handler
 func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
+}
+
+// HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers
+// this operation is performed in a go routine
+func HandleFetchOnStartupResources() {
+	if agent.cfg != nil {
+		if agent.cfg.IsFetchOnStartupEnabled() {
+			if agent.streamer != nil {
+				go agent.streamer.HandleFetchOnStartupResources()
+			} else {
+				log.Errorf("Handling fetch-on-startup resources will no occur as streamer is not initialized, check the logs for other errors")
+			}
+		} else {
+			log.Warnf("Handling fetch-on-startup resources will no occur as central.grpc.fetchOnStartup.enabled=false")
+		}
+	} else {
+		log.Warnf("Handling fetch-on-startup resources will no occur as config is not set. Test mode: %v", !util.IsNotTest())
+	}
 }
 
 func syncCache() error {
@@ -432,7 +455,6 @@ func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
 		return startStreamMode(cacheSyncFunc)
 	}
-
 	return startPollMode(cacheSyncFunc)
 }
 
@@ -510,6 +532,7 @@ func startStreamMode(cacheSyncFunc func()) error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
+	agent.streamer = sc
 	newEventProcessorJob(sc, "Stream Client")
 
 	return err

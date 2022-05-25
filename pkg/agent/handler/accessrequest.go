@@ -41,7 +41,7 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || isNotStatusSubResourceUpdate(action, meta) {
 		return nil
 	}
@@ -225,7 +225,7 @@ func (r provAccReq) GetApplicationDetailsValue(key string) string {
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
 func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
-	if r.appDetails == nil {
+	if r.accessDetails == nil {
 		return ""
 	}
 

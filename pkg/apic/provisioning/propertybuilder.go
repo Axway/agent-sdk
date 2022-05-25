@@ -96,6 +96,8 @@ type NumberPropertyBuilder interface {
 	SetMinValue(min float64) NumberPropertyBuilder
 	// SetMaxValue - Set the maximum allowed number value
 	SetMaxValue(min float64) NumberPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value float64) NumberPropertyBuilder
 	PropertyBuilder
 }
 
@@ -105,6 +107,8 @@ type IntegerPropertyBuilder interface {
 	SetMinValue(min int64) IntegerPropertyBuilder
 	// SetMaxValue - Set the maximum allowed integer value
 	SetMaxValue(min int64) IntegerPropertyBuilder
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value int64) IntegerPropertyBuilder
 	PropertyBuilder
 }
 
@@ -117,7 +121,7 @@ type ObjectPropertyBuilder interface {
 
 // ArrayPropertyBuilder - specific methods related to the Array property builders
 type ArrayPropertyBuilder interface {
-	// AddItem - Add a item property in the array property
+	// AddItem - Add an item property in the array property
 	AddItem(item PropertyBuilder) ArrayPropertyBuilder
 	// SetMinItems - Set the minimum number of items in the array property
 	SetMinItems(min uint) ArrayPropertyBuilder
@@ -341,6 +345,7 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 	}
 	def.Enum = p.enums
 
+	// set default value
 	if len(p.defaultValue) > 0 {
 		if len(p.enums) > 0 {
 			// Check validity for defaultValue
@@ -360,6 +365,7 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	// set if the property is encrypted at rest
 	def.IsEncrypted = p.isEncrypted
+
 	return def, err
 }
 
@@ -371,6 +377,7 @@ type numberSchemaProperty struct {
 	schemaProperty *schemaProperty
 	minValue       *float64 // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	maxValue       *float64 // We use a pointer to differentiate the "blank value" from a chosen 0 max value
+	defaultValue   *float64
 	PropertyBuilder
 }
 
@@ -386,6 +393,12 @@ func (p *numberSchemaProperty) SetMaxValue(max float64) NumberPropertyBuilder {
 	return p
 }
 
+// SetDefaultValue - Define the initial value for the property
+func (p *numberSchemaProperty) SetDefaultValue(value float64) NumberPropertyBuilder {
+	p.defaultValue = &value
+	return p
+}
+
 // Build - create the propertyDefinition for use in the subscription schema builder
 func (p *numberSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
@@ -395,6 +408,16 @@ func (p *numberSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	if p.minValue != nil && p.maxValue != nil && *p.minValue > *p.maxValue {
 		return nil, fmt.Errorf("max value (%f) must be greater than min value (%f)", *p.maxValue, *p.minValue)
+	}
+
+	if p.defaultValue != nil {
+		if p.minValue != nil && *p.defaultValue < *p.minValue {
+			return nil, fmt.Errorf("Default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
+		}
+		if p.maxValue != nil && *p.defaultValue > *p.maxValue {
+			return nil, fmt.Errorf("Default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
+		}
+		def.DefaultValue = p.defaultValue
 	}
 
 	def.Minimum = p.minValue
@@ -421,6 +444,13 @@ func (p *integerSchemaProperty) SetMinValue(min int64) IntegerPropertyBuilder {
 func (p *integerSchemaProperty) SetMaxValue(max int64) IntegerPropertyBuilder {
 	maximum := float64(max)
 	p.maxValue = &maximum
+	return p
+}
+
+// SetDefaultValue - Define the initial value for the property
+func (p *integerSchemaProperty) SetDefaultValue(value int64) IntegerPropertyBuilder {
+	defaultValue := float64(value)
+	p.defaultValue = &defaultValue
 	return p
 }
 

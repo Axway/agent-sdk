@@ -22,7 +22,7 @@ func NewTraceManagedApplicationHandler(cache agentcache.Manager) Handler {
 
 // Handle processes grpc events triggered for ManagedApplications for trace agent
 func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := getActionFromContext(ctx)
+	action := GetActionFromContext(ctx)
 	if resource.Kind != mv1.ManagedApplicationGVK().Kind {
 		return nil
 	}

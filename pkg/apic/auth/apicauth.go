@@ -3,32 +3,28 @@
 package auth
 
 import (
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"math/big"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
-
-	"crypto/rsa"
-	"crypto/x509"
-	"io/ioutil"
-
-	"net/http"
-	"net/url"
-
-	"encoding/json"
-	"encoding/pem"
-
-	"math/big"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
@@ -328,7 +324,7 @@ func (ptg *platformTokenGenerator) getPlatformTokens(requestToken string) (*axwa
 
 	tokens := axwayTokenResponse{}
 	if err := json.Unmarshal(resp.Body, &tokens); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to unmarshal token: %v", err)
 	}
 
 	return &tokens, nil
@@ -382,7 +378,7 @@ func (ptp *platformTokenGetter) Close() error {
 
 // fetchNewToken fetches a new token from the platform and updates the token cache.
 func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
-	log.Trace("Get cached token is empty.  Try and fetch a new token")
+	log.Debug("[INIT] Get cached token is empty. Try and fetch a new token")
 	privateKey, err := ptp.getPrivateKey()
 	if err != nil {
 		return "", err
@@ -398,6 +394,7 @@ func (ptp *platformTokenGetter) fetchNewToken() (string, error) {
 		*privateKey.Precomputed.Qinv = big.Int{}
 	}()
 
+	log.Debug("[INIT] Get public key")
 	publicKey, err := ptp.getPublicKey()
 	if err != nil {
 		return "", err

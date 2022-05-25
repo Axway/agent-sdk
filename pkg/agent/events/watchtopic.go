@@ -2,6 +2,7 @@ package events
 
 import (
 	"bytes"
+	_ "embed" // load of the watch topic template
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,7 +16,9 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-// agentTypesMap - Agent Types map
+//go:embed assets/watch-topic-template.json
+var agentTemplate string
+
 var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    "discoveryagents",
 	config.TraceabilityAgent: "traceabilityagents",
@@ -27,38 +30,20 @@ type watchTopicFeatures interface {
 	GetAgentType() config.AgentType
 }
 
-// TODO replace this with the resource def
 const (
-	agentTemplate = `{
-	"group": "management",
-	"apiVersion": "v1alpha1",
-	"kind": "WatchTopic",
-	"name": "{{.Name}}",
-	"title": "{{.Title}}",
-	"spec": {
-		"filters": [{{range $index, $kind := .Kinds}}{{if $index}},{{end}}
-			{
-				"group": "{{.Group}}",
-				"kind": "{{.Kind}}",
-				"name": "*",
-				{{if ne .ScopeName ""}}"scope": {
-					"kind": "{{if .ScopeKind}}{{.ScopeKind}}{{else}}Environment{{end}}",
-					"name": "{{.ScopeName}}"
-				},{{end}}
-				"type": ["{{ StringsJoin .EventTypes "\",\""}}"]
-			}{{end}}
-		],
-		"description": "{{.Description}}"
-	}
-}
-`
 	desc = "Watch Topic used by a %s agent for resources in the %s environment."
+	// WatchTopicFilterTypeCreated filter type name
+	WatchTopicFilterTypeCreated = "created"
+	// WatchTopicFilterTypeUpdated filter type name
+	WatchTopicFilterTypeUpdated = "updated"
+	// WatchTopicFilterTypeDeleted filter type name
+	WatchTopicFilterTypeDeleted = "deleted"
 )
 
 var (
-	created          = []string{"created"}
-	updated          = []string{"updated"}
-	deleted          = []string{"deleted"}
+	created          = []string{WatchTopicFilterTypeCreated}
+	updated          = []string{WatchTopicFilterTypeUpdated}
+	deleted          = []string{WatchTopicFilterTypeDeleted}
 	createdOrUpdated = append(created, updated...)
 	all              = append(createdOrUpdated, deleted...)
 )
@@ -279,13 +264,12 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 	kinds := []kindValues{
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
 		{GroupKind: mv1.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
 			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: mv1.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{

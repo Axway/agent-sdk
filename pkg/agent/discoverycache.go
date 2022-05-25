@@ -176,7 +176,7 @@ func (dc *discoveryCache) handleAPISvc() error {
 			var err error
 			svc, err = dc.migrator.Migrate(svc)
 			if err != nil {
-				return fmt.Errorf("failed to migrate service: %s", err)
+				dc.logger.Debugf("failed to migrate service: %s", err)
 			}
 		}
 
