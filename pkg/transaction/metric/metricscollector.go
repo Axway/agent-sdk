@@ -309,8 +309,7 @@ func (c *collector) createAppDetail(app *v1.ResourceInstance, subscription *v1.R
 	}
 
 	if app != nil {
-		detail.ID = app.Metadata.ID
-		detail.Name = app.Name
+		detail.ID, detail.Name = c.getConsumerApplication(app)
 		detail.ConsumerOrgID = c.getConsumerOrgID(app)
 		if detail.ConsumerOrgID == "" {
 			detail.ConsumerOrgID = c.getConsumerOrgIDFromSubscription(subscription)
@@ -642,6 +641,21 @@ func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
 	app.FromInstance(ri)
 
 	return app.Marketplace.Resource.Owner.Organization.Id
+}
+
+func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, string) {
+	if ri == nil {
+		return "", ""
+	}
+
+	for _, ref := range ri.Metadata.References {
+		// get the ID of the Catalog Application
+		if ref.Kind == cv1.ApplicationGVK().Kind {
+			return ref.ID, ref.Name
+		}
+	}
+
+	return ri.Metadata.ID, ri.Name // default to the managed app id
 }
 
 func (c *collector) getConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
