@@ -101,7 +101,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Errorf("error getting credential request definition")
+		logger.WithError(err).Error("error getting credential request definition")
 		h.onError(ctx, cred, err)
 		return cred
 	}

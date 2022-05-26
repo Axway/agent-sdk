@@ -132,11 +132,13 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 
 	if status.GetStatus() == prov.Success {
 		sec := app.Spec.Security
-		data, err := h.encryptSchema(
-			ard.Spec.Provision.Schema,
-			data,
-			sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
-		)
+		if ard.Spec.Provision != nil {
+			data, err = h.encryptSchema(
+				ard.Spec.Provision.Schema,
+				data,
+				sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+			)
+		}
 
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().
