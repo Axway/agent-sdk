@@ -35,7 +35,7 @@ func TestPollClientStart(t *testing.T) {
 	}
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	pollClient, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil)
+	pollClient, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil, watchTopic)
 	assert.NotNil(t, pollClient)
 	assert.Nil(t, err)
 
@@ -131,4 +131,23 @@ func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event)
 		}
 	}
 	return 0, m.err
+}
+
+var watchTopic = &mv1.WatchTopic{
+	ResourceMeta: apiv1.ResourceMeta{},
+	Owner:        nil,
+	Spec: mv1.WatchTopicSpec{
+		Description: "",
+		Filters: []mv1.WatchTopicSpecFilters{
+			{
+				Group: "management",
+				Kind:  mv1.APIServiceGVK().Kind,
+				Name:  "*",
+				Scope: &mv1.WatchTopicSpecScope{
+					Kind: "Environment",
+					Name: "mockEnvName",
+				},
+			},
+		},
+	},
 }

@@ -62,18 +62,14 @@ func NewStreamerClient(
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
 	onEventSyncError func(),
+	wt *v1alpha1.WatchTopic,
 	handlers ...handler.Handler,
 ) (*StreamerClient, error) {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent.stream").
 		WithComponent("Client")
+
 	tenant := cfg.GetTenantID()
-
-	wt, err := events.GetWatchTopic(cfg, apiClient)
-	if err != nil {
-		return nil, err
-	}
-
 	host, port := getWatchServiceHostPort(cfg)
 
 	watchCfg := &wm.Config{
@@ -137,7 +133,6 @@ func NewStreamerClient(
 	}
 
 	if cfg.IsFetchOnStartupEnabled() {
-		log.Debug("[INIT] Fetch and cache watch topic resources")
 		loadErr := cacheStartupResources(s)
 		if loadErr != nil {
 			return nil, loadErr

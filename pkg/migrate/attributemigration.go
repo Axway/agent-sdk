@@ -77,7 +77,7 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 // that refer to the APIService will all have their attributes updated.
 func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
-		return ri, fmt.Errorf("expected resource instance kind to be api service")
+		return ri, nil
 	}
 
 	// skip migration if x-agent-details is found for the service.

@@ -8,7 +8,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -303,10 +305,16 @@ func SyncCache() error {
 		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
 	}
 
+	wt, err := events.GetWatchTopic(agent.cfg, GetCentralClient())
+	if err != nil {
+		return err
+	}
+
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
 		GetCentralClient(),
 		newHandlers(),
+		wt,
 		opts...,
 	)
 
@@ -327,7 +335,7 @@ func SyncCache() error {
 		agent.cacheManager.SaveCache()
 	}
 
-	return startCentralEventProcessor(cacheSync)
+	return startCentralEventProcessor(wt, cacheSync)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -447,11 +455,11 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(cacheSyncFunc func()) error {
+func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(cacheSyncFunc)
+		return startStreamMode(wt, cacheSyncFunc)
 	}
-	return startPollMode(cacheSyncFunc)
+	return startPollMode(wt, cacheSyncFunc)
 }
 
 func newHandlers() []handler.Handler {
@@ -485,7 +493,7 @@ func newHandlers() []handler.Handler {
 	return handlers
 }
 
-func startPollMode(cacheSyncFunc func()) error {
+func startPollMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
 	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
@@ -497,6 +505,7 @@ func startPollMode(cacheSyncFunc func()) error {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
 		},
 		cacheSyncFunc,
+		wt,
 		handlers...,
 	)
 
@@ -509,7 +518,7 @@ func startPollMode(cacheSyncFunc func()) error {
 	return err
 }
 
-func startStreamMode(cacheSyncFunc func()) error {
+func startStreamMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
 	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(
@@ -521,6 +530,7 @@ func startStreamMode(cacheSyncFunc func()) error {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 		},
 		cacheSyncFunc,
+		wt,
 		handlers...,
 	)
 
