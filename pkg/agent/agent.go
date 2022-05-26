@@ -2,12 +2,13 @@ package agent
 
 import (
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -89,13 +90,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.teamMap = cache.New()
 	}
 
-	log.Debug("[INIT] Check other agent running")
 	err := checkRunningAgent()
 	if err != nil {
 		return err
 	}
 
-	log.Debug("[INIT] Validate features config")
 	err = config.ValidateConfig(agentFeaturesCfg)
 	if err != nil {
 		return err
@@ -105,7 +104,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
-		log.Debug("[INIT] Validate central configuration")
 		err = config.ValidateConfig(centralCfg)
 		if err != nil {
 			return err
@@ -114,7 +112,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
-		log.Debug("[INIT] Create new cache manager")
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
@@ -132,7 +129,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
-	log.Debug("[INIT] Configure API")
 	api.SetConfigAgent(
 		centralCfg.GetEnvironmentName(),
 		centralCfg.IsUsingGRPC(),
@@ -143,7 +139,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
-		log.Debug("[INIT] Init Token requester")
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
 			return err
@@ -153,7 +148,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
 
 		if util.IsNotTest() {
-			log.Debug("[INIT] Get Environment")
 			err = initEnvResources(centralCfg, agent.apicClient)
 			if err != nil {
 				return err
@@ -162,7 +156,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if centralCfg.GetAgentName() != "" {
 			if agent.agentResourceManager == nil {
-				log.Debug("[INIT] Get Agent resource")
 				agent.agentResourceManager, err = resource.NewAgentResourceManager(
 					agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
 				)
@@ -176,25 +169,15 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	if !agent.isInitialized {
-		log.Debug("[INIT] Setup signal catch")
 		setupSignalProcessor()
 		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
-			log.Debug("[INIT] Start period health check")
 			hc.StartPeriodicHealthCheck()
 		}
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-			log.Debug("[INIT] Start Agent Status update")
 			StartAgentStatusUpdate()
 
-			log.Debug("[INIT] Start Sync Cache")
-			err = syncCache()
-			if err != nil {
-				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
-			}
-
-			log.Debug("[INIT] Start Teal ACL Cache")
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -204,7 +187,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 			// Set agent running
 			if agent.agentResourceManager != nil {
-				log.Debug("[INIT] Set agent status to 'running'")
 				UpdateStatusWithPrevious(AgentRunning, "", "")
 			}
 		}
@@ -297,7 +279,8 @@ func HandleFetchOnStartupResources() {
 	}
 }
 
-func syncCache() error {
+// SyncCache -
+func SyncCache() error {
 	migrations := []migrate.Migrator{
 		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
 	}
@@ -309,14 +292,30 @@ func syncCache() error {
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)
+	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
 
-	discoveryCache := newDiscoveryCache(agent.agentResourceManager, mig)
+	opts := []discoveryOpt{
+		withMigration(mig),
+		withMpEnabled(isMpEnabled),
+	}
+
+	if agent.agentResourceManager != nil {
+		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
+	}
+
+	discoveryCache := newDiscoveryCache(
+		agent.cfg,
+		GetCentralClient(),
+		newHandlers(),
+		opts...,
+	)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
 		err := discoveryCache.execute()
 		if err != nil {
 			return err
 		}
+		agent.cacheManager.SaveCache()
 	}
 
 	cacheSync := func() {
@@ -325,6 +324,7 @@ func syncCache() error {
 		if err != nil {
 			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
 		}
+		agent.cacheManager.SaveCache()
 	}
 
 	return startCentralEventProcessor(cacheSync)
@@ -332,7 +332,6 @@ func syncCache() error {
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
-		log.Debug("[INIT] Webhook Subscription")
 		return client.RegisterSubscriptionWebhook()
 	}
 	return nil
@@ -450,10 +449,8 @@ func cleanUp() {
 
 func startCentralEventProcessor(cacheSyncFunc func()) error {
 	if agent.cfg.IsUsingGRPC() {
-		log.Debug("[INIT] Start event processor in streaming mode")
 		return startStreamMode(cacheSyncFunc)
 	}
-	log.Debug("[INIT] Start event processor in polling mode")
 	return startPollMode(cacheSyncFunc)
 }
 
@@ -461,19 +458,28 @@ func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
 		handler.NewInstanceHandler(agent.cacheManager),
-		handler.NewCategoryHandler(agent.cacheManager),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
-		handler.NewCRDHandler(agent.cacheManager),
-		handler.NewARDHandler(agent.cacheManager),
-		// handler.NewACLHandler(agent.cacheManager),
 		agent.proxyResourceHandler,
+	}
+
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		handlers = append(
+			handlers,
+			handler.NewCategoryHandler(agent.cacheManager),
+			handler.NewCRDHandler(agent.cacheManager),
+			handler.NewARDHandler(agent.cacheManager),
+			// handler.NewACLHandler(agent.cacheManager),
+		)
 	}
 
 	// Register managed application and access handler for traceability agent
 	// For discovery agent, the handlers gets registered while setting up provisioner
 	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
-		handlers = append(handlers, handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
-		handlers = append(handlers, handler.NewTraceManagedApplicationHandler(agent.cacheManager))
+		handlers = append(
+			handlers,
+			handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient),
+			handler.NewTraceManagedApplicationHandler(agent.cacheManager),
+		)
 	}
 
 	return handlers

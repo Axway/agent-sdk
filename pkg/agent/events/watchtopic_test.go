@@ -6,7 +6,6 @@ import (
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,58 +58,6 @@ func TestCreateWatchTopic(t *testing.T) {
 		})
 	}
 
-}
-
-func TestGetCachedWatchTopic(t *testing.T) {
-	c1 := mockCacheGet{
-		item: &mv1.WatchTopic{
-			ResourceMeta: apiv1.ResourceMeta{
-				Name: "wt-name",
-			},
-		},
-		err: nil,
-	}
-
-	c2 := mockCacheGet{
-		item: nil,
-		err:  fmt.Errorf("err"),
-	}
-
-	tests := []struct {
-		name   string
-		key    string
-		hasErr bool
-		err    error
-		cache  cache.GetItem
-	}{
-		{
-			name:   "should get a watch topic from the cache",
-			hasErr: false,
-			err:    nil,
-			cache:  c1,
-			key:    "wt-name",
-		},
-		{
-			name:   "should get a watch topic from the cache",
-			hasErr: true,
-			err:    fmt.Errorf("error"),
-			cache:  c2,
-			key:    "asdsf",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			wt, err := getCachedWatchTopic(tc.cache, tc.key)
-
-			if tc.hasErr {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-				assert.Equal(t, tc.key, wt.Name)
-			}
-		})
-	}
 }
 
 type mockWatchTopicFeatures struct {

@@ -300,6 +300,13 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	if !c.initialized {
+		if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() {
+			err = agent.SyncCache()
+			if err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
+		}
+
 		// Start the initial and recurring version check jobs
 		startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 		// Init the healthcheck API

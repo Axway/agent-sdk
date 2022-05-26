@@ -3,32 +3,28 @@
 package auth
 
 import (
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"math/big"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
-
-	"crypto/rsa"
-	"crypto/x509"
-	"io/ioutil"
-
-	"net/http"
-	"net/url"
-
-	"encoding/json"
-	"encoding/pem"
-
-	"math/big"
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
