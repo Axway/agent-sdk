@@ -294,15 +294,14 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	d, _ := time.ParseDuration(s)
 
 	// Get config value and check if duration is less than 30s
-	if d < time.Second*30 {
+	if d < lowerLimit {
 		flagName := p.nameToFlagName(name)
 		flag := p.rootCmd.Flag(flagName)
 
 		// since config value is < 30s, get duration default value
-		defaultValue := flag.DefValue
-		d, _ = time.ParseDuration(defaultValue)
+		d, _ = time.ParseDuration(flag.DefValue)
 
-		if d > time.Second*30 {
+		if d > lowerLimit {
 			// if defaultValue is > 30s, then just set the lower limit
 			d = lowerLimit
 			log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
