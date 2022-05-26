@@ -2,11 +2,12 @@ package stream
 
 import (
 	"fmt"
-	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"net"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/util"

@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -249,16 +250,19 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 		return
 	}
 	agent.provisioner = provisioner
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"accessrequesthandler",
-		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
-	)
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"managedappHandler",
-		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
-	)
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"credentialHandler",
-		handler.NewCredentialHandler(agent.provisioner, agent.apicClient),
-	)
+
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"accessrequesthandler",
+			handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
+		)
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"managedappHandler",
+			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
+		)
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"credentialHandler",
+			handler.NewCredentialHandler(agent.provisioner, agent.apicClient),
+		)
+	}
 }

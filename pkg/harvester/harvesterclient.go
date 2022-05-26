@@ -46,10 +46,10 @@ type Config struct {
 
 // Client for connecting to harvester
 type Client struct {
-	Cfg    *Config
-	Client api.Client
-	URL    string
-	logger log.FieldLogger
+	Cfg         *Config
+	Client      api.Client
+	URL         string
+	logger      log.FieldLogger
 	skipPublish bool
 }
 
@@ -92,7 +92,7 @@ func NewClient(cfg *Config) *Client {
 		URL:         harvesterURL,
 		Cfg:         cfg,
 		Client:      newSingleEntryClient(cfg),
-		logger: logger,
+		logger:      logger,
 		skipPublish: cfg.skipPublish,
 	}
 }
