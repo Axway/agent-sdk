@@ -193,6 +193,10 @@ func CheckIsRunning() error {
 			URL:    "http://0.0.0.0:" + strconv.Itoa(statusConfig.GetPort()) + "/status",
 		}
 		res, err := apiClient.Send(req)
+		if res == nil || err != nil {
+			return nil
+		}
+
 		if err == nil && res.Code == 200 {
 			return ErrAlreadyRunning
 		}
