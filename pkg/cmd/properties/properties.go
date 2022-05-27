@@ -288,13 +288,29 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
+	lowerLimit, _ := time.ParseDuration("30s")
+
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
+
+	// Get config value and check if duration is less than 30s
+	if d < lowerLimit {
+		flagName := p.nameToFlagName(name)
+		flag := p.rootCmd.Flag(flagName)
+
+		// since config value is < 30s, get duration default value
+		d, _ = time.ParseDuration(flag.DefValue)
+
+		if d > lowerLimit {
+			// if defaultValue is > 30s, then just set the lower limit
+			d = lowerLimit
+			log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+		}
+	}
 
 	p.addPropertyToFlatMap(name, s)
 	return d
 }
-
 func (p *properties) IntPropertyValue(name string) int {
 	s := p.parseStringValue(name)
 	i, _ := strconv.Atoi(s)
