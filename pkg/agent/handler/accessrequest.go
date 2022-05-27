@@ -20,22 +20,24 @@ const (
 )
 
 type arProvisioner interface {
-	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
+	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
 
 type accessRequestHandler struct {
-	prov   arProvisioner
-	cache  agentcache.Manager
-	client client
+	prov          arProvisioner
+	cache         agentcache.Manager
+	client        client
+	encryptSchema encryptSchemaFunc
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
 func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client) Handler {
 	return &accessRequestHandler{
-		prov:   prov,
-		cache:  cache,
-		client: client,
+		prov:          prov,
+		cache:         cache,
+		client:        client,
+		encryptSchema: encryptSchema,
 	}
 }
 
@@ -54,6 +56,11 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if err != nil {
 		log.WithError(err).Error("could not handle access request")
 		return nil
+	}
+
+	// add or update the cache with the access request
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+		h.cache.AddAccessRequest(ar)
 	}
 
 	if ok := isStatusFound(ar.Status); !ok {
@@ -101,6 +108,13 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 		return ar
 	}
 
+	ard, err := h.getARD(ctx, ar)
+	if err != nil {
+		log.WithError(err).Errorf("error getting access request definition")
+		h.onError(ctx, ar, err)
+		return ar
+	}
+
 	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
 	if err != nil {
 		log.WithError(err).Error("error getting resource details")
@@ -108,7 +122,33 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 		return ar
 	}
 
-	status := h.prov.AccessRequestProvision(req)
+	status, accessData := h.prov.AccessRequestProvision(req)
+	data := map[string]interface{}{}
+	if accessData != nil {
+		if d := accessData.GetData(); d != nil {
+			data = d
+		}
+	}
+
+	if status.GetStatus() == prov.Success {
+		sec := app.Spec.Security
+		if ard.Spec.Provision != nil {
+			data, err = h.encryptSchema(
+				ard.Spec.Provision.Schema,
+				data,
+				sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+			)
+		}
+
+		if err != nil {
+			status = prov.NewRequestStatusBuilder().
+				SetMessage(fmt.Sprintf("error encrypting access data: %s", err.Error())).
+				Failed()
+		} else {
+			ar.Data = data
+		}
+	}
+
 	ar.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())
@@ -122,6 +162,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 
 	ar.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(ar),
+		"data":             ar.Data,
 	}
 
 	return ar
@@ -173,7 +214,31 @@ func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *mv1.AccessRe
 	return app, err
 }
 
-func (h *accessRequestHandler) newReq(_ context.Context, ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
+func (h *accessRequestHandler) getARD(ctx context.Context, ar *mv1.AccessRequest) (*mv1.AccessRequestDefinition, error) {
+	// get the instance from the cache
+	instance, err := h.getServiceInstance(ctx, ar)
+	if err != nil {
+		return nil, err
+	}
+	svcInst := mv1.NewAPIServiceInstance(instance.Name, instance.Metadata.Scope.Name)
+	err = svcInst.FromInstance(instance)
+	if err != nil {
+		return nil, err
+	}
+
+	// now get the access request definition from the instance
+	ard := mv1.NewAccessRequestDefinition(svcInst.Spec.AccessRequestDefinition, ar.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(ard.GetSelfLink())
+	if err != nil {
+		return nil, err
+	}
+
+	ard = &mv1.AccessRequestDefinition{}
+	err = ard.FromInstance(ri)
+	return ard, err
+}
+
+func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
 	instID := ""
 	for _, ref := range ar.Metadata.References {
 		if ref.Name == ar.Spec.ApiServiceInstance {
@@ -186,22 +251,34 @@ func (h *accessRequestHandler) newReq(_ context.Context, ar *mv1.AccessRequest, 
 	if err != nil {
 		return nil, err
 	}
+	return instance, nil
+}
+
+func (h *accessRequestHandler) newReq(ctx context.Context, ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
+	instance, err := h.getServiceInstance(ctx, ar)
+	if err != nil {
+		return nil, err
+	}
 
 	return &provAccReq{
 		appDetails:      appDetails,
-		accessData:      ar.Spec.Data,
+		requestData:     ar.Spec.Data,
+		provData:        ar.Data,
 		accessDetails:   util.GetAgentDetails(ar),
 		instanceDetails: util.GetAgentDetails(instance),
 		managedApp:      ar.Spec.ManagedApplication,
+		id:              ar.Metadata.ID,
 	}, nil
 }
 
 type provAccReq struct {
 	appDetails      map[string]interface{}
 	accessDetails   map[string]interface{}
-	accessData      map[string]interface{}
+	requestData     map[string]interface{}
 	instanceDetails map[string]interface{}
+	provData        interface{}
 	managedApp      string
+	id              string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -209,9 +286,19 @@ func (r provAccReq) GetApplicationName() string {
 	return r.managedApp
 }
 
+// GetID gets the if of the access request resource
+func (r provAccReq) GetID() string {
+	return r.id
+}
+
 // GetAccessRequestData gets the data of the access request
 func (r provAccReq) GetAccessRequestData() map[string]interface{} {
-	return r.accessData
+	return r.requestData
+}
+
+// GetAccessRequestData gets the data of the access request
+func (r provAccReq) GetAccessRequestProvisioningData() interface{} {
+	return r.provData
 }
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.

@@ -35,9 +35,10 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner   `json:"owner"`
-	Spec  ApiServiceSpec `json:"spec"`
-	// 	Status ApiServiceStatus `json:"status"`
+	Details ApiServiceDetails `json:"details"`
+	Owner   *apiv1.Owner      `json:"owner"`
+	Spec    ApiServiceSpec    `json:"spec"`
+	// 	Status  ApiServiceStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -123,6 +124,7 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["details"] = res.Details
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -153,6 +155,20 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Details
+	if v, ok := aux.SubResources["details"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "details")
+		err = json.Unmarshal(sr, &res.Details)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status

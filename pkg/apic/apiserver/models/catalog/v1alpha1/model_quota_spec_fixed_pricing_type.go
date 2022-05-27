@@ -9,11 +9,10 @@
 
 package v1alpha1
 
-// AddOnStatus  (catalog.v1alpha1.AddOn)
-type AddOnStatus struct {
-	// The current status level, indicating progress towards consistency.
-	Level string `json:"level"`
-	// Reasons for the generated status.
+// QuotaSpecFixedPricingType struct for QuotaSpecFixedPricingType
+type QuotaSpecFixedPricingType struct {
+	Type     string `json:"type"`
+	Interval string `json:"interval"`
 	// GENERATE: The following code has been modified after code generation
-	Reasons []interface{} `json:"reasons,omitempty"`
+	Limit interface{} `json:"limit"`
 }

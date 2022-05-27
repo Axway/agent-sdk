@@ -214,7 +214,7 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 	var err error
 	if len(scopes) > 0 {
 		ard, err = provisioning.NewAccessRequestBuilder(callback).
-			SetSchema(
+			SetRequestSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
 						provisioning.NewSchemaPropertyBuilder().

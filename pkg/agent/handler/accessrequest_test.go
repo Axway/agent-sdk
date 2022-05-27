@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -17,6 +18,8 @@ import (
 )
 
 func TestAccessRequestHandler(t *testing.T) {
+	ardRI, _ := ard.AsInstance()
+
 	tests := []struct {
 		action           proto.Event_Type
 		expectedProvType string
@@ -28,6 +31,7 @@ func TestAccessRequestHandler(t *testing.T) {
 		references       []v1.Reference
 		subError         error
 		appStatus        string
+		getARDErr        error
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -84,6 +88,14 @@ func TestAccessRequestHandler(t *testing.T) {
 			references:     accessReq.Metadata.References,
 		},
 		{
+			action:         proto.Event_CREATED,
+			inboundStatus:  prov.Pending.String(),
+			name:           "should handle an error when retrieving the accress request definition, and set a failed status",
+			outboundStatus: prov.Error.String(),
+			references:     accessReq.Metadata.References,
+			getARDErr:      fmt.Errorf("could not get access request definition"),
+		},
+		{
 			action:           proto.Event_CREATED,
 			hasError:         true,
 			inboundStatus:    prov.Pending.String(),
@@ -137,12 +149,18 @@ func TestAccessRequestHandler(t *testing.T) {
 			c := &mockClient{
 				expectedStatus: tc.outboundStatus,
 				getErr:         tc.getErr,
+				getARDErr:      tc.getARDErr,
 				getRI:          mApp,
 				subError:       tc.subError,
 				t:              t,
+				ard:            ardRI,
 			}
 
 			handler := NewAccessRequestHandler(arp, cm, c)
+			v := handler.(*accessRequestHandler)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
 
 			ri, _ := ar.AsInstance()
 			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
@@ -253,7 +271,7 @@ func Test_arReq(t *testing.T) {
 		accessDetails: map[string]interface{}{
 			"access_details_key": "access_details_value",
 		},
-		accessData: map[string]interface{}{
+		requestData: map[string]interface{}{
 			"key": "val",
 		},
 		managedApp: "managed-app-name",
@@ -261,12 +279,18 @@ func Test_arReq(t *testing.T) {
 			defs.AttrExternalAPIStage: "api-stage",
 			defs.AttrExternalAPIID:    "123",
 		},
+		id: "ar-id",
+		provData: map[string]interface{}{
+			"key1": "val1",
+		},
 	}
 
 	assert.Equal(t, r.managedApp, r.GetApplicationName())
+	assert.Equal(t, r.id, r.GetID())
+	assert.Equal(t, r.provData, r.GetAccessRequestProvisioningData().(map[string]interface{}))
 	assert.Equal(t, r.appDetails["app_details_key"], r.GetApplicationDetailsValue("app_details_key"))
 	assert.Equal(t, r.accessDetails["access_details_key"], r.GetAccessRequestDetailsValue("access_details_key"))
-	assert.Equal(t, r.accessData, r.GetAccessRequestData())
+	assert.Equal(t, r.requestData, r.GetAccessRequestData())
 
 	r.accessDetails = nil
 	r.appDetails = nil
@@ -278,14 +302,18 @@ type mockClient struct {
 	createSubCalled bool
 	expectedStatus  string
 	getErr          error
+	getARDErr       error
 	getRI           *v1.ResourceInstance
+	ard             *v1.ResourceInstance
 	isDeleting      bool
 	subError        error
 	t               *testing.T
-	updateErr       error
 }
 
-func (m *mockClient) GetResource(_ string) (*v1.ResourceInstance, error) {
+func (m *mockClient) GetResource(url string) (*v1.ResourceInstance, error) {
+	if strings.Contains(url, "/accessrequestdefinitions") {
+		return m.ard, m.getARDErr
+	}
 	return m.getRI, m.getErr
 }
 
@@ -318,14 +346,14 @@ type mockARProvision struct {
 	t                     *testing.T
 }
 
-func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus) {
+func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData) {
 	m.expectedProvType = provision
 	v := ar.(*provAccReq)
 	assert.Equal(m.t, m.expectedAPIID, v.instanceDetails[defs.AttrExternalAPIID])
 	assert.Equal(m.t, m.expectedAppName, v.managedApp)
 	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
 	assert.Equal(m.t, m.expectedAccessDetails, v.accessDetails)
-	return m.expectedStatus
+	return m.expectedStatus, prov.NewAccessDataBuilder().SetData(nil)
 }
 
 func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (status prov.RequestStatus) {
@@ -354,7 +382,9 @@ var instance = &mv1.APIServiceInstance{
 			},
 		},
 	},
-	Spec: mv1.ApiServiceInstanceSpec{},
+	Spec: mv1.ApiServiceInstanceSpec{
+		AccessRequestDefinition: "ard",
+	},
 }
 
 var mApp = &v1.ResourceInstance{
@@ -395,8 +425,29 @@ var accessReq = mv1.AccessRequest{
 	Spec: mv1.AccessRequestSpec{
 		ApiServiceInstance: instRefName,
 		ManagedApplication: managedAppRefName,
+		Data:               map[string]interface{}{},
 	},
 	Status: &v1.ResourceStatus{
 		Level: prov.Pending.String(),
+	},
+}
+
+var ard = &mv1.AccessRequestDefinition{
+	ResourceMeta: v1.ResourceMeta{
+		Name: credAppRefName,
+		SubResources: map[string]interface{}{
+			defs.XAgentDetails: map[string]interface{}{
+				"sub_crd_key": "sub_crd_val",
+			},
+		},
+	},
+	Owner: nil,
+	Spec: mv1.AccessRequestDefinitionSpec{
+		Schema: nil,
+		Provision: &mv1.AccessRequestDefinitionSpecProvision{
+			Schema: map[string]interface{}{
+				"properties": map[string]interface{}{},
+			},
+		},
 	},
 }

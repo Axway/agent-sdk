@@ -22,10 +22,10 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 	rev := newRevision(svcName, "api-key-revision")
 
 	c := &mockMPMigClient{
-		revisions: []*v1.ResourceInstance{
+		revisions: []*apiv1.ResourceInstance{
 			rev,
 		},
-		instances: []*v1.ResourceInstance{
+		instances: []*apiv1.ResourceInstance{
 			newInstance(rev.Name, "inst1", "", []string{"api-key"}),
 			newInstance(rev.Name, "inst2", "", []string{"api-key"}),
 		},
@@ -56,10 +56,10 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	rev := newOAuthRev(svcName, "oauth-revision")
 
 	c := &mockMPMigClient{
-		revisions: []*v1.ResourceInstance{
+		revisions: []*apiv1.ResourceInstance{
 			rev,
 		},
-		instances: []*v1.ResourceInstance{
+		instances: []*apiv1.ResourceInstance{
 			newInstance(rev.Name, "inst1", "", []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}),
 		},
 	}
@@ -87,7 +87,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	assert.NotNil(t, a)
 }
 
-func newInstance(revName, instName, ard string, credentialRequestDefinitions []string) *v1.ResourceInstance {
+func newInstance(revName, instName, ard string, credentialRequestDefinitions []string) *apiv1.ResourceInstance {
 	inst := mv1a.NewAPIServiceInstance(instName, envName)
 	inst.Spec = mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           revName,
@@ -108,7 +108,7 @@ func newInstance(revName, instName, ard string, credentialRequestDefinitions []s
 	return ri
 }
 
-func newRevision(svcName, revName string) *v1.ResourceInstance {
+func newRevision(svcName, revName string) *apiv1.ResourceInstance {
 	rev := mv1a.NewAPIServiceRevision(revName, envName)
 	rev.Spec = mv1a.ApiServiceRevisionSpec{
 		ApiService: svcName,
@@ -140,8 +140,8 @@ type mockMPMigClient struct {
 	sync.Mutex
 	updateCount     int
 	createSubCalled bool
-	revisions       []*v1.ResourceInstance
-	instances       []*v1.ResourceInstance
+	revisions       []*apiv1.ResourceInstance
+	instances       []*apiv1.ResourceInstance
 }
 
 func (m *mockMPMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
@@ -164,7 +164,7 @@ func (m *mockMPMigClient) CreateSubResourceScoped(_ apiv1.ResourceMeta, _ map[st
 	return nil
 }
 
-func (m *mockMPMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockMPMigClient) CreateSubResource(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
 	m.createSubCalled = true
 	return nil
 }

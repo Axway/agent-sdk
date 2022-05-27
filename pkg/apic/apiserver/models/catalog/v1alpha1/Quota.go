@@ -11,61 +11,60 @@ import (
 )
 
 var (
-	_AddOnGVK = apiv1.GroupVersionKind{
+	_QuotaGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "AddOn",
+			Kind:  "Quota",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	AddOnScopes = []string{"ProductPlan"}
+	QuotaScopes = []string{"ProductPlan"}
 )
 
-const AddOnResourceName = "addons"
+const QuotaResourceName = "quotas"
 
-func AddOnGVK() apiv1.GroupVersionKind {
-	return _AddOnGVK
+func QuotaGVK() apiv1.GroupVersionKind {
+	return _QuotaGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_AddOnGVK, AddOnScopes[0], AddOnResourceName)
+	apiv1.RegisterGVK(_QuotaGVK, QuotaScopes[0], QuotaResourceName)
 }
 
-// AddOn Resource
-type AddOn struct {
+// Quota Resource
+type Quota struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner    `json:"owner"`
-	References AddOnReferences `json:"references"`
-	Spec       AddOnSpec       `json:"spec"`
-	// 	Status     AddOnStatus     `json:"status"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  QuotaSpec    `json:"spec"`
+	// 	Status QuotaStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
-// NewAddOn creates an empty *AddOn
-func NewAddOn(name, scopeName string) *AddOn {
-	return &AddOn{
+// NewQuota creates an empty *Quota
+func NewQuota(name, scopeName string) *Quota {
+	return &Quota{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _AddOnGVK,
+			GroupVersionKind: _QuotaGVK,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: AddOnScopes[0],
+					Kind: QuotaScopes[0],
 				},
 			},
 		},
 	}
 }
 
-// AddOnFromInstanceArray converts a []*ResourceInstance to a []*AddOn
-func AddOnFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AddOn, error) {
-	newArray := make([]*AddOn, 0)
+// QuotaFromInstanceArray converts a []*ResourceInstance to a []*Quota
+func QuotaFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Quota, error) {
+	newArray := make([]*Quota, 0)
 	for _, item := range fromArray {
-		res := &AddOn{}
+		res := &Quota{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*AddOn, 0), err
+			return make([]*Quota, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -73,10 +72,10 @@ func AddOnFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*AddOn, erro
 	return newArray, nil
 }
 
-// AsInstance converts a AddOn to a ResourceInstance
-func (res *AddOn) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a Quota to a ResourceInstance
+func (res *Quota) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = AddOnGVK()
+	meta.GroupVersionKind = QuotaGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -93,8 +92,8 @@ func (res *AddOn) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a AddOn
-func (res *AddOn) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a Quota
+func (res *Quota) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -112,7 +111,7 @@ func (res *AddOn) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *AddOn) MarshalJSON() ([]byte, error) {
+func (res *Quota) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -125,7 +124,6 @@ func (res *AddOn) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
-	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -133,7 +131,7 @@ func (res *AddOn) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *AddOn) UnmarshalJSON(data []byte) error {
+func (res *Quota) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -157,20 +155,6 @@ func (res *AddOn) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource References
-	if v, ok := aux.SubResources["references"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "references")
-		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource Status
 	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
@@ -191,6 +175,6 @@ func (res *AddOn) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *AddOn) PluralName() string {
-	return AddOnResourceName
+func (res *Quota) PluralName() string {
+	return QuotaResourceName
 }

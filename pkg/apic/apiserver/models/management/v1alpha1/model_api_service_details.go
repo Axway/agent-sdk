@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AssetReferences struct for AssetReferences
-type AssetReferences struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+// ApiServiceDetails  (management.v1alpha1.APIService)
+type ApiServiceDetails struct {
+	// Specification type for the API Service.
+	SpecType string `json:"specType,omitempty"`
 }

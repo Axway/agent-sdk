@@ -35,11 +35,11 @@ func init() {
 // AssetRelease Resource
 type AssetRelease struct {
 	apiv1.ResourceMeta
-	Icon       interface{}            `json:"icon"`
-	Owner      *apiv1.Owner           `json:"owner"`
-	References AssetReleaseReferences `json:"references"`
-	Spec       AssetReleaseSpec       `json:"spec"`
-	// 	Status     AssetReleaseStatus     `json:"status"`
+	Icon       interface{}      `json:"icon"`
+	Owner      *apiv1.Owner     `json:"owner"`
+	References interface{}      `json:"references"`
+	Spec       AssetReleaseSpec `json:"spec"`
+	// 	Status     AssetReleaseStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 

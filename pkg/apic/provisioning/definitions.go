@@ -74,7 +74,7 @@ func (c State) String() string {
 // Provisioning - interface to be implemented by agents for access provisioning
 type Provisioning interface {
 	AccessRequestDeprovision(AccessRequest) RequestStatus
-	AccessRequestProvision(AccessRequest) RequestStatus
+	AccessRequestProvision(AccessRequest) (RequestStatus, AccessData)
 	ApplicationRequestDeprovision(ApplicationRequest) RequestStatus
 	ApplicationRequestProvision(ApplicationRequest) RequestStatus
 	CredentialDeprovision(CredentialRequest) RequestStatus

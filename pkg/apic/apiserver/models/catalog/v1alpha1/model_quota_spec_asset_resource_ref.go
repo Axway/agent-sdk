@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// AddOnSpecAssetResourceRef struct for AddOnSpecAssetResourceRef
-type AddOnSpecAssetResourceRef struct {
+// QuotaSpecAssetResourceRef struct for QuotaSpecAssetResourceRef
+type QuotaSpecAssetResourceRef struct {
 	Kind string `json:"kind"`
 	Name string `json:"name,omitempty"`
 }

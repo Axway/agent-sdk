@@ -115,7 +115,7 @@ func (s *ServiceBody) createAccessRequestDefintion() error {
 		// sort the strings for consistent specs
 		sort.Strings(oauthScopes)
 		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefintion).
-			SetSchema(
+			SetRequestSchema(
 				provisioning.NewSchemaBuilder().
 					AddProperty(
 						provisioning.NewSchemaPropertyBuilder().

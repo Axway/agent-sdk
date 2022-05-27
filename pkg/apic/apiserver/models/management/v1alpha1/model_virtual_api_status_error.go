@@ -15,8 +15,8 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AddOnStatusError struct for AddOnStatusError
-type AddOnStatusError struct {
+// VirtualApiStatusError struct for VirtualApiStatusError
+type VirtualApiStatusError struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`

@@ -12,8 +12,7 @@ package v1alpha1
 // VirtualServiceSpecApikeycredential The API Key credential.
 type VirtualServiceSpecApikeycredential struct {
 	Kind string `json:"kind"`
-	// The name of the credential eg. external secret containing the api key.
-	Name string `json:"name"`
-	// The location of the api key eg. header, query or cookie.
-	In string `json:"in"`
+	// The name of the external secret containing the api key.
+	SecretName string                               `json:"secretName"`
+	In         VirtualServiceSpecApikeycredentialIn `json:"in"`
 }

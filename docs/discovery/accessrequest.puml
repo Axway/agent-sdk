@@ -18,13 +18,17 @@ agent --> sdk: Get details on Application  - GetApplicationDetailsValue(key)
 agent --> sdk: Get access request data - GetAccessRequestData()
 agent --> sdk: Get details on API Service Instance - GetInstanceDetails()
 agent --> agent: Handle provisioning of Access
+note over agent: Set access data using Access Data Builder
 note over agent: Add properties necessary to deprovision
 
 agent -> sdk: success
 activate sdk #green
+note right sdk: Get encryption data from Managed Application
+sdk -> sdk: Encrypt fields based on Credential Request Definition
 
 sdk -> env: Update Access Request Success
 deactivate sdk
+note left sdk: Add access data, with encrypted fields
 note left sdk: Add properties from agent to resource
 
 agent -> sdk: fail
