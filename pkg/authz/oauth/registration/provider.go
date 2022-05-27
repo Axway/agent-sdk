@@ -3,6 +3,8 @@ package registration
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -24,11 +26,17 @@ const (
 // Provider - interface for external IdP provider
 type Provider interface {
 	RegisterClient(clientMetadata Client) (Client, error)
+	UnregisterClient(clientId string) error
+}
+
+type tokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 type provider struct {
 	providerType       ProviderType
-	accessToken        string
+	cfg                config.IDPConfig
 	metadataURL        string
 	extraProperties    map[string]string
 	apiClient          coreapi.Client
@@ -50,7 +58,7 @@ func NewProvider(idp config.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string
 	p := &provider{
 		providerType:    providerType,
 		metadataURL:     idp.GetMetadataURL(),
-		accessToken:     idp.GetAccessToken(),
+		cfg:             idp,
 		extraProperties: idp.GetExtraProperties(),
 		apiClient:       apiClient,
 	}
@@ -99,15 +107,49 @@ func (p *provider) RegisterClient(clientReq Client) (Client, error) {
 	if !ok {
 		return nil, fmt.Errorf("unrecognized client request metadata")
 	}
+
+	// Default the values from config if not set on the request
+	if len(clientRequest.GetScopes()) == 0 {
+		clientRequest.Scope = strings.Split(p.cfg.GetClientScopes(), " ")
+	}
+
+	if len(clientRequest.GetGrantTypes()) == 0 {
+		clientRequest.GrantTypes = []string{p.cfg.GetGrantType()}
+	}
+
+	if clientRequest.TokenEndpointAuthMethod == "" {
+		clientRequest.TokenEndpointAuthMethod = p.cfg.GetAuthMethod()
+	}
+
+	if len(clientRequest.ResponseTypes) == 0 {
+		clientRequest.ResponseTypes = []string{p.cfg.GetAuthResponseType()}
+	}
+
 	clientRequest.JwksURI = p.authServerMetadata.JwksURI
+
 	clientRequest.extraProperties = p.extraProperties
+	if p.providerType == Okta {
+		if len(clientRequest.extraProperties) == 0 {
+			clientRequest.extraProperties = make(map[string]string)
+		}
+		_, ok := clientRequest.extraProperties["application_tye"]
+		if !ok {
+			clientRequest.extraProperties["application_tye"] = "service"
+		}
+	}
+
 	clientBuffer, err := json.Marshal(clientRequest)
 	if err != nil {
 		return nil, err
 	}
 
+	token, err := p.getClientToken()
+	if err != nil {
+		return nil, err
+	}
+
 	header := map[string]string{
-		"Authorization": authPrefix + " " + p.accessToken,
+		"Authorization": authPrefix + " " + token,
 		"Content-Type":  "application/json",
 	}
 
@@ -129,4 +171,69 @@ func (p *provider) RegisterClient(clientReq Client) (Client, error) {
 		return clientRes, err
 	}
 	return nil, fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
+}
+
+func (p *provider) UnregisterClient(clientID string) error {
+	authPrefix := p.getAuthorizationHeaderPrefix()
+	token, err := p.getClientToken()
+	if err != nil {
+		return err
+	}
+	header := map[string]string{
+		"Authorization": authPrefix + " " + token,
+		"Content-Type":  "application/json",
+	}
+
+	request := api.Request{
+		Method:  api.DELETE,
+		URL:     p.authServerMetadata.RegistrationEndpoint + "/" + clientID,
+		Headers: header,
+	}
+
+	response, err := p.apiClient.Send(request)
+	if err != nil {
+		return err
+	}
+
+	if response.Code != 204 {
+		return fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
+	}
+	return nil
+}
+
+func (p *provider) getClientToken() (string, error) {
+	token := p.cfg.GetAuthConfig().GetAccessToken()
+	if p.cfg.GetAuthConfig().GetType() == "client" {
+		tokenURL := p.authServerMetadata.TokenEndpoint
+
+		data := url.Values{
+			"client_id":     []string{p.cfg.GetAuthConfig().GetClientID()},
+			"client_secret": []string{p.cfg.GetAuthConfig().GetClientSecret()},
+			"grant_type":    []string{"client_credentials"},
+			// "scope":         []string{"client-manage"},
+		}
+		bufBody := data.Encode()
+		fmt.Println(bufBody)
+
+		req := api.Request{
+			Method: api.POST,
+			URL:    tokenURL,
+			Body:   []byte(bufBody),
+			Headers: map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+		}
+
+		res, err := p.apiClient.Send(req)
+		if err != nil {
+			return "", err
+		}
+		fmt.Println(string(res.Body))
+		tok := tokenResponse{}
+		if err := json.Unmarshal(res.Body, &tok); err != nil {
+			return "", err
+		}
+		token = tok.AccessToken
+	}
+	return token, nil
 }

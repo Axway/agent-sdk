@@ -33,3 +33,12 @@ func RegisterClient(name string, client Client) (Client, error) {
 	}
 	return nil, fmt.Errorf("unrecognized credential provider with name %s", name)
 }
+
+// UnregisterClient - removes the client using the registered provider
+func UnregisterClient(providerName string, clientId string) error {
+	p, ok := providerMap[providerName]
+	if ok {
+		return p.UnregisterClient(clientId)
+	}
+	return fmt.Errorf("unrecognized credential provider with name %s", providerName)
+}

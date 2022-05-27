@@ -51,7 +51,7 @@ type Properties interface {
 	BoolPropertyValueOrTrue(name string) bool // Use this method when the default value, no config given, is true
 	BoolFlagValue(name string) bool
 	StringSlicePropertyValue(name string) []string
-	ObjectSlicePropertyValue(name string) []map[string]string
+	ObjectSlicePropertyValue(name string) []map[string]interface{}
 
 	// Methods to set a property
 	SetStringFlagValue(name string, value string)
@@ -67,7 +67,7 @@ var aliasKeyPrefix string
 type properties struct {
 	Properties
 	rootCmd                  *cobra.Command
-	envIntfArrayPropValues   map[string][]map[string]string
+	envIntfArrayPropValues   map[string][]map[string]interface{}
 	envIntfArrayPropertyKeys map[string]map[string]bool
 	secretResolver           SecretPropertyResolver
 	flattenedProperties      map[string]string
@@ -419,7 +419,7 @@ func isDurationLowerLimitEnforced() bool {
 }
 
 // ObjectSlicePropertyValue
-func (p *properties) ObjectSlicePropertyValue(name string) []map[string]string {
+func (p *properties) ObjectSlicePropertyValue(name string) []map[string]interface{} {
 	p.readEnv()
 	name = strings.ReplaceAll(name, ".", "_")
 	name = strings.ToUpper(name)
@@ -434,8 +434,57 @@ func (p *properties) readEnv() {
 		return
 	}
 
+	p.envIntfArrayPropValues = make(map[string][]map[string]interface{})
+	envVarsMap := p.parseEnvPropertiesFlatMap()
+
+	for prefix, eVals := range envVarsMap {
+		propValues, ok := p.envIntfArrayPropValues[prefix]
+		if !ok {
+			propValues = make([]map[string]interface{}, 0)
+		}
+
+		for _, val := range eVals {
+			v := p.convertFlatMap(val)
+			propValues = append(propValues, v)
+		}
+		p.envIntfArrayPropValues[prefix] = propValues
+	}
+}
+
+func (p *properties) convertFlatMap(flatMap map[string]string) map[string]interface{} {
+	m := make(map[string]interface{})
+	for key, val := range flatMap {
+		ok := strings.Contains(key, ".")
+		if !ok {
+			m[key] = val
+		} else {
+			k := strings.Split(key, ".")
+			p.setChildMapProperty(m, k, val)
+		}
+	}
+	return m
+}
+
+func (p *properties) setChildMapProperty(parentMap map[string]interface{}, childKeys []string, val string) {
+	cm, ok := parentMap[childKeys[0]]
+	if !ok {
+		cm = make(map[string]interface{})
+	}
+
+	childMap, ok := cm.(map[string]interface{})
+	if ok {
+		if len(childKeys) > 2 {
+			p.setChildMapProperty(childMap, childKeys[1:], val)
+		} else {
+			childMap[childKeys[1]] = val
+		}
+		parentMap[childKeys[0]] = cm
+	}
+
+}
+
+func (p *properties) parseEnvPropertiesFlatMap() map[string]map[string]map[string]string {
 	envVarsMap := make(map[string]map[string]map[string]string)
-	p.envIntfArrayPropValues = make(map[string][]map[string]string)
 	for _, element := range os.Environ() {
 		variable := strings.SplitN(element, "=", 2)
 		name := variable[0]
@@ -446,9 +495,11 @@ func (p *properties) readEnv() {
 				elements := strings.Split(name, "_")
 				lastSuffix := elements[len(elements)-1]
 				_, ok := envVarsMap[prefix]
+
 				if !ok {
 					envVarsMap[prefix] = make(map[string]map[string]string)
 				}
+
 				m, ok := envVarsMap[prefix][lastSuffix]
 				if !ok {
 					m = make(map[string]string)
@@ -461,19 +512,9 @@ func (p *properties) readEnv() {
 						envVarsMap[prefix][lastSuffix] = m
 					}
 				}
+
 			}
 		}
 	}
-
-	for prefix, eVals := range envVarsMap {
-		propValues, ok := p.envIntfArrayPropValues[prefix]
-		if !ok {
-			propValues = make([]map[string]string, 0)
-		}
-
-		for _, val := range eVals {
-			propValues = append(propValues, val)
-		}
-		p.envIntfArrayPropValues[prefix] = propValues
-	}
+	return envVarsMap
 }
