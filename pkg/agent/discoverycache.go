@@ -121,8 +121,6 @@ func (dc *discoveryCache) execute() error {
 	return nil
 }
 
-// /apis/management/v1alpha1/environments/v7/apiservicerevisions
-
 func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 	resources := make(map[string]discoverFunc)
 	mpResources := make(map[string]discoverFunc)
