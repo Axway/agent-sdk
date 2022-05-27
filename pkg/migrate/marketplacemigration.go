@@ -51,7 +51,7 @@ type MarketplaceMigration struct {
 // Migrate -
 func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
-		return ri, fmt.Errorf("expected resource instance kind to be api service")
+		return ri, nil
 	}
 
 	err := m.updateService(ri)

@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
@@ -13,7 +12,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
-	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -22,17 +20,14 @@ const (
 )
 
 type discoveryCache struct {
-	envName                  string
 	centralURL               string
 	migrator                 migrate.Migrator
 	logger                   log.FieldLogger
-	instanceCacheLock        *sync.Mutex
-	discoveryCacheLock       *sync.Mutex
 	handlers                 []handler.Handler
-	agentType                config.AgentType
 	isMpEnabled              bool
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
+	watchTopic               *mv1.WatchTopic
 }
 
 type resourceClient interface {
@@ -47,7 +42,7 @@ type discoveryOpt func(dc *discoveryCache)
 
 func withAdditionalDiscoverFuncs(funcs ...discoverFunc) discoveryOpt {
 	return func(dc *discoveryCache) {
-		dc.additionalDiscoveryFuncs = funcs
+		dc.additionalDiscoveryFuncs = append(dc.additionalDiscoveryFuncs, funcs...)
 	}
 }
 
@@ -67,6 +62,7 @@ func newDiscoveryCache(
 	cfg config.CentralConfig,
 	client resourceClient,
 	handlers []handler.Handler,
+	watchTopic *mv1.WatchTopic,
 	opts ...discoveryOpt,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
@@ -74,14 +70,12 @@ func newDiscoveryCache(
 		WithComponent("discoveryCache")
 
 	dc := &discoveryCache{
-		agentType:          cfg.GetAgentType(),
-		instanceCacheLock:  &sync.Mutex{},
-		logger:             logger,
-		discoveryCacheLock: &sync.Mutex{},
-		handlers:           handlers,
-		envName:            cfg.GetEnvironmentName(),
-		centralURL:         cfg.GetURL(),
-		client:             client,
+		logger:                   logger,
+		handlers:                 handlers,
+		centralURL:               cfg.GetURL(),
+		client:                   client,
+		additionalDiscoveryFuncs: make([]discoverFunc, 0),
+		watchTopic:               watchTopic,
 	}
 
 	for _, opt := range opts {
@@ -90,44 +84,11 @@ func newDiscoveryCache(
 	return dc
 }
 
-func (dc *discoveryCache) daFuncs() []discoverFunc {
-	return []discoverFunc{
-		dc.handleAPISvc,
-		dc.handleServiceInstance,
-		dc.handleCategories,
-		dc.handleARD,
-		dc.handleCRD,
-		dc.handleAccessControlList,
-		dc.handleMarketplaceResources,
-	}
-}
-
-func (dc *discoveryCache) taFuncs() []discoverFunc {
-	return []discoverFunc{
-		dc.handleAPISvc,
-		dc.handleServiceInstance,
-		dc.handleMarketplaceResources,
-	}
-}
-
-func (dc *discoveryCache) getDiscoveryFuncs() []discoverFunc {
-	switch dc.agentType {
-	case config.DiscoveryAgent:
-		return dc.daFuncs()
-	case config.TraceabilityAgent:
-		return dc.taFuncs()
-	}
-	return nil
-}
-
 // execute rebuilds the discovery cache
 func (dc *discoveryCache) execute() error {
-	dc.discoveryCacheLock.Lock()
-	defer dc.discoveryCacheLock.Unlock()
-
 	dc.logger.Debug("executing resource cache update job")
 
-	discoveryFuncs := dc.getDiscoveryFuncs()
+	discoveryFuncs := dc.buildDiscoveryFuncs()
 	if dc.additionalDiscoveryFuncs != nil {
 		discoveryFuncs = append(discoveryFuncs, dc.additionalDiscoveryFuncs...)
 	}
@@ -160,197 +121,100 @@ func (dc *discoveryCache) execute() error {
 	return nil
 }
 
-func (dc *discoveryCache) handleAPISvc() error {
-	logger := dc.logger.WithField("kind", "APIService")
-	logger.Trace("fetching API Services and updating cache")
-	svcLink := mv1.NewAPIService("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(svcLink)
+func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
+	resources := make(map[string]discoverFunc)
+	mpResources := make(map[string]discoverFunc)
 
-	apiServices, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
+	for _, filter := range dc.watchTopic.Spec.Filters {
+		f := dc.buildResourceFunc(filter)
+		if isMPResource(filter.Kind) {
+			mpResources[filter.Kind] = f
+		} else {
+			resources[filter.Kind] = f
+		}
 	}
 
-	for _, svc := range apiServices {
-		if dc.migrator != nil {
-			var err error
-			svc, err = dc.migrator.Migrate(svc)
-			if err != nil {
-				dc.logger.Debugf("failed to migrate service: %s", err)
+	var funcs []discoverFunc
+	for _, f := range resources {
+		funcs = append(funcs, f)
+	}
+
+	if dc.isMpEnabled {
+		marketplaceFuncs := dc.buildMarketplaceFuncs(mpResources)
+		funcs = append(funcs, dc.handleMarketplaceFuncs(marketplaceFuncs))
+	}
+
+	return funcs
+}
+
+func (dc *discoveryCache) buildMarketplaceFuncs(mpResources map[string]discoverFunc) []discoverFunc {
+	var marketplaceFuncs []discoverFunc
+
+	mApps, ok := mpResources[mv1.ManagedApplicationGVK().Kind]
+	if ok {
+		marketplaceFuncs = append(marketplaceFuncs, mApps)
+	}
+
+	accessReq, ok := mpResources[mv1.AccessRequestGVK().Kind]
+	if ok {
+		marketplaceFuncs = append(marketplaceFuncs, accessReq)
+	}
+
+	creds, ok := mpResources[mv1.CredentialGVK().Kind]
+	if ok {
+		marketplaceFuncs = append(marketplaceFuncs, creds)
+	}
+
+	return marketplaceFuncs
+}
+
+func (dc *discoveryCache) handleMarketplaceFuncs(marketplaceFuncs []discoverFunc) discoverFunc {
+	return func() error {
+		for _, f := range marketplaceFuncs {
+			if err := f(); err != nil {
+				return err
 			}
 		}
+		return nil
+	}
+}
 
-		action := getAction(svc.Metadata.State)
-		if err := dc.handleResource(svc, action); err != nil {
-			logger.WithError(err).WithField("name", svc.Name).Error("failed to handle api service")
+func (dc *discoveryCache) buildResourceFunc(filter mv1.WatchTopicSpecFilters) discoverFunc {
+	return func() error {
+		url := fmt.Sprintf("/%s/v1alpha1", filter.Group)
+		if filter.Scope != nil {
+			scopePlural, _ := v1.GetPluralFromKind(filter.Scope.Kind)
+			url = fmt.Sprintf("%s/%s/%s", url, scopePlural, filter.Scope.Name)
 		}
-	}
 
-	return nil
-}
+		var kindPlural, _ = v1.GetPluralFromKind(filter.Kind)
+		url = fmt.Sprintf("%s/%s", url, kindPlural)
 
-func (dc *discoveryCache) handleServiceInstance() error {
-	dc.logger.WithField("kind", "APIServiceInstance").Trace("fetching API Service Instances and updating cache")
-	dc.instanceCacheLock.Lock()
-	defer dc.instanceCacheLock.Unlock()
+		logger := dc.logger.WithField("kind", filter.Kind)
+		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-	svcInstanceLink := mv1.NewAPIServiceInstance("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(svcInstanceLink)
-
-	serviceInstances, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		e := utilErrors.Wrap(ErrUnableToGetAPIV1Resources, err.Error()).FormatError("APIServiceInstances")
-		dc.logger.Error(e)
-		return e
-	}
-
-	return dc.handleResourcesList(serviceInstances)
-}
-
-func (dc *discoveryCache) handleCategories() error {
-	dc.logger.WithField("kind", "Category").Trace("fetching Categories and updating cache")
-
-	categoriesLink := catalog.NewCategory("").GetKindLink()
-	url := dc.formatResourceURL(categoriesLink)
-
-	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(categories)
-}
-
-func (dc *discoveryCache) handleAccessControlList() error {
-	dc.logger.WithField("kind", "AccessControlList").Trace("fetching AccessControlList and updating cache")
-
-	acl, _ := mv1.NewAccessControlList("", mv1.EnvironmentGVK().Kind, dc.envName)
-	aclLink := acl.GetKindLink()
-	url := dc.formatResourceURL(aclLink)
-
-	categories, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(categories)
-}
-
-func (dc *discoveryCache) handleARD() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-	dc.logger.WithField("kind", "AccessRequestDefinition").Trace("fetching AccessRequestDefinitions and updating cache")
-
-	ardLink := mv1.NewAccessRequestDefinition("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(ardLink)
-
-	ards, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(ards)
-}
-
-func (dc *discoveryCache) handleCRD() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-
-	dc.logger.WithField("kind", "CredentialRequestDefinition").Trace("fetching CredentialRequestDefinitions and updating cache")
-
-	crd := mv1.NewCredentialRequestDefinition("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(crd)
-
-	crds, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(crds)
-}
-
-func (dc *discoveryCache) handleManagedApp() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-
-	dc.logger.WithField("kind", "ManagedApplication").Trace("fetching ManagedApplications and updating cache")
-
-	managedAppLink := mv1.NewManagedApplication("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(managedAppLink)
-	managedApps, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(managedApps)
-}
-
-func (dc *discoveryCache) handleAccessRequest() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-
-	dc.logger.WithField("kind", "AccessRequest").Trace("fetching AccessRequests and updating cache")
-
-	arLink := mv1.NewAccessRequest("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(arLink)
-	accessRequests, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
-
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(accessRequests)
-}
-
-func (dc *discoveryCache) handleCredential() error {
-	if !dc.isMpEnabled {
-		return nil
-	}
-
-	logger := dc.logger.WithField("kind", "Credential")
-	logger.Trace("fetching Credentials and updating cache")
-
-	credLink := mv1.NewCredential("", dc.envName).GetKindLink()
-	url := dc.formatResourceURL(credLink)
-
-	credentials, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(
-		nil, url, apiServerPageSize,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	return dc.handleResourcesList(credentials)
-}
-
-func (dc *discoveryCache) handleMarketplaceResources() error {
-	funcs := []discoverFunc{
-		dc.handleManagedApp,
-		dc.handleAccessRequest,
-	}
-
-	if dc.agentType == config.DiscoveryAgent {
-		funcs = append(funcs, dc.handleCredential)
-	}
-
-	for _, f := range funcs {
-		if err := f(); err != nil {
-			return err
+		url = dc.formatResourceURL(url)
+		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
+		if err != nil {
+			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}
-	}
 
-	return nil
+		return dc.handleResourcesList(resources)
+	}
 }
 
 func (dc *discoveryCache) handleResourcesList(list []*apiV1.ResourceInstance) error {
 	for _, ri := range list {
+		if dc.migrator != nil {
+			var err error
+			ri, err = dc.migrator.Migrate(ri)
+			if err != nil {
+				dc.logger.WithError(err).Error("failed to migrate resource")
+			}
+		}
+
 		action := getAction(ri.Metadata.State)
-		if err := dc.handleResource(ri, action); ri != nil {
+		if err := dc.handleResource(ri, action); err != nil {
 			dc.logger.
 				WithError(err).
 				WithField("kind", ri.Kind).
@@ -358,6 +222,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiV1.ResourceInstance) er
 				Error("failed to handle resource")
 		}
 	}
+
 	return nil
 }
 
@@ -381,4 +246,17 @@ func getAction(state string) proto.Event_Type {
 		return proto.Event_UPDATED
 	}
 	return proto.Event_CREATED
+}
+
+func isMPResource(kind string) bool {
+	switch kind {
+	case mv1.ManagedApplicationGVK().Kind:
+		return true
+	case mv1.AccessRequestGVK().Kind:
+		return true
+	case mv1.CredentialGVK().Kind:
+		return true
+	default:
+		return false
+	}
 }

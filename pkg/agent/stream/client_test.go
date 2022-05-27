@@ -2,10 +2,10 @@ package stream
 
 import (
 	"context"
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -51,16 +51,13 @@ func NewConfigWithLoadOnStartup() config.CentralConfiguration {
 func TestNewStreamer(t *testing.T) {
 	getToken := &mockTokenGetter{}
 	wt := &mv1.WatchTopic{}
-	ri, _ := wt.AsInstance()
-	httpClient := &mockAPIClient{
-		watchTopic: ri,
-	}
+	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
 	cacheManager := agentcache.NewAgentCacheManager(&cfg, false)
 	onStreamConnection := func(s *StreamerClient) {
 		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
 	}
-	streamer, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, nil)
+	streamer, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, nil, wt)
 	assert.NotNil(t, streamer)
 	assert.Nil(t, err)
 
@@ -125,14 +122,16 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 				{
 					Name: "*",
 					Kind: mv1.AccessRequestGVK().Kind,
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: mv1.EnvironmentGVK().Kind,
+						Name: "mock",
+					},
 					Type: []string{events.WatchTopicFilterTypeCreated},
 				},
 			},
 		},
 	}
-	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
-		watchTopic: ri,
 		paged: []*apiv1.ResourceInstance{
 			createRI("123", "foo"),
 			createRI("456", "bar"),
@@ -146,7 +145,9 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 		initDone = true
 	}
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
+	underTest, err := NewStreamerClient(
+		httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler,
+	)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -201,14 +202,16 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 				{
 					Name: "*",
 					Kind: mv1.AccessRequestGVK().Kind,
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: mv1.EnvironmentGVK().Kind,
+						Name: "mock",
+					},
 					Type: []string{events.WatchTopicFilterTypeCreated},
 				},
 			},
 		},
 	}
-	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
-		watchTopic: ri,
 		paged: []*apiv1.ResourceInstance{
 			createRI("123", "foo"),
 			createRI("456", "bar"),
@@ -223,7 +226,7 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 		initDone = true
 	}
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -269,14 +272,16 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 				{
 					Name: "*",
 					Kind: mv1.AccessRequestGVK().Kind,
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: mv1.EnvironmentGVK().Kind,
+						Name: "mock",
+					},
 					Type: []string{events.WatchTopicFilterTypeDeleted}, // deleted => hence nothing to load
 				},
 			},
 		},
 	}
-	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
-		watchTopic: ri,
 		paged: []*apiv1.ResourceInstance{
 			createRI("132", "foo"),
 			createRI("456", "bar"),
@@ -291,7 +296,7 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 	}
 
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -336,15 +341,17 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 				{
 					Name: "foo",
 					Kind: mv1.AccessRequestGVK().Kind,
+					Scope: &mv1.WatchTopicSpecScope{
+						Kind: mv1.EnvironmentGVK().Kind,
+						Name: "mock",
+					},
 					Type: []string{events.WatchTopicFilterTypeCreated},
 				},
 			},
 		},
 	}
-	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
-		watchTopic: ri,
-		resource:   createRI("123", "foo"),
+		resource: createRI("123", "foo"),
 	}
 
 	cfg := NewConfigWithLoadOnStartup()
@@ -356,7 +363,7 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	}
 
 	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, &tHandler)
+	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NoError(t, err)
 
 	manager := &mockManager{status: true}
@@ -443,7 +450,6 @@ func (m *mockManager) Status() bool {
 }
 
 type mockAPIClient struct {
-	watchTopic  *apiv1.ResourceInstance
 	resource    *apiv1.ResourceInstance
 	getErr      error
 	createErr   error
@@ -455,18 +461,11 @@ type mockAPIClient struct {
 }
 
 func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
-	if strings.Contains(url, mv1.WatchTopicResourceName) {
-		return m.watchTopic, m.getErr
-	}
 	return m.resource, m.getErr
 }
 
 func (m mockAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
-	return m.watchTopic, m.createErr
-}
-
-func (m mockAPIClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
-	return m.watchTopic, m.updateErr
+	return nil, m.createErr
 }
 
 func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
