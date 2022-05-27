@@ -482,6 +482,11 @@ func (c *CentralConfiguration) GetAppendEnvironmentToTitle() bool {
 
 // GetUsageReportingConfig -
 func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
+	// Some paths in DA are checking usage reporting .  So return an empty usage reporting config if nil
+	// Find All References to see DA scenarios checking for this config
+	if c.UsageReporting == nil {
+		return NewUsageReporting()
+	}
 	return c.UsageReporting
 }
 
@@ -780,7 +785,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
-		UsageReporting:            ParseUsageReportingConfig(props),
+		// UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
