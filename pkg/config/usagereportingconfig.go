@@ -47,7 +47,7 @@ type UsageReportingConfig interface {
 	GetReportSchedule() string
 	GetReportGranularity() int
 	UsingQAVars() bool
-	validate()
+	Validate()
 }
 
 // UsageReportingConfiguration - structure to hold all usage reporting settings
@@ -134,7 +134,8 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 	}
 }
 
-func (u *UsageReportingConfiguration) validate() {
+// Validate -
+func (u *UsageReportingConfiguration) Validate() {
 	u.validateURL() // DEPRECATE
 	if u.URL != "" {
 		if _, err := url.ParseRequestURI(u.URL); err != nil {

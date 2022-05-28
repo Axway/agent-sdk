@@ -587,10 +587,10 @@ const (
 func (c *CentralConfiguration) ValidateCfg() (err error) {
 	exception.Block{
 		Try: func() {
-			if supportsTraceability(c.AgentType) && c.UsageReporting.IsOfflineMode() {
+			if supportsTraceability(c.AgentType) && c.GetUsageReportingConfig().IsOfflineMode() {
 				// only validate certain things when a traceability agent is in offline mode
 				c.validateOfflineConfig()
-				c.UsageReporting.validate()
+				c.GetUsageReportingConfig().Validate()
 				return
 			}
 			c.validateConfig()
@@ -602,7 +602,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 
 			if supportsTraceability(c.AgentType) {
-				c.UsageReporting.validate()
+				c.GetUsageReportingConfig().Validate()
 			}
 		},
 		Catch: func(e error) {
