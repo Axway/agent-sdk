@@ -759,20 +759,21 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
+	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
-		// Check if this is offline usage reporting only
-		cfg := &CentralConfiguration{
-			AgentName: props.StringPropertyValue(pathAgentName),
-			AgentType: agentType,
-		}
-		cfg.UsageReporting = ParseUsageReportingConfig(props)
-		if cfg.UsageReporting.IsOfflineMode() {
+		usageReporting = ParseUsageReportingConfig(props)
+		if usageReporting.IsOfflineMode() {
+			// Check if this is offline usage reporting only
+			cfg := &CentralConfiguration{
+				AgentName:      props.StringPropertyValue(pathAgentName),
+				AgentType:      agentType,
+				UsageReporting: usageReporting,
+			}
 			// only need the environment ID in offline mode
 			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
 			return cfg, nil
 		}
 	}
-
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
@@ -785,7 +786,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
-		// UsageReporting:            ParseUsageReportingConfig(props),
 		Auth: &AuthConfiguration{
 			URL:        props.StringPropertyValue(pathAuthURL),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
@@ -817,28 +817,24 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
-
 	cfg.URL = props.StringPropertyValue(pathURL)
 	cfg.SingleURL = props.StringPropertyValue(pathSingleURL)
 	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
-
 	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+		cfg.UsageReporting = usageReporting
 	} else {
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
-
 		// set the notifications
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 	}
-
 	return cfg, nil
 }
-
 func supportsTraceability(agentType AgentType) bool {
 	return agentType == TraceabilityAgent
 }
