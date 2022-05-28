@@ -134,6 +134,7 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 	}
 }
 
+// Validate -
 func (u *UsageReportingConfiguration) Validate() {
 	u.validateURL() // DEPRECATE
 	if u.URL != "" {
