@@ -27,7 +27,7 @@ type Provider interface {
 	GetIssuer() string
 	GetTokenEndpoint() string
 	RegisterClient(clientMetadata Client) (Client, error)
-	UnregisterClient(clientId string) error
+	UnregisterClient(clientID string) error
 }
 
 type tokenResponse struct {

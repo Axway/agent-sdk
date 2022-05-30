@@ -55,10 +55,10 @@ func GetProviderByTokenEndpoint(tokenEP string) (Provider, error) {
 }
 
 // UnregisterClient - removes the client using the registered provider
-func UnregisterClient(providerName string, clientId string) error {
+func UnregisterClient(providerName string, clientID string) error {
 	p, ok := providerMap[providerName]
 	if ok {
-		return p.UnregisterClient(clientId)
+		return p.UnregisterClient(clientID)
 	}
 	return fmt.Errorf("unrecognized credential provider with name %s", providerName)
 }
