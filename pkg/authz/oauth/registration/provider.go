@@ -7,9 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/api"
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -25,6 +23,9 @@ const (
 
 // Provider - interface for external IdP provider
 type Provider interface {
+	GetName() string
+	GetIssuer() string
+	GetTokenEndpoint() string
 	RegisterClient(clientMetadata Client) (Client, error)
 	UnregisterClient(clientId string) error
 }
@@ -36,7 +37,7 @@ type tokenResponse struct {
 
 type provider struct {
 	providerType       ProviderType
-	cfg                config.IDPConfig
+	cfg                corecfg.IDPConfig
 	metadataURL        string
 	extraProperties    map[string]string
 	apiClient          coreapi.Client
@@ -44,7 +45,7 @@ type provider struct {
 }
 
 // NewProvider - create a new IdP provider
-func NewProvider(idp config.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) (Provider, error) {
+func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) (Provider, error) {
 	apiClient := coreapi.NewClientWithTimeout(tlsCfg, proxyURL, clientTimeout)
 
 	providerType := Generic
@@ -73,8 +74,8 @@ func NewProvider(idp config.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string
 }
 
 func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
-	request := api.Request{
-		Method: api.GET,
+	request := coreapi.Request{
+		Method: coreapi.GET,
 		URL:    p.metadataURL,
 	}
 
@@ -99,6 +100,24 @@ func (p *provider) getAuthorizationHeaderPrefix() string {
 	default:
 		return "Bearer"
 	}
+}
+
+func (p *provider) GetName() string {
+	return p.cfg.GetIDPName()
+}
+
+func (p *provider) GetIssuer() string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.Issuer
+	}
+	return ""
+}
+
+func (p *provider) GetTokenEndpoint() string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.TokenEndpoint
+	}
+	return ""
 }
 
 func (p *provider) RegisterClient(clientReq Client) (Client, error) {
@@ -153,8 +172,8 @@ func (p *provider) RegisterClient(clientReq Client) (Client, error) {
 		"Content-Type":  "application/json",
 	}
 
-	request := api.Request{
-		Method:  api.POST,
+	request := coreapi.Request{
+		Method:  coreapi.POST,
 		URL:     p.authServerMetadata.RegistrationEndpoint,
 		Headers: header,
 		Body:    clientBuffer,
@@ -184,8 +203,8 @@ func (p *provider) UnregisterClient(clientID string) error {
 		"Content-Type":  "application/json",
 	}
 
-	request := api.Request{
-		Method:  api.DELETE,
+	request := coreapi.Request{
+		Method:  coreapi.DELETE,
 		URL:     p.authServerMetadata.RegistrationEndpoint + "/" + clientID,
 		Headers: header,
 	}
@@ -210,13 +229,12 @@ func (p *provider) getClientToken() (string, error) {
 			"client_id":     []string{p.cfg.GetAuthConfig().GetClientID()},
 			"client_secret": []string{p.cfg.GetAuthConfig().GetClientSecret()},
 			"grant_type":    []string{"client_credentials"},
-			// "scope":         []string{"client-manage"},
 		}
 		bufBody := data.Encode()
 		fmt.Println(bufBody)
 
-		req := api.Request{
-			Method: api.POST,
+		req := coreapi.Request{
+			Method: coreapi.POST,
 			URL:    tokenURL,
 			Body:   []byte(bufBody),
 			Headers: map[string]string{

@@ -159,10 +159,19 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 	}
 }
 
+// WithName - set that the name for the CRD
+func WithName(name string) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.name = name
+	}
+}
+
 // WithCRDOAuthSecret - set that the Oauth cred is secret based
 func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthSecretCRD
+		if c.name == "" {
+			c.name = provisioning.OAuthSecretCRD
+		}
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthClientSecret).
@@ -176,7 +185,10 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 // WithCRDOAuthPublicKey - set that the Oauth cred is key based
 func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthPublicKeyCRD
+		if c.name == "" {
+			c.name = provisioning.OAuthPublicKeyCRD
+		}
+
 		c.reqProps = append(c.reqProps,
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthPublicKey).

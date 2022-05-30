@@ -4,24 +4,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 var providerMap map[string]Provider
+var tokenEndpointProviderMap map[string]Provider
 
 func init() {
 	providerMap = make(map[string]Provider)
+	tokenEndpointProviderMap = make(map[string]Provider)
 }
 
 // RegisterProvider - registers the IdP provider using the config
-func RegisterProvider(idp config.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
+func RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
 	p, err := NewProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
 		return err
 	}
 
 	providerMap[idp.GetIDPName()] = p
+	tokenEndpointProviderMap[p.GetTokenEndpoint()] = p
 	return nil
 }
 
@@ -32,6 +34,24 @@ func RegisterClient(name string, client Client) (Client, error) {
 		return p.RegisterClient(client)
 	}
 	return nil, fmt.Errorf("unrecognized credential provider with name %s", name)
+}
+
+// GetProviderByName - returns the provider based on lookup by nme
+func GetProviderByName(name string) (Provider, error) {
+	p, ok := providerMap[name]
+	if ok {
+		return p, nil
+	}
+	return nil, fmt.Errorf("unrecognized credential provider with name %s", name)
+}
+
+// GetProviderByTokenEndpoint - returns the provider based on lookup by nme
+func GetProviderByTokenEndpoint(tokenEP string) (Provider, error) {
+	p, ok := tokenEndpointProviderMap[tokenEP]
+	if ok {
+		return p, nil
+	}
+	return nil, fmt.Errorf("unrecognized credential provider with token endpoint %s", tokenEP)
 }
 
 // UnregisterClient - removes the client using the registered provider
