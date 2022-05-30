@@ -4,9 +4,14 @@ import "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 
 type MockApplicationRequest struct {
 	provisioning.ApplicationRequest
+	ID       string
 	AppName  string
 	Details  map[string]string
 	TeamName string
+}
+
+func (m MockApplicationRequest) GetID() string {
+	return m.ID
 }
 
 func (m MockApplicationRequest) GetManagedApplicationName() string {
@@ -22,6 +27,7 @@ func (m MockApplicationRequest) GetTeamName() string {
 
 type MockCredentialRequest struct {
 	provisioning.CredentialRequest
+	ID          string
 	AppDetails  map[string]string
 	AppName     string
 	CredDefName string
@@ -31,6 +37,10 @@ type MockCredentialRequest struct {
 
 func (m MockCredentialRequest) GetApplicationName() string {
 	return m.AppName
+}
+
+func (m MockCredentialRequest) GetID() string {
+	return m.ID
 }
 
 func (m MockCredentialRequest) GetCredentialDetailsValue(key string) string {
@@ -51,11 +61,16 @@ func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 
 type MockAccessRequest struct {
 	provisioning.AccessRequest
+	ID                string
 	AppDetails        map[string]string
 	AppName           string
 	Details           map[string]string
 	InstanceDetails   map[string]interface{}
 	AccessRequestData map[string]interface{}
+}
+
+func (m MockAccessRequest) GetID() string {
+	return m.ID
 }
 
 func (m MockAccessRequest) GetAccessRequestData() map[string]interface{} {
