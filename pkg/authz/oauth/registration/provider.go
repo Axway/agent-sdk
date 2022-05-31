@@ -151,9 +151,9 @@ func (p *provider) RegisterClient(clientReq Client) (Client, error) {
 		if len(clientRequest.extraProperties) == 0 {
 			clientRequest.extraProperties = make(map[string]string)
 		}
-		_, ok := clientRequest.extraProperties["application_tye"]
+		_, ok := clientRequest.extraProperties["application_type"]
 		if !ok {
-			clientRequest.extraProperties["application_tye"] = "service"
+			clientRequest.extraProperties["application_type"] = "service"
 		}
 	}
 
