@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -380,10 +379,8 @@ type mockManager struct {
 
 func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
 	if m.readyCh != nil {
-		fmt.Println("HERE")
 		m.readyCh <- struct{}{}
 	}
-	fmt.Println("out")
 	return "", nil
 }
 
