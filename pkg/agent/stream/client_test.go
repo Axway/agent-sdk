@@ -61,7 +61,11 @@ func TestNewStreamer(t *testing.T) {
 	assert.NotNil(t, streamer)
 	assert.Nil(t, err)
 
-	manager := &mockManager{status: true}
+	manager := &mockManager{
+		status:  true,
+		readyCh: make(chan struct{}),
+	}
+
 	streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
 	}
@@ -74,9 +78,8 @@ func TestNewStreamer(t *testing.T) {
 		errCh <- err
 	}()
 
-	for streamer.listener == nil {
-		continue
-	}
+	<-manager.readyCh
+
 	// should stop the listener and write nil to the listener's error channel
 	streamer.listener.Stop()
 
@@ -92,19 +95,7 @@ func TestNewStreamer(t *testing.T) {
 		errCh <- err
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-
-	go func() {
-		for streamer.manager == nil {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		cancel()
-	}()
-	<-ctx.Done()
-	if !assert.Equal(t, context.Canceled, ctx.Err(), "Init was never completed") {
-		assert.FailNow(t, "no need to go further minimal state not reached")
-	}
+	<-manager.readyCh
 
 	assert.Nil(t, streamer.Status())
 	stop(t, streamer, errCh)
@@ -140,10 +131,7 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	initDone := false
-	onStreamConnection := func(s *StreamerClient) {
-		initDone = true
-	}
+	onStreamConnection := func(s *StreamerClient) {}
 	tHandler := mockHandler{}
 	underTest, err := NewStreamerClient(
 		httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler,
@@ -151,7 +139,11 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
-	manager := &mockManager{status: true}
+	manager := &mockManager{
+		status:  true,
+		readyCh: make(chan struct{}),
+	}
+
 	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
 	}
@@ -164,19 +156,7 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 		errCh <- err
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-
-	go func() {
-		for !initDone {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		cancel()
-	}()
-	<-ctx.Done()
-	if !assert.Equal(t, context.Canceled, ctx.Err(), "Values were never added") {
-		assert.FailNow(t, "no need to go further minimal state not reached")
-	}
+	<-manager.readyCh
 
 	assert.True(t, httpClient.pagedCalled)
 
@@ -191,7 +171,6 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	assert.Empty(t, underTest.cacheManager.GetAllFetchOnStartupResources())
 
 	stop(t, underTest, errCh)
-
 }
 
 func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) {
@@ -221,16 +200,16 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 	cfg.GRPCCfg.FetchOnStartup.Retention = time.Millisecond
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	initDone := false
-	onStreamConnection := func(s *StreamerClient) {
-		initDone = true
-	}
+	onStreamConnection := func(s *StreamerClient) {}
 	tHandler := mockHandler{}
 	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
-	manager := &mockManager{status: true}
+	manager := &mockManager{
+		status:  true,
+		readyCh: make(chan struct{}),
+	}
 	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
 	}
@@ -243,22 +222,10 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 		errCh <- err
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-
-	go func() {
-		for !initDone {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		cancel()
-	}()
-	<-ctx.Done()
-	if !assert.Equal(t, context.Canceled, ctx.Err(), "Values were never added") {
-		assert.FailNow(t, "no need to go further minimal state not reached")
-	}
-
+	<-manager.readyCh
 	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-	assert.Len(t, res, 0)
+
+	assert.Len(t, res, 2)
 
 	stop(t, underTest, errCh)
 
@@ -290,17 +257,17 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	initDone := false
-	onStreamConnection := func(s *StreamerClient) {
-		initDone = true
-	}
+	onStreamConnection := func(s *StreamerClient) {}
 
 	tHandler := mockHandler{}
 	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
-	manager := &mockManager{status: true}
+	manager := &mockManager{
+		status:  true,
+		readyCh: make(chan struct{}),
+	}
 	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
 	}
@@ -311,26 +278,13 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 		errCh <- err
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	go func() {
-		for !initDone {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		cancel()
-	}()
-	<-ctx.Done()
-	if !assert.Equal(t, ctx.Err(), context.Canceled, "Init of streamer not finished") {
-		underTest.listener.Stop()
-		assert.FailNow(t, "no need to go further minimal state not reached")
-	}
+	<-manager.readyCh
 
 	// at this stage we should have resources loaded... but here nothing to load (all deleted)
 	underTest.HandleFetchOnStartupResources()
 	assert.Nil(t, tHandler.received)
 
 	stop(t, underTest, errCh)
-
 }
 
 func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
@@ -357,16 +311,16 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	initDone := false
-	onStreamConnection := func(s *StreamerClient) {
-		initDone = true
-	}
+	onStreamConnection := func(s *StreamerClient) {}
 
 	tHandler := mockHandler{}
 	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
 	assert.NoError(t, err)
 
-	manager := &mockManager{status: true}
+	manager := &mockManager{
+		status:  true,
+		readyCh: make(chan struct{}),
+	}
 	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 		return manager, nil
 	}
@@ -377,19 +331,7 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 		errCh <- err
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	go func() {
-		for !initDone {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		cancel()
-	}()
-	<-ctx.Done()
-	if !assert.Equal(t, ctx.Err(), context.Canceled, "Init of streamer not finished") {
-		underTest.listener.Stop()
-		assert.FailNow(t, "no need to go further minimal state not reached")
-	}
+	<-manager.readyCh
 
 	assert.False(t, httpClient.pagedCalled)
 
@@ -431,10 +373,14 @@ func createRI(id, name string) *apiv1.ResourceInstance {
 }
 
 type mockManager struct {
-	status bool
+	status  bool
+	readyCh chan struct{}
 }
 
 func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
+	if m.readyCh != nil {
+		m.readyCh <- struct{}{}
+	}
 	return "", nil
 }
 

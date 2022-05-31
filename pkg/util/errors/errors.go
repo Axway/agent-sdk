@@ -9,5 +9,5 @@ var (
 	ErrStartingVersionChecker      = Newf(1005, "%s. No version to compare for upgrade")
 	ErrRegisterSubscriptionWebhook = New(1006, "unable to register subscription webhook")
 	ErrGrpcConnection              = New(1007, "grpc client is not connected to central")
-	ErrHarvesterConnection         = New(1007, "harvester client is not connected to central")
+	ErrHarvesterConnection         = New(1008, "harvester client is not connected to central")
 )
