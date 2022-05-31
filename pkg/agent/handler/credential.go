@@ -227,6 +227,7 @@ type provCreds struct {
 	managedApp  string
 	credType    string
 	id          string
+	name        string
 	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
@@ -242,6 +243,7 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		credData:    cr.Spec.Data,
 		managedApp:  cr.Spec.ManagedApplication,
 		id:          cr.Metadata.ID,
+		name:        cr.Name,
 	}
 }
 
@@ -250,9 +252,14 @@ func (c provCreds) GetApplicationName() string {
 	return c.managedApp
 }
 
-// GetID gets the if of the credential resource
+// GetID gets the id of the credential resource
 func (c provCreds) GetID() string {
 	return c.id
+}
+
+// GetName gets the name of the credential resource
+func (c provCreds) GetName() string {
+	return c.name
 }
 
 // GetCredentialType gets the type of the credential

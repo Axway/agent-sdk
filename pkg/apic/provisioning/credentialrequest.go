@@ -8,6 +8,8 @@ type CredentialRequest interface {
 	GetApplicationName() string
 	// GetID returns the ID of the resource for the request
 	GetID() string
+	// GetName returns the name of the resource for the request
+	GetName() string
 	// GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
 	GetCredentialDetailsValue(key string) string
 	// GetCredentialType returns the type of credential related to this request
