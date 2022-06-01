@@ -262,6 +262,8 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 // NewGovernanceAgentWatchTopic creates a WatchTopic template string
 func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
+		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
 		{GroupKind: mv1.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
