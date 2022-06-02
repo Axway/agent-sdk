@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -34,6 +35,7 @@ type OutputEventProcessor interface {
 }
 
 var outputEventProcessor OutputEventProcessor
+var pathDataMutex sync.Mutex = sync.Mutex{}
 
 const (
 	minWindowSize             int = 1
@@ -87,7 +89,16 @@ func SetOutputEventProcessor(eventProcessor OutputEventProcessor) {
 
 // GetDataDirPath - Returns the path of the data directory
 func GetDataDirPath() string {
+	pathDataMutex.Lock()
+	defer pathDataMutex.Unlock()
 	return paths.Paths.Data
+}
+
+// SetDataDirPath - Sets the path of the data directory
+func SetDataDirPath(path string) {
+	pathDataMutex.Lock()
+	defer pathDataMutex.Unlock()
+	paths.Paths.Data = path
 }
 
 // checkCreateDir

@@ -18,7 +18,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/elastic/beats/v7/libbeat/paths"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -210,7 +210,7 @@ func TestMetricCollector(t *testing.T) {
 	s := &testHTTPServer{}
 	defer s.closeServer()
 	s.startServer()
-	paths.Paths.Data = "."
+	traceability.SetDataDirPath(".")
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
@@ -403,7 +403,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			cmd.BuildDataPlaneType = "Azure"
 			agent.Initialize(cfg)
 
-			paths.Paths.Data = "."
+			traceability.SetDataDirPath(".")
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
@@ -463,7 +463,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 	s := &testHTTPServer{}
 	defer s.closeServer()
 	s.startServer()
-	paths.Paths.Data = "."
+	traceability.SetDataDirPath(".")
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
