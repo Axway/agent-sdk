@@ -251,7 +251,7 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 	}
 	agent.provisioner = provisioner
 
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"accessrequesthandler",
 			handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
