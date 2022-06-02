@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -103,7 +104,7 @@ func TestDiscoveryCache_execute(t *testing.T) {
 				}),
 			}
 
-			migration := &mig{}
+			migration := &mockMigrator{mutex: sync.Mutex{}}
 			if tc.withMigration {
 				opts = append(opts, withMigration(migration))
 			}
@@ -200,11 +201,14 @@ func (m mockRIClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string,
 	return make([]*apiv1.ResourceInstance, 0), m.err
 }
 
-type mig struct {
+type mockMigrator struct {
 	called bool
+	mutex  sync.Mutex
 }
 
-func (m *mig) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMigrator) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.called = true
 	return ri, nil
 }
