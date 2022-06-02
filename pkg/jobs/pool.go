@@ -294,7 +294,7 @@ func (p *Pool) stopAll() {
 
 // jobChecker - regularly checks the status of cron jobs, stopping jobs if error returned
 func (p *Pool) jobChecker() {
-	ticker := time.NewTicker(statusCheckInterval)
+	ticker := time.NewTicker(getStatusCheckInterval())
 	defer ticker.Stop()
 	for {
 		select {

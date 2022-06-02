@@ -1,11 +1,15 @@
 package jobs
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 //globalPool - the default job pool
 var globalPool *Pool
 var executionTimeLimit time.Duration = 5 * time.Minute
 var statusCheckInterval time.Duration = defaultRetryInterval
+var durationsMutex sync.Mutex = sync.Mutex{}
 
 func init() {
 	globalPool = newPool()
@@ -13,9 +17,25 @@ func init() {
 
 // UpdateDurations - updates settings int he jobs library
 func UpdateDurations(retryInterval time.Duration, executionTimeout time.Duration) {
+	durationsMutex.Lock()
+	defer durationsMutex.Unlock()
 	executionTimeLimit = executionTimeout
 	globalPool.backoff = newBackoffTimeout(retryInterval, 10*time.Minute, 2)
 	statusCheckInterval = retryInterval
+}
+
+// getStatusCheckInterval - get the status interval using a mutex
+func getStatusCheckInterval() time.Duration {
+	durationsMutex.Lock()
+	defer durationsMutex.Unlock()
+	return statusCheckInterval
+}
+
+// getExecutionTimeLimit - get the execution time limit using a mutex
+func getExecutionTimeLimit() time.Duration {
+	durationsMutex.Lock()
+	defer durationsMutex.Unlock()
+	return executionTimeLimit
 }
 
 //RegisterSingleRunJob - Runs a single run job in the globalPool
