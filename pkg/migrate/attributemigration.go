@@ -60,15 +60,17 @@ type migrateFunc func(ri *v1.ResourceInstance) error
 
 // AttributeMigration - used for migrating attributes to subresource
 type AttributeMigration struct {
-	client client
-	cfg    config.CentralConfig
+	client  client
+	cfg     config.CentralConfig
+	riMutex sync.Mutex
 }
 
 // NewAttributeMigration creates a new AttributeMigration
 func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMigration {
 	return &AttributeMigration{
-		client: client,
-		cfg:    cfg,
+		client:  client,
+		cfg:     cfg,
+		riMutex: sync.Mutex{},
 	}
 }
 
@@ -136,6 +138,8 @@ func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 	}
 
 	// replace the address value so that the Migrate func can return the updated resource instance
+	m.riMutex.Lock()
+	defer m.riMutex.Unlock()
 	*ri = *item.ri
 
 	return m.updateRI(item.ri)
@@ -143,6 +147,8 @@ func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 
 // updateRev gets a list of revisions for the service and updates their attributes.
 func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
+	m.riMutex.Lock()
+	defer m.riMutex.Unlock()
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -153,6 +159,8 @@ func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
 
 // updateInst gets a list of instances for the service and updates their attributes.
 func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
+	m.riMutex.Lock()
+	defer m.riMutex.Unlock()
 	revURL := m.cfg.GetRevisionsURL()
 
 	q := map[string]string{
@@ -198,6 +206,8 @@ func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
 
 // updateCI gets a list of consumer instances for the service and updates their attributes.
 func (m *AttributeMigration) updateCI(ri *v1.ResourceInstance) error {
+	m.riMutex.Lock()
+	defer m.riMutex.Unlock()
 	url := m.cfg.GetConsumerInstancesURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
