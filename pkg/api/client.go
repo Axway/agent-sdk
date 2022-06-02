@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -71,13 +72,17 @@ type configAgent struct {
 }
 
 var cfgAgent *configAgent
+var cfgAgentMutex *sync.Mutex
 
 func init() {
 	cfgAgent = &configAgent{}
+	cfgAgentMutex = &sync.Mutex{}
 }
 
 // SetConfigAgent -
 func SetConfigAgent(env string, isGRPC, isDocker bool, agentName, singleURL string, singleEntryFilter []string) {
+	cfgAgentMutex.Lock()
+	defer cfgAgentMutex.Unlock()
 	cfgAgent.environmentName = env
 	cfgAgent.isGRPC = isGRPC
 	cfgAgent.isDocker = isDocker
@@ -246,6 +251,8 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 		}
 	}
 	if !hasUserAgentHeader {
+		cfgAgentMutex.Lock()
+		defer cfgAgentMutex.Unlock()
 		deploymentType := "binary"
 		if cfgAgent.isDocker {
 			deploymentType = "docker"
