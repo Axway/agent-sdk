@@ -21,6 +21,9 @@ import (
 // ErrInvalidSecretReference - Error for parsing properties with secret reference
 var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s, please check the value for %s config")
 
+// QA EnvVars
+const qaEnforceDurationLowerLimit = "QA_ENFORCE_DURATION_LOWER_LIMIT"
+
 // SecretPropertyResolver - interface for resolving property values with secret references
 type SecretPropertyResolver interface {
 	ResolveSecret(secretRef string) (string, error)
@@ -293,8 +296,8 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
-	// Get config value and check if duration is less than 30s
-	if d < lowerLimit {
+	// Get config value and check if duration is less than 30s, check if allow lower limits
+	if isDurationLowerLimitEnforced() && d < lowerLimit {
 		flagName := p.nameToFlagName(name)
 		flag := p.rootCmd.Flag(flagName)
 
@@ -379,4 +382,17 @@ func (p *properties) MaskValues(maskedKeys string) {
 func (p *properties) DebugLogProperties() {
 	data, _ := json.MarshalIndent(p.flattenedProperties, "", " ")
 	log.Debugf("%s\n", data)
+}
+
+// enforce the lower limit by default
+func isDurationLowerLimitEnforced() bool {
+	if val := os.Getenv(qaEnforceDurationLowerLimit); val != "" {
+		ret, err := strconv.ParseBool(val)
+		if err != nil {
+			log.Errorf("Invalid value %s for env variable %s", val, qaEnforceDurationLowerLimit)
+			return true
+		}
+		return ret
+	}
+	return true
 }
