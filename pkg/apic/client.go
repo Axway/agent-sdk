@@ -696,6 +696,7 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 	var execErr error
 	var instanceBytes []byte
 	wg := &sync.WaitGroup{}
+	bytesMutex := &sync.Mutex{}
 
 	for subName, sub := range subs {
 		wg.Add(1)
@@ -713,11 +714,13 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 		go func(sn string) {
 			defer wg.Done()
 			var err error
+			bytesMutex.Lock()
 			instanceBytes, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
 			if err != nil {
 				execErr = err
 				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
 			}
+			bytesMutex.Unlock()
 		}(subName)
 	}
 
