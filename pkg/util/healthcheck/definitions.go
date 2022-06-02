@@ -1,6 +1,9 @@
 package healthcheck
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 const defaultCheckInterval = 30 * time.Second
 
@@ -21,11 +24,12 @@ type Status struct {
 
 // statusCheck - the status check
 type statusCheck struct {
-	ID       string  `json:"-"`
-	Name     string  `json:"name"`
-	Endpoint string  `json:"endpoint"`
-	Status   *Status `json:"status"`
-	checker  CheckStatus
+	ID          string  `json:"-"`
+	Name        string  `json:"name"`
+	Endpoint    string  `json:"endpoint"`
+	Status      *Status `json:"status"`
+	checker     CheckStatus
+	statusMutex *sync.Mutex
 }
 
 // StatusLevel - the level of the status of the healthcheck

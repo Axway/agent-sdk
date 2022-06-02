@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -71,8 +72,13 @@ func TestRunChecks(t *testing.T) {
 	isReady := false
 	cfg := corecfg.NewStatusConfig()
 	SetStatusConfig(cfg)
+
 	// Start a go func to watch WaitForReady
+	var wg sync.WaitGroup
+	wg.Add((1))
 	go func() {
+		defer wg.Done()
+
 		// Set isReady to true on return
 		err := WaitForReady()
 		if err == nil {
@@ -87,7 +93,7 @@ func TestRunChecks(t *testing.T) {
 	assert.Nil(t, err1, "There was an unexpected error while registering a healthcheck1")
 	assert.Nil(t, err2, "There was an unexpected error while registering a healthcheck2")
 
-	// Run the checks, al fail
+	// Run the checks, all fail
 	res := RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
 	assert.False(t, isReady, "isReady should have been false")
@@ -97,8 +103,8 @@ func TestRunChecks(t *testing.T) {
 	hcValues["healthcheck2"] = false
 	res = RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
-	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have passed")
-	assert.Equal(t, FAIL, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have failed")
+	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have passed")
+	assert.Equal(t, FAIL, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have failed")
 	assert.False(t, isReady, "isReady should have been false")
 
 	// only hc2 pass
@@ -106,8 +112,8 @@ func TestRunChecks(t *testing.T) {
 	hcValues["healthcheck2"] = true
 	res = RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
-	assert.Equal(t, FAIL, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have failed")
-	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have passed")
+	assert.Equal(t, FAIL, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have failed")
+	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have passed")
 	assert.False(t, isReady, "isReady should have been false")
 
 	// hall hc pass
@@ -115,10 +121,10 @@ func TestRunChecks(t *testing.T) {
 	hcValues["healthcheck2"] = true
 	res = RunChecks()
 	assert.Equal(t, OK, res, "The overall healthcheck should have passed")
-	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have passed")
-	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have passed")
-	// Give the WaitForReady check a second to pass
-	time.Sleep(time.Second)
+	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have passed")
+	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have passed")
+
+	wg.Wait()
 	assert.True(t, isReady, "isReady should have been true")
 }
 
