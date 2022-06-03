@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
@@ -14,6 +15,10 @@ import (
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
@@ -136,6 +141,47 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return events, nil
 	}
 
+	cacheManager := agent.GetCacheManager()
+
+	// Lookup Managed App
+	apiID := detail.APIDetails.ID
+	stage := detail.APIDetails.Stage
+
+	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
+	accessRequest := e.getAccessRequest(cacheManager, managedApp, apiID, stage)
+	subscription := e.getSubscription(cacheManager, accessRequest)
+
+	subscriptionID := e.getSubscriptionID(subscription)
+	subscriptionName := subscription.Name
+
+	application := Application{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	consumerOrgID := unknown
+
+	if managedApp != nil {
+		appID, appName := e.getConsumerApplication(managedApp)
+		application.ID = appID
+		application.Name = appName
+		consumerOrgID := e.getConsumerOrgID(managedApp)
+		if consumerOrgID == "" {
+			consumerOrgID = e.getConsumerOrgIDFromSubscription(subscription)
+		}
+	}
+
+	consumerDetails := &ConsumerDetails{
+		OrgID:       consumerOrgID,
+		Application: &application,
+		Subscription: &Subscription{
+			ID:   subscriptionID,
+			Name: subscriptionName,
+		},
+	}
+
+	summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
+
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if summaryEvent == (LogEvent{}) {
 
@@ -207,6 +253,76 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 		Status: status,
 		APIID:  apiID,
 	}
+}
+
+func (e *Generator) getSubscriptionID(subscription *v1.ResourceInstance) string {
+	if subscription == nil {
+		return unknown
+	}
+	return subscription.Metadata.ID
+}
+
+func (e *Generator) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
+	if managedApp == nil {
+		return nil
+	}
+
+	// Lookup Access Request
+	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
+	accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
+	return accessReq
+}
+
+func (e *Generator) getSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
+	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
+	if subscriptionName == "" {
+		return nil
+	}
+
+	subscription := cacheManager.GetSubscriptionByName(subscriptionName)
+	if subscription == nil {
+		return nil
+	}
+	return subscription
+}
+
+func (e *Generator) getConsumerOrgID(ri *v1.ResourceInstance) string {
+	if ri == nil {
+		return ""
+	}
+
+	// Lookup Subscription
+	app := &v1alpha1.ManagedApplication{}
+	app.FromInstance(ri)
+
+	return app.Marketplace.Resource.Owner.Organization.Id
+}
+
+func (e *Generator) getConsumerApplication(ri *v1.ResourceInstance) (string, string) {
+	if ri == nil {
+		return "", ""
+	}
+
+	for _, ref := range ri.Metadata.References {
+		// get the ID of the Catalog Application
+		if ref.Kind == cv1.ApplicationGVK().Kind {
+			return ref.ID, ref.Name
+		}
+	}
+
+	return ri.Metadata.ID, ri.Name // default to the managed app id
+}
+
+func (e *Generator) getConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
+	if ri == nil {
+		return ""
+	}
+
+	// Lookup Subscription
+	subscription := &cv1.Subscription{}
+	subscription.FromInstance(ri)
+
+	return subscription.Marketplace.Resource.Owner.Organization.Id
 }
 
 // Validate APIs in the traceability exceptions list
