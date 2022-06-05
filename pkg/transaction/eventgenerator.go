@@ -142,15 +142,17 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	cacheManager := agent.GetCacheManager()
+	appName := ""
+	if summaryEvent.TransactionSummary.Application != nil {
+		appName = summaryEvent.TransactionSummary.Application.Name
+	}
+	apiID := summaryEvent.TransactionSummary.Proxy.ID
+	stage := summaryEvent.TransactionSummary.Proxy.Stage
 
-	// Lookup Managed App
-	apiID := detail.APIDetails.ID
-	stage := detail.APIDetails.Stage
-
-	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
+	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	accessRequest := e.getAccessRequest(cacheManager, managedApp, apiID, stage)
-	subscription := e.getSubscription(cacheManager, accessRequest)
 
+	subscription := e.getSubscription(cacheManager, accessRequest)
 	subscriptionID := e.getSubscriptionID(subscription)
 	subscriptionName := subscription.Name
 
@@ -160,7 +162,6 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	consumerOrgID := unknown
-
 	if managedApp != nil {
 		appID, appName := e.getConsumerApplication(managedApp)
 		application.ID = appID
