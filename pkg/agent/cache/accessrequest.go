@@ -1,9 +1,9 @@
 package cache
 
 import (
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -15,7 +15,7 @@ func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	return c.accessRequestMap.GetKeys()
 }
 
-func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {
+func (c *cacheManager) AddAccessRequest(ar *management.AccessRequest) {
 	if ar == nil {
 		return
 	}
@@ -40,13 +40,13 @@ func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ar)
 }
 
-func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest {
+func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *management.AccessRequest {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
 	if accessRequest != nil {
-		ri, ok := accessRequest.(*mv1.AccessRequest)
+		ri, ok := accessRequest.(*management.AccessRequest)
 		if ok {
 			return ri
 		}
@@ -54,13 +54,13 @@ func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteA
 	return nil
 }
 
-func (c *cacheManager) GetAccessRequest(id string) *mv1.AccessRequest {
+func (c *cacheManager) GetAccessRequest(id string) *management.AccessRequest {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	accessRequest, _ := c.accessRequestMap.Get(id)
 	if accessRequest != nil {
-		ri, ok := accessRequest.(*mv1.AccessRequest)
+		ri, ok := accessRequest.(*management.AccessRequest)
 		if ok {
 			return ri
 		}

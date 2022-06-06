@@ -7,22 +7,22 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// GetAPIServiceRevisions - v1alpha1.APIServiceRevision
-func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+// GetAPIServiceRevisions - management.APIServiceRevision
+func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*management.APIServiceRevision, error) {
 	resources, err := c.GetAPIV1ResourceInstances(queryParams, URL)
 	if err != nil {
 		return nil, err
 	}
-	apiServiceInstances, err := v1alpha1.APIServiceRevisionFromInstanceArray(resources)
+	apiServiceInstances, err := management.APIServiceRevisionFromInstanceArray(resources)
 	if err != nil {
 		return nil, err
 	}
 
-	filteredAPIRevisions := make([]*v1alpha1.APIServiceRevision, 0)
+	filteredAPIRevisions := make([]*management.APIServiceRevision, 0)
 
 	//create array and filter by stage name. Check the stage name as this does not apply for v7
 	if stage != "" {
@@ -38,13 +38,13 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 	return filteredAPIRevisions, nil
 }
 
-// GetAPIServiceInstances - get v1alpha1.APIServiceInstance
-func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+// GetAPIServiceInstances - get management.APIServiceInstance
+func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error) {
 	resources, err := c.GetAPIV1ResourceInstances(queryParams, URL)
 	if err != nil {
 		return nil, err
 	}
-	apiServiceIntances, err := v1alpha1.APIServiceInstanceFromInstanceArray(resources)
+	apiServiceIntances, err := management.APIServiceInstanceFromInstanceArray(resources)
 	if err != nil {
 		return nil, err
 	}

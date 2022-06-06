@@ -2,19 +2,19 @@ package resource
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
-func traceabilityAgent(res *v1.ResourceInstance) *v1alpha1.TraceabilityAgent {
-	agentRes := &v1alpha1.TraceabilityAgent{}
+func traceabilityAgent(res *v1.ResourceInstance) *management.TraceabilityAgent {
+	agentRes := &management.TraceabilityAgent{}
 	agentRes.FromInstance(res)
 
 	return agentRes
 }
 
-func createTraceabilityAgentStatusResource(agentName, status, prevStatus, message string) *v1alpha1.TraceabilityAgent {
-	agentRes := v1alpha1.TraceabilityAgent{}
+func createTraceabilityAgentStatusResource(agentName, status, prevStatus, message string) *management.TraceabilityAgent {
+	agentRes := management.TraceabilityAgent{}
 	agentRes.Name = agentName
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion

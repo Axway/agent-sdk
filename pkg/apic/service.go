@@ -15,7 +15,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	unifiedcatalog "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
@@ -32,7 +32,7 @@ const (
 )
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
-func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*v1alpha1.APIService, error) {
+func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.APIService, error) {
 	// if the team is set in the config, use that team name and id for all services
 	if c.cfg.GetTeamName() != "" {
 		if teamID, found := c.getTeamFromCache(c.cfg.GetTeamName()); found {
@@ -130,7 +130,7 @@ func (c *ServiceClient) checkReferencesToAccessRequestDefinition(ard string) int
 		}
 		// check the references
 		for _, ref := range serviceInstance.Metadata.References {
-			if ref.Kind == v1alpha1.AccessRequestDefinitionGVK().Kind {
+			if ref.Kind == management.AccessRequestDefinitionGVK().Kind {
 				if ref.Name == ard {
 					count++
 				}
@@ -156,7 +156,7 @@ func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceIn
 				continue // do not add the finalizer back
 			}
 			// 1 or fewer references to the ARD, clean it up
-			tempARD := v1alpha1.NewAccessRequestDefinition(f.Description, c.cfg.GetEnvironmentName())
+			tempARD := management.NewAccessRequestDefinition(f.Description, c.cfg.GetEnvironmentName())
 			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.createAPIServerURL(tempARD.GetSelfLink()), nil)
 			if err == nil {
 				continue // do not add the finalizer back
@@ -187,12 +187,12 @@ func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceIn
 }
 
 // GetConsumerInstanceByID -
-func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*management.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID(consumerInstanceID)
 }
 
 // GetConsumerInstancesByExternalAPIID - DEPRECATED
-func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error) {
+func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*management.ConsumerInstance, error) {
 	log.DeprecationWarningReplace("GetConsumerInstancesByExternalAPIID", "")
 	return c.getConsumerInstancesByExternalAPIID(externalAPIID)
 }
@@ -330,11 +330,11 @@ func (c *ServiceClient) executeAPIServiceAPI(method, url string, buffer []byte) 
 // create the on-and-only secret for the environment
 func (c *ServiceClient) createSecret() error {
 	s := c.DefaultSubscriptionApprovalWebhook.GetSecret()
-	spec := v1alpha1.SecretSpec{
+	spec := management.SecretSpec{
 		Data: map[string]string{DefaultSubscriptionWebhookAuthKey: base64.StdEncoding.EncodeToString([]byte(s))},
 	}
 
-	secret := v1alpha1.Secret{
+	secret := management.Secret{
 		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
 		Spec:         spec,
 	}
@@ -388,21 +388,21 @@ func (c *ServiceClient) createSecret() error {
 // create the on-and-only subscription approval webhook for the environment
 func (c *ServiceClient) createWebhook() error {
 	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	specSecret := v1alpha1.WebhookSpecAuthSecret{
+	specSecret := management.WebhookSpecAuthSecret{
 		Name: DefaultSubscriptionWebhookName,
 		Key:  DefaultSubscriptionWebhookAuthKey,
 	}
-	authSpec := v1alpha1.WebhookSpecAuth{
+	authSpec := management.WebhookSpecAuth{
 		Secret: specSecret,
 	}
-	webSpec := v1alpha1.WebhookSpec{
+	webSpec := management.WebhookSpec{
 		Auth:    authSpec,
 		Enabled: true,
 		Url:     webhookCfg.GetURL(),
 		Headers: webhookCfg.GetWebhookHeaders(),
 	}
 
-	webhook := v1alpha1.Webhook{
+	webhook := management.Webhook{
 		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
 		Spec:         webSpec,
 	}

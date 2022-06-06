@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -49,8 +49,8 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 		b := []byte("")
 
 		if strings.Contains(req.RequestURI, "/consumersubscriptiondefs/"+apiKeySchema.GetSubscriptionName()) {
-			existingSchema := v1alpha1.ConsumerSubscriptionDefinition{
-				Spec: v1alpha1.ConsumerSubscriptionDefinitionSpec{
+			existingSchema := management.ConsumerSubscriptionDefinition{
+				Spec: management.ConsumerSubscriptionDefinitionSpec{
 					Webhooks: []string{existingWebhook},
 				},
 			}
@@ -86,7 +86,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	assert.Nil(t, err)
 	cachedSchema, _ := serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
 	assert.NotNil(t, cachedSchema)
-	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
+	// assert.Contains(t, cachedSchema.(*management.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
 	assert.True(t, schemaCreated)
 	assert.False(t, schemaUpdate)
 
@@ -96,7 +96,7 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	err = svcClient.RegisterSubscriptionSchema(apiKeySchema, false)
 	assert.Nil(t, err)
 	cachedSchema, err = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
-	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
+	// assert.Contains(t, cachedSchema.(*management.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
 	assert.NotNil(t, cachedSchema)
 	assert.False(t, schemaCreated)
 	assert.False(t, schemaUpdate)
@@ -104,8 +104,8 @@ func TestRegisterSubscriptionSchema(t *testing.T) {
 	// err = svcClient.RegisterSubscriptionSchema(apiKeySchema, true)
 	assert.Nil(t, err)
 	cachedSchema, _ = serviceClient.subscriptionSchemaCache.Get(apiKeySchema.GetSubscriptionName())
-	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
-	// assert.Contains(t, cachedSchema.(*v1alpha1.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
+	// assert.Contains(t, cachedSchema.(*management.ConsumerSubscriptionDefinition).Spec.Webhooks, DefaultSubscriptionWebhookName)
+	// assert.Contains(t, cachedSchema.(*management.ConsumerSubscriptionDefinition).Spec.Webhooks, existingWebhook)
 	assert.NotNil(t, cachedSchema)
 	assert.False(t, schemaCreated)
 	// assert.True(t, schemaUpdate)
@@ -147,16 +147,16 @@ func TestGetProperty(t *testing.T) {
 func TestGetProfilePropValue(t *testing.T) {
 	svcClient, _, _ := commonSetup(t)
 	sc := svcClient.(*ServiceClient)
-	def := &v1alpha1.ConsumerSubscriptionDefinition{}
+	def := &management.ConsumerSubscriptionDefinition{}
 	p := sc.getProfilePropValue(def)
 	assert.Nil(t, p)
 
-	props := v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{
+	props := management.ConsumerSubscriptionDefinitionSpecSchemaProperties{
 		Key:   profileKey,
 		Value: map[string]interface{}{"key1": "value1"},
 	}
 
-	def.Spec.Schema.Properties = []v1alpha1.ConsumerSubscriptionDefinitionSpecSchemaProperties{props}
+	def.Spec.Schema.Properties = []management.ConsumerSubscriptionDefinitionSpecSchemaProperties{props}
 	p = sc.getProfilePropValue(def)
 	assert.NotNil(t, p)
 	assert.Equal(t, "value1", p["key1"])

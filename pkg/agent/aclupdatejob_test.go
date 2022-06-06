@@ -9,23 +9,23 @@ import (
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
-func generateTestACL(name string, teams []string) *v1alpha1.AccessControlList {
-	acl := &v1alpha1.AccessControlList{
+func generateTestACL(name string, teams []string) *management.AccessControlList {
+	acl := &management.AccessControlList{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1alpha1.AccessControlListGVK(),
+			GroupVersionKind: management.AccessControlListGVK(),
 			Name:             name,
 			Title:            name,
 		},
-		Spec: v1alpha1.AccessControlListSpec{
-			Rules: []v1alpha1.AccessRules{
+		Spec: management.AccessControlListSpec{
+			Rules: []management.AccessRules{
 				{
-					Access: []v1alpha1.AccessLevelScope{
+					Access: []management.AccessLevelScope{
 						{
 							Level: "scope",
 						},
@@ -123,7 +123,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 					token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 					resp.Write([]byte(token))
 				}
-				if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+test.envName+"/accesscontrollists") {
+				if strings.Contains(req.RequestURI, "/apis/management/management/environments/"+test.envName+"/accesscontrollists") {
 					aclReturn, _ := ioutil.ReadAll(req.Body)
 					switch {
 					case req.Method == http.MethodDelete:
@@ -154,7 +154,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 				for _, team := range combinedTeams {
 					agent.cacheManager.AddAPIService(&v1.ResourceInstance{
 						ResourceMeta: v1.ResourceMeta{
-							GroupVersionKind: v1alpha1.APIServiceGVK(),
+							GroupVersionKind: management.APIServiceGVK(),
 							Name:             team,
 							Title:            team,
 							SubResources: map[string]interface{}{
@@ -175,7 +175,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 
 				// acl from cache
 				if test.aclCached[i] {
-					var acl v1alpha1.AccessControlList
+					var acl management.AccessControlList
 					cachedACL := agent.cacheManager.GetAccessControlList()
 					acl.FromInstance(cachedACL)
 					assert.Equal(t, len(expectedACL.Spec.Subjects), len(acl.Spec.Subjects))
@@ -215,7 +215,7 @@ func TestInitializeACLJob(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var expectedACL *v1alpha1.AccessControlList
+			var expectedACL *management.AccessControlList
 			var apiCalled bool
 			// initialize the http responses
 			s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
@@ -255,7 +255,7 @@ func TestInitializeACLJob(t *testing.T) {
 			cachedACL := agent.cacheManager.GetAccessControlList()
 			if tt.loadCache || tt.returnACL {
 				assert.NotNil(t, cachedACL)
-				var acl v1alpha1.AccessControlList
+				var acl management.AccessControlList
 				acl.FromInstance(cachedACL)
 				assert.True(t, assert.ObjectsAreEqualValues(expectedACL.Spec.Subjects, acl.Spec.Subjects))
 			} else {

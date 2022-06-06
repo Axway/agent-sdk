@@ -1,4 +1,4 @@
-package v1alpha1
+package management
 
 // CredentialRequestDefinitionSpecWebhook struct for CredentialRequestDefinitionSpecWebhook
 type CredentialRequestDefinitionSpecWebhook struct {

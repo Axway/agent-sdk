@@ -1,4 +1,4 @@
-package v1alpha1
+package management
 
 // CredentialRequestDefinitionSpecProvision struct for CredentialRequestDefinitionSpecProvision
 type CredentialRequestDefinitionSpecProvision struct {

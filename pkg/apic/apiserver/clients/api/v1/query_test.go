@@ -3,7 +3,7 @@ package v1
 import (
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 func TestRSQL(t *testing.T) {
@@ -54,12 +54,12 @@ func TestRSQL(t *testing.T) {
 		},
 		{
 			"by reference",
-			Reference(v1alpha1.ResourceDiscoveryGVK(), "my-rd-pods"),
+			Reference(management.ResourceDiscoveryGVK(), "my-rd-pods"),
 			`metadata.references.name==my-rd-pods;metadata.references.kind==ResourceDiscovery`,
 		},
 		{
 			"by reference or attribute",
-			Or(AttrIn("a", "v1", "v2"), Reference(v1alpha1.ResourceDiscoveryGVK(), "my-rd-svc")),
+			Or(AttrIn("a", "v1", "v2"), Reference(management.ResourceDiscoveryGVK(), "my-rd-svc")),
 			`(attributes.a=in=("v1","v2"),metadata.references.name==my-rd-svc;metadata.references.kind==ResourceDiscovery)`,
 		},
 	}

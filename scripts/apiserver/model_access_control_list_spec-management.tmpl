@@ -1,4 +1,4 @@
-package v1alpha1
+package management
 
 // GENERATE: All of the code below was replaced after code gneration
 
