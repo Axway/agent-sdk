@@ -22,6 +22,7 @@ const (
 	SummaryEventApplicationIDPrefix = "remoteAppId_"
 )
 
+// GetAccessRequest -
 func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
 	if managedApp == nil {
 		return nil
@@ -33,6 +34,7 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	return accessReq
 }
 
+// GetSubscriptionID -
 func GetSubscriptionID(subscription *v1.ResourceInstance) string {
 	if subscription == nil {
 		return unknown
@@ -40,6 +42,7 @@ func GetSubscriptionID(subscription *v1.ResourceInstance) string {
 	return subscription.Metadata.ID
 }
 
+// GetSubscription -
 func GetSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
 	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
 	if subscriptionName == "" {
@@ -53,6 +56,7 @@ func GetSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessR
 	return subscription
 }
 
+// GetConsumerOrgID -
 func GetConsumerOrgID(ri *v1.ResourceInstance) string {
 	if ri == nil {
 		return ""
@@ -65,6 +69,7 @@ func GetConsumerOrgID(ri *v1.ResourceInstance) string {
 	return app.Marketplace.Resource.Owner.Organization.Id
 }
 
+// GetConsumerApplication -
 func GetConsumerApplication(ri *v1.ResourceInstance) (string, string) {
 	if ri == nil {
 		return "", ""
@@ -80,6 +85,7 @@ func GetConsumerApplication(ri *v1.ResourceInstance) (string, string) {
 	return ri.Metadata.ID, ri.Name // default to the managed app id
 }
 
+// GetConsumerOrgIDFromSubscription -
 func GetConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
 	if ri == nil {
 		return ""
