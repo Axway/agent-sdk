@@ -11,6 +11,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/tidwall/gjson"
 )
@@ -170,12 +171,12 @@ func (c *ServiceClient) updateSubscriptionDefinitionPropertiesForCatalogItem(cat
 }
 
 // CreateCategory - Adds a new category
-func (c *ServiceClient) CreateCategory(title string) (*management.Category, error) {
-	spec := management.CategorySpec{
+func (c *ServiceClient) CreateCategory(title string) (*catalog.Category, error) {
+	spec := catalog.CategorySpec{
 		Description: "",
 	}
 
-	category := management.Category{
+	category := catalog.Category{
 		ResourceMeta: v1.ResourceMeta{Title: title},
 		Spec:         spec,
 	}
@@ -206,7 +207,7 @@ func (c *ServiceClient) CreateCategory(title string) (*management.Category, erro
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var newCategory management.Category
+	var newCategory catalog.Category
 	err = json.Unmarshal(response.Body, &newCategory)
 	return &newCategory, err
 }

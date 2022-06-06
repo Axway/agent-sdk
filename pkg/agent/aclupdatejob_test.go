@@ -123,7 +123,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 					token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 					resp.Write([]byte(token))
 				}
-				if strings.Contains(req.RequestURI, "/apis/management/management/environments/"+test.envName+"/accesscontrollists") {
+				if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+test.envName+"/accesscontrollists") {
 					aclReturn, _ := ioutil.ReadAll(req.Body)
 					switch {
 					case req.Method == http.MethodDelete:

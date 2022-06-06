@@ -7,7 +7,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
@@ -45,7 +45,7 @@ func NewPollClient(
 	cacheManager agentcache.Manager,
 	onStreamConnection OnStreamConnection,
 	onClientStop onClientStopCb,
-	wt *v1alpha1.WatchTopic,
+	wt *management.WatchTopic,
 	handlers ...handler.Handler,
 ) (*PollClient, error) {
 
