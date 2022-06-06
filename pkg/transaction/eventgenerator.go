@@ -10,7 +10,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
-	transUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -209,11 +209,11 @@ func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
 
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
-	accessRequest := transUtil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 
 	// get subscription info
-	subscription := transUtil.GetSubscription(cacheManager, accessRequest)
-	subscriptionID := transUtil.GetSubscriptionID(subscription)
+	subscription := transutil.GetSubscription(cacheManager, accessRequest)
+	subscriptionID := transutil.GetSubscriptionID(subscription)
 	subscriptionName := subscription.Name
 
 	application := &Application{
@@ -224,12 +224,12 @@ func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 	consumerOrgID := unknown
 
 	if managedApp != nil {
-		appID, appName := transUtil.GetConsumerApplication(managedApp)
+		appID, appName := transutil.GetConsumerApplication(managedApp)
 		application.ID = appID
 		application.Name = appName
-		consumerOrgID := transUtil.GetConsumerOrgID(managedApp)
+		consumerOrgID := transutil.GetConsumerOrgID(managedApp)
 		if consumerOrgID == "" {
-			consumerOrgID = transUtil.GetConsumerOrgIDFromSubscription(subscription)
+			consumerOrgID = transutil.GetConsumerOrgIDFromSubscription(subscription)
 		}
 	}
 
