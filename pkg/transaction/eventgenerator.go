@@ -11,7 +11,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -136,10 +135,9 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		log.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
 		return events, nil
 	}
-	if util.IsNotTest() {
-		if summaryEvent.TransactionSummary != nil {
-			summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
-		}
+
+	if summaryEvent.TransactionSummary != nil {
+		summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
