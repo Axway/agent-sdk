@@ -143,7 +143,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 
 		for _, event := range pagedEvents {
 			lastID = event.Metadata.GetSequenceID()
-			if !h.skipPublish {
+			if !h.skipPublish || eventCh != nil {
 				eventCh <- event.toProtoEvent()
 			}
 		}

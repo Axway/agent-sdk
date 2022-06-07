@@ -5,10 +5,10 @@ import (
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/harvester"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -27,24 +27,25 @@ var cfg = &config.CentralConfiguration{
 }
 
 func TestPollClientStart(t *testing.T) {
-	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{}
+	wt := mv1.NewWatchTopic("mocktopic")
 	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
 		ri: ri,
 	}
 
-	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	pollClient, err := NewPollClient(httpClient, cfg, getToken, cacheManager, nil, nil, watchTopic)
-	assert.NotNil(t, pollClient)
-	assert.Nil(t, err)
-
 	mockH := &mockHarvester{
 		readyCh: make(chan struct{}),
 	}
 
-	pollClient.newPollManager = func(cfg *harvester.Config, interval time.Duration, onStop onClientStopCb) *manager {
-		p := newPollManager(cfg, interval, onStop)
+	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
+	seq := events.NewSequenceProvider(cacheManager, wt.Name)
+
+	pollClient, err := NewPollClient(httpClient, cfg, nil, WithHarvester(mockH, seq, wt.GetSelfLink()))
+	assert.NotNil(t, pollClient)
+	assert.Nil(t, err)
+
+	pollClient.newPollManager = func(interval time.Duration, options ...executorOpt) *pollExecutor {
+		p := newPollExecutor(cfg.PollInterval, options...)
 		p.harvester = mockH
 		return p
 	}

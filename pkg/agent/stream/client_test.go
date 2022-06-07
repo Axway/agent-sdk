@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 
@@ -21,8 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-var noop = func() {}
 
 func NewConfig() config.CentralConfiguration {
 	return config.CentralConfiguration{
@@ -54,10 +52,16 @@ func TestNewStreamer(t *testing.T) {
 	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
 	cacheManager := agentcache.NewAgentCacheManager(&cfg, false)
-	onStreamConnection := func(s *StreamerClient) {
-		hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
-	}
-	streamer, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, nil, wt)
+
+	streamer, err := NewStreamerClient(
+		httpClient,
+		&cfg,
+		getToken,
+		nil,
+		WithOnStreamConnection(),
+		WithCacheManager(cacheManager),
+		WithWatchTopic(wt),
+	)
 	assert.NotNil(t, streamer)
 	assert.Nil(t, err)
 
@@ -131,10 +135,15 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	onStreamConnection := func(s *StreamerClient) {}
-	tHandler := mockHandler{}
+
+	tHandler := &mockHandler{}
 	underTest, err := NewStreamerClient(
-		httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler,
+		httpClient,
+		&cfg,
+		getToken,
+		[]handler.Handler{tHandler},
+		WithCacheManager(cacheManager),
+		WithWatchTopic(wt),
 	)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
@@ -161,11 +170,11 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	assert.True(t, httpClient.pagedCalled)
 
 	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-	assert.Len(t, res, 2)
+	assert.Equal(t, 2, len(res))
 
 	// make sure handler are called
 	underTest.HandleFetchOnStartupResources()
-	assert.Len(t, tHandler.received, 2)
+	assert.Equal(t, 2, len(tHandler.received))
 
 	// and won't be anymore
 	assert.Empty(t, underTest.cacheManager.GetAllFetchOnStartupResources())
@@ -200,9 +209,15 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 	cfg.GRPCCfg.FetchOnStartup.Retention = time.Millisecond
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	onStreamConnection := func(s *StreamerClient) {}
-	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
+	tHandler := &mockHandler{}
+
+	underTest, err := NewStreamerClient(httpClient,
+		&cfg,
+		getToken,
+		[]handler.Handler{tHandler},
+		WithCacheManager(cacheManager),
+		WithWatchTopic(wt),
+	)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -223,9 +238,10 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 	}()
 
 	<-manager.readyCh
+
 	res := underTest.cacheManager.GetAllFetchOnStartupResources()
 
-	assert.Len(t, res, 2)
+	assert.Equal(t, 2, len(res))
 
 	stop(t, underTest, errCh)
 
@@ -257,10 +273,14 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	onStreamConnection := func(s *StreamerClient) {}
-
-	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
+	tHandler := &mockHandler{}
+	underTest, err := NewStreamerClient(httpClient,
+		&cfg,
+		getToken,
+		[]handler.Handler{tHandler},
+		WithCacheManager(cacheManager),
+		WithWatchTopic(wt),
+	)
 	assert.NotNil(t, underTest)
 	assert.NoError(t, err)
 
@@ -311,10 +331,15 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	cfg := NewConfigWithLoadOnStartup()
 
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	onStreamConnection := func(s *StreamerClient) {}
 
-	tHandler := mockHandler{}
-	underTest, err := NewStreamerClient(httpClient, &cfg, getToken, cacheManager, onStreamConnection, noop, wt, &tHandler)
+	tHandler := &mockHandler{}
+	underTest, err := NewStreamerClient(
+		httpClient,
+		&cfg, getToken,
+		[]handler.Handler{tHandler},
+		WithCacheManager(cacheManager),
+		WithWatchTopic(wt),
+	)
 	assert.NoError(t, err)
 
 	manager := &mockManager{
@@ -336,11 +361,11 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	assert.False(t, httpClient.pagedCalled)
 
 	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-	assert.Len(t, res, 1)
+	assert.Equal(t, 1, len(res))
 
 	// make sure handler are called
 	underTest.HandleFetchOnStartupResources()
-	assert.Len(t, tHandler.received, 1)
+	assert.Equal(t, 1, len(tHandler.received))
 	assert.Equal(t, "foo", tHandler.received[0].Name)
 	assert.Equal(t, "123", tHandler.received[0].Metadata.ID)
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,7 +24,7 @@ func TestWatchOptions(t *testing.T) {
 		WithTLSConfig(nil),
 		WithKeepAlive(1*time.Second, 1*time.Second),
 		WithLogger(entry),
-		WithSyncEvents(&testSequenceProvider{}),
+		WithHarvester(&mockHarvester{}, &testSequenceProvider{}),
 		WithProxy("http://proxy"),
 		WithSingleEntryAddr("single-entry"),
 	}
@@ -38,7 +39,19 @@ func TestWatchOptions(t *testing.T) {
 	assert.Equal(t, entry, options.loggerEntry)
 	assert.Equal(t, 1*time.Second, options.keepAlive.timeout)
 	assert.Equal(t, 1*time.Second, options.keepAlive.time)
-	assert.NotNil(t, options.sequenceProvider)
+	assert.NotNil(t, options.sequence)
 	assert.Equal(t, "http://proxy", options.proxyURL)
 	assert.Equal(t, "single-entry", options.singleEntryAddr)
+}
+
+type mockHarvester struct{}
+
+func (m mockHarvester) EventCatchUp(link string, events chan *proto.Event) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+	// TODO implement me
+	panic("implement me")
 }

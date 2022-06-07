@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -48,8 +49,9 @@ type watchOptions struct {
 	singleEntryAddr  string
 	keepAlive        keepAliveOption
 	loggerEntry      *logrus.Entry
-	sequenceProvider events.SequenceProvider
+	sequence         events.SequenceProvider
 	onEventSyncError eventSyncCb
+	harvester        harvester.Harvest
 }
 
 // newWatchOptions returns the default watchOptions
@@ -107,10 +109,11 @@ func WithLogger(loggerEntry *logrus.Entry) Option {
 	})
 }
 
-// WithSyncEvents allows using the harvester client to sync events on watch registration
-func WithSyncEvents(sequenceGetter events.SequenceProvider) Option {
+// WithHarvester allows using the harvester client to sync events on watch registration
+func WithHarvester(harvester harvester.Harvest, sequence events.SequenceProvider) Option {
 	return funcOption(func(o *watchOptions) {
-		o.sequenceProvider = sequenceGetter
+		o.sequence = sequence
+		o.harvester = harvester
 	})
 }
 

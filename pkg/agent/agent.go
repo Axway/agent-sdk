@@ -11,6 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -310,6 +311,10 @@ func SyncCache() error {
 		return err
 	}
 
+	sequence := events.NewSequenceProvider(agent.cacheManager, wt.Name)
+	hCfg := harvester.NewConfig(agent.cfg, agent.tokenRequester, sequence)
+	hClient := harvester.NewClient(hCfg)
+
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
 		GetCentralClient(),
@@ -319,7 +324,12 @@ func SyncCache() error {
 	)
 
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		err := discoveryCache.execute()
+		seqID, err := hClient.ReceiveSyncEvents(wt.GetSelfLink(), 0, nil)
+		if err != nil {
+			return err
+		}
+		sequence.SetSequence(seqID)
+		err = discoveryCache.execute()
 		if err != nil {
 			return err
 		}
@@ -335,7 +345,7 @@ func SyncCache() error {
 		agent.cacheManager.SaveCache()
 	}
 
-	return startCentralEventProcessor(wt, cacheSync)
+	return startCentralEventProcessor(wt, cacheSync, sequence, hClient)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -455,11 +465,11 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
+func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func(), sequence events.SequenceProvider, hClient harvester.Harvest) error {
 	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(wt, cacheSyncFunc)
+		return startStreamMode(wt, cacheSyncFunc, sequence, hClient)
 	}
-	return startPollMode(wt, cacheSyncFunc)
+	return startPollMode(cacheSyncFunc, sequence, hClient, wt.GetSelfLink())
 }
 
 func newHandlers() []handler.Handler {
@@ -493,20 +503,21 @@ func newHandlers() []handler.Handler {
 	return handlers
 }
 
-func startPollMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
+func startPollMode(
+	cacheSyncFunc func(),
+	sequence events.SequenceProvider,
+	hClient harvester.Harvest,
+	topicSelfLink string,
+) error {
 	handlers := newHandlers()
 
 	pc, err := poller.NewPollClient(
 		agent.apicClient,
 		agent.cfg,
-		agent.tokenRequester,
-		agent.cacheManager,
-		func(p *poller.PollClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
+		handlers,
+		poller.WithHarvester(hClient, sequence, topicSelfLink),
+		poller.WithOnClientStop(cacheSyncFunc),
+		poller.WithOnConnect(),
 	)
 
 	if err != nil {
@@ -518,20 +529,24 @@ func startPollMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
 	return err
 }
 
-func startStreamMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
+func startStreamMode(
+	wt *mv1.WatchTopic,
+	cacheSyncFunc func(),
+	sequence events.SequenceProvider,
+	hClient harvester.Harvest,
+) error {
 	handlers := newHandlers()
 
 	sc, err := stream.NewStreamerClient(
 		agent.apicClient,
 		agent.cfg,
 		agent.tokenRequester,
-		agent.cacheManager,
-		func(s *stream.StreamerClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
+		handlers,
+		stream.WithOnStreamConnection(),
+		stream.WithEventSyncError(cacheSyncFunc),
+		stream.WithWatchTopic(wt),
+		stream.WithHarvester(hClient, sequence),
+		stream.WithCacheManager(agent.cacheManager),
 	)
 
 	if err != nil {

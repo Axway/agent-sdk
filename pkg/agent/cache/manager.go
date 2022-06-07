@@ -141,7 +141,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		accessRequestMap:        cache.New(),
 		subscriptionMap:         cache.New(),
 		sequenceCache:           cache.New(),
-		fetchOnStartup:        cache.New(),
+		fetchOnStartup:          cache.New(),
 		teams:                   cache.New(),
 		ardMap:                  cache.New(),
 		crdMap:                  cache.New(),
