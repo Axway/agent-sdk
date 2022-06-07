@@ -30,13 +30,18 @@ type Generator struct {
 	shouldAddFields                bool
 	shouldUseTrafficForAggregation bool
 	collector                      metric.Collector
+	logger                         log.FieldLogger
 }
 
 // NewEventGenerator - Create a new event generator
 func NewEventGenerator() EventGenerator {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.transaction.eventgenerator").
+		WithComponent("eventgenerator")
 	eventGen := &Generator{
 		shouldAddFields:                !traceability.IsHTTPTransport(),
 		shouldUseTrafficForAggregation: true,
+		logger:                         logger,
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
@@ -132,7 +137,7 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 	// See if the uri is in the api exceptions list
 	if e.isInAPIExceptionsList(detailEvents) {
-		log.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
+		e.logger.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
 		return events, nil
 	}
 
@@ -205,12 +210,19 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
+		e.logger.
+			WithField("appName", appName).
+			Debug("transaction summary application name")
 	}
 
 	// get proxy information
 	if summaryEvent.TransactionSummary.Proxy != nil {
 		apiID = summaryEvent.TransactionSummary.Proxy.ID
 		stage = summaryEvent.TransactionSummary.Proxy.Stage
+		e.logger.
+			WithField("apidID", apiID).
+			WithField("stage", stage).
+			Debug("transaction summary proxy information")
 	} else {
 		return nil
 	}
@@ -218,14 +230,29 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
+		e.logger.
+			WithField("appName", appName).
+			Debug("could not get managed application by name")
 		return nil
 	}
+	e.logger.
+		WithField("appName", appName).
+		WithField("managed app name", managedApp.Name).
+		Debug("managed application info")
 
 	// get the access request
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 	if accessRequest == nil {
+		e.logger.
+			Debug("could not get access request")
 		return nil
 	}
+	e.logger.
+		WithField("managed app name", managedApp.Name).
+		WithField("apiID", apiID).
+		WithField("stage", stage).
+		WithField("access request name", accessRequest.Name).
+		Debug("managed application info")
 
 	// get subscription info
 	subscription := &Subscription{
@@ -234,13 +261,19 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	}
 
 	subscriptionObj := transutil.GetSubscription(cacheManager, accessRequest)
-	if subscriptionObj != nil {
-		subscription.ID = transutil.GetSubscriptionID(subscriptionObj)
-		subscription.Name = subscriptionObj.Name
-	} else {
+	if subscriptionObj == nil {
+		e.logger.Debug("could not get subscription")
 		return nil
 	}
 
+	subscription.ID = transutil.GetSubscriptionID(subscriptionObj)
+	subscription.Name = subscriptionObj.Name
+	e.logger.
+		WithField("subscription ID", subscription.ID).
+		WithField("subscription name", subscription.Name).
+		Debug("subscription information")
+
+	// get application info
 	appID := unknown
 	application := &Application{
 		ID:   appID,
@@ -253,10 +286,25 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		appID, appName = transutil.GetConsumerApplication(managedApp)
 		application.ID = appID
 		application.Name = appName
-		consumerOrgID := transutil.GetConsumerOrgID(managedApp)
+		e.logger.
+			WithField("application ID", application.ID).
+			WithField("application name", application.Name).
+			Debug("application information")
+
+			// try to get consumer org ID from the managed app first
+		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
 		if consumerOrgID == "" {
+			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+			// if we can't get it from the managed app, try to get the consumer org ID from the subscription
 			consumerOrgID = transutil.GetConsumerOrgIDFromSubscription(subscriptionObj)
+			if consumerOrgID == "" {
+				e.logger.Debug("could not get consumer org ID from the subscription")
+				return nil
+			}
 		}
+		e.logger.
+			WithField("consumer org ID", consumerOrgID).
+			Debug("consumer org ID ")
 	}
 
 	// Update consumer details with Org, Application and Subscription
