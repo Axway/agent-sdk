@@ -220,7 +220,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		apiID = summaryEvent.TransactionSummary.Proxy.ID
 		stage = summaryEvent.TransactionSummary.Proxy.Stage
 		e.logger.
-			WithField("apidID", apiID).
+			WithField("apiID", apiID).
 			WithField("stage", stage).
 			Debug("transaction summary proxy information")
 	} else {
