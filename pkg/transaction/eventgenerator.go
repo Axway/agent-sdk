@@ -138,10 +138,7 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 	if util.IsNotTest() {
 		if summaryEvent.TransactionSummary != nil {
-			consumerDetails := e.getConsumerDetails(summaryEvent)
-			if consumerDetails != nil {
-				summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
-			}
+			summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
 		}
 	}
 
