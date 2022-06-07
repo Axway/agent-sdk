@@ -137,7 +137,9 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return events, nil
 	}
 	if util.IsNotTest() {
-		summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerInfo(summaryEvent)
+		if summaryEvent.TransactionSummary != nil {
+			summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerInfo(summaryEvent)
+		}
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -195,53 +197,76 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	return events, nil
 }
 
-// getConsumerInfo - get the consumer information to add to transaction event
+// getConsumerInfo - get the consumer information to add to transaction event.  If we don't have any
+// 		information we need to get the consumer information, then we just return an empty ConsumerDetails
 func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 	cacheManager := agent.GetCacheManager()
-	appName := ""
+	appName := unknown
+	apiID := ""
+	stage := ""
+
+	consumerDetails := &ConsumerDetails{}
 
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
 	}
 
 	// get proxy information
-	apiID := summaryEvent.TransactionSummary.Proxy.ID
-	stage := summaryEvent.TransactionSummary.Proxy.Stage
+	if summaryEvent.TransactionSummary.Proxy != nil {
+		apiID = summaryEvent.TransactionSummary.Proxy.ID
+		stage = summaryEvent.TransactionSummary.Proxy.Stage
+	} else {
+		return consumerDetails
+	}
 
+	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
+	if managedApp == nil {
+		return consumerDetails
+	}
+
+	// get the access request
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	if accessRequest == nil {
+		return consumerDetails
+	}
 
 	// get subscription info
-	subscription := transutil.GetSubscription(cacheManager, accessRequest)
-	subscriptionID := transutil.GetSubscriptionID(subscription)
-	subscriptionName := subscription.Name
-
-	application := &Application{
+	subscription := &Subscription{
 		ID:   unknown,
 		Name: unknown,
 	}
 
+	subscriptionObj := transutil.GetSubscription(cacheManager, accessRequest)
+	if subscriptionObj != nil {
+		subscription.ID = transutil.GetSubscriptionID(subscriptionObj)
+		subscription.Name = subscriptionObj.Name
+	} else {
+		return consumerDetails
+	}
+
+	appID := unknown
+	application := &Application{
+		ID:   appID,
+		Name: appName,
+	}
+
 	consumerOrgID := unknown
 
-	if managedApp != nil {
-		appID, appName := transutil.GetConsumerApplication(managedApp)
+	if managedApp != nil && subscriptionObj != nil {
+		appID, appName = transutil.GetConsumerApplication(managedApp)
 		application.ID = appID
 		application.Name = appName
 		consumerOrgID := transutil.GetConsumerOrgID(managedApp)
 		if consumerOrgID == "" {
-			consumerOrgID = transutil.GetConsumerOrgIDFromSubscription(subscription)
+			consumerOrgID = transutil.GetConsumerOrgIDFromSubscription(subscriptionObj)
 		}
 	}
 
 	// Update consumer details with Org, Application and Subscription
-	consumerDetails := &ConsumerDetails{
-		OrgID:       consumerOrgID,
-		Application: application,
-		Subscription: &Subscription{
-			ID:   subscriptionID,
-			Name: subscriptionName,
-		},
-	}
+	consumerDetails.OrgID = consumerOrgID
+	consumerDetails.Application = application
+	consumerDetails.Subscription = subscription
 
 	return consumerDetails
 }
