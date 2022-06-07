@@ -138,7 +138,10 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 	if util.IsNotTest() {
 		if summaryEvent.TransactionSummary != nil {
-			summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerInfo(summaryEvent)
+			consumerDetails := e.getConsumerDetails(summaryEvent)
+			if consumerDetails != nil {
+				summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
+			}
 		}
 	}
 
@@ -197,15 +200,13 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	return events, nil
 }
 
-// getConsumerInfo - get the consumer information to add to transaction event.  If we don't have any
-// 		information we need to get the consumer information, then we just return an empty ConsumerDetails
-func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
+// getConsumerDetails - get the consumer information to add to transaction event.  If we don't have any
+// 		information we need to get the consumer information, then we just return nil
+func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	cacheManager := agent.GetCacheManager()
 	appName := unknown
 	apiID := ""
 	stage := ""
-
-	consumerDetails := &ConsumerDetails{}
 
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
@@ -216,19 +217,19 @@ func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 		apiID = summaryEvent.TransactionSummary.Proxy.ID
 		stage = summaryEvent.TransactionSummary.Proxy.Stage
 	} else {
-		return consumerDetails
+		return nil
 	}
 
 	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
-		return consumerDetails
+		return nil
 	}
 
 	// get the access request
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 	if accessRequest == nil {
-		return consumerDetails
+		return nil
 	}
 
 	// get subscription info
@@ -242,7 +243,7 @@ func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 		subscription.ID = transutil.GetSubscriptionID(subscriptionObj)
 		subscription.Name = subscriptionObj.Name
 	} else {
-		return consumerDetails
+		return nil
 	}
 
 	appID := unknown
@@ -264,9 +265,11 @@ func (e *Generator) getConsumerInfo(summaryEvent LogEvent) *ConsumerDetails {
 	}
 
 	// Update consumer details with Org, Application and Subscription
-	consumerDetails.OrgID = consumerOrgID
-	consumerDetails.Application = application
-	consumerDetails.Subscription = subscription
+	consumerDetails := &ConsumerDetails{
+		OrgID:        consumerOrgID,
+		Application:  application,
+		Subscription: subscription,
+	}
 
 	return consumerDetails
 }
