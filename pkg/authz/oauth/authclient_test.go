@@ -74,7 +74,7 @@ func TestGetPlatformTokensHttpError(t *testing.T) {
 	assert.NotNil(t, err)
 
 	privateKey, _ := util.ReadPrivateKeyFile("testdata/private_key.pem", "")
-	publicKey, _ := util.ReadPublicKeyBytes("testdata/publicKey")
+	publicKey, _ := util.ReadPublicKeyBytes("testdata/publickey")
 	s.SetTokenResponse("", 0, http.StatusBadRequest)
 	ac, err = NewAuthClient(s.GetTokenURL(), apiClient,
 		WithServerName("testServer"),
