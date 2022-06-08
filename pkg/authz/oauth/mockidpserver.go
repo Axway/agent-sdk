@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// MockIdPServer - interface for mock IDP server
-type MockIdPServer interface {
+// MockIDPServer - interface for mock IDP server
+type MockIDPServer interface {
 	GetMetadataURL() string
 	GetIssuer() string
 	GetTokenURL() string
@@ -34,7 +34,7 @@ type mockIDPServer struct {
 }
 
 // NewMockIDPServer - creates a new mock IDP server for tests
-func NewMockIDPServer() MockIdPServer {
+func NewMockIDPServer() MockIDPServer {
 	m := &mockIDPServer{
 		metadataResponseCode: http.StatusOK,
 		tokenResponseCode:    http.StatusOK,
