@@ -1,22 +1,16 @@
 package agent
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/harvester"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -282,72 +276,6 @@ func HandleFetchOnStartupResources() {
 	}
 }
 
-// SyncCache -
-func SyncCache() error {
-	migrations := []migrate.Migrator{
-		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
-	}
-
-	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-		agent.marketplaceMigration = marketplaceMigration
-		migrations = append(migrations, marketplaceMigration)
-	}
-
-	mig := migrate.NewMigrateAll(migrations...)
-	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
-
-	opts := []discoveryOpt{
-		withMigration(mig),
-		withMpEnabled(isMpEnabled),
-	}
-
-	if agent.agentResourceManager != nil {
-		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
-	}
-
-	wt, err := events.GetWatchTopic(agent.cfg, GetCentralClient())
-	if err != nil {
-		return err
-	}
-
-	sequence := events.NewSequenceProvider(agent.cacheManager, wt.Name)
-	hCfg := harvester.NewConfig(agent.cfg, agent.tokenRequester, sequence)
-	hClient := harvester.NewClient(hCfg)
-
-	discoveryCache := newDiscoveryCache(
-		agent.cfg,
-		GetCentralClient(),
-		newHandlers(),
-		wt,
-		opts...,
-	)
-
-	if !agent.cacheManager.HasLoadedPersistedCache() {
-		seqID, err := hClient.ReceiveSyncEvents(wt.GetSelfLink(), 0, nil)
-		if err != nil {
-			return err
-		}
-		sequence.SetSequence(seqID)
-		err = discoveryCache.execute()
-		if err != nil {
-			return err
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	cacheSync := func() {
-		agent.cacheManager.Flush()
-		err := discoveryCache.execute()
-		if err != nil {
-			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	return startCentralEventProcessor(wt, cacheSync, sequence, hClient)
-}
-
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
 		return client.RegisterSubscriptionWebhook()
@@ -465,13 +393,6 @@ func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
 }
 
-func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func(), sequence events.SequenceProvider, hClient harvester.Harvest) error {
-	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(wt, cacheSyncFunc, sequence, hClient)
-	}
-	return startPollMode(cacheSyncFunc, sequence, hClient, wt.GetSelfLink())
-}
-
 func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager),
@@ -501,60 +422,4 @@ func newHandlers() []handler.Handler {
 	}
 
 	return handlers
-}
-
-func startPollMode(
-	cacheSyncFunc func(),
-	sequence events.SequenceProvider,
-	hClient harvester.Harvest,
-	topicSelfLink string,
-) error {
-	handlers := newHandlers()
-
-	pc, err := poller.NewPollClient(
-		agent.apicClient,
-		agent.cfg,
-		handlers,
-		poller.WithHarvester(hClient, sequence, topicSelfLink),
-		poller.WithOnClientStop(cacheSyncFunc),
-		poller.WithOnConnect(),
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the harvester poll client: %s", err)
-	}
-
-	newEventProcessorJob(pc, "Poll Client")
-
-	return err
-}
-
-func startStreamMode(
-	wt *mv1.WatchTopic,
-	cacheSyncFunc func(),
-	sequence events.SequenceProvider,
-	hClient harvester.Harvest,
-) error {
-	handlers := newHandlers()
-
-	sc, err := stream.NewStreamerClient(
-		agent.apicClient,
-		agent.cfg,
-		agent.tokenRequester,
-		handlers,
-		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(cacheSyncFunc),
-		stream.WithWatchTopic(wt),
-		stream.WithHarvester(hClient, sequence),
-		stream.WithCacheManager(agent.cacheManager),
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the watch manager: %s", err)
-	}
-
-	agent.streamer = sc
-	newEventProcessorJob(sc, "Stream Client")
-
-	return err
 }

@@ -25,22 +25,6 @@ type pollExecutor struct {
 
 type newPollExecutorFunc func(interval time.Duration, options ...executorOpt) *pollExecutor
 
-type executorOpt func(m *pollExecutor)
-
-func withHarvester(cfg harvesterConfig) executorOpt {
-	return func(m *pollExecutor) {
-		m.harvester = cfg.hClient
-		m.sequence = cfg.sequence
-		m.topicSelfLink = cfg.topicSelfLink
-	}
-}
-
-func withOnStop(cb onClientStopCb) executorOpt {
-	return func(m *pollExecutor) {
-		m.onStop = cb
-	}
-}
-
 func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecutor {
 	logger := log.NewFieldLogger().
 		WithComponent("pollExecutor").

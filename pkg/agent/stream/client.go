@@ -55,46 +55,6 @@ type StreamerClient struct {
 	onEventSyncError        func()
 }
 
-type StreamOpt func(client *StreamerClient)
-
-// WithWatchTopic sets the watch topic
-func WithWatchTopic(wt *v1alpha1.WatchTopic) StreamOpt {
-	return func(client *StreamerClient) {
-		client.wt = wt
-		client.topicSelfLink = wt.GetSelfLink()
-	}
-}
-
-func WithCacheManager(cache agentcache.Manager) StreamOpt {
-	return func(client *StreamerClient) {
-		client.cacheManager = cache
-	}
-}
-
-// WithHarvester configures the streaming client to use harvester for syncing initial events
-func WithHarvester(hClient harvester.Harvest, sequence events.SequenceProvider) StreamOpt {
-	return func(client *StreamerClient) {
-		client.sequence = sequence
-		client.harvester = hClient
-	}
-}
-
-// WithEventSyncError sets the callback func to run when there is an error syncing events
-func WithEventSyncError(cb func()) StreamOpt {
-	return func(client *StreamerClient) {
-		client.onEventSyncError = cb
-	}
-}
-
-// WithOnStreamConnection func to execute when a connection to central is made
-func WithOnStreamConnection() StreamOpt {
-	return func(pc *StreamerClient) {
-		pc.onStreamConnection = func() {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", pc.Healthcheck)
-		}
-	}
-}
-
 // NewStreamerClient creates a StreamerClient
 func NewStreamerClient(
 	apiClient events.APIClient,
