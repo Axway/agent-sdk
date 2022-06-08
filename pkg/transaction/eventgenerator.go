@@ -212,39 +212,39 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		appName = summaryEvent.TransactionSummary.Application.Name
 		e.logger.
 			WithField("appName", appName).
-			Debug("transaction summary application name")
+			Trace("transaction summary application name")
 	}
 
 	// get proxy information
-	if summaryEvent.TransactionSummary.Proxy != nil {
-		apiID = summaryEvent.TransactionSummary.Proxy.ID
-		stage = summaryEvent.TransactionSummary.Proxy.Stage
-		e.logger.
-			WithField("apiID", apiID).
-			WithField("stage", stage).
-			Debug("transaction summary proxy information")
-	} else {
+	if summaryEvent.TransactionSummary.Proxy == nil {
+		e.logger.Debug("proxy information is not available, no consumer information attached")
 		return nil
 	}
+	apiID = summaryEvent.TransactionSummary.Proxy.ID
+	stage = summaryEvent.TransactionSummary.Proxy.Stage
+	e.logger.
+		WithField("apiID", apiID).
+		WithField("stage", stage).
+		Trace("transaction summary proxy information")
 
 	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
 		e.logger.
 			WithField("appName", appName).
-			Debug("could not get managed application by name")
+			Debug("could not get managed application by name, no consumer information attached")
 		return nil
 	}
 	e.logger.
 		WithField("appName", appName).
 		WithField("managed app name", managedApp.Name).
-		Debug("managed application info")
+		Trace("managed application info")
 
 	// get the access request
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 	if accessRequest == nil {
 		e.logger.
-			Debug("could not get access request")
+			Debug("could not get access request, no consumer information attached")
 		return nil
 	}
 	e.logger.
@@ -252,7 +252,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		WithField("apiID", apiID).
 		WithField("stage", stage).
 		WithField("access request name", accessRequest.Name).
-		Debug("managed application info")
+		Trace("managed application info")
 
 	// get subscription info
 	subscription := &Subscription{
@@ -262,7 +262,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 
 	subscriptionObj := transutil.GetSubscription(cacheManager, accessRequest)
 	if subscriptionObj == nil {
-		e.logger.Debug("could not get subscription")
+		e.logger.Debug("could not get subscription, no consumer information attached")
 		return nil
 	}
 
@@ -271,7 +271,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	e.logger.
 		WithField("subscription ID", subscription.ID).
 		WithField("subscription name", subscription.Name).
-		Debug("subscription information")
+		Trace("subscription information")
 
 	// get application info
 	appID := unknown
@@ -289,7 +289,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		e.logger.
 			WithField("application ID", application.ID).
 			WithField("application name", application.Name).
-			Debug("application information")
+			Trace("application information")
 
 			// try to get consumer org ID from the managed app first
 		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
@@ -304,17 +304,15 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		}
 		e.logger.
 			WithField("consumer org ID", consumerOrgID).
-			Debug("consumer org ID ")
+			Trace("consumer org ID ")
 	}
 
 	// Update consumer details with Org, Application and Subscription
-	consumerDetails := &ConsumerDetails{
+	return &ConsumerDetails{
 		OrgID:        consumerOrgID,
 		Application:  application,
 		Subscription: subscription,
 	}
-
-	return consumerDetails
 }
 
 // createSamplingTransactionDetails -
