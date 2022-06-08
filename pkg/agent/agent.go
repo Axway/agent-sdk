@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -366,10 +367,17 @@ func UpdateStatus(status, description string) {
 
 // UpdateStatusWithPrevious - Updates the agent state providing a previous state
 func UpdateStatusWithPrevious(status, prevStatus, description string) {
+	ctx := context.WithValue(context.Background(), ctxLogger, logger)
+	UpdateStatusWithContext(ctx, status, prevStatus, description)
+}
+
+// UpdateStatusWithContext - Updates the agent state providing a context
+func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
+	logger := ctx.Value(ctxLogger).(log.FieldLogger)
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			logger.Warnf("could not update the agent status reference, %s", err.Error())
+			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
 	}
 }

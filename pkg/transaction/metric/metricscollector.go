@@ -22,6 +22,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	transUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -230,10 +231,10 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	stage := detail.APIDetails.Stage
 
 	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
-	accessRequest := c.getAccessRequest(cacheManager, managedApp, apiID, stage)
-	subscription := c.getSubscription(cacheManager, accessRequest)
+	accessRequest := transUtil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	subscription := transUtil.GetSubscription(cacheManager, accessRequest)
 
-	subscriptionID := c.getSubscriptionID(subscription)
+	subscriptionID := transUtil.GetSubscriptionID(subscription)
 	appID := c.getApplicationID(managedApp)
 	statusCode := detail.StatusCode
 
