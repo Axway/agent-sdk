@@ -40,7 +40,7 @@ func TestClientBuilder(t *testing.T) {
 	assert.Equal(t, "http://localhost", cm.GetLogoURI())
 	assert.Nil(t, cm.GetJwks())
 
-	publicKey, err := util.ReadPublicKeyBytes("../../apic/auth/testdata/publicKey")
+	publicKey, err := util.ReadPublicKeyBytes("testdata/publicKey")
 	assert.Nil(t, err)
 
 	cm, err = NewClientMetadataBuilder().
@@ -66,7 +66,7 @@ func TestBuildValidations(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, client)
 
-	publicKey, err := util.ReadPublicKeyBytes("../../apic/auth/testdata/publicKey")
+	publicKey, err := util.ReadPublicKeyBytes("testdata/publicKey")
 	assert.Nil(t, err)
 
 	client, err = NewClientMetadataBuilder().

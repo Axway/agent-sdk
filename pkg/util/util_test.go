@@ -226,7 +226,7 @@ func TestParseAddr(t *testing.T) {
 }
 
 func TestComputeKIDFromDER(t *testing.T) {
-	key, err := ioutil.ReadFile("../apic/auth/testdata/public_key")
+	key, err := ioutil.ReadFile("testdata/public_key")
 	if err != nil {
 		t.Errorf("unable to read public_key")
 	}
@@ -240,7 +240,7 @@ func TestComputeKIDFromDER(t *testing.T) {
 	}
 
 	// der file format
-	key, err = ioutil.ReadFile("../apic/auth/testdata/public_key.der")
+	key, err = ioutil.ReadFile("testdata/public_key.der")
 	if err != nil {
 		t.Errorf("unable to read public_key.der")
 	}
@@ -262,17 +262,17 @@ func TestReadPrivateKey(t *testing.T) {
 	}{
 		{
 			description: "no password",
-			privKeyFile: "../apic/auth/testdata/private_key.pem",
+			privKeyFile: "testdata/private_key.pem",
 		},
 		{
 			description:  "with empty password file",
-			privKeyFile:  "../apic/auth/testdata/private_key.pem",
-			passwordFile: "../apic/auth/testdata/password_empty",
+			privKeyFile:  "testdata/private_key.pem",
+			passwordFile: "testdata/password_empty",
 		},
 		{
 			description:  "with password",
-			privKeyFile:  "../apic/auth/testdata/private_key_with_pwd.pem",
-			passwordFile: "../apic/auth/testdata/password",
+			privKeyFile:  "testdata/private_key_with_pwd.pem",
+			passwordFile: "testdata/password",
 		},
 	}
 
@@ -290,7 +290,7 @@ func TestReadPublicKeyFile(t *testing.T) {
 	}{
 		{
 			description:   "with public key",
-			publicKeyFile: "../apic/auth/testdata/public_key",
+			publicKeyFile: "testdata/public_key",
 		},
 	}
 	for _, testCase := range cases {
