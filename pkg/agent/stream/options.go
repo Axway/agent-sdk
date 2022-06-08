@@ -9,25 +9,26 @@ import (
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
-// StreamOpt func for setting fields on the StreamerClient
-type StreamOpt func(client *StreamerClient)
+// StreamerOpt func for setting fields on the StreamerClient
+type StreamerOpt func(client *StreamerClient)
 
 // WithWatchTopic sets the watch topic
-func WithWatchTopic(wt *v1alpha1.WatchTopic) StreamOpt {
+func WithWatchTopic(wt *v1alpha1.WatchTopic) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.wt = wt
 		client.topicSelfLink = wt.GetSelfLink()
 	}
 }
 
-func WithCacheManager(cache agentcache.Manager) StreamOpt {
+// WithCacheManager sets a cache manager
+func WithCacheManager(cache agentcache.Manager) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.cacheManager = cache
 	}
 }
 
 // WithHarvester configures the streaming client to use harvester for syncing initial events
-func WithHarvester(hClient harvester.Harvest, sequence events.SequenceProvider) StreamOpt {
+func WithHarvester(hClient harvester.Harvest, sequence events.SequenceProvider) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.sequence = sequence
 		client.harvester = hClient
@@ -35,14 +36,14 @@ func WithHarvester(hClient harvester.Harvest, sequence events.SequenceProvider) 
 }
 
 // WithEventSyncError sets the callback func to run when there is an error syncing events
-func WithEventSyncError(cb func()) StreamOpt {
+func WithEventSyncError(cb func()) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.onEventSyncError = cb
 	}
 }
 
 // WithOnStreamConnection func to execute when a connection to central is made
-func WithOnStreamConnection() StreamOpt {
+func WithOnStreamConnection() StreamerOpt {
 	return func(pc *StreamerClient) {
 		pc.onStreamConnection = func() {
 			hc.RegisterHealthcheck(util.AmplifyCentral, "central", pc.Healthcheck)

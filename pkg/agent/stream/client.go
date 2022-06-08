@@ -61,7 +61,7 @@ func NewStreamerClient(
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
 	handlers []handler.Handler,
-	options ...StreamOpt,
+	options ...StreamerOpt,
 ) (*StreamerClient, error) {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent.stream").
