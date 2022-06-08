@@ -78,7 +78,7 @@ func (es *EventSync) SyncCache() error {
 			return err
 		}
 	}
-	return nil
+	return es.startCentralEventProcessor()
 }
 
 func (es *EventSync) initCache() error {
@@ -106,7 +106,7 @@ func (es *EventSync) rebuildCache() {
 
 func (es *EventSync) startCentralEventProcessor() error {
 	if agent.cfg.IsUsingGRPC() {
-		return es.startPollMode()
+		return es.startStreamMode()
 	}
 	return es.startPollMode()
 }

@@ -7,6 +7,8 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,4 +58,30 @@ func TestPollerRegisterWatchError(t *testing.T) {
 
 	err := <-errCh
 	assert.NotNil(t, err)
+}
+
+func TestPollClientOptions(t *testing.T) {
+	cfg := config.NewCentralConfig(config.DiscoveryAgent)
+	pc, _ := NewPollClient(
+		&mock.Client{}, cfg, nil,
+		WithHarvester(&mockHarvester{}, &mockSequence{}, "/self/link"),
+		WithOnClientStop(func() {}),
+		WithOnConnect(),
+	)
+
+	assert.NotNil(t, pc.harvesterConfig.hClient)
+	assert.NotNil(t, pc.harvesterConfig.sequence)
+	assert.NotNil(t, pc.harvesterConfig.topicSelfLink)
+	assert.NotNil(t, pc.onClientStop)
+	assert.NotNil(t, pc.onStreamConnection)
+}
+
+type mockSequence struct{}
+
+func (m mockSequence) GetSequence() int64 {
+	return 0
+}
+
+func (m mockSequence) SetSequence(_ int64) {
+
 }

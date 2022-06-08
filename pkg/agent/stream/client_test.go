@@ -8,6 +8,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/apic/mock"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -377,6 +378,23 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 
 }
 
+func TestClientOptions(t *testing.T) {
+	sc, _ := NewStreamerClient(
+		&mock.Client{},
+		config.NewCentralConfig(config.DiscoveryAgent),
+		&mockTokenGetter{},
+		nil,
+		WithHarvester(&mockHarvester{}, &mockSequence{}),
+		WithEventSyncError(func() {
+		}),
+		WithOnStreamConnection(),
+	)
+	assert.NotNil(t, sc.harvester)
+	assert.NotNil(t, sc.sequence)
+	assert.NotNil(t, sc.onEventSyncError)
+	assert.NotNil(t, sc.onStreamConnection)
+}
+
 func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 	t.Helper()
 	// should stop the listener and write nil to the listener's error channel
@@ -468,4 +486,24 @@ func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.Re
 	}
 	m.received = append(m.received, ri)
 	return m.err
+}
+
+type mockHarvester struct{}
+
+func (m mockHarvester) EventCatchUp(link string, events chan *proto.Event) error {
+	return nil
+}
+
+func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+	return 0, nil
+}
+
+type mockSequence struct{}
+
+func (m mockSequence) GetSequence() int64 {
+	return 0
+}
+
+func (m mockSequence) SetSequence(sequenceID int64) {
+	return
 }
