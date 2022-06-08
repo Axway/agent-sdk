@@ -1,4 +1,4 @@
-package registration
+package oauth
 
 import (
 	"encoding/json"
@@ -24,8 +24,8 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Client - Interface for IdP client representation
-type Client interface {
+// ClientMetadata - Interface for IdP client metadata representation
+type ClientMetadata interface {
 	GetClientName() string
 	GetClientID() string
 	GetClientSecret() string
@@ -33,15 +33,17 @@ type Client interface {
 	GetClientSecretExpiresAt() *time.Time
 	GetScopes() []string
 	GetGrantTypes() []string
+	GetTokenEndpointAuthMethod() string
 	GetResponseTypes() []string
 	GetClientURI() string
 	GetRedirectURIs() []string
 	GetLogoURI() string
 	GetJwksURI() string
+	GetJwks() map[string]interface{}
 	GetExtraProperties() map[string]string
 }
 
-type client struct {
+type clientMetadata struct {
 	ClientName            string `json:"client_name,omitempty"`
 	ClientID              string `json:"client_id,omitempty"`
 	ClientSecret          string `json:"client_secret,omitempty"`
@@ -54,18 +56,19 @@ type client struct {
 	ResponseTypes           []string `json:"response_types,omitempty"`
 	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty"`
 
-	ClientURI       string            `json:"client_uri,omitempty"`
-	RedirectURIs    []string          `json:"redirect_uris,omitempty"`
-	JwksURI         string            `json:"jwks_uri,omitempty"`
-	LogoURI         string            `json:"logo_uri,omitempty"`
-	extraProperties map[string]string `json:"-"`
+	ClientURI       string                 `json:"client_uri,omitempty"`
+	RedirectURIs    []string               `json:"redirect_uris,omitempty"`
+	JwksURI         string                 `json:"jwks_uri,omitempty"`
+	Jwks            map[string]interface{} `json:"jwks,omitempty"`
+	LogoURI         string                 `json:"logo_uri,omitempty"`
+	extraProperties map[string]string      `json:"-"`
 }
 
 var clientFields map[string]bool
 
 func init() {
 	clientFields = make(map[string]bool)
-	t := reflect.TypeOf(client{})
+	t := reflect.TypeOf(clientMetadata{})
 
 	for i := 0; i < t.NumField(); i++ {
 		tag := t.Field(i).Tag.Get("json")
@@ -79,19 +82,19 @@ func init() {
 	}
 }
 
-func (c *client) GetClientName() string {
+func (c *clientMetadata) GetClientName() string {
 	return c.ClientName
 }
 
-func (c *client) GetClientID() string {
+func (c *clientMetadata) GetClientID() string {
 	return c.ClientID
 }
 
-func (c *client) GetClientSecret() string {
+func (c *clientMetadata) GetClientSecret() string {
 	return c.ClientSecret
 }
 
-func (c *client) GetClientIDIssuedAt() *time.Time {
+func (c *clientMetadata) GetClientIDIssuedAt() *time.Time {
 	if c.ClientIDIssuedAt == nil {
 		return nil
 	}
@@ -100,7 +103,7 @@ func (c *client) GetClientIDIssuedAt() *time.Time {
 	return &t
 }
 
-func (c *client) GetClientSecretExpiresAt() *time.Time {
+func (c *clientMetadata) GetClientSecretExpiresAt() *time.Time {
 	if c.ClientSecretExpiresAt == nil {
 		return nil
 	}
@@ -109,41 +112,49 @@ func (c *client) GetClientSecretExpiresAt() *time.Time {
 	return &t
 }
 
-func (c *client) GetScopes() []string {
+func (c *clientMetadata) GetScopes() []string {
 	return c.Scope
 }
 
-func (c *client) GetGrantTypes() []string {
+func (c *clientMetadata) GetGrantTypes() []string {
 	return c.GrantTypes
 }
 
-func (c *client) GetResponseTypes() []string {
+func (c *clientMetadata) GetResponseTypes() []string {
 	return c.ResponseTypes
 }
 
-func (c *client) GetClientURI() string {
+func (c *clientMetadata) GetTokenEndpointAuthMethod() string {
+	return c.TokenEndpointAuthMethod
+}
+
+func (c *clientMetadata) GetClientURI() string {
 	return c.ClientURI
 }
 
-func (c *client) GetRedirectURIs() []string {
+func (c *clientMetadata) GetRedirectURIs() []string {
 	return c.RedirectURIs
 }
 
-func (c *client) GetLogoURI() string {
+func (c *clientMetadata) GetLogoURI() string {
 	return c.LogoURI
 }
 
-func (c *client) GetJwksURI() string {
+func (c *clientMetadata) GetJwksURI() string {
 	return c.JwksURI
 }
 
-func (c *client) GetExtraProperties() map[string]string {
+func (c *clientMetadata) GetJwks() map[string]interface{} {
+	return c.Jwks
+}
+
+func (c *clientMetadata) GetExtraProperties() map[string]string {
 	return c.extraProperties
 }
 
 // MarshalJSON serialize the client metadata with provider metadata
-func (c *client) MarshalJSON() ([]byte, error) {
-	type alias client
+func (c *clientMetadata) MarshalJSON() ([]byte, error) {
+	type alias clientMetadata
 	v := &struct{ *alias }{
 		alias: (*alias)(c),
 	}
@@ -167,8 +178,8 @@ func (c *client) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON deserialize the client metadata with provider metadata
-func (c *client) UnmarshalJSON(data []byte) error {
-	type alias client
+func (c *clientMetadata) UnmarshalJSON(data []byte) error {
+	type alias clientMetadata
 	v := &struct{ *alias }{
 		alias: (*alias)(c),
 	}
@@ -179,23 +190,17 @@ func (c *client) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	buf, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
 	allFields := map[string]interface{}{}
-	err = json.Unmarshal(buf, &allFields)
+	err = json.Unmarshal(data, &allFields)
 	if err != nil {
 		return err
 	}
 
 	v.extraProperties = make(map[string]string)
-
 	for key, value := range allFields {
 		if _, ok := clientFields[key]; !ok {
 			if strValue, ok := value.(string); ok {
-				c.extraProperties[key] = strValue
+				v.extraProperties[key] = strValue
 			}
 		}
 	}

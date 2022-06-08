@@ -1,4 +1,4 @@
-package registration
+package oauth
 
 // AuthorizationServerMetadata - OAuth metadata from IdP
 type AuthorizationServerMetadata struct {

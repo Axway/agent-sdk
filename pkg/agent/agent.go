@@ -18,7 +18,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/authz/oauth/registration"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
@@ -65,6 +65,7 @@ type agentData struct {
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
+	authProviderRegistry   oauth.ProviderRegistry
 }
 
 var agent agentData
@@ -199,20 +200,19 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 func registerExternalIDPs() {
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
+		tlsCfg := agent.cfg.GetTLSConfig()
+		proxy := agent.cfg.GetProxyURL()
+		timeout := agent.cfg.GetClientTimeout()
 		for _, idp := range idPCfg.GetIDPList() {
-			tlsCfg := agent.cfg.GetTLSConfig()
-			proxy := agent.cfg.GetProxyURL()
-			timeout := agent.cfg.GetClientTimeout()
-
 			registerCredentialProvider(idp, tlsCfg, proxy, timeout)
 		}
 	}
 }
 
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) {
-	err := registration.RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
+	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
-		log.Errorf("unable to register external IdP provider, any credential request to the IdP will fail. %s", err.Error())
+		log.Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
 }
 
@@ -279,6 +279,14 @@ func RegisterResourceEventHandler(name string, resourceEventHandler handler.Hand
 // UnregisterResourceEventHandler - removes the specified resource event handler
 func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
+}
+
+// GetAuthProviderRegistry - Returns the auth provider registry
+func GetAuthProviderRegistry() oauth.ProviderRegistry {
+	if agent.authProviderRegistry == nil {
+		agent.authProviderRegistry = oauth.NewProviderRegistry()
+	}
+	return agent.authProviderRegistry
 }
 
 // HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers

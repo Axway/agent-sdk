@@ -1,6 +1,7 @@
 package util
 
 import (
+	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
@@ -222,4 +223,79 @@ func TestParseAddr(t *testing.T) {
 	u, _ = url.Parse("http://test")
 	addr = ParseAddr(u)
 	assert.Equal(t, "test:80", addr)
+}
+
+func TestComputeKIDFromDER(t *testing.T) {
+	key, err := ioutil.ReadFile("../apic/auth/testdata/public_key")
+	if err != nil {
+		t.Errorf("unable to read public_key")
+	}
+	res, err := ComputeKIDFromDER(key)
+	if err != nil {
+		t.Errorf("unable to compute kid")
+	}
+	expected := "1wzYoslzjo-ROTN1CUWPQYtTUqrqiaDO96fAAmb7JvA"
+	if res != expected {
+		t.Fail()
+	}
+
+	// der file format
+	key, err = ioutil.ReadFile("../apic/auth/testdata/public_key.der")
+	if err != nil {
+		t.Errorf("unable to read public_key.der")
+	}
+	res, err = ComputeKIDFromDER(key)
+	if err != nil {
+		t.Errorf("unable to compute kid")
+	}
+	expected = "iXcfstYFMANhYzgPwMWJxIQdfLQBqWjdiwyl7e4xv6Q"
+	if res != expected {
+		t.Fail()
+	}
+}
+
+func TestReadPrivateKey(t *testing.T) {
+	cases := []struct {
+		description  string
+		privKeyFile  string
+		passwordFile string
+	}{
+		{
+			description: "no password",
+			privKeyFile: "../apic/auth/testdata/private_key.pem",
+		},
+		{
+			description:  "with empty password file",
+			privKeyFile:  "../apic/auth/testdata/private_key.pem",
+			passwordFile: "../apic/auth/testdata/password_empty",
+		},
+		{
+			description:  "with password",
+			privKeyFile:  "../apic/auth/testdata/private_key_with_pwd.pem",
+			passwordFile: "../apic/auth/testdata/password",
+		},
+	}
+
+	for _, testCase := range cases {
+		if _, err := ReadPrivateKeyFile(testCase.privKeyFile, testCase.passwordFile); err != nil {
+			t.Errorf("testcase: %s: failed to read rsa key %s", testCase.description, err)
+		}
+	}
+}
+
+func TestReadPublicKeyFile(t *testing.T) {
+	cases := []struct {
+		description   string
+		publicKeyFile string
+	}{
+		{
+			description:   "with public key",
+			publicKeyFile: "../apic/auth/testdata/public_key",
+		},
+	}
+	for _, testCase := range cases {
+		if _, err := ReadPublicKeyBytes(testCase.publicKeyFile); err != nil {
+			t.Errorf("testcase: %s: failed to read public key %s", testCase.description, err)
+		}
+	}
 }

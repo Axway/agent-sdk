@@ -1,11 +1,18 @@
 package util
 
 import (
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"hash/fnv"
 	"io/fs"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,10 +20,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/golang-jwt/jwt"
 	"github.com/sirupsen/logrus"
 )
 
@@ -309,4 +318,152 @@ func ConvertStringToUint(val string) uint64 {
 // ConvertUnitToString -
 func ConvertUnitToString(val uint64) string {
 	return strconv.FormatUint(val, 10)
+}
+
+// ReadPrivateKeyFile - reads and parses the private key content
+func ReadPrivateKeyFile(privateKeyFile, passwordFile string) (*rsa.PrivateKey, error) {
+	keyBytes, err := ioutil.ReadFile(privateKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// cleanup private key read bytes
+	defer func() {
+		for i := range keyBytes {
+			keyBytes[i] = 0
+		}
+	}()
+
+	if passwordFile != "" {
+		var passwordBuf []byte
+		var err error
+		// cleanup password bytes
+		defer func() {
+			for i := range passwordBuf {
+				passwordBuf[i] = 0
+			}
+		}()
+
+		passwordBuf, err = readPassword(passwordFile)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(passwordBuf) > 0 {
+			key, err := parseRSAPrivateKeyFromPEMWithBytePassword(keyBytes, passwordBuf)
+			if err != nil {
+				return nil, err
+			}
+
+			return key, nil
+
+		}
+		log.Debug("password file empty, assuming unencrypted key")
+		return jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
+	}
+
+	log.Debug("no password, assuming unencrypted key")
+	return jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
+}
+
+func readPassword(passwordFile string) ([]byte, error) {
+	return ioutil.ReadFile(passwordFile)
+}
+
+// ReadPublicKeyBytes - reads the public key bytes from file
+func ReadPublicKeyBytes(publicKeyFile string) ([]byte, error) {
+	keyBytes, err := ioutil.ReadFile(publicKeyFile)
+	if err != nil {
+		return nil, err
+	}
+	return keyBytes, nil
+}
+
+// parseRSAPrivateKeyFromPEMWithBytePassword - tries to parse an rsa private key using password as bytes
+// inspired from jwt.ParseRSAPrivateKeyFromPEMWithPassword
+func parseRSAPrivateKeyFromPEMWithBytePassword(key []byte, password []byte) (*rsa.PrivateKey, error) {
+	var err error
+
+	// Parse PEM block
+	var block *pem.Block
+	if block, _ = pem.Decode(key); block == nil {
+		return nil, fmt.Errorf("key must be pem encoded")
+	}
+
+	var parsedKey interface{}
+
+	var blockDecrypted []byte
+	if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
+		return nil, err
+	}
+
+	if parsedKey, err = x509.ParsePKCS1PrivateKey(blockDecrypted); err != nil {
+		if parsedKey, err = x509.ParsePKCS8PrivateKey(blockDecrypted); err != nil {
+			return nil, err
+		}
+	}
+
+	var pkey *rsa.PrivateKey
+	var ok bool
+	if pkey, ok = parsedKey.(*rsa.PrivateKey); !ok {
+		return nil, fmt.Errorf("[apicauth] not a private key")
+	}
+
+	return pkey, nil
+}
+
+//ParsePublicKey - parses the public key content
+func ParsePublicKey(publicKey []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(publicKey)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key: %s", err)
+	}
+
+	p, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("expected public key type to be *rsa.PublicKey but received %T", pub)
+	}
+	return p, nil
+}
+
+// ParsePublicKeyDER - parse DER block from public key
+func ParsePublicKeyDER(publicKey []byte) ([]byte, error) {
+	if b64key, err := base64.StdEncoding.DecodeString(string(publicKey)); err == nil {
+		return b64key, nil
+	}
+
+	_, err := x509.ParsePKIXPublicKey(publicKey)
+	if err != nil {
+		pemBlock, _ := pem.Decode(publicKey)
+		if pemBlock == nil {
+			return nil, errors.New("data in key was not valid")
+		}
+		if pemBlock.Type != "PUBLIC KEY" {
+			return nil, errors.New("unsupported key type")
+		}
+		return pemBlock.Bytes, nil
+	}
+	return publicKey, nil
+}
+
+// ComputeKIDFromDER - compute key ID for public key
+func ComputeKIDFromDER(publicKey []byte) (kid string, err error) {
+	b64key, err := ParsePublicKeyDER(publicKey)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New() // create new hash with sha256 checksum
+	/* #nosec G104 */
+	if _, err := h.Write(b64key); err != nil { // add b64key to hash
+		return "", err
+	}
+	e := base64.StdEncoding.EncodeToString(h.Sum(nil)) // return string of base64 encoded hash
+	kid = strings.Split(e, "=")[0]
+	kid = strings.Replace(kid, "+", "-", -1)
+	kid = strings.Replace(kid, "/", "_", -1)
+	return
 }

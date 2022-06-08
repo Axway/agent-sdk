@@ -1,4 +1,4 @@
-package registration
+package oauth
 
 import (
 	"encoding/json"
