@@ -68,7 +68,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		ClientTimeout: 15,
 		ProxyURL:      "",
 		TenantID:      config.TenantID,
-		TLS:           nil,
+		TLS:           corecfg.NewTLSConfig(),
 		GRPCCfg: corecfg.GRPCConfig{
 			Enabled:  true,
 			Insecure: config.Insecure,
