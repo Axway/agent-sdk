@@ -183,7 +183,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	log := getLoggerFromContext(ctx)
 	req, err := h.newReq(ctx, ar, map[string]interface{}{})
 	if err != nil {
-		log.WithError(err).Error("error getting deprovision request details: %s")
+		log.WithError(err).Error("error getting deprovision request details")
 		h.onError(ctx, ar, err)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return
@@ -194,6 +194,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	ri, _ := ar.AsInstance()
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
+		h.cache.DeleteAccessRequest(ar.Metadata.ID)
 	} else {
 		err := fmt.Errorf(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")

@@ -15,7 +15,6 @@ import (
 
 const (
 	maFinalizer = "agent.managedapplication.provisioned"
-	maLogPrefix = "managed application handler - %s"
 )
 
 type managedAppProvision interface {
