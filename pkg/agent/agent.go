@@ -392,6 +392,7 @@ func setupSignalProcessor() {
 		<-sigs
 		cleanUp()
 		logger.Info("Stopping agent")
+		agent.cacheManager.SaveCache()
 		os.Exit(0)
 	}()
 }
