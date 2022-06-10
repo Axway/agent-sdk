@@ -24,6 +24,7 @@ func resetResources() {
 	agent.cacheManager = nil
 	agent.isInitialized = false
 	agent.apicClient = nil
+	agent.agentFeaturesCfg = nil
 }
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {

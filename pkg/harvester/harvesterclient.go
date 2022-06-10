@@ -123,7 +123,6 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["Content-Type"] = "application/json"
 		res, err := h.Client.Send(req)
 		if err != nil {
-			// send signal to discovery cache
 			return lastID, err
 		}
 
@@ -143,7 +142,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 
 		for _, event := range pagedEvents {
 			lastID = event.Metadata.GetSequenceID()
-			if !h.skipPublish {
+			if !h.skipPublish && eventCh != nil {
 				eventCh <- event.toProtoEvent()
 			}
 		}

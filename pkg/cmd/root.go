@@ -301,8 +301,12 @@ func (c *agentRootCommand) initConfig() error {
 
 	if !c.initialized {
 		if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-			err = agent.SyncCache()
+			eventSync, err := agent.NewEventSync()
 			if err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
+
+			if err := eventSync.SyncCache(); err != nil {
 				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
 			}
 		}

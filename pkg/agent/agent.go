@@ -2,21 +2,16 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -282,63 +277,6 @@ func HandleFetchOnStartupResources() {
 	}
 }
 
-// SyncCache -
-func SyncCache() error {
-	migrations := []migrate.Migrator{
-		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
-	}
-
-	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-		agent.marketplaceMigration = marketplaceMigration
-		migrations = append(migrations, marketplaceMigration)
-	}
-
-	mig := migrate.NewMigrateAll(migrations...)
-	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
-
-	opts := []discoveryOpt{
-		withMigration(mig),
-		withMpEnabled(isMpEnabled),
-	}
-
-	if agent.agentResourceManager != nil {
-		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
-	}
-
-	wt, err := events.GetWatchTopic(agent.cfg, GetCentralClient())
-	if err != nil {
-		return err
-	}
-
-	discoveryCache := newDiscoveryCache(
-		agent.cfg,
-		GetCentralClient(),
-		newHandlers(),
-		wt,
-		opts...,
-	)
-
-	if !agent.cacheManager.HasLoadedPersistedCache() {
-		err := discoveryCache.execute()
-		if err != nil {
-			return err
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	cacheSync := func() {
-		agent.cacheManager.Flush()
-		err := discoveryCache.execute()
-		if err != nil {
-			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	return startCentralEventProcessor(wt, cacheSync)
-}
-
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
 		return client.RegisterSubscriptionWebhook()
@@ -435,11 +373,11 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 
 // UpdateStatusWithContext - Updates the agent state providing a context
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
-	log := ctx.Value(ctxLogger).(log.FieldLogger)
+	logger := ctx.Value(ctxLogger).(log.FieldLogger)
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			log.WithError(err).Warnf("could not update the agent status reference")
+			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
 	}
 }
@@ -454,6 +392,7 @@ func setupSignalProcessor() {
 		<-sigs
 		cleanUp()
 		logger.Info("Stopping agent")
+		agent.cacheManager.SaveCache()
 		os.Exit(0)
 	}()
 }
@@ -461,13 +400,6 @@ func setupSignalProcessor() {
 // cleanUp - AgentCleanup
 func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
-}
-
-func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(wt, cacheSyncFunc)
-	}
-	return startPollMode(wt, cacheSyncFunc)
 }
 
 func newHandlers() []handler.Handler {
@@ -499,55 +431,4 @@ func newHandlers() []handler.Handler {
 	}
 
 	return handlers
-}
-
-func startPollMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	handlers := newHandlers()
-
-	pc, err := poller.NewPollClient(
-		agent.apicClient,
-		agent.cfg,
-		agent.tokenRequester,
-		agent.cacheManager,
-		func(p *poller.PollClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the harvester poll client: %s", err)
-	}
-
-	newEventProcessorJob(pc, "Poll Client")
-
-	return err
-}
-
-func startStreamMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	handlers := newHandlers()
-
-	sc, err := stream.NewStreamerClient(
-		agent.apicClient,
-		agent.cfg,
-		agent.tokenRequester,
-		agent.cacheManager,
-		func(s *stream.StreamerClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the watch manager: %s", err)
-	}
-
-	agent.streamer = sc
-	newEventProcessorJob(sc, "Stream Client")
-
-	return err
 }
