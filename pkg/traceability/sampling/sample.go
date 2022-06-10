@@ -1,6 +1,7 @@
 package sampling
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -23,7 +24,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	if s.config.PerAPI && s.config.PerSub {
 		if details.SubID != "" {
-			return s.shouldSampleWithCounter(details.SubID)
+			return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
 		}
 		if details.APIID != "" {
 			return s.shouldSampleWithCounter(details.APIID)
@@ -38,7 +39,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	if !s.config.PerAPI && s.config.PerSub {
 		if details.SubID != "" {
-			return s.shouldSampleWithCounter(details.SubID)
+			return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
 		}
 	}
 
