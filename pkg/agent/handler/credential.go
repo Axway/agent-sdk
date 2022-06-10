@@ -128,6 +128,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
 	if status.GetStatus() == prov.Success {
+		credentialData = h.getProvisionedCredentialData(provCreds, credentialData)
 		sec := app.Spec.Security
 		data, err := h.encryptSchema(
 			crd.Spec.Provision.Schema,
@@ -271,6 +272,16 @@ func (h *credentials) unregisterIDPClientCredential(cr *provCreds) error {
 
 	cr.idpCredData.clientID = cr.idpCredData.GetClientID()
 	return nil
+}
+
+func (h *credentials) getProvisionedCredentialData(provCreds *provCreds, credentialData prov.Credential) prov.Credential {
+	if provCreds.IsIDPCredential() {
+		return prov.NewCredentialBuilder().SetOAuthIDAndSecret(
+			provCreds.GetIDPCredentialData().GetClientID(),
+			provCreds.GetIDPCredentialData().GetClientSecret(),
+		)
+	}
+	return credentialData
 }
 
 type provCreds struct {
