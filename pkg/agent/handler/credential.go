@@ -339,40 +339,14 @@ func newIDPCredData(p oauth.Provider, credData, provData map[string]interface{})
 	cd := &idpCredData{}
 
 	if provData != nil {
-		if data, ok := provData[prov.OauthClientID]; ok && data != nil {
-			cd.clientID = data.(string)
-		}
+		cd.clientID = util.GetStringFromMapInterface(prov.OauthClientID, provData)
 	}
-
-	if data, ok := credData[prov.OauthScopes]; ok && data != nil {
-		cd.scopes = []string{}
-		for _, u := range data.([]interface{}) {
-			cd.scopes = append(cd.scopes, u.(string))
-		}
-	}
-
-	if data, ok := credData[prov.OauthGrantType]; ok && data != nil {
-		cd.grantTypes = []string{data.(string)}
-	}
-
-	if data, ok := credData[prov.OauthRedirectURIs]; ok && data != nil {
-		cd.redirectURLs = []string{}
-		for _, u := range data.([]interface{}) {
-			cd.redirectURLs = append(cd.redirectURLs, u.(string))
-		}
-	}
-
-	if data, ok := credData[prov.OauthTokenAuthMethod]; ok && data != nil {
-		cd.tokenAuthMethod = data.(string)
-	}
-
-	if data, ok := credData[prov.OauthJwks]; ok && data != nil {
-		cd.publicKey = data.(string)
-	}
-
-	if data, ok := credData[prov.OauthJwksURI]; ok && data != nil {
-		cd.jwksURI = data.(string)
-	}
+	cd.scopes = util.GetStringArrayFromMapInterface(prov.OauthScopes, credData)
+	cd.grantTypes = []string{util.GetStringFromMapInterface(prov.OauthGrantType, credData)}
+	cd.redirectURLs = util.GetStringArrayFromMapInterface(prov.OauthRedirectURIs, credData)
+	cd.tokenAuthMethod = util.GetStringFromMapInterface(prov.OauthTokenAuthMethod, credData)
+	cd.publicKey = util.GetStringFromMapInterface(prov.OauthJwks, credData)
+	cd.jwksURI = util.GetStringFromMapInterface(prov.OauthJwksURI, credData)
 
 	return cd
 }

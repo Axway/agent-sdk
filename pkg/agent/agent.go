@@ -212,7 +212,11 @@ func registerExternalIDPs() {
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) {
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
-		log.Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
+		logger.
+			WithField("name", idp.GetIDPName()).
+			WithField("type", idp.GetIDPType()).
+			WithField("metadataUrl", idp.GetMetadataURL()).
+			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
 }
 

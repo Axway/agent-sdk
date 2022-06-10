@@ -299,3 +299,72 @@ func TestReadPublicKeyFile(t *testing.T) {
 		}
 	}
 }
+
+func TestGetStringFromMapInterface(t *testing.T) {
+	cases := []struct {
+		data        map[string]interface{}
+		key         string
+		expectedVal string
+	}{
+		{
+			data:        map[string]interface{}{"key": "valid"},
+			key:         "key",
+			expectedVal: "valid",
+		},
+		{
+			data:        map[string]interface{}{"key": 10},
+			key:         "invalidKey",
+			expectedVal: "",
+		},
+		{
+			data:        map[string]interface{}{"key": 10},
+			expectedVal: "",
+		},
+	}
+	for _, testCase := range cases {
+		ret := GetStringFromMapInterface(testCase.key, testCase.data)
+		assert.Equal(t, testCase.expectedVal, ret)
+	}
+}
+
+func TestGetStringArrayFromMapInterface(t *testing.T) {
+	cases := []struct {
+		data        map[string]interface{}
+		key         string
+		expectedVal []string
+	}{
+		{
+			data:        map[string]interface{}{"key": []string{"val1", "val2"}},
+			key:         "key",
+			expectedVal: []string{"val1", "val2"},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{"val1", "val2"}},
+			key:         "key",
+			expectedVal: []string{"val1", "val2"},
+		},
+		{
+			data:        map[string]interface{}{"key": []string{"val1", "val2"}},
+			key:         "invalidKey",
+			expectedVal: []string{},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{10, "val1"}},
+			key:         "key",
+			expectedVal: []string{"val1"},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{10, 10}},
+			key:         "key",
+			expectedVal: []string{},
+		},
+		{
+			data:        map[string]interface{}{"key": []int{10}},
+			expectedVal: []string{},
+		},
+	}
+	for _, testCase := range cases {
+		ret := GetStringArrayFromMapInterface(testCase.key, testCase.data)
+		assert.Equal(t, testCase.expectedVal, ret)
+	}
+}

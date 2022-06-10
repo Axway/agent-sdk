@@ -35,6 +35,7 @@ type authClient struct {
 	cachedTokenExpiry *time.Timer
 	getTokenMutex     *sync.Mutex
 	options           *authClientOptions
+	logger            log.FieldLogger
 }
 
 type authenticator interface {
@@ -48,11 +49,15 @@ type tokenResponse struct {
 
 // NewAuthClient - create a new auth client with client options
 func NewAuthClient(tokenURL string, apiClient api.Client, opts ...AuthClientOption) (AuthClient, error) {
+	logger := log.NewFieldLogger().
+		WithComponent("authclient").
+		WithPackage("sdk.agent.authz.oauth")
 	client := &authClient{
 		tokenURL:      tokenURL,
 		apiClient:     apiClient,
 		getTokenMutex: &sync.Mutex{},
 		options:       &authClientOptions{},
+		logger:        logger,
 	}
 	for _, o := range opts {
 		o(client.options)
@@ -139,7 +144,6 @@ func (c *authClient) fetchNewToken() (string, error) {
 }
 
 func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
-	startTime := time.Now()
 	req, err := c.options.authenticator.prepareRequest()
 	if err != nil {
 		return nil, err
@@ -151,9 +155,13 @@ func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
 	}
 
 	if resp.Code != 200 {
-		body := resp.Body
-		log.Debugf("bad response from %s: %d %s: %s, request time : %s", c.options.serverName, resp.Code, http.StatusText(resp.Code), body, startTime.String())
-		return nil, fmt.Errorf("bad response from %s: %d %s", c.options.serverName, resp.Code, http.StatusText(resp.Code))
+		err := fmt.Errorf("bad response from %s: %d %s", c.options.serverName, resp.Code, http.StatusText(resp.Code))
+		c.logger.
+			WithField("server", c.options.serverName).
+			WithField("url", c.tokenURL).
+			WithField("status", resp.Code).
+			WithError(err)
+		return nil, err
 	}
 
 	tokens := tokenResponse{}

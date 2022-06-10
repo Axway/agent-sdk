@@ -467,3 +467,31 @@ func ComputeKIDFromDER(publicKey []byte) (kid string, err error) {
 	kid = strings.Replace(kid, "/", "_", -1)
 	return
 }
+
+// GetStringArrayFromMapInterface - returns the validated string for the map element
+func GetStringFromMapInterface(key string, data map[string]interface{}) string {
+	if e, ok := data[key]; ok && e != nil {
+		if value, ok := e.(string); ok {
+			return value
+		}
+	}
+	return ""
+}
+
+// GetStringArrayFromMapInterface - returns the validated string array for the map element
+func GetStringArrayFromMapInterface(key string, data map[string]interface{}) []string {
+	val := []string{}
+	if e, ok := data[key]; ok && e != nil {
+		if i, ok := e.([]interface{}); ok {
+			for _, u := range i {
+				if s, ok := u.(string); ok {
+					val = append(val, s)
+				}
+			}
+		}
+		if sa, ok := e.([]string); ok {
+			val = append(val, sa...)
+		}
+	}
+	return val
+}

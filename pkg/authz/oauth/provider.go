@@ -68,13 +68,14 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		apiClient:       apiClient,
 		idpType:         idpType,
 	}
+
 	metadata, err := p.fetchMetadata()
 	if err != nil {
 		p.logger.
 			WithField("name", p.cfg.GetIDPName()).
 			WithField("type", p.cfg.GetIDPType()).
 			WithField("metadataUrl", p.metadataURL).
-			Error("error fetching IDP metadata")
+			WithError(err)
 		return nil, err
 	}
 
@@ -106,7 +107,7 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 		err = json.Unmarshal(response.Body, authSrvMetadata)
 		return authSrvMetadata, err
 	}
-	return nil, fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
+	return nil, fmt.Errorf("error fetching metadata status code: %d, body: %s", response.Code, string(response.Body))
 
 }
 
