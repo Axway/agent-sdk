@@ -21,6 +21,10 @@ type Provider interface {
 	GetIssuer() string
 	GetTokenEndpoint() string
 	GetAuthorizationEndpoint() string
+	GetSupportedScopes() []string
+	GetSupportedGrantTypes() []string
+	GetSupportedTokenAuthMethods() []string
+	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
 	UnregisterClient(clientID string) error
 }
@@ -106,10 +110,12 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 
 }
 
+// GetName - returns the name of the provider
 func (p *provider) GetName() string {
 	return p.cfg.GetIDPName()
 }
 
+// GetIssuer - returns the issuer for the provider
 func (p *provider) GetIssuer() string {
 	if p.authServerMetadata != nil {
 		return p.authServerMetadata.Issuer
@@ -117,6 +123,7 @@ func (p *provider) GetIssuer() string {
 	return ""
 }
 
+// GetTokenEndpoint - return the token endpoint URL
 func (p *provider) GetTokenEndpoint() string {
 	if p.authServerMetadata != nil {
 		return p.authServerMetadata.TokenEndpoint
@@ -124,6 +131,7 @@ func (p *provider) GetTokenEndpoint() string {
 	return ""
 }
 
+// GetAuthorizationEndpoint - return authorization endpoint
 func (p *provider) GetAuthorizationEndpoint() string {
 	if p.authServerMetadata != nil {
 		return p.authServerMetadata.AuthorizationEndpoint
@@ -131,6 +139,40 @@ func (p *provider) GetAuthorizationEndpoint() string {
 	return ""
 }
 
+// GetSupportedScopes - returns the global scopes supported by provider
+func (p *provider) GetSupportedScopes() []string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.ScopesSupported
+	}
+	return []string{""}
+}
+
+// GetSupportedGrantTypes - returns the grant type supported by provider
+func (p *provider) GetSupportedGrantTypes() []string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.GrantTypesSupported
+	}
+	return []string{""}
+}
+
+// GetSupportedTokenAuthMethods - returns the token auth method supported by provider
+func (p *provider) GetSupportedTokenAuthMethods() []string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.TokenEndpointAuthMethodSupported
+	}
+	return []string{""}
+
+}
+
+// GetSupportedResponseMethod - returns the token response method supported by provider
+func (p *provider) GetSupportedResponseMethod() []string {
+	if p.authServerMetadata != nil {
+		return p.authServerMetadata.ResponseTypesSupported
+	}
+	return []string{""}
+}
+
+// RegisterClient - register the OAuth client with IDP
 func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, error) {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	err := p.enrichClientReq(clientReq)
@@ -225,6 +267,7 @@ func (p *provider) applyClientDefaults(clientRequest *clientMetadata) {
 	}
 }
 
+// UnregisterClient - removes the OAuth client from IDP
 func (p *provider) UnregisterClient(clientID string) error {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	token, err := p.getClientToken()

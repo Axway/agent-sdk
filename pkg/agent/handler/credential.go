@@ -9,6 +9,7 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -25,20 +26,22 @@ type credProv interface {
 }
 
 type credentials struct {
-	prov          credProv
-	client        client
-	encryptSchema encryptSchemaFunc
+	prov                credProv
+	client              client
+	encryptSchema       encryptSchemaFunc
+	idpProviderRegistry oauth.ProviderRegistry
 }
 
 // encryptSchemaFunc func signature for encryptSchema
 type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
-func NewCredentialHandler(prov credProv, client client) Handler {
+func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.ProviderRegistry) Handler {
 	return &credentials{
-		prov:          prov,
-		client:        client,
-		encryptSchema: encryptSchema,
+		prov:                prov,
+		client:              client,
+		encryptSchema:       encryptSchema,
+		idpProviderRegistry: providerRegistry,
 	}
 }
 
@@ -106,7 +109,22 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 		return cred
 	}
 
-	provCreds := newProvCreds(cred, util.GetAgentDetails(app))
+	provCreds, err := newProvCreds(cred, util.GetAgentDetails(app), nil, h.idpProviderRegistry)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		h.onError(ctx, cred, err)
+		return cred
+	}
+
+	if provCreds.IsIDPCredential() {
+		err := h.registerIDPClientCredential(provCreds)
+		if err != nil {
+			logger.WithError(err).Error("error provisioning credential request with IDP")
+			h.onError(ctx, cred, err)
+			return cred
+		}
+	}
+
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
 	if status.GetStatus() == prov.Success {
@@ -145,11 +163,32 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 }
 
 func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
-	provCreds := newProvCreds(cred, map[string]interface{}{})
-	status := h.prov.CredentialDeprovision(provCreds)
 	logger := getLoggerFromContext(ctx)
+	var provData map[string]interface{}
+	if cred.Data != nil {
+		if m, ok := cred.Data.(map[string]interface{}); ok {
+			provData = m
+		}
+	}
 
+	provCreds, err := newProvCreds(cred, map[string]interface{}{}, provData, h.idpProviderRegistry)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		h.onError(ctx, cred, err)
+		return
+	}
+
+	status := h.prov.CredentialDeprovision(provCreds)
 	if status.GetStatus() == prov.Success {
+		if provCreds.IsIDPCredential() {
+			err := h.unregisterIDPClientCredential(provCreds)
+			if err != nil {
+				logger.WithError(err).Error("error deprovisioning credential request from IDP")
+				h.onError(ctx, cred, err)
+				return
+			}
+		}
+
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 	} else {
@@ -194,33 +233,44 @@ func (h *credentials) getCRD(ctx context.Context, cred *mv1.Credential) (*mv1.Cr
 	return crd, err
 }
 
-// encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
-func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[string]interface{} {
-	for key, value := range data {
-		schemaValue := schema[key]
-		v, ok := schemaValue.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		if _, ok := v[xAxwayEncrypted]; ok {
-			v, ok := value.(string)
-			if !ok {
-				continue
-			}
-
-			str, err := enc.Encrypt(v)
-			if err != nil {
-
-				log.Error(err)
-				continue
-			}
-
-			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
-		}
+func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
+	p := cr.GetIDPProvider()
+	idpCredData := cr.GetIDPCredentialData()
+	// prepare external client metadata from CRD data
+	clientMetadata, err := oauth.NewClientMetadataBuilder().
+		SetClientName(cr.GetName()).
+		SetScopes(idpCredData.GetScopes()).
+		SetGrantTypes(idpCredData.GetGrantTypes()).
+		SetTokenEndpointAuthMethod(idpCredData.GetTokenEndpointAuthMethod()).
+		SetResponseType(idpCredData.GetResponseTypes()).
+		SetRedirectURIs(idpCredData.GetRedirectURIs()).
+		SetJWKS([]byte(idpCredData.GetPublicKey())).
+		SetJWKSURI(idpCredData.GetJwksURI()).
+		Build()
+	if err != nil {
+		return err
 	}
 
-	return data
+	// provision external client
+	resClientMetadata, err := p.RegisterClient(clientMetadata)
+	if err != nil {
+		return err
+	}
+
+	cr.idpCredData.clientID = resClientMetadata.GetClientID()
+	cr.idpCredData.clientSecret = resClientMetadata.GetClientSecret()
+	return nil
+}
+
+func (h *credentials) unregisterIDPClientCredential(cr *provCreds) error {
+	p := cr.GetIDPProvider()
+	err := p.UnregisterClient(cr.idpCredData.GetClientID())
+	if err != nil {
+		return err
+	}
+
+	cr.idpCredData.clientID = cr.idpCredData.GetClientID()
+	return nil
 }
 
 type provCreds struct {
@@ -231,12 +281,26 @@ type provCreds struct {
 	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
+	idpCredData *idpCredData
+	idpProvider oauth.Provider
 }
 
-func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCreds {
+type idpCredData struct {
+	clientID        string
+	clientSecret    string
+	scopes          []string
+	grantTypes      []string
+	tokenAuthMethod string
+	responseTypes   []string
+	redirectURLs    []string
+	jwksURI         string
+	publicKey       string
+}
+
+func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}, provData map[string]interface{}, idpProviderRegistry oauth.ProviderRegistry) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
-	return &provCreds{
+	provCred := &provCreds{
 		appDetails:  appDetails,
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
@@ -245,6 +309,61 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}) *provCr
 		id:          cr.Metadata.ID,
 		name:        cr.Name,
 	}
+
+	// Setup external credential request data to be used for provisioning
+	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok {
+		p, err := idpProviderRegistry.GetProviderByTokenEndpoint(idpTokenURL)
+		if err != nil {
+			return nil, fmt.Errorf("IDP provider not found for credential request")
+		}
+		provCred.idpProvider = p
+		provCred.idpCredData = newIDPCredData(p, provCred.credData, provData)
+	}
+
+	return provCred, nil
+}
+
+// newIDPCredData - reads the idp client metadata from credential request
+func newIDPCredData(p oauth.Provider, credData, provData map[string]interface{}) *idpCredData {
+	cd := &idpCredData{}
+
+	if provData != nil {
+		if data, ok := provData[prov.OauthClientID]; ok && data != nil {
+			cd.clientID = data.(string)
+		}
+	}
+
+	if data, ok := credData[prov.OauthScopes]; ok && data != nil {
+		cd.scopes = []string{}
+		for _, u := range data.([]interface{}) {
+			cd.scopes = append(cd.scopes, u.(string))
+		}
+	}
+
+	if data, ok := credData[prov.OauthGrantType]; ok && data != nil {
+		cd.grantTypes = []string{data.(string)}
+	}
+
+	if data, ok := credData[prov.OauthRedirectURIs]; ok && data != nil {
+		cd.redirectURLs = []string{}
+		for _, u := range data.([]interface{}) {
+			cd.redirectURLs = append(cd.redirectURLs, u.(string))
+		}
+	}
+
+	if data, ok := credData[prov.OauthTokenAuthMethod]; ok && data != nil {
+		cd.tokenAuthMethod = data.(string)
+	}
+
+	if data, ok := credData[prov.OauthJwks]; ok && data != nil {
+		cd.publicKey = data.(string)
+	}
+
+	if data, ok := credData[prov.OauthJwksURI]; ok && data != nil {
+		cd.jwksURI = data.(string)
+	}
+
+	return cd
 }
 
 // GetApplicationName gets the name of the managed application
@@ -272,6 +391,21 @@ func (c provCreds) GetCredentialData() map[string]interface{} {
 	return c.credData
 }
 
+// IsIDPCredential returns boolean indicating if the credential request is for IDP provider
+func (c provCreds) IsIDPCredential() bool {
+	return c.idpProvider != nil
+}
+
+// GetIDPProvider returns the interface for IDP provider if the credential request is for IDP provider
+func (c provCreds) GetIDPProvider() oauth.Provider {
+	return c.idpProvider
+}
+
+// GetIDPCredentialData returns the credential data for IDP from the request
+func (c provCreds) GetIDPCredentialData() prov.IDPCredentialData {
+	return c.idpCredData
+}
+
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
 func (c provCreds) GetCredentialDetailsValue(key string) string {
 	if c.credDetails == nil {
@@ -288,6 +422,51 @@ func (c provCreds) GetApplicationDetailsValue(key string) string {
 	}
 
 	return util.ToString(c.appDetails[key])
+}
+
+// GetClientID - returns client ID
+func (c *idpCredData) GetClientID() string {
+	return c.clientID
+}
+
+// GetClientSecret - returns client secret
+func (c *idpCredData) GetClientSecret() string {
+	return c.clientSecret
+}
+
+// GetScopes - returns client scopes
+func (c *idpCredData) GetScopes() []string {
+	return c.scopes
+}
+
+// GetGrantTypes - returns grant types
+func (c *idpCredData) GetGrantTypes() []string {
+	return c.grantTypes
+}
+
+// GetTokenEndpointAuthMethod - returns token auth method
+func (c *idpCredData) GetTokenEndpointAuthMethod() string {
+	return c.tokenAuthMethod
+}
+
+// GetResponseTypes - returns token response type
+func (c *idpCredData) GetResponseTypes() []string {
+	return c.responseTypes
+}
+
+// GetRedirectURIs - Returns redirect urls
+func (c *idpCredData) GetRedirectURIs() []string {
+	return c.redirectURLs
+}
+
+// GetJwksURI - returns JWKS uri
+func (c *idpCredData) GetJwksURI() string {
+	return c.jwksURI
+}
+
+// GetPublicKey - returns the public key
+func (c *idpCredData) GetPublicKey() string {
+	return c.publicKey
 }
 
 // encryptSchema schema is the json schema. credData is the data that contains data to encrypt based on the key, alg and hash.
@@ -311,4 +490,33 @@ func encryptSchema(
 
 	data := encryptMap(enc, props, credData)
 	return data, nil
+}
+
+// encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
+func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[string]interface{} {
+	for key, value := range data {
+		schemaValue := schema[key]
+		v, ok := schemaValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if _, ok := v[xAxwayEncrypted]; ok {
+			v, ok := value.(string)
+			if !ok {
+				continue
+			}
+
+			str, err := enc.Encrypt(v)
+			if err != nil {
+
+				log.Error(err)
+				continue
+			}
+
+			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
+		}
+	}
+
+	return data
 }

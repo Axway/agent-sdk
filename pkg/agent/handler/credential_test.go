@@ -138,7 +138,7 @@ func TestCredentialHandler(t *testing.T) {
 				subError:       tc.subError,
 			}
 
-			handler := NewCredentialHandler(p, c)
+			handler := NewCredentialHandler(p, c, nil)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -204,7 +204,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 				t:              t,
 			}
 
-			handler := NewCredentialHandler(p, c)
+			handler := NewCredentialHandler(p, c, nil)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -227,7 +227,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 func TestCredentialHandler_wrong_kind(t *testing.T) {
 	c := &mockClient{}
 	p := &mockCredProv{}
-	handler := NewCredentialHandler(p, c)
+	handler := NewCredentialHandler(p, c, nil)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),

@@ -112,7 +112,7 @@ func (b *clientBuilder) decodeJWKS() ([]byte, error) {
 }
 
 func (b *clientBuilder) Build() (ClientMetadata, error) {
-	if b.publicKey != nil {
+	if b.publicKey != nil && len(b.publicKey) > 0 {
 		jwksBuf, err := b.decodeJWKS()
 		if err != nil {
 			return nil, err
