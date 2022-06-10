@@ -326,11 +326,11 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 		if summaryEvent.TransactionSummary.Proxy != nil {
 			apiID = summaryEvent.TransactionSummary.Proxy.ID
 		}
-	}
 
-	consumerDetails := summaryEvent.TransactionSummary.ConsumerDetails
-	if consumerDetails != nil && consumerDetails.Subscription != nil {
-		subID = consumerDetails.Subscription.ID
+		consumerDetails := summaryEvent.TransactionSummary.ConsumerDetails
+		if consumerDetails != nil && consumerDetails.Subscription != nil {
+			subID = consumerDetails.Subscription.ID
+		}
 	}
 
 	return sampling.TransactionDetails{
