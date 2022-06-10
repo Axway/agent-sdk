@@ -319,6 +319,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) sampling.TransactionDetails {
 	var status string
 	var apiID string
+	var subID string
 
 	if summaryEvent.TransactionSummary != nil {
 		status = summaryEvent.TransactionSummary.Status
@@ -327,9 +328,15 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 		}
 	}
 
+	consumerDetails := summaryEvent.TransactionSummary.ConsumerDetails
+	if consumerDetails != nil && consumerDetails.Subscription != nil {
+		subID = consumerDetails.Subscription.ID
+	}
+
 	return sampling.TransactionDetails{
 		Status: status,
 		APIID:  apiID,
+		SubID:  subID,
 	}
 }
 

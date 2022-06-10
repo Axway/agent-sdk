@@ -20,9 +20,28 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	if hasFailedStatus && s.config.ReportAllErrors {
 		return true
 	}
-	if s.config.PerAPI && details.APIID != "" {
-		return s.shouldSampleWithCounter(details.APIID)
+
+	if s.config.PerAPI && s.config.PerSub {
+		if details.SubID != "" {
+			return s.shouldSampleWithCounter(details.SubID)
+		}
+		if details.APIID != "" {
+			return s.shouldSampleWithCounter(details.APIID)
+		}
 	}
+
+	if s.config.PerAPI && !s.config.PerSub {
+		if details.APIID != "" {
+			return s.shouldSampleWithCounter(details.APIID)
+		}
+	}
+
+	if !s.config.PerAPI && s.config.PerSub {
+		if details.SubID != "" {
+			return s.shouldSampleWithCounter(details.SubID)
+		}
+	}
+
 	return s.shouldSampleWithCounter(globalCounter)
 }
 
