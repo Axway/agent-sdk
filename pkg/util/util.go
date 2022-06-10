@@ -468,7 +468,7 @@ func ComputeKIDFromDER(publicKey []byte) (kid string, err error) {
 	return
 }
 
-// GetStringArrayFromMapInterface - returns the validated string for the map element
+// GetStringFromMapInterface - returns the validated string for the map element
 func GetStringFromMapInterface(key string, data map[string]interface{}) string {
 	if e, ok := data[key]; ok && e != nil {
 		if value, ok := e.(string); ok {
