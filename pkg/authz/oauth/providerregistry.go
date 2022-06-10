@@ -17,10 +17,15 @@ const (
 
 // ProviderRegistry - interface for provider registry
 type ProviderRegistry interface {
+	// RegisterProvider - registers the provider using the config
 	RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error
+	// GetProviderByName - returns the provider from registry based on the name
 	GetProviderByName(name string) (Provider, error)
+	// GetProviderByIssuer - returns the provider from registry based on the IDP issuer
 	GetProviderByIssuer(issuer string) (Provider, error)
+	// GetProviderByTokenEndpoint - returns the provider from registry based on the IDP token endpoint
 	GetProviderByTokenEndpoint(tokenEndpoint string) (Provider, error)
+	// GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
 	GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error)
 }
 
@@ -40,6 +45,7 @@ func NewProviderRegistry() ProviderRegistry {
 	}
 }
 
+// RegisterProvider - registers the provider using the config
 func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
 	p, err := NewProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
@@ -66,6 +72,7 @@ func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecf
 	return nil
 }
 
+// GetProviderByName - returns the provider from registry based on the name
 func (r *providerRegistry) GetProviderByName(name string) (Provider, error) {
 	p, err := r.providerMap.Get(name)
 	if err != nil {
@@ -79,14 +86,17 @@ func (r *providerRegistry) GetProviderByName(name string) (Provider, error) {
 	return prov, nil
 }
 
+// GetProviderByTokenEndpoint - returns the provider from registry based on the IDP token endpoint
 func (r *providerRegistry) GetProviderByIssuer(issuer string) (Provider, error) {
 	return r.getProviderBySecondaryKey(issuerKeyPrefix + issuer)
 }
 
+// GetProviderByTokenEndpoint - returns the provider from registry based on the IDP token endpoint
 func (r *providerRegistry) GetProviderByTokenEndpoint(tokenEndpoint string) (Provider, error) {
 	return r.getProviderBySecondaryKey(tokenEpKeyPrefix + tokenEndpoint)
 }
 
+// GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
 func (r *providerRegistry) GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error) {
 	return r.getProviderBySecondaryKey(authEpKeyPrefix + authEndpoint)
 }

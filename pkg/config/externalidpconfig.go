@@ -63,23 +63,35 @@ func (e *ExtraProperties) UnmarshalJSON(data []byte) error {
 
 // IDPAuthConfig - interface for IdP provider auth config
 type IDPAuthConfig interface {
+	// GetType - type of authentication mechanism to use "accessToken" or "client"
 	GetType() string
+	// GetAccessToken - token(initial access token/Admin API Token etc) to be used by Agent SDK to authenticate with IdP
 	GetAccessToken() string
+	// GetClientID - Identifier of the client in IdP that can used to create new OAuth clients
 	GetClientID() string
+	// GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
 	GetClientSecret() string
-	// GetClientScopes() []string
 }
 
 // IDPConfig - interface for IdP provider config
 type IDPConfig interface {
+	// GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
 	GetMetadataURL() string
+	// GetIDPType - IDP type ("generic" or "okta")
 	GetIDPType() string
+	// GetIDPName - for the identity provider
 	GetIDPName() string
+	// GetAuthConfig - to be used for authentication with IDP
 	GetAuthConfig() IDPAuthConfig
+	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 	GetClientScopes() string
+	// GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
 	GetGrantType() string
+	// GetAuthMethod - default token endpoint authentication method(default : "client_secret_basic")
 	GetAuthMethod() string
+	// GetAuthResponseType - default token response type to be used when registering the client
 	GetAuthResponseType() string
+	// GetExtraProperties - set of additional properties to be applied when registering the client
 	GetExtraProperties() map[string]string
 }
 
@@ -105,67 +117,67 @@ type IDPConfiguration struct {
 	ExtraProperties  ExtraProperties `json:"extraProperties,omitempty"`
 }
 
-// GetIDPName - returns the name of IdP provider
+// GetIDPName - for the identity provider
 func (i *IDPConfiguration) GetIDPName() string {
 	return i.Name
 }
 
-// GetIDPType - returns the IdP type
+// GetIDPType - IDP type ("generic" or "okta")
 func (i *IDPConfiguration) GetIDPType() string {
 	return i.Type
 }
 
-// GetAuthConfig - returns the IdP Auth config
+// GetAuthConfig - to be used for authentication with IDP
 func (i *IDPConfiguration) GetAuthConfig() IDPAuthConfig {
 	return i.AuthConfig
 }
 
-// GetMetadataURL - returns the metadata URL for IdP
+// GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
 func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
 }
 
-// GetExtraProperties - returns the IdP specific properties to be included in client request
+// GetExtraProperties - set of additional properties to be applied when registering the client
 func (i *IDPConfiguration) GetExtraProperties() map[string]string {
 	return i.ExtraProperties
 }
 
-// GetClientScopes - returns the Client scopes to be used for registering IdP client
+// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 func (i *IDPConfiguration) GetClientScopes() string {
 	return i.ClientScopes
 }
 
-// GetGrantType - returns the Client grant type to be used for registering IdP client
+// GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
 func (i *IDPConfiguration) GetGrantType() string {
 	return i.GrantType
 }
 
-// GetAuthMethod - returns the Client auth method to be used for registering IdP client
+// GetAuthMethod - default token endpoint authentication method(default : "client_secret_basic")
 func (i *IDPConfiguration) GetAuthMethod() string {
 	return i.AuthMethod
 }
 
-// GetAuthResponseType - returns the Client auth response type to be used for registering IdP client
+// GetAuthResponseType - default token response type to be used when registering the client
 func (i *IDPConfiguration) GetAuthResponseType() string {
 	return i.AuthResponseType
 }
 
-// GetType - returns the auth type to be used for IdP client registration APIs
+// GetType - type of authentication mechanism to use "accessToken" or "client"
 func (i *IDPAuthConfiguration) GetType() string {
 	return i.Type
 }
 
-// GetAccessToken - returns the access token to be used for IdP client registration APIs
+// GetAccessToken - token(initial access token/Admin API Token etc) to be used by Agent SDK to authenticate with IdP
 func (i *IDPAuthConfiguration) GetAccessToken() string {
 	return i.AccessToken
 }
 
-// GetClientID - returns the Client ID to be used for IdP client registration APIs
+// GetClientID - Identifier of the client in IdP that can used to create new OAuth client
 func (i *IDPAuthConfiguration) GetClientID() string {
 	return i.ClientID
 }
 
-// GetClientSecret - returns the Client Secret to be used for IdP client registration APIs
+// GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
 func (i *IDPAuthConfiguration) GetClientSecret() string {
 	return i.ClientSecret
 }
@@ -185,7 +197,7 @@ func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, err
 		idpCfg := &IDPConfiguration{
 			AuthConfig:       &IDPAuthConfiguration{},
 			ExtraProperties:  make(ExtraProperties),
-			ClientScopes:     "resource.Read resource.Write",
+			ClientScopes:     "resource.READ resource.WRITE",
 			GrantType:        "client_credentials",
 			AuthMethod:       "client_secret_basic",
 			AuthResponseType: "token",
