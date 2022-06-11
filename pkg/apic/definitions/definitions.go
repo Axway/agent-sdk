@@ -43,17 +43,3 @@ const (
 const (
 	MigrationCompleted = "completed"
 )
-
-// default names of ARD and CRDs
-const (
-	APIKeyARD         = "api-key"
-	APIKeyCRD         = "api-key"
-	OAuthSecretCRD    = "oauth-secret"
-	OAuthPublicKeyCRD = "oauth-public-key"
-
-	OauthClientID     = "clientId"
-	OauthClientSecret = "clientSecret"
-	OauthPublicKey    = "publicKey"
-
-	APIKey = "apiKey"
-)

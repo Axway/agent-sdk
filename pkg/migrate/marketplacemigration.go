@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+)
+
+const (
+	serviceName  = "service-name"
+	instanceName = "instance-name"
+	revisionName = "revision-name"
 )
 
 // Migrator interface for performing a migration on a ResourceInstance
@@ -56,6 +63,8 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		return ri, nil
 	}
 
+	ctx := context.WithValue(context.Background(), serviceName, ri.Name)
+
 	// check resource to see if this apiservice has already been run through migration
 	apiSvc, err := ri.AsInstance()
 	if err != nil {
@@ -74,10 +83,10 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 	}
 
 	m.logger.
-		WithField("service-name", ri.Name).
+		WithField(serviceName, ri.Name).
 		Tracef("perform marketplace provision")
 
-	err = m.updateService(ri)
+	err = m.updateService(ri, ctx)
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
 	}
@@ -86,7 +95,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 }
 
 // updateService gets a list of instances for the service and updates their request definitions.
-func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
+func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance, ctx context.Context) error {
 	revURL := m.cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -98,7 +107,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 	}
 
 	m.logger.
-		WithField("service-name", ri.Name).
+		WithField(serviceName, ctx.Value(serviceName)).
 		Tracef("found %d revisions for api", len(revs))
 
 	errCh := make(chan error, len(revs))
@@ -118,7 +127,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 
 			// Passing down apiservice name (ri.Name) for logging purposes
 			// Possible future refactor to send context through to get proper resources downstream
-			err := m.updateSvcInstance(url, q, ri.Name, revision)
+			err := m.updateSvcInstance(url, q, revision, ctx)
 			errCh <- err
 		}(rev)
 	}
@@ -136,8 +145,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 }
 
 func (m *MarketplaceMigration) updateSvcInstance(
-	resourceURL string, query map[string]string, apiservice string, revision *v1.ResourceInstance,
-) error {
+	resourceURL string, query map[string]string, revision *v1.ResourceInstance, ctx context.Context) error {
 	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
@@ -152,7 +160,7 @@ func (m *MarketplaceMigration) updateSvcInstance(
 		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			err := m.handleSvcInstance(apiservice, svcInstance, revision)
+			err := m.handleSvcInstance(svcInstance, revision, ctx)
 			if err != nil {
 				errCh <- err
 			}
@@ -200,10 +208,10 @@ func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []strin
 
 	for _, policy := range authPolicies {
 		if policy == apic.Apikey {
-			credentialRequestPolicies = append(credentialRequestPolicies, definitions.APIKeyCRD)
+			credentialRequestPolicies = append(credentialRequestPolicies, provisioning.APIKeyCRD)
 		}
 		if policy == apic.Oauth {
-			credentialRequestPolicies = append(credentialRequestPolicies, []string{definitions.OAuthPublicKeyCRD, definitions.OAuthSecretCRD}...)
+			credentialRequestPolicies = append(credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
 		}
 	}
 
@@ -294,12 +302,11 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 }
 
 func (m *MarketplaceMigration) handleSvcInstance(
-	apiservice string, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance,
-) error {
+	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, ctx context.Context) error {
 	logger := m.logger.
-		WithField("service-name", apiservice).
-		WithField("instance-name", svcInstance.Name).
-		WithField("revision-name", revision.Name)
+		WithField(serviceName, ctx.Value(serviceName)).
+		WithField(instanceName, svcInstance.Name).
+		WithField(revisionName, revision.Name)
 
 	apiSvcInst := mv1a.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
 	apiSvcInst.FromInstance(svcInstance)
@@ -324,7 +331,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		apiKeyInfo := processor.GetAPIKeyInfo()
 		if len(apiKeyInfo) > 0 {
 			logger.Debug("instance has a spec definition type of apiKey")
-			ardRIName = definitions.APIKeyARD
+			ardRIName = provisioning.APIKeyARD
 		}
 
 		// get oauth scopes
