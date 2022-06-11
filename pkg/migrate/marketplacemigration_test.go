@@ -9,7 +9,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -60,7 +60,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 			rev,
 		},
 		instances: []*apiv1.ResourceInstance{
-			newInstance(rev.Name, "inst1", "", []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}),
+			newInstance(rev.Name, "inst1", "", []string{definitions.OAuthPublicKeyCRD, definitions.OAuthSecretCRD}),
 		},
 	}
 	cfg := &config.CentralConfiguration{

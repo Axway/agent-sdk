@@ -73,6 +73,10 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		}
 	}
 
+	m.logger.
+		WithField("service-name", ri.Name).
+		Tracef("perform marketplace provision")
+
 	err = m.updateService(ri)
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
@@ -196,10 +200,10 @@ func (m *MarketplaceMigration) getCredentialRequestPolicies(authPolicies []strin
 
 	for _, policy := range authPolicies {
 		if policy == apic.Apikey {
-			credentialRequestPolicies = append(credentialRequestPolicies, provisioning.APIKeyCRD)
+			credentialRequestPolicies = append(credentialRequestPolicies, definitions.APIKeyCRD)
 		}
 		if policy == apic.Oauth {
-			credentialRequestPolicies = append(credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
+			credentialRequestPolicies = append(credentialRequestPolicies, []string{definitions.OAuthPublicKeyCRD, definitions.OAuthSecretCRD}...)
 		}
 	}
 
@@ -320,7 +324,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		apiKeyInfo := processor.GetAPIKeyInfo()
 		if len(apiKeyInfo) > 0 {
 			logger.Debug("instance has a spec definition type of apiKey")
-			ardRIName = "api-key"
+			ardRIName = definitions.APIKeyARD
 		}
 
 		// get oauth scopes

@@ -180,10 +180,10 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 // WithCRDOAuthSecret - set that the Oauth cred is secret based
 func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthSecretCRD
+		c.name = definitions.OAuthSecretCRD
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.OauthClientSecret).
+				SetName(definitions.OauthClientSecret).
 				SetLabel("Client Secret").
 				SetRequired().
 				IsString().
@@ -194,10 +194,10 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 // WithCRDOAuthPublicKey - set that the Oauth cred is key based
 func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthPublicKeyCRD
+		c.name = definitions.OAuthPublicKeyCRD
 		c.reqProps = append(c.reqProps,
 			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.OauthPublicKey).
+				SetName(definitions.OauthPublicKey).
 				SetLabel("Public Key").
 				SetRequired().
 				IsString())
@@ -207,10 +207,10 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
 func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	apiKeyOptions := []func(*crdBuilderOptions){
-		withCRDName(provisioning.APIKeyCRD),
+		withCRDName(definitions.APIKeyCRD),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.APIKey).
+				SetName(definitions.APIKey).
 				SetLabel("API Key").
 				SetRequired().
 				IsString().
@@ -227,7 +227,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 	oauthOptions := []func(*crdBuilderOptions){
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.OauthClientID).
+				SetName(definitions.OauthClientID).
 				SetLabel("Client ID").
 				SetRequired().
 				IsString()),
@@ -257,7 +257,7 @@ func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 
 // NewAPIKeyAccessRequestBuilder - called by the agents
 func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
-	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
+	return NewAccessRequestBuilder().SetName(definitions.APIKeyARD)
 }
 
 // provisioner
