@@ -7,9 +7,11 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -46,7 +48,7 @@ func willCreateOrUpdateResource(data v1.Interface) bool {
 	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
 		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 		if existingCRD == nil {
-			log.Debugf("credential request definition %s needs to be created or updated using migration path", ri.Name)
+			log.Tracef("credential request definition %s needs to be created or updated using migration path", ri.Name)
 			return true
 		}
 	} else {
@@ -87,10 +89,26 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		log.Debugf("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		log.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 		_, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
+		}
+
+		// Mark marketplace migration completed here in provisioning
+		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
+		ri, err = GetCentralClient().UpdateResourceInstance(svc)
+		if err != nil {
+			return nil, err
+		}
+		//update sub resources
+		inst, err := svc.AsInstance()
+		if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
+			err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
+			if err != nil {
+				return nil, err
+			}
+			log.Debugf("updated x-agent-details with marketplace-migration: completed")
 		}
 	}
 	return ri, nil

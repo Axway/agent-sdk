@@ -10,8 +10,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -48,13 +50,29 @@ type MarketplaceMigration struct {
 	cache  ardCache
 }
 
-// Migrate -
 func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.APIServiceGVK().Kind {
 		return ri, nil
 	}
 
-	err := m.updateService(ri)
+	// check resource to see if this apiservice has already been run through migration
+	apiSvc, err := ri.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+
+	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
+	details := util.GetAgentDetails(apiSvc)
+	if len(details) > 0 {
+		completed := details[definitions.MarketplaceMigration]
+		if completed == definitions.MigrationCompleted {
+			// migration ran already
+			m.logger.Debugf("marketplace provision migration ran previously for service-name", apiSvc.Name)
+			return ri, nil
+		}
+	}
+
+	err = m.updateService(ri)
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
 	}
@@ -76,7 +94,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance) error {
 
 	m.logger.
 		WithField("service-name", ri.Name).
-		Debugf("found %d revisions for api", len(revs))
+		Tracef("found %d revisions for api", len(revs))
 
 	errCh := make(chan error, len(revs))
 	wg := &sync.WaitGroup{}
