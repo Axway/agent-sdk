@@ -86,7 +86,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		WithField(serviceName, ri.Name).
 		Tracef("perform marketplace provision")
 
-	err = m.updateService(ri, ctx)
+	err = m.updateService(ctx, ri)
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
 	}
@@ -95,7 +95,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 }
 
 // updateService gets a list of instances for the service and updates their request definitions.
-func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance, ctx context.Context) error {
+func (m *MarketplaceMigration) updateService(ctx context.Context, ri *v1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -127,7 +127,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance, ctx contex
 
 			// Passing down apiservice name (ri.Name) for logging purposes
 			// Possible future refactor to send context through to get proper resources downstream
-			err := m.updateSvcInstance(url, q, revision, ctx)
+			err := m.updateSvcInstance(ctx, url, q, revision)
 			errCh <- err
 		}(rev)
 	}
@@ -145,7 +145,7 @@ func (m *MarketplaceMigration) updateService(ri *v1.ResourceInstance, ctx contex
 }
 
 func (m *MarketplaceMigration) updateSvcInstance(
-	resourceURL string, query map[string]string, revision *v1.ResourceInstance, ctx context.Context) error {
+	ctx context.Context, resourceURL string, query map[string]string, revision *v1.ResourceInstance) error {
 	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func (m *MarketplaceMigration) updateSvcInstance(
 		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			err := m.handleSvcInstance(svcInstance, revision, ctx)
+			err := m.handleSvcInstance(ctx, svcInstance, revision)
 			if err != nil {
 				errCh <- err
 			}
@@ -302,7 +302,7 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 }
 
 func (m *MarketplaceMigration) handleSvcInstance(
-	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, ctx context.Context) error {
+	ctx context.Context, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance) error {
 	logger := m.logger.
 		WithField(serviceName, ctx.Value(serviceName)).
 		WithField(instanceName, svcInstance.Name).
