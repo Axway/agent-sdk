@@ -23,6 +23,10 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			ri, _ := data.AsInstance()
 			return ri, nil
 		},
+		UpdateResourceInstanceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+			ri, _ := data.AsInstance()
+			return ri, nil
+		},
 	}
 
 	tests := []struct {
