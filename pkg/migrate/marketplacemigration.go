@@ -18,10 +18,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+type resourceType string
+
 const (
-	serviceName  = "service-name"
-	instanceName = "instance-name"
-	revisionName = "revision-name"
+	serviceName  resourceType = "service-name"
+	instanceName              = "instance-name"
+	revisionName              = "revision-name"
 )
 
 // Migrator interface for performing a migration on a ResourceInstance
@@ -83,7 +85,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 	}
 
 	m.logger.
-		WithField(serviceName, ri.Name).
+		WithField(string(serviceName), ri.Name).
 		Tracef("perform marketplace provision")
 
 	err = m.updateService(ctx, ri)
@@ -107,7 +109,7 @@ func (m *MarketplaceMigration) updateService(ctx context.Context, ri *v1.Resourc
 	}
 
 	m.logger.
-		WithField(serviceName, ctx.Value(serviceName)).
+		WithField(string(serviceName), ctx.Value(serviceName)).
 		Tracef("found %d revisions for api", len(revs))
 
 	errCh := make(chan error, len(revs))
@@ -304,7 +306,7 @@ func (m *MarketplaceMigration) createInstanceEndpoint(endpoints []apic.EndpointD
 func (m *MarketplaceMigration) handleSvcInstance(
 	ctx context.Context, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance) error {
 	logger := m.logger.
-		WithField(serviceName, ctx.Value(serviceName)).
+		WithField(string(serviceName), ctx.Value(serviceName)).
 		WithField(instanceName, svcInstance.Name).
 		WithField(revisionName, revision.Name)
 
