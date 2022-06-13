@@ -79,7 +79,9 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		completed := details[definitions.MarketplaceMigration]
 		if completed == definitions.MigrationCompleted {
 			// migration ran already
-			m.logger.Debugf("marketplace provision migration ran previously for service-name %s", apiSvc.Name)
+			m.logger.
+				WithField(string(serviceName), apiSvc).
+				Debugf("marketplace provision migration ran previously for service-name")
 			return ri, nil
 		}
 	}
