@@ -75,7 +75,8 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 			WithField("name", p.cfg.GetIDPName()).
 			WithField("type", p.cfg.GetIDPType()).
 			WithField("metadataUrl", p.metadataURL).
-			WithError(err)
+			WithError(err).
+			Error("unable to fetch OAuth authorization server metadata")
 		return nil, err
 	}
 

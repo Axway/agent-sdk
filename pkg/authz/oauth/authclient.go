@@ -160,7 +160,8 @@ func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
 			WithField("server", c.options.serverName).
 			WithField("url", c.tokenURL).
 			WithField("status", resp.Code).
-			WithError(err)
+			WithError(err).
+			Debug(err.Error())
 		return nil, err
 	}
 

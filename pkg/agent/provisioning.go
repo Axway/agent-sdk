@@ -163,7 +163,9 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 // WithCRDForIDP - set the schema properties using the provider metadata
 func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = p.GetName() + "-" + provisioning.OAuthIDPCRD
+		if c.name == "" {
+			c.name = p.GetName() + "-" + provisioning.OAuthIDPCRD
+		}
 
 		setIDPClientSecretSchemaProperty(c)
 		setIDPTokenURLSchemaProperty(p, c)
