@@ -81,7 +81,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 			// migration ran already
 			m.logger.
 				WithField(string(serviceName), apiSvc).
-				Debugf("marketplace provision migration already completed for service-name")
+				Debugf("marketplace provision migration already completed")
 			return ri, nil
 		}
 	}
