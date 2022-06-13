@@ -24,6 +24,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	if s.config.PerAPI && s.config.PerSub {
 		if details.SubID != "" {
+			s.shouldSampleWithCounter(details.APIID)
 			return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
 		}
 		if details.APIID != "" {
