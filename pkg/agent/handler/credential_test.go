@@ -10,14 +10,18 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -264,6 +268,178 @@ func Test_creds(t *testing.T) {
 	c.appDetails = nil
 	assert.Empty(t, c.GetApplicationDetailsValue("app_details_key"))
 	assert.Empty(t, c.GetCredentialDetailsValue("access_details_key"))
+}
+
+func TestIDPCredentialProvisioning(t *testing.T) {
+	crdRI, _ := crd.AsInstance()
+	s := oauth.NewMockIDPServer()
+	defer s.Close()
+
+	tests := []struct {
+		name               string
+		metadataURL        string
+		tokenURL           string
+		expectedProvType   string
+		outboundStatus     prov.Status
+		registrationStatus int
+		handlerInvoked     bool
+		hasError           bool
+	}{
+		{
+			name:               "should provision IDP credential with no error",
+			metadataURL:        s.GetMetadataURL(),
+			tokenURL:           s.GetTokenURL(),
+			expectedProvType:   provision,
+			outboundStatus:     prov.Success,
+			registrationStatus: http.StatusCreated,
+		},
+		{
+			name:           "should fail to provision and set the status to error",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       "test",
+			outboundStatus: prov.Error,
+			hasError:       true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			idpConfig := createIDPConfig(s)
+			idpProviderRegistry := oauth.NewProviderRegistry()
+			idpProviderRegistry.RegisterProvider(idpConfig, config.NewTLSConfig(), "", 30*time.Second)
+
+			cred := credential
+			cred.Status.Level = prov.Pending.String()
+
+			cred.Spec.Data = map[string]interface{}{
+				"idpTokenURL": tc.tokenURL,
+			}
+
+			p := &mockCredProv{
+				t: t,
+				expectedStatus: mock.MockRequestStatus{
+					Status: prov.Success,
+					Msg:    "msg",
+					Properties: map[string]string{
+						"status_key": "status_val",
+					},
+				},
+				expectedAppDetails:  util.GetAgentDetails(credApp),
+				expectedCredDetails: util.GetAgentDetails(&cred),
+				expectedManagedApp:  credAppRefName,
+				expectedCredType:    cred.Spec.CredentialRequestDefinition,
+			}
+
+			c := &credClient{
+				crd:            crdRI,
+				expectedStatus: tc.outboundStatus.String(),
+				managedApp:     credApp,
+				t:              t,
+			}
+
+			handler := NewCredentialHandler(p, c, idpProviderRegistry)
+			v := handler.(*credentials)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
+
+			ri, _ := cred.AsInstance()
+			s.SetRegistrationResponseCode(tc.registrationStatus)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
+			assert.Nil(t, err)
+		})
+	}
+}
+
+func TestIDPCredentialDeprovisioning(t *testing.T) {
+	crdRI, _ := crd.AsInstance()
+	s := oauth.NewMockIDPServer()
+	defer s.Close()
+
+	tests := []struct {
+		name               string
+		metadataURL        string
+		tokenURL           string
+		outboundStatus     prov.Status
+		registrationStatus int
+		handlerInvoked     bool
+	}{
+		{
+			name:               "should deprovision IDP credential with no error",
+			metadataURL:        s.GetMetadataURL(),
+			tokenURL:           s.GetTokenURL(),
+			outboundStatus:     prov.Success,
+			registrationStatus: http.StatusNoContent,
+			handlerInvoked:     true,
+		},
+		{
+			name:           "should fail to deprovision and set the status to error",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       "test",
+			outboundStatus: prov.Error,
+			handlerInvoked: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			idpConfig := createIDPConfig(s)
+			idpProviderRegistry := oauth.NewProviderRegistry()
+			idpProviderRegistry.RegisterProvider(idpConfig, config.NewTLSConfig(), "", 30*time.Second)
+
+			cred := credential
+			cred.Status.Level = prov.Success.String()
+			cred.Metadata.State = v1.ResourceDeleting
+			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
+			cred.Spec.Data = map[string]interface{}{
+				"idpTokenURL": tc.tokenURL,
+			}
+
+			p := &mockCredProv{
+				t: t,
+				expectedStatus: mock.MockRequestStatus{
+					Status: tc.outboundStatus,
+					Msg:    "msg",
+					Properties: map[string]string{
+						"status_key": "status_val",
+					},
+				},
+				expectedAppDetails:  map[string]interface{}{},
+				expectedCredDetails: util.GetAgentDetails(&cred),
+				expectedManagedApp:  credAppRefName,
+				expectedCredType:    cred.Spec.CredentialRequestDefinition,
+			}
+
+			c := &credClient{
+				crd:            crdRI,
+				expectedStatus: tc.outboundStatus.String(),
+				managedApp:     credApp,
+				isDeleting:     true,
+				t:              t,
+			}
+
+			handler := NewCredentialHandler(p, c, idpProviderRegistry)
+			v := handler.(*credentials)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
+
+			ri, _ := cred.AsInstance()
+			s.SetRegistrationResponseCode(tc.registrationStatus)
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			if tc.handlerInvoked {
+				assert.Equal(t, deprovision, p.expectedProvType)
+				if tc.outboundStatus.String() == prov.Success.String() {
+					assert.False(t, c.createSubCalled)
+				} else {
+					assert.True(t, c.createSubCalled)
+				}
+			} else {
+				assert.False(t, c.createSubCalled)
+			}
+		})
+	}
+
 }
 
 type mockCredProv struct {
@@ -596,4 +772,22 @@ var credential = mv1.Credential{
 	Status: &v1.ResourceStatus{
 		Level: "",
 	},
+}
+
+func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
+	return &config.IDPConfiguration{
+		Name:        "test",
+		Type:        "okta",
+		MetadataURL: s.GetMetadataURL(),
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:         "client",
+			ClientID:     "test",
+			ClientSecret: "test",
+		},
+		GrantType:        "client_credentials",
+		ClientScopes:     "read,write",
+		AuthMethod:       "client_secret_basic",
+		AuthResponseType: "token",
+		ExtraProperties:  config.ExtraProperties{"key": "value"},
+	}
 }

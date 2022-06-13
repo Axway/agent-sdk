@@ -322,7 +322,7 @@ func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}, provDat
 	}
 
 	// Setup external credential request data to be used for provisioning
-	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok {
+	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok && idpProviderRegistry != nil {
 		p, err := idpProviderRegistry.GetProviderByTokenEndpoint(idpTokenURL)
 		if err != nil {
 			return nil, fmt.Errorf("IDP provider not found for credential request")
