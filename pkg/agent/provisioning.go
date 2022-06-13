@@ -15,6 +15,16 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+var supportedIDPGrantTypes = map[string]bool{
+	"client_credentials": true,
+	"authorization_code": true}
+
+var supportedIDPTokenAuthMethods = map[string]bool{
+	"client_secret_basic": true,
+	"client_secret_post":  true,
+	"client_secret_jwt":   true,
+	"private_key_jwt":     true}
+
 // credential request definitions
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Migrator) (*v1.ResourceInstance, error) {
@@ -215,7 +225,9 @@ func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilder
 }
 
 func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	grantType := p.GetSupportedGrantTypes()
+	grantType := removeUnsupportedTypes(
+		p.GetSupportedGrantTypes(), supportedIDPGrantTypes)
+
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthGrantType).
@@ -225,8 +237,20 @@ func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 			SetEnumValues(grantType))
 }
 
+func removeUnsupportedTypes(values []string, supportedTypes map[string]bool) []string {
+	var result []string
+	for _, s := range values {
+		if ok := supportedTypes[s]; ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
 func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	tokenAuthMethod := p.GetSupportedTokenAuthMethods()
+	tokenAuthMethod := removeUnsupportedTypes(
+		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods)
+
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTokenAuthMethod).
