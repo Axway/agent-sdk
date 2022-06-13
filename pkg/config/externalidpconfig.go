@@ -5,31 +5,49 @@ import (
 	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
 const (
-	pathExternalIDP = "agentFeatures.idp"
+	accessToken = "accessToken"
+	client      = "client"
+
+	pathExternalIDP     = "agentFeatures.idp"
+	fldName             = "name"
+	fldType             = "type"
+	fldMetadataURL      = "metadataUrl"
+	fldExtraProperties  = "extraProperties"
+	fldScope            = "scope"
+	fldGrantType        = "grantType"
+	fldAuthMethod       = "authMethod"
+	fldAuthResponseType = "authResponseType"
+	fldAuthType         = "auth.type"
+	fldAuthAccessToken  = "auth.accessToken"
+	fldAuthClientID     = "auth.clientId"
+	fldAuthClientSecret = "auth.clientSecret"
 )
 
 var configProperties = []string{
-	"name",
-	"type",
-	"metadataUrl",
-	"extraProperties",
-	"scope",
-	"grantType",
-	"authMethod",
-	"authResponseType",
-	"auth.type",
-	"auth.type",
-	"auth.accessToken",
-	"auth.clientId",
-	"auth.clientSecret",
+	fldName,
+	fldType,
+	fldMetadataURL,
+	fldExtraProperties,
+	fldScope,
+	fldGrantType,
+	fldAuthMethod,
+	fldAuthResponseType,
+	fldAuthType,
+	fldAuthAccessToken,
+	fldAuthClientID,
+	fldAuthClientSecret,
 }
+
+var validIDPAuthType = map[string]bool{accessToken: true, client: true}
 
 // ExternalIDPConfig -
 type ExternalIDPConfig interface {
 	GetIDPList() []IDPConfig
+	ValidateCfg() (err error)
 }
 
 type externalIDPConfig struct {
@@ -42,6 +60,20 @@ func (e *externalIDPConfig) GetIDPList() []IDPConfig {
 		list = append(list, idpCfg)
 	}
 	return list
+}
+
+func (e *externalIDPConfig) ValidateCfg() (err error) {
+	for _, idpCfg := range e.IDPConfigs {
+		exception.Block{
+			Try: func() {
+				idpCfg.validate()
+			},
+			Catch: func(e error) {
+				err = e
+			},
+		}.Do()
+	}
+	return err
 }
 
 // ExtraProperties - type for representing extra IdP provider properties to be included in client request
@@ -71,6 +103,8 @@ type IDPAuthConfig interface {
 	GetClientID() string
 	// GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
 	GetClientSecret() string
+	// validate - Validates the IDP auth configuration
+	validate()
 }
 
 // IDPConfig - interface for IdP provider config
@@ -93,6 +127,8 @@ type IDPConfig interface {
 	GetAuthResponseType() string
 	// GetExtraProperties - set of additional properties to be applied when registering the client
 	GetExtraProperties() map[string]string
+	// validate - Validates the IDP configuration
+	validate()
 }
 
 // IDPAuthConfiguration - Structure to hold the IdP provider auth config
@@ -162,6 +198,19 @@ func (i *IDPConfiguration) GetAuthResponseType() string {
 	return i.AuthResponseType
 }
 
+// validate - Validates the IDP configuration
+func (i *IDPConfiguration) validate() {
+	if i.Name == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldName))
+	}
+
+	if i.MetadataURL == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldMetadataURL))
+	}
+
+	i.AuthConfig.validate()
+}
+
 // GetType - type of authentication mechanism to use "accessToken" or "client"
 func (i *IDPAuthConfiguration) GetType() string {
 	return i.Type
@@ -180,6 +229,26 @@ func (i *IDPAuthConfiguration) GetClientID() string {
 // GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
 func (i *IDPAuthConfiguration) GetClientSecret() string {
 	return i.ClientSecret
+}
+
+// validate - Validates the IDP auth configuration
+func (i *IDPAuthConfiguration) validate() {
+	if ok := validIDPAuthType[i.GetType()]; !ok {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthType))
+	}
+
+	if i.GetType() == accessToken && i.GetAccessToken() == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthAccessToken))
+	}
+
+	if i.GetType() == client {
+		if i.GetClientID() == "" {
+			exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientID))
+		}
+		if i.GetClientSecret() == "" {
+			exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientSecret))
+		}
+	}
 }
 
 func addExternalIDPProperties(props properties.Properties) {

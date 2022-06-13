@@ -77,7 +77,9 @@ const (
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
 func (c *AgentFeaturesConfiguration) ValidateCfg() (err error) {
-	// No validation required
+	if c.ExternalIDPConfig != nil {
+		return c.ExternalIDPConfig.ValidateCfg()
+	}
 	return
 }
 
