@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -237,6 +238,10 @@ func (h *credentials) getCRD(ctx context.Context, cred *mv1.Credential) (*mv1.Cr
 func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
 	p := cr.GetIDPProvider()
 	idpCredData := cr.GetIDPCredentialData()
+
+	formattedJWKS := strings.ReplaceAll(idpCredData.GetPublicKey(), "----- ", "-----\n")
+	formattedJWKS = strings.ReplaceAll(formattedJWKS, " -----", "\n-----")
+
 	// prepare external client metadata from CRD data
 	clientMetadata, err := oauth.NewClientMetadataBuilder().
 		SetClientName(cr.GetName()).
@@ -245,7 +250,7 @@ func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
 		SetTokenEndpointAuthMethod(idpCredData.GetTokenEndpointAuthMethod()).
 		SetResponseType(idpCredData.GetResponseTypes()).
 		SetRedirectURIs(idpCredData.GetRedirectURIs()).
-		SetJWKS([]byte(idpCredData.GetPublicKey())).
+		SetJWKS([]byte(formattedJWKS)).
 		SetJWKSURI(idpCredData.GetJwksURI()).
 		Build()
 	if err != nil {
