@@ -11,6 +11,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -164,7 +165,8 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
-			c.name = p.GetName() + "-" + provisioning.OAuthIDPCRD
+			name := util.ConvertToDomainNameCompliant(p.GetName())
+			c.name = name + "-" + provisioning.OAuthIDPCRD
 		}
 
 		setIDPClientSecretSchemaProperty(c)

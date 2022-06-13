@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -494,4 +495,25 @@ func GetStringArrayFromMapInterface(key string, data map[string]interface{}) []s
 		}
 	}
 	return val
+}
+
+// ConvertToDomainNameCompliant - converts string to be domain name complaint
+func ConvertToDomainNameCompliant(str string) string {
+	// convert all letters to lower first
+	newName := strings.ToLower(str)
+
+	// parse name out. All valid parts must be '-', '.', a-z, or 0-9
+	re := regexp.MustCompile(`[-\.a-z0-9]*`)
+	matches := re.FindAllString(newName, -1)
+
+	// join all of the parts, separated with '-'. This in effect is substituting all illegal chars with a '-'
+	newName = strings.Join(matches, "-")
+
+	// The regex rule says that the name must not begin or end with a '-' or '.', so trim them off
+	newName = strings.TrimLeft(strings.TrimRight(newName, "-."), "-.")
+
+	// The regex rule also says that the name must not have a sequence of ".-", "-.", or "..", so replace them
+	r1 := strings.ReplaceAll(newName, "-.", "--")
+	r2 := strings.ReplaceAll(r1, ".-", "--")
+	return strings.ReplaceAll(r2, "..", "--")
 }

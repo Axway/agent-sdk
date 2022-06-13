@@ -368,3 +368,18 @@ func TestGetStringArrayFromMapInterface(t *testing.T) {
 		assert.Equal(t, testCase.expectedVal, ret)
 	}
 }
+
+func TestConvertToDomainNameCompliant(t *testing.T) {
+	name := ConvertToDomainNameCompliant("Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant(".Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant(".Abc...De/f")
+	assert.Equal(t, "abc--.de-f", name)
+	name = ConvertToDomainNameCompliant("Abc.D-ef")
+	assert.Equal(t, "abc.d-ef", name)
+	name = ConvertToDomainNameCompliant("Abc.Def=")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant("A..bc.Def")
+	assert.Equal(t, "a--bc.def", name)
+}
