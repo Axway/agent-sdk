@@ -14,6 +14,7 @@ var agentSamples *sample
 type Sampling struct {
 	Percentage      int  `config:"percentage"    validate:"min=0, max=100"`
 	PerAPI          bool `config:"per_api"`
+	PerSub          bool `config:"per_subscription"`
 	ReportAllErrors bool `config:"reportAllErrors" yaml:"reportAllErrors"`
 }
 
@@ -22,6 +23,7 @@ func DefaultConfig() Sampling {
 	return Sampling{
 		Percentage:      defaultSamplingRate,
 		PerAPI:          true,
+		PerSub:          true,
 		ReportAllErrors: true,
 	}
 }
