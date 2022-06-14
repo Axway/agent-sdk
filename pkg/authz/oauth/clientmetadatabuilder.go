@@ -103,6 +103,7 @@ func (b *clientBuilder) decodeJWKS() ([]byte, error) {
 	}
 	kid, _ := util.ComputeKIDFromDER(b.publicKey)
 	key.Set(jwk.KeyIDKey, kid)
+	key.Set(jwk.KeyUsageKey, jwk.ForSignature)
 
 	buf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
