@@ -478,6 +478,12 @@ type CredentialRequest interface {
   GetCredentialType() string
   // GetCredentialData returns the map[string]interface{} of data from the request
   GetCredentialData() map[string]interface{}
+  // IsIDPCredential returns boolean indicating if the credential request is for IDP provider
+  IsIDPCredential() bool
+  // GetIDPProvider returns the interface for IDP provider if the credential request is for IDP provider
+  GetIDPProvider() o.Provider
+  // GetIDPCredentialData() returns the credential data for IDP from the request
+  GetIDPCredentialData() IDPCredentialData
 }
 ```
 
@@ -509,3 +515,166 @@ type CredentialBuilder interface {
 ```
 
 All of the builder methods above return the Credential object. The Agent SDK is able to assist in building the credential objects for OAuth and API Key authentication, if the agent needs to supply data that is not one of those known structures the SetCredential method should be used
+
+
+#### IDP Credential provisioning
+![Credential Events](./externalcredential.png)
+
+The Agent SDK maintains a registry for the managing the OAuth identity providers and exposes interface to register & lookups for the provider.
+
+```go
+// ProviderRegistry - interface for provider registry
+type ProviderRegistry interface {
+	// RegisterProvider - registers the provider using the config
+	RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error
+	// GetProviderByName - returns the provider from registry based on the name
+	GetProviderByName(name string) (Provider, error)
+	// GetProviderByIssuer - returns the provider from registry based on the IDP issuer
+	GetProviderByIssuer(issuer string) (Provider, error)
+	// GetProviderByTokenEndpoint - returns the provider from registry based on the IDP token endpoint
+	GetProviderByTokenEndpoint(tokenEndpoint string) (Provider, error)
+	// GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
+	GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error)
+}
+```
+
+##### IDP Registration
+The Agent SDK uses the following interface for configuration to register the OAuth providers
+```go
+// IDPAuthConfig - interface for IdP provider auth config
+type IDPAuthConfig interface {
+  // GetType - type of authentication mechanism to use "accessToken" or "client"
+  GetType() string
+  // GetAccessToken - token(initial access token/Admin API Token etc) to be used by Agent SDK to authenticate with IdP
+  GetAccessToken() string
+  // GetClientID - Identifier of the client in IdP that can used to create new OAuth clients
+  GetClientID() string
+  // GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
+  GetClientSecret() string
+}
+
+// IDPConfig - interface for IdP provider config
+type IDPConfig interface {
+  // GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
+  GetMetadataURL() string
+  // GetIDPType - IDP type ("generic" or "okta")
+  GetIDPType() string
+  // GetIDPName - for the identity provider
+  GetIDPName() string
+  // GetAuthConfig - to be used for authentication with IDP
+  GetAuthConfig() IDPAuthConfig
+  // GetClientScopes - default list of scopes that are included in the client metadata request to IDP
+  GetClientScopes() string
+  // GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
+  GetGrantType() string
+  // GetAuthMethod - default token endpoint authentication method(default : "client_secret_basic")
+  GetAuthMethod() string
+  // GetAuthResponseType - default token response type to be used when registering the client
+  GetAuthResponseType() string
+  // GetExtraProperties - set of additional properties to be applied when registering the client
+  GetExtraProperties() map[string]string
+}
+```
+
+The Amplify Agent SDK provides support for implicitly registering multiple identity providers based on environment variable based configuration. The environment variable based config need to be suffixed with the index number. The following is an example of registering the provider using environment variable based configuration.
+
+```
+AGENTFEATURES_IDP_NAME_#="local-keycloak"
+AGENTFEATURES_IDP_TYPE_1="keycloak"
+AGENTFEATURES_IDP_METADATAURL_1="http://keycloak:9999/realms/somerealm/.well-known/openid-configuration"
+AGENTFEATURES_IDP_AUTH_TYPE_1="client"
+AGENTFEATURES_IDP_AUTH_CLIENTID_1="service-account"
+AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1="service-account-secret"
+AGENTFEATURES_IDP_SCOPE_1="resource.READ resource.WRITE"
+```
+
+Alternatively, the agent implementation can choose to explicitly register the provider calling by using the `ProviderRegistry` interface.
+
+```go
+idpCfg := &config.IDPConfiguration{
+    Name:            name,
+    Type:            providerType,
+    ExtraProperties: extraProperties,
+    MetadataURL:     metadataURL,
+    AuthConfig: &config.IDPAuthConfiguration{
+        Type:         authType,
+        ClientID:     clientID,
+        ClientSecret: clientSecret,
+        AccessToken:  accessToken,
+    },
+}
+agent.GetAuthProviderRegistry().RegisterProvider(idpCfg, tlsCfg, proxyURL, clientTimeout)
+```
+
+##### Registering the Credential request definition for IDP
+The Amplify Agent SDK provides a mechanism to set up credential request definition schemas using registered provider. The Amplify Agent SDK sets up the `CredentialRequestDefinition` resource with request schema for the data needed to provision the OAuth client with the specified provider.
+
+```go
+import (
+    "github.com/Axway/agent-sdk/pkg/agent"
+)
+
+func registerCRDForOAuthProvider(crdName string, tokenURL, apiScopes string) error {
+  p, err := agent.GetAuthProviderRegistry().GetProviderByTokenEndpoint(tokenURL)
+  if err != nil {
+    return fmt.Errorf("no provider registered for %s", tokenURL)
+  }
+
+  agent.NewOAuthCredentialRequestBuilder(
+    agent.WithCRDForIDP(p, scopes),
+    agent.WithCRDName(crdName),
+  ).Register()
+
+  return nil
+}
+```
+
+##### IDP Credential provisioning/deprovisioning processing
+
+When receiving a provisioning/deprovisioning request the Amplify Agent SDK performs check to identify if the request is for IDP using the credential request data. For the IDP credential request, the Amplify SDK performs the lookup to identify the registered provider and prepares the data required to process the registration/un-registration using the credential request data.
+
+For provisioning, the Amplify Agent SDK prepares the OAuth client metadata using the credential request data and uses the provider to register the client with IDP before calling the `CredentialProvision` handler
+
+For deprovisioning, the Amplify Agent SDK calls the `CredentialDeprovision` handler and then uses the provider to unregister the client from IDP.
+
+Both provision and deprovision handler will receive the `CredentialRequest` object that holds data for provisioned OAuth client in IDP. The Amplify Agent SDK exposes `IDPCredentialData` interface, that agent implementation can use to get the details(client id, client secret, grant type etc) of the provisioned OAuth IDP client and associate the information with dataplane.
+
+```go
+// IDPCredentialData - interface for the IDP credential request
+type IDPCredentialData interface {
+	// GetClientID - returns client ID
+	GetClientID() string
+	// GetClientSecret - returns client secret
+	GetClientSecret() string
+	// GetScopes - returns client scopes
+	GetScopes() []string
+	// GetGrantTypes - returns grant types
+	GetGrantTypes() []string
+	// GetTokenEndpointAuthMethod - returns token auth method
+	GetTokenEndpointAuthMethod() string
+	// GetResponseTypes - returns token response type
+	GetResponseTypes() []string
+	// GetRedirectURIs - Returns redirect urls
+	GetRedirectURIs() []string
+	// GetJwksURI - returns JWKS uri
+	GetJwksURI() string
+	// GetPublicKey - returns the public key
+	GetPublicKey() string
+}
+```
+
+The following is an example of the `CredentialProvision` handler implementation demonstrating the use if `IDPCredentialData` interface.
+
+```go
+func CredentialProvision(credentialRequest provisioning.CredentialRequest) (status provisioning.RequestStatus, credentials provisioning.Credential) {
+  ...
+  if credentialRequest.IsIDPCredential() {
+    externalClientID := credentialRequest.GetIDPCredentialData().GetClientID()
+    externalClientSecret := credentialRequest.GetIDPCredentialData().GetClientSecret()
+    ...
+    // Associate OAuth IDP client ID with dataplane
+    ...
+  }
+  ...
+}
+```

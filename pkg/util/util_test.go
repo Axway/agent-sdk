@@ -1,6 +1,7 @@
 package util
 
 import (
+	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
@@ -222,4 +223,163 @@ func TestParseAddr(t *testing.T) {
 	u, _ = url.Parse("http://test")
 	addr = ParseAddr(u)
 	assert.Equal(t, "test:80", addr)
+}
+
+func TestComputeKIDFromDER(t *testing.T) {
+	key, err := ioutil.ReadFile("testdata/public_key")
+	if err != nil {
+		t.Errorf("unable to read public_key")
+	}
+	res, err := ComputeKIDFromDER(key)
+	if err != nil {
+		t.Errorf("unable to compute kid")
+	}
+	expected := "1wzYoslzjo-ROTN1CUWPQYtTUqrqiaDO96fAAmb7JvA"
+	if res != expected {
+		t.Fail()
+	}
+
+	// der file format
+	key, err = ioutil.ReadFile("testdata/public_key.der")
+	if err != nil {
+		t.Errorf("unable to read public_key.der")
+	}
+	res, err = ComputeKIDFromDER(key)
+	if err != nil {
+		t.Errorf("unable to compute kid")
+	}
+	expected = "iXcfstYFMANhYzgPwMWJxIQdfLQBqWjdiwyl7e4xv6Q"
+	if res != expected {
+		t.Fail()
+	}
+}
+
+func TestReadPrivateKey(t *testing.T) {
+	cases := []struct {
+		description  string
+		privKeyFile  string
+		passwordFile string
+	}{
+		{
+			description: "no password",
+			privKeyFile: "testdata/private_key.pem",
+		},
+		{
+			description:  "with empty password file",
+			privKeyFile:  "testdata/private_key.pem",
+			passwordFile: "testdata/password_empty",
+		},
+		{
+			description:  "with password",
+			privKeyFile:  "testdata/private_key_with_pwd.pem",
+			passwordFile: "testdata/password",
+		},
+	}
+
+	for _, testCase := range cases {
+		if _, err := ReadPrivateKeyFile(testCase.privKeyFile, testCase.passwordFile); err != nil {
+			t.Errorf("testcase: %s: failed to read rsa key %s", testCase.description, err)
+		}
+	}
+}
+
+func TestReadPublicKeyFile(t *testing.T) {
+	cases := []struct {
+		description   string
+		publicKeyFile string
+	}{
+		{
+			description:   "with public key",
+			publicKeyFile: "testdata/public_key",
+		},
+	}
+	for _, testCase := range cases {
+		if _, err := ReadPublicKeyBytes(testCase.publicKeyFile); err != nil {
+			t.Errorf("testcase: %s: failed to read public key %s", testCase.description, err)
+		}
+	}
+}
+
+func TestGetStringFromMapInterface(t *testing.T) {
+	cases := []struct {
+		data        map[string]interface{}
+		key         string
+		expectedVal string
+	}{
+		{
+			data:        map[string]interface{}{"key": "valid"},
+			key:         "key",
+			expectedVal: "valid",
+		},
+		{
+			data:        map[string]interface{}{"key": 10},
+			key:         "invalidKey",
+			expectedVal: "",
+		},
+		{
+			data:        map[string]interface{}{"key": 10},
+			expectedVal: "",
+		},
+	}
+	for _, testCase := range cases {
+		ret := GetStringFromMapInterface(testCase.key, testCase.data)
+		assert.Equal(t, testCase.expectedVal, ret)
+	}
+}
+
+func TestGetStringArrayFromMapInterface(t *testing.T) {
+	cases := []struct {
+		data        map[string]interface{}
+		key         string
+		expectedVal []string
+	}{
+		{
+			data:        map[string]interface{}{"key": []string{"val1", "val2"}},
+			key:         "key",
+			expectedVal: []string{"val1", "val2"},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{"val1", "val2"}},
+			key:         "key",
+			expectedVal: []string{"val1", "val2"},
+		},
+		{
+			data:        map[string]interface{}{"key": []string{"val1", "val2"}},
+			key:         "invalidKey",
+			expectedVal: []string{},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{10, "val1"}},
+			key:         "key",
+			expectedVal: []string{"val1"},
+		},
+		{
+			data:        map[string]interface{}{"key": []interface{}{10, 10}},
+			key:         "key",
+			expectedVal: []string{},
+		},
+		{
+			data:        map[string]interface{}{"key": []int{10}},
+			expectedVal: []string{},
+		},
+	}
+	for _, testCase := range cases {
+		ret := GetStringArrayFromMapInterface(testCase.key, testCase.data)
+		assert.Equal(t, testCase.expectedVal, ret)
+	}
+}
+
+func TestConvertToDomainNameCompliant(t *testing.T) {
+	name := ConvertToDomainNameCompliant("Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant(".Abc.Def")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant(".Abc...De/f")
+	assert.Equal(t, "abc--.de-f", name)
+	name = ConvertToDomainNameCompliant("Abc.D-ef")
+	assert.Equal(t, "abc.d-ef", name)
+	name = ConvertToDomainNameCompliant("Abc.Def=")
+	assert.Equal(t, "abc.def", name)
+	name = ConvertToDomainNameCompliant("A..bc.Def")
+	assert.Equal(t, "a--bc.def", name)
 }

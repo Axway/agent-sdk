@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -17,6 +18,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
@@ -63,6 +65,7 @@ type agentData struct {
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
+	authProviderRegistry   oauth.ProviderRegistry
 }
 
 var agent agentData
@@ -175,7 +178,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-
+			registerExternalIDPs()
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -192,6 +195,29 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	agent.isInitialized = true
 	return nil
+}
+
+func registerExternalIDPs() {
+	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
+		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
+		tlsCfg := agent.cfg.GetTLSConfig()
+		proxy := agent.cfg.GetProxyURL()
+		timeout := agent.cfg.GetClientTimeout()
+		for _, idp := range idPCfg.GetIDPList() {
+			registerCredentialProvider(idp, tlsCfg, proxy, timeout)
+		}
+	}
+}
+
+func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) {
+	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
+	if err != nil {
+		logger.
+			WithField("name", idp.GetIDPName()).
+			WithField("type", idp.GetIDPType()).
+			WithField("metadataUrl", idp.GetMetadataURL()).
+			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
+	}
 }
 
 func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
@@ -257,6 +283,14 @@ func RegisterResourceEventHandler(name string, resourceEventHandler handler.Hand
 // UnregisterResourceEventHandler - removes the specified resource event handler
 func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
+}
+
+// GetAuthProviderRegistry - Returns the auth provider registry
+func GetAuthProviderRegistry() oauth.ProviderRegistry {
+	if agent.authProviderRegistry == nil {
+		agent.authProviderRegistry = oauth.NewProviderRegistry()
+	}
+	return agent.authProviderRegistry
 }
 
 // HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers
