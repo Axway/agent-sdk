@@ -22,19 +22,18 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return true
 	}
 
-	global := s.shouldSampleWithCounter(globalCounter)
-	var perAPI bool
-	var perSub bool
+	sampleGlobal := s.shouldSampleWithCounter(globalCounter)
 
 	if s.config.PerSub && details.SubID != "" {
-		perSub = s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
+		s.shouldSampleWithCounter(details.APIID)
+		return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
 	}
 
 	if s.config.PerAPI && details.APIID != "" {
-		perAPI = s.shouldSampleWithCounter(details.APIID)
+		return s.shouldSampleWithCounter(details.APIID)
 	}
 
-	return global || perAPI || perSub
+	return sampleGlobal
 }
 
 func (s *sample) shouldSampleWithCounter(counterName string) bool {

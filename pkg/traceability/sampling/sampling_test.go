@@ -100,7 +100,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% of Transactions",
+			name: "50% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 50,
 				"id2": 50,
@@ -114,7 +114,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "25% of Transactions",
+			name: "25% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 105,
 				"id2": 100,
@@ -129,7 +129,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "10% of Transactions",
+			name: "10% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -141,7 +141,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "1% of Transactions",
+			name: "1% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -153,7 +153,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "0% of Transactions",
+			name: "0% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -165,7 +165,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% per API of Transactions",
+			name: "50% per API of Transactions when per api is enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -179,7 +179,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "25% per API of Transactions",
+			name: "25% per API of Transactions when per api is enabled",
 			apiTransactions: map[string]int{
 				"id1": 105, // expect 30
 				"id2": 100, // expect 25
@@ -194,7 +194,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% of subscription transactions with PerAPI enabled",
+			name: "50% of subscription transactions when per api and per sub are enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -215,7 +215,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% of subscription transactions with PerAPI disabled",
+			name: "50% of subscription transactions when per api is disabled and per sub is enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -236,7 +236,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% of per API transactions when there PerSub is enabled, but no subID is found",
+			name: "50% of per API transactions when per api and per sub are enabled, but no subID is found",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
