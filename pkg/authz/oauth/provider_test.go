@@ -26,7 +26,7 @@ func TestRegistration(t *testing.T) {
 		GrantType:        "client_credentials",
 		ClientScopes:     "read,write",
 		AuthMethod:       "client_secret_basic",
-		AuthResponseType: "token",
+		AuthResponseType: "",
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
 	}
 
@@ -43,6 +43,7 @@ func TestRegistration(t *testing.T) {
 		SetClientName("test").
 		SetRedirectURIs([]string{"http://localhost"}).
 		SetJWKSURI("http://localhost").
+		SetGrantTypes([]string{"authorization_code"}).
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, c)

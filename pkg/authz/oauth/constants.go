@@ -33,6 +33,9 @@ const (
 	grantImplicit          = "implicit"
 	grantClientCredentials = "client_credentials"
 
+	authResponseToken = "token"
+	authResponseCode  = "code"
+
 	assertionTypeJWT = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 
 	metaGrantType           = "grant_type"

@@ -246,7 +246,7 @@ func (p *provider) enrichClientReq(clientReq ClientMetadata) error {
 	clientRequest.extraProperties = p.extraProperties
 
 	p.idpType.preProcessClientRequest(clientRequest)
-
+	p.preProcessResponseType(clientRequest)
 	return nil
 }
 
@@ -265,8 +265,31 @@ func (p *provider) applyClientDefaults(clientRequest *clientMetadata) {
 	}
 
 	if len(clientRequest.ResponseTypes) == 0 {
-		clientRequest.ResponseTypes = []string{p.cfg.GetAuthResponseType()}
+		defaultAuthResponseType := p.cfg.GetAuthResponseType()
+		if defaultAuthResponseType == "" {
+			defaultAuthResponseType = authResponseToken
+		}
+		clientRequest.ResponseTypes = []string{defaultAuthResponseType}
 	}
+}
+
+func (p *provider) preProcessResponseType(clientRequest *clientMetadata) {
+	for _, grantTypes := range clientRequest.GrantTypes {
+		if grantTypes == grantAuthorizationCode {
+			if !p.hasCodeResponseMethod(clientRequest) {
+				clientRequest.ResponseTypes = []string{authResponseCode}
+			}
+		}
+	}
+}
+
+func (p *provider) hasCodeResponseMethod(clientRequest *clientMetadata) bool {
+	for _, authResponseMethod := range clientRequest.ResponseTypes {
+		if authResponseMethod == authResponseCode {
+			return true
+		}
+	}
+	return false
 }
 
 // UnregisterClient - removes the OAuth client from IDP
