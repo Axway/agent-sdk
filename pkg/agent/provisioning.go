@@ -211,8 +211,6 @@ func setIDPTokenURLSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 }
 
 func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilderOptions) {
-	supportedScopes := p.GetSupportedScopes()
-	supportedScopes = append(supportedScopes, scopes...)
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthScopes).
@@ -221,7 +219,7 @@ func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilder
 			AddItem(
 				provisioning.NewSchemaPropertyBuilder().
 					SetName("scope").
-					IsString().SetEnumValues(supportedScopes)))
+					IsString().SetEnumValues(scopes)))
 }
 
 func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
