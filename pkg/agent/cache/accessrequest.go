@@ -3,6 +3,7 @@ package cache
 import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
@@ -44,11 +45,13 @@ func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteA
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
-	if accessRequest != nil {
-		ri, ok := accessRequest.(*mv1.AccessRequest)
-		if ok {
-			return ri
+	cachedAccessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
+	if cachedAccessRequest != nil {
+		if ri, ok := cachedAccessRequest.(*v1.ResourceInstance); ok {
+			accessRequest := &mv1.AccessRequest{}
+			if accessRequest.FromInstance(ri) == nil {
+				return accessRequest
+			}
 		}
 	}
 	return nil
