@@ -2,12 +2,10 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -50,34 +48,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if cachedAccessReq == nil {
 			h.cache.AddAccessRequest(resource)
-			h.addSubscription(ar)
 		}
 	}
 	return nil
-}
-
-func (h *traceAccessRequestHandler) addSubscription(ar *mv1.AccessRequest) {
-	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(ar)
-	if subscriptionName == "" {
-		return
-	}
-
-	subscription := h.cache.GetSubscriptionByName(subscriptionName)
-	if subscription == nil {
-		subscription, err := h.fetchSubscription(subscriptionName)
-		if err == nil {
-			h.cache.AddSubscription(subscription)
-		}
-	}
-}
-
-func (h *traceAccessRequestHandler) fetchSubscription(subscriptionName string) (*v1.ResourceInstance, error) {
-	if subscriptionName == "" {
-		return nil, nil
-	}
-	url := fmt.Sprintf(
-		"/catalog/v1alpha1/subscriptions/%s",
-		subscriptionName,
-	)
-	return h.client.GetResource(url)
 }

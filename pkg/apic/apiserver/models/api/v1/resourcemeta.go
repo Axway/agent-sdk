@@ -19,6 +19,7 @@ type Meta interface {
 	SetTags([]string)
 	GetSubResource(key string) interface{}
 	SetSubResource(key string, resource interface{})
+	GetReferenceByGVK(GroupVersionKind) Reference
 }
 
 // ResourceMeta metadata for a ResourceInstance
@@ -174,6 +175,16 @@ func (rm *ResourceMeta) SetSubResource(name string, value interface{}) {
 		rm.SubResources = make(map[string]interface{})
 	}
 	rm.SubResources[name] = value
+}
+
+// GetReferenceByGVK returns the first found reference that matches the GroupKind argument.
+func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
+	for _, ref := range rm.Metadata.References {
+		if ref.Group == gvk.Group && ref.Kind == gvk.Kind {
+			return ref
+		}
+	}
+	return Reference{}
 }
 
 // MarshalJSON marshals the ResourceMeta to properly set the SubResources

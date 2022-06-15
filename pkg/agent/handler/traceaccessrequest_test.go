@@ -109,9 +109,6 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	cachedAR = cm.GetAccessRequestByAppAndAPI("app", "api", "")
 	assert.NotNil(t, cachedAR)
 
-	cachedRI := cm.GetSubscription("subscription-id")
-	assert.NotNil(t, cachedRI)
-
 	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)
 	assert.Nil(t, err)
 

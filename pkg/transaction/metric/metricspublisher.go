@@ -65,6 +65,9 @@ func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error
 	}
 
 	b, contentType, err := pj.createMultipartFormData(event)
+	if err != nil {
+		return err
+	}
 
 	headers := map[string]string{
 		"Content-Type":  contentType,
@@ -77,7 +80,7 @@ func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error
 		Headers: headers,
 		Body:    b.Bytes(),
 	}
-	log.Debugf("Payload for Usage event : %s\n", string(b.Bytes()))
+	log.Debugf("Payload for Usage event : %s\n", b.String())
 	response, err := pj.apiClient.Send(request)
 	if err != nil {
 		return err

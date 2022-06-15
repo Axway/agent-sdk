@@ -233,7 +233,7 @@ func (c *cacheStorage) storeCacheJob() {
 			c.save()
 		case <-signals:
 			c.save()
-			break
+			return
 		}
 	}
 }
