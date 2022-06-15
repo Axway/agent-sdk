@@ -678,7 +678,9 @@ func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.
 
 	// Lookup Access Request
 	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
-	accessReq := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
+	accessReq := &v1alpha1.AccessRequest{}
+	ri := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
+	accessReq.FromInstance(ri)
 	return accessReq
 }
 

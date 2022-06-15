@@ -3,6 +3,7 @@ package cache
 import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
@@ -15,8 +16,13 @@ func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	return c.accessRequestMap.GetKeys()
 }
 
-func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {
-	if ar == nil {
+func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
+	if ri == nil {
+		return
+	}
+
+	ar := &mv1.AccessRequest{}
+	if ar.FromInstance(ri) != nil {
 		return
 	}
 
@@ -37,31 +43,29 @@ func (c *cacheManager) AddAccessRequest(ar *mv1.AccessRequest) {
 		apiStage, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 	}
 
-	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ar)
+	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ri)
 }
 
-func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest {
+func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
 	if accessRequest != nil {
-		ri, ok := accessRequest.(*mv1.AccessRequest)
-		if ok {
+		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
 			return ri
 		}
 	}
 	return nil
 }
 
-func (c *cacheManager) GetAccessRequest(id string) *mv1.AccessRequest {
+func (c *cacheManager) GetAccessRequest(id string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	accessRequest, _ := c.accessRequestMap.Get(id)
 	if accessRequest != nil {
-		ri, ok := accessRequest.(*mv1.AccessRequest)
-		if ok {
+		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
 			return ri
 		}
 	}
