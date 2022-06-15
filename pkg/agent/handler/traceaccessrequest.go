@@ -49,7 +49,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 	if shouldProcessForTrace(ar.Status.Level, ar.Metadata.State) {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if cachedAccessReq == nil {
-			h.cache.AddAccessRequest(ar)
+			h.cache.AddAccessRequest(resource)
 			h.addSubscription(ar)
 		}
 	}

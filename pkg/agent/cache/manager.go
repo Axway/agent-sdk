@@ -7,7 +7,6 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -90,9 +89,9 @@ type Manager interface {
 
 	// AccessRequest cache related methods
 	GetAccessRequestCacheKeys() []string
-	AddAccessRequest(resource *mv1.AccessRequest)
-	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *mv1.AccessRequest
-	GetAccessRequest(id string) *mv1.AccessRequest
+	AddAccessRequest(resource *v1.ResourceInstance)
+	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance
+	GetAccessRequest(id string) *v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 
 	// Subscription cache related methods

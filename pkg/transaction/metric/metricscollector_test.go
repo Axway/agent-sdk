@@ -178,8 +178,8 @@ func createSubscription(id, name, consumerOrgID string) *v1.ResourceInstance {
 	return createRI(id, name, marketplaceSubRes)
 }
 
-func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *mv1.AccessRequest {
-	return &mv1.AccessRequest{
+func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *v1.ResourceInstance {
+	ar := &mv1.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
@@ -203,6 +203,8 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 			},
 		},
 	}
+	ri, _ := ar.AsInstance()
+	return ri
 }
 
 func TestMetricCollector(t *testing.T) {
