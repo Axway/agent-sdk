@@ -54,7 +54,7 @@ func TestRetryJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterRetryJob(job, 3)
-	globalPool.jobs[jobID].(*retryJob).SetBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
+	globalPool.jobs[jobID].(*retryJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
 	statuses := []JobStatus{JobStatusRunning, JobStatusRetrying, JobStatusFinished}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)

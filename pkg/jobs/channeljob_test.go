@@ -78,7 +78,7 @@ func TestChannelJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterChannelJob(job, job.stopChan)
-	globalPool.jobs[jobID].(*channelJob).SetBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
+	globalPool.jobs[jobID].(*channelJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
 	statuses := []JobStatus{JobStatusRunning}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)

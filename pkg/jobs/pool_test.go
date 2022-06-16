@@ -17,7 +17,7 @@ func setStatusCheckInterval(interval time.Duration) {
 
 func TestPoolCoordination(t *testing.T) {
 	testPool := newPool() // create a new pool for this test to not interfere with other tests
-	testPool.SetBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
+	testPool.setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 	setStatusCheckInterval(time.Millisecond)
 	failJob := &intervalJobImpl{
 		name:        "FailedIntervalJob",

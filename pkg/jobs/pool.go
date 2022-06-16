@@ -54,15 +54,15 @@ func newPool() *Pool {
 	return &newPool
 }
 
-// GetBackoff - get the job backoff
-func (p *Pool) GetBackoff() *backoff {
+// getBackoff - get the job backoff
+func (p *Pool) getBackoff() *backoff {
 	p.backoffLock.Lock()
 	defer p.backoffLock.Unlock()
 	return p.backoff
 }
 
-// SetBackoff - set the job backoff
-func (p *Pool) SetBackoff(backoff *backoff) {
+// setBackoff - set the job backoff
+func (p *Pool) setBackoff(backoff *backoff) {
 	p.backoffLock.Lock()
 	defer p.backoffLock.Unlock()
 	p.backoff = backoff
@@ -346,7 +346,7 @@ func (p *Pool) stopAll() {
 		p.logger.WithField("jobName", job.GetName()).Tracef("finished stopping job")
 	}
 	for i := 1; i < maxErrors; i++ {
-		p.GetBackoff().increaseTimeout()
+		p.getBackoff().increaseTimeout()
 	}
 }
 
@@ -387,14 +387,14 @@ func (p *Pool) watchJobs() {
 			p.stopAll()
 		} else {
 			if p.getFailedJob() != "" {
-				p.logger.Debugf("Pool not running, start all jobs in %v seconds", p.GetBackoff().getCurrentTimeout())
-				p.GetBackoff().sleep()
+				p.logger.Debugf("Pool not running, start all jobs in %v seconds", p.getBackoff().getCurrentTimeout())
+				p.getBackoff().sleep()
 			}
 			// attempt to restart all jobs
 			if p.startAll() {
-				p.GetBackoff().reset()
+				p.getBackoff().reset()
 			} else {
-				p.GetBackoff().increaseTimeout()
+				p.getBackoff().increaseTimeout()
 			}
 		}
 	}

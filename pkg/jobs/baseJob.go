@@ -110,15 +110,15 @@ func (b *baseJob) executeCronJob() {
 	}
 }
 
-// GetBackoff - get the job backoff
-func (b *baseJob) GetBackoff() *backoff {
+// getBackoff - get the job backoff
+func (b *baseJob) getBackoff() *backoff {
 	b.backoffLock.Lock()
 	defer b.backoffLock.Unlock()
 	return b.backoff
 }
 
-// SetBackoff - set the job backoff
-func (b *baseJob) SetBackoff(backoff *backoff) {
+// setBackoff - set the job backoff
+func (b *baseJob) setBackoff(backoff *backoff) {
 	b.backoffLock.Lock()
 	defer b.backoffLock.Unlock()
 	b.backoff = backoff
@@ -239,19 +239,19 @@ func (b *baseJob) waitForReady() {
 	for {
 		select {
 		case <-b.stopReadyChan:
-			b.GetBackoff().reset()
+			b.getBackoff().reset()
 			b.UnsetIsReady()
 			return
 		default:
 			if b.job.Ready() {
-				b.GetBackoff().reset()
+				b.getBackoff().reset()
 				b.logger.Debug("job is ready")
 				b.SetIsReady()
 				return
 			}
-			b.logger.Tracef("job is not ready, checking again in %v seconds", b.GetBackoff().getCurrentTimeout())
-			b.GetBackoff().sleep()
-			b.GetBackoff().increaseTimeout()
+			b.logger.Tracef("job is not ready, checking again in %v seconds", b.getBackoff().getCurrentTimeout())
+			b.getBackoff().sleep()
+			b.getBackoff().increaseTimeout()
 		}
 	}
 }
