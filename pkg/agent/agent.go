@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -142,7 +143,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not authenticate to Amplify, please check your keys and key password")
 		}
 
 		// Init apic client when the agent starts, and on config change.
