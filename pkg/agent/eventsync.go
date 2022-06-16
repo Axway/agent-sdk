@@ -7,6 +7,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 )
@@ -22,16 +23,25 @@ type EventSync struct {
 
 // NewEventSync creates an EventSync
 func NewEventSync() (*EventSync, error) {
-	migrations := []migrate.Migrator{
-		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
-	}
+	migrations := []migrate.Migrator{}
 
+	// Make sure only DA and Governance agents run migration processes
+	runMigrations := agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent
+
+	// Check if marketplace is enabled
 	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
 
-	if isMpEnabled {
-		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-		agent.marketplaceMigration = marketplaceMigration
-		migrations = append(migrations, marketplaceMigration)
+	if runMigrations {
+		// add attribute migration to migrations
+		attributeMigration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
+		migrations = append(migrations, attributeMigration)
+
+		if isMpEnabled {
+			// add marketplace migration to migrations
+			marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
+			agent.marketplaceMigration = marketplaceMigration
+			migrations = append(migrations, marketplaceMigration)
+		}
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)
