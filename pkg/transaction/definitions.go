@@ -77,15 +77,18 @@ type Summary struct {
 	EntryPoint      *EntryPoint      `json:"entryPoint,omitempty"`
 	IsInMetricEvent bool             `json:"isInMetricEvent,omitempty"`
 	ConsumerDetails *ConsumerDetails `json:"consumerDetails,omitempty"`
+	Plan            *Plan            `json:"plan,omitempty"`
+	Quota           *Quota           `json:"quota,omitempty"`
+	AssetResource   *AssetResource   `json:"assetResource,omitempty"`
+	API             APIDetails       `json:"api"`
 }
 
 // ConsumerDetails  - Represents the consumer details in the transaction summary event
 type ConsumerDetails struct {
-	OrgID        string        `json:"orgId,omitempty"`
-	Application  *Application  `json:"application,omitempty"`
-	Product      *Product      `json:"product,omitempty"`
-	Plan         *Plan         `json:"plan,omitempty"`
-	Subscription *Subscription `json:"subscription,omitempty"`
+	OrgID            string            `json:"orgId,omitempty"`
+	Application      *Application      `json:"application,omitempty"`
+	PublishedProduct *PublishedProduct `json:"publishedProduct,omitempty"`
+	Subscription     *Subscription     `json:"subscription,omitempty"`
 }
 
 // Subscription  - Represents the subscription used in transaction summary event
@@ -94,8 +97,21 @@ type Subscription struct {
 	Name string `json:"name,omitempty"`
 }
 
+// PublishedProduct - Represents the product used in the transaction summary event
+type PublishedProduct struct {
+	ID      string `json:"id,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
 // Application  - Represents the application used in transaction summary event
 type Application struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// AssetResource  - Represents the asset resource used in transaction summary event
+type AssetResource struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
 }
@@ -107,10 +123,23 @@ type Product struct {
 	Version string `json:"version,omitempty"`
 }
 
+// Quota - Represents the quota used in the transaction summary event
+type Quota struct {
+	ID string `json:"id,omitempty"`
+}
+
 // Plan - Represents the plan used in the transaction summary event
 type Plan struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	ID string `json:"id,omitempty"`
+}
+
+type APIDetails struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Revision           int    `json:"revision,omitempty"`
+	// TeamID             string `json:"teamId,omitempty"`
+	// APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	// Stage              string `json:"-"`
 }
 
 // Team  - Represents the team used in transaction summary event
