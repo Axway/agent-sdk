@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -19,7 +18,10 @@ type baseJob struct {
 	err              error         // the error thrown
 	statusLock       *sync.RWMutex // lock on preventing status write/read at the same time
 	isReadyLock      *sync.RWMutex // lock on preventing isReady write/read at the same time
+	backoffLock      *sync.RWMutex // lock on preventing backoff write/read at the same time
+	failsLock        *sync.RWMutex // lock on preventing consecutiveFails write/read at the same time
 	failChan         chan string   // channel to send signal to pool of failure
+	errorLock        *sync.RWMutex // lock on preventing error write/read at the same time
 	jobLock          sync.Mutex    // lock used for signalling that the job is being executed
 	consecutiveFails int
 	backoff          *backoff
@@ -53,6 +55,9 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		failChan:      failJobChan,
 		statusLock:    &sync.RWMutex{},
 		isReadyLock:   &sync.RWMutex{},
+		backoffLock:   &sync.RWMutex{},
+		failsLock:     &sync.RWMutex{},
+		errorLock:     &sync.RWMutex{},
 		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
 		isReady:       false,
 		stopReadyChan: make(chan interface{}),
@@ -61,9 +66,9 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 }
 
 func (b *baseJob) executeJob() {
-	b.err = b.job.Execute()
+	b.setError(b.job.Execute())
 	b.SetStatus(JobStatusFinished)
-	if b.err != nil {
+	if b.getError() != nil {
 		b.SetStatus(JobStatusFailed)
 	}
 }
@@ -83,7 +88,6 @@ func (b *baseJob) callWithTimeout(execution func() error) error {
 		case err := <-executed:
 			executionError = err
 		case <-time.After(executionTimeLimit): // execute the job with a time limit
-			executionError = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 		}
 	} else {
 		executionError = execution()
@@ -97,13 +101,27 @@ func (b *baseJob) executeCronJob() {
 	b.jobLock.Lock()
 	defer b.jobLock.Unlock()
 
-	b.err = b.callWithTimeout(b.job.Execute)
-	if b.err != nil {
+	b.setError(b.callWithTimeout(b.job.Execute))
+	if b.getError() != nil {
 		if b.failChan != nil {
 			b.failChan <- b.id
 		}
 		b.SetStatus(JobStatusFailed)
 	}
+}
+
+// GetBackoff - get the job backoff
+func (b *baseJob) GetBackoff() *backoff {
+	b.backoffLock.Lock()
+	defer b.backoffLock.Unlock()
+	return b.backoff
+}
+
+// SetBackoff - set the job backoff
+func (b *baseJob) SetBackoff(backoff *backoff) {
+	b.backoffLock.Lock()
+	defer b.backoffLock.Unlock()
+	b.backoff = backoff
 }
 
 //SetStatus - locks the job, execution can not take place until the Unlock func is called
@@ -145,11 +163,33 @@ func (b *baseJob) Unlock() {
 }
 
 func (b *baseJob) getConsecutiveFails() int {
+	b.failsLock.Lock()
+	defer b.failsLock.Unlock()
 	return b.consecutiveFails
+}
+
+func (b *baseJob) setConsecutiveFails(fails int) {
+	b.failsLock.Lock()
+	defer b.failsLock.Unlock()
+	b.consecutiveFails = fails
+}
+
+func (b *baseJob) getError() error {
+	b.errorLock.Lock()
+	defer b.errorLock.Unlock()
+	return b.err
+}
+
+func (b *baseJob) setError(err error) {
+	b.errorLock.Lock()
+	defer b.errorLock.Unlock()
+	b.err = err
 }
 
 //GetStatusValue - returns the job status
 func (b *baseJob) updateStatus() JobStatus {
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
 	newStatus := JobStatusRunning // reset to running before checking
 	jobStatus := b.callWithTimeout(b.job.Status)
 	if jobStatus != nil { // on error set the status to failed
@@ -158,13 +198,12 @@ func (b *baseJob) updateStatus() JobStatus {
 
 		newStatus = JobStatusFailed
 	}
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
+
 	b.status = newStatus
 	return b.status
 }
 
-//GetStatusValue - returns the job status
+//GetStatus - returns the job status
 func (b *baseJob) GetStatus() JobStatus {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
@@ -196,23 +235,23 @@ func (b *baseJob) Ready() bool {
 
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
-	b.logger.Debugf("waiting for job to be ready")
+	b.logger.Debugf("waiting for job to be ready: %s", b.GetName())
 	for {
 		select {
 		case <-b.stopReadyChan:
-			b.backoff.reset()
+			b.GetBackoff().reset()
 			b.UnsetIsReady()
 			return
 		default:
 			if b.job.Ready() {
-				b.backoff.reset()
+				b.GetBackoff().reset()
 				b.logger.Debug("job is ready")
 				b.SetIsReady()
 				return
 			}
-			b.logger.Tracef("job is not ready, checking again in %v seconds", b.backoff.getCurrentTimeout())
-			b.backoff.sleep()
-			b.backoff.increaseTimeout()
+			b.logger.Tracef("job is not ready, checking again in %v seconds", b.GetBackoff().getCurrentTimeout())
+			b.GetBackoff().sleep()
+			b.GetBackoff().increaseTimeout()
 		}
 	}
 }
@@ -236,10 +275,9 @@ func (b *baseJob) startLog() {
 }
 
 func (b *baseJob) stopLog() {
-
 	b.logger.Debugf("Stopping %v ", b.jobType)
 }
 
 func (b *baseJob) setExecutionError() {
-	b.err = errors.Wrap(ErrExecutingJob, b.err.Error()).FormatError(b.jobType, b.id)
+	b.setError(errors.Wrap(ErrExecutingJob, b.getError().Error()).FormatError(b.jobType, b.id))
 }

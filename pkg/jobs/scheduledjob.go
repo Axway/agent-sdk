@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"sync"
 	"time"
 
 	"github.com/gorhill/cronexpr"
@@ -18,6 +19,7 @@ type scheduleJobProps struct {
 type scheduleJob struct {
 	baseJob
 	scheduleJobProps
+	cronLock *sync.Mutex
 }
 
 //newScheduledJob - creates a job that is ran at a specific time (@hourly,@daily,@weekly,min hour dow dom)
@@ -34,6 +36,7 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 			schedule: schedule,
 			stopChan: make(chan bool),
 		},
+		&sync.Mutex{},
 	}
 
 	go thisJob.start()
@@ -41,6 +44,8 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 }
 
 func (b *scheduleJob) getNextExecution() time.Duration {
+	b.cronLock.Lock()
+	defer b.cronLock.Unlock()
 	nextTime := b.cronExp.Next(time.Now())
 	return nextTime.Sub(time.Now())
 }
@@ -61,7 +66,7 @@ func (b *scheduleJob) start() {
 			return
 		case <-ticker.C:
 			b.executeCronJob()
-			if b.err != nil {
+			if b.getError() != nil {
 				b.setExecutionError()
 				b.SetStatus(JobStatusStopped)
 			}

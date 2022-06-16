@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,10 +17,12 @@ type channelJobImpl struct {
 	executions int
 	status     error
 	stopChan   chan interface{}
+	jobMutex   *sync.Mutex
+	readyMutex *sync.Mutex
 }
 
 func (j *channelJobImpl) Execute() error {
-	j.executions++
+	j.incrementExecutions()
 	for {
 		select {
 		case <-j.stopChan:
@@ -34,48 +38,71 @@ func (j *channelJobImpl) Status() error {
 }
 
 func (j *channelJobImpl) Ready() bool {
+	j.readyMutex.Lock()
+	defer j.readyMutex.Unlock()
 	return j.ready
+}
+
+func (j *channelJobImpl) setReady(ready bool) {
+	j.readyMutex.Lock()
+	defer j.readyMutex.Unlock()
+	j.ready = ready
+}
+
+func (j *channelJobImpl) getExecutions() int {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	return j.executions
+}
+
+func (j *channelJobImpl) incrementExecutions() {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	j.executions++
+}
+
+func (j *channelJobImpl) clearExecutions() {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	j.executions = 0
 }
 
 func TestChannelJob(t *testing.T) {
 	job := &channelJobImpl{
-		name:     "ChannelJob",
-		runTime:  5 * time.Millisecond,
-		ready:    false,
-		stopChan: make(chan interface{}),
+		name:       "ChannelJob",
+		runTime:    1 * time.Second,
+		ready:      false,
+		stopChan:   make(chan interface{}),
+		jobMutex:   &sync.Mutex{},
+		readyMutex: &sync.Mutex{},
 	}
 
 	jobID, _ := RegisterChannelJob(job, job.stopChan)
-	globalPool.jobs[jobID].(*channelJob).backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
+	globalPool.jobs[jobID].(*channelJob).SetBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
-	status := GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)
-	job.ready = true
-	time.Sleep(20 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
-	time.Sleep(50 * time.Millisecond) // Let the executions continue
-	globalPool.cronJobs[jobID].stop()
-	time.Sleep(25 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusStopped], status)
-	assert.LessOrEqual(t, 1, job.executions)
+	statuses := []JobStatus{JobStatusRunning}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
 
-	// restart the job
-	go globalPool.cronJobs[jobID].start()
-	time.Sleep(10 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
+	testDone := make(chan interface{})
+
+	go statusWaiter(ctx, t, statuses, jobID, testDone)
+
+	job.setReady(true)
+	<-testDone
+
+	assert.Nil(t, ctx.Err())
 	UnregisterJob(jobID)
-	time.Sleep(10 * time.Millisecond)
 }
 
 func TestDetachedChannelJob(t *testing.T) {
 	job := &channelJobImpl{
-		name:     "DetachedChannelJob",
-		runTime:  5 * time.Millisecond,
-		ready:    false,
-		stopChan: make(chan interface{}),
+		name:       "DetachedChannelJob",
+		runTime:    5 * time.Millisecond,
+		ready:      false,
+		stopChan:   make(chan interface{}),
+		jobMutex:   &sync.Mutex{},
+		readyMutex: &sync.Mutex{},
 	}
 
 	jobID, _ := RegisterDetachedChannelJob(job, job.stopChan)
@@ -85,5 +112,5 @@ func TestDetachedChannelJob(t *testing.T) {
 
 	j = globalPool.cronJobs[jobID]
 	assert.Nil(t, j)
-
+	UnregisterJob(jobID)
 }

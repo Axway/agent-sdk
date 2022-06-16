@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,10 +15,13 @@ type scheduledJobImpl struct {
 	runTime    time.Duration
 	ready      bool
 	executions int
+	jobMutex   *sync.Mutex
 }
 
 func (j *scheduledJobImpl) Execute() error {
+	j.jobMutex.Lock()
 	j.executions++
+	j.jobMutex.Unlock()
 	time.Sleep(j.runTime)
 	return nil
 }
@@ -26,14 +31,35 @@ func (j *scheduledJobImpl) Status() error {
 }
 
 func (j *scheduledJobImpl) Ready() bool {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
 	return j.ready
+}
+
+func (j *scheduledJobImpl) setReady(ready bool) {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	j.ready = ready
+}
+
+func (j *scheduledJobImpl) getExecutions() int {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	return j.executions
+}
+
+func (j *scheduledJobImpl) clearExecutions() {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	j.executions = 0
 }
 
 func TestScheduledJob(t *testing.T) {
 	job := &scheduledJobImpl{
-		name:    "ScheduledJob",
-		runTime: 5 * time.Millisecond,
-		ready:   false,
+		name:     "ScheduledJob",
+		runTime:  5 * time.Millisecond,
+		ready:    false,
+		jobMutex: &sync.Mutex{},
 	}
 
 	// scheduled job with bad schedule
@@ -44,16 +70,16 @@ func TestScheduledJob(t *testing.T) {
 	jobID, err := RegisterScheduledJob(job, "* * * * * * *")
 	assert.Nil(t, err)
 
-	status := GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)
-	job.ready = true
-	time.Sleep(10 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusRunning], status)
-	time.Sleep(3 * time.Second) // Let the executions continue
-	globalPool.cronJobs[jobID].stop()
-	time.Sleep(1 * time.Second)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusStopped], status)
-	assert.LessOrEqual(t, 3, job.executions)
+	statuses := []JobStatus{JobStatusRunning}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
+
+	testDone := make(chan interface{})
+
+	go statusWaiter(ctx, t, statuses, jobID, testDone)
+
+	job.setReady(true)
+	<-testDone
+	assert.Nil(t, ctx.Err())
+	UnregisterJob(jobID)
 }

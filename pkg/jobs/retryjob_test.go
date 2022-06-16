@@ -1,7 +1,9 @@
 package jobs
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,18 +12,20 @@ import (
 
 type retryJobImpl struct {
 	Job
-	name    string
-	runTime time.Duration
-	fails   int
-	ready   bool
+	name     string
+	runTime  time.Duration
+	fails    int
+	ready    bool
+	jobMutex *sync.Mutex
 }
 
 func (j *retryJobImpl) Execute() error {
-	if j.fails > 0 {
+	for j.fails > 0 {
 		j.fails--
-		return fmt.Errorf("fail")
+		time.Sleep(j.runTime)
+		return fmt.Errorf("retry job failed")
 	}
-	time.Sleep(j.runTime)
+
 	return nil
 }
 
@@ -30,28 +34,39 @@ func (j *retryJobImpl) Status() error {
 }
 
 func (j *retryJobImpl) Ready() bool {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
 	return j.ready
 }
 
+func (j *retryJobImpl) setReady(ready bool) {
+	j.jobMutex.Lock()
+	defer j.jobMutex.Unlock()
+	j.ready = ready
+}
 func TestRetryJob(t *testing.T) {
 	job := &retryJobImpl{
-		name:    "RetryJob",
-		runTime: 100 * time.Millisecond,
-		fails:   2,
-		ready:   false,
+		name:     "RetryJob",
+		runTime:  500 * time.Millisecond,
+		fails:    2,
+		ready:    false,
+		jobMutex: &sync.Mutex{},
 	}
 
 	jobID, _ := RegisterRetryJob(job, 3)
-	globalPool.jobs[jobID].(*retryJob).backoff = newBackoffTimeout(time.Millisecond, time.Millisecond, 1)
+	globalPool.jobs[jobID].(*retryJob).SetBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
-	time.Sleep(10 * time.Millisecond)
-	status := GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusInitializing], status)
-	job.ready = true
-	time.Sleep(20 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusRetrying], status)
-	time.Sleep(300 * time.Millisecond)
-	status = GetJobStatus(jobID)
-	assert.Equal(t, jobStatusToString[JobStatusFinished], status)
+	statuses := []JobStatus{JobStatusRunning, JobStatusRetrying, JobStatusFinished}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
+
+	testDone := make(chan interface{})
+
+	go statusWaiter(ctx, t, statuses, jobID, testDone)
+
+	job.setReady(true)
+	<-testDone
+
+	assert.Nil(t, ctx.Err())
+	UnregisterJob(jobID)
 }
