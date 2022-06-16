@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorhill/cronexpr"
-
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -39,7 +37,6 @@ type offlineReportCache interface {
 
 type cacheOfflineReport struct {
 	jobs.Job
-	cronExp         *cronexpr.Expression
 	cacheFilePath   string
 	reportCache     cache.Cache
 	reportCacheLock sync.Mutex

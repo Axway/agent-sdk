@@ -9,7 +9,6 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -44,20 +43,6 @@ func GetSubscriptionID(subscription *v1.ResourceInstance) string {
 	return subscription.Metadata.ID
 }
 
-// GetSubscription -
-func GetSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
-	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
-	if subscriptionName == "" {
-		return nil
-	}
-
-	subscription := cacheManager.GetSubscriptionByName(subscriptionName)
-	if subscription == nil {
-		return nil
-	}
-	return subscription
-}
-
 // GetConsumerOrgID -
 func GetConsumerOrgID(ri *v1.ResourceInstance) string {
 	if ri == nil {
@@ -85,19 +70,6 @@ func GetConsumerApplication(ri *v1.ResourceInstance) (string, string) {
 	}
 
 	return ri.Metadata.ID, ri.Name // default to the managed app id
-}
-
-// GetConsumerOrgIDFromSubscription -
-func GetConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
-	if ri == nil {
-		return ""
-	}
-
-	// Lookup Subscription
-	subscription := &cv1.Subscription{}
-	subscription.FromInstance(ri)
-
-	return subscription.Marketplace.Resource.Owner.Organization.Id
 }
 
 // IsHTTPSuccessStatus - Returns true if the HTTP status is between 200 and 400

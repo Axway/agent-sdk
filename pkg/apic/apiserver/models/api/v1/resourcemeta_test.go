@@ -107,6 +107,32 @@ func TestResourceMeta(t *testing.T) {
 		Title: "title",
 		Metadata: Metadata{
 			ID: "333",
+			References: []Reference{
+				{
+					Group: "ref1group",
+					Kind:  "ref1kind",
+					ID:    "ref1id",
+					Name:  "ref1name",
+					Scope: "ref1scope",
+					Type:  "ref1type",
+				},
+				{
+					Group: "ref2group",
+					Kind:  "ref2kind",
+					ID:    "ref2id",
+					Name:  "ref2name",
+					Scope: "ref2scope",
+					Type:  "ref2type",
+				},
+				{
+					Group: "ref3group",
+					Kind:  "ref3kind",
+					ID:    "ref3id",
+					Name:  "ref3name",
+					Scope: "ref3scope",
+					Type:  "ref3type",
+				},
+			},
 		},
 	}
 
@@ -125,6 +151,35 @@ func TestResourceMeta(t *testing.T) {
 	assert.Equal(t, 0, len(meta.GetTags()))
 	meta.SetTags([]string{"tag1", "tag2"})
 	assert.Equal(t, meta.Tags, meta.GetTags())
+
+	// test GetReferenceByGVK
+	ref1GVK := GroupVersionKind{
+		GroupKind: GroupKind{
+			Group: "ref1group",
+			Kind:  "ref1kind",
+		},
+		APIVersion: "v1",
+	}
+	ref2GVK := GroupVersionKind{
+		GroupKind: GroupKind{
+			Group: "ref2group",
+			Kind:  "ref2kind",
+		},
+		APIVersion: "v1",
+	}
+	ref3GVK := GroupVersionKind{
+		GroupKind: GroupKind{
+			Group: "ref3group",
+			Kind:  "ref3kind",
+		},
+		APIVersion: "v1",
+	}
+	ref1test := meta.GetReferenceByGVK(ref1GVK)
+	assert.Equal(t, ref1test, meta.Metadata.References[0])
+	ref2test := meta.GetReferenceByGVK(ref2GVK)
+	assert.Equal(t, ref2test, meta.Metadata.References[1])
+	ref3test := meta.GetReferenceByGVK(ref3GVK)
+	assert.Equal(t, ref3test, meta.Metadata.References[2])
 }
 
 // should be able to call get methods if meta is nil

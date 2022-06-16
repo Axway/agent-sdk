@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -256,20 +257,18 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		WithField("access request name", accessRequest.Name).
 		Trace("managed application info")
 
+	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
 	// get subscription info
 	subscription := &Subscription{
-		ID:   unknown,
-		Name: unknown,
+		ID:   subRef.ID,
+		Name: subRef.Name,
 	}
 
-	subscriptionObj := transutil.GetSubscription(cacheManager, accessRequest)
-	if subscriptionObj == nil {
+	if subRef.ID == "" || subRef.Name == "" {
 		e.logger.Debug("could not get subscription, no consumer information attached")
 		return nil
 	}
 
-	subscription.ID = transutil.GetSubscriptionID(subscriptionObj)
-	subscription.Name = subscriptionObj.Name
 	e.logger.
 		WithField("subscription ID", subscription.ID).
 		WithField("subscription name", subscription.Name).
@@ -284,7 +283,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 
 	consumerOrgID := unknown
 
-	if managedApp != nil && subscriptionObj != nil {
+	if managedApp != nil {
 		appID, appName = transutil.GetConsumerApplication(managedApp)
 		application.ID = appID
 		application.Name = appName
@@ -297,12 +296,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
 		if consumerOrgID == "" {
 			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
-			// if we can't get it from the managed app, try to get the consumer org ID from the subscription
-			consumerOrgID = transutil.GetConsumerOrgIDFromSubscription(subscriptionObj)
-			if consumerOrgID == "" {
-				e.logger.Debug("could not get consumer org ID from the subscription")
-				return nil
-			}
+			return nil
 		}
 		e.logger.
 			WithField("consumer org ID", consumerOrgID).

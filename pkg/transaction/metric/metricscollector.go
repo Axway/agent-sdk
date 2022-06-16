@@ -13,11 +13,9 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -232,9 +230,16 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 
 	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
 	accessRequest := transUtil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
-	subscription := transUtil.GetSubscription(cacheManager, accessRequest)
 
-	subscriptionID := transUtil.GetSubscriptionID(subscription)
+	subRef := v1.Reference{
+		ID:   unknown,
+		Name: unknown,
+	}
+	if accessRequest != nil {
+		subRef = accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	}
+
+	subscriptionID := subRef.ID
 	appID := c.getApplicationID(managedApp)
 	statusCode := detail.StatusCode
 
@@ -262,8 +267,8 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription: c.createSubscriptionDetail(subscription),
-			App:          c.createAppDetail(managedApp, subscription),
+			Subscription: c.createSubscriptionDetail(subRef),
+			App:          c.createAppDetail(managedApp),
 			API:          c.createAPIDetail(detail.APIDetails, accessRequest),
 			StatusCode:   statusCode,
 			Status:       c.getStatusText(statusCode),
@@ -276,22 +281,15 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	return statusMap[statusCode]
 }
 
-func (c *collector) getSubscriptionID(subscription *v1.ResourceInstance) string {
-	if subscription == nil {
-		return unknown
-	}
-	return subscription.Metadata.ID
-}
-
-func (c *collector) createSubscriptionDetail(subscription *v1.ResourceInstance) SubscriptionDetails {
+func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDetails {
 	detail := SubscriptionDetails{
 		ID:   unknown,
 		Name: unknown,
 	}
 
-	if subscription != nil {
-		detail.ID = subscription.Metadata.ID
-		detail.Name = subscription.Name
+	if subRef.ID != "" && subRef.Name != "" {
+		detail.ID = subRef.ID
+		detail.Name = subRef.Name
 	}
 	return detail
 }
@@ -303,7 +301,7 @@ func (c *collector) getApplicationID(app *v1.ResourceInstance) string {
 	return app.Metadata.ID
 }
 
-func (c *collector) createAppDetail(app *v1.ResourceInstance, subscription *v1.ResourceInstance) AppDetails {
+func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
 	detail := AppDetails{
 		ID:   unknown,
 		Name: unknown,
@@ -312,9 +310,6 @@ func (c *collector) createAppDetail(app *v1.ResourceInstance, subscription *v1.R
 	if app != nil {
 		detail.ID, detail.Name = c.getConsumerApplication(app)
 		detail.ConsumerOrgID = c.getConsumerOrgID(app)
-		if detail.ConsumerOrgID == "" {
-			detail.ConsumerOrgID = c.getConsumerOrgIDFromSubscription(subscription)
-		}
 	}
 	return detail
 }
@@ -657,42 +652,4 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, str
 	}
 
 	return ri.Metadata.ID, ri.Name // default to the managed app id
-}
-
-func (c *collector) getConsumerOrgIDFromSubscription(ri *v1.ResourceInstance) string {
-	if ri == nil {
-		return ""
-	}
-
-	// Lookup Subscription
-	subscription := &cv1.Subscription{}
-	subscription.FromInstance(ri)
-
-	return subscription.Marketplace.Resource.Owner.Organization.Id
-}
-
-func (c *collector) getAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
-	if managedApp == nil {
-		return nil
-	}
-
-	// Lookup Access Request
-	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
-	accessReq := &v1alpha1.AccessRequest{}
-	ri := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
-	accessReq.FromInstance(ri)
-	return accessReq
-}
-
-func (c *collector) getSubscription(cacheManager cache.Manager, accessRequest *v1alpha1.AccessRequest) *v1.ResourceInstance {
-	subscriptionName := defs.GetSubscriptionNameFromAccessRequest(accessRequest)
-	if subscriptionName == "" {
-		return nil
-	}
-
-	subscription := cacheManager.GetSubscriptionByName(subscriptionName)
-	if subscription == nil {
-		return nil
-	}
-	return subscription
 }
