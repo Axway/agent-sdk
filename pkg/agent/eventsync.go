@@ -26,7 +26,7 @@ func NewEventSync() (*EventSync, error) {
 	migrations := []migrate.Migrator{}
 
 	// Make sure only DA and Governance agents run migration processes
-	runMigrations := agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent
+	runMigrations := agent.cfg.GetAgentType() != config.TraceabilityAgent
 
 	// Check if marketplace is enabled
 	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
