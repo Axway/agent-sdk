@@ -292,6 +292,10 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 
 			// try to get consumer org ID from the managed app first
 		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
+		if consumerOrgID == "" {
+			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+			return nil
+		}
 		e.logger.
 			WithField("consumer org ID", consumerOrgID).
 			Trace("consumer org ID ")
