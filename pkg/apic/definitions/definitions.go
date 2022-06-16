@@ -36,4 +36,10 @@ const (
 	MarketplaceSubResource           = "marketplace"
 	ReferencesSubResource            = "references"
 	Subscription                     = "Subscription"
+	MarketplaceMigration             = "marketplace-migration"
+)
+
+// market place provisioning migration
+const (
+	MigrationCompleted = "completed"
 )
