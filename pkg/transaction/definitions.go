@@ -83,6 +83,8 @@ type Summary struct {
 type ConsumerDetails struct {
 	OrgID        string        `json:"orgId,omitempty"`
 	Application  *Application  `json:"application,omitempty"`
+	Product      *Product      `json:"product,omitempty"`
+	Plan         *Plan         `json:"plan,omitempty"`
 	Subscription *Subscription `json:"subscription,omitempty"`
 }
 
@@ -98,10 +100,17 @@ type Application struct {
 	Name string `json:"name,omitempty"`
 }
 
-// Product - Represents the prodcut used in the transaction summary event
+// Product - Represents the product used in the transaction summary event
 type Product struct {
 	ID      string `json:"id,omitempty"`
+	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+// Plan - Represents the plan used in the transaction summary event
+type Plan struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event

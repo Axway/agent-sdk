@@ -79,7 +79,7 @@ type SummaryBuilder interface {
 	SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder
 	SetDuration(duration int) SummaryBuilder
 	SetApplication(appID, appName string) SummaryBuilder
-	SetProduct(id, version string) SummaryBuilder
+	SetProduct(id, name, version string) SummaryBuilder
 	SetTeam(teamID string) SummaryBuilder
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder
@@ -452,12 +452,13 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetProduct(id, version string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetProduct(id, name, version string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
 	b.logEvent.TransactionSummary.Product = &Product{
 		ID:      id,
+		Name:    name,
 		Version: version,
 	}
 	return b

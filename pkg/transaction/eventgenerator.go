@@ -143,6 +143,8 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 	if summaryEvent.TransactionSummary != nil {
 		summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
+		summaryEvent.TransactionSummary.ConsumerDetails.Product = e.getProductDetails(summaryEvent)
+		summaryEvent.TransactionSummary.ConsumerDetails.Plan = e.getPlanDetails(summaryEvent)
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -312,6 +314,23 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		OrgID:        consumerOrgID,
 		Application:  application,
 		Subscription: subscription,
+	}
+}
+
+// getProductDetails -
+func (e Generator) getProductDetails(summaryEvent LogEvent) *Product {
+	return &Product{
+		ID:      "id",
+		Name:    "name",
+		Version: "version",
+	}
+}
+
+// getPlanDetails -
+func (e Generator) getPlanDetails(summaryEvent LogEvent) *Plan {
+	return &Plan{
+		ID:   "id",
+		Name: "name",
 	}
 }
 

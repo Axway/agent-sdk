@@ -252,7 +252,7 @@ func TestSummaryBuilder(t *testing.T) {
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).
-		SetProduct("2222", "1.0").
+		SetProduct("2222", "productname", "1.0").
 		SetRunTime("1111", "runtime1").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetIsInMetricEvent(false).
