@@ -133,6 +133,7 @@ type Plan struct {
 	ID string `json:"id,omitempty"`
 }
 
+// APIDetails - Represents the api used in the transaction summary event
 type APIDetails struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
