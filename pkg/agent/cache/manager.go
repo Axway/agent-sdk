@@ -97,12 +97,6 @@ type Manager interface {
 	GetAccessRequest(id string) *v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 
-	// Subscription cache related methods
-	AddSubscription(resource *v1.ResourceInstance)
-	GetSubscriptionByName(subscriptionName string) *v1.ResourceInstance
-	GetSubscription(id string) *v1.ResourceInstance
-	DeleteSubscription(id string) error
-
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
