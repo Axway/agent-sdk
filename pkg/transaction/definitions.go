@@ -77,7 +77,7 @@ type Summary struct {
 	EntryPoint      *EntryPoint      `json:"entryPoint,omitempty"`
 	IsInMetricEvent bool             `json:"isInMetricEvent,omitempty"`
 	ConsumerDetails *ConsumerDetails `json:"consumerDetails,omitempty"`
-	Plan            *Plan            `json:"plan,omitempty"`
+	ProductPlan     *ProductPlan     `json:"productPlan,omitempty"`
 	Quota           *Quota           `json:"quota,omitempty"`
 	AssetResource   *AssetResource   `json:"assetResource,omitempty"`
 	API             APIDetails       `json:"api"`
@@ -128,19 +128,17 @@ type Quota struct {
 	ID string `json:"id,omitempty"`
 }
 
-// Plan - Represents the plan used in the transaction summary event
-type Plan struct {
+// ProductPlan - Represents the plan used in the transaction summary event
+type ProductPlan struct {
 	ID string `json:"id,omitempty"`
 }
 
 // APIDetails - Represents the api used in the transaction summary event
 type APIDetails struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	// Revision           int    `json:"revision,omitempty"`
-	// TeamID             string `json:"teamId,omitempty"`
-	// APIServiceInstance string `json:"apiServiceInstance,omitempty"`
-	// Stage              string `json:"-"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Revision           int    `json:"revision,omitempty"`
+	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event
