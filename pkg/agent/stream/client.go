@@ -213,7 +213,6 @@ func (s *StreamerClient) Stop() {
 
 // Healthcheck - health check for stream client
 func (s *StreamerClient) Healthcheck(_ string) *hc.Status {
-
 	if err := s.Status(); err != nil {
 		return &hc.Status{
 			Result:  hc.FAIL,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -35,14 +36,14 @@ func init() {
 		WithComponent("healthChecker")
 }
 
-//StartPeriodicHealthCheck - starts a job that runs the periodic healthchecks
+// StartPeriodicHealthCheck - starts a job that runs the periodic health checks
 func StartPeriodicHealthCheck() {
 	interval := defaultCheckInterval
 	if GetStatusConfig() != nil {
 		interval = GetStatusConfig().GetHealthCheckInterval()
 	}
 	periodicHealthCheckJob := &periodicHealthCheck{interval: interval}
-	go periodicHealthCheckJob.Execute()
+	jobs.RegisterIntervalJobWithName(periodicHealthCheckJob, periodicHealthCheckJob.interval, "Periodic Health Check")
 }
 
 // SetNameAndVersion - sets the name and version of the globalHealthChecker

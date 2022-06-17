@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -23,6 +25,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 	Flush()
+	GetCache(key string) cache.Cache
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error
@@ -154,6 +157,36 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 	}
 
 	return m
+}
+
+// GetCache get a single cache by name
+func (c *cacheManager) GetCache(key string) cache.Cache {
+	switch key {
+	case mv1.APIServiceGVK().Kind:
+		return c.apiMap
+	case mv1.APIServiceInstanceGVK().Kind:
+		return c.instanceMap
+	case catalog.CategoryGVK().Kind:
+		return c.categoryMap
+	case mv1.CredentialRequestDefinitionGVK().Kind:
+		return c.crdMap
+	case mv1.AccessRequestDefinitionGVK().Kind:
+		return c.ardMap
+	case "teams":
+		return c.teams
+	case mv1.ManagedApplicationGVK().Kind:
+		return c.managedApplicationMap
+	case catalog.SubscriptionGVK().Kind:
+		return c.subscriptionMap
+	case mv1.AccessRequestGVK().Kind:
+		return c.accessRequestMap
+	case "watchSequence":
+		return c.sequenceCache
+	case "fetchOnStartup":
+		return c.fetchOnStartup
+	default:
+		return nil
+	}
 }
 
 func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
