@@ -56,11 +56,11 @@ type Client struct {
 // NewConfig creates a config for harvester connections
 func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.SequenceProvider) *Config {
 	parsed, _ := url.Parse(cfg.GetURL())
+	hostname := parsed.Hostname()
 	port := util.ParsePort(parsed)
-
 	return &Config{
 		ClientTimeout:    cfg.GetClientTimeout(),
-		Host:             parsed.Host,
+		Host:             hostname,
 		PageSize:         100,
 		Port:             uint32(port),
 		Protocol:         parsed.Scheme,
