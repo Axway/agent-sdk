@@ -7,8 +7,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -210,8 +208,19 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summary {
 	cacheManager := agent.GetCacheManager()
 	appName := unknown
-	apiID := ""
-	stage := ""
+
+	// get proxy information
+	if summaryEvent.TransactionSummary.Proxy == nil {
+		e.logger.Debug("proxy information is not available, no consumer information attached")
+		return nil
+	}
+
+	apiID := summaryEvent.TransactionSummary.Proxy.ID
+	stage := summaryEvent.TransactionSummary.Proxy.Stage
+	e.logger.
+		WithField("apiID", apiID).
+		WithField("stage", stage).
+		Trace("transaction summary proxy information")
 
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
@@ -219,18 +228,6 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 			WithField("appName", appName).
 			Trace("transaction summary application name")
 	}
-
-	// get proxy information
-	if summaryEvent.TransactionSummary.Proxy == nil {
-		e.logger.Debug("proxy information is not available, no consumer information attached")
-		return nil
-	}
-	apiID = summaryEvent.TransactionSummary.Proxy.ID
-	stage = summaryEvent.TransactionSummary.Proxy.Stage
-	e.logger.
-		WithField("apiID", apiID).
-		WithField("stage", stage).
-		Trace("transaction summary proxy information")
 
 	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
@@ -259,151 +256,19 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		WithField("access request name", accessRequest.Name).
 		Trace("managed application info")
 
-	consumerDetails := &ConsumerDetails{}
-
-	// get subscription info
-	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
-	if subRef.ID == "" || subRef.Name == "" {
-		e.logger.Debug("could not get subscription, no consumer information attached")
-		return nil
-	}
-	subscription := &Subscription{
-		ID:   subRef.ID,
-		Name: subRef.Name,
-	}
-	e.logger.
-		WithField("subscription ID", subscription.ID).
-		WithField("subscription name", subscription.Name).
-		Trace("subscription information")
-
-	// add subscription to consumer details
-	consumerDetails.Subscription = subscription
-
-	consumerOrgID := unknown
-
 	if managedApp != nil {
-		// get application info
-		appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
-		if appRef.ID == "" || appRef.Name == "" {
-			e.logger.Debug("could not get application, no consumer information attached")
-			return nil
-		}
-		application := &Application{
-			ID:   appRef.ID,
-			Name: appRef.Name,
-		}
-		e.logger.
-			WithField("application ID", application.ID).
-			WithField("application name", application.Name).
-			Trace("application information")
-
-		// add application to consumer details
-		consumerDetails.Application = application
-
-		// try to get consumer org ID from the managed app first
-		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
-		if consumerOrgID == "" {
-			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
-			return nil
-		}
-		e.logger.
-			WithField("consumer org ID", consumerOrgID).
-			Trace("consumer org ID ")
-
-		// add organization ID to consumer details
-		consumerDetails.OrgID = consumerOrgID
-
-		// try to get Published product info
-		publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
-		if publishProductRef.ID == "" || publishProductRef.Name == "" {
-			e.logger.Debug("could not get published product, no consumer information attached")
-		}
-		publishedProduct := &PublishedProduct{
-			ID:   publishProductRef.ID,
-			Name: publishProductRef.Name,
-		}
-		e.logger.
-			WithField("application ID", publishedProduct.ID).
-			WithField("application name", publishedProduct.Name).
-			Trace("published product information")
-
-		// add published product to consumer details
-		consumerDetails.PublishedProduct = publishedProduct
+		// Update consumer details
+		summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
 	}
 
-	// Update consumer details with Org, Application and Subscription
-	summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
-	e.updateProviderDetails(accessRequest, summaryEvent.TransactionSummary)
+	// Update provider details
+	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, e.logger)
+	summaryEvent.TransactionSummary.ProviderDetails.API.ID = summaryEvent.TransactionSummary.Proxy.ID
+	summaryEvent.TransactionSummary.ProviderDetails.API.Name = summaryEvent.TransactionSummary.Proxy.Name
+	summaryEvent.TransactionSummary.ProviderDetails.API.Revision = summaryEvent.TransactionSummary.Proxy.Revision
+
 	return summaryEvent.TransactionSummary
 
-}
-
-func (e *Generator) updateProviderDetails(accessRequest *v1alpha1.AccessRequest, summaryEvent *Summary) *Summary {
-	// get asset resource
-	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
-	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
-		e.logger.Debug("could not get asset resource, not added to transaction summary")
-	}
-	assetResource := &AssetResource{
-		ID:   assetResourceRef.ID,
-		Name: assetResourceRef.Name,
-	}
-	e.logger.
-		WithField("asset resource ID", assetResourceRef.ID).
-		WithField("asset resource name", assetResource.Name).
-		Trace("asset resource information")
-	// add asset resource information
-	summaryEvent.AssetResource = assetResource
-
-	// get plan ID
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
-	if productPlanRef.ID == "" {
-		e.logger.Debug("could not get product plan ID, not added to transaction summary")
-	}
-	productPlan := &ProductPlan{
-		ID: productPlanRef.ID,
-	}
-	e.logger.
-		WithField("product plan ID", productPlanRef.ID).
-		Trace("product plan ID information")
-	// add product plan ID
-	summaryEvent.ProductPlan = productPlan
-
-	// get quota
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
-	if quotaRef.ID == "" {
-		e.logger.Debug("could not get quota ID, not added to transaction summary")
-	}
-	quota := &Quota{
-		ID: quotaRef.ID,
-	}
-	e.logger.
-		WithField("quota ID", quota.ID).
-		Trace("quota ID information")
-	// add quota ID
-	summaryEvent.Quota = quota
-
-	apiserviceinstance := accessRequest.Spec.ApiServiceInstance
-	if apiserviceinstance == "" {
-		e.logger.Debug("could not get apiserviceinstance, not added to transaction summary")
-	}
-	e.logger.
-		WithField("proxy ID", summaryEvent.Proxy.ID).
-		WithField("proxy Name", summaryEvent.Proxy.Name).
-		WithField("proxy Revision", summaryEvent.Proxy.Revision).
-		WithField("apiserviceinstance", apiserviceinstance).
-		Trace("apiserviceinstance information")
-		// get apiservice instance information
-	apiDetails := APIDetails{
-		ID:                 summaryEvent.Proxy.ID,
-		Name:               summaryEvent.Proxy.Name,
-		Revision:           summaryEvent.Proxy.Revision,
-		APIServiceInstance: apiserviceinstance,
-	}
-	// add apiDetails
-	summaryEvent.API = apiDetails
-
-	return summaryEvent
 }
 
 // createSamplingTransactionDetails -

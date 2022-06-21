@@ -9,6 +9,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -144,4 +145,190 @@ func FormatProxyID(proxyID string) string {
 // FormatApplicationID - Returns the prefixed applicationID for summary event.
 func FormatApplicationID(applicationID string) string {
 	return SummaryEventApplicationIDPrefix + applicationID
+}
+
+func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
+	consumerDetails := &models.ConsumerDetails{}
+
+	// get subscription info
+	subscription := &models.Subscription{
+		ID:   unknown,
+		Name: unknown,
+	}
+	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	if subRef.ID == "" || subRef.Name == "" {
+		log.Debug("could not get subscription, no consumer information attached")
+	} else {
+		subscription.ID = subRef.ID
+		subscription.Name = subRef.Name
+	}
+	log.
+		WithField("subscription ID", subscription.ID).
+		WithField("subscription name", subscription.Name).
+		Trace("subscription information")
+
+		// add subscription to consumer details
+	consumerDetails.Subscription = subscription
+
+	// get application info
+	application := &models.Application{
+		ID:   unknown,
+		Name: unknown,
+	}
+	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
+	if appRef.ID == "" || appRef.Name == "" {
+		log.Debug("could not get application, no consumer information attached")
+	} else {
+		application.ID = appRef.ID
+		application.Name = appRef.Name
+	}
+
+	log.
+		WithField("application ID", application.ID).
+		WithField("application name", application.Name).
+		Trace("application information")
+
+	// add application to consumer details
+	consumerDetails.Application = application
+
+	// try to get consumer org ID from the managed app first
+
+	consumerOrgID := GetConsumerOrgID(managedApp)
+	if consumerOrgID == "" {
+		log.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+		consumerOrgID = unknown
+	}
+	log.
+		WithField("consumer org ID", consumerOrgID).
+		Trace("consumer org ID ")
+
+	// add organization ID to consumer details
+	consumerDetails.OrgID = consumerOrgID
+
+	// try to get Published product info
+	publishedProduct := &models.PublishedProduct{
+		ID:   unknown,
+		Name: unknown,
+	}
+	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
+	if publishProductRef.ID == "" || publishProductRef.Name == "" {
+		log.Debug("could not get published product, no consumer information attached")
+	}
+	publishedProduct.ID = publishProductRef.ID
+	publishedProduct.Name = publishProductRef.Name
+
+	log.
+		WithField("application ID", publishedProduct.ID).
+		WithField("application name", publishedProduct.Name).
+		Trace("published product information")
+
+	// add published product to consumer details
+	consumerDetails.PublishedProduct = publishedProduct
+
+	return consumerDetails
+}
+
+func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) *models.ProviderDetails {
+	providerDetails := &models.ProviderDetails{}
+
+	// get asset resource
+	assetResource := &models.AssetResource{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
+		log.Debug("could not get asset resource, not added to transaction summary")
+	} else {
+		assetResource.ID = assetResourceRef.ID
+		assetResource.Name = assetResourceRef.Name
+
+		log.
+			WithField("asset resource ID", assetResource.ID).
+			WithField("asset resource name", assetResource.Name).
+			Trace("asset resource information")
+	}
+	// add asset resource information
+	providerDetails.AssetResource = assetResource
+
+	// get product
+	product := &models.Product{
+		ID:      unknown,
+		Name:    unknown,
+		Version: unknown,
+	}
+	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	if productRef.ID == "" || productRef.Name == "" {
+		log.Debug("could not get product ID or Name, not added to transaction summary")
+	} else {
+		product.ID = productRef.ID
+		product.Name = productRef.Name
+		// product.Version = productRef.Version TODO
+		log.
+			WithField("product ID", product.ID).
+			WithField("product Name", product.Name).
+			WithField("product Version", product.Version)
+	}
+	// add product information
+	providerDetails.Product = product
+
+	// get plan ID
+	productPlan := &models.ProductPlan{
+		ID: unknown,
+	}
+	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	if productPlanRef.ID == "" {
+		log.Debug("could not get product plan ID, not added to transaction summary")
+	} else {
+		productPlan.ID = productPlanRef.ID
+
+		log.
+			WithField("product plan ID", productPlan.ID).
+			Trace("product plan ID information")
+	}
+	// add product plan ID
+	providerDetails.ProductPlan = productPlan
+
+	// get quota
+	quota := &models.Quota{
+		ID: unknown,
+	}
+	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	if quotaRef.ID == "" {
+		log.Debug("could not get quota ID, not added to transaction summary")
+	} else {
+		quota.ID = quotaRef.ID
+
+		log.
+			WithField("quota ID", quota.ID).
+			Trace("quota ID information")
+	}
+	// add quota ID
+	providerDetails.Quota = quota
+
+	apiDetails := models.APIDetails{}
+
+	apiserviceinstance := accessRequest.Spec.ApiServiceInstance
+	if apiserviceinstance == "" {
+		log.Debug("could not get apiserviceinstance, not added to transaction summary")
+	}
+	// log.
+	// 	WithField("proxy ID", summaryEvent.Proxy.ID).
+	// 	WithField("proxy Name", summaryEvent.Proxy.Name).
+	// 	WithField("proxy Revision", summaryEvent.Proxy.Revision).
+	// 	WithField("apiserviceinstance", apiserviceinstance).
+	// 	Trace("apiserviceinstance information")
+	// 	// get apiservice instance information
+	// apiDetails := models.APIDetails{
+	// 	ID:                 summaryEvent.Proxy.ID,
+	// 	Name:               summaryEvent.Proxy.Name,
+	// 	Revision:           summaryEvent.Proxy.Revision,
+	// 	APIServiceInstance: apiserviceinstance,
+	// }
+	apiDetails.APIServiceInstance = apiserviceinstance
+	// add apiDetails
+	providerDetails.API = apiDetails
+
+	return providerDetails
 }

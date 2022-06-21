@@ -1,5 +1,7 @@
 package transaction
 
+import "github.com/Axway/agent-sdk/pkg/transaction/models"
+
 // TypeTransactionSummary - Transaction summary type
 const TypeTransactionSummary = "transactionSummary"
 
@@ -66,52 +68,22 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	Status          string           `json:"status,omitempty"`
-	StatusDetail    string           `json:"statusDetail,omitempty"`
-	Duration        int              `json:"duration"`
-	Application     *Application     `json:"application,omitempty"`
-	Product         *Product         `json:"product,omitempty"`
-	Team            *Team            `json:"team,omitempty"`
-	Proxy           *Proxy           `json:"proxy,omitempty"`
-	Runtime         *Runtime         `json:"runtime,omitempty"`
-	EntryPoint      *EntryPoint      `json:"entryPoint,omitempty"`
-	IsInMetricEvent bool             `json:"isInMetricEvent,omitempty"`
-	ConsumerDetails *ConsumerDetails `json:"consumerDetails,omitempty"`
-	ProductPlan     *ProductPlan     `json:"productPlan,omitempty"`
-	Quota           *Quota           `json:"quota,omitempty"`
-	AssetResource   *AssetResource   `json:"assetResource,omitempty"`
-	API             APIDetails       `json:"api"`
-}
-
-// ConsumerDetails  - Represents the consumer details in the transaction summary event
-type ConsumerDetails struct {
-	OrgID            string            `json:"orgId,omitempty"`
-	Application      *Application      `json:"application,omitempty"`
-	PublishedProduct *PublishedProduct `json:"publishedProduct,omitempty"`
-	Subscription     *Subscription     `json:"subscription,omitempty"`
-}
-
-// Subscription  - Represents the subscription used in transaction summary event
-type Subscription struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
-// PublishedProduct - Represents the product used in the transaction summary event
-type PublishedProduct struct {
-	ID      string `json:"id,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Version string `json:"version,omitempty"`
+	Status          string                  `json:"status,omitempty"`
+	StatusDetail    string                  `json:"statusDetail,omitempty"`
+	Duration        int                     `json:"duration"`
+	Application     *Application            `json:"application,omitempty"`
+	Product         *Product                `json:"product,omitempty"`
+	Team            *Team                   `json:"team,omitempty"`
+	Proxy           *Proxy                  `json:"proxy,omitempty"`
+	Runtime         *Runtime                `json:"runtime,omitempty"`
+	EntryPoint      *EntryPoint             `json:"entryPoint,omitempty"`
+	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
+	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
+	ProviderDetails *models.ProviderDetails `json:"providerDetails,omitempty"`
 }
 
 // Application  - Represents the application used in transaction summary event
 type Application struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
-// AssetResource  - Represents the asset resource used in transaction summary event
-type AssetResource struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
 }
@@ -121,24 +93,6 @@ type Product struct {
 	ID      string `json:"id,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
-}
-
-// Quota - Represents the quota used in the transaction summary event
-type Quota struct {
-	ID string `json:"id,omitempty"`
-}
-
-// ProductPlan - Represents the plan used in the transaction summary event
-type ProductPlan struct {
-	ID string `json:"id,omitempty"`
-}
-
-// APIDetails - Represents the api used in the transaction summary event
-type APIDetails struct {
-	ID                 string `json:"id"`
-	Name               string `json:"name"`
-	Revision           int    `json:"revision,omitempty"`
-	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event
