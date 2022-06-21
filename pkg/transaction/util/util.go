@@ -147,6 +147,7 @@ func FormatApplicationID(applicationID string) string {
 	return SummaryEventApplicationIDPrefix + applicationID
 }
 
+// UpdateWithConsumerDetails -
 func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
 	consumerDetails := &models.ConsumerDetails{}
 
@@ -228,6 +229,7 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	return consumerDetails
 }
 
+// UpdateWithProviderDetails -
 func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProviderDetails {
 	providerDetails := models.ProviderDetails{}
 
