@@ -307,28 +307,5 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	// add quota ID
 	providerDetails.Quota = quota
 
-	apiDetails := models.APIDetails{}
-
-	apiserviceinstance := accessRequest.Spec.ApiServiceInstance
-	if apiserviceinstance == "" {
-		log.Debug("could not get apiserviceinstance, not added to transaction summary")
-	}
-	// log.
-	// 	WithField("proxy ID", summaryEvent.Proxy.ID).
-	// 	WithField("proxy Name", summaryEvent.Proxy.Name).
-	// 	WithField("proxy Revision", summaryEvent.Proxy.Revision).
-	// 	WithField("apiserviceinstance", apiserviceinstance).
-	// 	Trace("apiserviceinstance information")
-	// 	// get apiservice instance information
-	// apiDetails := models.APIDetails{
-	// 	ID:                 summaryEvent.Proxy.ID,
-	// 	Name:               summaryEvent.Proxy.Name,
-	// 	Revision:           summaryEvent.Proxy.Revision,
-	// 	APIServiceInstance: apiserviceinstance,
-	// }
-	apiDetails.APIServiceInstance = apiserviceinstance
-	// add apiDetails
-	providerDetails.API = apiDetails
-
 	return providerDetails
 }

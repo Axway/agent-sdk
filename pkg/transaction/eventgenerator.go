@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -207,7 +210,6 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 // 		information we need to get the consumer information, then we just return nil
 func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summary {
 	cacheManager := agent.GetCacheManager()
-	appName := unknown
 
 	// get proxy information
 	if summaryEvent.TransactionSummary.Proxy == nil {
@@ -215,6 +217,30 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		return nil
 	}
 
+	// Go get the access request and managed app
+	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
+	if managedApp != nil {
+		// Update consumer details
+		summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+	}
+
+	// Update provider details
+	api := APIDetails{
+		ID:                 summaryEvent.TransactionSummary.Proxy.ID,
+		Name:               summaryEvent.TransactionSummary.Proxy.Name,
+		Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
+		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+	}
+	summaryEvent.TransactionSummary.API = api
+	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, e.logger)
+
+	return summaryEvent.TransactionSummary
+
+}
+
+// getAccessRequest -
+func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent LogEvent) (*v1alpha1.AccessRequest, *v1.ResourceInstance) {
+	appName := unknown
 	apiID := summaryEvent.TransactionSummary.Proxy.ID
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
 	e.logger.
@@ -235,7 +261,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		e.logger.
 			WithField("appName", appName).
 			Debug("could not get managed application by name, no consumer information attached")
-		return nil
+		return nil, nil
 	}
 	e.logger.
 		WithField("appName", appName).
@@ -247,7 +273,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 	if accessRequest == nil {
 		e.logger.
 			Debug("could not get access request, no consumer information attached")
-		return nil
+		return nil, nil
 	}
 	e.logger.
 		WithField("managed app name", managedApp.Name).
@@ -256,19 +282,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		WithField("access request name", accessRequest.Name).
 		Trace("managed application info")
 
-	if managedApp != nil {
-		// Update consumer details
-		summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
-	}
-
-	// Update provider details
-	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, e.logger)
-	summaryEvent.TransactionSummary.ProviderDetails.API.ID = summaryEvent.TransactionSummary.Proxy.ID
-	summaryEvent.TransactionSummary.ProviderDetails.API.Name = summaryEvent.TransactionSummary.Proxy.Name
-	summaryEvent.TransactionSummary.ProviderDetails.API.Revision = summaryEvent.TransactionSummary.Proxy.Revision
-
-	return summaryEvent.TransactionSummary
-
+	return accessRequest, managedApp
 }
 
 // createSamplingTransactionDetails -
