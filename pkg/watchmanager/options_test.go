@@ -9,22 +9,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testSequenceProvider struct{}
-
-func (s *testSequenceProvider) GetSequence() int64 {
-	return 0
+type testSequenceProvider struct {
+	id int64
 }
 
-func (s *testSequenceProvider) SetSequence(_ int64) {
+func (s *testSequenceProvider) GetSequence() int64 {
+	return s.id
+}
+
+func (s *testSequenceProvider) SetSequence(id int64) {
+	s.id = id
 }
 
 func TestWatchOptions(t *testing.T) {
 	entry := logrus.NewEntry(logrus.New())
+	seq := &testSequenceProvider{}
+	seq.SetSequence(1)
 	opts := []Option{
 		WithTLSConfig(nil),
 		WithKeepAlive(1*time.Second, 1*time.Second),
 		WithLogger(entry),
-		WithHarvester(&mockHarvester{}, &testSequenceProvider{}),
+		WithHarvester(&mockHarvester{}, seq),
 		WithProxy("http://proxy"),
 		WithSingleEntryAddr("single-entry"),
 	}

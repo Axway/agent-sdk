@@ -12,7 +12,6 @@ import (
 )
 
 func TestEventSync_pollMode(t *testing.T) {
-	resetResources()
 	cfg := createCentralCfg("https://abc.com", "mockenv")
 	err := Initialize(cfg)
 
@@ -38,7 +37,6 @@ func TestEventSync_pollMode(t *testing.T) {
 }
 
 func TestEventSync_streamMode(t *testing.T) {
-	resetResources()
 	cfg := createCentralCfg("https://abc.com", "mockenv")
 	cfg.GRPCCfg = config.GRPCConfig{
 		Enabled:  true,
