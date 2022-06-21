@@ -20,7 +20,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
-	transUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -229,7 +229,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	stage := detail.APIDetails.Stage
 
 	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
-	accessRequest := transUtil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 
 	subRef := v1.Reference{
 		ID:   unknown,

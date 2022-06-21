@@ -68,6 +68,7 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
+	models.ProviderDetails
 	Status          string                  `json:"status,omitempty"`
 	StatusDetail    string                  `json:"statusDetail,omitempty"`
 	Duration        int                     `json:"duration"`
@@ -79,7 +80,6 @@ type Summary struct {
 	EntryPoint      *EntryPoint             `json:"entryPoint,omitempty"`
 	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
 	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
-	ProviderDetails *models.ProviderDetails `json:"providerDetails,omitempty"`
 }
 
 // Application  - Represents the application used in transaction summary event

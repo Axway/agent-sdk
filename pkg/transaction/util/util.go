@@ -171,9 +171,10 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	consumerDetails.Subscription = subscription
 
 	// get application info
-	application := &models.Application{
-		ID:   unknown,
-		Name: unknown,
+	application := &models.AppDetails{
+		ConsumerOrgID: unknown,
+		ID:            unknown,
+		Name:          unknown,
 	}
 	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
 	if appRef.ID == "" || appRef.Name == "" {
@@ -188,22 +189,21 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("application name", application.Name).
 		Trace("application information")
 
-	// add application to consumer details
-	consumerDetails.Application = application
-
 	// try to get consumer org ID from the managed app first
 
 	consumerOrgID := GetConsumerOrgID(managedApp)
 	if consumerOrgID == "" {
 		log.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
 		consumerOrgID = unknown
+	} else {
+		application.ConsumerOrgID = consumerOrgID
 	}
 	log.
 		WithField("consumer org ID", consumerOrgID).
 		Trace("consumer org ID ")
 
-	// add organization ID to consumer details
-	consumerDetails.OrgID = consumerOrgID
+	// add application to consumer details
+	consumerDetails.Application = application
 
 	// try to get Published product info
 	publishedProduct := &models.PublishedProduct{
@@ -228,8 +228,8 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	return consumerDetails
 }
 
-func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) *models.ProviderDetails {
-	providerDetails := &models.ProviderDetails{}
+func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProviderDetails {
+	providerDetails := models.ProviderDetails{}
 
 	// get asset resource
 	assetResource := &models.AssetResource{

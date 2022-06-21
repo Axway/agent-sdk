@@ -2,8 +2,7 @@ package models
 
 // ConsumerDetails  - Represents the consumer details in the transaction summary event
 type ConsumerDetails struct {
-	OrgID            string            `json:"orgId,omitempty"`
-	Application      *Application      `json:"application,omitempty"`
+	Application      *AppDetails       `json:"application,omitempty"`
 	PublishedProduct *PublishedProduct `json:"publishedProduct,omitempty"`
 	Subscription     *Subscription     `json:"subscription,omitempty"`
 }
@@ -21,10 +20,11 @@ type PublishedProduct struct {
 	Version string `json:"version,omitempty"`
 }
 
-// Application  - Represents the application used in transaction summary event
-type Application struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+// AppDetails - struct for app details to report
+type AppDetails struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
 }
 
 // ProviderDetails - Represent the provider details in the transaction summary event
