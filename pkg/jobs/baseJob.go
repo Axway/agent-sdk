@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -88,6 +89,7 @@ func (b *baseJob) callWithTimeout(execution func() error) error {
 		case err := <-executed:
 			executionError = err
 		case <-time.After(executionTimeLimit): // execute the job with a time limit
+			executionError = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 		}
 	} else {
 		executionError = execution()

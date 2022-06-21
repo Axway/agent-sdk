@@ -5,29 +5,27 @@ import (
 	"time"
 )
 
-var backoffMutex sync.Mutex = sync.Mutex{} // just use a global for this one
-
 func newBackoffTimeout(startingTimeout time.Duration, maxTimeout time.Duration, increaseFactor int) *backoff {
-	backoffMutex.Lock()
-	defer backoffMutex.Unlock()
 	return &backoff{
-		base:    startingTimeout,
-		max:     maxTimeout,
-		current: startingTimeout,
-		factor:  increaseFactor,
+		base:         startingTimeout,
+		max:          maxTimeout,
+		current:      startingTimeout,
+		factor:       increaseFactor,
+		backoffMutex: &sync.Mutex{},
 	}
 }
 
 type backoff struct {
-	base    time.Duration
-	max     time.Duration
-	current time.Duration
-	factor  int
+	base         time.Duration
+	max          time.Duration
+	current      time.Duration
+	factor       int
+	backoffMutex *sync.Mutex
 }
 
 func (b *backoff) increaseTimeout() {
-	backoffMutex.Lock()
-	defer backoffMutex.Unlock()
+	b.backoffMutex.Lock()
+	defer b.backoffMutex.Unlock()
 	b.current = b.current * time.Duration(b.factor)
 	if b.current > b.max {
 		b.current = b.max // use the max timeout
@@ -35,8 +33,8 @@ func (b *backoff) increaseTimeout() {
 }
 
 func (b *backoff) reset() {
-	backoffMutex.Lock()
-	defer backoffMutex.Unlock()
+	b.backoffMutex.Lock()
+	defer b.backoffMutex.Unlock()
 	b.current = b.base
 }
 
@@ -45,7 +43,7 @@ func (b *backoff) sleep() {
 }
 
 func (b *backoff) getCurrentTimeout() time.Duration {
-	backoffMutex.Lock()
-	defer backoffMutex.Unlock()
+	b.backoffMutex.Lock()
+	defer b.backoffMutex.Unlock()
 	return b.current
 }
