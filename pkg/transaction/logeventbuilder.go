@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -445,10 +446,12 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TransactionSummary.Application = &Application{
-		ID:   appID,
-		Name: appName,
-	}
+	dataplaneDetails := &models.DataplaneDetails{}
+	dataplaneDetails.Application = &models.Application{}
+	dataplaneDetails.Application.ID = appID
+	dataplaneDetails.Application.Name = appName
+
+	b.logEvent.TransactionSummary.DataplaneDetails.Application = dataplaneDetails.Application
 	return b
 }
 
@@ -456,11 +459,13 @@ func (b *transactionSummaryBuilder) SetProduct(id, name, version string) Summary
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TransactionSummary.Product = &Product{
-		ID:      id,
-		Name:    name,
-		Version: version,
-	}
+	dataplaneDetails := models.DataplaneDetails{}
+	dataplaneDetails.Product = &models.Product{}
+	dataplaneDetails.Product.ID = id
+	dataplaneDetails.Product.Name = name
+	dataplaneDetails.Product.Version = version
+
+	b.logEvent.TransactionSummary.DataplaneDetails.Product = dataplaneDetails.Product
 	return b
 }
 

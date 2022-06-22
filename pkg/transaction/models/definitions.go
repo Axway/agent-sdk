@@ -2,7 +2,7 @@ package models
 
 // ConsumerDetails  - Represents the consumer details in the transaction summary event
 type ConsumerDetails struct {
-	Application      *AppDetails       `json:"application,omitempty"`
+	Application      *AppDetails       `json:"application,omitempty"` // marketplace application
 	PublishedProduct *PublishedProduct `json:"publishedProduct,omitempty"`
 	Subscription     *Subscription     `json:"subscription,omitempty"`
 }
@@ -29,10 +29,12 @@ type AppDetails struct {
 
 // ProviderDetails - Represent the provider details in the transaction summary event
 type ProviderDetails struct {
+	Application   *AppDetails    `json:"application,omitempty"` // managed application
 	Product       *Product       `json:"product,omitempty"`
 	ProductPlan   *ProductPlan   `json:"productPlan,omitempty"`
 	Quota         *Quota         `json:"quota,omitempty"`
 	AssetResource *AssetResource `json:"assetResource,omitempty"`
+	API           APIDetails     `json:"api"`
 }
 
 // AssetResource  - Represents the asset resource used in transaction summary event
@@ -56,4 +58,24 @@ type Quota struct {
 // ProductPlan - Represents the plan used in the transaction summary event
 type ProductPlan struct {
 	ID string `json:"id,omitempty"`
+}
+
+// APIDetails - Represents the api used in the transaction summary event
+type APIDetails struct {
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Revision           int    `json:"revision,omitempty"`
+	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+}
+
+// DataplaneDetails - Represent the dataplane in the transaction summary event
+type DataplaneDetails struct {
+	Application *Application `json:"application,omitempty"` // dataplane application
+	Product     *Product     `json:"product,omitempty"`     // dataplane product
+}
+
+// Application  - Represents the application used in transaction summary event
+type Application struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }

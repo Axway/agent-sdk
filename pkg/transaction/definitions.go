@@ -69,24 +69,16 @@ type LogEvent struct {
 // Summary - Represent the transaction summary event
 type Summary struct {
 	models.ProviderDetails
-	Status          string                  `json:"status,omitempty"`
-	StatusDetail    string                  `json:"statusDetail,omitempty"`
-	Duration        int                     `json:"duration"`
-	Application     *Application            `json:"application,omitempty"`
-	Product         *Product                `json:"product,omitempty"`
-	Team            *Team                   `json:"team,omitempty"`
-	Proxy           *Proxy                  `json:"proxy,omitempty"`
-	Runtime         *Runtime                `json:"runtime,omitempty"`
-	EntryPoint      *EntryPoint             `json:"entryPoint,omitempty"`
-	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
-	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
-	API             APIDetails              `json:"api"`
-}
-
-// Application  - Represents the application used in transaction summary event
-type Application struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Status           string                   `json:"status,omitempty"`
+	StatusDetail     string                   `json:"statusDetail,omitempty"`
+	Duration         int                      `json:"duration"`
+	Team             *Team                    `json:"team,omitempty"`
+	Proxy            *Proxy                   `json:"proxy,omitempty"`
+	Runtime          *Runtime                 `json:"runtime,omitempty"`
+	EntryPoint       *EntryPoint              `json:"entryPoint,omitempty"`
+	IsInMetricEvent  bool                     `json:"isInMetricEvent,omitempty"`
+	ConsumerDetails  *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
+	DataplaneDetails *models.DataplaneDetails `json:"dataplaneDetails,omitempty" `
 }
 
 // Product - Represents the product used in the transaction summary event
@@ -94,14 +86,6 @@ type Product struct {
 	ID      string `json:"id,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
-}
-
-// APIDetails - Represents the api used in the transaction summary event
-type APIDetails struct {
-	ID                 string `json:"id"`
-	Name               string `json:"name"`
-	Revision           int    `json:"revision,omitempty"`
-	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event

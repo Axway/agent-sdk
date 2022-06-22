@@ -232,14 +232,17 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
 	}
 
+	// TODO - SDB, how we get this versus calling reference
 	// Update provider details
-	api := APIDetails{
-		ID:                 summaryEvent.TransactionSummary.Proxy.ID,
-		Name:               summaryEvent.TransactionSummary.Proxy.Name,
-		Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
-		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
-	}
-	summaryEvent.TransactionSummary.API = api
+	/*
+		api := APIDetails{
+			ID:                 summaryEvent.TransactionSummary.Proxy.ID,
+			Name:               summaryEvent.TransactionSummary.Proxy.Name,
+			Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
+			APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+		}
+		summaryEvent.TransactionSummary.API = api
+	*/
 	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, e.logger)
 
 	return summaryEvent.TransactionSummary
@@ -272,7 +275,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	}
 	e.logger.
 		WithField("appName", appName).
-		WithField("managed app name", managedApp.Name).
+		WithField("managed-app-name", managedApp.Name).
 		Trace("managed application info")
 
 	// get the access request
@@ -283,10 +286,10 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 		return nil, nil
 	}
 	e.logger.
-		WithField("managed app name", managedApp.Name).
+		WithField("managed-app-name", managedApp.Name).
 		WithField("apiID", apiID).
 		WithField("stage", stage).
-		WithField("access request name", accessRequest.Name).
+		WithField("access-request-name", accessRequest.Name).
 		Trace("managed application info")
 
 	return accessRequest, managedApp

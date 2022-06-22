@@ -164,8 +164,8 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		subscription.Name = subRef.Name
 	}
 	log.
-		WithField("subscription ID", subscription.ID).
-		WithField("subscription name", subscription.Name).
+		WithField("subscription-id", subscription.ID).
+		WithField("subscription-name", subscription.Name).
 		Trace("subscription information")
 
 		// add subscription to consumer details
@@ -186,8 +186,8 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 
 	log.
-		WithField("application ID", application.ID).
-		WithField("application name", application.Name).
+		WithField("application-id", application.ID).
+		WithField("application-name", application.Name).
 		Trace("application information")
 
 	// try to get consumer org ID from the managed app first
@@ -200,7 +200,7 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		application.ConsumerOrgID = consumerOrgID
 	}
 	log.
-		WithField("consumer org ID", consumerOrgID).
+		WithField("consumer-org-id", consumerOrgID).
 		Trace("consumer org ID ")
 
 	// add application to consumer details
@@ -220,8 +220,8 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 
 	log.
-		WithField("application ID", publishedProduct.ID).
-		WithField("application name", publishedProduct.Name).
+		WithField("application-id", publishedProduct.ID).
+		WithField("application-name", publishedProduct.Name).
 		Trace("published product information")
 
 	// add published product to consumer details
@@ -234,6 +234,12 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProviderDetails {
 	providerDetails := models.ProviderDetails{}
 
+	// managedApplication := &models.AppDetails{
+	// 	ID: unknown,
+	// 	Name: unknown,
+	// 	ConsumerOrgID: unknown,
+	// }
+
 	// get asset resource
 	assetResource := &models.AssetResource{
 		ID:   unknown,
@@ -242,14 +248,14 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
 	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
-		log.Debug("could not get asset resource, setting asset resource to unknown")
+		log.Trace("could not get asset resource, setting asset resource to unknown")
 	} else {
 		assetResource.ID = assetResourceRef.ID
 		assetResource.Name = assetResourceRef.Name
 	}
 	log.
-		WithField("asset resource ID", assetResource.ID).
-		WithField("asset resource name", assetResource.Name).
+		WithField("asset-resource-id", assetResource.ID).
+		WithField("asset-resource-name", assetResource.Name).
 		Trace("asset resource information")
 	// add asset resource information
 	providerDetails.AssetResource = assetResource
@@ -266,12 +272,13 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	} else {
 		product.ID = productRef.ID
 		product.Name = productRef.Name
-		// product.Version = productRef.Version TODO
+		// product.Version = productRef.Version TODO - SDB
 	}
 	log.
-		WithField("product ID", product.ID).
-		WithField("product Name", product.Name).
-		WithField("product Version", product.Version)
+		WithField("product-id", product.ID).
+		WithField("product-name", product.Name).
+		WithField("product-version", product.Version).
+		Trace("product information")
 	// add product information
 	providerDetails.Product = product
 
@@ -286,7 +293,7 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 		productPlan.ID = productPlanRef.ID
 	}
 	log.
-		WithField("product plan ID", productPlan.ID).
+		WithField("product-plan-id", productPlan.ID).
 		Trace("product plan ID information")
 	// add product plan ID
 	providerDetails.ProductPlan = productPlan
@@ -302,10 +309,31 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 		quota.ID = quotaRef.ID
 	}
 	log.
-		WithField("quota ID", quota.ID).
+		WithField("quota-id", quota.ID).
 		Trace("quota ID information")
 	// add quota ID
 	providerDetails.Quota = quota
+
+	// get apiserviceinstance
+	apiserviceinstance := models.APIDetails{
+		ID:                 unknown,
+		Name:               unknown,
+		Revision:           0, //TODO SDB - how to set this from reference
+		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+	}
+	apiserviceinstanceRef := accessRequest.GetReferenceByGVK(v1alpha1.APIServiceInstanceGVK())
+	if apiserviceinstanceRef.ID == "" || apiserviceinstanceRef.Name == "" {
+		log.Debug("could not get apiserviceinstance, setting apiserviceinstance to unknown")
+	} else {
+		apiserviceinstance.ID = apiserviceinstanceRef.ID
+		apiserviceinstance.Name = apiserviceinstanceRef.Name
+	}
+	log.
+		WithField("apiserviceinstance-id", apiserviceinstance.ID).
+		WithField("apiserviceinstance-name", apiserviceinstance.Name).
+		WithField("apiserviceinstance-revision", 0). // TODO SDB - how to set
+		WithField("apiserviceinstance", apiserviceinstance.APIServiceInstance)
+	providerDetails.API = apiserviceinstance
 
 	return providerDetails
 }
