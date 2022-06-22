@@ -31,14 +31,15 @@ type eventProcessorJob struct {
 }
 
 // newEventProcessorJob creates a job for the streamerClient
-func newEventProcessorJob(streamer eventsJob, name string) jobs.Job {
+func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 	streamJob := &eventProcessorJob{
-		streamer:      streamer,
+		streamer:      eventJob,
 		stop:          make(chan interface{}),
 		retryInterval: defaultRetryInterval,
 		name:          name,
 	}
 	streamJob.jobID, _ = jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
+	jobs.RegisterIntervalJobWithName(newCentralHealthCheckJob(eventJob), time.Second*3, "Central Health Check")
 
 	return streamJob
 }

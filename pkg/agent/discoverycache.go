@@ -86,7 +86,7 @@ func newDiscoveryCache(
 
 // execute rebuilds the discovery cache
 func (dc *discoveryCache) execute() error {
-	dc.logger.Debug("executing resource cache update job")
+	dc.logger.Debug("executing discovery cache")
 
 	discoveryFuncs := dc.buildDiscoveryFuncs()
 	if dc.additionalDiscoveryFuncs != nil {
@@ -114,8 +114,6 @@ func (dc *discoveryCache) execute() error {
 }
 
 func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) error {
-	dc.logger.Debugf("executing resource cache update job with %d funcs", len(discoveryFuncs))
-
 	errCh := make(chan error, len(discoveryFuncs))
 	wg := &sync.WaitGroup{}
 
@@ -138,8 +136,6 @@ func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) e
 			return e
 		}
 	}
-
-	dc.logger.Debugf("cache has been updated by %d funcs", len(discoveryFuncs))
 
 	return nil
 }

@@ -2,6 +2,7 @@ package watchmanager
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,7 +30,9 @@ func TestWatchManager_RegisterWatch(t *testing.T) {
 		TenantID:    "tenantID",
 		TokenGetter: getMockToken,
 	}
-	wm, err := New(cfg)
+	sequence := &testSequenceProvider{}
+	sequence.SetSequence(1)
+	wm, err := New(cfg, WithHarvester(&hClient{}, sequence))
 	assert.Nil(t, err)
 	assert.NotNil(t, wm)
 
@@ -40,11 +43,91 @@ func TestWatchManager_RegisterWatch(t *testing.T) {
 	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
 	events, errors := make(chan *proto.Event), make(chan error)
-	id, err := manager.RegisterWatch("/watch/topic", events, errors)
+	_, err = manager.RegisterWatch("/watch/topic", events, errors)
 	assert.Nil(t, err)
 
-	err = manager.CloseWatch(id)
+	assert.Equal(t, len(manager.clientMap), 1)
+
+	manager.CloseConn()
+
+	assert.Equal(t, len(manager.clientMap), 0)
+}
+
+func TestWatchManager_OnError(t *testing.T) {
+	cfg := &Config{
+		Host:        "localhost",
+		Port:        8080,
+		TenantID:    "tenantID",
+		TokenGetter: getMockToken,
+	}
+	sequence := &testSequenceProvider{}
+	sequence.SetSequence(1)
+	hc := &hClient{
+		err: fmt.Errorf("error"),
+	}
+	cbChan := make(chan struct{})
+	cb := func() {
+		go func() {
+			cbChan <- struct{}{}
+		}()
+	}
+	wm, err := New(cfg, WithHarvester(hc, sequence), WithEventSyncError(cb))
 	assert.Nil(t, err)
+	assert.NotNil(t, wm)
+
+	manager := wm.(*watchManager)
+	stream := &mockStream{
+		context: context.Background(),
+	}
+	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
+
+	events, errors := make(chan *proto.Event), make(chan error)
+	_, err = manager.RegisterWatch("/watch/topic", events, errors)
+	assert.NotNil(t, err)
+
+	// expect that the callback func for a harvester error was called
+	v := <-cbChan
+	assert.NotNil(t, v)
+
+	assert.Equal(t, len(manager.clientMap), 0)
+}
+
+func TestWatchManager_zeroSequenceID(t *testing.T) {
+	cfg := &Config{
+		Host:        "localhost",
+		Port:        8080,
+		TenantID:    "tenantID",
+		TokenGetter: getMockToken,
+	}
+	sequence := &testSequenceProvider{}
+	hc := &hClient{
+		err: fmt.Errorf("error"),
+	}
+	cbChan := make(chan struct{})
+	cb := func() {
+		go func() {
+			cbChan <- struct{}{}
+		}()
+	}
+	wm, err := New(cfg, WithHarvester(hc, sequence), WithEventSyncError(cb))
+	assert.Nil(t, err)
+	assert.NotNil(t, wm)
+
+	manager := wm.(*watchManager)
+	stream := &mockStream{
+		context: context.Background(),
+	}
+	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
+
+	events, errors := make(chan *proto.Event), make(chan error)
+	_, err = manager.RegisterWatch("/watch/topic", events, errors)
+	assert.NotNil(t, err)
+
+	// expect that the callback func for a harvester error was called
+	v := <-cbChan
+	assert.NotNil(t, v)
+
+	assert.Equal(t, len(manager.clientMap), 0)
 }
 
 func TestConfig(t *testing.T) {
@@ -71,4 +154,16 @@ func TestConfig(t *testing.T) {
 	}
 	err = cfg.validateCfg()
 	assert.Nil(t, err)
+}
+
+type hClient struct {
+	err error
+}
+
+func (h hClient) EventCatchUp(link string, events chan *proto.Event) error {
+	return h.err
+}
+
+func (h hClient) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+	return 0, nil
 }

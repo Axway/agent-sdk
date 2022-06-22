@@ -1,6 +1,7 @@
 package healthcheck
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -23,9 +24,9 @@ func (sm *periodicHealthCheck) Status() error {
 }
 
 func (sm *periodicHealthCheck) Execute() error {
-	for {
-		// Execute all healthchecks
-		RunChecks()
-		time.Sleep(sm.interval)
+	status := RunChecks()
+	if status != OK {
+		return fmt.Errorf("periodicHealthCheck status is not OK. Received status %s", status)
 	}
+	return nil
 }

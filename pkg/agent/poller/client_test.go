@@ -39,6 +39,7 @@ func TestPollClientStart(t *testing.T) {
 
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
+	seq.SetSequence(1)
 
 	pollClient, err := NewPollClient(httpClient, cfg, nil, WithHarvester(mockH, seq, wt.GetSelfLink()))
 	assert.NotNil(t, pollClient)

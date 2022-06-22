@@ -101,6 +101,8 @@ func (es *EventSync) initCache() error {
 	es.sequence.SetSequence(seqID - 1)
 	err = es.discoveryCache.execute()
 	if err != nil {
+		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
+		agent.cacheManager.Flush()
 		return err
 	}
 	agent.cacheManager.SaveCache()
