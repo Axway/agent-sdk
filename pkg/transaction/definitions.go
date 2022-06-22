@@ -68,17 +68,17 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	models.ProviderDetails
-	Status           string                   `json:"status,omitempty"`
-	StatusDetail     string                   `json:"statusDetail,omitempty"`
-	Duration         int                      `json:"duration"`
-	Team             *Team                    `json:"team,omitempty"`
-	Proxy            *Proxy                   `json:"proxy,omitempty"`
-	Runtime          *Runtime                 `json:"runtime,omitempty"`
-	EntryPoint       *EntryPoint              `json:"entryPoint,omitempty"`
-	IsInMetricEvent  bool                     `json:"isInMetricEvent,omitempty"`
-	ConsumerDetails  *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
-	DataplaneDetails *models.DataplaneDetails `json:"dataplaneDetails,omitempty" `
+	models.ProviderDetails                          // inherited values for provider details to sit on top level
+	Status                 string                   `json:"status,omitempty"`
+	StatusDetail           string                   `json:"statusDetail,omitempty"`
+	Duration               int                      `json:"duration"`
+	Team                   *Team                    `json:"team,omitempty"`
+	Proxy                  *Proxy                   `json:"proxy,omitempty"`
+	Runtime                *Runtime                 `json:"runtime,omitempty"`
+	EntryPoint             *EntryPoint              `json:"entryPoint,omitempty"`
+	IsInMetricEvent        bool                     `json:"isInMetricEvent,omitempty"`
+	ConsumerDetails        *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
+	DataplaneDetails       *models.DataplaneDetails `json:"dataplaneDetails,omitempty" `
 }
 
 // Product - Represents the product used in the transaction summary event

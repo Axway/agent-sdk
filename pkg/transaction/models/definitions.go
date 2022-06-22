@@ -29,7 +29,7 @@ type AppDetails struct {
 
 // ProviderDetails - Represent the provider details in the transaction summary event
 type ProviderDetails struct {
-	Application   *AppDetails    `json:"application,omitempty"` // managed application
+	Application   *Application   `json:"application,omitempty"` // managed application
 	Product       *Product       `json:"product,omitempty"`
 	ProductPlan   *ProductPlan   `json:"productPlan,omitempty"`
 	Quota         *Quota         `json:"quota,omitempty"`
@@ -71,7 +71,7 @@ type APIDetails struct {
 // DataplaneDetails - Represent the dataplane in the transaction summary event
 type DataplaneDetails struct {
 	Application *Application `json:"application,omitempty"` // dataplane application
-	Product     *Product     `json:"product,omitempty"`     // dataplane product
+	Product     *Product     `json:"product,omitempty"`     // dataplane product TODO SDB - where does the dataplane product come from
 }
 
 // Application  - Represents the application used in transaction summary event

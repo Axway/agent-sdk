@@ -235,25 +235,17 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	providerDetails := models.ProviderDetails{}
 
 	// get managed application
-	managedApplication := &models.AppDetails{
-		ID:            managedApp.ResourceMeta.Metadata.ID,
-		Name:          managedApp.Name,
-		ConsumerOrgID: unknown,
-	}
-	// managed application should be set at this point
-	consumerOrgID := GetConsumerOrgID(managedApp)
-	// consumer org ID should not be empty
-	if consumerOrgID == "" {
-		log.Trace("could not get consumer org ID, setting consumer org ID to unknown")
-	} else {
-		managedApplication.ConsumerOrgID = consumerOrgID
+	managedApplication := &models.Application{
+		ID:   managedApp.ResourceMeta.Metadata.ID,
+		Name: managedApp.Name,
 	}
 
 	log.
 		WithField("managed-app-id", managedApplication.ID).
 		WithField("managed-app-name", managedApplication.Name).
-		WithField("managed-app-consumerOrgID", managedApplication.ConsumerOrgID).
 		Trace("managed application information")
+
+	providerDetails.Application = managedApplication
 
 	// get asset resource
 	assetResource := &models.AssetResource{
@@ -287,8 +279,9 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	} else {
 		product.ID = productRef.ID
 		product.Name = productRef.Name
-		// product.Version = productRef.Version TODO - SDB
 	}
+	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+
 	log.
 		WithField("product-id", product.ID).
 		WithField("product-name", product.Name).
@@ -328,29 +321,6 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		Trace("quota ID information")
 	// add quota ID
 	providerDetails.Quota = quota
-
-	/* TODO - SDB this doesn't return the revision
-	// get apiserviceinstance
-	apiserviceinstance := models.APIDetails{
-		ID:                 unknown,
-		Name:               unknown,
-		Revision:           0,
-		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
-	}
-	apiserviceinstanceRef := accessRequest.GetReferenceByGVK(v1alpha1.APIServiceInstanceGVK())
-	if apiserviceinstanceRef.ID == "" || apiserviceinstanceRef.Name == "" {
-		log.Debug("could not get apiserviceinstance, setting apiserviceinstance to unknown")
-	} else {
-		apiserviceinstance.ID = apiserviceinstanceRef.ID
-		apiserviceinstance.Name = apiserviceinstanceRef.Name
-	}
-	log.
-		WithField("apiserviceinstance-id", apiserviceinstance.ID).
-		WithField("apiserviceinstance-name", apiserviceinstance.Name).
-		WithField("apiserviceinstance-revision", 0).
-		WithField("apiserviceinstance", apiserviceinstance.APIServiceInstance)
-	providerDetails.API = apiserviceinstance
-	*/
 
 	return providerDetails
 }

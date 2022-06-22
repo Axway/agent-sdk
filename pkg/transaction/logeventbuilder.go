@@ -586,7 +586,7 @@ func (b *transactionSummaryBuilder) validateLogEvent() error {
 		return errors.New("transaction entry point details are not set in transaction summary event")
 	}
 
-	if b.logEvent.TransactionSummary.Product != nil && b.logEvent.TransactionSummary.Product.ID == "" {
+	if b.logEvent.TransactionSummary.DataplaneDetails.Product != nil && b.logEvent.TransactionSummary.DataplaneDetails.Product.ID == "" {
 		return errors.New("product ID property not set in transaction summary event")
 	}
 	return nil
