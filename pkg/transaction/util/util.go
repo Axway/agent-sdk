@@ -158,7 +158,7 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
 	if subRef.ID == "" || subRef.Name == "" {
-		log.Debug("could not get subscription, no consumer information attached")
+		log.Debug("could not get subscription, setting subscription to unknown")
 	} else {
 		subscription.ID = subRef.ID
 		subscription.Name = subRef.Name
@@ -179,7 +179,7 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
 	if appRef.ID == "" || appRef.Name == "" {
-		log.Debug("could not get application, no consumer information attached")
+		log.Debug("could not get application, setting application to unknown")
 	} else {
 		application.ID = appRef.ID
 		application.Name = appRef.Name
@@ -213,10 +213,11 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
 	if publishProductRef.ID == "" || publishProductRef.Name == "" {
-		log.Debug("could not get published product, no consumer information attached")
+		log.Debug("could not get published product, setting published product to unknown")
+	} else {
+		publishedProduct.ID = publishProductRef.ID
+		publishedProduct.Name = publishProductRef.Name
 	}
-	publishedProduct.ID = publishProductRef.ID
-	publishedProduct.Name = publishProductRef.Name
 
 	log.
 		WithField("application ID", publishedProduct.ID).
@@ -241,16 +242,15 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
 	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
-		log.Debug("could not get asset resource, not added to transaction summary")
+		log.Debug("could not get asset resource, setting asset resource to unknown")
 	} else {
 		assetResource.ID = assetResourceRef.ID
 		assetResource.Name = assetResourceRef.Name
-
-		log.
-			WithField("asset resource ID", assetResource.ID).
-			WithField("asset resource name", assetResource.Name).
-			Trace("asset resource information")
 	}
+	log.
+		WithField("asset resource ID", assetResource.ID).
+		WithField("asset resource name", assetResource.Name).
+		Trace("asset resource information")
 	// add asset resource information
 	providerDetails.AssetResource = assetResource
 
@@ -262,16 +262,16 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	}
 	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
 	if productRef.ID == "" || productRef.Name == "" {
-		log.Debug("could not get product ID or Name, not added to transaction summary")
+		log.Debug("could not get product ID or Name, setting product to unknown")
 	} else {
 		product.ID = productRef.ID
 		product.Name = productRef.Name
 		// product.Version = productRef.Version TODO
-		log.
-			WithField("product ID", product.ID).
-			WithField("product Name", product.Name).
-			WithField("product Version", product.Version)
 	}
+	log.
+		WithField("product ID", product.ID).
+		WithField("product Name", product.Name).
+		WithField("product Version", product.Version)
 	// add product information
 	providerDetails.Product = product
 
@@ -281,14 +281,13 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	}
 	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
 	if productPlanRef.ID == "" {
-		log.Debug("could not get product plan ID, not added to transaction summary")
+		log.Debug("could not get product plan ID, setting product plan to unknown")
 	} else {
 		productPlan.ID = productPlanRef.ID
-
-		log.
-			WithField("product plan ID", productPlan.ID).
-			Trace("product plan ID information")
 	}
+	log.
+		WithField("product plan ID", productPlan.ID).
+		Trace("product plan ID information")
 	// add product plan ID
 	providerDetails.ProductPlan = productPlan
 
@@ -298,14 +297,13 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	}
 	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
 	if quotaRef.ID == "" {
-		log.Debug("could not get quota ID, not added to transaction summary")
+		log.Debug("could not get quota ID, setting quota to unknown")
 	} else {
 		quota.ID = quotaRef.ID
-
-		log.
-			WithField("quota ID", quota.ID).
-			Trace("quota ID information")
 	}
+	log.
+		WithField("quota ID", quota.ID).
+		Trace("quota ID information")
 	// add quota ID
 	providerDetails.Quota = quota
 
