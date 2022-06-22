@@ -65,6 +65,7 @@ type APIDetails struct {
 	ID                 string `json:"id"`
 	Name               string `json:"name"`
 	Revision           int    `json:"revision,omitempty"`
+	TeamID             string `json:"teamID,omitempty"`
 	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
 }
 

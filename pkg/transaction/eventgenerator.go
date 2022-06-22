@@ -241,6 +241,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		ID:                 summaryEvent.TransactionSummary.Proxy.ID,
 		Name:               summaryEvent.TransactionSummary.Proxy.Name,
 		Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
+		TeamID:             summaryEvent.TransactionSummary.Team.ID,
 		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
 	}
 	summaryEvent.TransactionSummary.ProviderDetails.API = api
