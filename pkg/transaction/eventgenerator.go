@@ -14,6 +14,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -90,10 +91,10 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
-		appDetails := metric.AppDetails{}
-		if summaryEvent.TransactionSummary.Application != nil {
-			appDetails.Name = summaryEvent.TransactionSummary.Application.Name
-			appDetails.ID = strings.TrimLeft(summaryEvent.TransactionSummary.Application.ID, SummaryEventApplicationIDPrefix)
+		appDetails := metric.AppDetails{} //TODO SDB
+		if summaryEvent.TransactionSummary.DataplaneDetails.Application != nil {
+			appDetails.Name = summaryEvent.TransactionSummary.DataplaneDetails.Application.Name
+			appDetails.ID = strings.TrimLeft(summaryEvent.TransactionSummary.DataplaneDetails.Application.ID, SummaryEventApplicationIDPrefix)
 		}
 
 		collector := metric.GetMetricCollector()
@@ -227,23 +228,25 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 
 	// Go get the access request and managed app
 	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
-	if managedApp != nil {
-		// Update consumer details
-		summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+	if accessRequest == nil || managedApp == nil {
+		return nil
 	}
 
-	// TODO - SDB, how we get this versus calling reference
+	// Update consumer details
+	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+
+	// TODO - SDB, how we get this versus calling reference in util
 	// Update provider details
-	/*
-		api := APIDetails{
-			ID:                 summaryEvent.TransactionSummary.Proxy.ID,
-			Name:               summaryEvent.TransactionSummary.Proxy.Name,
-			Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
-			APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
-		}
-		summaryEvent.TransactionSummary.API = api
-	*/
-	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, e.logger)
+
+	api := models.APIDetails{
+		ID:                 summaryEvent.TransactionSummary.Proxy.ID,
+		Name:               summaryEvent.TransactionSummary.Proxy.Name,
+		Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
+		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+	}
+	summaryEvent.TransactionSummary.ProviderDetails.API = api
+
+	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, managedApp, e.logger)
 
 	return summaryEvent.TransactionSummary
 }
@@ -258,11 +261,11 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
 
-	if summaryEvent.TransactionSummary.Application != nil {
-		appName = summaryEvent.TransactionSummary.Application.Name
+	if summaryEvent.TransactionSummary.DataplaneDetails.Application != nil {
+		appName = summaryEvent.TransactionSummary.DataplaneDetails.Application.Name
 		e.logger.
 			WithField("appName", appName).
-			Trace("transaction summary application name")
+			Trace("transaction summary dataplane details application name")
 	}
 
 	// get the managed application

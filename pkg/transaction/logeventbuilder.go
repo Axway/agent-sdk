@@ -447,6 +447,8 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 		return b
 	}
 	dataplaneDetails := &models.DataplaneDetails{}
+	b.logEvent.TransactionSummary.DataplaneDetails = dataplaneDetails
+
 	dataplaneDetails.Application = &models.Application{}
 	dataplaneDetails.Application.ID = appID
 	dataplaneDetails.Application.Name = appName
@@ -459,7 +461,9 @@ func (b *transactionSummaryBuilder) SetProduct(id, name, version string) Summary
 	if b.err != nil {
 		return b
 	}
-	dataplaneDetails := models.DataplaneDetails{}
+	dataplaneDetails := &models.DataplaneDetails{}
+	b.logEvent.TransactionSummary.DataplaneDetails = dataplaneDetails
+
 	dataplaneDetails.Product = &models.Product{}
 	dataplaneDetails.Product.ID = id
 	dataplaneDetails.Product.Name = name

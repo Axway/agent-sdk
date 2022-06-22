@@ -231,14 +231,29 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 }
 
 // UpdateWithProviderDetails -
-func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProviderDetails {
+func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.ProviderDetails {
 	providerDetails := models.ProviderDetails{}
 
-	// managedApplication := &models.AppDetails{
-	// 	ID: unknown,
-	// 	Name: unknown,
-	// 	ConsumerOrgID: unknown,
-	// }
+	// get managed application
+	managedApplication := &models.AppDetails{
+		ID:            managedApp.ResourceMeta.Metadata.ID,
+		Name:          managedApp.Name,
+		ConsumerOrgID: unknown,
+	}
+	// managed application should be set at this point
+	consumerOrgID := GetConsumerOrgID(managedApp)
+	// consumer org ID should not be empty
+	if consumerOrgID == "" {
+		log.Trace("could not get consumer org ID, setting consumer org ID to unknown")
+	} else {
+		managedApplication.ConsumerOrgID = consumerOrgID
+	}
+
+	log.
+		WithField("managed-app-id", managedApplication.ID).
+		WithField("managed-app-name", managedApplication.Name).
+		WithField("managed-app-consumerOrgID", managedApplication.ConsumerOrgID).
+		Trace("managed application information")
 
 	// get asset resource
 	assetResource := &models.AssetResource{
@@ -314,11 +329,12 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	// add quota ID
 	providerDetails.Quota = quota
 
+	/* TODO - SDB this doesn't return the revision
 	// get apiserviceinstance
 	apiserviceinstance := models.APIDetails{
 		ID:                 unknown,
 		Name:               unknown,
-		Revision:           0, //TODO SDB - how to set this from reference
+		Revision:           0,
 		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
 	}
 	apiserviceinstanceRef := accessRequest.GetReferenceByGVK(v1alpha1.APIServiceInstanceGVK())
@@ -331,9 +347,10 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	log.
 		WithField("apiserviceinstance-id", apiserviceinstance.ID).
 		WithField("apiserviceinstance-name", apiserviceinstance.Name).
-		WithField("apiserviceinstance-revision", 0). // TODO SDB - how to set
+		WithField("apiserviceinstance-revision", 0).
 		WithField("apiserviceinstance", apiserviceinstance.APIServiceInstance)
 	providerDetails.API = apiserviceinstance
+	*/
 
 	return providerDetails
 }

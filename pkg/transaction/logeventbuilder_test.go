@@ -200,9 +200,9 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "200", logEvent.TransactionSummary.StatusDetail)
 	assert.Equal(t, 10, logEvent.TransactionSummary.Duration)
 
-	assert.NotNil(t, logEvent.TransactionSummary.Application)
-	assert.Equal(t, "1111", logEvent.TransactionSummary.Application.ID)
-	assert.Equal(t, "TestApp", logEvent.TransactionSummary.Application.Name)
+	assert.NotNil(t, logEvent.TransactionSummary.DataplaneDetails.Application)
+	assert.Equal(t, "1111", logEvent.TransactionSummary.DataplaneDetails.Application.ID)
+	assert.Equal(t, "TestApp", logEvent.TransactionSummary.DataplaneDetails.Application.Name)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Team)
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Team.ID)
@@ -271,7 +271,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "200", logEvent.TransactionSummary.StatusDetail)
 	assert.Equal(t, 10, logEvent.TransactionSummary.Duration)
 
-	assert.Nil(t, logEvent.TransactionSummary.Application)
+	assert.Nil(t, logEvent.TransactionSummary.DataplaneDetails.Application)
 	assert.Nil(t, logEvent.TransactionSummary.Team)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
@@ -279,9 +279,9 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 0, logEvent.TransactionSummary.Proxy.Revision)
 
-	assert.NotNil(t, logEvent.TransactionSummary.Product)
-	assert.Equal(t, "2222", logEvent.TransactionSummary.Product.ID)
-	assert.Equal(t, "1.0", logEvent.TransactionSummary.Product.Version)
+	assert.NotNil(t, logEvent.TransactionSummary.DataplaneDetails.Product)
+	assert.Equal(t, "2222", logEvent.TransactionSummary.DataplaneDetails.Product.ID)
+	assert.Equal(t, "1.0", logEvent.TransactionSummary.DataplaneDetails.Product.Version)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Runtime)
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Runtime.ID)
