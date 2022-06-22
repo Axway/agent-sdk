@@ -12,5 +12,5 @@ package v1alpha1
 // VirtualServiceSpecAmplifyjwtauthrule Amplify Gateway JWT authentication.
 type VirtualServiceSpecAmplifyjwtauthrule struct {
 	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 }

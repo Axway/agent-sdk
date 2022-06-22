@@ -11,6 +11,7 @@ package v1alpha1
 
 // VirtualServiceSpecServiceRoutingService struct for VirtualServiceSpecServiceRoutingService
 type VirtualServiceSpecServiceRoutingService struct {
+	// The path prefix to match. Example /api/v1
 	Prefix    string                                             `json:"prefix"`
 	Protocol  string                                             `json:"protocol,omitempty"`
 	Endpoints []VirtualServiceSpecServiceRoutingServiceEndpoints `json:"endpoints"`

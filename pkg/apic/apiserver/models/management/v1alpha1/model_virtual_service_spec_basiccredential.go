@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// VirtualServiceSpecApikeyauthrule API key authentication.
-type VirtualServiceSpecApikeyauthrule struct {
+// VirtualServiceSpecBasiccredential The HTTP Basic credential.
+type VirtualServiceSpecBasiccredential struct {
 	Kind string `json:"kind"`
-	Name string `json:"name"`
+	// The name of the external secret containing the http basic credential.
+	SecretName string `json:"secretName"`
 }
