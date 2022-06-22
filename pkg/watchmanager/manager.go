@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/harvester"
 	"google.golang.org/grpc/connectivity"
 
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -34,7 +33,6 @@ type watchManager struct {
 	cfg                *Config
 	clientMap          map[string]*watchClient
 	connection         *grpc.ClientConn
-	hClient            harvester.Harvest
 	logger             log.FieldLogger
 	mutex              sync.Mutex
 	newWatchClientFunc newWatchClientFunc
@@ -68,22 +66,6 @@ func New(cfg *Config, opts ...Option) (Manager, error) {
 		manager.logger.
 			WithError(err).
 			Errorf("failed to establish connection with watch service")
-	}
-
-	seq := manager.options.sequenceProvider
-
-	if seq != nil {
-		harvesterConfig := &harvester.Config{
-			Host:             manager.cfg.Host,
-			Port:             manager.cfg.Port,
-			TenantID:         manager.cfg.TenantID,
-			TokenGetter:      manager.cfg.TokenGetter,
-			ProxyURL:         manager.options.proxyURL,
-			TLSCfg:           manager.options.tlsCfg,
-			ClientTimeout:    manager.options.keepAlive.timeout,
-			SequenceProvider: seq,
-		}
-		manager.hClient = harvester.NewClient(harvesterConfig)
 	}
 
 	return manager, err
@@ -135,11 +117,11 @@ func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
 
 // eventCatchUp - called until lastSequenceID is 0, caught up on events
 func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error {
-	if m.hClient == nil || m.options.sequenceProvider == nil {
+	if m.options.harvester == nil || m.options.sequence == nil {
 		return nil
 	}
 
-	err := m.hClient.EventCatchUp(link, events)
+	err := m.options.harvester.EventCatchUp(link, events)
 	if err != nil {
 		return err
 	}
@@ -170,12 +152,18 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	m.clientMap[subID] = client
 	m.mutex.Unlock()
 
+	if m.options.sequence != nil && m.options.sequence.GetSequence() == 0 {
+		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
+		m.logger.Error(err.Error())
+		m.CloseWatch(subID)
+		m.onHarvesterErr()
+		return subID, err
+	}
+
 	if err := m.eventCatchUp(link, events); err != nil {
 		m.logger.WithError(err).Error("failed to sync events from harvester")
-		client.cancelStreamCtx()
-		if m.options.onEventSyncError != nil {
-			m.options.onEventSyncError()
-		}
+		m.CloseWatch(subID)
+		m.onHarvesterErr()
 		return subID, err
 	}
 
@@ -235,4 +223,11 @@ func (m *watchManager) Status() bool {
 	}
 
 	return ok && m.connection.GetState() == connectivity.Ready
+}
+
+func (m *watchManager) onHarvesterErr() {
+	if m.options.onEventSyncError == nil {
+		return
+	}
+	m.options.onEventSyncError()
 }

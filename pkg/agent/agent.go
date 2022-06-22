@@ -1,26 +1,25 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
+	"github.com/Axway/agent-sdk/pkg/agent/stream"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
@@ -67,6 +66,7 @@ type agentData struct {
 	provisioner            provisioning.Provisioning
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
+	authProviderRegistry   oauth.ProviderRegistry
 }
 
 var agent agentData
@@ -143,7 +143,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = initializeTokenRequester(centralCfg)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not authenticate to Amplify, please check your keys and key password")
 		}
 
 		// Init apic client when the agent starts, and on config change.
@@ -179,7 +179,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			StartAgentStatusUpdate()
-
+			registerExternalIDPs()
 			startTeamACLCache()
 
 			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
@@ -196,6 +196,29 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	agent.isInitialized = true
 	return nil
+}
+
+func registerExternalIDPs() {
+	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
+		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
+		tlsCfg := agent.cfg.GetTLSConfig()
+		proxy := agent.cfg.GetProxyURL()
+		timeout := agent.cfg.GetClientTimeout()
+		for _, idp := range idPCfg.GetIDPList() {
+			registerCredentialProvider(idp, tlsCfg, proxy, timeout)
+		}
+	}
+}
+
+func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) {
+	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
+	if err != nil {
+		logger.
+			WithField("name", idp.GetIDPName()).
+			WithField("type", idp.GetIDPType()).
+			WithField("metadataUrl", idp.GetMetadataURL()).
+			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
+	}
 }
 
 func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
@@ -263,6 +286,14 @@ func UnregisterResourceEventHandler(name string) {
 	agent.proxyResourceHandler.UnregisterTargetHandler(name)
 }
 
+// GetAuthProviderRegistry - Returns the auth provider registry
+func GetAuthProviderRegistry() oauth.ProviderRegistry {
+	if agent.authProviderRegistry == nil {
+		agent.authProviderRegistry = oauth.NewProviderRegistry()
+	}
+	return agent.authProviderRegistry
+}
+
 // HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers
 // this operation is performed in a go routine
 func HandleFetchOnStartupResources() {
@@ -279,63 +310,6 @@ func HandleFetchOnStartupResources() {
 	} else {
 		log.Warnf("Handling fetch-on-startup resources will no occur as config is not set. Test mode: %v", !util.IsNotTest())
 	}
-}
-
-// SyncCache -
-func SyncCache() error {
-	migrations := []migrate.Migrator{
-		migrate.NewAttributeMigration(agent.apicClient, agent.cfg),
-	}
-
-	if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-		agent.marketplaceMigration = marketplaceMigration
-		migrations = append(migrations, marketplaceMigration)
-	}
-
-	mig := migrate.NewMigrateAll(migrations...)
-	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
-
-	opts := []discoveryOpt{
-		withMigration(mig),
-		withMpEnabled(isMpEnabled),
-	}
-
-	if agent.agentResourceManager != nil {
-		opts = append(opts, withAdditionalDiscoverFuncs(agent.agentResourceManager.FetchAgentResource))
-	}
-
-	wt, err := events.GetWatchTopic(agent.cfg, GetCentralClient())
-	if err != nil {
-		return err
-	}
-
-	discoveryCache := newDiscoveryCache(
-		agent.cfg,
-		GetCentralClient(),
-		newHandlers(),
-		wt,
-		opts...,
-	)
-
-	if !agent.cacheManager.HasLoadedPersistedCache() {
-		err := discoveryCache.execute()
-		if err != nil {
-			return err
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	cacheSync := func() {
-		agent.cacheManager.Flush()
-		err := discoveryCache.execute()
-		if err != nil {
-			logger.WithError(err).Error("failed to re-sync cache after a cache flush")
-		}
-		agent.cacheManager.SaveCache()
-	}
-
-	return startCentralEventProcessor(wt, cacheSync)
 }
 
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
@@ -428,10 +402,17 @@ func UpdateStatus(status, description string) {
 
 // UpdateStatusWithPrevious - Updates the agent state providing a previous state
 func UpdateStatusWithPrevious(status, prevStatus, description string) {
+	ctx := context.WithValue(context.Background(), ctxLogger, logger)
+	UpdateStatusWithContext(ctx, status, prevStatus, description)
+}
+
+// UpdateStatusWithContext - Updates the agent state providing a context
+func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
+	logger := ctx.Value(ctxLogger).(log.FieldLogger)
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			logger.Warnf("could not update the agent status reference, %s", err.Error())
+			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
 	}
 }
@@ -446,6 +427,7 @@ func setupSignalProcessor() {
 		<-sigs
 		cleanUp()
 		logger.Info("Stopping agent")
+		agent.cacheManager.SaveCache()
 		os.Exit(0)
 	}()
 }
@@ -453,13 +435,6 @@ func setupSignalProcessor() {
 // cleanUp - AgentCleanup
 func cleanUp() {
 	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
-}
-
-func startCentralEventProcessor(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	if agent.cfg.IsUsingGRPC() {
-		return startStreamMode(wt, cacheSyncFunc)
-	}
-	return startPollMode(wt, cacheSyncFunc)
 }
 
 func newHandlers() []handler.Handler {
@@ -491,55 +466,4 @@ func newHandlers() []handler.Handler {
 	}
 
 	return handlers
-}
-
-func startPollMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	handlers := newHandlers()
-
-	pc, err := poller.NewPollClient(
-		agent.apicClient,
-		agent.cfg,
-		agent.tokenRequester,
-		agent.cacheManager,
-		func(p *poller.PollClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", p.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the harvester poll client: %s", err)
-	}
-
-	newEventProcessorJob(pc, "Poll Client")
-
-	return err
-}
-
-func startStreamMode(wt *mv1.WatchTopic, cacheSyncFunc func()) error {
-	handlers := newHandlers()
-
-	sc, err := stream.NewStreamerClient(
-		agent.apicClient,
-		agent.cfg,
-		agent.tokenRequester,
-		agent.cacheManager,
-		func(s *stream.StreamerClient) {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", s.Healthcheck)
-		},
-		cacheSyncFunc,
-		wt,
-		handlers...,
-	)
-
-	if err != nil {
-		return fmt.Errorf("could not start the watch manager: %s", err)
-	}
-
-	agent.streamer = sc
-	newEventProcessorJob(sc, "Stream Client")
-
-	return err
 }

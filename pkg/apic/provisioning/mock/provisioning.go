@@ -1,6 +1,9 @@
 package mock
 
-import "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+import (
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
+)
 
 type MockApplicationRequest struct {
 	provisioning.ApplicationRequest
@@ -57,6 +60,18 @@ func (m MockCredentialRequest) GetCredentialType() string {
 
 func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 	return m.CredData
+}
+
+func (m MockCredentialRequest) IsIDPCredential() bool {
+	return false
+}
+
+func GetIDPProvider() oauth.Provider {
+	return nil
+}
+
+func GetIDPCredentialData() provisioning.IDPCredentialData {
+	return nil
 }
 
 type MockAccessRequest struct {

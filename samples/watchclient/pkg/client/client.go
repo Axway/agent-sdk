@@ -5,6 +5,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 
 	"github.com/sirupsen/logrus"
 
@@ -59,9 +61,26 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 	if config.Insecure {
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
 	}
-	watchOptions = append(watchOptions, wm.WithSyncEvents(getSequenceManager()))
-
 	ta := auth.NewTokenAuth(config.Auth, config.TenantID)
+
+	ccfg := &corecfg.CentralConfiguration{
+		URL:           config.Host,
+		ClientTimeout: 15,
+		ProxyURL:      "",
+		TenantID:      config.TenantID,
+		TLS:           corecfg.NewTLSConfig(),
+		GRPCCfg: corecfg.GRPCConfig{
+			Enabled:  true,
+			Insecure: config.Insecure,
+			FetchOnStartup: corecfg.FetchOnStartup{
+				Enabled: false,
+			},
+		},
+	}
+
+	hCfg := harvester.NewConfig(ccfg, ta, getSequenceManager())
+	hClient := harvester.NewClient(hCfg)
+	watchOptions = append(watchOptions, wm.WithHarvester(hClient, getSequenceManager()))
 
 	cfg := &wm.Config{
 		Host:        config.Host,

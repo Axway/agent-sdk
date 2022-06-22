@@ -7,13 +7,14 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
@@ -30,13 +31,18 @@ type Generator struct {
 	shouldAddFields                bool
 	shouldUseTrafficForAggregation bool
 	collector                      metric.Collector
+	logger                         log.FieldLogger
 }
 
 // NewEventGenerator - Create a new event generator
 func NewEventGenerator() EventGenerator {
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.transaction.eventgenerator").
+		WithComponent("eventgenerator")
 	eventGen := &Generator{
 		shouldAddFields:                !traceability.IsHTTPTransport(),
 		shouldUseTrafficForAggregation: true,
+		logger:                         logger,
 	}
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
@@ -132,8 +138,12 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 	// See if the uri is in the api exceptions list
 	if e.isInAPIExceptionsList(detailEvents) {
-		log.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
+		e.logger.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
 		return events, nil
+	}
+
+	if summaryEvent.TransactionSummary != nil {
+		summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -191,21 +201,136 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	return events, nil
 }
 
+// getConsumerDetails - get the consumer information to add to transaction event.  If we don't have any
+// 		information we need to get the consumer information, then we just return nil
+func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
+	cacheManager := agent.GetCacheManager()
+	appName := unknown
+	apiID := ""
+	stage := ""
+
+	if summaryEvent.TransactionSummary.Application != nil {
+		appName = summaryEvent.TransactionSummary.Application.Name
+		e.logger.
+			WithField("appName", appName).
+			Trace("transaction summary application name")
+	}
+
+	// get proxy information
+	if summaryEvent.TransactionSummary.Proxy == nil {
+		e.logger.Debug("proxy information is not available, no consumer information attached")
+		return nil
+	}
+	apiID = summaryEvent.TransactionSummary.Proxy.ID
+	stage = summaryEvent.TransactionSummary.Proxy.Stage
+	e.logger.
+		WithField("apiID", apiID).
+		WithField("stage", stage).
+		Trace("transaction summary proxy information")
+
+	// get the managed application
+	managedApp := cacheManager.GetManagedApplicationByName(appName)
+	if managedApp == nil {
+		e.logger.
+			WithField("appName", appName).
+			Debug("could not get managed application by name, no consumer information attached")
+		return nil
+	}
+	e.logger.
+		WithField("appName", appName).
+		WithField("managed app name", managedApp.Name).
+		Trace("managed application info")
+
+	// get the access request
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	if accessRequest == nil {
+		e.logger.
+			Debug("could not get access request, no consumer information attached")
+		return nil
+	}
+	e.logger.
+		WithField("managed app name", managedApp.Name).
+		WithField("apiID", apiID).
+		WithField("stage", stage).
+		WithField("access request name", accessRequest.Name).
+		Trace("managed application info")
+
+	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	// get subscription info
+	subscription := &Subscription{
+		ID:   subRef.ID,
+		Name: subRef.Name,
+	}
+
+	if subRef.ID == "" || subRef.Name == "" {
+		e.logger.Debug("could not get subscription, no consumer information attached")
+		return nil
+	}
+
+	e.logger.
+		WithField("subscription ID", subscription.ID).
+		WithField("subscription name", subscription.Name).
+		Trace("subscription information")
+
+	// get application info
+	appID := unknown
+	application := &Application{
+		ID:   appID,
+		Name: appName,
+	}
+
+	consumerOrgID := unknown
+
+	if managedApp != nil {
+		appID, appName = transutil.GetConsumerApplication(managedApp)
+		application.ID = appID
+		application.Name = appName
+		e.logger.
+			WithField("application ID", application.ID).
+			WithField("application name", application.Name).
+			Trace("application information")
+
+			// try to get consumer org ID from the managed app first
+		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
+		if consumerOrgID == "" {
+			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+			return nil
+		}
+		e.logger.
+			WithField("consumer org ID", consumerOrgID).
+			Trace("consumer org ID ")
+	}
+
+	// Update consumer details with Org, Application and Subscription
+	return &ConsumerDetails{
+		OrgID:        consumerOrgID,
+		Application:  application,
+		Subscription: subscription,
+	}
+}
+
 // createSamplingTransactionDetails -
 func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) sampling.TransactionDetails {
 	var status string
 	var apiID string
+	var subID string
 
 	if summaryEvent.TransactionSummary != nil {
 		status = summaryEvent.TransactionSummary.Status
 		if summaryEvent.TransactionSummary.Proxy != nil {
 			apiID = summaryEvent.TransactionSummary.Proxy.ID
 		}
+
+		consumerDetails := summaryEvent.TransactionSummary.ConsumerDetails
+		if consumerDetails != nil && consumerDetails.Subscription != nil {
+			subID = consumerDetails.Subscription.ID
+		}
 	}
 
 	return sampling.TransactionDetails{
 		Status: status,
 		APIID:  apiID,
+		SubID:  subID,
 	}
 }
 

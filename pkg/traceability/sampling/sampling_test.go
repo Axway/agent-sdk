@@ -85,6 +85,7 @@ func TestShouldSample(t *testing.T) {
 		testTransactions int
 		expectedSampled  int
 		config           Sampling
+		subIDs           map[string]string
 	}{
 		{
 			name: "All Transactions",
@@ -99,7 +100,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% of Transactions",
+			name: "50% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 50,
 				"id2": 50,
@@ -113,7 +114,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "25% of Transactions",
+			name: "25% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 105,
 				"id2": 100,
@@ -128,7 +129,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "10% of Transactions",
+			name: "10% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -140,7 +141,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "1% of Transactions",
+			name: "1% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -152,7 +153,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "0% of Transactions",
+			name: "0% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
@@ -164,7 +165,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% per API of Transactions",
+			name: "50% per API of Transactions when per api is enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -178,7 +179,7 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "25% per API of Transactions",
+			name: "25% per API of Transactions when per api is enabled",
 			apiTransactions: map[string]int{
 				"id1": 105, // expect 30
 				"id2": 100, // expect 25
@@ -190,6 +191,64 @@ func TestShouldSample(t *testing.T) {
 			config: Sampling{
 				Percentage: 25,
 				PerAPI:     true,
+			},
+		},
+		{
+			name: "50% of subscription transactions when per api and per sub are enabled",
+			apiTransactions: map[string]int{
+				"id1": 50, // expect 50
+				"id2": 50, // expect 50
+				"id3": 50, // expect 50
+				"id4": 50, // expect 50
+			},
+			subIDs: map[string]string{
+				"id1": "sub1",
+				"id2": "sub2",
+				"id3": "sub3",
+				"id4": "sub4",
+			},
+			expectedSampled: 200,
+			config: Sampling{
+				Percentage: 50,
+				PerAPI:     true,
+				PerSub:     true,
+			},
+		},
+		{
+			name: "50% of subscription transactions when per api is disabled and per sub is enabled",
+			apiTransactions: map[string]int{
+				"id1": 50, // expect 50
+				"id2": 50, // expect 50
+				"id3": 50, // expect 50
+				"id4": 50, // expect 50
+			},
+			subIDs: map[string]string{
+				"id1": "sub1",
+				"id2": "sub2",
+				"id3": "sub3",
+				"id4": "sub4",
+			},
+			expectedSampled: 200,
+			config: Sampling{
+				Percentage: 50,
+				PerAPI:     false,
+				PerSub:     true,
+			},
+		},
+		{
+			name: "50% of per API transactions when per api and per sub are enabled, but no subID is found",
+			apiTransactions: map[string]int{
+				"id1": 50, // expect 50
+				"id2": 50, // expect 50
+				"id3": 50, // expect 50
+				"id4": 50, // expect 50
+			},
+			subIDs:          map[string]string{},
+			expectedSampled: 200,
+			config: Sampling{
+				Percentage: 50,
+				PerAPI:     true,
+				PerSub:     true,
 			},
 		},
 	}
@@ -206,12 +265,18 @@ func TestShouldSample(t *testing.T) {
 			for apiID, numCalls := range test.apiTransactions {
 				waitGroup.Add(1)
 
-				go func(wg *sync.WaitGroup, id string, calls int) {
+				var subID string
+				if test.subIDs != nil {
+					subID = test.subIDs[apiID]
+				}
+
+				go func(wg *sync.WaitGroup, id, subID string, calls int) {
 					defer wg.Done()
 					for i := 0; i < calls; i++ {
 						testDetails := TransactionDetails{
 							Status: "Success", // this does not matter at the moment
 							APIID:  id,
+							SubID:  subID,
 						}
 						sample, err := ShouldSampleTransaction(testDetails)
 						if sample {
@@ -221,7 +286,7 @@ func TestShouldSample(t *testing.T) {
 						}
 						assert.Nil(t, err)
 					}
-				}(&waitGroup, apiID, numCalls)
+				}(&waitGroup, apiID, subID, numCalls)
 			}
 
 			waitGroup.Wait()

@@ -86,13 +86,34 @@ func newDiscoveryCache(
 
 // execute rebuilds the discovery cache
 func (dc *discoveryCache) execute() error {
-	dc.logger.Debug("executing resource cache update job")
+	dc.logger.Debug("executing discovery cache")
 
 	discoveryFuncs := dc.buildDiscoveryFuncs()
 	if dc.additionalDiscoveryFuncs != nil {
 		discoveryFuncs = append(discoveryFuncs, dc.additionalDiscoveryFuncs...)
 	}
 
+	err := dc.executeDiscoveryFuncs(discoveryFuncs)
+	if err != nil {
+		return err
+	}
+
+	// Now do the marketplace discovery funcs as the other functions have completed
+	// AccessRequest cache need the APIServiceInstance cache to be fully loaded.
+	if dc.isMpEnabled {
+		marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncs()
+		err := dc.executeDiscoveryFuncs(marketplaceDiscoveryFuncs)
+		if err != nil {
+			return err
+		}
+	}
+
+	dc.logger.Debug("cache has been updated")
+
+	return nil
+}
+
+func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) error {
 	errCh := make(chan error, len(discoveryFuncs))
 	wg := &sync.WaitGroup{}
 
@@ -116,20 +137,15 @@ func (dc *discoveryCache) execute() error {
 		}
 	}
 
-	dc.logger.Debug("cache has been updated")
-
 	return nil
 }
 
 func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 	resources := make(map[string]discoverFunc)
-	mpResources := make(map[string]discoverFunc)
 
 	for _, filter := range dc.watchTopic.Spec.Filters {
 		f := dc.buildResourceFunc(filter)
-		if isMPResource(filter.Kind) {
-			mpResources[filter.Kind] = f
-		} else {
+		if !isMPResource(filter.Kind) {
 			resources[filter.Kind] = f
 		}
 	}
@@ -139,11 +155,22 @@ func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 		funcs = append(funcs, f)
 	}
 
-	if dc.isMpEnabled {
-		marketplaceFuncs := dc.buildMarketplaceFuncs(mpResources)
-		funcs = append(funcs, dc.handleMarketplaceFuncs(marketplaceFuncs))
+	return funcs
+}
+
+func (dc *discoveryCache) buildMarketplaceDiscoveryFuncs() []discoverFunc {
+	mpResources := make(map[string]discoverFunc)
+
+	for _, filter := range dc.watchTopic.Spec.Filters {
+		if isMPResource(filter.Kind) {
+			f := dc.buildResourceFunc(filter)
+			mpResources[filter.Kind] = f
+		}
 	}
 
+	var funcs []discoverFunc
+	marketplaceFuncs := dc.buildMarketplaceFuncs(mpResources)
+	funcs = append(funcs, dc.handleMarketplaceFuncs(marketplaceFuncs))
 	return funcs
 }
 

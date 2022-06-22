@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -29,9 +30,6 @@ import (
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 )
 
-// OnStreamConnection - callback StreamerClient will invoke after stream connection is established
-type OnStreamConnection func(*StreamerClient)
-
 // StreamerClient client for starting a watch controller stream and handling the events
 type StreamerClient struct {
 	apiClient               events.APIClient
@@ -40,8 +38,8 @@ type StreamerClient struct {
 	manager                 wm.Manager
 	newListener             events.NewListenerFunc
 	newManager              wm.NewManagerFunc
-	onStreamConnection      OnStreamConnection
-	seq                     events.SequenceProvider
+	onStreamConnection      func()
+	sequence                events.SequenceProvider
 	topicSelfLink           string
 	watchCfg                *wm.Config
 	watchOpts               []wm.Option
@@ -52,6 +50,9 @@ type StreamerClient struct {
 	fetchOnStartupRetention time.Duration
 	logger                  log.FieldLogger
 	environmentURL          string
+	wt                      *v1alpha1.WatchTopic
+	harvester               harvester.Harvest
+	onEventSyncError        func()
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -59,11 +60,8 @@ func NewStreamerClient(
 	apiClient events.APIClient,
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
-	cacheManager agentcache.Manager,
-	onStreamConnection OnStreamConnection,
-	onEventSyncError func(),
-	wt *v1alpha1.WatchTopic,
-	handlers ...handler.Handler,
+	handlers []handler.Handler,
+	options ...StreamerOpt,
 ) (*StreamerClient, error) {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent.stream").
@@ -78,19 +76,35 @@ func NewStreamerClient(
 		TenantID:    tenant,
 		TokenGetter: getToken.GetToken,
 	}
-	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 
-	watchOpts := []wm.Option{
+	s := &StreamerClient{
+		handlers:                handlers,
+		apiClient:               apiClient,
+		watchCfg:                watchCfg,
+		loadOnStartup:           make([]v1alpha1.WatchTopicSpecFilters, 0),
+		newManager:              wm.New,
+		newListener:             events.NewEventListener,
+		logger:                  logger,
+		environmentURL:          cfg.GetEnvironmentURL(),
+		fetchOnStartupPageSize:  cfg.GetFetchOnStartupPageSize(),
+		fetchOnStartupRetention: cfg.GetFetchOnStartupRetention(),
+	}
+
+	for _, opt := range options {
+		opt(s)
+	}
+
+	s.watchOpts = []wm.Option{
 		wm.WithLogger(logrus.NewEntry(log.Get())),
-		wm.WithSyncEvents(seq),
+		wm.WithHarvester(s.harvester, s.sequence),
 		wm.WithProxy(cfg.GetProxyURL()),
-		wm.WithEventSyncError(onEventSyncError),
+		wm.WithEventSyncError(s.onEventSyncError),
 	}
 
 	if cfg.IsGRPCInsecure() {
-		watchOpts = append(watchOpts, wm.WithTLSConfig(nil))
+		s.watchOpts = append(s.watchOpts, wm.WithTLSConfig(nil))
 	} else {
-		watchOpts = append(watchOpts, wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()))
+		s.watchOpts = append(s.watchOpts, wm.WithTLSConfig(cfg.GetTLSConfig().BuildTLSConfig()))
 	}
 
 	if cfg.GetSingleURL() != "" {
@@ -101,35 +115,16 @@ func NewStreamerClient(
 		}
 	}
 
-	fetchOnStartup := make([]v1alpha1.WatchTopicSpecFilters, 0)
-	if cfg.IsFetchOnStartupEnabled() {
-		for _, filter := range wt.Spec.Filters {
+	if cfg.IsFetchOnStartupEnabled() && s.wt != nil {
+		for _, filter := range s.wt.Spec.Filters {
 			for _, ftype := range filter.Type {
 				if filter.Scope.Kind == v1alpha1.EnvironmentGVK().Kind &&
 					(ftype == events.WatchTopicFilterTypeCreated || ftype == events.WatchTopicFilterTypeUpdated) {
-					fetchOnStartup = append(fetchOnStartup, filter)
+					s.loadOnStartup = append(s.loadOnStartup, filter)
 					break
 				}
 			}
 		}
-	}
-
-	s := &StreamerClient{
-		handlers:                handlers,
-		apiClient:               apiClient,
-		topicSelfLink:           wt.Metadata.SelfLink,
-		watchCfg:                watchCfg,
-		watchOpts:               watchOpts,
-		loadOnStartup:           fetchOnStartup,
-		newManager:              wm.New,
-		newListener:             events.NewEventListener,
-		seq:                     seq,
-		onStreamConnection:      onStreamConnection,
-		cacheManager:            cacheManager,
-		logger:                  logger,
-		environmentURL:          cfg.GetEnvironmentURL(),
-		fetchOnStartupPageSize:  cfg.GetFetchOnStartupPageSize(),
-		fetchOnStartupRetention: cfg.GetFetchOnStartupRetention(),
 	}
 
 	if cfg.IsFetchOnStartupEnabled() {
@@ -168,7 +163,7 @@ func (s *StreamerClient) Start() error {
 	s.listener = s.newListener(
 		eventCh,
 		s.apiClient,
-		s.seq,
+		s.sequence,
 		s.handlers...,
 	)
 
@@ -187,7 +182,7 @@ func (s *StreamerClient) Start() error {
 	}
 
 	if s.onStreamConnection != nil {
-		s.onStreamConnection(s)
+		s.onStreamConnection()
 	}
 
 	select {
@@ -218,7 +213,6 @@ func (s *StreamerClient) Stop() {
 
 // Healthcheck - health check for stream client
 func (s *StreamerClient) Healthcheck(_ string) *hc.Status {
-
 	if err := s.Status(); err != nil {
 		return &hc.Status{
 			Result:  hc.FAIL,

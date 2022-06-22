@@ -2,8 +2,6 @@ package jobs
 
 import (
 	"time"
-
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type intervalJobProps struct {
@@ -35,7 +33,7 @@ func (b *intervalJob) handleExecution() {
 	b.executeCronJob()
 	if b.getError() != nil {
 		b.setExecutionError()
-		log.Error(b.getError())
+		b.logger.Error(b.getError())
 		b.SetStatus(JobStatusStopped)
 		b.setConsecutiveFails(b.getConsecutiveFails() + 1)
 	}
@@ -71,9 +69,9 @@ func (b *intervalJob) start() {
 func (b *intervalJob) stop() {
 	b.stopLog()
 	if b.IsReady() {
-		log.Tracef("writing to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
-		log.Tracef("wrote to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
 	} else {
 		b.stopReadyChan <- nil
 	}

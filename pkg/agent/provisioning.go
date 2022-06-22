@@ -7,11 +7,24 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+var supportedIDPGrantTypes = map[string]bool{
+	"client_credentials": true,
+	"authorization_code": true}
+
+var supportedIDPTokenAuthMethods = map[string]bool{
+	"client_secret_basic": true,
+	"client_secret_post":  true,
+	"client_secret_jwt":   true,
+	"private_key_jwt":     true}
 
 // credential request definitions
 // createOrUpdateDefinition -
@@ -46,7 +59,7 @@ func willCreateOrUpdateResource(data v1.Interface) bool {
 	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
 		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 		if existingCRD == nil {
-			log.Debugf("credential request definition %s needs to be created or updated using migration path", ri.Name)
+			log.Tracef("credential request definition %s needs to be created or updated using migration path", ri.Name)
 			return true
 		}
 	} else {
@@ -87,10 +100,26 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		log.Debugf("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		log.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 		_, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
+		}
+
+		// Mark marketplace migration completed here in provisioning
+		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
+		ri, err = GetCentralClient().UpdateResourceInstance(svc)
+		if err != nil {
+			return nil, err
+		}
+		//update sub resources
+		inst, err := svc.AsInstance()
+		if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
+			err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
+			if err != nil {
+				return nil, err
+			}
+			log.Debugf("updated x-agent-details with marketplace-migration: completed")
 		}
 	}
 	return ri, nil
@@ -138,8 +167,8 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		SetRequestSchema(reqSchema)
 }
 
-// withCRDName - set another name for the CRD
-func withCRDName(name string) func(c *crdBuilderOptions) {
+// WithCRDName - set another name for the CRD
+func WithCRDName(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.name = name
 	}
@@ -159,10 +188,128 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 	}
 }
 
+// WithCRDForIDP - set the schema properties using the provider metadata
+func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		if c.name == "" {
+			name := util.ConvertToDomainNameCompliant(p.GetName())
+			c.name = name + "-" + provisioning.OAuthIDPCRD
+		}
+
+		setIDPClientSecretSchemaProperty(c)
+		setIDPTokenURLSchemaProperty(p, c)
+		setIDPScopesSchemaProperty(p, scopes, c)
+		setIDPGrantTypesSchemaProperty(p, c)
+		setIDPTokenAuthMethodSchemaProperty(p, c)
+		setIDPRedirectURIsSchemaProperty(p, c)
+		setIDPJWKSURISchemaProperty(p, c)
+		setIDPJWKSSchemaProperty(p, c)
+	}
+}
+
+func setIDPClientSecretSchemaProperty(c *crdBuilderOptions) {
+	c.provProps = append(c.provProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthClientSecret).
+			SetLabel("Client Secret").
+			IsString().
+			IsEncrypted())
+}
+
+func setIDPTokenURLSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.IDPTokenURL).
+			SetRequired().
+			SetLabel("Token URL").
+			SetReadOnly().
+			IsString().
+			SetDefaultValue(p.GetTokenEndpoint()))
+}
+
+func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthScopes).
+			SetLabel("Scopes").
+			IsArray().
+			AddItem(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("scope").
+					IsString().SetEnumValues(scopes)))
+}
+
+func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	grantType := removeUnsupportedTypes(
+		p.GetSupportedGrantTypes(), supportedIDPGrantTypes)
+
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthGrantType).
+			SetLabel("Grant Type").
+			IsString().
+			SetDefaultValue("client_credentials").
+			SetEnumValues(grantType))
+}
+
+func removeUnsupportedTypes(values []string, supportedTypes map[string]bool) []string {
+	var result []string
+	for _, s := range values {
+		if ok := supportedTypes[s]; ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	tokenAuthMethod := removeUnsupportedTypes(
+		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods)
+
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthTokenAuthMethod).
+			SetLabel("Token Auth Method").
+			IsString().
+			SetDefaultValue("client_secret_basic").
+			SetEnumValues(tokenAuthMethod))
+}
+
+func setIDPRedirectURIsSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthRedirectURIs).
+			SetLabel("Redirect URLs").
+			IsArray().
+			AddItem(
+				provisioning.NewSchemaPropertyBuilder().
+					SetName("URL").
+					IsString()))
+}
+
+func setIDPJWKSURISchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthJwksURI).
+			SetLabel("JWKS URI").
+			IsString())
+}
+
+func setIDPJWKSSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthJwks).
+			SetLabel("Public Key").
+			IsString())
+
+}
+
 // WithCRDOAuthSecret - set that the Oauth cred is secret based
 func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthSecretCRD
+		if c.name == "" {
+			c.name = provisioning.OAuthSecretCRD
+		}
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthClientSecret).
@@ -176,7 +323,10 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 // WithCRDOAuthPublicKey - set that the Oauth cred is key based
 func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
-		c.name = provisioning.OAuthPublicKeyCRD
+		if c.name == "" {
+			c.name = provisioning.OAuthPublicKeyCRD
+		}
+
 		c.reqProps = append(c.reqProps,
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthPublicKey).
@@ -189,7 +339,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 // NewAPIKeyCredentialRequestBuilder - add api key base properties for provisioning schema
 func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	apiKeyOptions := []func(*crdBuilderOptions){
-		withCRDName(provisioning.APIKeyCRD),
+		WithCRDName(provisioning.APIKeyCRD),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.APIKey).
@@ -262,7 +412,7 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 		)
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient),
+			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, agent.authProviderRegistry),
 		)
 	}
 }

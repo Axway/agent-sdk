@@ -6,10 +6,19 @@ const (
 	APIKeyCRD         = "api-key"
 	OAuthSecretCRD    = "oauth-secret"
 	OAuthPublicKeyCRD = "oauth-public-key"
+	OAuthIDPCRD       = "oauth-idp"
 
-	OauthClientID     = "clientId"
-	OauthClientSecret = "clientSecret"
-	OauthPublicKey    = "publicKey"
+	OauthClientID        = "clientId"
+	OauthClientSecret    = "clientSecret"
+	OauthPublicKey       = "publicKey"
+	OauthGrantType       = "grantType"
+	OauthTokenAuthMethod = "tokenAuthMethod"
+	OauthScopes          = "scopes"
+	OauthRedirectURIs    = "redirectURLs"
+	OauthJwksURI         = "jwksURI"
+	OauthJwks            = "jwks"
+
+	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
 )

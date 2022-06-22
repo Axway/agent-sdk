@@ -13,7 +13,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -159,27 +158,8 @@ func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstan
 	return createRI(id, name, marketplaceSubRes)
 }
 
-func createSubscription(id, name, consumerOrgID string) *v1.ResourceInstance {
-	var marketplaceSubRes map[string]interface{}
-	if consumerOrgID != "" {
-		marketplaceSubRes = map[string]interface{}{
-			"marketplace": cv1.SubscriptionMarketplace{
-				Name: name,
-				Resource: cv1.SubscriptionMarketplaceResource{
-					Owner: cv1.SubscriptionMarketplaceResourceOwner{
-						Organization: cv1.SubscriptionMarketplaceResourceOwnerOrganization{
-							Id: consumerOrgID,
-						},
-					},
-				},
-			},
-		}
-	}
-	return createRI(id, name, marketplaceSubRes)
-}
-
-func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *mv1.AccessRequest {
-	return &mv1.AccessRequest{
+func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *v1.ResourceInstance {
+	ar := &mv1.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
@@ -203,6 +183,8 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 			},
 		},
 	}
+	ri, _ := ar.AsInstance()
+	return ri
 }
 
 func TestMetricCollector(t *testing.T) {
@@ -227,9 +209,6 @@ func TestMetricCollector(t *testing.T) {
 
 	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
 	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
-
-	cm.AddSubscription(createSubscription("sub-1", "subscription-1", "test-consumer-org"))
-	cm.AddSubscription(createSubscription("sub-2", "subscription-2", ""))
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
@@ -285,7 +264,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
+			expectedMetricEventsAcked: 2, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
 		},
 		// Success case with no usage report
@@ -299,7 +278,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{0},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0,
+			expectedMetricEventsAcked: 2,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
@@ -312,7 +291,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
-			expectedMetricEventsAcked: 1,
+			expectedMetricEventsAcked: 3,
 			appName:                   "unknown",
 		},
 		// Success case, retry metrics
@@ -326,7 +305,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 1,
+			expectedMetricEventsAcked: 3,
 			appName:                   "unknown",
 		},
 		// Retry limit hit

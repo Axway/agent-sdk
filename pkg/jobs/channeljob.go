@@ -2,8 +2,6 @@ package jobs
 
 import (
 	"sync"
-
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type channelJobProps struct {
@@ -53,7 +51,7 @@ func (b *channelJob) handleExecution() {
 	b.setError(b.job.Execute())
 	if b.getError() != nil {
 		b.setExecutionError()
-		log.Error(b.err)
+		b.baseJob.logger.Error(b.err)
 		b.stop() // stop the job on error
 		b.consecutiveFails++
 	}
@@ -89,14 +87,14 @@ func (b *channelJob) setIsStopped(stopped bool) {
 //stop - write to the stop channel to stop the execution loop
 func (b *channelJob) stop() {
 	if b.getIsStopped() {
-		log.Tracef("job has already been stopped")
+		b.baseJob.logger.Tracef("job has already been stopped")
 		return
 	}
 	b.stopLog()
 	if b.IsReady() {
-		log.Tracef("writing to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
-		log.Tracef("wrote to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
 	} else {
 		b.stopReadyChan <- nil
 	}

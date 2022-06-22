@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -8,11 +9,20 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/google/uuid"
 )
 
 const (
 	periodic  = "periodic status change"
 	immediate = "immediate status change"
+)
+
+// This type is used for values added to context
+type ctxKey int
+
+// The key used for the logger in the context
+const (
+	ctxLogger ctxKey = iota
 )
 
 var previousStatus string // The global previous status to be used by both update jobs
@@ -35,8 +45,9 @@ var periodicStatusUpdate *agentStatusUpdate
 var immediateStatusUpdate *agentStatusUpdate
 
 func (su *agentStatusUpdate) Ready() bool {
+	ctx := context.WithValue(context.Background(), ctxLogger, su.logger)
 	// Do not start until status will be running
-	status := su.getCombinedStatus()
+	status := su.getCombinedStatus(ctx)
 	if status != AgentRunning && su.immediateStatusChange {
 		return false
 	}
@@ -52,33 +63,37 @@ func (su *agentStatusUpdate) Status() error {
 }
 
 func (su *agentStatusUpdate) Execute() error {
+	id, _ := uuid.NewUUID()
+	log := su.logger.WithField("statusUpdateID", id)
+
+	ctx := context.WithValue(context.Background(), ctxLogger, log)
 	// only one status update should execute at a time
-	su.logger.Tracef("get status update lock %s", su.typeOfStatusUpdate)
+	log.Tracef("get status update lock %s", su.typeOfStatusUpdate)
 	updateStatusMutex.Lock()
 	defer func() {
-		su.logger.Tracef("return status update lock %s", su.typeOfStatusUpdate)
+		log.Tracef("return status update lock %s", su.typeOfStatusUpdate)
 		updateStatusMutex.Unlock()
 	}()
 
 	// get the status from the health check and jobs
-	status := su.getCombinedStatus()
-	su.logger.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
+	status := su.getCombinedStatus(ctx)
+	log.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
 
-	// Check to see if this is the immediate status change
-	// If change of status is coming FROM or TO 'unhealthy', then report this immediately
-	if previousStatus != status && (su.immediateStatusChange && previousStatus == AgentRunning || status == AgentRunning) {
-		su.logger.
-			WithField("previous-status", previousStatus).
-			WithField("new-status", status).
-			Debug("status is changing")
-		UpdateStatusWithPrevious(status, previousStatus, "")
-	} else if su.typeOfStatusUpdate == periodic {
-		// If its a periodic check, tickle last activity so that UI shows agent is still alive.  Not needed for immediate check.
-		su.logger.
+	if su.typeOfStatusUpdate == periodic {
+		// always update on the periodic status update, even if the status has not changed
+		log.
 			WithField("previous-status", previousStatus).
 			WithField("new-status", status).
 			Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
-		UpdateStatusWithPrevious(status, previousStatus, "")
+		UpdateStatusWithContext(ctx, status, previousStatus, "")
+		su.previousActivityTime = su.currentActivityTime
+	} else if previousStatus != status {
+		// if the status has changed then report that on the immediate check
+		log.
+			WithField("previous-status", previousStatus).
+			WithField("new-status", status).
+			Debug("status is changing")
+		UpdateStatusWithContext(ctx, status, previousStatus, "")
 		su.previousActivityTime = su.currentActivityTime
 	}
 
@@ -88,23 +103,23 @@ func (su *agentStatusUpdate) Execute() error {
 
 // StartAgentStatusUpdate - starts 2 separate jobs that runs the periodic status updates and immediate status updates
 func StartAgentStatusUpdate() {
-	if err := runStatusUpdateCheck(); err != nil {
-		log.Errorf("not starting status update jobs: %s", err)
-		return
-	}
-	startPeriodicStatusUpdate()
-	startImmediateStatusUpdate()
-}
-
-// startPeriodicStatusUpdate - start periodic status updates based on report activity frequency config
-func startPeriodicStatusUpdate() {
-	interval := agent.cfg.GetReportActivityFrequency()
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("agentStatusUpdate")
+	if err := runStatusUpdateCheck(); err != nil {
+		logger.WithError(err).Error("not starting status update jobs")
+		return
+	}
+	startPeriodicStatusUpdate(logger)
+	startImmediateStatusUpdate(logger)
+}
+
+// startPeriodicStatusUpdate - start periodic status updates based on report activity frequency config
+func startPeriodicStatusUpdate(logger log.FieldLogger) {
+	interval := agent.cfg.GetReportActivityFrequency()
 	periodicStatusUpdate = &agentStatusUpdate{
 		typeOfStatusUpdate: periodic,
-		logger:             logger,
+		logger:             logger.WithField("status-check", periodic),
 	}
 	_, err := jobs.RegisterIntervalJobWithName(periodicStatusUpdate, interval, "Status Update")
 
@@ -115,15 +130,12 @@ func startPeriodicStatusUpdate() {
 
 // startImmediateStatusUpdate - start job that will 'immediately' update status.  NOTE : By 'immediately', this means currently 10 seconds.
 // The time interval for this job is hard coded.
-func startImmediateStatusUpdate() {
+func startImmediateStatusUpdate(logger log.FieldLogger) {
 	interval := 10 * time.Second
-	logger := log.NewFieldLogger().
-		WithPackage("sdk.agent").
-		WithComponent("agentStatusUpdate")
 	immediateStatusUpdate = &agentStatusUpdate{
 		immediateStatusChange: true,
 		typeOfStatusUpdate:    immediate,
-		logger:                logger,
+		logger:                logger.WithField("status-check", immediate),
 	}
 	_, err := jobs.RegisterDetachedIntervalJobWithName(immediateStatusUpdate, interval, "Immediate Status Update")
 
@@ -132,11 +144,12 @@ func startImmediateStatusUpdate() {
 	}
 }
 
-func (su *agentStatusUpdate) getCombinedStatus() string {
-	status := su.getJobPoolStatus()
-	hcStatus := su.getHealthcheckStatus()
+func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) string {
+	log := ctx.Value(ctxLogger).(log.FieldLogger)
+	status := su.getJobPoolStatus(ctx)
+	hcStatus := su.getHealthcheckStatus(ctx)
 	if hcStatus != AgentRunning {
-		su.logger.
+		log.
 			WithField("pool-status", status).
 			WithField("healthcheck-status", hcStatus).
 			Info("agent not in running status")
@@ -146,8 +159,10 @@ func (su *agentStatusUpdate) getCombinedStatus() string {
 }
 
 // getJobPoolStatus
-func (su *agentStatusUpdate) getJobPoolStatus() string {
+func (su *agentStatusUpdate) getJobPoolStatus(ctx context.Context) string {
+	log := ctx.Value(ctxLogger).(log.FieldLogger)
 	status := jobs.GetStatus()
+	log.Tracef("status from pool: %s", status)
 
 	// update the status only if not running
 	if status == jobs.PoolStatusStopped.String() {
@@ -157,8 +172,10 @@ func (su *agentStatusUpdate) getJobPoolStatus() string {
 }
 
 // getHealthcheckStatus
-func (su *agentStatusUpdate) getHealthcheckStatus() string {
+func (su *agentStatusUpdate) getHealthcheckStatus(ctx context.Context) string {
+	log := ctx.Value(ctxLogger).(log.FieldLogger)
 	hcStatus := hc.GetGlobalStatus()
+	log.Tracef("status from healthcheck: %s", hcStatus)
 
 	// update the status only if not running
 	if hcStatus == string(hc.FAIL) {

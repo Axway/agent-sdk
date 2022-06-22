@@ -12,4 +12,5 @@ const (
 type TransactionDetails struct {
 	Status string
 	APIID  string
+	SubID  string
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/gorhill/cronexpr"
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type scheduleJobProps struct {
@@ -80,9 +79,9 @@ func (b *scheduleJob) start() {
 func (b *scheduleJob) stop() {
 	b.stopLog()
 	if b.IsReady() {
-		log.Tracef("writing to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
-		log.Tracef("wrote to %s stop channel", b.GetName())
+		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
 	} else {
 		b.stopReadyChan <- nil
 	}

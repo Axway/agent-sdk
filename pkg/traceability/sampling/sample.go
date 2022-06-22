@@ -1,6 +1,7 @@
 package sampling
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -20,10 +21,22 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	if hasFailedStatus && s.config.ReportAllErrors {
 		return true
 	}
-	if s.config.PerAPI && details.APIID != "" {
+
+	sampleGlobal := s.shouldSampleWithCounter(globalCounter)
+	perAPIEnabled := s.config.PerAPI && details.APIID != ""
+
+	if s.config.PerSub && details.SubID != "" {
+		if perAPIEnabled {
+			s.shouldSampleWithCounter(details.APIID)
+		}
+		return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
+	}
+
+	if perAPIEnabled {
 		return s.shouldSampleWithCounter(details.APIID)
 	}
-	return s.shouldSampleWithCounter(globalCounter)
+
+	return sampleGlobal
 }
 
 func (s *sample) shouldSampleWithCounter(counterName string) bool {
