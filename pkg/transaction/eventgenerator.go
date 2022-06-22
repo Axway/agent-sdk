@@ -148,12 +148,13 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	if summaryEvent.TransactionSummary != nil {
 		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
 		if txnSummary != nil {
+
 			jsonData, err := json.Marshal(&txnSummary)
 			if err != nil {
 				return nil, err
-			} else {
-				fmt.Println(string(jsonData))
 			}
+			fmt.Println(string(jsonData))
+
 			summaryEvent.TransactionSummary = txnSummary
 		}
 	}
