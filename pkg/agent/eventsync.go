@@ -34,7 +34,8 @@ func NewEventSync() (*EventSync, error) {
 	if runMigrations {
 		// add attribute migration to migrations
 		attributeMigration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
-		migrations = append(migrations, attributeMigration)
+		ardMigration := migrate.NewArdMigration(agent.apicClient, agent.cfg)
+		migrations = append(migrations, attributeMigration, ardMigration)
 
 		if isMpEnabled {
 			// add marketplace migration to migrations
