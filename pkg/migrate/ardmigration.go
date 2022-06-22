@@ -20,7 +20,7 @@ func NewArdMigration(client client, cfg config.CentralConfig) *ArdMigration {
 	}
 }
 
-// Migrate migrates an AccessRequestDefinition
+// Migrate checks an AccessRequestDefinition for the "scopes" key in the schema, and removes it if it is found.
 func (m *ArdMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	if ri.Kind != mv1a.AccessRequestDefinitionGVK().Kind {
 		return ri, nil
@@ -32,24 +32,26 @@ func (m *ArdMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, e
 		return ri, err
 	}
 
-	if properties, ok := ard.Spec.Schema["properties"]; ok {
-		if props, ok := properties.(map[string]interface{}); ok {
-			if _, ok := props["scopes"]; ok {
-				delete(props, "scopes")
-				ard.Spec.Schema["properties"] = props
-
-				res, err := m.client.UpdateResourceInstance(ard)
-				if err != nil {
-					return ri, err
-				}
-				ri = res
-			}
+	scopes := m.getScopes(ard.Spec.Schema)
+	if scopes != nil {
+		res, err := m.client.UpdateResourceInstance(ard)
+		if err != nil {
+			return ri, err
 		}
+		ri = res
 	}
 
 	return ri, nil
 }
 
-func (m *ArdMigration) updateARD(ard *mv1a.AccessRequestDefinition) (*v1.ResourceInstance, error) {
-	return m.client.UpdateResourceInstance(ard)
+func (m *ArdMigration) getScopes(schema map[string]interface{}) interface{} {
+	if properties, ok := schema["properties"]; ok {
+		if props, ok := properties.(map[string]interface{}); ok {
+			if scopes, ok := props["scopes"]; ok {
+				delete(props, "scopes")
+				return scopes
+			}
+		}
+	}
+	return nil
 }
