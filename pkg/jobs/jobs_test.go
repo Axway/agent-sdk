@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -9,9 +10,12 @@ import (
 
 func TestJobLocks(t *testing.T) {
 	failJob := &intervalJobImpl{
-		name:    "FailedIntervalJob",
-		runTime: 50 * time.Millisecond,
-		ready:   true,
+		name:        "FailedIntervalJob",
+		runTime:     50 * time.Millisecond,
+		ready:       true,
+		jobMutex:    &sync.Mutex{},
+		statusMutex: &sync.Mutex{},
+		readyMutex:  &sync.Mutex{},
 	}
 	jobID, _ := RegisterIntervalJob(failJob, 10*time.Millisecond)
 
@@ -28,7 +32,7 @@ func TestJobLocks(t *testing.T) {
 	// Unlock the job then sleep another 120 milliseconds to check more executions have happened
 	JobUnlock(jobID) // Unlock the job
 	time.Sleep(120 * time.Millisecond)
-	newExecutions = failJob.executions
+	newExecutions = failJob.getExecutions()
 	assert.Greater(t, newExecutions, curExecutions, "The job did not run more executions after unlocking")
 
 	// Run test again using the jobExecution to get the locks
@@ -48,7 +52,6 @@ func TestJobLocks(t *testing.T) {
 	// Unlock the job then sleep another 120 milliseconds to check more executions have happened
 	jobExecution.Unlock() // Unlock the job
 	time.Sleep(120 * time.Millisecond)
-	newExecutions = failJob.executions
+	newExecutions = failJob.getExecutions()
 	assert.Greater(t, newExecutions, curExecutions, "The job did not run more executions after unlocking")
-
 }

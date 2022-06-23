@@ -36,17 +36,19 @@ func (b *retryJob) start() {
 		b.executeJob()
 		if b.err == nil {
 			// job was successful
+			b.SetStatus(JobStatusFinished)
 			return
 		}
 		b.setExecutionRetryError()
 		b.SetStatus(JobStatusRetrying)
 	}
+
 	b.SetStatus(JobStatusFailed)
 }
 
 //stop - noop
 func (b *retryJob) stop() {
-	b.stop()
+	b.stopLog()
 	return
 }
 

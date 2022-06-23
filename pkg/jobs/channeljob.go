@@ -1,9 +1,14 @@
 package jobs
 
+import (
+	"sync"
+)
+
 type channelJobProps struct {
-	signalStop chan interface{}
-	stopChan   chan bool
-	isStopped  bool
+	signalStop  chan interface{}
+	stopChan    chan bool
+	isStopped   bool
+	stoppedLock *sync.Mutex
 }
 
 type channelJob struct {
@@ -16,8 +21,9 @@ func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string,
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
 		channelJobProps{
-			signalStop: signalStop,
-			stopChan:   make(chan bool),
+			signalStop:  signalStop,
+			stopChan:    make(chan bool),
+			stoppedLock: &sync.Mutex{},
 		},
 	}
 
@@ -30,8 +36,9 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
 		channelJobProps{
-			signalStop: signalStop,
-			stopChan:   make(chan bool),
+			signalStop:  signalStop,
+			stopChan:    make(chan bool),
+			stoppedLock: &sync.Mutex{},
 		},
 	}
 
@@ -41,14 +48,14 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 
 func (b *channelJob) handleExecution() {
 	// Execute the job
-	b.err = b.job.Execute()
-	if b.err != nil {
+	b.setError(b.job.Execute())
+	if b.getError() != nil {
 		b.setExecutionError()
 		b.baseJob.logger.Error(b.err)
 		b.stop() // stop the job on error
 		b.consecutiveFails++
 	}
-	b.consecutiveFails = 0
+	b.setConsecutiveFails(0)
 }
 
 //start - calls the Execute function from the Job definition
@@ -57,7 +64,7 @@ func (b *channelJob) start() {
 	b.waitForReady()
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
 	b.SetStatus(JobStatusRunning)
-	b.isStopped = false
+	b.setIsStopped(false)
 
 	// Wait for a write on the stop channel
 	<-b.stopChan
@@ -65,9 +72,21 @@ func (b *channelJob) start() {
 	b.SetStatus(JobStatusStopped)
 }
 
+func (b *channelJob) getIsStopped() bool {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	return b.isStopped
+}
+
+func (b *channelJob) setIsStopped(stopped bool) {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	b.isStopped = stopped
+}
+
 //stop - write to the stop channel to stop the execution loop
 func (b *channelJob) stop() {
-	if b.isStopped {
+	if b.getIsStopped() {
 		b.baseJob.logger.Tracef("job has already been stopped")
 		return
 	}
@@ -79,6 +98,6 @@ func (b *channelJob) stop() {
 	} else {
 		b.stopReadyChan <- nil
 	}
-	b.isStopped = true
+	b.setIsStopped(true)
 	b.UnsetIsReady()
 }

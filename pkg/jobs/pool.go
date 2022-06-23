@@ -21,6 +21,8 @@ type Pool struct {
 	cronJobsMapLock         sync.Mutex
 	detachedCronJobsMapLock sync.Mutex
 	poolStatusLock          sync.Mutex
+	backoffLock             sync.Mutex
+	failedJobLock           sync.Mutex
 	failJobChan             chan string
 	stopJobsChan            chan bool
 	backoff                 *backoff
@@ -52,6 +54,20 @@ func newPool() *Pool {
 	return &newPool
 }
 
+// getBackoff - get the job backoff
+func (p *Pool) getBackoff() *backoff {
+	p.backoffLock.Lock()
+	defer p.backoffLock.Unlock()
+	return p.backoff
+}
+
+// setBackoff - set the job backoff
+func (p *Pool) setBackoff(backoff *backoff) {
+	p.backoffLock.Lock()
+	defer p.backoffLock.Unlock()
+	p.backoff = backoff
+}
+
 // recordJob - Adds a job to the jobs map
 func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
@@ -64,20 +80,56 @@ func (p *Pool) recordJob(job JobExecution) string {
 	return job.GetID()
 }
 
-// recordCronJob - Adds a job to the cron jobs map
-func (p *Pool) recordCronJob(job JobExecution) string {
+func (p *Pool) setCronJob(job JobExecution) {
 	p.cronJobsMapLock.Lock()
 	defer p.cronJobsMapLock.Unlock()
 	p.cronJobs[job.GetID()] = job
+}
+
+func (p *Pool) getCronJob(jobID string) (JobExecution, bool) {
+	p.cronJobsMapLock.Lock()
+	defer p.cronJobsMapLock.Unlock()
+	value, exists := p.cronJobs[jobID]
+	return value, exists
+}
+
+func (p *Pool) getCronJobs() map[string]JobExecution {
+	p.cronJobsMapLock.Lock()
+	defer p.cronJobsMapLock.Unlock()
+
+	// Create the target map
+	newMap := make(map[string]JobExecution)
+
+	// Copy from the original map to the target map to avoid race conditions
+	for key, value := range p.cronJobs {
+		newMap[key] = value
+	}
+	return newMap
+}
+
+func (p *Pool) setDetachedCronJob(job JobExecution) {
+	p.detachedCronJobsMapLock.Lock()
+	defer p.detachedCronJobsMapLock.Unlock()
+	p.detachedCronJobs[job.GetID()] = job
+}
+
+func (p *Pool) getDetachedCronJob(jobID string) (JobExecution, bool) {
+	p.detachedCronJobsMapLock.Lock()
+	defer p.detachedCronJobsMapLock.Unlock()
+	value, exists := p.detachedCronJobs[jobID]
+	return value, exists
+}
+
+// recordCronJob - Adds a job to the cron jobs map
+func (p *Pool) recordCronJob(job JobExecution) string {
+	p.setCronJob(job)
 	p.logger.Tracef("added new cron job, now running %v cron jobs", len(p.cronJobs))
 	return p.recordJob(job)
 }
 
 // recordDetachedCronJob - Adds a job to the detached cron jobs map
 func (p *Pool) recordDetachedCronJob(job JobExecution) string {
-	p.detachedCronJobsMapLock.Lock()
-	defer p.detachedCronJobsMapLock.Unlock()
-	p.detachedCronJobs[job.GetID()] = job
+	p.setDetachedCronJob(job)
 	p.logger.Tracef("added new cron job, now running %v detached cron jobs", len(p.detachedCronJobs))
 	return p.recordJob(job)
 }
@@ -93,16 +145,12 @@ func (p *Pool) removeJob(jobID string) {
 	}
 
 	// remove from cron jobs, if present
-	p.cronJobsMapLock.Lock()
-	defer p.cronJobsMapLock.Unlock()
-	if _, found := p.cronJobs[jobID]; found {
+	if _, found := p.getCronJob(jobID); found {
 		delete(p.cronJobs, jobID)
 	}
 
 	// remove from detached cron jobs, if present
-	p.detachedCronJobsMapLock.Lock()
-	defer p.detachedCronJobsMapLock.Unlock()
-	if _, found := p.detachedCronJobs[jobID]; found {
+	if _, found := p.getDetachedCronJob(jobID); found {
 		delete(p.detachedCronJobs, jobID)
 	}
 }
@@ -225,6 +273,18 @@ func (p *Pool) JobUnlock(id string) {
 	p.jobs[id].Unlock()
 }
 
+func (p *Pool) getFailedJob() string {
+	p.failedJobLock.Lock()
+	defer p.failedJobLock.Unlock()
+	return p.failedJob
+}
+
+func (p *Pool) setFailedJob(job string) {
+	p.failedJobLock.Lock()
+	defer p.failedJobLock.Unlock()
+	p.failedJob = job
+}
+
 // GetJobStatus - Returns the Status of the Job based on the id
 func (p *Pool) GetJobStatus(id string) string {
 	return p.jobs[id].GetStatus().String()
@@ -250,7 +310,7 @@ func (p *Pool) SetStatus(status PoolStatus) {
 func (p *Pool) startAll() bool {
 	// Check that all are ready before starting
 	p.logger.Debug("Checking for all cron jobs to be ready")
-	for _, job := range p.cronJobs {
+	for _, job := range p.getCronJobs() {
 		if !job.Ready() {
 			p.logger.WithField("jobID", job.GetID()).Debugf("job is not ready")
 			return false
@@ -258,7 +318,7 @@ func (p *Pool) startAll() bool {
 	}
 	p.logger.Debug("Starting all cron jobs")
 	p.SetStatus(PoolStatusRunning)
-	for _, job := range p.cronJobs {
+	for _, job := range p.getCronJobs() {
 		go job.start()
 	}
 	return true
@@ -274,11 +334,9 @@ func (p *Pool) stopAll() {
 	// Must do the map copy so that the loop can run without a race condition.
 	// Can NOT do a defer on this unlock, or will get stuck
 	mapCopy := make(map[string]JobExecution)
-	p.cronJobsMapLock.Lock()
-	for key, value := range p.cronJobs {
+	for key, value := range p.getCronJobs() {
 		mapCopy[key] = value
 	}
-	p.cronJobsMapLock.Unlock()
 	for _, job := range mapCopy {
 		p.logger.WithField("jobName", job.GetName()).Trace("stopping job")
 		job.stop()
@@ -288,7 +346,7 @@ func (p *Pool) stopAll() {
 		p.logger.WithField("jobName", job.GetName()).Tracef("finished stopping job")
 	}
 	for i := 1; i < maxErrors; i++ {
-		p.backoff.increaseTimeout()
+		p.getBackoff().increaseTimeout()
 	}
 }
 
@@ -300,13 +358,13 @@ func (p *Pool) jobChecker() {
 		select {
 		case <-ticker.C:
 			go func() {
-				for _, job := range p.cronJobs {
+				for _, job := range p.getCronJobs() {
 					job.updateStatus()
 				}
 			}()
 		case failedJob := <-p.failJobChan:
 			if p.GetStatus() == PoolStatusRunning.String() {
-				p.failedJob = failedJob // this is the job for the current fail loop
+				p.setFailedJob(failedJob) // this is the job for the current fail loop
 				p.stopJobsChan <- true
 			}
 		}
@@ -320,21 +378,23 @@ func (p *Pool) watchJobs() {
 		if p.GetStatus() == PoolStatusRunning.String() {
 			// The pool is running, wait for any signal that a job went down
 			<-p.stopJobsChan
-			p.logger.
-				WithField("jobName", p.cronJobs[p.failedJob].GetName()).
-				WithField("failed job", p.failedJob).
-				Debug("Job failed, stop all jobs")
+			if job, found := p.getCronJob(p.getFailedJob()); found {
+				p.logger.
+					WithField("jobName", job.GetName()).
+					WithField("failed job", p.getFailedJob()).
+					Debug("Job failed, stop all jobs")
+			}
 			p.stopAll()
 		} else {
-			if p.failedJob != "" {
-				p.logger.Debugf("Pool not running, start all jobs in %v seconds", p.backoff.getCurrentTimeout())
-				p.backoff.sleep()
+			if p.getFailedJob() != "" {
+				p.logger.Debugf("Pool not running, start all jobs in %v seconds", p.getBackoff().getCurrentTimeout())
+				p.getBackoff().sleep()
 			}
 			// attempt to restart all jobs
 			if p.startAll() {
-				p.backoff.reset()
+				p.getBackoff().reset()
 			} else {
-				p.backoff.increaseTimeout()
+				p.getBackoff().increaseTimeout()
 			}
 		}
 	}
