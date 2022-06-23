@@ -13,6 +13,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -20,6 +21,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -221,15 +223,26 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	if !c.usageConfig.CanPublishMetric() {
 		return nil // no need to update metrics with publish off
 	}
+	// set defaults
+	// apiMetric := &APIMetric{}
+	consumerDetails := &models.ConsumerDetails{}
+	providerDetails := models.ProviderDetails{}
 
 	cacheManager := agent.GetCacheManager()
 
-	// Lookup Managed App
+	// Lookup Access Request and Managed App
 	apiID := detail.APIDetails.ID
-	stage := detail.APIDetails.Stage
 
-	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
-	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	// Go get the access request and managed app
+	accessRequest, managedApp := c.getAccessRequestAndManagedApp(cacheManager, detail)
+	if accessRequest != nil && managedApp != nil {
+		// Update consumer details
+		consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
+
+		// Update provider details
+		providerDetails = transutil.UpdateWithProviderDetails(accessRequest, managedApp, c.logger)
+		// return apiMetric //TODO SDB - what if this comes back nil?
+	}
 
 	subRef := v1.Reference{
 		ID:   unknown,
@@ -267,18 +280,58 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription: c.createSubscriptionDetail(subRef),
-			App:          c.createAppDetail(managedApp),
-			API:          c.createAPIDetail(detail.APIDetails, accessRequest),
-			StatusCode:   statusCode,
-			Status:       c.getStatusText(statusCode),
-			StartTime:    now(),
+			Subscription:    c.createSubscriptionDetail(subRef),
+			App:             c.createAppDetail(managedApp),
+			API:             c.createAPIDetail(detail.APIDetails, accessRequest),
+			StatusCode:      statusCode,
+			Status:          c.getStatusText(statusCode),
+			StartTime:       now(),
+			ConsumerDetails: consumerDetails,
+			ProviderDetails: providerDetails,
 		}
 	}
 	histogram.Update(detail.Duration)
 	c.storage.updateMetric(histogram, statusMap[statusCode])
 
 	return statusMap[statusCode]
+}
+
+// getAccessRequest -
+func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail Detail) (*v1alpha1.AccessRequest, *v1.ResourceInstance) {
+
+	c.logger.
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("stage", detail.APIDetails.Stage).
+		Trace("metric collector information")
+
+	// get the managed application
+	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
+	if managedApp == nil {
+		c.logger.
+			WithField("appName", detail.AppDetails.Name).
+			Debug("could not get managed application by name, return empty API metrics")
+		return nil, nil
+	}
+	c.logger.
+		WithField("appName", detail.AppDetails.Name).
+		WithField("managed-app-name", managedApp.Name).
+		Trace("managed application info")
+
+	// get the access request
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, detail.APIDetails.ID, detail.APIDetails.Stage)
+	if accessRequest == nil {
+		c.logger.
+			Debug("could not get access request, return empty API metrics")
+		return nil, nil
+	}
+	c.logger.
+		WithField("managed-app-name", managedApp.Name).
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("stage", detail.APIDetails.Stage).
+		WithField("access-request-name", accessRequest.Name).
+		Trace("managed application info")
+
+	return accessRequest, managedApp
 }
 
 func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDetails {

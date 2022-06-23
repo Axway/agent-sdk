@@ -78,7 +78,7 @@ type Summary struct {
 	EntryPoint             *EntryPoint              `json:"entryPoint,omitempty"`
 	IsInMetricEvent        bool                     `json:"isInMetricEvent,omitempty"`
 	ConsumerDetails        *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
-	DataplaneDetails       *models.DataplaneDetails `json:"dataplaneDetails,omitempty" `
+	DataplaneDetails       *models.DataplaneDetails `json:"dataplaneDetails,omitempty"`
 }
 
 // Product - Represents the product used in the transaction summary event

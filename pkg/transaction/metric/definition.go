@@ -1,6 +1,10 @@
 package metric
 
-import "time"
+import (
+	"time"
+
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
+)
 
 // use a variable for this to fake it for tests
 var now = time.Now
@@ -55,15 +59,18 @@ type APIDetails struct {
 
 // APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	Subscription SubscriptionDetails `json:"subscription"`
-	App          AppDetails          `json:"application"`
-	API          APIDetails          `json:"api"`
-	StatusCode   string              `json:"statusCode"`
-	Status       string              `json:"status"`
-	Count        int64               `json:"count"`
-	Response     ResponseMetrics     `json:"response"`
-	Observation  ObservationDetails  `json:"observation"`
-	StartTime    time.Time           `json:"-"`
+	models.ProviderDetails
+	Subscription     SubscriptionDetails      `json:"subscription"`
+	App              AppDetails               `json:"application"`
+	API              APIDetails               `json:"api"`
+	StatusCode       string                   `json:"statusCode"`
+	Status           string                   `json:"status"`
+	Count            int64                    `json:"count"`
+	Response         ResponseMetrics          `json:"response"`
+	Observation      ObservationDetails       `json:"observation"`
+	StartTime        time.Time                `json:"-"`
+	ConsumerDetails  *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
+	DataplaneDetails *models.DataplaneDetails `json:"dataplaneDetails,omitempty"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -78,13 +85,16 @@ func (a *APIMetric) GetType() string {
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	App          AppDetails          `json:"app,omitempty"`
-	Subscription SubscriptionDetails `json:"subscription,omitempty"`
-	API          APIDetails          `json:"api"`
-	StatusCode   string              `json:"statusCode"`
-	Count        int64               `json:"count"`
-	Values       []int64             `json:"values"`
-	StartTime    time.Time           `json:"startTime"`
+	models.ProviderDetails
+	App              AppDetails               `json:"app,omitempty"`
+	Subscription     SubscriptionDetails      `json:"subscription,omitempty"`
+	API              APIDetails               `json:"api"`
+	StatusCode       string                   `json:"statusCode"`
+	Count            int64                    `json:"count"`
+	Values           []int64                  `json:"values"`
+	StartTime        time.Time                `json:"startTime"`
+	ConsumerDetails  *models.ConsumerDetails  `json:"consumerDetails,omitempty"`
+	DataplaneDetails *models.DataplaneDetails `json:"dataplaneDetails,omitempty"`
 }
 
 // V4EventDistribution - represents V7 distribution
