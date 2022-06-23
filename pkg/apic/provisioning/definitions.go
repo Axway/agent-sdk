@@ -89,3 +89,39 @@ type Provisioning interface {
 	CredentialDeprovision(CredentialRequest) RequestStatus
 	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
 }
+
+// QuotaInterval is the quota limit
+type QuotaInterval int
+
+const (
+	// The supported limits
+	Unsupported QuotaInterval = iota + 1
+	Daily
+	Weekly
+	Monthly
+	Annually
+)
+
+// String returns the string value of the State
+func (q QuotaInterval) String() string {
+	return map[QuotaInterval]string{
+		Daily:       "daily",
+		Weekly:      "weekly",
+		Monthly:     "monthly",
+		Annually:    "annually",
+		Unsupported: "",
+	}[q]
+}
+
+// QuotaLimitFromString returns the quota limit represented by the string sent in
+func QuotaLimitFromString(limit string) QuotaInterval {
+	if q, ok := map[string]QuotaInterval{
+		"daily":    Daily,
+		"weekly":   Weekly,
+		"monthly":  Monthly,
+		"annually": Annually,
+	}[limit]; ok {
+		return q
+	}
+	return Unsupported
+}

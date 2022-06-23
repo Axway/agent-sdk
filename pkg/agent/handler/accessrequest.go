@@ -269,6 +269,7 @@ func (h *accessRequestHandler) newReq(ctx context.Context, ar *mv1.AccessRequest
 		instanceDetails: util.GetAgentDetails(instance),
 		managedApp:      ar.Spec.ManagedApplication,
 		id:              ar.Metadata.ID,
+		quota:           ar.Spec.Quota,
 	}, nil
 }
 
@@ -280,6 +281,7 @@ type provAccReq struct {
 	provData        interface{}
 	managedApp      string
 	id              string
+	quota           *mv1.AccessRequestSpecQuota
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -327,4 +329,20 @@ func (r provAccReq) GetInstanceDetails() map[string]interface{} {
 	}
 
 	return r.instanceDetails
+}
+
+func (r provAccReq) GetQuotaLimit() int64 {
+	if r.quota == nil {
+		return -1
+	}
+
+	return int64(r.quota.Limit)
+}
+
+func (r provAccReq) GetQuotaInterval() prov.QuotaInterval {
+	if r.quota == nil {
+		return prov.Unsupported
+	}
+
+	return prov.QuotaLimitFromString(r.quota.Interval)
 }
