@@ -83,6 +83,8 @@ type MockAccessRequest struct {
 	InstanceDetails               map[string]interface{}
 	AccessRequestData             map[string]interface{}
 	AccessRequestProvisioningData interface{}
+	QuotaLimit                    int64
+	QuotaInterval                 provisioning.QuotaInterval
 }
 
 func (m MockAccessRequest) GetID() string {
@@ -111,6 +113,25 @@ func (m MockAccessRequest) GetApplicationDetailsValue(key string) string {
 
 func (m MockAccessRequest) GetInstanceDetails() map[string]interface{} {
 	return m.InstanceDetails
+}
+
+func (m MockAccessRequest) GetQuota() provisioning.Quota {
+	if m.QuotaInterval == 0 {
+		return nil
+	}
+	return m
+}
+
+func (m MockAccessRequest) GetLimit() int64 {
+	return m.QuotaLimit
+}
+
+func (m MockAccessRequest) GetInterval() provisioning.QuotaInterval {
+	return m.QuotaInterval
+}
+
+func (m MockAccessRequest) GetIntervalString() string {
+	return m.QuotaInterval.String()
 }
 
 type MockRequestStatus struct {
