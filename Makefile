@@ -28,7 +28,7 @@ dep: resolve-dependencies
 
 test: dep
 	@go vet ${GO_TEST_LIST}
-	@go test -short -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
+	@go test -short -race -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
 
 test-sonar: dep
 	@go vet ${GO_PKG_LIST}
