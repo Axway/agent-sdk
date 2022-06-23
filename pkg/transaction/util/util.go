@@ -280,7 +280,7 @@ func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		product.ID = productRef.ID
 		product.Name = productRef.Name
 	}
-	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK()) //TODO SDB
 
 	log.
 		WithField("product-id", product.ID).
