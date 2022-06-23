@@ -16,10 +16,8 @@ type Quota interface {
 type QuotaInterval int
 
 const (
-	// Unsupported - default if a quota interval is not set
-	Unsupported QuotaInterval = iota + 1
 	// Daily -
-	Daily
+	Daily QuotaInterval = iota + 1
 	// Weekly -
 	Weekly
 	// Monthly -
@@ -31,16 +29,15 @@ const (
 // String returns the string value of the State
 func (q QuotaInterval) String() string {
 	return map[QuotaInterval]string{
-		Daily:       "daily",
-		Weekly:      "weekly",
-		Monthly:     "monthly",
-		Annually:    "annually",
-		Unsupported: "",
+		Daily:    "daily",
+		Weekly:   "weekly",
+		Monthly:  "monthly",
+		Annually: "annually",
 	}[q]
 }
 
-// quotaLimitFromString returns the quota limit represented by the string sent in
-func quotaLimitFromString(limit string) QuotaInterval {
+// quotaIntervalFromString returns the quota limit represented by the string sent in
+func quotaIntervalFromString(limit string) QuotaInterval {
 	if q, ok := map[string]QuotaInterval{
 		"daily":    Daily,
 		"weekly":   Weekly,
@@ -49,7 +46,7 @@ func quotaLimitFromString(limit string) QuotaInterval {
 	}[limit]; ok {
 		return q
 	}
-	return Unsupported
+	return -1
 }
 
 type quota struct {
@@ -62,9 +59,13 @@ func NewQuotaFromAccessRequest(ar *v1alpha1.AccessRequest) Quota {
 	if ar.Spec.Quota == nil {
 		return nil
 	}
+	interval := quotaIntervalFromString(ar.Spec.Quota.Interval)
+	if interval == -1 {
+		return nil
+	}
 	return &quota{
 		limit:    int64(ar.Spec.Quota.Limit),
-		interval: quotaLimitFromString(ar.Spec.Quota.Interval),
+		interval: interval,
 	}
 }
 
