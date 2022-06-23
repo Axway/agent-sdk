@@ -17,6 +17,7 @@ func TestPollerRegisterWatch(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
 	wt := mv1.NewWatchTopic("mocktopic")
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
+	seq.SetSequence(1)
 	mockH := &mockHarvester{}
 
 	poller := newPollExecutor(cfg.PollInterval, withHarvester(harvesterConfig{

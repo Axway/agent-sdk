@@ -21,6 +21,7 @@ type pollExecutor struct {
 	cancel        context.CancelFunc
 	interval      time.Duration
 	onStop        onClientStopCb
+	isReady       bool
 }
 
 type newPollExecutorFunc func(interval time.Duration, options ...executorOpt) *pollExecutor
@@ -57,6 +58,15 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 		return
 	}
 
+	if m.sequence.GetSequence() == 0 {
+		go func() {
+			m.onHarvesterErr()
+			m.Stop()
+			errChan <- fmt.Errorf("do not have a sequence id, stopping poller")
+		}()
+		return
+	}
+
 	go func() {
 		err := m.sync(m.topicSelfLink, eventChan)
 		m.Stop()
@@ -71,6 +81,7 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 		return err
 	}
 
+	m.isReady = true
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -111,10 +122,11 @@ func (m *pollExecutor) onHarvesterErr() {
 func (m *pollExecutor) Stop() {
 	m.timer.Stop()
 	m.cancel()
+	m.isReady = false
 	m.logger.Debug("poller has been stopped")
 }
 
 // Status returns a bool indicating the status of the poller
 func (m *pollExecutor) Status() bool {
-	return m.ctx.Err() == nil
+	return m.ctx.Err() == nil && m.isReady
 }

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -384,6 +385,9 @@ func ReadPublicKeyBytes(publicKeyFile string) ([]byte, error) {
 // inspired from jwt.ParseRSAPrivateKeyFromPEMWithPassword
 func parseRSAPrivateKeyFromPEMWithBytePassword(key []byte, password []byte) (*rsa.PrivateKey, error) {
 	var err error
+
+	// trim any spaces from the password
+	password = bytes.TrimSpace(password)
 
 	// Parse PEM block
 	var block *pem.Block

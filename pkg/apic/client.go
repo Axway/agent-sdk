@@ -762,12 +762,8 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *v1.ResourceInstance, finali
 		}
 		res.Finalizers = cleanedFinalizer
 	}
-	bts, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
 
-	return c.UpdateResource(res.GetSelfLink(), bts)
+	return c.UpdateResourceInstance(res)
 }
 
 // UpdateResource updates a resource

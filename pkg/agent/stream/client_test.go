@@ -379,12 +379,14 @@ func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 }
 
 func TestClientOptions(t *testing.T) {
+	sequence := &mockSequence{}
+	sequence.SetSequence(1)
 	sc, _ := NewStreamerClient(
 		&mock.Client{},
 		config.NewCentralConfig(config.DiscoveryAgent),
 		&mockTokenGetter{},
 		nil,
-		WithHarvester(&mockHarvester{}, &mockSequence{}),
+		WithHarvester(&mockHarvester{}, sequence),
 		WithEventSyncError(func() {
 		}),
 		WithOnStreamConnection(),
@@ -498,12 +500,15 @@ func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64,
 	return 0, nil
 }
 
-type mockSequence struct{}
+type mockSequence struct {
+	seq int64
+}
 
 func (m mockSequence) GetSequence() int64 {
-	return 0
+	return m.seq
 }
 
 func (m mockSequence) SetSequence(sequenceID int64) {
+	m.seq = sequenceID
 	return
 }
