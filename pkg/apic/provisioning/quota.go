@@ -2,6 +2,7 @@ package provisioning
 
 import "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
+// Quota - interface for accessing an access requests quota
 type Quota interface {
 	// GetInterval returns the quota interval from within the access request
 	GetInterval() QuotaInterval
@@ -15,11 +16,15 @@ type Quota interface {
 type QuotaInterval int
 
 const (
-	// The supported limits
+	// Unsupported - default if a quota interval is not set
 	Unsupported QuotaInterval = iota + 1
+	// Daily -
 	Daily
+	// Weekly -
 	Weekly
+	// Monthly -
 	Monthly
+	// Annually -
 	Annually
 )
 
@@ -52,6 +57,7 @@ type quota struct {
 	limit    int64
 }
 
+//NewQuotaFromAccessRequest create a Quota interface from an access request or nil if no quota on access request
 func NewQuotaFromAccessRequest(ar *v1alpha1.AccessRequest) Quota {
 	if ar.Spec.Quota == nil {
 		return nil
