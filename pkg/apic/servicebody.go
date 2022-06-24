@@ -1,8 +1,6 @@
 package apic
 
 import (
-	"sort"
-
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
@@ -80,7 +78,7 @@ func (s *ServiceBody) GetScopes() map[string]string {
 	return s.scopes
 }
 
-//GetCredentialRequestDefinitions - returns the array of all credential request policies
+// GetCredentialRequestDefinitions - returns the array of all credential request policies
 func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 	if len(s.credentialRequestPolicies) > 0 {
 		return s.credentialRequestPolicies
@@ -96,37 +94,24 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 	return s.credentialRequestPolicies
 }
 
-func (s *ServiceBody) setAccessRequestDefintion(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+func (s *ServiceBody) setAccessRequestDefinition(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
 	s.accessRequestDefinition = accessRequestDefinition
 	return s.accessRequestDefinition, nil
 }
 
-// GetAccessRequestDefintion -
-func (s *ServiceBody) GetAccessRequestDefintion() *mv1a.AccessRequestDefinition {
+// GetAccessRequestDefinition -
+func (s *ServiceBody) GetAccessRequestDefinition() *mv1a.AccessRequestDefinition {
 	return s.accessRequestDefinition
 }
 
-func (s *ServiceBody) createAccessRequestDefintion() error {
+func (s *ServiceBody) createAccessRequestDefinition() error {
 	oauthScopes := make([]string, 0)
 	for scope := range s.GetScopes() {
 		oauthScopes = append(oauthScopes, scope)
 	}
 	if len(oauthScopes) > 0 {
 		// sort the strings for consistent specs
-		sort.Strings(oauthScopes)
-		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefintion).
-			SetRequestSchema(
-				provisioning.NewSchemaBuilder().
-					AddProperty(
-						provisioning.NewSchemaPropertyBuilder().
-							SetName("scopes").
-							SetLabel("Scopes").
-							IsArray().
-							AddItem(
-								provisioning.NewSchemaPropertyBuilder().
-									SetName("scope").
-									IsString().
-									SetEnumValues(oauthScopes)))).Register()
+		_, err := provisioning.NewAccessRequestBuilder(s.setAccessRequestDefinition).Register()
 		if err != nil {
 			return err
 		}

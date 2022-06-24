@@ -137,22 +137,28 @@ func (p *Pool) recordDetachedCronJob(job JobExecution) string {
 // recordJob - Removes the specified job from jobs map
 func (p *Pool) removeJob(jobID string) {
 	p.jobsMapLock.Lock()
-	defer p.jobsMapLock.Unlock()
 	job, ok := p.jobs[jobID]
 	if ok {
 		job.stop()
 		delete(p.jobs, jobID)
 	}
+	p.jobsMapLock.Unlock()
 
 	// remove from cron jobs, if present
-	if _, found := p.getCronJob(jobID); found {
+	_, found := p.getCronJob(jobID)
+	p.cronJobsMapLock.Lock()
+	if found {
 		delete(p.cronJobs, jobID)
 	}
+	p.cronJobsMapLock.Unlock()
 
 	// remove from detached cron jobs, if present
-	if _, found := p.getDetachedCronJob(jobID); found {
+	_, found = p.getDetachedCronJob(jobID)
+	p.detachedCronJobsMapLock.Lock()
+	if found {
 		delete(p.detachedCronJobs, jobID)
 	}
+	p.detachedCronJobsMapLock.Unlock()
 }
 
 // RegisterSingleRunJob - Runs a single run job
