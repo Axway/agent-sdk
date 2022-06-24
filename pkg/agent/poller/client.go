@@ -2,6 +2,7 @@ package poller
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -25,6 +26,7 @@ type PollClient struct {
 	poller             *pollExecutor
 	newPollManager     newPollExecutorFunc
 	harvesterConfig    harvesterConfig
+	mutex              sync.RWMutex
 }
 
 type harvesterConfig struct {
@@ -63,6 +65,8 @@ func NewPollClient(
 func (p *PollClient) Start() error {
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
 
+	p.mutex.Lock()
+
 	p.listener = p.newListener(
 		eventCh,
 		p.apiClient,
@@ -76,6 +80,8 @@ func (p *PollClient) Start() error {
 		withHarvester(p.harvesterConfig),
 	)
 	p.poller = poller
+
+	p.mutex.Unlock()
 
 	listenCh := p.listener.Listen()
 
@@ -95,6 +101,8 @@ func (p *PollClient) Start() error {
 
 // Status returns an error if the poller is not running
 func (p *PollClient) Status() error {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	if p.poller == nil || p.listener == nil {
 		return fmt.Errorf("harvester polling client is not ready")
 	}

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -28,6 +29,7 @@ type eventProcessorJob struct {
 	jobID         string
 	retryInterval time.Duration
 	name          string
+	mutex         sync.RWMutex
 }
 
 // newEventProcessorJob creates a job for the streamerClient
@@ -70,6 +72,8 @@ func (j *eventProcessorJob) Ready() bool {
 }
 
 func (j *eventProcessorJob) renewRegistration() {
+	j.mutex.Lock()
+	defer j.mutex.Unlock()
 	if j.jobID != "" {
 		jobs.UnregisterJob(j.jobID)
 		j.jobID = ""
