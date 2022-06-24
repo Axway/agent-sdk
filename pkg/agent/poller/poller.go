@@ -59,8 +59,8 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 	}
 
 	if m.sequence.GetSequence() == 0 {
+		m.onHarvesterErr()
 		go func() {
-			m.onHarvesterErr()
 			m.Stop()
 			errChan <- fmt.Errorf("do not have a sequence id, stopping poller")
 		}()
