@@ -14,7 +14,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
-// updateService gets a list of instances for the service and updates their request definitions.
+// UpdateService - gets a list of instances for the service and updates their request definitions.
 func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceMigration) error {
 	revURL := m.Cfg.GetRevisionsURL()
 	q := map[string]string{
@@ -164,19 +164,7 @@ func registerAccessRequestDefinition(scopes map[string]string) (*mv1a.AccessRequ
 	var ard *mv1a.AccessRequestDefinition
 	var err error
 	if len(scopes) > 0 {
-		ard, err = provisioning.NewAccessRequestBuilder(callback).
-			SetRequestSchema(
-				provisioning.NewSchemaBuilder().
-					AddProperty(
-						provisioning.NewSchemaPropertyBuilder().
-							SetName("scopes").
-							SetLabel("Scopes").
-							IsArray().
-							AddItem(
-								provisioning.NewSchemaPropertyBuilder().
-									SetName("scope").
-									IsString().
-									SetEnumValues(oauthScopes)))).Register()
+		ard, err = provisioning.NewAccessRequestBuilder(callback).Register()
 		if err != nil {
 			return nil, err
 		}
@@ -275,11 +263,7 @@ func handleSvcInstance(
 			}
 
 			logger.Debugf("migrated instance %s with the necessary request definitions", apiSvcInst.Name)
-
-			return nil
 		}
-
-		logger.Debugf("no request definitions migrated for instance %s done at this time", apiSvcInst.Name)
 	}
 
 	return nil
