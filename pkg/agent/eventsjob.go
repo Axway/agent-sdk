@@ -40,7 +40,12 @@ func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 		retryInterval: defaultRetryInterval,
 		name:          name,
 	}
-	streamJob.jobID, _ = jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
+
+	jobID, _ := jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
+	streamJob.mutex.Lock()
+	streamJob.jobID = jobID
+	streamJob.mutex.Unlock()
+
 	jobs.RegisterIntervalJobWithName(newCentralHealthCheckJob(eventJob), time.Second*3, "Central Health Check")
 
 	return streamJob
