@@ -32,4 +32,4 @@ jobs:
           go-version: 1.17
 
       - name: Test
-        run: make test RACEFLAG=
+        run: make test
