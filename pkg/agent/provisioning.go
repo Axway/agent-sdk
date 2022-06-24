@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -33,45 +34,23 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 		return nil, nil
 	}
 
-	runMarketplaceMigration := willCreateOrUpdateResource(data)
-
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
 	}
 
-	if marketplaceMigration != nil && runMarketplaceMigration {
+	if marketplaceMigration != nil {
 		_, err = migrateMarketPlace(marketplaceMigration, ri)
 	}
 
 	return ri, nil
 }
 
-// willCreateOrUpdateResource - future check to see if CreateOrUpdateResource will be executed
-func willCreateOrUpdateResource(data v1.Interface) bool {
+type resourceType string
 
-	// Check (only) credential request definition to see if it exists prior to CreateOrUpdateResource call
-	ri, err := data.AsInstance()
-	if err != nil {
-		return false
-	}
-
-	if mv1a.CredentialRequestDefinitionGVK().Kind == ri.Kind {
-		existingCRD, _ := agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
-		if existingCRD == nil {
-			log.Tracef("credential request definition %s needs to be created or updated using migration path", ri.Name)
-			return true
-		}
-	} else {
-		existingARD, _ := agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
-		if existingARD == nil {
-			log.Debugf("access request definition %s needs to be created or updated using migration path", ri.Name)
-			return true
-		}
-	}
-
-	return false
-}
+const (
+	serviceName resourceType = "service-name"
+)
 
 // migrateMarketPlace -
 func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
@@ -100,8 +79,14 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		log.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
-		_, err = marketplaceMigration.Migrate(svc)
+		ctx := context.WithValue(context.Background(), serviceName, svc.Name)
+
+		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+
+		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
+		migrate.UpdateService(ctx, svc, mig)
+
+		// _, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
 		}
