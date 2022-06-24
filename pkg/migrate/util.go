@@ -14,6 +14,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
+const (
+	serviceName  = "service-name"
+	instanceName = "instance-name"
+	revisionName = "revision-name"
+)
+
+var apiserviceName string
+
 // UpdateService - gets a list of instances for the service and updates their request definitions.
 func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceMigration) error {
 	revURL := m.Cfg.GetRevisionsURL()
@@ -26,8 +34,9 @@ func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceM
 		return err
 	}
 
+	apiserviceName = ri.Name
 	m.Logger.
-		WithField(string(serviceName), ctx.Value(serviceName)).
+		WithField(serviceName, apiserviceName).
 		Tracef("found %d revisions for api", len(revs))
 
 	errCh := make(chan error, len(revs))
@@ -185,7 +194,7 @@ func updateRI(ri *v1.ResourceInstance, m *MarketplaceMigration) error {
 func handleSvcInstance(
 	ctx context.Context, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, m *MarketplaceMigration) error {
 	logger := m.Logger.
-		WithField(string(serviceName), ctx.Value(serviceName)).
+		WithField(serviceName, apiserviceName).
 		WithField(instanceName, svcInstance.Name).
 		WithField(revisionName, revision.Name)
 
@@ -211,7 +220,7 @@ func handleSvcInstance(
 		// get the apikey info
 		apiKeyInfo := processor.GetAPIKeyInfo()
 		if len(apiKeyInfo) > 0 {
-			logger.Debug("instance has a spec definition type of apiKey")
+			logger.Trace("instance has a spec definition type of apiKey")
 			ardRIName = provisioning.APIKeyARD
 		}
 
@@ -223,7 +232,7 @@ func handleSvcInstance(
 		// Check if ARD exists
 		if apiSvcInst.Spec.AccessRequestDefinition == "" && len(oauthScopes) > 0 {
 			// Only migrate resource with oauth scopes. Spec with type apiKey will be handled on startup
-			logger.Debug("instance has a spec definition type of oauth")
+			logger.Trace("instance has a spec definition type of oauth")
 			ardRIName, err = processAccessRequestDefinition(oauthScopes, m)
 			if err != nil {
 				return err
@@ -239,7 +248,7 @@ func handleSvcInstance(
 		// Find only the known CRDs
 		credentialRequestDefinitions := checkCredentialRequestDefinitions(credentialRequestPolicies, m)
 		if len(credentialRequestDefinitions) > 0 && !sortCompare(apiSvcInst.Spec.CredentialRequestDefinitions, credentialRequestDefinitions) {
-			logger.Debugf("adding the following credential request definitions %s,", credentialRequestDefinitions)
+			logger.Debugf("adding the following credential request definitions %s to apiserviceinstance %s", credentialRequestDefinitions, apiSvcInst.Name)
 			updateRequestDefinition = true
 		}
 
@@ -248,11 +257,12 @@ func handleSvcInstance(
 			ardRIName = ""
 		} else {
 			if apiSvcInst.Spec.AccessRequestDefinition == "" {
-				logger.Debugf("adding the following access request definition %s", ardRIName)
+				logger.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
 				updateRequestDefinition = true
 			}
 		}
 
+		// update apiserivceinstane spec with necessary request definitions
 		if updateRequestDefinition {
 			inInterface := newInstanceSpec(apiSvcInst.Spec.Endpoint, revision.Name, ardRIName, credentialRequestDefinitions)
 			svcInstance.Spec = inInterface

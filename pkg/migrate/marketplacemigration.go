@@ -12,14 +12,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-type resourceType string
-
-const (
-	serviceName  resourceType = "service-name"
-	instanceName              = "instance-name"
-	revisionName              = "revision-name"
-)
-
 // Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
 	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
@@ -74,14 +66,14 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		if completed == definitions.MigrationCompleted {
 			// migration ran already
 			m.Logger.
-				WithField(string(serviceName), apiSvc).
+				WithField(serviceName, apiSvc).
 				Debugf("marketplace provision migration already completed")
 			return ri, nil
 		}
 	}
 
 	m.Logger.
-		WithField(string(serviceName), ri.Name).
+		WithField(serviceName, ri.Name).
 		Tracef("perform marketplace provision")
 
 	UpdateService(ctx, ri, m)
