@@ -72,9 +72,14 @@ func (j *eventProcessorJob) Ready() bool {
 }
 
 func (j *eventProcessorJob) renewRegistration() {
-	j.mutex.Lock()
-	defer j.mutex.Unlock()
-	if j.jobID != "" {
+	j.mutex.RLock()
+	jobID := j.jobID
+	j.mutex.RUnlock()
+
+	if jobID != "" {
+		j.mutex.Lock()
+		defer j.mutex.Unlock()
+
 		jobs.UnregisterJob(j.jobID)
 		j.jobID = ""
 
@@ -84,7 +89,10 @@ func (j *eventProcessorJob) renewRegistration() {
 		}
 
 		time.AfterFunc(j.retryInterval, func() {
-			j.jobID, _ = jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
+			jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
+			j.mutex.Lock()
+			defer j.mutex.Unlock()
+			j.jobID = jobID
 		})
 		return
 	}
