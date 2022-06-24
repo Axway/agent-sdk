@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -23,7 +22,7 @@ const (
 var apiserviceName string
 
 // UpdateService - gets a list of instances for the service and updates their request definitions.
-func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceMigration) error {
+func UpdateService(ri *v1.ResourceInstance, m *MarketplaceMigration) error {
 	revURL := m.Cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -56,7 +55,7 @@ func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceM
 
 			// Passing down apiservice name (ri.Name) for logging purposes
 			// Possible future refactor to send context through to get proper resources downstream
-			err := updateSvcInstance(ctx, url, q, revision, m)
+			err := updateSvcInstance(url, q, revision, m)
 			errCh <- err
 		}(rev)
 	}
@@ -74,7 +73,7 @@ func UpdateService(ctx context.Context, ri *v1.ResourceInstance, m *MarketplaceM
 }
 
 func updateSvcInstance(
-	ctx context.Context, resourceURL string, query map[string]string, revision *v1.ResourceInstance, m *MarketplaceMigration) error {
+	resourceURL string, query map[string]string, revision *v1.ResourceInstance, m *MarketplaceMigration) error {
 	resources, err := m.Client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
@@ -89,7 +88,7 @@ func updateSvcInstance(
 		go func(svcInstance *v1.ResourceInstance) {
 			defer wg.Done()
 
-			err := handleSvcInstance(ctx, svcInstance, revision, m)
+			err := handleSvcInstance(svcInstance, revision, m)
 			if err != nil {
 				errCh <- err
 			}
@@ -192,7 +191,7 @@ func updateRI(ri *v1.ResourceInstance, m *MarketplaceMigration) error {
 }
 
 func handleSvcInstance(
-	ctx context.Context, svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, m *MarketplaceMigration) error {
+	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance, m *MarketplaceMigration) error {
 	logger := m.Logger.
 		WithField(serviceName, apiserviceName).
 		WithField(instanceName, svcInstance.Name).

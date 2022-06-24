@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"context"
 	"fmt"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -51,8 +50,6 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		return ri, nil
 	}
 
-	ctx := context.WithValue(context.Background(), serviceName, ri.Name)
-
 	// check resource to see if this apiservice has already been run through migration
 	apiSvc, err := ri.AsInstance()
 	if err != nil {
@@ -76,7 +73,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 		WithField(serviceName, ri.Name).
 		Tracef("perform marketplace provision")
 
-	UpdateService(ctx, ri, m)
+	UpdateService(ri, m)
 	// err = m.updateService(ctx, ri)
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)

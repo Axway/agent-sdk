@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
@@ -79,12 +78,11 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 	for _, svc := range apiSvcResources {
 		var err error
-		ctx := context.WithValue(context.Background(), serviceName, svc.Name)
 
 		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-		migrate.UpdateService(ctx, svc, mig)
+		migrate.UpdateService(svc, mig)
 
 		// _, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
