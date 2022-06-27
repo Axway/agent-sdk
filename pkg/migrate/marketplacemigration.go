@@ -17,8 +17,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// Migrator interface for performing a migration on a ResourceInstance
-
 const (
 	serviceName  = "service-name"
 	instanceName = "instance-name"
@@ -27,6 +25,7 @@ const (
 
 var apiserviceName string
 
+// Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
 	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
 }
