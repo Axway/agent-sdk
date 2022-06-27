@@ -212,7 +212,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
 		e.logger.
-			WithField("appName", appName).
+			WithField("app-name", appName).
 			Trace("transaction summary application name")
 	}
 
@@ -224,7 +224,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	apiID = summaryEvent.TransactionSummary.Proxy.ID
 	stage = summaryEvent.TransactionSummary.Proxy.Stage
 	e.logger.
-		WithField("apiID", apiID).
+		WithField("api-id", apiID).
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
 
@@ -232,13 +232,13 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
 		e.logger.
-			WithField("appName", appName).
+			WithField("app-name", appName).
 			Debug("could not get managed application by name, no consumer information attached")
 		return nil
 	}
 	e.logger.
-		WithField("appName", appName).
-		WithField("managed app name", managedApp.Name).
+		WithField("app-name", appName).
+		WithField("managed-app-name", managedApp.Name).
 		Trace("managed application info")
 
 	// get the access request
@@ -249,10 +249,10 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		return nil
 	}
 	e.logger.
-		WithField("managed app name", managedApp.Name).
-		WithField("apiID", apiID).
+		WithField("managed-app-name", managedApp.Name).
+		WithField("api-id", apiID).
 		WithField("stage", stage).
-		WithField("access request name", accessRequest.Name).
+		WithField("access-request-name", accessRequest.Name).
 		Trace("managed application info")
 
 	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
@@ -268,8 +268,8 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	}
 
 	e.logger.
-		WithField("subscription ID", subscription.ID).
-		WithField("subscription name", subscription.Name).
+		WithField("subscription-id", subscription.ID).
+		WithField("subscription-name", subscription.Name).
 		Trace("subscription information")
 
 	// get application info
@@ -286,8 +286,8 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		application.ID = appID
 		application.Name = appName
 		e.logger.
-			WithField("application ID", application.ID).
-			WithField("application name", application.Name).
+			WithField("application-id", application.ID).
+			WithField("application-name", application.Name).
 			Trace("application information")
 
 			// try to get consumer org ID from the managed app first
@@ -297,7 +297,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 			return nil
 		}
 		e.logger.
-			WithField("consumer org ID", consumerOrgID).
+			WithField("consumer-org-id", consumerOrgID).
 			Trace("consumer org ID ")
 	}
 

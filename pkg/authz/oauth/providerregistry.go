@@ -60,8 +60,8 @@ func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecf
 	r.logger.
 		WithField("name", name).
 		WithField("issuer", issuer).
-		WithField("tokenEndpoint", tokenEndpoint).
-		WithField("authorizationEndpoint", authEndPoint).
+		WithField("token-endpoint", tokenEndpoint).
+		WithField("authorization-endpoint", authEndPoint).
 		Debug("registered IDP provider")
 
 	r.providerMap.Set(name, p)
