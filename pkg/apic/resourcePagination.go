@@ -2,6 +2,7 @@ package apic
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -24,10 +25,10 @@ func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, UR
 
 	filteredAPIRevisions := make([]*v1alpha1.APIServiceRevision, 0)
 
-	//create array and filter by stage name. Check the stage name as this does not apply for v7
+	// create array and filter by stage name. Check the stage name as this does not apply for v7
 	if stage != "" {
 		for _, apiServer := range apiServiceInstances {
-			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(stage)) {
+			if strings.Contains(strings.ToLower(apiServer.Name), strings.ToLower(fmt.Sprintf("%s.", stage))) {
 				filteredAPIRevisions = append(filteredAPIRevisions, apiServer)
 			}
 		}
