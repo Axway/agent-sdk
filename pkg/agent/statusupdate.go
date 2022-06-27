@@ -64,7 +64,7 @@ func (su *agentStatusUpdate) Status() error {
 
 func (su *agentStatusUpdate) Execute() error {
 	id, _ := uuid.NewUUID()
-	log := su.logger.WithField("statusUpdateID", id)
+	log := su.logger.WithField("status-update-id", id)
 
 	ctx := context.WithValue(context.Background(), ctxLogger, log)
 	// only one status update should execute at a time

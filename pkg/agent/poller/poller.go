@@ -101,7 +101,7 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 
 func (m *pollExecutor) tick(topicSelfLink string, eventChan chan *proto.Event) error {
 	sequence := m.sequence.GetSequence()
-	logger := m.logger.WithField("sequenceID", sequence)
+	logger := m.logger.WithField("sequence-id", sequence)
 	logger.Debug("retrieving harvester events")
 
 	if _, err := m.harvester.ReceiveSyncEvents(topicSelfLink, sequence, eventChan); err != nil {

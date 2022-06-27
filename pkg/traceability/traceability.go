@@ -378,14 +378,14 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 	if publishCount > 0 {
 		client.logger.
 			WithField("count", publishCount).
-			WithField("eventType", eventType).
+			WithField("event-type", eventType).
 			Info("creating events")
 	}
 
 	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
 		client.logger.
-			WithField("eventType", eventType).
+			WithField("event-type", eventType).
 			WithError(err).
 			Error("failed to publish event")
 		return err
@@ -394,7 +394,7 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 	if publishCount-len(batch.Events()) > 0 {
 		client.logger.
 			WithField("count", publishCount-len(batch.Events())).
-			WithField("eventType", eventType).
+			WithField("event-type", eventType).
 			Info("published events")
 	}
 

@@ -73,8 +73,8 @@ func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
 	defer p.jobsMapLock.Unlock()
 	p.logger.
-		WithField("jobID", job.GetID()).
-		WithField("jobName", job.GetName()).
+		WithField("job-id", job.GetID()).
+		WithField("job-name", job.GetName()).
 		Trace("registered job")
 	p.jobs[job.GetID()] = job
 	return job.GetID()
@@ -318,7 +318,7 @@ func (p *Pool) startAll() bool {
 	p.logger.Debug("Checking for all cron jobs to be ready")
 	for _, job := range p.getCronJobs() {
 		if !job.Ready() {
-			p.logger.WithField("jobID", job.GetID()).Debugf("job is not ready")
+			p.logger.WithField("job-id", job.GetID()).Debugf("job is not ready")
 			return false
 		}
 	}
@@ -344,12 +344,12 @@ func (p *Pool) stopAll() {
 		mapCopy[key] = value
 	}
 	for _, job := range mapCopy {
-		p.logger.WithField("jobName", job.GetName()).Trace("stopping job")
+		p.logger.WithField("job-name", job.GetName()).Trace("stopping job")
 		job.stop()
 		if job.getConsecutiveFails() > maxErrors {
 			maxErrors = job.getConsecutiveFails()
 		}
-		p.logger.WithField("jobName", job.GetName()).Tracef("finished stopping job")
+		p.logger.WithField("job-name", job.GetName()).Tracef("finished stopping job")
 	}
 	for i := 1; i < maxErrors; i++ {
 		p.getBackoff().increaseTimeout()
@@ -386,8 +386,8 @@ func (p *Pool) watchJobs() {
 			<-p.stopJobsChan
 			if job, found := p.getCronJob(p.getFailedJob()); found {
 				p.logger.
-					WithField("jobName", job.GetName()).
-					WithField("failed job", p.getFailedJob()).
+					WithField("job-name", job.GetName()).
+					WithField("failed-job", p.getFailedJob()).
 					Debug("Job failed, stop all jobs")
 			}
 			p.stopAll()

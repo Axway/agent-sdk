@@ -74,7 +74,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		p.logger.
 			WithField("name", p.cfg.GetIDPName()).
 			WithField("type", p.cfg.GetIDPType()).
-			WithField("metadataUrl", p.metadataURL).
+			WithField("metadata-url", p.metadataURL).
 			WithError(err).
 			Error("unable to fetch OAuth authorization server metadata")
 		return nil, err
@@ -214,22 +214,22 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		err = json.Unmarshal(response.Body, clientRes)
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
-			WithField("clientName", clientReq.GetClientName()).
-			WithField("grantType", clientReq.GetGrantTypes()).
-			WithField("tokenAuthMethod", clientReq.GetTokenEndpointAuthMethod()).
-			WithField("responseType", clientReq.GetResponseTypes()).
-			WithField("redirectURL", clientReq.GetRedirectURIs()).
+			WithField("client-name", clientReq.GetClientName()).
+			WithField("grant-type", clientReq.GetGrantTypes()).
+			WithField("token-auth-method", clientReq.GetTokenEndpointAuthMethod()).
+			WithField("response-type", clientReq.GetResponseTypes()).
+			WithField("redirect-url", clientReq.GetRedirectURIs()).
 			Info("registered client")
 		return clientRes, err
 	}
 
 	err = fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
 	p.logger.
-		WithField("clientName", clientReq.GetClientName()).
-		WithField("grantType", clientReq.GetGrantTypes()).
-		WithField("tokenAuthMethod", clientReq.GetTokenEndpointAuthMethod()).
-		WithField("responseType", clientReq.GetResponseTypes()).
-		WithField("redirectURL", clientReq.GetRedirectURIs()).
+		WithField("client-name", clientReq.GetClientName()).
+		WithField("grant-type", clientReq.GetGrantTypes()).
+		WithField("token-auth-method", clientReq.GetTokenEndpointAuthMethod()).
+		WithField("response-type", clientReq.GetResponseTypes()).
+		WithField("redirect-url", clientReq.GetRedirectURIs()).
 		Error(err.Error())
 
 	return nil, err
@@ -319,14 +319,14 @@ func (p *provider) UnregisterClient(clientID string) error {
 		err := fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
-			WithField("clientName", clientID).
+			WithField("client-name", clientID).
 			Error(err.Error())
 		return err
 	}
 
 	p.logger.
 		WithField("provider", p.cfg.GetIDPName()).
-		WithField("clientName", clientID).
+		WithField("client-name", clientID).
 		Info("unregistered client")
 	return nil
 }
