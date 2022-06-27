@@ -118,8 +118,8 @@ func (t *httpTrace) logWroteHeaderField(key string, value []string) {
 func (t *httpTrace) logGotConn(info httptrace.GotConnInfo) {
 	t.logger.
 		WithField("id", t.reqID).
-		WithField("localAddr", fmt.Sprintf("%s:%s", info.Conn.LocalAddr().Network(), info.Conn.RemoteAddr().String())).
-		WithField("remoteAddr", fmt.Sprintf("%s:%s", info.Conn.RemoteAddr().Network(), info.Conn.RemoteAddr().String())).
+		WithField("local-addr", fmt.Sprintf("%s:%s", info.Conn.LocalAddr().Network(), info.Conn.RemoteAddr().String())).
+		WithField("remote-addr", fmt.Sprintf("%s:%s", info.Conn.RemoteAddr().Network(), info.Conn.RemoteAddr().String())).
 		Trace("connection established")
 }
 
@@ -139,7 +139,7 @@ func (t *httpTrace) logTLSHandshakeDone(state tls.ConnectionState, err error) {
 	t.logger.
 		WithField("id", t.reqID).
 		WithField("protocol", state.NegotiatedProtocol).
-		WithField("server name", state.ServerName).
+		WithField("server-name", state.ServerName).
 		Trace("TLS handshake completed")
 }
 

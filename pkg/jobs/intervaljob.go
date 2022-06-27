@@ -31,13 +31,13 @@ func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan
 func (b *intervalJob) handleExecution() {
 	// Execute the job now and then start the interval period
 	b.executeCronJob()
-	if b.err != nil {
+	if b.getError() != nil {
 		b.setExecutionError()
-		b.logger.Error(b.err)
+		b.logger.Error(b.getError())
 		b.SetStatus(JobStatusStopped)
-		b.consecutiveFails++
+		b.setConsecutiveFails(b.getConsecutiveFails() + 1)
 	}
-	b.consecutiveFails = 0
+	b.setConsecutiveFails(0)
 }
 
 //start - calls the Execute function from the Job definition

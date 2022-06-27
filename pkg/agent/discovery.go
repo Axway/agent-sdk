@@ -150,8 +150,8 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 }
 
 func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.ResourceInstance, error) {
-	if serviceBody.GetAccessRequestDefintion() != nil {
-		newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefintion())
+	if serviceBody.GetAccessRequestDefinition() != nil {
+		newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefinition())
 		if err == nil && newARD != nil {
 			serviceBody.SetAccessRequestDefinitionName(newARD.Name, true)
 

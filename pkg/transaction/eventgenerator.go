@@ -255,7 +255,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	apiID := summaryEvent.TransactionSummary.Proxy.ID
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
 	e.logger.
-		WithField("apiID", apiID).
+		WithField("api-id", apiID).
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
 
@@ -270,12 +270,12 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
 		e.logger.
-			WithField("appName", appName).
+			WithField("app-name", appName).
 			Debug("could not get managed application by name, no consumer information attached")
 		return nil, nil
 	}
 	e.logger.
-		WithField("appName", appName).
+		WithField("app-name", appName).
 		WithField("managed-app-name", managedApp.Name).
 		Trace("managed application info")
 
@@ -288,7 +288,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	}
 	e.logger.
 		WithField("managed-app-name", managedApp.Name).
-		WithField("apiID", apiID).
+		WithField("api-id", apiID).
 		WithField("stage", stage).
 		WithField("access-request-name", accessRequest.Name).
 		Trace("managed application info")

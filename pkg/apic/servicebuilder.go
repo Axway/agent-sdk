@@ -318,7 +318,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 			}
 
 			// if the spec has api key and oauth use the oauth ard
-			err := b.serviceBody.createAccessRequestDefintion()
+			err := b.serviceBody.createAccessRequestDefinition()
 			if err != nil {
 				return b.serviceBody, err
 			}

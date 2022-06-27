@@ -113,7 +113,7 @@ func (w WatchClient) Watch() {
 		return
 	}
 
-	log = log.WithField("subscriptionId", subscriptionID)
+	log = log.WithField("subscription-id", subscriptionID)
 	log.Infof("watch registered successfully")
 
 	for {

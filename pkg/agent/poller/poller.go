@@ -3,6 +3,7 @@ package poller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -22,6 +23,7 @@ type pollExecutor struct {
 	interval      time.Duration
 	onStop        onClientStopCb
 	isReady       bool
+	lock          sync.RWMutex
 }
 
 type newPollExecutorFunc func(interval time.Duration, options ...executorOpt) *pollExecutor
@@ -59,8 +61,8 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 	}
 
 	if m.sequence.GetSequence() == 0 {
+		m.onHarvesterErr()
 		go func() {
-			m.onHarvesterErr()
 			m.Stop()
 			errChan <- fmt.Errorf("do not have a sequence id, stopping poller")
 		}()
@@ -81,7 +83,9 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 		return err
 	}
 
+	m.lock.Lock()
 	m.isReady = true
+	m.lock.Unlock()
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -97,7 +101,7 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 
 func (m *pollExecutor) tick(topicSelfLink string, eventChan chan *proto.Event) error {
 	sequence := m.sequence.GetSequence()
-	logger := m.logger.WithField("sequenceID", sequence)
+	logger := m.logger.WithField("sequence-id", sequence)
 	logger.Debug("retrieving harvester events")
 
 	if _, err := m.harvester.ReceiveSyncEvents(topicSelfLink, sequence, eventChan); err != nil {
@@ -122,11 +126,17 @@ func (m *pollExecutor) onHarvesterErr() {
 func (m *pollExecutor) Stop() {
 	m.timer.Stop()
 	m.cancel()
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.isReady = false
+
 	m.logger.Debug("poller has been stopped")
 }
 
 // Status returns a bool indicating the status of the poller
 func (m *pollExecutor) Status() bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	return m.ctx.Err() == nil && m.isReady
 }

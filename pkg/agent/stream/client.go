@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -53,6 +54,7 @@ type StreamerClient struct {
 	wt                      *v1alpha1.WatchTopic
 	harvester               harvester.Harvest
 	onEventSyncError        func()
+	mutex                   sync.RWMutex
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -160,6 +162,8 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 func (s *StreamerClient) Start() error {
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
 
+	s.mutex.Lock()
+
 	s.listener = s.newListener(
 		eventCh,
 		s.apiClient,
@@ -173,6 +177,8 @@ func (s *StreamerClient) Start() error {
 	}
 
 	s.manager = manager
+
+	s.mutex.Unlock()
 
 	listenCh := s.listener.Listen()
 
@@ -195,6 +201,8 @@ func (s *StreamerClient) Start() error {
 
 // Status returns the health status
 func (s *StreamerClient) Status() error {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 	if s.manager == nil || s.listener == nil {
 		return fmt.Errorf("stream client is not ready")
 	}

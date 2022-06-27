@@ -216,7 +216,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		logger.
 			WithField("name", idp.GetIDPName()).
 			WithField("type", idp.GetIDPType()).
-			WithField("metadataUrl", idp.GetMetadataURL()).
+			WithField("metadata-url", idp.GetMetadataURL()).
 			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
 }
