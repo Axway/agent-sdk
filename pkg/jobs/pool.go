@@ -318,7 +318,7 @@ func (p *Pool) startAll() bool {
 	p.logger.Debug("Checking for all cron jobs to be ready")
 	for _, job := range p.getCronJobs() {
 		if !job.Ready() {
-			p.logger.WithField("job-iD", job.GetID()).Debugf("job is not ready")
+			p.logger.WithField("job-id", job.GetID()).Debugf("job is not ready")
 			return false
 		}
 	}
