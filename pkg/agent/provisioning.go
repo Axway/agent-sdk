@@ -76,9 +76,8 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-		migrate.UpdateService(svc, mig)
+		mig.UpdateService(svc)
 
-		// _, err = marketplaceMigration.Migrate(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to migrate service: %s", err)
 		}
