@@ -130,10 +130,10 @@ twistlock:
 twistlock:on-schedule:
   extends: .dummy
 
-twistlock-master:
-  extends: .dummy
-    # For some reason, twistlock always wants to run here unless this "only" section is here
-  only:
-    refs:
-      - xxxxx
+# twistlock-master:
+#   extends: .dummy
+#     # For some reason, twistlock always wants to run here unless this "only" section is here
+#   only:
+#     refs:
+#       - xxxxx
 
