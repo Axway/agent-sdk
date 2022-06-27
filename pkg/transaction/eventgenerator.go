@@ -262,7 +262,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	if summaryEvent.TransactionSummary.DataplaneDetails.Application != nil {
 		appName = summaryEvent.TransactionSummary.DataplaneDetails.Application.Name
 		e.logger.
-			WithField("appName", appName).
+			WithField("app-name", appName).
 			Trace("transaction summary dataplane details application name")
 	}
 
