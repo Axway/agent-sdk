@@ -45,12 +45,6 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 	return ri, nil
 }
 
-type resourceType string
-
-const (
-	serviceName resourceType = "service-name"
-)
-
 // migrateMarketPlace -
 func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	switch ri.Kind {
