@@ -405,14 +405,6 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		Version: unknown,
 	}
 
-	summaryEvent.ProductPlan = &models.ProductPlan{
-		ID: unknown,
-	}
-
-	summaryEvent.Quota = &models.Quota{
-		ID: unknown,
-	}
-
 	apisvc := unknown
 
 	if accessRequest == nil || managedApp == nil {
@@ -431,41 +423,6 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("asset-resource-id", summaryEvent.AssetResource.ID).
 		WithField("asset-resource-name", summaryEvent.AssetResource.Name).
 		Trace("asset resource information")
-
-	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
-	if productRef.ID == "" || productRef.Name == "" {
-		log.Debug("could not get product ID or Name, setting product to unknown")
-	} else {
-		summaryEvent.Product.ID = productRef.ID
-		summaryEvent.Product.Name = productRef.Name
-	}
-	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK()) //TODO SDB
-
-	log.
-		WithField("product-id", summaryEvent.Product.ID).
-		WithField("product-name", summaryEvent.Product.Name).
-		WithField("product-version", summaryEvent.Product.Version).
-		Trace("product information")
-
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
-	if productPlanRef.ID == "" {
-		log.Debug("could not get product plan ID, setting product plan to unknown")
-	} else {
-		summaryEvent.ProductPlan.ID = productPlanRef.ID
-	}
-	log.
-		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
-		Trace("product plan ID information")
-
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
-	if quotaRef.ID == "" {
-		log.Debug("could not get quota ID, setting quota to unknown")
-	} else {
-		summaryEvent.Quota.ID = quotaRef.ID
-	}
-	log.
-		WithField("quota-id", summaryEvent.Quota.ID).
-		Trace("quota ID information")
 
 	if accessRequest == nil {
 		log.Debug("could not get api service details, setting apiservice to unknown")

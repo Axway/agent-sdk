@@ -78,8 +78,6 @@ type Summary struct {
 	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
 	Application     *Application            `json:"application,omitempty"`
 	Product         *models.Product         `json:"product,omitempty"`
-	ProductPlan     *models.ProductPlan     `json:"productPlan,omitempty"`
-	Quota           *models.Quota           `json:"quota,omitempty"`
 	AssetResource   *models.AssetResource   `json:"assetResource,omitempty"`
 	API             *models.APIDetails      `json:"api,omitempty"`
 	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
