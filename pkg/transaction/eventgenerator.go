@@ -390,19 +390,13 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	return
 }
 
-// UpdateWithProviderDetails -
+// updateWithProviderDetails -
 func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
 
 	// Set default to provider details in case access request or managed apps comes back nil
 	summaryEvent.AssetResource = &models.AssetResource{
 		ID:   unknown,
 		Name: unknown,
-	}
-
-	summaryEvent.Product = &models.Product{
-		ID:      unknown,
-		Name:    unknown,
-		Version: unknown,
 	}
 
 	apisvc := unknown
