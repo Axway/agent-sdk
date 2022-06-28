@@ -191,7 +191,6 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetr
 		Values:          histogram.Sample().Values(),
 		StartTime:       metric.StartTime,
 		ConsumerDetails: metric.ConsumerDetails,
-		ProviderDetails: metric.ProviderDetails,
 	}
 
 	c.storage.Set(metricKeyPrefix+c.getKey(metric), cachedMetric)

@@ -149,45 +149,52 @@ func FormatApplicationID(applicationID string) string {
 
 // UpdateWithConsumerDetails -
 func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
-	consumerDetails := &models.ConsumerDetails{}
 
-	// get subscription info
-	subscription := &models.Subscription{
-		ID:   unknown,
-		Name: unknown,
+	// Set default to consumer details in case access request or managed apps comes back nil
+	consumerDetails := &models.ConsumerDetails{
+		Subscription: &models.Subscription{
+			ID:   unknown,
+			Name: unknown,
+		},
+		Application: &models.AppDetails{
+			ConsumerOrgID: unknown,
+			ID:            unknown,
+			Name:          unknown,
+		},
+		PublishedProduct: &models.Product{
+			ID:   unknown,
+			Name: unknown,
+		},
 	}
+
+	if accessRequest == nil || managedApp == nil {
+		log.Trace("access request or managed app is nil. Setting default values to unknown")
+		return consumerDetails
+	}
+
 	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
 	if subRef.ID == "" || subRef.Name == "" {
 		log.Debug("could not get subscription, setting subscription to unknown")
 	} else {
-		subscription.ID = subRef.ID
-		subscription.Name = subRef.Name
+		consumerDetails.Subscription.ID = subRef.ID
+		consumerDetails.Subscription.Name = subRef.Name
 	}
 	log.
-		WithField("subscription-id", subscription.ID).
-		WithField("subscription-name", subscription.Name).
+		WithField("subscription-id", consumerDetails.Subscription.ID).
+		WithField("subscription-name", consumerDetails.Subscription.Name).
 		Trace("subscription information")
 
-		// add subscription to consumer details
-	consumerDetails.Subscription = subscription
-
-	// get application info
-	application := &models.AppDetails{
-		ConsumerOrgID: unknown,
-		ID:            unknown,
-		Name:          unknown,
-	}
 	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
 	if appRef.ID == "" || appRef.Name == "" {
 		log.Debug("could not get application, setting application to unknown")
 	} else {
-		application.ID = appRef.ID
-		application.Name = appRef.Name
+		consumerDetails.Application.ID = appRef.ID
+		consumerDetails.Application.Name = appRef.Name
 	}
 
 	log.
-		WithField("application-id", application.ID).
-		WithField("application-name", application.Name).
+		WithField("application-id", consumerDetails.Application.ID).
+		WithField("application-name", consumerDetails.Application.Name).
 		Trace("application information")
 
 	// try to get consumer org ID from the managed app first
@@ -195,132 +202,25 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	consumerOrgID := GetConsumerOrgID(managedApp)
 	if consumerOrgID == "" {
 		log.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
-		consumerOrgID = unknown
 	} else {
-		application.ConsumerOrgID = consumerOrgID
+		consumerDetails.Application.ConsumerOrgID = consumerOrgID
 	}
 	log.
-		WithField("consumer-org-id", consumerOrgID).
+		WithField("consumer-org-id", consumerDetails.Application.ConsumerOrgID).
 		Trace("consumer org ID ")
 
-	// add application to consumer details
-	consumerDetails.Application = application
-
-	// try to get Published product info
-	publishedProduct := &models.PublishedProduct{
-		ID:   unknown,
-		Name: unknown,
-	}
 	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
 	if publishProductRef.ID == "" || publishProductRef.Name == "" {
 		log.Debug("could not get published product, setting published product to unknown")
 	} else {
-		publishedProduct.ID = publishProductRef.ID
-		publishedProduct.Name = publishProductRef.Name
+		consumerDetails.PublishedProduct.ID = publishProductRef.ID
+		consumerDetails.PublishedProduct.Name = publishProductRef.Name
 	}
 
 	log.
-		WithField("application-id", publishedProduct.ID).
-		WithField("application-name", publishedProduct.Name).
+		WithField("application-id", consumerDetails.PublishedProduct.ID).
+		WithField("application-name", consumerDetails.PublishedProduct.Name).
 		Trace("published product information")
 
-	// add published product to consumer details
-	consumerDetails.PublishedProduct = publishedProduct
-
 	return consumerDetails
-}
-
-// UpdateWithProviderDetails -
-func UpdateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.ProviderDetails {
-	providerDetails := models.ProviderDetails{}
-
-	// get managed application
-	managedApplication := &models.Application{
-		ID:   managedApp.ResourceMeta.Metadata.ID,
-		Name: managedApp.Name,
-	}
-
-	log.
-		WithField("managed-app-id", managedApplication.ID).
-		WithField("managed-app-name", managedApplication.Name).
-		Trace("managed application information")
-
-	providerDetails.Application = managedApplication
-
-	// get asset resource
-	assetResource := &models.AssetResource{
-		ID:   unknown,
-		Name: unknown,
-	}
-
-	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
-	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
-		log.Trace("could not get asset resource, setting asset resource to unknown")
-	} else {
-		assetResource.ID = assetResourceRef.ID
-		assetResource.Name = assetResourceRef.Name
-	}
-	log.
-		WithField("asset-resource-id", assetResource.ID).
-		WithField("asset-resource-name", assetResource.Name).
-		Trace("asset resource information")
-	// add asset resource information
-	providerDetails.AssetResource = assetResource
-
-	// get product
-	product := &models.Product{
-		ID:      unknown,
-		Name:    unknown,
-		Version: unknown,
-	}
-	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
-	if productRef.ID == "" || productRef.Name == "" {
-		log.Debug("could not get product ID or Name, setting product to unknown")
-	} else {
-		product.ID = productRef.ID
-		product.Name = productRef.Name
-	}
-	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK()) //TODO SDB
-
-	log.
-		WithField("product-id", product.ID).
-		WithField("product-name", product.Name).
-		WithField("product-version", product.Version).
-		Trace("product information")
-	// add product information
-	providerDetails.Product = product
-
-	// get plan ID
-	productPlan := &models.ProductPlan{
-		ID: unknown,
-	}
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
-	if productPlanRef.ID == "" {
-		log.Debug("could not get product plan ID, setting product plan to unknown")
-	} else {
-		productPlan.ID = productPlanRef.ID
-	}
-	log.
-		WithField("product-plan-id", productPlan.ID).
-		Trace("product plan ID information")
-	// add product plan ID
-	providerDetails.ProductPlan = productPlan
-
-	// get quota
-	quota := &models.Quota{
-		ID: unknown,
-	}
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
-	if quotaRef.ID == "" {
-		log.Debug("could not get quota ID, setting quota to unknown")
-	} else {
-		quota.ID = quotaRef.ID
-	}
-	log.
-		WithField("quota-id", quota.ID).
-		Trace("quota ID information")
-	// add quota ID
-	providerDetails.Quota = quota
-
-	return providerDetails
 }

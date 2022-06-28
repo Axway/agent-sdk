@@ -234,7 +234,6 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	// set defaults
 	// apiMetric := &APIMetric{}
 	consumerDetails := &models.ConsumerDetails{}
-	providerDetails := models.ProviderDetails{}
 
 	cacheManager := agent.GetCacheManager()
 
@@ -246,10 +245,6 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	if accessRequest != nil && managedApp != nil {
 		// Update consumer details
 		consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
-
-		// Update provider details
-		providerDetails = transutil.UpdateWithProviderDetails(accessRequest, managedApp, c.logger)
-		// return apiMetric //TODO SDB - what if this comes back nil?
 	}
 
 	subRef := v1.Reference{
@@ -295,7 +290,6 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 			Status:          c.getStatusText(statusCode),
 			StartTime:       now(),
 			ConsumerDetails: consumerDetails,
-			ProviderDetails: providerDetails,
 		}
 	}
 	histogram.Update(detail.Duration)

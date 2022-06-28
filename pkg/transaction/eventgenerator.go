@@ -10,6 +10,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
@@ -228,25 +229,15 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 
 	// Go get the access request and managed app
 	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
-	if accessRequest == nil || managedApp == nil {
-		return nil
-	}
 
-	// Update consumer details
-	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+	// Update the consumer details
+	consumerDetails := transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+	summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
 
 	// Update provider details
-	summaryEvent.TransactionSummary.ProviderDetails = transutil.UpdateWithProviderDetails(accessRequest, managedApp, e.logger)
-	api := models.APIDetails{
-		ID:                 summaryEvent.TransactionSummary.Proxy.ID,
-		Name:               summaryEvent.TransactionSummary.Proxy.Name,
-		Revision:           summaryEvent.TransactionSummary.Proxy.Revision,
-		TeamID:             summaryEvent.TransactionSummary.Team.ID,
-		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
-	}
-	summaryEvent.TransactionSummary.ProviderDetails.API = api
+	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
 
-	return summaryEvent.TransactionSummary
+	return updatedSummaryEvent
 }
 
 // getAccessRequest -
@@ -259,8 +250,8 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
 
-	if summaryEvent.TransactionSummary.DataplaneDetails.Application != nil {
-		appName = summaryEvent.TransactionSummary.DataplaneDetails.Application.Name
+	if summaryEvent.TransactionSummary.Application != nil {
+		appName = summaryEvent.TransactionSummary.Application.Name
 		e.logger.
 			WithField("app-name", appName).
 			Trace("transaction summary dataplane details application name")
@@ -397,4 +388,105 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	fields["token"] = token
 	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
+}
+
+// UpdateWithProviderDetails -
+func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
+
+	// Set default to provider details in case access request or managed apps comes back nil
+	summaryEvent.AssetResource = &models.AssetResource{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	summaryEvent.Product = &models.Product{
+		ID:      unknown,
+		Name:    unknown,
+		Version: unknown,
+	}
+
+	summaryEvent.ProductPlan = &models.ProductPlan{
+		ID: unknown,
+	}
+
+	summaryEvent.Quota = &models.Quota{
+		ID: unknown,
+	}
+
+	apisvc := unknown
+
+	if accessRequest == nil || managedApp == nil {
+		log.Trace("access request or managed app is nil. Setting default values to unknown")
+		return summaryEvent
+	}
+
+	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
+		log.Trace("could not get asset resource, setting asset resource to unknown")
+	} else {
+		summaryEvent.AssetResource.ID = assetResourceRef.ID
+		summaryEvent.AssetResource.Name = assetResourceRef.Name
+	}
+	log.
+		WithField("asset-resource-id", summaryEvent.AssetResource.ID).
+		WithField("asset-resource-name", summaryEvent.AssetResource.Name).
+		Trace("asset resource information")
+
+	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	if productRef.ID == "" || productRef.Name == "" {
+		log.Debug("could not get product ID or Name, setting product to unknown")
+	} else {
+		summaryEvent.Product.ID = productRef.ID
+		summaryEvent.Product.Name = productRef.Name
+	}
+	// productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK()) //TODO SDB
+
+	log.
+		WithField("product-id", summaryEvent.Product.ID).
+		WithField("product-name", summaryEvent.Product.Name).
+		WithField("product-version", summaryEvent.Product.Version).
+		Trace("product information")
+
+	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	if productPlanRef.ID == "" {
+		log.Debug("could not get product plan ID, setting product plan to unknown")
+	} else {
+		summaryEvent.ProductPlan.ID = productPlanRef.ID
+	}
+	log.
+		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
+		Trace("product plan ID information")
+
+	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	if quotaRef.ID == "" {
+		log.Debug("could not get quota ID, setting quota to unknown")
+	} else {
+		summaryEvent.Quota.ID = quotaRef.ID
+	}
+	log.
+		WithField("quota-id", summaryEvent.Quota.ID).
+		Trace("quota ID information")
+
+	if accessRequest == nil {
+		log.Debug("could not get api service details, setting apiservice to unknown")
+	} else {
+		apisvc = accessRequest.Spec.ApiServiceInstance
+	}
+	api := &models.APIDetails{
+		ID:                 summaryEvent.Proxy.ID,
+		Name:               summaryEvent.Proxy.Name,
+		Revision:           summaryEvent.Proxy.Revision,
+		TeamID:             summaryEvent.Team.ID,
+		APIServiceInstance: apisvc,
+	}
+	summaryEvent.API = api
+	log.
+		WithField("proxy-id", summaryEvent.Proxy.ID).
+		WithField("proxy-name", summaryEvent.Proxy.Name).
+		WithField("proxy-revision", summaryEvent.Proxy.Revision).
+		WithField("proxy-team-id", summaryEvent.Team.ID).
+		WithField("apiservice", apisvc).
+		Trace("api details information")
+
+	return summaryEvent
 }

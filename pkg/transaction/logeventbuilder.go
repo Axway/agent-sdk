@@ -446,14 +446,11 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 	if b.err != nil {
 		return b
 	}
-	dataplaneDetails := &models.DataplaneDetails{}
-	b.logEvent.TransactionSummary.DataplaneDetails = dataplaneDetails
+	b.logEvent.TransactionSummary.Application = &Application{
+		ID:   appID,
+		Name: appName,
+	}
 
-	dataplaneDetails.Application = &models.Application{}
-	dataplaneDetails.Application.ID = appID
-	dataplaneDetails.Application.Name = appName
-
-	b.logEvent.TransactionSummary.DataplaneDetails.Application = dataplaneDetails.Application
 	return b
 }
 
@@ -461,15 +458,11 @@ func (b *transactionSummaryBuilder) SetProduct(id, name, version string) Summary
 	if b.err != nil {
 		return b
 	}
-	dataplaneDetails := &models.DataplaneDetails{}
-	b.logEvent.TransactionSummary.DataplaneDetails = dataplaneDetails
+	b.logEvent.TransactionSummary.Product = &models.Product{
+		ID:      id,
+		Version: version,
+	}
 
-	dataplaneDetails.Product = &models.Product{}
-	dataplaneDetails.Product.ID = id
-	dataplaneDetails.Product.Name = name
-	dataplaneDetails.Product.Version = version
-
-	b.logEvent.TransactionSummary.DataplaneDetails.Product = dataplaneDetails.Product
 	return b
 }
 
@@ -586,7 +579,7 @@ func (b *transactionSummaryBuilder) validateLogEvent() error {
 		return errors.New("transaction entry point details are not set in transaction summary event")
 	}
 
-	if b.logEvent.TransactionSummary.DataplaneDetails.Product != nil && b.logEvent.TransactionSummary.DataplaneDetails.Product.ID == "" {
+	if b.logEvent.TransactionSummary.Product != nil && b.logEvent.TransactionSummary.Product.ID == "" {
 		return errors.New("product ID property not set in transaction summary event")
 	}
 	return nil
