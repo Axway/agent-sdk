@@ -16,7 +16,6 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
 )
@@ -24,7 +23,7 @@ import (
 var globalHealthChecker *healthChecker
 var statusConfig corecfg.StatusConfig
 var logger log.FieldLogger
-var statusCfgMutex sync.Mutex = sync.Mutex{}
+var statusCfgMutex = sync.Mutex{}
 
 func init() {
 	globalHealthChecker = &healthChecker{
@@ -73,7 +72,7 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 	http.HandleFunc(fmt.Sprintf("/status/%s", endpoint), checkHandler)
 
 	if util.IsNotTest() {
-		executeCheck(newChecker) // execute the healthcheck on registration
+		newChecker.executeCheck()
 	}
 
 	return newID.String(), nil
@@ -91,26 +90,6 @@ func GetStatusConfig() corecfg.StatusConfig {
 	statusCfgMutex.Lock()
 	defer statusCfgMutex.Unlock()
 	return statusConfig
-}
-
-// WaitForReady - Iterate through all healthchecks, returns OK once ready or returns Fail if timeout is reached
-func WaitForReady() error {
-	timeout := time.After(GetStatusConfig().GetHealthCheckPeriod())
-	tick := time.Tick(500 * time.Millisecond)
-	// Keep trying until we have timed out or got a good result
-	for {
-		select {
-		// Got a timeout! Fail with a timeout error
-		case <-timeout:
-			return errors.ErrTimeoutServicesNotReady
-		// Got a tick, we should RunChecks
-		case <-tick:
-			if RunChecks() == OK {
-				logger.Trace("Services are Ready")
-				return nil
-			}
-		}
-	}
 }
 
 // GetStatus - returns the current status for specified service
@@ -132,10 +111,9 @@ func GetStatus(endpoint string) StatusLevel {
 // RunChecks - loop through all
 func RunChecks() StatusLevel {
 	passed := true
+
 	for _, check := range globalHealthChecker.Checks {
-		executeCheck(check)
-		check.statusMutex.Lock()
-		defer check.statusMutex.Unlock()
+		check.executeCheck()
 		if check.Status.Result == FAIL {
 			globalHealthChecker.Status = FAIL
 			passed = false
@@ -149,13 +127,14 @@ func RunChecks() StatusLevel {
 	return globalHealthChecker.Status
 }
 
-// executeCheck  - executes the specified status check and logs the result
-func executeCheck(check *statusCheck) {
-	check.statusMutex.Lock()
-	defer check.statusMutex.Unlock()
+func (check *statusCheck) setStatus(s *Status) {
+	check.Status = s
+}
 
-	// Run the check
-	check.Status = check.checker(check.Name)
+func (check *statusCheck) executeCheck() {
+	s := check.checker(check.Name)
+	check.setStatus(s)
+
 	if check.Status.Result == OK {
 		logger.
 			WithField("check-name", check.Name).
@@ -168,13 +147,6 @@ func executeCheck(check *statusCheck) {
 			WithField("details", check.Status.Details).
 			Error("health check failed")
 	}
-}
-
-// getCheckerStatus - get the status of the checker
-func getCheckerStatus(check *statusCheck) StatusLevel {
-	check.statusMutex.Lock()
-	defer check.statusMutex.Unlock()
-	return check.Status.Result
 }
 
 // Server contains an http server for health checks.
@@ -229,7 +201,7 @@ func GetGlobalStatus() string {
 	return string(globalHealthChecker.Status)
 }
 
-//GetHealthcheckOutput - query the http endpoint and return the body
+// GetHealthcheckOutput - query the http endpoint and return the body
 func GetHealthcheckOutput(url string) (string, error) {
 	client := http.DefaultClient
 
@@ -301,7 +273,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	executeCheck(thisCheck)
+	thisCheck.executeCheck()
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// If check failed change return code to 500
