@@ -242,10 +242,9 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 
 	// Go get the access request and managed app
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(cacheManager, detail)
-	if accessRequest != nil && managedApp != nil {
-		// Update consumer details
-		consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
-	}
+
+	// Update consumer details
+	consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
 
 	subRef := v1.Reference{
 		ID:   unknown,

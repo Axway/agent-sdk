@@ -150,7 +150,7 @@ func FormatApplicationID(applicationID string) string {
 // UpdateWithConsumerDetails -
 func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
 
-	// Set default to consumer details in case access request or managed apps comes back nil
+	// Set defaults to unknown to consumer details in case access request or managed apps comes back nil
 	consumerDetails := &models.ConsumerDetails{
 		Subscription: &models.Subscription{
 			ID:   unknown,
