@@ -460,6 +460,7 @@ func (b *transactionSummaryBuilder) SetProduct(id, name, version string) Summary
 	}
 	b.logEvent.TransactionSummary.Product = &models.Product{
 		ID:      id,
+		Name:    name,
 		Version: version,
 	}
 
