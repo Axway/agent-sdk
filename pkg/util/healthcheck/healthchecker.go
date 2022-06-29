@@ -78,7 +78,7 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 	return newID.String(), nil
 }
 
-// SetStatusConfig - Set the status config globally
+// SetStatusConfig - Set the status config globally.
 func SetStatusConfig(statusCfg corecfg.StatusConfig) {
 	statusCfgMutex.Lock()
 	defer statusCfgMutex.Unlock()
