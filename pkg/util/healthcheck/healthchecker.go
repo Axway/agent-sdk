@@ -151,14 +151,12 @@ func (check *statusCheck) executeCheck() {
 
 // Server contains an http server for health checks.
 type Server struct {
-	mux *http.ServeMux
 }
 
 // HandleRequests - starts the http server
 func (s *Server) HandleRequests() {
-	s.mux = http.NewServeMux()
 	if !globalHealthChecker.registered {
-		s.mux.HandleFunc("/status", statusHandler)
+		http.HandleFunc("/status", statusHandler)
 		globalHealthChecker.registered = true
 	}
 
@@ -168,7 +166,7 @@ func (s *Server) HandleRequests() {
 func (s *Server) startHealthCheckServer() {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
 		addr := fmt.Sprintf(":%d", statusConfig.GetPort())
-		go http.ListenAndServe(addr, s.mux)
+		go http.ListenAndServe(addr, nil)
 	}
 }
 
