@@ -151,19 +151,15 @@ func (check *statusCheck) executeCheck() {
 
 // Server contains an http server for health checks.
 type Server struct {
-	server *http.Server
+	mux *http.ServeMux
 }
 
 // HandleRequests - starts the http server
 func (s *Server) HandleRequests() {
+	s.mux = http.NewServeMux()
 	if !globalHealthChecker.registered {
-		http.HandleFunc("/status", statusHandler)
+		s.mux.HandleFunc("/status", statusHandler)
 		globalHealthChecker.registered = true
-	}
-
-	// Close the server if already running. This can happen due to config/agent resource change
-	if s.server != nil {
-		s.server.Close()
 	}
 
 	s.startHealthCheckServer()
@@ -171,8 +167,8 @@ func (s *Server) HandleRequests() {
 
 func (s *Server) startHealthCheckServer() {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
-		s.server = &http.Server{Addr: fmt.Sprintf(":%d", statusConfig.GetPort())}
-		go s.server.ListenAndServe()
+		addr := fmt.Sprintf(":%d", statusConfig.GetPort())
+		go http.ListenAndServe(addr, s.mux)
 	}
 }
 

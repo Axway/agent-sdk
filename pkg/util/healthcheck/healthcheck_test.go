@@ -104,7 +104,7 @@ func TestRunChecks(t *testing.T) {
 func TestStatusAPIDoesNotAllowPrefixMatches(t *testing.T) {
 	resetGlobalHealthChecker()
 	cfg := &corecfg.StatusConfiguration{
-		Port:                8989, // We don't use this actual port in this test
+		Port:                7890,
 		HealthCheckPeriod:   3 * time.Minute,
 		HealthCheckInterval: 30 * time.Second,
 	}
