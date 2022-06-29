@@ -149,6 +149,11 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	if summaryEvent.TransactionSummary != nil {
 		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
 		if txnSummary != nil {
+			jsonData, err := json.Marshal(&txnSummary)
+			if err != nil {
+				return nil, err
+			}
+			e.logger.Trace(string(jsonData))
 			summaryEvent.TransactionSummary = txnSummary
 		}
 	}
@@ -254,7 +259,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	if managedApp == nil {
 		e.logger.
 			WithField("app-name", appName).
-			Debug("could not get managed application by name, no consumer information attached")
+			Warn("could not get managed application by name, no consumer information attached")
 		return nil, nil
 	}
 	e.logger.
@@ -266,7 +271,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 	if accessRequest == nil {
 		e.logger.
-			Debug("could not get access request, no consumer information attached")
+			Warn("could not get access request, no consumer information attached")
 		return nil, nil
 	}
 	e.logger.
