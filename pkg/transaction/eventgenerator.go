@@ -399,12 +399,46 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		Name: unknown,
 	}
 
+	summaryEvent.Product = &models.Product{
+		ID:      unknown,
+		Name:    unknown,
+		Version: unknown,
+	}
+
+	summaryEvent.ProductPlan = &models.ProductPlan{
+		ID: unknown,
+	}
+
+	summaryEvent.Quota = &models.Quota{
+		ID: unknown,
+	}
+
 	apisvc := unknown
 
 	if accessRequest == nil || managedApp == nil {
 		log.Trace("access request or managed app is nil. Setting default values to unknown")
 		return summaryEvent
 	}
+
+	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	if productRef.ID == "" || productRef.Name == "" {
+		log.Trace("could not get product information, setting product to unknown")
+	} else {
+		summaryEvent.Product.ID = productRef.ID
+		summaryEvent.Product.Name = productRef.Name
+	}
+
+	productRelaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	if productRelaseRef.ID == "" || productRelaseRef.Name == "" {
+		log.Trace("could not get product release information, setting product release to unknown")
+	} else {
+		summaryEvent.Product.Version = productRelaseRef.Name
+	}
+	log.
+		WithField("product-id", summaryEvent.Product.ID).
+		WithField("product-name", summaryEvent.Product.Name).
+		WithField("product-version", summaryEvent.Product.Version).
+		Trace("product information")
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
 	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
@@ -438,6 +472,26 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("proxy-team-id", summaryEvent.Team.ID).
 		WithField("apiservice", apisvc).
 		Trace("api details information")
+
+	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	if productPlanRef.ID == "" {
+		log.Debug("could not get product plan ID, setting product plan to unknown")
+	} else {
+		summaryEvent.ProductPlan.ID = productPlanRef.ID
+	}
+	log.
+		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
+		Trace("product plan ID information")
+
+	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	if quotaRef.ID == "" {
+		log.Debug("could not get quota ID, setting quota to unknown")
+	} else {
+		summaryEvent.Quota.ID = quotaRef.ID
+	}
+	log.
+		WithField("quota-id", summaryEvent.Quota.ID).
+		Trace("quota ID information")
 
 	return summaryEvent
 }

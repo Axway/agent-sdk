@@ -165,13 +165,6 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 			ID:   unknown,
 			Name: unknown,
 		},
-		ProductPlan: &models.ProductPlan{
-			ID: unknown,
-		},
-
-		Quota: &models.Quota{
-			ID: unknown,
-		},
 	}
 
 	if accessRequest == nil || managedApp == nil {
@@ -228,26 +221,6 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("application-id", consumerDetails.PublishedProduct.ID).
 		WithField("application-name", consumerDetails.PublishedProduct.Name).
 		Trace("published product information")
-
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
-	if productPlanRef.ID == "" {
-		log.Debug("could not get product plan ID, setting product plan to unknown")
-	} else {
-		consumerDetails.ProductPlan.ID = productPlanRef.ID
-	}
-	log.
-		WithField("product-plan-id", consumerDetails.ProductPlan.ID).
-		Trace("product plan ID information")
-
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
-	if quotaRef.ID == "" {
-		log.Debug("could not get quota ID, setting quota to unknown")
-	} else {
-		consumerDetails.Quota.ID = quotaRef.ID
-	}
-	log.
-		WithField("quota-id", consumerDetails.Quota.ID).
-		Trace("quota ID information")
 
 	return consumerDetails
 }

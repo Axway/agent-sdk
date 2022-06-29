@@ -68,7 +68,7 @@ type APIMetric struct {
 	Response        ResponseMetrics         `json:"response"`
 	Observation     ObservationDetails      `json:"observation"`
 	StartTime       time.Time               `json:"-"`
-	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
+	ConsumerDetails *models.ConsumerDetails `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -90,7 +90,7 @@ type cachedMetric struct {
 	Count           int64                   `json:"count"`
 	Values          []int64                 `json:"values"`
 	StartTime       time.Time               `json:"startTime"`
-	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
+	ConsumerDetails *models.ConsumerDetails `json:"-"`
 }
 
 // V4EventDistribution - represents V7 distribution

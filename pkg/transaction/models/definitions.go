@@ -5,8 +5,6 @@ type ConsumerDetails struct {
 	Application      *AppDetails   `json:"application,omitempty"` // marketplace application
 	PublishedProduct *Product      `json:"publishedProduct,omitempty"`
 	Subscription     *Subscription `json:"subscription,omitempty"`
-	ProductPlan      *ProductPlan  `json:"productPlan,omitempty"`
-	Quota            *Quota        `json:"quota,omitempty"`
 }
 
 // Subscription  - Represents the subscription used in transaction summary consumer details
