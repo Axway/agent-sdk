@@ -117,6 +117,9 @@ func TestStatusAPIDoesNotAllowPrefixMatches(t *testing.T) {
 		url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, path)
 		resp, err := client.Get(url)
 		assert.Nil(t, err)
+		if err != nil {
+			t.Errorf("test failed: %s", err.Error())
+		}
 		if resp == nil {
 			return 0
 		}
