@@ -63,19 +63,6 @@ stages:
     - schedules
 
 ############################################################
-# Section for CSR jobs
-############################################################
-run-csr:
-  dependencies:
-    - fetch-fortify
-    - whitesource
-
-update-csr:
-  dependencies:
-    - fetch-fortify
-    - whitesource:on-schedule
-
-############################################################
 # Section for triggering agent updates
 ############################################################
 .trigger-downstream-agent:
