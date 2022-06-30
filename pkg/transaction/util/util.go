@@ -9,6 +9,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -144,4 +145,82 @@ func FormatProxyID(proxyID string) string {
 // FormatApplicationID - Returns the prefixed applicationID for summary event.
 func FormatApplicationID(applicationID string) string {
 	return SummaryEventApplicationIDPrefix + applicationID
+}
+
+// UpdateWithConsumerDetails -
+func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
+
+	// Set defaults to unknown to consumer details in case access request or managed apps comes back nil
+	consumerDetails := &models.ConsumerDetails{
+		Subscription: &models.Subscription{
+			ID:   unknown,
+			Name: unknown,
+		},
+		Application: &models.AppDetails{
+			ConsumerOrgID: unknown,
+			ID:            unknown,
+			Name:          unknown,
+		},
+		PublishedProduct: &models.Product{
+			ID:   unknown,
+			Name: unknown,
+		},
+	}
+
+	if accessRequest == nil || managedApp == nil {
+		log.Trace("access request or managed app is nil. Setting default values to unknown")
+		return consumerDetails
+	}
+
+	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	if subRef.ID == "" || subRef.Name == "" {
+		log.Debug("could not get subscription, setting subscription to unknown")
+	} else {
+		consumerDetails.Subscription.ID = subRef.ID
+		consumerDetails.Subscription.Name = subRef.Name
+	}
+	log.
+		WithField("subscription-id", consumerDetails.Subscription.ID).
+		WithField("subscription-name", consumerDetails.Subscription.Name).
+		Trace("subscription information")
+
+	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
+	if appRef.ID == "" || appRef.Name == "" {
+		log.Debug("could not get application, setting application to unknown")
+	} else {
+		consumerDetails.Application.ID = appRef.ID
+		consumerDetails.Application.Name = appRef.Name
+	}
+
+	log.
+		WithField("application-id", consumerDetails.Application.ID).
+		WithField("application-name", consumerDetails.Application.Name).
+		Trace("application information")
+
+	// try to get consumer org ID from the managed app first
+
+	consumerOrgID := GetConsumerOrgID(managedApp)
+	if consumerOrgID == "" {
+		log.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+	} else {
+		consumerDetails.Application.ConsumerOrgID = consumerOrgID
+	}
+	log.
+		WithField("consumer-org-id", consumerDetails.Application.ConsumerOrgID).
+		Trace("consumer org ID ")
+
+	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
+	if publishProductRef.ID == "" || publishProductRef.Name == "" {
+		log.Debug("could not get published product, setting published product to unknown")
+	} else {
+		consumerDetails.PublishedProduct.ID = publishProductRef.ID
+		consumerDetails.PublishedProduct.Name = publishProductRef.Name
+	}
+
+	log.
+		WithField("application-id", consumerDetails.PublishedProduct.ID).
+		WithField("application-name", consumerDetails.PublishedProduct.Name).
+		Trace("published product information")
+
+	return consumerDetails
 }

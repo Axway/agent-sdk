@@ -1,5 +1,7 @@
 package transaction
 
+import "github.com/Axway/agent-sdk/pkg/transaction/models"
+
 // TypeTransactionSummary - Transaction summary type
 const TypeTransactionSummary = "transactionSummary"
 
@@ -66,42 +68,27 @@ type LogEvent struct {
 
 // Summary - Represent the transaction summary event
 type Summary struct {
-	Status          string           `json:"status,omitempty"`
-	StatusDetail    string           `json:"statusDetail,omitempty"`
-	Duration        int              `json:"duration"`
-	Application     *Application     `json:"application,omitempty"`
-	Product         *Product         `json:"product,omitempty"`
-	Team            *Team            `json:"team,omitempty"`
-	Proxy           *Proxy           `json:"proxy,omitempty"`
-	Runtime         *Runtime         `json:"runtime,omitempty"`
-	EntryPoint      *EntryPoint      `json:"entryPoint,omitempty"`
-	IsInMetricEvent bool             `json:"isInMetricEvent,omitempty"`
-	ConsumerDetails *ConsumerDetails `json:"consumerDetails,omitempty"`
+	Status          string                  `json:"status,omitempty"`
+	StatusDetail    string                  `json:"statusDetail,omitempty"`
+	Duration        int                     `json:"duration"`
+	Team            *Team                   `json:"team,omitempty"`
+	Proxy           *Proxy                  `json:"proxy,omitempty"`
+	Runtime         *Runtime                `json:"runtime,omitempty"`
+	EntryPoint      *EntryPoint             `json:"entryPoint,omitempty"`
+	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
+	Application     *Application            `json:"application,omitempty"`
+	AssetResource   *models.AssetResource   `json:"assetResource,omitempty"`
+	API             *models.APIDetails      `json:"api,omitempty"`
+	Product         *models.Product         `json:"product,omitempty"`
+	ProductPlan     *models.ProductPlan     `json:"productPlan,omitempty"`
+	Quota           *models.Quota           `json:"quota,omitempty"`
+	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
 }
 
-// ConsumerDetails  - Represents the consumer details in the transaction summary event
-type ConsumerDetails struct {
-	OrgID        string        `json:"orgId,omitempty"`
-	Application  *Application  `json:"application,omitempty"`
-	Subscription *Subscription `json:"subscription,omitempty"`
-}
-
-// Subscription  - Represents the subscription used in transaction summary event
-type Subscription struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
-// Application  - Represents the application used in transaction summary event
+// Application  - Represents the application used in transaction summary event (dataplane)
 type Application struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
-}
-
-// Product - Represents the prodcut used in the transaction summary event
-type Product struct {
-	ID      string `json:"id,omitempty"`
-	Version string `json:"version,omitempty"`
 }
 
 // Team  - Represents the team used in transaction summary event

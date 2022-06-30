@@ -6,11 +6,15 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -143,7 +147,15 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	if summaryEvent.TransactionSummary != nil {
-		summaryEvent.TransactionSummary.ConsumerDetails = e.getConsumerDetails(summaryEvent)
+		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
+		if txnSummary != nil {
+			jsonData, err := json.Marshal(&txnSummary)
+			if err != nil {
+				return nil, err
+			}
+			e.logger.Trace(string(jsonData))
+			summaryEvent.TransactionSummary = txnSummary
+		}
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -201,40 +213,54 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	return events, nil
 }
 
-// getConsumerDetails - get the consumer information to add to transaction event.  If we don't have any
+// updateTxnSummaryByAccessRequest - get the consumer information to add to transaction event.  If we don't have any
 // 		information we need to get the consumer information, then we just return nil
-func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
+func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summary {
 	cacheManager := agent.GetCacheManager()
-	appName := unknown
-	apiID := ""
-	stage := ""
-
-	if summaryEvent.TransactionSummary.Application != nil {
-		appName = summaryEvent.TransactionSummary.Application.Name
-		e.logger.
-			WithField("app-name", appName).
-			Trace("transaction summary application name")
-	}
 
 	// get proxy information
 	if summaryEvent.TransactionSummary.Proxy == nil {
 		e.logger.Debug("proxy information is not available, no consumer information attached")
 		return nil
 	}
-	apiID = summaryEvent.TransactionSummary.Proxy.ID
-	stage = summaryEvent.TransactionSummary.Proxy.Stage
+
+	// Go get the access request and managed app
+	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
+
+	// Update the consumer details
+	consumerDetails := transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+	summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
+
+	// Update provider details
+	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
+
+	return updatedSummaryEvent
+}
+
+// getAccessRequest -
+func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent LogEvent) (*v1alpha1.AccessRequest, *v1.ResourceInstance) {
+	appName := unknown
+	apiID := summaryEvent.TransactionSummary.Proxy.ID
+	stage := summaryEvent.TransactionSummary.Proxy.Stage
 	e.logger.
 		WithField("api-id", apiID).
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
+
+	if summaryEvent.TransactionSummary.Application != nil {
+		appName = summaryEvent.TransactionSummary.Application.Name
+		e.logger.
+			WithField("app-name", appName).
+			Trace("transaction summary dataplane details application name")
+	}
 
 	// get the managed application
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
 		e.logger.
 			WithField("app-name", appName).
-			Debug("could not get managed application by name, no consumer information attached")
-		return nil
+			Warn("could not get managed application by name, no consumer information attached")
+		return nil, nil
 	}
 	e.logger.
 		WithField("app-name", appName).
@@ -245,8 +271,8 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
 	if accessRequest == nil {
 		e.logger.
-			Debug("could not get access request, no consumer information attached")
-		return nil
+			Warn("could not get access request, no consumer information attached")
+		return nil, nil
 	}
 	e.logger.
 		WithField("managed-app-name", managedApp.Name).
@@ -255,58 +281,7 @@ func (e *Generator) getConsumerDetails(summaryEvent LogEvent) *ConsumerDetails {
 		WithField("access-request-name", accessRequest.Name).
 		Trace("managed application info")
 
-	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
-	// get subscription info
-	subscription := &Subscription{
-		ID:   subRef.ID,
-		Name: subRef.Name,
-	}
-
-	if subRef.ID == "" || subRef.Name == "" {
-		e.logger.Debug("could not get subscription, no consumer information attached")
-		return nil
-	}
-
-	e.logger.
-		WithField("subscription-id", subscription.ID).
-		WithField("subscription-name", subscription.Name).
-		Trace("subscription information")
-
-	// get application info
-	appID := unknown
-	application := &Application{
-		ID:   appID,
-		Name: appName,
-	}
-
-	consumerOrgID := unknown
-
-	if managedApp != nil {
-		appID, appName = transutil.GetConsumerApplication(managedApp)
-		application.ID = appID
-		application.Name = appName
-		e.logger.
-			WithField("application-id", application.ID).
-			WithField("application-name", application.Name).
-			Trace("application information")
-
-			// try to get consumer org ID from the managed app first
-		consumerOrgID = transutil.GetConsumerOrgID(managedApp)
-		if consumerOrgID == "" {
-			e.logger.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
-			return nil
-		}
-		e.logger.
-			WithField("consumer-org-id", consumerOrgID).
-			Trace("consumer org ID ")
-	}
-
-	// Update consumer details with Org, Application and Subscription
-	return &ConsumerDetails{
-		OrgID:        consumerOrgID,
-		Application:  application,
-		Subscription: subscription,
-	}
+	return accessRequest, managedApp
 }
 
 // createSamplingTransactionDetails -
@@ -410,4 +385,110 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	fields["token"] = token
 	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
+}
+
+// updateWithProviderDetails -
+func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
+
+	// Set default to provider details in case access request or managed apps comes back nil
+	summaryEvent.AssetResource = &models.AssetResource{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	summaryEvent.Product = &models.Product{
+		ID:      unknown,
+		Name:    unknown,
+		Version: unknown,
+	}
+
+	summaryEvent.ProductPlan = &models.ProductPlan{
+		ID: unknown,
+	}
+
+	summaryEvent.Quota = &models.Quota{
+		ID: unknown,
+	}
+
+	apisvc := unknown
+
+	if accessRequest == nil || managedApp == nil {
+		log.Trace("access request or managed app is nil. Setting default values to unknown")
+		return summaryEvent
+	}
+
+	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	if productRef.ID == "" || productRef.Name == "" {
+		log.Trace("could not get product information, setting product to unknown")
+	} else {
+		summaryEvent.Product.ID = productRef.ID
+		summaryEvent.Product.Name = productRef.Name
+	}
+
+	productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
+		log.Trace("could not get product release information, setting product release to unknown")
+	} else {
+		summaryEvent.Product.Version = productReleaseRef.Name
+	}
+	log.
+		WithField("product-id", summaryEvent.Product.ID).
+		WithField("product-name", summaryEvent.Product.Name).
+		WithField("product-version", summaryEvent.Product.Version).
+		Trace("product information")
+
+	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
+		log.Trace("could not get asset resource, setting asset resource to unknown")
+	} else {
+		summaryEvent.AssetResource.ID = assetResourceRef.ID
+		summaryEvent.AssetResource.Name = assetResourceRef.Name
+	}
+	log.
+		WithField("asset-resource-id", summaryEvent.AssetResource.ID).
+		WithField("asset-resource-name", summaryEvent.AssetResource.Name).
+		Trace("asset resource information")
+
+	if accessRequest == nil {
+		log.Debug("could not get api service details, setting apiservice to unknown")
+	} else {
+		apisvc = accessRequest.Spec.ApiServiceInstance
+	}
+	api := &models.APIDetails{
+		ID:                 summaryEvent.Proxy.ID,
+		Name:               summaryEvent.Proxy.Name,
+		Revision:           summaryEvent.Proxy.Revision,
+		TeamID:             summaryEvent.Team.ID,
+		APIServiceInstance: apisvc,
+	}
+	summaryEvent.API = api
+	log.
+		WithField("proxy-id", summaryEvent.Proxy.ID).
+		WithField("proxy-name", summaryEvent.Proxy.Name).
+		WithField("proxy-revision", summaryEvent.Proxy.Revision).
+		WithField("proxy-team-id", summaryEvent.Team.ID).
+		WithField("apiservice", apisvc).
+		Trace("api details information")
+
+	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	if productPlanRef.ID == "" {
+		log.Debug("could not get product plan ID, setting product plan to unknown")
+	} else {
+		summaryEvent.ProductPlan.ID = productPlanRef.ID
+	}
+	log.
+		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
+		Trace("product plan ID information")
+
+	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	if quotaRef.ID == "" {
+		log.Debug("could not get quota ID, setting quota to unknown")
+	} else {
+		summaryEvent.Quota.ID = quotaRef.ID
+	}
+	log.
+		WithField("quota-id", summaryEvent.Quota.ID).
+		Trace("quota ID information")
+
+	return summaryEvent
 }
