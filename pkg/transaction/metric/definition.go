@@ -90,7 +90,7 @@ type cachedMetric struct {
 	Count           int64                   `json:"count"`
 	Values          []int64                 `json:"values"`
 	StartTime       time.Time               `json:"startTime"`
-	ConsumerDetails *models.ConsumerDetails `json:"-"`
+	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails"`
 }
 
 // V4EventDistribution - represents V7 distribution
