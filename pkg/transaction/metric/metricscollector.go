@@ -231,8 +231,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	if !c.usageConfig.CanPublishMetric() {
 		return nil // no need to update metrics with publish off
 	}
-	// set defaults
-	// apiMetric := &APIMetric{}
+
 	consumerDetails := &models.ConsumerDetails{}
 
 	cacheManager := agent.GetCacheManager()

@@ -425,11 +425,11 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		summaryEvent.Product.Name = productRef.Name
 	}
 
-	productRelaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
-	if productRelaseRef.ID == "" || productRelaseRef.Name == "" {
+	productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
 		log.Trace("could not get product release information, setting product release to unknown")
 	} else {
-		summaryEvent.Product.Version = productRelaseRef.Name
+		summaryEvent.Product.Version = productReleaseRef.Name
 	}
 	log.
 		WithField("product-id", summaryEvent.Product.ID).
