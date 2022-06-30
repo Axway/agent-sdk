@@ -55,6 +55,11 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		return nil
 	}
 
+	// add or update the cache with the ManagedApplication
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+		h.cache.AddManagedApplication(resource)
+	}
+
 	if ok := isStatusFound(app.Status); !ok {
 		log.Debug("could not handle application request as it did not have a status subresource")
 		return nil
