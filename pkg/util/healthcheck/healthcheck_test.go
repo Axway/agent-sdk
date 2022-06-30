@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -46,8 +45,6 @@ func TestRegisterHealthcheck(t *testing.T) {
 
 func TestRunChecks(t *testing.T) {
 	resetGlobalHealthChecker()
-
-	// assert that the number of Checks is 0
 	assert.Equal(t, 0, len(globalHealthChecker.Checks), "The initial number of checks was not 0")
 
 	hcValues := map[string]bool{
@@ -69,69 +66,45 @@ func TestRunChecks(t *testing.T) {
 		}
 	}
 
-	isReady := false
 	cfg := corecfg.NewStatusConfig()
 	SetStatusConfig(cfg)
 
-	// Start a go func to watch WaitForReady
-	var wg sync.WaitGroup
-	wg.Add((1))
-	go func() {
-		defer wg.Done()
-
-		// Set isReady to true on return
-		err := WaitForReady()
-		if err == nil {
-			isReady = true
-		}
-
-	}()
-
-	// Register healthchecks
 	_, err1 := RegisterHealthcheck("healthcheck1", "healthcheck1", hcFunc)
 	_, err2 := RegisterHealthcheck("healthcheck2", "healthcheck2", hcFunc)
-	assert.Nil(t, err1, "There was an unexpected error while registering a healthcheck1")
-	assert.Nil(t, err2, "There was an unexpected error while registering a healthcheck2")
+	assert.Nil(t, err1)
+	assert.Nil(t, err2)
 
-	// Run the checks, all fail
 	res := RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
-	assert.False(t, isReady, "isReady should have been false")
 
-	// only hc1 pass
 	hcValues["healthcheck1"] = true
 	hcValues["healthcheck2"] = false
 	res = RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
-	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have passed")
-	assert.Equal(t, FAIL, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have failed")
-	assert.False(t, isReady, "isReady should have been false")
+	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have passed")
+	assert.Equal(t, FAIL, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have failed")
 
 	// only hc2 pass
 	hcValues["healthcheck1"] = false
 	hcValues["healthcheck2"] = true
 	res = RunChecks()
 	assert.Equal(t, FAIL, res, "The overall healthcheck should have failed")
-	assert.Equal(t, FAIL, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have failed")
-	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have passed")
-	assert.False(t, isReady, "isReady should have been false")
+	assert.Equal(t, FAIL, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have failed")
+	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have passed")
 
 	// hall hc pass
 	hcValues["healthcheck1"] = true
 	hcValues["healthcheck2"] = true
 	res = RunChecks()
 	assert.Equal(t, OK, res, "The overall healthcheck should have passed")
-	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck1"]), "healthcheck1 should have passed")
-	assert.Equal(t, OK, getCheckerStatus(globalHealthChecker.Checks["healthcheck2"]), "healthcheck2 should have passed")
-
-	wg.Wait()
-	assert.True(t, isReady, "isReady should have been true")
+	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck1"].Status.Result, "healthcheck1 should have passed")
+	assert.Equal(t, OK, globalHealthChecker.Checks["healthcheck2"].Status.Result, "healthcheck2 should have passed")
 }
 
 func TestStatusAPIDoesNotAllowPrefixMatches(t *testing.T) {
 	resetGlobalHealthChecker()
 	cfg := &corecfg.StatusConfiguration{
-		Port:                8989, // We don't use this actual port in this test
+		Port:                7890,
 		HealthCheckPeriod:   3 * time.Minute,
 		HealthCheckInterval: 30 * time.Second,
 	}
@@ -144,6 +117,12 @@ func TestStatusAPIDoesNotAllowPrefixMatches(t *testing.T) {
 		url := fmt.Sprintf("http://localhost:%d%s", cfg.Port, path)
 		resp, err := client.Get(url)
 		assert.Nil(t, err)
+		if err != nil {
+			t.Errorf("test failed: %s", err.Error())
+		}
+		if resp == nil {
+			return 0
+		}
 		return resp.StatusCode
 	}
 
