@@ -29,6 +29,7 @@ set_version_variables() {
 
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
+    echo "{COMMIT_MSG}={INT - update to new release ${NEW_VERSION}}" >> $GITHUB_ENV
 }
 
 checkout_main() {
