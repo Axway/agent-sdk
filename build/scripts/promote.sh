@@ -1,5 +1,4 @@
 #!/bin/bash
-
 check_required_param() {
     echo $1
     if [ -z $1 ]; then
@@ -25,7 +24,6 @@ set_version_variables() {
 
     # right now, this only does patch versioning.
     export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
-
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
 }
@@ -34,8 +32,8 @@ checkout_main() {
     # need these in order to commit
     git config --global user.name "Gitlab action"
     git config --global user.email "gitaction@axway.com"
-    git fetch
-    git checkout main
+    # git fetch
+    # git checkout main
 }
 
 update_version_file() {
@@ -48,9 +46,9 @@ commit_promotion() {
     # maybe define a user that can push and go git config --locak(global) user
     # maybe this? https://github.com/marketplace/actions/add-commit or this https://github.com/peter-evans/create-pull-request
     # echo "Committing the new promoted version to main"
-    # cd ${BASE_DIR}
-    # git add version
-    # git commit -m "INT - ${MSG}"
+    cd ${BASE_DIR}
+    git add version
+    git commit -m "INT - ${MSG}"
     # git push --force origin main
 
     echo "Until the script can be fixed, you must manually do the next steps"
