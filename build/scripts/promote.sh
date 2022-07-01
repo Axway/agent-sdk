@@ -1,4 +1,5 @@
 #!/bin/bash
+export $1=v1.2.3
 
 check_required_param() {
     echo $1
@@ -34,13 +35,15 @@ checkout_main() {
     # need these in order to commit
     git config --global user.name "Gitlab action"
     git config --global user.email "gitaction@axway.com"
-    git fetch
-    git checkout main
+    # git fetch
+    # git checkout main
 }
 
 update_version_file() {
+    cat ${BASE_DIR}/version
     echo "Updating version file to version ${NEW_VERSION}"
     echo ${NEW_VERSION} > ${BASE_DIR}/version
+    cat ${BASE_DIR}/version
 }
 
 commit_promotion() {

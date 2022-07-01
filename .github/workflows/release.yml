@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - APIGOV-DALE
+      - APIGOV-dale
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
 
@@ -22,8 +23,15 @@ jobs:
       run:
         working-directory: .
     steps:
-    - uses: actions/checkout@v2
-    - name: Update version file
-      working-directory: ./build/scripts
-      # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
-      run: ./promote.sh ${GITHUB_REF}   
+      - uses: actions/checkout@v2
+      - name: Update version file
+        working-directory: ./build/scripts
+        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+        run: ./promote.sh ${GITHUB_REF}  
+      - name: Create pull request
+        uses: peter-evens/create-pull-request@v4
+        with:
+          commit-message: foo
+          branch: APIGOV-updateversion
+          delete-branch: true
+     
