@@ -24,12 +24,8 @@ set_version_variables() {
 
     # right now, this only does patch versioning.
     export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
-#    echo "RELEASE_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-    echo "{RELEASE_VERSION}={4.5.6}" >> $GITHUB_ENV
-
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
-    echo "{COMMIT_MSG}={INT - update to new release ${NEW_VERSION}}" >> $GITHUB_ENV
 }
 
 checkout_main() {
@@ -42,10 +38,8 @@ checkout_main() {
 
 update_version_file() {
     NEW_VERSION="v1.2.3"
-    cat ${BASE_DIR}/version
     echo "Updating version file to version ${NEW_VERSION}"
     echo ${NEW_VERSION} > ${BASE_DIR}/version
-    cat ${BASE_DIR}/version
 }
 
 commit_promotion() {
@@ -53,9 +47,9 @@ commit_promotion() {
     # maybe define a user that can push and go git config --locak(global) user
     # maybe this? https://github.com/marketplace/actions/add-commit or this https://github.com/peter-evans/create-pull-request
     # echo "Committing the new promoted version to main"
-    # cd ${BASE_DIR}
-    # git add version
-    # git commit -m "INT - ${MSG}"
+    cd ${BASE_DIR}
+    git add version
+    git commit -m "INT - ${MSG}"
     # git push --force origin main
 
     echo "Until the script can be fixed, you must manually do the next steps"
