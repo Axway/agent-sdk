@@ -1,6 +1,4 @@
 #!/bin/bash
-export $1=v1.2.3
-
 check_required_param() {
     echo $1
     if [ -z $1 ]; then
@@ -40,6 +38,7 @@ checkout_main() {
 }
 
 update_version_file() {
+    NEW_VERSION="v1.2.3"
     cat ${BASE_DIR}/version
     echo "Updating version file to version ${NEW_VERSION}"
     echo ${NEW_VERSION} > ${BASE_DIR}/version
@@ -65,12 +64,12 @@ commit_promotion() {
 }
 
 main() {
-    check_required_param $1
-    if [ $? -eq 1 ]; then
-        echo "Promotion of release not completed. Missing parameter for release version (e.g. v1.2.3)"
-        echo "version file not updated. You can update it manually if you wish."
-        exit
-    fi
+    # check_required_param $1
+    # if [ $? -eq 1 ]; then
+    #     echo "Promotion of release not completed. Missing parameter for release version (e.g. v1.2.3)"
+    #     echo "version file not updated. You can update it manually if you wish."
+    #     exit
+    # fi
 
     checkout_main
 
