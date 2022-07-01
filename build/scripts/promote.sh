@@ -24,6 +24,7 @@ set_version_variables() {
 
     # right now, this only does patch versioning.
     export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
+    echo "{NEW_VERSION}={${NEW_VERSION}}"
 
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
