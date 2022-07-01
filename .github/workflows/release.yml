@@ -33,7 +33,6 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
-          commit-message: INT - update to new release of SDK
           branch: APIGOV-updateversion
           delete-branch: true
      
