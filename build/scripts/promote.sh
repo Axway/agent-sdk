@@ -25,7 +25,7 @@ set_version_variables() {
     # right now, this only does patch versioning.
     export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
 #    echo "RELEASE_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-    echo "${RELEASE_VERSION}={4.5.6}" >> $GITHUB_ENV
+    echo "{RELEASE_VERSION}={4.5.6}" >> $GITHUB_ENV
 
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
