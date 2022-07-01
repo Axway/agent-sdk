@@ -31,7 +31,7 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
-          commit-message: INT - update to new release ${{ env.NEW_VERSION }}
+          commit-message: INT - update to new release ${{ env.RELEASE_VERSION }}
           branch: APIGOV-updateversion
           delete-branch: true
      
