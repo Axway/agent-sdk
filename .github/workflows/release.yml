@@ -27,7 +27,10 @@ jobs:
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
-        run: ./promote.sh ${GITHUB_REF}  
+        run: |
+          ./promote.sh ${GITHUB_REF}
+          echo ${{ env.RELEASE_VERSION }}
+          echo "$NEW_VERSION"
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
