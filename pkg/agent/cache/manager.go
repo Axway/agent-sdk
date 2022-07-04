@@ -95,6 +95,12 @@ type Manager interface {
 	GetAccessRequest(id string) *v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 
+	// Credential cache related methods
+	GetCredentialCacheKeys() []string
+	AddCredential(resource *v1.ResourceInstance)
+	GetCredential(id string) *v1.ResourceInstance
+	DeleteCredential(id string) error
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -107,6 +113,7 @@ type cacheManager struct {
 	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
+	credentialMap           cache.Cache
 	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	fetchOnStartup          cache.Cache
@@ -133,6 +140,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		categoryMap:             cache.New(),
 		managedApplicationMap:   cache.New(),
 		accessRequestMap:        cache.New(),
+		credentialMap:           cache.New(),
 		subscriptionMap:         cache.New(),
 		sequenceCache:           cache.New(),
 		fetchOnStartup:          cache.New(),
@@ -303,6 +311,7 @@ func (c *cacheManager) Flush() {
 	c.logger.Debug("resetting the persistent cache")
 
 	c.accessRequestMap.Flush()
+	c.credentialMap.Flush()
 	c.apiMap.Flush()
 	c.ardMap.Flush()
 	c.categoryMap.Flush()

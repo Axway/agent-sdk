@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"net/http"
 	"strings"
 	"testing"
@@ -114,6 +115,8 @@ func TestCredentialHandler(t *testing.T) {
 				credApp.SubResources["status"].(map[string]interface{})["level"] = tc.appStatus
 			}
 
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
 			cred := credential
 			cred.Status.Level = tc.inboundStatus
 
@@ -142,7 +145,7 @@ func TestCredentialHandler(t *testing.T) {
 				subError:       tc.subError,
 			}
 
-			handler := NewCredentialHandler(p, c, nil)
+			handler := NewCredentialHandler(p, cm, c, nil)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -208,6 +211,8 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			cred.Metadata.State = tc.resourceState
 			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
 
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
 			p := &mockCredProv{
 				t: t,
 				expectedStatus: mock.MockRequestStatus{
@@ -231,7 +236,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 				t:              t,
 			}
 
-			handler := NewCredentialHandler(p, c, nil)
+			handler := NewCredentialHandler(p, cm, c, nil)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -258,7 +263,8 @@ func TestCredentialHandler_deleting(t *testing.T) {
 func TestCredentialHandler_wrong_kind(t *testing.T) {
 	c := &mockClient{}
 	p := &mockCredProv{}
-	handler := NewCredentialHandler(p, c, nil)
+	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	handler := NewCredentialHandler(p, cm, c, nil)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: mv1.EnvironmentGVK(),
@@ -330,6 +336,7 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 			idpConfig := createIDPConfig(s)
 			idpProviderRegistry := oauth.NewProviderRegistry()
 			idpProviderRegistry.RegisterProvider(idpConfig, config.NewTLSConfig(), "", 30*time.Second)
@@ -363,7 +370,7 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 				t:              t,
 			}
 
-			handler := NewCredentialHandler(p, c, idpProviderRegistry)
+			handler := NewCredentialHandler(p, cm, c, idpProviderRegistry)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -421,6 +428,8 @@ func TestIDPCredentialDeprovisioning(t *testing.T) {
 				"idpTokenURL": tc.tokenURL,
 			}
 
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
 			p := &mockCredProv{
 				t: t,
 				expectedStatus: mock.MockRequestStatus{
@@ -444,7 +453,7 @@ func TestIDPCredentialDeprovisioning(t *testing.T) {
 				t:              t,
 			}
 
-			handler := NewCredentialHandler(p, c, idpProviderRegistry)
+			handler := NewCredentialHandler(p, cm, c, idpProviderRegistry)
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil

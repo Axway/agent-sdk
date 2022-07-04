@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -29,6 +30,7 @@ type credProv interface {
 type credentials struct {
 	marketplaceHandler
 	prov                credProv
+	cache               agentcache.Manager
 	client              client
 	encryptSchema       encryptSchemaFunc
 	idpProviderRegistry oauth.ProviderRegistry
@@ -38,9 +40,10 @@ type credentials struct {
 type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
-func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.ProviderRegistry) Handler {
+func NewCredentialHandler(prov credProv, cache agentcache.Manager, client client, providerRegistry oauth.ProviderRegistry) Handler {
 	return &credentials{
 		prov:                prov,
+		cache:               cache,
 		client:              client,
 		encryptSchema:       encryptSchema,
 		idpProviderRegistry: providerRegistry,
@@ -62,6 +65,11 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	if err != nil {
 		logger.WithError(err).Error("could not handle credential request")
 		return nil
+	}
+
+	// add or update the cache with the access request
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+		h.cache.AddCredential(resource)
 	}
 
 	if ok := isStatusFound(cr.Status); !ok {
