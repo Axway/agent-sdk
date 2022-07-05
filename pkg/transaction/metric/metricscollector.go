@@ -254,7 +254,8 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	}
 
 	subscriptionID := subRef.ID
-	appID := c.getApplicationID(managedApp)
+	appDetail := c.createAppDetail(managedApp)
+	appID := appDetail.ID
 	statusCode := detail.StatusCode
 
 	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + apiID + "." + statusCode)
@@ -282,7 +283,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
 			Subscription:    c.createSubscriptionDetail(subRef),
-			App:             c.createAppDetail(managedApp),
+			App:             appDetail,
 			API:             c.createAPIDetail(detail.APIDetails, accessRequest),
 			StatusCode:      statusCode,
 			Status:          c.getStatusText(statusCode),
@@ -345,13 +346,6 @@ func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDe
 		detail.Name = subRef.Name
 	}
 	return detail
-}
-
-func (c *collector) getApplicationID(app *v1.ResourceInstance) string {
-	if app == nil {
-		return unknown
-	}
-	return app.Metadata.ID
 }
 
 func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
