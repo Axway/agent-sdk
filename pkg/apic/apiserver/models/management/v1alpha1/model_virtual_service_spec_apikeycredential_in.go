@@ -11,7 +11,7 @@ package v1alpha1
 
 // VirtualServiceSpecApikeycredentialIn The object containing the api key name and location in the request.
 type VirtualServiceSpecApikeycredentialIn struct {
-	// The name of the api key header.
+	// The name of the api key header/query parameter.
 	Name     string `json:"name"`
 	Location string `json:"location"`
 }

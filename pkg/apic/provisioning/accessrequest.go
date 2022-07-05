@@ -16,4 +16,6 @@ type AccessRequest interface {
 	GetAccessRequestProvisioningData() interface{}
 	// GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
 	GetInstanceDetails() map[string]interface{}
+	// GetQuota returns the quota from within the access request
+	GetQuota() Quota
 }

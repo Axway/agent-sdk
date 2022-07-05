@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// VirtualServiceSpecApikeyauthrule API key authentication.
-type VirtualServiceSpecApikeyauthrule struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
+// QuotaSpecUnlimitedPricingType struct for QuotaSpecUnlimitedPricingType
+type QuotaSpecUnlimitedPricingType struct {
+	Type string `json:"type"`
 }

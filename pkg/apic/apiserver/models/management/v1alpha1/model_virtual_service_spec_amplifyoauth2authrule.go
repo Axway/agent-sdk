@@ -12,5 +12,5 @@ package v1alpha1
 // VirtualServiceSpecAmplifyoauth2authrule Amplify Gateway OAuth2 authentication.
 type VirtualServiceSpecAmplifyoauth2authrule struct {
 	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 }

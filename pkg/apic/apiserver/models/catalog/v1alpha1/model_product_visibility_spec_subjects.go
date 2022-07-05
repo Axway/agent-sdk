@@ -9,8 +9,10 @@
 
 package v1alpha1
 
-// VirtualServiceSpecApikeyauthrule API key authentication.
-type VirtualServiceSpecApikeyauthrule struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
+// ProductVisibilitySpecSubjects  (catalog.v1alpha1.ProductVisibility)
+type ProductVisibilitySpecSubjects struct {
+	// Type of the subject
+	Type string `json:"type,omitempty"`
+	// ID of the subject
+	Id string `json:"id,omitempty"`
 }

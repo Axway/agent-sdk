@@ -70,6 +70,7 @@ type Set struct {
 	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
+	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
@@ -326,6 +327,10 @@ func New(b cAPIV1.Base) *Set {
 	s.PublishedProductCatalogV1alpha1, err = catalog_v1alpha1.NewPublishedProductClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedProduct: %s", err))
+	}
+	s.ProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewProductVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductVisibility: %s", err))
 	}
 	s.ProductCatalogV1alpha1, err = catalog_v1alpha1.NewProductClient(b)
 	if err != nil {
