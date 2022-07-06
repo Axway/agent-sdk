@@ -241,11 +241,17 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(cacheManager, detail)
 
 	// Update consumer details
-	consumerDetails := &models.ConsumerDetails{}
-	consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
+	subRef := v1.Reference{
+		ID:   unknown,
+		Name: unknown,
+	}
+	if accessRequest != nil {
+		subRef = accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	}
 
-	subscriptionID := consumerDetails.Subscription.ID
-	appID := consumerDetails.Application.ID
+	subscriptionID := subRef.ID
+	appDetail := c.createAppDetail(managedApp)
+	appID := appDetail.ID
 
 	statusCode := detail.StatusCode
 
@@ -273,17 +279,16 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription:     SubscriptionDetails(*consumerDetails.Subscription),
-			App:              AppDetails(*consumerDetails.Application),
-			PublishedProduct: *consumerDetails.PublishedProduct,
-			API:              c.createAPIDetail(detail.APIDetails, accessRequest),
-			AssetResource:    c.getAssetResource(accessRequest, managedApp, c.logger),
-			Product:          c.getProduct(accessRequest, managedApp, c.logger),
-			ProductPlan:      c.getProductPlan(accessRequest, managedApp, c.logger),
-			Quota:            c.getQuota(accessRequest, managedApp, c.logger),
-			StatusCode:       statusCode,
-			Status:           c.getStatusText(statusCode),
-			StartTime:        now(),
+			Subscription:  c.createSubscriptionDetail(subRef),
+			App:           appDetail,
+			Product:       c.getProduct(accessRequest, c.logger),
+			API:           c.createAPIDetail(detail.APIDetails, accessRequest),
+			AssetResource: c.getAssetResource(accessRequest, c.logger),
+			ProductPlan:   c.getProductPlan(accessRequest, c.logger),
+			Quota:         c.getQuota(accessRequest, c.logger),
+			StatusCode:    statusCode,
+			Status:        c.getStatusText(statusCode),
+			StartTime:     now(),
 		}
 	}
 	histogram.Update(detail.Duration)
@@ -330,6 +335,32 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 	return accessRequest, managedApp
 }
 
+func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDetails {
+	detail := SubscriptionDetails{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	if subRef.ID != "" && subRef.Name != "" {
+		detail.ID = subRef.ID
+		detail.Name = subRef.Name
+	}
+	return detail
+}
+
+func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
+	detail := AppDetails{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	if app != nil {
+		detail.ID, detail.Name = c.getConsumerApplication(app)
+		detail.ConsumerOrgID = c.getConsumerOrgID(app)
+	}
+	return detail
+}
+
 func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRequest) APIDetails {
 	detail := APIDetails{
 		ID:                 api.ID,
@@ -345,15 +376,15 @@ func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRe
 	return detail
 }
 
-func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.AssetResource {
+func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.AssetResource {
 	// Set default to provider details in case access request or managed apps comes back nil
 	assetResource := models.AssetResource{
 		ID:   unknown,
 		Name: unknown,
 	}
 
-	if accessRequest == nil || managedApp == nil {
-		log.Trace("access request or managed app is nil. Setting default values to unknown")
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
 		return assetResource
 	}
 
@@ -364,23 +395,22 @@ func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, mana
 		assetResource.ID = assetResourceRef.ID
 		assetResource.Name = assetResourceRef.Name
 	}
-	log.
-		WithField("asset-resource-id", assetResource.ID).
+	log.WithField("asset-resource-id", assetResource.ID).
 		WithField("asset-resource-name", assetResource.Name).
 		Trace("asset resource information")
 
 	return assetResource
 }
 
-func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.Product {
+func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
 	product := models.Product{
 		ID:      unknown,
 		Name:    unknown,
 		Version: unknown,
 	}
 
-	if accessRequest == nil || managedApp == nil {
-		log.Trace("access request or managed app is nil. Setting default values to unknown")
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
 		return product
 	}
 
@@ -398,8 +428,7 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, managedApp
 	} else {
 		product.Version = productReleaseRef.Name
 	}
-	log.
-		WithField("product-id", product.ID).
+	log.WithField("product-id", product.ID).
 		WithField("product-name", product.Name).
 		WithField("product-version", product.Version).
 		Trace("product information")
@@ -407,13 +436,13 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, managedApp
 
 }
 
-func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.ProductPlan {
+func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProductPlan {
 	productPlan := models.ProductPlan{
 		ID: unknown,
 	}
 
-	if accessRequest == nil || managedApp == nil {
-		log.Trace("access request or managed app is nil. Setting default values to unknown")
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
 		return productPlan
 	}
 
@@ -423,18 +452,17 @@ func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, manage
 	} else {
 		productPlan.ID = productPlanRef.ID
 	}
-	log.
-		WithField("product-plan-id", productPlan.ID).
+	log.WithField("product-plan-id", productPlan.ID).
 		Trace("product plan ID information")
 
 	return productPlan
 }
 
-func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) models.Quota {
+func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Quota {
 	quota := models.Quota{
 		ID: unknown,
 	}
-	if accessRequest == nil || managedApp == nil {
+	if accessRequest == nil {
 		log.Trace("access request or managed app is nil. Setting default values to unknown")
 		return quota
 	}
@@ -444,8 +472,7 @@ func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, managedApp *
 	} else {
 		quota.ID = quotaRef.ID
 	}
-	log.
-		WithField("quota-id", quota.ID).
+	log.WithField("quota-id", quota.ID).
 		Trace("quota ID information")
 
 	return quota
