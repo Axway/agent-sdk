@@ -279,16 +279,17 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription:  c.createSubscriptionDetail(subRef),
-			App:           appDetail,
-			Product:       c.getProduct(accessRequest, c.logger),
-			API:           c.createAPIDetail(detail.APIDetails, accessRequest),
-			AssetResource: c.getAssetResource(accessRequest, c.logger),
-			ProductPlan:   c.getProductPlan(accessRequest, c.logger),
-			Quota:         c.getQuota(accessRequest, c.logger),
-			StatusCode:    statusCode,
-			Status:        c.getStatusText(statusCode),
-			StartTime:     now(),
+			Subscription:     c.createSubscriptionDetail(subRef),
+			App:              appDetail,
+			PublishedProduct: c.getPublishedProduct(accessRequest, c.logger),
+			Product:          c.getProduct(accessRequest, c.logger),
+			API:              c.createAPIDetail(detail.APIDetails, accessRequest),
+			AssetResource:    c.getAssetResource(accessRequest, c.logger),
+			ProductPlan:      c.getProductPlan(accessRequest, c.logger),
+			Quota:            c.getQuota(accessRequest, c.logger),
+			StatusCode:       statusCode,
+			Status:           c.getStatusText(statusCode),
+			StartTime:        now(),
 		}
 	}
 	histogram.Update(detail.Duration)
@@ -374,6 +375,32 @@ func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRe
 		detail.APIServiceInstance = accessReq.Spec.ApiServiceInstance
 	}
 	return detail
+}
+
+func (c *collector) getPublishedProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
+	publishedProduct := models.Product{
+		ID:   unknown,
+		Name: unknown,
+	}
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
+		return publishedProduct
+	}
+
+	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
+	if publishProductRef.ID == "" || publishProductRef.Name == "" {
+		log.Debug("could not get published product, setting published product to unknown")
+	} else {
+		publishedProduct.ID = publishProductRef.ID
+		publishedProduct.Name = publishProductRef.Name
+	}
+
+	log.
+		WithField("published-product-id", publishedProduct.ID).
+		WithField("published-product-name", publishedProduct.Name).
+		Trace("published product information")
+
+	return publishedProduct
 }
 
 func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.AssetResource {

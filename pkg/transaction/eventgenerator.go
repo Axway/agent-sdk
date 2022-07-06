@@ -228,8 +228,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
 
 	// Update the consumer details
-	consumerDetails := transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
-	summaryEvent.TransactionSummary.ConsumerDetails = consumerDetails
+	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
 
 	// Update provider details
 	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
