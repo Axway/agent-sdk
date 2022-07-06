@@ -59,16 +59,20 @@ type APIDetails struct {
 
 // APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	Subscription    SubscriptionDetails     `json:"subscription"`
-	App             AppDetails              `json:"application"`
-	API             APIDetails              `json:"api"`
-	StatusCode      string                  `json:"statusCode"`
-	Status          string                  `json:"status"`
-	Count           int64                   `json:"count"`
-	Response        ResponseMetrics         `json:"response"`
-	Observation     ObservationDetails      `json:"observation"`
-	StartTime       time.Time               `json:"-"`
-	ConsumerDetails *models.ConsumerDetails `json:"-"`
+	Subscription     SubscriptionDetails  `json:"subscription"`
+	App              AppDetails           `json:"application"`
+	PublishedProduct models.Product       `json:"publishedProduct,omitempty"`
+	API              APIDetails           `json:"api"`
+	AssetResource    models.AssetResource `json:"assetResource,omitempty"`
+	Product          models.Product       `json:"product,omitempty"`
+	ProductPlan      models.ProductPlan   `json:"productPlan,omitempty"`
+	Quota            models.Quota         `json:"quota,omitempty"`
+	StatusCode       string               `json:"statusCode"`
+	Status           string               `json:"status"`
+	Count            int64                `json:"count"`
+	Response         ResponseMetrics      `json:"response"`
+	Observation      ObservationDetails   `json:"observation"`
+	StartTime        time.Time            `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -83,14 +87,18 @@ func (a *APIMetric) GetType() string {
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	App             AppDetails              `json:"app,omitempty"`
-	Subscription    SubscriptionDetails     `json:"subscription,omitempty"`
-	API             APIDetails              `json:"api"`
-	StatusCode      string                  `json:"statusCode"`
-	Count           int64                   `json:"count"`
-	Values          []int64                 `json:"values"`
-	StartTime       time.Time               `json:"startTime"`
-	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails"`
+	Subscription     SubscriptionDetails  `json:"subscription,omitempty"`
+	App              AppDetails           `json:"app,omitempty"`
+	PublishedProduct models.Product       `json:"publishedProduct,omitempty"`
+	API              APIDetails           `json:"api"`
+	AssetResource    models.AssetResource `json:"assetResource,omitempty"`
+	Product          models.Product       `json:"product,omitempty"`
+	ProductPlan      models.ProductPlan   `json:"productPlan,omitempty"`
+	Quota            models.Quota         `json:"quota,omitempty"`
+	StatusCode       string               `json:"statusCode"`
+	Count            int64                `json:"count"`
+	Values           []int64              `json:"values"`
+	StartTime        time.Time            `json:"startTime"`
 }
 
 // V4EventDistribution - represents V7 distribution
