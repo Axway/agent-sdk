@@ -279,17 +279,16 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription:     c.createSubscriptionDetail(subRef),
-			App:              appDetail,
-			PublishedProduct: c.getPublishedProduct(accessRequest, c.logger),
-			Product:          c.getProduct(accessRequest, c.logger),
-			API:              c.createAPIDetail(detail.APIDetails, accessRequest),
-			AssetResource:    c.getAssetResource(accessRequest, c.logger),
-			ProductPlan:      c.getProductPlan(accessRequest, c.logger),
-			Quota:            c.getQuota(accessRequest, c.logger),
-			StatusCode:       statusCode,
-			Status:           c.getStatusText(statusCode),
-			StartTime:        now(),
+			Subscription:  c.createSubscriptionDetail(subRef),
+			App:           appDetail,
+			Product:       c.getProduct(accessRequest, c.logger),
+			API:           c.createAPIDetail(detail.APIDetails, accessRequest),
+			AssetResource: c.getAssetResource(accessRequest, c.logger),
+			ProductPlan:   c.getProductPlan(accessRequest, c.logger),
+			Quota:         c.getQuota(accessRequest, c.logger),
+			StatusCode:    statusCode,
+			Status:        c.getStatusText(statusCode),
+			StartTime:     now(),
 		}
 	}
 	histogram.Update(detail.Duration)
