@@ -218,8 +218,8 @@ func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 
 	log.
-		WithField("application-id", consumerDetails.PublishedProduct.ID).
-		WithField("application-name", consumerDetails.PublishedProduct.Name).
+		WithField("published-product-id", consumerDetails.PublishedProduct.ID).
+		WithField("published-product-name", consumerDetails.PublishedProduct.Name).
 		Trace("published product information")
 
 	return consumerDetails

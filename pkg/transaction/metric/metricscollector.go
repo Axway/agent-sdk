@@ -232,8 +232,6 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		return nil // no need to update metrics with publish off
 	}
 
-	consumerDetails := &models.ConsumerDetails{}
-
 	cacheManager := agent.GetCacheManager()
 
 	// Lookup Access Request and Managed App
@@ -243,8 +241,6 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(cacheManager, detail)
 
 	// Update consumer details
-	consumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, c.logger)
-
 	subRef := v1.Reference{
 		ID:   unknown,
 		Name: unknown,
@@ -256,6 +252,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	subscriptionID := subRef.ID
 	appDetail := c.createAppDetail(managedApp)
 	appID := appDetail.ID
+
 	statusCode := detail.StatusCode
 
 	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + apiID + "." + statusCode)
@@ -282,13 +279,16 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
 		statusMap[statusCode] = &APIMetric{
-			Subscription:    c.createSubscriptionDetail(subRef),
-			App:             appDetail,
-			API:             c.createAPIDetail(detail.APIDetails, accessRequest),
-			StatusCode:      statusCode,
-			Status:          c.getStatusText(statusCode),
-			StartTime:       now(),
-			ConsumerDetails: consumerDetails,
+			Subscription:  c.createSubscriptionDetail(subRef),
+			App:           appDetail,
+			Product:       c.getProduct(accessRequest, c.logger),
+			API:           c.createAPIDetail(detail.APIDetails, accessRequest),
+			AssetResource: c.getAssetResource(accessRequest, c.logger),
+			ProductPlan:   c.getProductPlan(accessRequest, c.logger),
+			Quota:         c.getQuota(accessRequest, c.logger),
+			StatusCode:    statusCode,
+			Status:        c.getStatusText(statusCode),
+			StartTime:     now(),
 		}
 	}
 	histogram.Update(detail.Duration)
@@ -374,6 +374,134 @@ func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRe
 		detail.APIServiceInstance = accessReq.Spec.ApiServiceInstance
 	}
 	return detail
+}
+
+func (c *collector) getPublishedProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
+	publishedProduct := models.Product{
+		ID:   unknown,
+		Name: unknown,
+	}
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
+		return publishedProduct
+	}
+
+	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
+	if publishProductRef.ID == "" || publishProductRef.Name == "" {
+		log.Debug("could not get published product, setting published product to unknown")
+	} else {
+		publishedProduct.ID = publishProductRef.ID
+		publishedProduct.Name = publishProductRef.Name
+	}
+
+	log.
+		WithField("published-product-id", publishedProduct.ID).
+		WithField("published-product-name", publishedProduct.Name).
+		Trace("published product information")
+
+	return publishedProduct
+}
+
+func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.AssetResource {
+	// Set default to provider details in case access request or managed apps comes back nil
+	assetResource := models.AssetResource{
+		ID:   unknown,
+		Name: unknown,
+	}
+
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
+		return assetResource
+	}
+
+	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
+		log.Trace("could not get asset resource, setting asset resource to unknown")
+	} else {
+		assetResource.ID = assetResourceRef.ID
+		assetResource.Name = assetResourceRef.Name
+	}
+	log.WithField("asset-resource-id", assetResource.ID).
+		WithField("asset-resource-name", assetResource.Name).
+		Trace("asset resource information")
+
+	return assetResource
+}
+
+func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
+	product := models.Product{
+		ID:      unknown,
+		Name:    unknown,
+		Version: unknown,
+	}
+
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
+		return product
+	}
+
+	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	if productRef.ID == "" || productRef.Name == "" {
+		log.Trace("could not get product information, setting product to unknown")
+	} else {
+		product.ID = productRef.ID
+		product.Name = productRef.Name
+	}
+
+	productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
+		log.Trace("could not get product release information, setting product release to unknown")
+	} else {
+		product.Version = productReleaseRef.Name
+	}
+	log.WithField("product-id", product.ID).
+		WithField("product-name", product.Name).
+		WithField("product-version", product.Version).
+		Trace("product information")
+	return product
+
+}
+
+func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProductPlan {
+	productPlan := models.ProductPlan{
+		ID: unknown,
+	}
+
+	if accessRequest == nil {
+		log.Trace("access request is nil. Setting default values to unknown")
+		return productPlan
+	}
+
+	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	if productPlanRef.ID == "" {
+		log.Debug("could not get product plan ID, setting product plan to unknown")
+	} else {
+		productPlan.ID = productPlanRef.ID
+	}
+	log.WithField("product-plan-id", productPlan.ID).
+		Trace("product plan ID information")
+
+	return productPlan
+}
+
+func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Quota {
+	quota := models.Quota{
+		ID: unknown,
+	}
+	if accessRequest == nil {
+		log.Trace("access request or managed app is nil. Setting default values to unknown")
+		return quota
+	}
+	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	if quotaRef.ID == "" {
+		log.Debug("could not get quota ID, setting quota to unknown")
+	} else {
+		quota.ID = quotaRef.ID
+	}
+	log.WithField("quota-id", quota.ID).
+		Trace("quota ID information")
+
+	return quota
 }
 
 func (c *collector) cleanup() {

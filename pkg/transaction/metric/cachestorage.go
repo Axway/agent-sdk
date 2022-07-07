@@ -183,14 +183,17 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetr
 	defer c.storageLock.Unlock()
 
 	cachedMetric := cachedMetric{
-		Subscription:    metric.Subscription,
-		App:             metric.App,
-		API:             metric.API,
-		StatusCode:      metric.StatusCode,
-		Count:           histogram.Count(),
-		Values:          histogram.Sample().Values(),
-		StartTime:       metric.StartTime,
-		ConsumerDetails: metric.ConsumerDetails,
+		Subscription:  metric.Subscription,
+		App:           metric.App,
+		Product:       metric.Product,
+		AssetResource: metric.AssetResource,
+		ProductPlan:   metric.ProductPlan,
+		Quota:         metric.Quota,
+		API:           metric.API,
+		StatusCode:    metric.StatusCode,
+		Count:         histogram.Count(),
+		Values:        histogram.Sample().Values(),
+		StartTime:     metric.StartTime,
 	}
 
 	c.storage.Set(metricKeyPrefix+c.getKey(metric), cachedMetric)
