@@ -24,7 +24,7 @@ func (p *asyncAPIProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	var err error
 	servers := p.asyncapiDef["servers"]
 	if servers != nil {
-		if serverList, ok := servers.(map[interface{}]interface{}); ok {
+		if serverList, ok := servers.(map[string]interface{}); ok {
 			endpoints, err = p.parseServerList(serverList)
 			if err != nil {
 				return nil, err
@@ -35,10 +35,10 @@ func (p *asyncAPIProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return endpoints, nil
 }
 
-func (p *asyncAPIProcessor) parseServerList(serverList map[interface{}]interface{}) ([]EndpointDefinition, error) {
+func (p *asyncAPIProcessor) parseServerList(serverList map[string]interface{}) ([]EndpointDefinition, error) {
 	endpoints := make([]EndpointDefinition, 0)
 	for _, value := range serverList {
-		serverObjInterface, ok := value.(map[interface{}]interface{})
+		serverObjInterface, ok := value.(map[string]interface{})
 		if ok {
 			endpoint, err := p.parseServerObject(serverObjInterface)
 			if err != nil {
@@ -50,13 +50,12 @@ func (p *asyncAPIProcessor) parseServerList(serverList map[interface{}]interface
 	return endpoints, nil
 }
 
-func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[interface{}]interface{}) (EndpointDefinition, error) {
+func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[string]interface{}) (EndpointDefinition, error) {
 	var err error
 	protocol := ""
 	serverURL := ""
 	var serverVariables map[string]string
-	for keyInterface, valueInterface := range serverObjInterface {
-		key := keyInterface.(string)
+	for key, valueInterface := range serverObjInterface {
 		value, ok := valueInterface.(string)
 		if ok {
 			if key == "protocol" {
@@ -67,7 +66,7 @@ func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[interface{}
 			}
 		}
 		if key == "variables" {
-			variablesInterface, ok := valueInterface.(map[interface{}]interface{})
+			variablesInterface, ok := valueInterface.(map[string]interface{})
 			if ok {
 				serverVariables, _ = p.parseVariables(variablesInterface)
 			}
@@ -88,11 +87,10 @@ func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[interface{}
 	return endpoint, err
 }
 
-func (p *asyncAPIProcessor) parseVariables(variablesObjInterface map[interface{}]interface{}) (map[string]string, error) {
+func (p *asyncAPIProcessor) parseVariables(variablesObjInterface map[string]interface{}) (map[string]string, error) {
 	serverVars := make(map[string]string)
-	for varNameInt, varObject := range variablesObjInterface {
-		varName := varNameInt.(string)
-		varObjectInterface, ok := varObject.(map[interface{}]interface{})
+	for varName, varObject := range variablesObjInterface {
+		varObjectInterface, ok := varObject.(map[string]interface{})
 		if ok {
 			varValue := p.parseVariableObject(varObjectInterface)
 			serverVars[varName] = varValue
@@ -101,10 +99,9 @@ func (p *asyncAPIProcessor) parseVariables(variablesObjInterface map[interface{}
 	return serverVars, nil
 }
 
-func (p *asyncAPIProcessor) parseVariableObject(serverObjInterface map[interface{}]interface{}) string {
+func (p *asyncAPIProcessor) parseVariableObject(serverObjInterface map[string]interface{}) string {
 	varDefaultValue := ""
-	for keyInterface, valueInterface := range serverObjInterface {
-		key := keyInterface.(string)
+	for key, valueInterface := range serverObjInterface {
 		if key == "default" {
 			value, ok := valueInterface.(string)
 			if ok {
