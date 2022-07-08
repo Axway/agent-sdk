@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // oas2Swagger Wrapper type for the openapi2.T struct
