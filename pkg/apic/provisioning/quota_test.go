@@ -37,7 +37,7 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 			ar := v1alpha1.NewAccessRequest("name", "environment")
 			if tt.intervalString != "" {
 				ar.Spec.Quota = &v1alpha1.AccessRequestSpecQuota{
-					Limit:    float32(tt.limit),
+					Limit:    float64(tt.limit),
 					Interval: tt.intervalString,
 				}
 			}

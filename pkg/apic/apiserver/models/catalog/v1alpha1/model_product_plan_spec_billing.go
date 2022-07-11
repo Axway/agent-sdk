@@ -9,10 +9,13 @@
 
 package v1alpha1
 
-// QuotaSpecLimitTypeStrict struct for QuotaSpecLimitTypeStrict
-type QuotaSpecLimitTypeStrict struct {
-	Type string `json:"type"`
-	// The limit of the unit that is provided.
+// ProductPlanSpecBilling Paid plan billing details. (catalog.v1alpha1.ProductPlan)
+type ProductPlanSpecBilling struct {
+	Currency string `json:"currency"`
+	// The base price for the plan.
 	// GENERATE: The following code has been modified after code generation
-	Value float64 `json:"value"`
+	Price float64 `json:"price,omitempty"`
+	// The billing cycle type.
+	Cycle    string `json:"cycle,omitempty"`
+	Interval string `json:"interval"`
 }

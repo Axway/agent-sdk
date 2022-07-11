@@ -44,6 +44,7 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
 
   # replace an access request definition spec files
   cp ./model_access_request_definition_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_request_definition_spec.go
+  cp ./model_access_request_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_request_spec.go
 
   chown -R ${USERID}:${GROUPID} ${OUTDIR}
 else
