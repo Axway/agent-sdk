@@ -12,6 +12,6 @@ package v1alpha1
 // QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
 type QuotaSpecLimitTypeLooseOverages struct {
 	// The overage price per unit.
-	Value    float32 `json:"value,omitempty"`
-	Currency string  `json:"currency,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Value float64 `json:"value,omitempty"`
 }

@@ -132,7 +132,6 @@ for file in ${MODELS}; do
         $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
         # remove the prefix
         $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-
         # reformat the code
         go fmt ${file}
     fi
@@ -169,7 +168,7 @@ for file in ${MODELS}; do
         if grep -e ${state} ${file} >> /dev/null; then
             # add a comment to the code
             $SED -i -e "/${state}/i ${COMMENT}" ${file}
-            # replace the Oneof type
+            # replace the state
             $SED -i -e "s/${state}/${stateType}${state}/g" ${file}
             # reformat the code
             go fmt ${file}
@@ -221,10 +220,28 @@ done
 #         if grep -e ${request} ${file} >> /dev/null; then
 #             # add a comment to the code
 #             $SED -i -e "/${request}/i ${COMMENT}" ${file}
-#             # replace the Oneof type
+#             # replace the state
 #             $SED -i -e "s/${request}/${requestType}${request}/g" ${file}
 #             # reformat the code
 #             go fmt ${file}
 #         fi
 #     done
 # done
+
+######################
+# Update any OneOf types to be interface{}
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+SEARCH="float32.*\s"
+REPLACE="float64 "
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # replace the float32 type
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done

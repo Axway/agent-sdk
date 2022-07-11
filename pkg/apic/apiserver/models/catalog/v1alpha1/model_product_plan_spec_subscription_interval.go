@@ -14,5 +14,6 @@ type ProductPlanSpecSubscriptionInterval struct {
 	// The type of the interval
 	Type string `json:"type,omitempty"`
 	// The subscription inverval length
-	Length float32 `json:"length,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Length float64 `json:"length,omitempty"`
 }

@@ -13,5 +13,6 @@ package v1
 type QuotaSpecLimitTypeStrict struct {
 	Type string `json:"type"`
 	// The limit of the unit that is provided.
-	Value float32 `json:"value"`
+	// GENERATE: The following code has been modified after code generation
+	Value float64 `json:"value"`
 }
