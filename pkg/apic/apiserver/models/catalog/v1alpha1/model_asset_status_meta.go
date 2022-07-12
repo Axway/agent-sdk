@@ -9,8 +9,7 @@
 
 package v1alpha1
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float32 `json:"value,omitempty"`
+// AssetStatusMeta  (catalog.v1alpha1.Asset)
+type AssetStatusMeta struct {
+	AssetResource string `json:"assetResource,omitempty"`
 }

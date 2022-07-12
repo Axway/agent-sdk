@@ -9,8 +9,10 @@
 
 package v1alpha1
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float32 `json:"value,omitempty"`
+// AssetStatus  (catalog.v1alpha1.Asset)
+type AssetStatus struct {
+	// The current status level, indicating progress towards consistency.
+	Level string `json:"level"`
+	// Reasons for the generated status.
+	Reasons []AssetStatusReasons `json:"reasons,omitempty"`
 }

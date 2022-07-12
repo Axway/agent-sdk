@@ -9,8 +9,8 @@
 
 package v1alpha1
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float32 `json:"value,omitempty"`
+// AccessRequestReferencesProduct struct for AccessRequestReferencesProduct
+type AccessRequestReferencesProduct struct {
+	Kind string `json:"kind"`
+	Name string `json:"name,omitempty"`
 }

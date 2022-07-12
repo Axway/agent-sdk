@@ -9,8 +9,9 @@
 
 package v1alpha1
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float32 `json:"value,omitempty"`
+// ExternalSecretSpecTlsValidationData Data for TLS certificate validation.
+type ExternalSecretSpecTlsValidationData struct {
+	Kind string `json:"kind"`
+	// Alias for the trusted certificate authority in the secret.
+	TrustedCAAlias string `json:"trustedCAAlias"`
 }
