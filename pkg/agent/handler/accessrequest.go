@@ -49,6 +49,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	log := getLoggerFromContext(ctx).WithComponent("accessRequestHandler")
+	defer log.Trace("finished processing request")
 	ctx = setLoggerInContext(ctx, log)
 
 	ar := &mv1.AccessRequest{}
@@ -74,13 +75,16 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		err := h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
 			log.WithError(err).Error("error creating subresources")
-			return err
 		}
-		err = h.client.CreateSubResource(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
-		if err != nil {
-			log.WithError(err).Error("error creating status subresources")
-			return err
+
+		// update the status regardless of errors updating the other subresources
+		statusErr := h.client.CreateSubResource(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
+		if statusErr != nil {
+			log.WithError(statusErr).Error("error creating status subresources")
+			return statusErr
 		}
+
+		return err
 	}
 
 	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
@@ -88,7 +92,6 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		h.onDeleting(ctx, ar)
 	}
 
-	log.Trace("finished processing request")
 	return nil
 }
 
