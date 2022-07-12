@@ -51,3 +51,7 @@ func (m mockArdMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.R
 func (m mockArdMigClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
 	return nil
 }
+
+func (m mockArdMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
+	return nil
+}

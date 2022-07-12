@@ -36,6 +36,13 @@ type ardCache interface {
 	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 }
 
+// MarketplaceMigration - used for migrating attributes to subresource
+type MarketplaceMigration struct {
+	migration
+	logger log.FieldLogger
+	cache  ardCache
+}
+
 // NewMarketplaceMigration - creates a new MarketplaceMigration
 func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardCache) *MarketplaceMigration {
 	logger := log.NewFieldLogger().
@@ -43,19 +50,13 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 		WithComponent("MarketplaceMigration")
 
 	return &MarketplaceMigration{
+		migration: migration{
+			client: client,
+			cfg:    cfg,
+		},
 		logger: logger,
-		client: client,
-		cfg:    cfg,
 		cache:  cache,
 	}
-}
-
-// MarketplaceMigration - used for migrating attributes to subresource
-type MarketplaceMigration struct {
-	logger log.FieldLogger
-	client client
-	cfg    config.CentralConfig
-	cache  ardCache
 }
 
 // Migrate -
@@ -251,16 +252,6 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 	return ard, nil
 }
 
-// updateRI updates the resource, and the sub resource
-func (m *MarketplaceMigration) updateRI(ri *v1.ResourceInstance) error {
-	_, err := m.client.UpdateResourceInstance(ri)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *MarketplaceMigration) handleSvcInstance(
 	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance) error {
 	logger := m.logger.
@@ -280,7 +271,6 @@ func (m *MarketplaceMigration) handleSvcInstance(
 
 	if processor, ok := i.(apic.OasSpecProcessor); ok {
 		ardRIName := apiSvcInst.Spec.AccessRequestDefinition
-		credentialRequestPolicies := apiSvcInst.Spec.CredentialRequestDefinitions
 
 		processor.ParseAuthInfo()
 
@@ -310,7 +300,7 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		}
 
 		// Check if CRD exists
-		credentialRequestPolicies, err = getCredentialRequestPolicies(authPolicies)
+		credentialRequestPolicies, err := getCredentialRequestPolicies(authPolicies)
 		if err != nil {
 			return err
 		}
