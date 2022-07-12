@@ -79,7 +79,8 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 	return nil
 }
 
-func (h *managedApplication) onPending(_ context.Context, app *mv1.ManagedApplication, pma provManagedApp) error {
+func (h *managedApplication) onPending(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) error {
+	log := getLoggerFromContext(ctx)
 	status := h.prov.ApplicationRequestProvision(pma)
 
 	app.Status = prov.NewStatusReason(status)
@@ -100,9 +101,16 @@ func (h *managedApplication) onPending(_ context.Context, app *mv1.ManagedApplic
 
 	err := h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	if err != nil {
-		return err
+		log.WithError(err).Error("error creating subresources")
 	}
-	return h.client.CreateSubResource(app.ResourceMeta, map[string]interface{}{"status": app.Status})
+
+	statusErr := h.client.CreateSubResource(app.ResourceMeta, map[string]interface{}{"status": app.Status})
+	if statusErr != nil {
+		log.WithError(statusErr).Error("error creating status subresources")
+		return statusErr
+	}
+
+	return err
 }
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) {
