@@ -3,9 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -145,25 +143,25 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	var instance *mv1a.APIServiceInstance
 
 	instanceURL := c.cfg.GetInstancesURL()
-	instancePrefix := getRevisionPrefix(serviceBody)
-	instanceName := instancePrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
+	instanceName := getRevisionPrefix(serviceBody)
 
-	if serviceBody.serviceContext.revisionAction == addAPI {
-		httpMethod = http.MethodPost
-		instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
-	}
+	// creating new instance
+	httpMethod = http.MethodPost
+	instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
 
-	if serviceBody.serviceContext.revisionAction == updateAPI {
-		httpMethod = http.MethodPut
-		instances, err := c.getRevisionInstances(instanceName, instanceURL)
+	if serviceBody.serviceContext.serviceAction == updateAPI {
+		instances, err := c.getInstances(instanceName, instanceURL)
 		if err != nil {
 			return err
 		}
-		if len(instances) == 0 {
-			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
+
+		if len(instances) > 0 {
+			instanceURL = instanceURL + "/" + instanceName
+
+			// updating existing instance
+			httpMethod = http.MethodPut
+			instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
 		}
-		instanceURL = instanceURL + "/" + instanceName
-		instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
 	}
 
 	buffer, err := json.Marshal(instance)
@@ -233,7 +231,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceIn
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getRevisionInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
+func (c *ServiceClient) getInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
 	// Check if instances exist for the current revision.
 	queryParams := map[string]string{
 		"query": "name==" + name,
