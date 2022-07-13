@@ -165,6 +165,8 @@ func (m *mockMPMigClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[strin
 }
 
 func (m *mockMPMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+	m.Lock()
+	defer m.Unlock()
 	m.createSubCalled = true
 	return nil
 }
