@@ -32,5 +32,6 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           branch: APIGOV-updateversion
+          base: ${{ github.head_ref }}
           delete-branch: true
      
