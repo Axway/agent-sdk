@@ -28,6 +28,7 @@ func newTestMigrationConfig() MigrationConfig {
 func (m *MigrationSettings) validate() {
 }
 
+// ShouldCleanInstances - returns the value fo CleanInstances
 func (m *MigrationSettings) ShouldCleanInstances() bool {
 	return m.CleanInstances
 }
