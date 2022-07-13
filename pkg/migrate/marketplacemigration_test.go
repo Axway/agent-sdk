@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -34,7 +34,7 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 		Environment:      envName,
 		APIServerVersion: "v1alpha1",
 	}
-	cm := cache2.NewAgentCacheManager(cfg, false)
+	cm := cache.NewAgentCacheManager(cfg, false)
 
 	ard := mv1a.NewAccessRequestDefinition("api-key", envName)
 	ard.Metadata.ID = "123"
@@ -67,7 +67,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 		Environment:      envName,
 		APIServerVersion: "v1alpha1",
 	}
-	cm := cache2.NewAgentCacheManager(cfg, false)
+	cm := cache.NewAgentCacheManager(cfg, false)
 
 	ard := mv1a.NewAccessRequestDefinition("oauth", envName)
 	ard.Metadata.ID = "0012"
