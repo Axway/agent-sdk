@@ -23,7 +23,7 @@ type APISIMigration struct {
 func NewAPISIMigration(client client, cfg config.CentralConfig) *APISIMigration {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.migrate").
-		WithComponent("APIServiceInstance Migration")
+		WithComponent("instance-migration")
 
 	return &APISIMigration{
 		migration: migration{
