@@ -41,9 +41,9 @@ func (m *APISIMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance,
 	}
 
 	// skip migration if instance migration is not enabled
-	// if !m.cfg.ShouldMigrateInstances() {
-	// 	return ri, nil
-	// }
+	if !m.cfg.GetMigrationSettings().ShouldCleanInstances() {
+		return ri, nil
+	}
 
 	logger := m.logger.WithField(serviceName, ri.Name)
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -150,17 +151,17 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		instances, err := c.getPreviousRevisionInstance(serviceBody.serviceContext.previousRevision.Name, instanceURL)
+		prevInst, err := c.getLastInstance(serviceBody, instanceURL)
 		if err != nil {
 			return err
 		}
 
-		if len(instances) > 0 {
+		if prevInst != nil {
 			instanceURL = instanceURL + "/" + instanceName
 
 			// updating existing instance
 			httpMethod = http.MethodPut
-			instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
+			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
 		}
 	}
 
@@ -231,13 +232,23 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceIn
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getPreviousRevisionInstance(name, url string) ([]*mv1a.APIServiceInstance, error) {
-	// Check if instances exist for the current revision.
-	queryParams := map[string]string{
-		"query": "metadata.references.name==" + name,
-	}
+func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*mv1a.APIServiceInstance, error) {
+	// start from latest revision, find first instance
+	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
+		queryParams := map[string]string{
+			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
+		}
 
-	return c.GetAPIServiceInstances(queryParams, url)
+		instances, err := c.GetAPIServiceInstances(queryParams, url)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(instances) > 0 {
+			return instances[0], nil
+		}
+	}
+	return nil, nil
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
