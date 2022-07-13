@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -89,8 +90,8 @@ func TestAPISIMigration(t *testing.T) {
 		{
 			name:              "called with apiservice, revisions, and instances of diff stages returns without error",
 			resource:          mv1a.NewAPIService("apisi", defEnvName),
-			revisions:         append(createRevisionsResponse("apisi-stage1", 5), createRevisionsResponse("apisi-sage2", 5)...),
-			instances:         append(createInstanceResponse("apisi-stage1", 5), createInstanceResponse("apisi-sage2", 5)...),
+			revisions:         append(createRevisionsResponse("apisi-stage1", 5), createRevisionsResponse("apisi-stage2", 5)...),
+			instances:         append(createInstanceResponse("apisi-stage1", 5), createInstanceResponse("apisi-stage2", 5)...),
 			expectedDeletes:   8,
 			migrationComplete: true,
 		},
@@ -130,6 +131,7 @@ func TestAPISIMigration(t *testing.T) {
 }
 
 type mockAPISIMigClient struct {
+	sync.Mutex
 	deleteCalls      int
 	revisions        []*v1.ResourceInstance
 	instances        []*v1.ResourceInstance
@@ -141,6 +143,8 @@ func (m *mockAPISIMigClient) ExecuteAPI(method, url string, queryParam map[strin
 }
 
 func (m *mockAPISIMigClient) GetAPIV1ResourceInstancesWithPageSize(query map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+	m.Lock()
+	defer m.Unlock()
 	if m.instanceReturned {
 		return nil, nil
 	} else if strings.Contains(url, "instances") {
