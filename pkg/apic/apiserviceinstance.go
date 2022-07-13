@@ -150,7 +150,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		instances, err := c.getInstances(instanceName, instanceURL)
+		instances, err := c.getPreviousRevisionInstance(serviceBody.serviceContext.previousRevision.Name, instanceURL)
 		if err != nil {
 			return err
 		}
@@ -231,10 +231,10 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceIn
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
+func (c *ServiceClient) getPreviousRevisionInstance(name, url string) ([]*mv1a.APIServiceInstance, error) {
 	// Check if instances exist for the current revision.
 	queryParams := map[string]string{
-		"query": "name==" + name,
+		"query": "metadata.references.name==" + name,
 	}
 
 	return c.GetAPIServiceInstances(queryParams, url)
