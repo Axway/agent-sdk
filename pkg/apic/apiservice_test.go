@@ -105,7 +105,6 @@ func TestCreateService(t *testing.T) {
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
-	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -309,7 +308,6 @@ func TestUpdateService(t *testing.T) {
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
-	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
