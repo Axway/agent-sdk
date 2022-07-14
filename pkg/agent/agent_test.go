@@ -21,7 +21,11 @@ import (
 
 func resetResources() {
 	agent.agentResourceManager = nil
-	agent.cacheManager = nil
+	if agent.cacheManager != nil {
+		agent.cacheManager.ApplyResourceReadLock()
+		defer agent.cacheManager.ReleaseResourceReadLock()
+		agent.cacheManager = nil
+	}
 	agent.isInitialized = false
 	agent.apicClient = nil
 	agent.agentFeaturesCfg = nil
