@@ -87,6 +87,8 @@ type StringPropertyBuilder interface {
 	IsEncrypted() StringPropertyBuilder
 	// SetDefaultValue - Define the initial value for the property
 	SetDefaultValue(value string) StringPropertyBuilder
+	// SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
+	SetPropertyOrder(values []string) StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -127,6 +129,8 @@ type ArrayPropertyBuilder interface {
 	SetMinItems(min uint) ArrayPropertyBuilder
 	// SetMaxItems - Set the maximum number of items in the array property
 	SetMaxItems(max uint) ArrayPropertyBuilder
+	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
+	SetAsTextArea(value string) ArrayPropertyBuilder
 	PropertyBuilder
 }
 
@@ -265,6 +269,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	propertyOrder  []string
 	defaultValue   string
 	StringPropertyBuilder
 }
@@ -317,6 +322,21 @@ func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder 
 // SetDefaultValue - Define the initial value for the property
 func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuilder {
 	p.defaultValue = value
+	return p
+}
+
+// SetPropertyOrder - add a list of enum values to the property
+func (p *stringSchemaProperty) SetPropertyOrder(values []string) StringPropertyBuilder {
+	dict := make(map[string]bool, 0)
+
+	// use a temp map to filter out any duplicate values from the input
+	for _, value := range values {
+		if _, ok := dict[value]; !ok {
+			dict[value] = true
+			p.propertyOrder = append(p.propertyOrder, value)
+		}
+	}
+
 	return p
 }
 
@@ -463,6 +483,7 @@ type arraySchemaProperty struct {
 	items          []propertyDefinition
 	minItems       *uint
 	maxItems       *uint
+	textAreaField  string
 	PropertyBuilder
 }
 
@@ -490,6 +511,12 @@ func (p *arraySchemaProperty) SetMaxItems(max uint) ArrayPropertyBuilder {
 	} else {
 		p.maxItems = &max
 	}
+	return p
+}
+
+// SetAsTextArea - set the field to be rendered as a textarea box within the UI
+func (p *arraySchemaProperty) SetAsTextArea(textAreaField string) ArrayPropertyBuilder {
+	p.textAreaField = textAreaField
 	return p
 }
 

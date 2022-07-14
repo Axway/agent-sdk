@@ -6,6 +6,7 @@ import "encoding/json"
 type SchemaBuilder interface {
 	SetName(name string) SchemaBuilder
 	SetDescription(description string) SchemaBuilder
+	SetPropertyOrder(propertyOrder []string) SchemaBuilder
 	AddProperty(property PropertyBuilder) SchemaBuilder
 	AddUniqueKey(keyName string) SchemaBuilder
 	// Build builds the json schema - this is called automatically by the resource builder
@@ -17,6 +18,7 @@ type schemaBuilder struct {
 	err           error
 	name          string
 	description   string
+	propertyOrder []string
 	uniqueKeys    []string
 	properties    map[string]propertyDefinition
 	schemaVersion string
@@ -37,6 +39,7 @@ func NewSchemaBuilder() SchemaBuilder {
 	return &schemaBuilder{
 		properties:    make(map[string]propertyDefinition, 0),
 		uniqueKeys:    make([]string, 0),
+		propertyOrder: make([]string, 0),
 		schemaVersion: "http://json-schema.org/draft-07/schema#",
 	}
 }
@@ -50,6 +53,12 @@ func (s *schemaBuilder) SetName(name string) SchemaBuilder {
 // SetDescription - give the subscription schema a description
 func (s *schemaBuilder) SetDescription(description string) SchemaBuilder {
 	s.description = description
+	return s
+}
+
+// SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
+func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
+	s.propertyOrder = propertyOrder
 	return s
 }
 
