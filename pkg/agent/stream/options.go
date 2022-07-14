@@ -3,7 +3,7 @@ package stream
 import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -13,7 +13,7 @@ import (
 type StreamerOpt func(client *StreamerClient)
 
 // WithWatchTopic sets the watch topic
-func WithWatchTopic(wt *v1alpha1.WatchTopic) StreamerOpt {
+func WithWatchTopic(wt *management.WatchTopic) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.wt = wt
 		client.topicSelfLink = wt.GetSelfLink()

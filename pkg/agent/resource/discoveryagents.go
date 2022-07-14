@@ -4,19 +4,19 @@ import (
 	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
-func discoveryAgent(res *v1.ResourceInstance) *v1alpha1.DiscoveryAgent {
-	agentRes := &v1alpha1.DiscoveryAgent{}
+func discoveryAgent(res *v1.ResourceInstance) *management.DiscoveryAgent {
+	agentRes := &management.DiscoveryAgent{}
 	agentRes.FromInstance(res)
 
 	return agentRes
 }
 
-func createDiscoveryAgentStatusResource(agentName, status, prevStatus, message string) *v1alpha1.DiscoveryAgent {
-	agentRes := v1alpha1.DiscoveryAgent{}
+func createDiscoveryAgentStatusResource(agentName, status, prevStatus, message string) *management.DiscoveryAgent {
+	agentRes := management.DiscoveryAgent{}
 	agentRes.Name = agentName
 	agentRes.Status.Version = config.AgentVersion
 	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion

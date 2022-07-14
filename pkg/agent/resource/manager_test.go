@@ -8,23 +8,23 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
-	res := &v1alpha1.DiscoveryAgent{
+	res := &management.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.DiscoveryAgentSpec{
+		Spec: management.DiscoveryAgentSpec{
 			DataplaneType: dataplane,
-			Config: v1alpha1.DiscoveryAgentSpecConfig{
+			Config: management.DiscoveryAgentSpecConfig{
 				OwningTeam: team,
 			},
 		},
@@ -34,16 +34,16 @@ func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInsta
 }
 
 func createTraceabilityAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
-	res := &v1alpha1.TraceabilityAgent{
+	res := &management.TraceabilityAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.TraceabilityAgentSpec{
+		Spec: management.TraceabilityAgentSpec{
 			DataplaneType: dataplane,
-			Config: v1alpha1.TraceabilityAgentSpecConfig{
+			Config: management.TraceabilityAgentSpecConfig{
 				OwningTeam: team,
 			},
 		},
@@ -53,14 +53,14 @@ func createTraceabilityAgentRes(id, name, dataplane, team string) *v1.ResourceIn
 }
 
 func createGovernanceAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
-	res := &v1alpha1.GovernanceAgent{
+	res := &management.GovernanceAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.GovernanceAgentSpec{
+		Spec: management.GovernanceAgentSpec{
 			DataplaneType: dataplane,
 			Config: map[string]interface{}{
 				"team": team,

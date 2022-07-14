@@ -4,7 +4,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -21,7 +21,7 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 		return
 	}
 
-	ar := &mv1.AccessRequest{}
+	ar := &management.AccessRequest{}
 	if ar.FromInstance(ri) != nil {
 		return
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -14,7 +14,7 @@ import (
 type Client struct {
 	SetTokenGetterMock                                       func(tokenRequester auth.PlatformTokenGetter)
 	SetConfigMock                                            func(cfg corecfg.CentralConfig)
-	PublishServiceMock                                       func(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error)
+	PublishServiceMock                                       func(serviceBody *apic.ServiceBody) (*management.APIService, error)
 	RegisterSubscriptionWebhookMock                          func() error
 	RegisterSubscriptionSchemaMock                           func(subscriptionSchema apic.SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchemaMock                             func(subscriptionSchema apic.SubscriptionSchema) error
@@ -24,8 +24,8 @@ type Client struct {
 	DeleteAPIServiceInstanceWithFinalizersMock               func(ri *v1.ResourceInstance) error
 	DeleteConsumerInstanceMock                               func(name string) error
 	DeleteServiceByNameMock                                  func(name string) error
-	GetConsumerInstanceByIDMock                              func(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error)
-	GetConsumerInstancesByExternalAPIIDMock                  func(externalAPIID string) ([]*v1alpha1.ConsumerInstance, error)
+	GetConsumerInstanceByIDMock                              func(consumerInstanceID string) (*management.ConsumerInstance, error)
+	GetConsumerInstancesByExternalAPIIDMock                  func(externalAPIID string) ([]*management.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinitionMock         func(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddressMock                                  func(ID string) (string, error)
 	GetUserNameMock                                          func(ID string) (string, error)
@@ -35,22 +35,22 @@ type Client struct {
 	GetCatalogItemNameMock                                   func(ID string) (string, error)
 	ExecuteAPIMock                                           func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	HealthcheckMock                                          func(name string) *hc.Status
-	GetAPIRevisionsMock                                      func(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceRevisionsMock                               func(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error)
-	GetAPIServiceInstancesMock                               func(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error)
+	GetAPIRevisionsMock                                      func(queryParams map[string]string, stage string) ([]*management.APIServiceRevision, error)
+	GetAPIServiceRevisionsMock                               func(queryParams map[string]string, URL, stage string) ([]*management.APIServiceRevision, error)
+	GetAPIServiceInstancesMock                               func(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error)
 	GetAPIV1ResourceInstancesMock                            func(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSizeMock                func(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
-	GetAPIServiceByNameMock                                  func(serviceName string) (*v1alpha1.APIService, error)
-	GetAPIServiceInstanceByNameMock                          func(serviceInstanceName string) (*v1alpha1.APIServiceInstance, error)
-	GetAPIRevisionByNameMock                                 func(serviceRevisionName string) (*v1alpha1.APIServiceRevision, error)
+	GetAPIServiceByNameMock                                  func(serviceName string) (*management.APIService, error)
+	GetAPIServiceInstanceByNameMock                          func(serviceInstanceName string) (*management.APIServiceInstance, error)
+	GetAPIRevisionByNameMock                                 func(serviceRevisionName string) (*management.APIServiceRevision, error)
 	CreateCategoryMock                                       func(categoryName string) (*catalog.Category, error)
 	GetOrCreateCategoryMock                                  func(category string) string
-	GetEnvironmentMock                                       func() (*v1alpha1.Environment, error)
+	GetEnvironmentMock                                       func() (*management.Environment, error)
 	GetCentralTeamByNameMock                                 func(teamName string) (*definitions.PlatformTeam, error)
 	GetTeamMock                                              func(queryParams map[string]string) ([]definitions.PlatformTeam, error)
-	GetAccessControlListMock                                 func(aclName string) (*v1alpha1.AccessControlList, error)
-	UpdateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
-	CreateAccessControlListMock                              func(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error)
+	GetAccessControlListMock                                 func(aclName string) (*management.AccessControlList, error)
+	UpdateAccessControlListMock                              func(acl *management.AccessControlList) (*management.AccessControlList, error)
+	CreateAccessControlListMock                              func(acl *management.AccessControlList) (*management.AccessControlList, error)
 	UpdateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
 	CreateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri v1.Interface) error
@@ -63,7 +63,7 @@ type Client struct {
 	IsMarketplaceSubsEnabledMock                             func() bool
 }
 
-func (m *Client) GetEnvironment() (*v1alpha1.Environment, error) {
+func (m *Client) GetEnvironment() (*management.Environment, error) {
 	if m.GetEnvironmentMock != nil {
 		return m.GetEnvironmentMock()
 	}
@@ -77,21 +77,21 @@ func (m *Client) GetCentralTeamByName(teamName string) (*definitions.PlatformTea
 	return nil, nil
 }
 
-func (m *Client) GetAPIRevisions(queryParams map[string]string, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+func (m *Client) GetAPIRevisions(queryParams map[string]string, stage string) ([]*management.APIServiceRevision, error) {
 	if m.GetAPIRevisionsMock != nil {
 		return m.GetAPIRevisionsMock(queryParams, stage)
 	}
 	return nil, nil
 }
 
-func (m *Client) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*v1alpha1.APIServiceInstance, error) {
+func (m *Client) GetAPIServiceInstances(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error) {
 	if m.GetAPIServiceInstancesMock != nil {
 		return m.GetAPIServiceInstancesMock(queryParams, URL)
 	}
 	return nil, nil
 }
 
-func (m *Client) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*v1alpha1.APIServiceRevision, error) {
+func (m *Client) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*management.APIServiceRevision, error) {
 	if m.GetAPIServiceRevisionsMock != nil {
 		return m.GetAPIServiceRevisionsMock(queryParams, URL, stage)
 	}
@@ -126,21 +126,21 @@ func (m *Client) GetOrCreateCategory(category string) string {
 	return ""
 }
 
-func (m *Client) GetAPIServiceByName(serviceName string) (*v1alpha1.APIService, error) {
+func (m *Client) GetAPIServiceByName(serviceName string) (*management.APIService, error) {
 	if m.GetAPIServiceByNameMock != nil {
 		return m.GetAPIServiceByNameMock(serviceName)
 	}
 	return nil, nil
 }
 
-func (m *Client) GetAPIRevisionByName(revisionName string) (*v1alpha1.APIServiceRevision, error) {
+func (m *Client) GetAPIRevisionByName(revisionName string) (*management.APIServiceRevision, error) {
 	if m.GetAPIRevisionByNameMock != nil {
 		return m.GetAPIRevisionByNameMock(revisionName)
 	}
 	return nil, nil
 }
 
-func (m *Client) GetAPIServiceInstanceByName(instanceName string) (*v1alpha1.APIServiceInstance, error) {
+func (m *Client) GetAPIServiceInstanceByName(instanceName string) (*management.APIServiceInstance, error) {
 	if m.GetAPIServiceInstanceByNameMock != nil {
 		return m.GetAPIServiceInstanceByNameMock(instanceName)
 	}
@@ -153,7 +153,7 @@ func (m *Client) SetTokenGetter(tokenGetter auth.PlatformTokenGetter) {
 	}
 }
 
-func (m *Client) PublishService(serviceBody *apic.ServiceBody) (*v1alpha1.APIService, error) {
+func (m *Client) PublishService(serviceBody *apic.ServiceBody) (*management.APIService, error) {
 	if m.PublishServiceMock != nil {
 		return m.PublishServiceMock(serviceBody)
 	}
@@ -229,13 +229,13 @@ func (m *Client) UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, sub
 	return nil
 }
 
-func (m *Client) GetConsumerInstanceByID(consumerInstanceID string) (*v1alpha1.ConsumerInstance, error) {
+func (m *Client) GetConsumerInstanceByID(consumerInstanceID string) (*management.ConsumerInstance, error) {
 	if m.GetConsumerInstanceByIDMock != nil {
 		return m.GetConsumerInstanceByIDMock(consumerInstanceID)
 	}
 	return nil, nil
 }
-func (m *Client) GetConsumerInstancesByExternalAPIID(consumerInstanceID string) ([]*v1alpha1.ConsumerInstance, error) {
+func (m *Client) GetConsumerInstancesByExternalAPIID(consumerInstanceID string) ([]*management.ConsumerInstance, error) {
 	if m.GetConsumerInstancesByExternalAPIIDMock != nil {
 		return m.GetConsumerInstancesByExternalAPIIDMock(consumerInstanceID)
 	}
@@ -311,21 +311,21 @@ func (m *Client) GetTeam(queryParams map[string]string) ([]definitions.PlatformT
 	return nil, nil
 }
 
-func (m *Client) GetAccessControlList(aclName string) (*v1alpha1.AccessControlList, error) {
+func (m *Client) GetAccessControlList(aclName string) (*management.AccessControlList, error) {
 	if m.GetAccessControlListMock != nil {
 		return m.GetAccessControlListMock(aclName)
 	}
 	return nil, nil
 }
 
-func (m *Client) UpdateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+func (m *Client) UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error) {
 	if m.UpdateAccessControlListMock != nil {
 		return m.UpdateAccessControlListMock(acl)
 	}
 	return nil, nil
 }
 
-func (m *Client) CreateAccessControlList(acl *v1alpha1.AccessControlList) (*v1alpha1.AccessControlList, error) {
+func (m *Client) CreateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error) {
 	if m.CreateAccessControlListMock != nil {
 		return m.CreateAccessControlListMock(acl)
 	}

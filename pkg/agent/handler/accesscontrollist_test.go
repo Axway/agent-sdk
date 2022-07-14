@@ -6,7 +6,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,7 @@ func TestACLHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessControlListGVK().Kind,
+							Kind: management.AccessControlListGVK().Kind,
 						},
 					},
 				},
@@ -51,7 +51,7 @@ func TestACLHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessControlListGVK().Kind,
+							Kind: management.AccessControlListGVK().Kind,
 						},
 					},
 				},
@@ -70,7 +70,7 @@ func TestACLHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: mv1.AccessControlListGVK().Kind,
+							Kind: management.AccessControlListGVK().Kind,
 						},
 					},
 				},

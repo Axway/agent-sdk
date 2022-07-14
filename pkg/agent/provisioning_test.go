@@ -7,7 +7,7 @@ import (
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -55,7 +55,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var err error
-			var crd *v1alpha1.CredentialRequestDefinition
+			var crd *management.CredentialRequestDefinition
 			switch test.expectedName {
 			case "api-key":
 				crd, err = NewAPIKeyCredentialRequestBuilder().Register()

@@ -8,7 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -23,14 +23,14 @@ const (
 )
 
 // GetAccessRequest -
-func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *v1alpha1.AccessRequest {
+func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *management.AccessRequest {
 	if managedApp == nil {
 		return nil
 	}
 
 	// Lookup Access Request
 	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
-	accessReq := &v1alpha1.AccessRequest{}
+	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
 	accessReq.FromInstance(ri)
 	return accessReq
@@ -51,7 +51,7 @@ func GetConsumerOrgID(ri *v1.ResourceInstance) string {
 	}
 
 	// Lookup Subscription
-	app := &v1alpha1.ManagedApplication{}
+	app := &management.ManagedApplication{}
 	app.FromInstance(ri)
 
 	return app.Marketplace.Resource.Owner.Organization.Id
@@ -148,7 +148,7 @@ func FormatApplicationID(applicationID string) string {
 }
 
 // UpdateWithConsumerDetails -
-func UpdateWithConsumerDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
+func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedApp *v1.ResourceInstance, log log.FieldLogger) *models.ConsumerDetails {
 
 	// Set defaults to unknown to consumer details in case access request or managed apps comes back nil
 	consumerDetails := &models.ConsumerDetails{

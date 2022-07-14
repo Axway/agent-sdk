@@ -1,4 +1,4 @@
-package v1alpha1
+package definitions
 
 // GENERATE: All of the code below was replaced after code gneration
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -70,16 +70,16 @@ func (j *aclUpdateJob) initializeACLJob() {
 	}
 }
 
-func (j *aclUpdateJob) createACLResource(teamIDs []string) *v1alpha1.AccessControlList {
-	acl, _ := v1alpha1.NewAccessControlList(
+func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessControlList {
+	acl, _ := management.NewAccessControlList(
 		j.getACLName(),
-		v1alpha1.EnvironmentGVK().Kind,
+		management.EnvironmentGVK().Kind,
 		agent.cfg.GetEnvironmentName(),
 	)
-	acl.Spec = v1alpha1.AccessControlListSpec{
-		Rules: []v1alpha1.AccessRules{
+	acl.Spec = management.AccessControlListSpec{
+		Rules: []management.AccessRules{
 			{
-				Access: []v1alpha1.AccessLevelScope{
+				Access: []management.AccessLevelScope{
 					{
 						Level: "scope",
 					},

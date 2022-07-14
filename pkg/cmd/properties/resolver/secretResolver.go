@@ -9,7 +9,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -52,19 +52,19 @@ func (s *secretResolver) parseSecretRef(secretRef string) (string, string) {
 	return "", ""
 }
 
-func (s *secretResolver) getSecret(secretName string) (*v1alpha1.Secret, error) {
+func (s *secretResolver) getSecret(secretName string) (*management.Secret, error) {
 	secretResourceURL := agent.GetCentralConfig().GetEnvironmentURL() + "/secrets/" + secretName
 
 	response, err := agent.GetCentralClient().ExecuteAPI(coreapi.GET, secretResourceURL, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	secret := &v1alpha1.Secret{}
+	secret := &management.Secret{}
 	err = json.Unmarshal(response, secret)
 	return secret, err
 }
 
-func (s *secretResolver) parseKeyValueFromSecretSpec(secret *v1alpha1.Secret, key string) (string, error) {
+func (s *secretResolver) parseKeyValueFromSecretSpec(secret *management.Secret, key string) (string, error) {
 	// Return empty string if secret key not found
 	keyVal, ok := secret.Spec.Data[key]
 	if !ok {
@@ -91,7 +91,7 @@ func (s *secretResolver) ResolveSecret(secretRef string) (string, error) {
 
 	secretName, key := s.parseSecretRef(secretRef)
 	if secretName != "" && key != "" {
-		var secret *v1alpha1.Secret
+		var secret *management.Secret
 		// Get cached secret to resolve key
 		cachedSecret, err := s.secretsCache.Get(secretMapItemPrefix + secretName)
 		if err != nil {
@@ -104,7 +104,7 @@ func (s *secretResolver) ResolveSecret(secretRef string) (string, error) {
 			}
 			s.secretsCache.Set(secretMapItemPrefix+secret.GetName(), secret)
 		} else {
-			secret, _ = cachedSecret.(*v1alpha1.Secret)
+			secret, _ = cachedSecret.(*management.Secret)
 		}
 		keyVal, err := s.parseKeyValueFromSecretSpec(secret, key)
 		if err != nil {

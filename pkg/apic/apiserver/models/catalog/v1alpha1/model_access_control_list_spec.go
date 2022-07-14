@@ -1,4 +1,4 @@
-package v1alpha1
+package catalog
 
 // GENERATE: All of the code below was replaced after code gneration
 
