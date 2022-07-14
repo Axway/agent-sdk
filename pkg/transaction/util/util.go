@@ -7,7 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -65,7 +65,7 @@ func GetConsumerApplication(ri *v1.ResourceInstance) (string, string) {
 
 	for _, ref := range ri.Metadata.References {
 		// get the ID of the Catalog Application
-		if ref.Kind == cv1.ApplicationGVK().Kind {
+		if ref.Kind == catalog.ApplicationGVK().Kind {
 			return ref.ID, ref.Name
 		}
 	}
@@ -172,7 +172,7 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		return consumerDetails
 	}
 
-	subRef := accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+	subRef := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
 	if subRef.ID == "" || subRef.Name == "" {
 		log.Debug("could not get subscription, setting subscription to unknown")
 	} else {
@@ -184,7 +184,7 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		WithField("subscription-name", consumerDetails.Subscription.Name).
 		Trace("subscription information")
 
-	appRef := accessRequest.GetReferenceByGVK(cv1.ApplicationGVK())
+	appRef := accessRequest.GetReferenceByGVK(catalog.ApplicationGVK())
 	if appRef.ID == "" || appRef.Name == "" {
 		log.Debug("could not get application, setting application to unknown")
 	} else {
@@ -209,7 +209,7 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		WithField("consumer-org-id", consumerDetails.Application.ConsumerOrgID).
 		Trace("consumer org ID ")
 
-	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
+	publishProductRef := accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())
 	if publishProductRef.ID == "" || publishProductRef.Name == "" {
 		log.Debug("could not get published product, setting published product to unknown")
 	} else {
