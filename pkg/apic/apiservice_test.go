@@ -274,6 +274,10 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
@@ -313,6 +317,10 @@ func TestUpdateService(t *testing.T) {
 	httpClient.SetResponses([]api.MockResponse{
 		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{
