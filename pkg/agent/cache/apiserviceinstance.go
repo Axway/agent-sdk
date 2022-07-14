@@ -10,7 +10,7 @@ import (
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
-	c.instanceMap.Set(resource.Metadata.ID, resource)
+	c.instanceMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
 
 // GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
@@ -27,6 +27,21 @@ func (c *cacheManager) GetAPIServiceInstanceByID(id string) (*v1.ResourceInstanc
 	defer c.ReleaseResourceReadLock()
 
 	item, err := c.instanceMap.Get(id)
+	if item != nil {
+		instance, ok := item.(*v1.ResourceInstance)
+		if ok {
+			return instance, nil
+		}
+	}
+	return nil, err
+}
+
+// GetAPIServiceInstanceByName - returns resource from APIServiceInstance cache based on instance name
+func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceInstance, error) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	item, err := c.instanceMap.GetBySecondaryKey(name)
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {

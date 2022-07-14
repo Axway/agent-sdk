@@ -142,8 +142,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 
 	// creating new instance
 	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
-	httpMethod := http.MethodPost
-	urlPath := instance.GetKindLink()
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
@@ -154,17 +152,12 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		if prevInst != nil {
 			// updating existing instance
 			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
-			httpMethod = http.MethodPut
-			urlPath = instance.GetSelfLink()
 		}
 	}
 
-	buffer, err := json.Marshal(instance)
-	if err != nil {
-		return err
-	}
+	addSpecHashToResource(instance)
 
-	ri, err := c.executeAPIServiceAPI(httpMethod, c.createAPIServerURL(urlPath), buffer)
+	ri, err := c.CreateOrUpdateResource(instance)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
