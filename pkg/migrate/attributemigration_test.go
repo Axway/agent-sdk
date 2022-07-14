@@ -178,3 +178,7 @@ func (m *mockAttrMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1
 func (m *mockAttrMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
 	return json.Marshal(m.execRes)
 }
+
+func (m mockAttrMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
+	return nil
+}

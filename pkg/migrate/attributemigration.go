@@ -1,12 +1,10 @@
 package migrate
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"sync"
 
-	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -49,6 +47,7 @@ type client interface {
 	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
 	CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
+	DeleteResourceInstance(ri v1.Interface) error
 }
 
 type item struct {
@@ -60,16 +59,17 @@ type migrateFunc func(ri *v1.ResourceInstance) error
 
 // AttributeMigration - used for migrating attributes to subresource
 type AttributeMigration struct {
-	client  client
-	cfg     config.CentralConfig
+	migration
 	riMutex sync.Mutex
 }
 
 // NewAttributeMigration creates a new AttributeMigration
 func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMigration {
 	return &AttributeMigration{
-		client:  client,
-		cfg:     cfg,
+		migration: migration{
+			client: client,
+			cfg:    cfg,
+		},
 		riMutex: sync.Mutex{},
 	}
 }
@@ -259,34 +259,6 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	return nil
 }
 
-// updateRI updates the resource, and the sub resource
-func (m *AttributeMigration) updateRI(ri *v1.ResourceInstance) error {
-	_, err := m.client.UpdateResourceInstance(ri)
-	if err != nil {
-		return err
-	}
-
-	return m.createSubResource(ri)
-}
-
-func (m *AttributeMigration) getRI(url string) (*v1.ResourceInstance, error) {
-	response, err := m.client.ExecuteAPI(api.GET, url, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error while retrieving ResourceInstance: %s", err)
-	}
-
-	resourceInstance := &v1.ResourceInstance{}
-	err = json.Unmarshal(response, &resourceInstance)
-	return resourceInstance, err
-}
-
-func (m *AttributeMigration) createSubResource(ri *v1.ResourceInstance) error {
-	subResources := map[string]interface{}{
-		defs.XAgentDetails: ri.SubResources[defs.XAgentDetails],
-	}
-	return m.client.CreateSubResource(ri.ResourceMeta, subResources)
-}
-
 func updateAttrs(ri *v1.ResourceInstance) item {
 	details := util.GetAgentDetails(ri)
 	if details == nil {
@@ -333,8 +305,4 @@ func updateAttrs(ri *v1.ResourceInstance) item {
 	util.SetAgentDetails(ri, details)
 
 	return item
-}
-
-func queryFunc(name string) string {
-	return fmt.Sprintf("metadata.references.name==%s", name)
 }

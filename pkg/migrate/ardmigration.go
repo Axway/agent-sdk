@@ -8,15 +8,16 @@ import (
 
 // ArdMigration - used for migrating access request definitions
 type ArdMigration struct {
-	client client
-	cfg    config.CentralConfig
+	migration
 }
 
 // NewArdMigration creates a new ArdMigration
 func NewArdMigration(client client, cfg config.CentralConfig) *ArdMigration {
 	return &ArdMigration{
-		client: client,
-		cfg:    cfg,
+		migration: migration{
+			client: client,
+			cfg:    cfg,
+		},
 	}
 }
 

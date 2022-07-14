@@ -3,7 +3,6 @@ package apic
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -141,37 +140,24 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	var httpMethod string
-	var instance *mv1a.APIServiceInstance
+	// creating new instance
+	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
 
-	instanceURL := c.cfg.GetInstancesURL()
-	instancePrefix := getRevisionPrefix(serviceBody)
-	instanceName := instancePrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
-
-	if serviceBody.serviceContext.revisionAction == addAPI {
-		httpMethod = http.MethodPost
-		instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
-	}
-
-	if serviceBody.serviceContext.revisionAction == updateAPI {
-		httpMethod = http.MethodPut
-		instances, err := c.getRevisionInstances(instanceName, instanceURL)
+	if serviceBody.serviceContext.serviceAction == updateAPI {
+		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
 		if err != nil {
 			return err
 		}
-		if len(instances) == 0 {
-			return fmt.Errorf("no instance found named '%s' for revision '%s'", instanceName, serviceBody.serviceContext.revisionName)
+
+		if prevInst != nil {
+			// updating existing instance
+			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
 		}
-		instanceURL = instanceURL + "/" + instanceName
-		instance = c.updateAPIServiceInstance(serviceBody, instances[0], endpoints)
 	}
 
-	buffer, err := json.Marshal(instance)
-	if err != nil {
-		return err
-	}
+	addSpecHashToResource(instance)
 
-	ri, err := c.executeAPIServiceAPI(httpMethod, instanceURL, buffer)
+	ri, err := c.CreateOrUpdateResource(instance)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -199,7 +185,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	}
 
 	c.caches.AddAPIServiceInstance(ri)
-	serviceBody.serviceContext.instanceName = instanceName
+	serviceBody.serviceContext.instanceName = instance.Name
 
 	return err
 }
@@ -233,13 +219,23 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceIn
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getRevisionInstances(name, url string) ([]*mv1a.APIServiceInstance, error) {
-	// Check if instances exist for the current revision.
-	queryParams := map[string]string{
-		"query": "name==" + name,
-	}
+func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*mv1a.APIServiceInstance, error) {
+	// start from latest revision, find first instance
+	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
+		queryParams := map[string]string{
+			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
+		}
 
-	return c.GetAPIServiceInstances(queryParams, url)
+		instances, err := c.GetAPIServiceInstances(queryParams, url)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(instances) > 0 {
+			return instances[0], nil
+		}
+	}
+	return nil, nil
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name

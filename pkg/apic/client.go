@@ -806,6 +806,8 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *v1.ResourceInst
 		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
 	case mv1a.CredentialRequestDefinitionGVK().Kind:
 		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
+	case mv1a.APIServiceInstanceGVK().Kind:
+		existingRI, err = c.caches.GetAPIServiceInstanceByName(data.Name)
 	}
 
 	if err == nil && existingRI != nil {
