@@ -140,28 +140,22 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	var httpMethod string
-	var instance *mv1a.APIServiceInstance
-
-	instanceURL := c.cfg.GetInstancesURL()
-	instanceName := getRevisionPrefix(serviceBody)
-
 	// creating new instance
-	httpMethod = http.MethodPost
-	instance = c.buildAPIServiceInstance(serviceBody, instanceName, endpoints)
+	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
+	httpMethod := http.MethodPost
+	urlPath := instance.GetKindLink()
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		prevInst, err := c.getLastInstance(serviceBody, instanceURL)
+		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
 		if err != nil {
 			return err
 		}
 
 		if prevInst != nil {
-			instanceURL = instanceURL + "/" + instanceName
-
 			// updating existing instance
-			httpMethod = http.MethodPut
 			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
+			httpMethod = http.MethodPut
+			urlPath = instance.GetSelfLink()
 		}
 	}
 
@@ -170,7 +164,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	ri, err := c.executeAPIServiceAPI(httpMethod, instanceURL, buffer)
+	ri, err := c.executeAPIServiceAPI(httpMethod, c.createAPIServerURL(urlPath), buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -198,7 +192,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	}
 
 	c.caches.AddAPIServiceInstance(ri)
-	serviceBody.serviceContext.instanceName = instanceName
+	serviceBody.serviceContext.instanceName = instance.Name
 
 	return err
 }

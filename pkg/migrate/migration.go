@@ -6,8 +6,10 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // migration - used for migrating resources
@@ -54,4 +56,15 @@ func (m *migration) getAllRI(url string, q map[string]string) ([]*v1.ResourceIns
 
 func queryFunc(name string) string {
 	return fmt.Sprintf("metadata.references.name==%s", name)
+}
+
+func isMigrationCompleted(h v1.Interface, migrationKey string) bool {
+	details := util.GetAgentDetails(h)
+	if len(details) > 0 {
+		completed := details[migrationKey]
+		if completed == definitions.MigrationCompleted {
+			return true
+		}
+	}
+	return false
 }

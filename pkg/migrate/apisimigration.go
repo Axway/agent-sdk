@@ -47,15 +47,10 @@ func (m *APISIMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance,
 
 	logger := m.logger.WithField(serviceName, ri.Name)
 
-	// skip migration if instance migration has been completed
-	details := util.GetAgentDetails(ri)
-	if len(details) > 0 {
-		completed := details[definitions.InstanceMigration]
-		if completed == definitions.MigrationCompleted {
-			// migration ran already
-			logger.Debugf("service instance migration already completed")
-			return ri, nil
-		}
+	if isMigrationCompleted(ri, definitions.InstanceMigration) {
+		// migration ran already
+		logger.Debugf("service instance migration already completed")
+		return ri, nil
 	}
 
 	// get all revisions for this service

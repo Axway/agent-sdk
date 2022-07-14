@@ -13,7 +13,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -72,16 +71,12 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 	}
 
 	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
-	details := util.GetAgentDetails(apiSvc)
-	if len(details) > 0 {
-		completed := details[definitions.MarketplaceMigration]
-		if completed == definitions.MigrationCompleted {
-			// migration ran already
-			m.logger.
-				WithField(serviceName, apiSvc).
-				Debugf("marketplace provision migration already completed")
-			return ri, nil
-		}
+	if isMigrationCompleted(ri, definitions.MarketplaceMigration) {
+		// migration ran already
+		m.logger.
+			WithField(serviceName, apiSvc).
+			Debugf("marketplace provision migration already completed")
+		return ri, nil
 	}
 
 	m.logger.
