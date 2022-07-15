@@ -299,7 +299,7 @@ func TestCreateHTTPClientt(t *testing.T) {
 	testConfig.CompressionLevel = 20
 	group, err = createTransport(testConfig)
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "requires value > 9 accessing 'compression_level'")
+	assert.Contains(t, err.Error(), "requires value <= 9 accessing 'compression_level'")
 	assert.NotNil(t, group)
 	assert.Nil(t, group.Clients)
 	assert.False(t, logstashClientCreateCalled)
