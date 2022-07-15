@@ -14,6 +14,11 @@ const (
 	DataTypeObject  = "object"
 )
 
+const (
+	TextAreaWidget = "textarea"
+	HiddenWidget   = "hidden"
+)
+
 // anyOfPropertyDefinitions - used for items of propertyDefinition
 type anyOfPropertyDefinitions struct {
 	AnyOf []propertyDefinition `json:"anyOf,omitempty"`
@@ -36,6 +41,8 @@ type propertyDefinition struct {
 	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
+	PropertyOrder      []string                      `json:"x-axway-order,omitempty"`
+	TextArea           string                        `json:"x-axway-widget,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -88,7 +95,9 @@ type StringPropertyBuilder interface {
 	// SetDefaultValue - Define the initial value for the property
 	SetDefaultValue(value string) StringPropertyBuilder
 	// SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
-	SetPropertyOrder(values []string) StringPropertyBuilder
+	SetPropertyOrder(order int) StringPropertyBuilder
+	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
+	SetAsTextArea(value string) StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -129,8 +138,6 @@ type ArrayPropertyBuilder interface {
 	SetMinItems(min uint) ArrayPropertyBuilder
 	// SetMaxItems - Set the maximum number of items in the array property
 	SetMaxItems(max uint) ArrayPropertyBuilder
-	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
-	SetAsTextArea(value string) ArrayPropertyBuilder
 	PropertyBuilder
 }
 
@@ -253,7 +260,7 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 	}
 
 	if p.hidden {
-		prop.Format = "hidden"
+		prop.Format = HiddenWidget
 	}
 
 	return prop, nil
@@ -269,7 +276,8 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
-	propertyOrder  []string
+	propertyOrder  int
+	textAreaField  string
 	defaultValue   string
 	StringPropertyBuilder
 }
@@ -326,17 +334,14 @@ func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuild
 }
 
 // SetPropertyOrder - add a list of enum values to the property
-func (p *stringSchemaProperty) SetPropertyOrder(values []string) StringPropertyBuilder {
-	dict := make(map[string]bool, 0)
+func (p *stringSchemaProperty) SetPropertyOrder(propertyOrder int) StringPropertyBuilder {
+	p.propertyOrder = propertyOrder
+	return p
+}
 
-	// use a temp map to filter out any duplicate values from the input
-	for _, value := range values {
-		if _, ok := dict[value]; !ok {
-			dict[value] = true
-			p.propertyOrder = append(p.propertyOrder, value)
-		}
-	}
-
+// SetAsTextArea - set the field to be rendered as a textarea box within the UI
+func (p *stringSchemaProperty) SetAsTextArea(textAreaField string) StringPropertyBuilder {
+	p.textAreaField = textAreaField
 	return p
 }
 
@@ -385,6 +390,11 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	// set if the property is encrypted at rest
 	def.IsEncrypted = p.isEncrypted
+
+	// set field to be rendered as a textarea box within the UI
+	if p.textAreaField != "" {
+		def.TextArea = TextAreaWidget
+	}
 
 	return def, err
 }
@@ -483,7 +493,6 @@ type arraySchemaProperty struct {
 	items          []propertyDefinition
 	minItems       *uint
 	maxItems       *uint
-	textAreaField  string
 	PropertyBuilder
 }
 
@@ -511,12 +520,6 @@ func (p *arraySchemaProperty) SetMaxItems(max uint) ArrayPropertyBuilder {
 	} else {
 		p.maxItems = &max
 	}
-	return p
-}
-
-// SetAsTextArea - set the field to be rendered as a textarea box within the UI
-func (p *arraySchemaProperty) SetAsTextArea(textAreaField string) ArrayPropertyBuilder {
-	p.textAreaField = textAreaField
 	return p
 }
 

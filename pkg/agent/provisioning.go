@@ -189,7 +189,8 @@ func setIDPClientSecretSchemaProperty(c *crdBuilderOptions) {
 			SetName(provisioning.OauthClientSecret).
 			SetLabel("Client Secret").
 			IsString().
-			IsEncrypted())
+			IsEncrypted().
+			SetPropertyOrder(1))
 }
 
 func setIDPTokenURLSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
