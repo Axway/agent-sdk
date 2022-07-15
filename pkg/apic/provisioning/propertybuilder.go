@@ -14,6 +14,7 @@ const (
 	DataTypeObject  = "object"
 )
 
+// Supported widget types
 const (
 	TextAreaWidget = "textarea"
 	HiddenWidget   = "hidden"
