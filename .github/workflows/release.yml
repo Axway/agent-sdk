@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
@@ -32,6 +32,7 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           branch: APIGOV-updateversion
+          commit-message: INT - update to new release
           base: ${{ github.head_ref }}
           delete-branch: true
      
