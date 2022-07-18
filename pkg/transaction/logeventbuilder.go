@@ -454,14 +454,15 @@ func (b *transactionSummaryBuilder) SetApplication(appID, appName string) Summar
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetProduct(id, name, version string) SummaryBuilder {
+// Currently, no one is setting Product for transaction summary builder, but leaving function signature as is for now
+func (b *transactionSummaryBuilder) SetProduct(id, name, versionId string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
 	b.logEvent.TransactionSummary.Product = &models.Product{
-		ID:      id,
-		Name:    name,
-		Version: version,
+		ID:        id,
+		Name:      name,
+		VersionID: versionId,
 	}
 
 	return b
