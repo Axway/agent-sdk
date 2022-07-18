@@ -73,8 +73,8 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 
 		// validate property order
 		if len(s.PropertyOrder) > 0 {
-			if !isValueInList(prop.Name, s.PropertyOrder) {
-				s.err = fmt.Errorf("property %s is was not found in the property order", prop.Name)
+			if !inPropertyOrder(prop.Name, s.PropertyOrder) {
+				s.err = fmt.Errorf("property %s is not found in the property order", prop.Name)
 			}
 		}
 	} else {
@@ -83,7 +83,8 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	return s
 }
 
-func isValueInList(value string, list []string) bool {
+// inPropertyOrder - check to see if the property is in the propertyOrder.
+func inPropertyOrder(value string, list []string) bool {
 	for _, v := range list {
 		if v == value {
 			return true
