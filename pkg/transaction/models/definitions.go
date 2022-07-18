@@ -31,7 +31,7 @@ type Product struct {
 	ID          string `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
 	VersionName string `json:"versionName,omitempty"`
-	Version     string `json:"versionId,omitempty"`
+	VersionID   string `json:"versionId,omitempty"`
 }
 
 // Quota - Represents the quota used in the transaction summary provider details event

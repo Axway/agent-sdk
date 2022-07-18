@@ -432,7 +432,7 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	product := models.Product{
 		ID:          unknown,
 		Name:        unknown,
-		Version:     unknown,
+		VersionID:   unknown,
 		VersionName: unknown,
 	}
 
@@ -453,12 +453,12 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.Fi
 	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
 		log.Trace("could not get product release information, setting product release to unknown")
 	} else {
-		product.Version = productReleaseRef.ID
+		product.VersionID = productReleaseRef.ID
 		product.VersionName = productReleaseRef.Name
 	}
 	log.WithField("product-id", product.ID).
 		WithField("product-name", product.Name).
-		WithField("product-version-id", product.Version).
+		WithField("product-version-id", product.VersionID).
 		WithField("product-version-name", product.VersionName).
 		Trace("product information")
 	return product
