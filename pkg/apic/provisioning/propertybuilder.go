@@ -14,12 +14,6 @@ const (
 	DataTypeObject  = "object"
 )
 
-// Supported widget types
-const (
-	TextAreaWidget = "textarea"
-	HiddenWidget   = "hidden"
-)
-
 // anyOfPropertyDefinitions - used for items of propertyDefinition
 type anyOfPropertyDefinitions struct {
 	AnyOf []propertyDefinition `json:"anyOf,omitempty"`
@@ -42,8 +36,7 @@ type propertyDefinition struct {
 	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
-	PropertyOrder      []string                      `json:"x-axway-order,omitempty"`
-	TextArea           string                        `json:"x-axway-widget,omitempty"`
+	UseTextArea        bool                          `json:"x-axway-widget,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -98,7 +91,7 @@ type StringPropertyBuilder interface {
 	// SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
 	SetPropertyOrder(order int) StringPropertyBuilder
 	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
-	SetAsTextArea(value string) StringPropertyBuilder
+	SetAsTextArea() StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -261,7 +254,7 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 	}
 
 	if p.hidden {
-		prop.Format = HiddenWidget
+		prop.Format = "hidden"
 	}
 
 	return prop, nil
@@ -278,7 +271,7 @@ type stringSchemaProperty struct {
 	firstEnumValue string
 	enums          []string
 	propertyOrder  int
-	textAreaField  string
+	useTextArea    bool
 	defaultValue   string
 	StringPropertyBuilder
 }
@@ -341,8 +334,8 @@ func (p *stringSchemaProperty) SetPropertyOrder(propertyOrder int) StringPropert
 }
 
 // SetAsTextArea - set the field to be rendered as a textarea box within the UI
-func (p *stringSchemaProperty) SetAsTextArea(textAreaField string) StringPropertyBuilder {
-	p.textAreaField = textAreaField
+func (p *stringSchemaProperty) SetAsTextArea() StringPropertyBuilder {
+	p.useTextArea = true
 	return p
 }
 
@@ -393,9 +386,7 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def.IsEncrypted = p.isEncrypted
 
 	// set field to be rendered as a textarea box within the UI
-	if p.textAreaField != "" {
-		def.TextArea = TextAreaWidget
-	}
+	def.UseTextArea = p.useTextArea
 
 	return def, err
 }

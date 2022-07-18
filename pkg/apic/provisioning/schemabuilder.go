@@ -1,12 +1,15 @@
 package provisioning
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // SchemaBuilder - used to build a subscription schema for API Central
 type SchemaBuilder interface {
 	SetName(name string) SchemaBuilder
 	SetDescription(description string) SchemaBuilder
-	SetPropertyOrder(propertyOrder int) SchemaBuilder
+	SetPropertyOrder(propertyOrder []string) SchemaBuilder
 	AddProperty(property PropertyBuilder) SchemaBuilder
 	AddUniqueKey(keyName string) SchemaBuilder
 	// Build builds the json schema - this is called automatically by the resource builder
@@ -18,7 +21,7 @@ type schemaBuilder struct {
 	err           error
 	name          string
 	description   string
-	propertyOrder int
+	PropertyOrder []string `json:"x-axway-order,omitempty"`
 	uniqueKeys    []string
 	properties    map[string]propertyDefinition
 	schemaVersion string
@@ -39,7 +42,7 @@ func NewSchemaBuilder() SchemaBuilder {
 	return &schemaBuilder{
 		properties:    make(map[string]propertyDefinition, 0),
 		uniqueKeys:    make([]string, 0),
-		propertyOrder: 0,
+		PropertyOrder: make([]string, 0),
 		schemaVersion: "http://json-schema.org/draft-07/schema#",
 	}
 }
@@ -57,8 +60,8 @@ func (s *schemaBuilder) SetDescription(description string) SchemaBuilder {
 }
 
 // SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
-func (s *schemaBuilder) SetPropertyOrder(propertyOrder int) SchemaBuilder {
-	s.propertyOrder = propertyOrder
+func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
+	s.PropertyOrder = propertyOrder
 	return s
 }
 
@@ -67,10 +70,26 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	prop, err := property.Build()
 	if err == nil {
 		s.properties[prop.Name] = *prop
+
+		// validate property order
+		if len(s.PropertyOrder) > 0 {
+			if !isValueInList(prop.Name, s.PropertyOrder) {
+				s.err = fmt.Errorf("property %s is was not found in the property order", prop.Name)
+			}
+		}
 	} else {
 		s.err = err
 	}
 	return s
+}
+
+func isValueInList(value string, list []string) bool {
+	for _, v := range list {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
 
 // AddUniqueKey - add a unique key to the schema
