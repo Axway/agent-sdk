@@ -23,7 +23,7 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
