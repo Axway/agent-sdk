@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -22,10 +22,10 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 	rev := newRevision(svcName, "api-key-revision")
 
 	c := &mockMPMigClient{
-		revisions: []*apiv1.ResourceInstance{
+		revisions: []*v1.ResourceInstance{
 			rev,
 		},
-		instances: []*apiv1.ResourceInstance{
+		instances: []*v1.ResourceInstance{
 			newInstance(rev.Name, "inst1", "", []string{"api-key"}),
 			newInstance(rev.Name, "inst2", "", []string{"api-key"}),
 		},
@@ -34,7 +34,7 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 		Environment:      envName,
 		APIServerVersion: "v1alpha1",
 	}
-	cm := cache2.NewAgentCacheManager(cfg, false)
+	cm := cache.NewAgentCacheManager(cfg, false)
 
 	ard := mv1a.NewAccessRequestDefinition("api-key", envName)
 	ard.Metadata.ID = "123"
@@ -56,10 +56,10 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	rev := newOAuthRev(svcName, "oauth-revision")
 
 	c := &mockMPMigClient{
-		revisions: []*apiv1.ResourceInstance{
+		revisions: []*v1.ResourceInstance{
 			rev,
 		},
-		instances: []*apiv1.ResourceInstance{
+		instances: []*v1.ResourceInstance{
 			newInstance(rev.Name, "inst1", "", []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}),
 		},
 	}
@@ -67,7 +67,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 		Environment:      envName,
 		APIServerVersion: "v1alpha1",
 	}
-	cm := cache2.NewAgentCacheManager(cfg, false)
+	cm := cache.NewAgentCacheManager(cfg, false)
 
 	ard := mv1a.NewAccessRequestDefinition("oauth", envName)
 	ard.Metadata.ID = "0012"
@@ -87,7 +87,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	assert.NotNil(t, a)
 }
 
-func newInstance(revName, instName, ard string, credentialRequestDefinitions []string) *apiv1.ResourceInstance {
+func newInstance(revName, instName, ard string, credentialRequestDefinitions []string) *v1.ResourceInstance {
 	inst := mv1a.NewAPIServiceInstance(instName, envName)
 	inst.Spec = mv1a.ApiServiceInstanceSpec{
 		ApiServiceRevision:           revName,
@@ -108,7 +108,7 @@ func newInstance(revName, instName, ard string, credentialRequestDefinitions []s
 	return ri
 }
 
-func newRevision(svcName, revName string) *apiv1.ResourceInstance {
+func newRevision(svcName, revName string) *v1.ResourceInstance {
 	rev := mv1a.NewAPIServiceRevision(revName, envName)
 	rev.Spec = mv1a.ApiServiceRevisionSpec{
 		ApiService: svcName,
@@ -140,15 +140,15 @@ type mockMPMigClient struct {
 	sync.Mutex
 	updateCount     int
 	createSubCalled bool
-	revisions       []*apiv1.ResourceInstance
-	instances       []*apiv1.ResourceInstance
+	revisions       []*v1.ResourceInstance
+	instances       []*v1.ResourceInstance
 }
 
 func (m *mockMPMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, url string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, url string, _ int) ([]*v1.ResourceInstance, error) {
 	if strings.Contains(url, "instances") {
 		return m.instances, nil
 	}
@@ -156,28 +156,34 @@ func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]str
 
 }
 
-func (m *mockMPMigClient) UpdateAPIV1ResourceInstance(_ string, _ *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) Updatev1ResourceInstance(_ string, _ *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	return nil, nil
 }
 
-func (m *mockMPMigClient) CreateSubResourceScoped(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockMPMigClient) CreateSubResourceScoped(_ v1.ResourceMeta, _ map[string]interface{}) error {
 	return nil
 }
 
-func (m *mockMPMigClient) CreateSubResource(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
+func (m *mockMPMigClient) CreateSubResource(_ v1.ResourceMeta, _ map[string]interface{}) error {
+	m.Lock()
+	defer m.Unlock()
 	m.createSubCalled = true
 	return nil
 }
 
-func (m *mockMPMigClient) UpdateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) UpdateResourceInstance(_ v1.Interface) (*v1.ResourceInstance, error) {
 	m.Lock()
 	defer m.Unlock()
 	m.updateCount = m.updateCount + 1
 	return nil, nil
 }
 
-func (m *mockMPMigClient) CreateOrUpdateResource(i apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) CreateOrUpdateResource(i v1.Interface) (*v1.ResourceInstance, error) {
 	ri, _ := i.AsInstance()
 	ri.Metadata.ID = ardID
 	return ri, nil
+}
+
+func (m *mockMPMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
+	return nil
 }

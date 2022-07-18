@@ -281,7 +281,7 @@ func TestSummaryBuilder(t *testing.T) {
 
 	assert.NotNil(t, logEvent.TransactionSummary.Product)
 	assert.Equal(t, "2222", logEvent.TransactionSummary.Product.ID)
-	assert.Equal(t, "1.0", logEvent.TransactionSummary.Product.Version)
+	assert.Equal(t, "1.0", logEvent.TransactionSummary.Product.VersionID)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Runtime)
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Runtime.ID)

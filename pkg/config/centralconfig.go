@@ -124,6 +124,7 @@ type CentralConfig interface {
 	SetIsMarketplaceSubsEnabled(enabled bool)
 	IsMarketplaceSubsEnabled() bool
 	GetSingleURL() string
+	GetMigrationSettings() MigrationConfig
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -143,6 +144,7 @@ type CentralConfiguration struct {
 	APIServerVersion          string               `config:"apiServerVersion"`
 	TagsToPublish             string               `config:"additionalTags"`
 	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
+	MigrationSettings         MigrationConfig      `config:"migration"`
 	Auth                      AuthConfig           `config:"auth"`
 	TLS                       TLSConfig            `config:"ssl"`
 	PollInterval              time.Duration        `config:"pollInterval"`
@@ -202,6 +204,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 				PageSize:  20,
 			},
 		},
+		MigrationSettings: newMigrationConfig(),
 	}
 }
 
@@ -212,6 +215,7 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config.URL = "https://central.com"
 	config.Environment = "environment"
 	config.Auth = newTestAuthConfig()
+	config.MigrationSettings = newTestMigrationConfig()
 	return config
 }
 
@@ -428,6 +432,11 @@ func (c *CentralConfiguration) GetCatalogItemSubscriptionDefinitionPropertiesURL
 // GetAuthConfig - Returns the Auth Config
 func (c *CentralConfiguration) GetAuthConfig() AuthConfig {
 	return c.Auth
+}
+
+// GetMigrationSettings - Returns the Migration Config
+func (c *CentralConfiguration) GetMigrationSettings() MigrationConfig {
+	return c.MigrationSettings
 }
 
 // GetTLSConfig - Returns the TLS Config
@@ -754,6 +763,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
+		AddMigrationConfigProperties(props)
 	}
 }
 
@@ -832,9 +842,11 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		// set the notifications
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
+		cfg.MigrationSettings = ParseMigrationConfig(props)
 	}
 	return cfg, nil
 }
+
 func supportsTraceability(agentType AgentType) bool {
 	return agentType == TraceabilityAgent
 }

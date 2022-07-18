@@ -105,7 +105,6 @@ func TestCreateService(t *testing.T) {
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
-	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 	// this should fail
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -275,6 +274,10 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
@@ -309,12 +312,15 @@ func TestUpdateService(t *testing.T) {
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
-	assert.Equal(t, &cloneServiceBody.serviceContext.revisionName, &cloneServiceBody.serviceContext.instanceName)
 
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
 			FileName: "./testdata/apiservice.json", // for call to update the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{

@@ -38,6 +38,7 @@ type Manager interface {
 	AddAPIServiceInstance(resource *v1.ResourceInstance)
 	GetAPIServiceInstanceKeys() []string
 	GetAPIServiceInstanceByID(id string) (*v1.ResourceInstance, error)
+	GetAPIServiceInstanceByName(apiName string) (*v1.ResourceInstance, error)
 	DeleteAPIServiceInstance(id string) error
 	DeleteAllAPIServiceInstance()
 

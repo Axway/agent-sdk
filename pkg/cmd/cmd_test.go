@@ -115,6 +115,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
 	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
 	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertBooleanCmdFlag(t, rootCmd, "central.migration.cleanInstances", "centralMigrationCleanInstances", false, "Set this to clean all but latest instance, per stage, within an API Service")
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
