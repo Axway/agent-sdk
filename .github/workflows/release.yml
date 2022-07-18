@@ -31,7 +31,7 @@ jobs:
           # ./promote.sh ${GITHUB_REF}
           echo "REF   ${GITHUB_REF}"
           ./promote.sh refs/tags/v1.1.2
-          echo "HEAD REF   ${{ github.head_ref }}""
+          echo "HEAD REF   ${{ github.head_ref }}"
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
