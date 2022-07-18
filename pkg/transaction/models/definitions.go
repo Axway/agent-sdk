@@ -28,9 +28,10 @@ type AssetResource struct {
 
 // Product - Represents the product used in the transaction summary provider details event
 type Product struct {
-	ID      string `json:"id,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Version string `json:"version,omitempty"`
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	VersionName string `json:"versionName,omitempty"`
+	Version     string `json:"versionId,omitempty"`
 }
 
 // Quota - Represents the quota used in the transaction summary provider details event

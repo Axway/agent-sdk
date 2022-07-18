@@ -396,9 +396,10 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	}
 
 	summaryEvent.Product = &models.Product{
-		ID:      unknown,
-		Name:    unknown,
-		Version: unknown,
+		ID:          unknown,
+		Name:        unknown,
+		Version:     unknown,
+		VersionName: unknown,
 	}
 
 	summaryEvent.ProductPlan = &models.ProductPlan{
@@ -428,12 +429,14 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
 		log.Trace("could not get product release information, setting product release to unknown")
 	} else {
-		summaryEvent.Product.Version = productReleaseRef.Name
+		summaryEvent.Product.Version = productReleaseRef.ID
+		summaryEvent.Product.VersionName = productReleaseRef.Name
 	}
 	log.
 		WithField("product-id", summaryEvent.Product.ID).
 		WithField("product-name", summaryEvent.Product.Name).
-		WithField("product-version", summaryEvent.Product.Version).
+		WithField("product-version-id", summaryEvent.Product.Version).
+		WithField("product-version-name", summaryEvent.Product.VersionName).
 		Trace("product information")
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
