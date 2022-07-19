@@ -88,8 +88,6 @@ type StringPropertyBuilder interface {
 	IsEncrypted() StringPropertyBuilder
 	// SetDefaultValue - Define the initial value for the property
 	SetDefaultValue(value string) StringPropertyBuilder
-	// SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
-	SetPropertyOrder(order int) StringPropertyBuilder
 	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
 	SetAsTextArea() StringPropertyBuilder
 	PropertyBuilder
