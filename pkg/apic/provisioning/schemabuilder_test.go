@@ -6,6 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	axwayOrder = "x-axway-order"
+)
+
 func TestNewSchemaBuilder(t *testing.T) {
 	builder := NewSchemaBuilder()
 	assert.NotNil(t, builder)
@@ -50,7 +54,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// set property order - property order takes precedence
-	_, err = NewSchemaBuilder().
+	schemaMap1, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		SetPropertyOrder([]string{"name3", "name2", "name1"}).
@@ -75,9 +79,17 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		Build()
 
 	assert.Nil(t, err)
+	assert.NotNil(t, schemaMap1)
+	assert.NotEmpty(t, schemaMap1[axwayOrder])
+
+	// assert that properties in property order takes precedence over added property appended order
+	propertyOrder, _ := schemaMap1[axwayOrder].([]interface{})
+	assert.Equal(t, propertyOrder[0].(string), "name3")
+	assert.Equal(t, propertyOrder[1].(string), "name2")
+	assert.Equal(t, propertyOrder[2].(string), "name1")
 
 	// do no set property order.  property order appended as each property is added
-	_, err = NewSchemaBuilder().
+	schemaMap2, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		AddProperty(NewSchemaPropertyBuilder().
@@ -101,9 +113,16 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		Build()
 
 	assert.Nil(t, err)
+	assert.NotNil(t, schemaMap2)
+	assert.NotEmpty(t, schemaMap2[axwayOrder])
+
+	// assert that appended properties exist
+	assert.Contains(t, schemaMap2[axwayOrder], "name5")
+	assert.Contains(t, schemaMap2[axwayOrder], "name3")
+	assert.Contains(t, schemaMap2[axwayOrder], "name1")
 
 	// set property order, however, no properties were added to match any properties in property order
-	_, err = NewSchemaBuilder().
+	schemaMap3, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		SetPropertyOrder([]string{"name3", "name2", "name1"}).
@@ -115,5 +134,12 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 			SetEnumValues([]string{"a", "b", "c"})).
 		Build()
 
-	assert.Nil(t, err)
+	assert.NotNil(t, schemaMap3)
+	assert.NotEmpty(t, schemaMap3[axwayOrder])
+
+	// assert that properties in property order weren't added
+	propertyOrder1, _ := schemaMap3[axwayOrder].([]interface{})
+	for _, item := range propertyOrder1 {
+		assert.NotEqual(t, item.(string), "name5")
+	}
 }

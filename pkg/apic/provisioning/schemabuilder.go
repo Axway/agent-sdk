@@ -123,8 +123,8 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	// validate that the properties in the property order were added
 	if len(s.propertyOrder) > 0 {
 		for _, orderedProperty := range s.propertyOrder {
-			if property, ok := s.properties[orderedProperty]; !ok {
-				log.Warnf("ordered property %s, was not added as a property", property.Name)
+			if _, ok := s.properties[orderedProperty]; !ok {
+				log.Warnf("ordered property %s, was not added as a property", orderedProperty)
 			}
 		}
 	}
