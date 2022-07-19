@@ -36,6 +36,7 @@ type propertyDefinition struct {
 	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
+	Widget             string                        `json:"x-axway-widget,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -87,6 +88,8 @@ type StringPropertyBuilder interface {
 	IsEncrypted() StringPropertyBuilder
 	// SetDefaultValue - Define the initial value for the property
 	SetDefaultValue(value string) StringPropertyBuilder
+	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
+	SetAsTextArea() StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -265,6 +268,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	widget         string
 	defaultValue   string
 	StringPropertyBuilder
 }
@@ -320,6 +324,12 @@ func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuild
 	return p
 }
 
+// SetAsTextArea - set the field to be rendered as a textarea box within the UI
+func (p *stringSchemaProperty) SetAsTextArea() StringPropertyBuilder {
+	p.widget = "textArea"
+	return p
+}
+
 // IsEncrypted - Sets that this field needs to be encrypted at rest
 func (p *stringSchemaProperty) IsEncrypted() StringPropertyBuilder {
 	p.isEncrypted = true
@@ -365,6 +375,9 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	// set if the property is encrypted at rest
 	def.IsEncrypted = p.isEncrypted
+
+	// set field to be rendered as a textarea box within the UI
+	def.Widget = p.widget
 
 	return def, err
 }

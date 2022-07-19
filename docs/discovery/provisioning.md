@@ -149,6 +149,8 @@ type SchemaBuilder interface {
   SetDescription(name string) SchemaBuilder
   // Add a property, via the SchemaPropertyBuilder, to the schema, call this as many times as needed
   AddProperty(property SchemaPropertyBuilder) SchemaBuilder
+  // Set the property order
+  SetPropertyOrder(propertyOrder []string) SchemaBuilder
   // Add a unique key to the schema, call this as many times as needed
   AddUniqueKey(keyName string) SchemaBuilder
   // Builds the schema to be used, returns the json schema in a map[string]interface
@@ -201,6 +203,8 @@ type StringPropertyBuilder interface {
   IsEncrypted() StringPropertyBuilder
   // SetDefaultValue - Define the initial value for the property
   SetDefaultValue(value string) StringPropertyBuilder
+  // SetAsTextArea - Set value to be rendered as a textarea box within the UI
+   SetAsTextArea() StringPropertyBuilder
 }
 ```
 
@@ -210,6 +214,7 @@ Example of a required string property declaration.
 provisioning.NewSchemaPropertyBuilder().
  SetName("stringProperty").
  SetDescription("Description of the String property.").
+ SetAsTextArea().
  SetRequired().
    IsString()
 ```
