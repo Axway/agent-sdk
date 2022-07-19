@@ -623,10 +623,12 @@ type credClient struct {
 	getAppErr       error
 	getCrdErr       error
 	createSubCalled bool
+	deleteResCalled bool
 	subError        error
 	expectedStatus  string
 	t               *testing.T
 	isDeleting      bool
+	delErr          error
 }
 
 func (m *credClient) GetResource(url string) (*v1.ResourceInstance, error) {
@@ -657,6 +659,11 @@ func (m *credClient) UpdateResourceFinalizer(ri *v1.ResourceInstance, _, _ strin
 	}
 
 	return nil, nil
+}
+
+func (m *credClient) DeleteResourceInstance(ri v1.Interface) error {
+	m.deleteResCalled = true
+	return m.delErr
 }
 
 func parsePrivateKey(priv string) *rsa.PrivateKey {
