@@ -6,9 +6,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// propertyOrderSet - global flag to check if property order was set
-var propertyOrderSet = false
-
 // SchemaBuilder - used to build a subscription schema for API Central
 type SchemaBuilder interface {
 	SetName(name string) SchemaBuilder
@@ -22,13 +19,14 @@ type SchemaBuilder interface {
 
 // schemaBuilder - holds all the details needs to create a subscription schema
 type schemaBuilder struct {
-	err           error
-	name          string
-	description   string
-	propertyOrder []string
-	uniqueKeys    []string
-	properties    map[string]propertyDefinition
-	schemaVersion string
+	err              error
+	name             string
+	description      string
+	propertyOrder    []string
+	uniqueKeys       []string
+	properties       map[string]propertyDefinition
+	schemaVersion    string
+	propertyOrderSet bool
 }
 
 // jsonSchema - the schema generated from the builder
@@ -45,10 +43,11 @@ type jsonSchema struct {
 // NewSchemaBuilder - Creates a new subscription schema builder
 func NewSchemaBuilder() SchemaBuilder {
 	return &schemaBuilder{
-		properties:    make(map[string]propertyDefinition, 0),
-		uniqueKeys:    make([]string, 0),
-		propertyOrder: make([]string, 0),
-		schemaVersion: "http://json-schema.org/draft-07/schema#",
+		properties:       make(map[string]propertyDefinition, 0),
+		uniqueKeys:       make([]string, 0),
+		propertyOrder:    make([]string, 0),
+		propertyOrderSet: false,
+		schemaVersion:    "http://json-schema.org/draft-07/schema#",
 	}
 }
 
@@ -68,7 +67,7 @@ func (s *schemaBuilder) SetDescription(description string) SchemaBuilder {
 func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
 	// If property names in the property order is bogus, it will be ignored when rendered
 	s.propertyOrder = propertyOrder
-	propertyOrderSet = true
+	s.propertyOrderSet = true
 	return s
 }
 
@@ -78,7 +77,7 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	if err == nil {
 		s.properties[prop.Name] = *prop
 		// If property order wasn't set, add property as they come in
-		if !propertyOrderSet {
+		if !s.propertyOrderSet {
 			s.propertyOrder = append(s.propertyOrder, prop.Name)
 		}
 	} else {
@@ -156,9 +155,6 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Set property set bool back to false for next schema builder
-	propertyOrderSet = false
 
 	return schemaMap, nil
 }
