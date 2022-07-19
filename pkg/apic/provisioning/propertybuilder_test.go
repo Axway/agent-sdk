@@ -158,6 +158,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetReadOnly().
 				IsString().
 				IsEncrypted().
+				SetAsTextArea().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
 				SetFirstEnumValue("firstValue").
@@ -170,6 +171,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Format:       "hidden",
 				ReadOnly:     true,
 				IsEncrypted:  true,
+				TextArea:     "textArea",
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "c", "a", "b", "addedValue"},
 				DefaultValue: "a",
@@ -184,6 +186,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetReadOnly().
 				IsString().
 				IsEncrypted().
+				SetAsTextArea().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
 				SetFirstEnumValue("firstValue").
@@ -197,6 +200,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Format:       "hidden",
 				ReadOnly:     true,
 				IsEncrypted:  true,
+				TextArea:     "textArea",
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "a", "addedValue", "b", "c"},
 				DefaultValue: "a",

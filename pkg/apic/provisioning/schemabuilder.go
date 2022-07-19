@@ -66,6 +66,7 @@ func (s *schemaBuilder) SetDescription(description string) SchemaBuilder {
 
 // SetPropertyOrder - Set a list of ordered fields to be rendered in the UI
 func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
+	// If property names in the property order is bogus, it will be ignored when rendered
 	s.propertyOrder = propertyOrder
 	propertyOrderSet = true
 	return s
@@ -112,8 +113,9 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	// validate property order
 	for _, value := range s.properties {
 		if len(s.propertyOrder) > 0 {
+			// if property is not in the set property order, warn
 			if !inPropertyOrder(value.Name, s.propertyOrder) {
-				log.Debugf("property %s is not found in the property order", value.Name)
+				log.Warnf("property %s is not found in the property order", value.Name)
 			}
 		}
 

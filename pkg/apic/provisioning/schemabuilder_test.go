@@ -17,6 +17,7 @@ func TestNewSchemaBuilder(t *testing.T) {
 	assert.Empty(t, schemaBuilderProps.name)
 	assert.Empty(t, schemaBuilderProps.properties)
 	assert.Len(t, schemaBuilderProps.uniqueKeys, 0)
+	assert.Len(t, schemaBuilderProps.propertyOrder, 0)
 }
 
 func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
@@ -47,4 +48,57 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		Build()
 
 	assert.NotNil(t, err)
+
+	// set property order - property order takes precedence
+	_, err = NewSchemaBuilder().
+		SetName("name").
+		AddUniqueKey("key").
+		SetPropertyOrder([]string{"name3", "name2", "name1"}).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name1").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name2").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name3").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		Build()
+
+	assert.Nil(t, err)
+
+	// do no set property order.  property order appended as each property is added
+	_, err = NewSchemaBuilder().
+		SetName("name").
+		AddUniqueKey("key").
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name5").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name3").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name1").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		Build()
+
+	assert.Nil(t, err)
 }
