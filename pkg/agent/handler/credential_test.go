@@ -165,24 +165,47 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
-		name           string
-		outboundStatus prov.Status
+		name            string
+		outboundStatus  prov.Status
+		resourceState   string
+		provStatus      string
+		action          string
+		deleteResCalled bool
 	}{
 		{
 			name:           "should deprovision with no error",
 			outboundStatus: prov.Success,
+			resourceState:  v1.ResourceDeleting,
+			provStatus:     prov.Success.String(),
+		},
+		{
+			name:            "should deprovision with no error when CredentialExpired",
+			outboundStatus:  prov.Success,
+			provStatus:      prov.Error.String(),
+			action:          "CredentialExpired",
+			deleteResCalled: true,
 		},
 		{
 			name:           "should fail to deprovision and set the status to error",
 			outboundStatus: prov.Error,
+			resourceState:  v1.ResourceDeleting,
+			provStatus:     prov.Success.String(),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cred := credential
-			cred.Status.Level = prov.Success.String()
-			cred.Metadata.State = v1.ResourceDeleting
+			cred.Status.Level = tc.provStatus
+			cred.Status.Reasons = []v1.ResourceStatusReason{
+				{
+					Type: tc.provStatus,
+					Meta: map[string]interface{}{
+						"action": tc.action,
+					},
+				},
+			}
+			cred.Metadata.State = tc.resourceState
 			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
 
 			p := &mockCredProv{
@@ -223,6 +246,10 @@ func TestCredentialHandler_deleting(t *testing.T) {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
+			}
+
+			if tc.deleteResCalled {
+				assert.True(t, c.deleteResCalled)
 			}
 		})
 	}

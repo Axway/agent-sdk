@@ -110,7 +110,6 @@ func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) str
 
 // shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers
 func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
-
 	switch {
 	case len(finalizers) == 0:
 		return false
