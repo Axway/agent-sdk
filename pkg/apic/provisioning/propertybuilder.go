@@ -268,7 +268,6 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
-	propertyOrder  int
 	textArea       string
 	defaultValue   string
 	StringPropertyBuilder
@@ -322,12 +321,6 @@ func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder 
 // SetDefaultValue - Define the initial value for the property
 func (p *stringSchemaProperty) SetDefaultValue(value string) StringPropertyBuilder {
 	p.defaultValue = value
-	return p
-}
-
-// SetPropertyOrder - add a list of enum values to the property
-func (p *stringSchemaProperty) SetPropertyOrder(propertyOrder int) StringPropertyBuilder {
-	p.propertyOrder = propertyOrder
 	return p
 }
 
