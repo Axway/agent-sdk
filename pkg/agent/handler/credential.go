@@ -108,7 +108,7 @@ func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) str
 	return ""
 }
 
-// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers
+// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers or when it is in Error and the only reason is CredentialExpired
 func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
 	switch {
 	case len(finalizers) == 0:
@@ -230,7 +230,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 
-		// Delete the resource, since it was not n Deleting State
+		// Delete the resource, since it was not in Deleting State
 		if ri.Metadata.State != v1.ResourceDeleting {
 			h.client.DeleteResourceInstance(ri)
 		}
