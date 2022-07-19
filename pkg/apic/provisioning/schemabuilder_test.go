@@ -101,4 +101,19 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 		Build()
 
 	assert.Nil(t, err)
+
+	// set property order, however, no properties were added to match any properties in property order
+	_, err = NewSchemaBuilder().
+		SetName("name").
+		AddUniqueKey("key").
+		SetPropertyOrder([]string{"name3", "name2", "name1"}).
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("name5").
+			SetDescription("description").
+			SetRequired().
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"})).
+		Build()
+
+	assert.Nil(t, err)
 }

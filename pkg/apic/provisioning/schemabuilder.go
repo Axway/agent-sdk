@@ -88,8 +88,8 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	return s
 }
 
-// inPropertyOrder - check to see if the property is in the propertyOrder.
-func inPropertyOrder(value string, list []string) bool {
+// inList - check to see if the string is in the list.
+func inList(value string, list []string) bool {
 	for _, v := range list {
 		if v == value {
 			return true
@@ -110,15 +110,23 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 		return nil, s.err
 	}
 
-	// validate property order
+	// validate that the property added is in the property order set by the implementation
 	for _, value := range s.properties {
 		if len(s.propertyOrder) > 0 {
 			// if property is not in the set property order, warn
-			if !inPropertyOrder(value.Name, s.propertyOrder) {
+			if !inList(value.Name, s.propertyOrder) {
 				log.Warnf("property %s is not found in the property order", value.Name)
 			}
 		}
+	}
 
+	// validate that the properties in the property order were added
+	if len(s.propertyOrder) > 0 {
+		for _, orderedProperty := range s.propertyOrder {
+			if property, ok := s.properties[orderedProperty]; !ok {
+				log.Warnf("ordered property %s, was not added as a property", property.Name)
+			}
+		}
 	}
 
 	// Create the list of required properties
