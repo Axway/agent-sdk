@@ -10,6 +10,7 @@ import (
 )
 
 type traceManagedApplication struct {
+	marketplaceHandler
 	cache agentcache.Manager
 }
 
@@ -42,7 +43,7 @@ func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta
 		return nil
 	}
 
-	if shouldProcessForTrace(app.Status.Level, app.Metadata.State) {
+	if h.shouldProcessForTrace(app.Status, app.Metadata.State) {
 		cachedApp := h.cache.GetManagedApplication(resource.Metadata.ID)
 		if cachedApp == nil {
 			h.cache.AddManagedApplication(resource)

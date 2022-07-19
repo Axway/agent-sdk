@@ -23,6 +23,7 @@ type managedAppProvision interface {
 }
 
 type managedApplication struct {
+	marketplaceHandler
 	prov   managedAppProvision
 	cache  agentcache.Manager
 	client client
@@ -40,7 +41,7 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 // Handle processes grpc events triggered for ManagedApplications
 func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -66,12 +67,12 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		id:             app.Metadata.ID,
 	}
 
-	if ok := shouldProcessPending(app.Status.Level, app.Metadata.State); ok {
+	if ok := h.shouldProcessPending(app.Status, app.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		return h.onPending(ctx, app, ma)
 	}
 
-	if ok := shouldProcessDeleting(app.Status.Level, app.Metadata.State, len(app.Finalizers)); ok {
+	if ok := h.shouldProcessDeleting(app.Status, app.Metadata.State, app.Finalizers); ok {
 		log.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, app, ma)
 	}

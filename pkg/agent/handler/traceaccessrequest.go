@@ -10,6 +10,7 @@ import (
 )
 
 type traceAccessRequestHandler struct {
+	marketplaceHandler
 	cache  agentcache.Manager
 	client client
 }
@@ -44,7 +45,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 		return nil
 	}
 
-	if shouldProcessForTrace(ar.Status.Level, ar.Metadata.State) {
+	if h.shouldProcessForTrace(ar.Status, ar.Metadata.State) {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if cachedAccessReq == nil {
 			h.cache.AddAccessRequest(resource)

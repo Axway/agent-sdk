@@ -3,11 +3,13 @@ package provisioning
 import (
 	"time"
 
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
 // RequestStatus - holds info about the Status of the request
 type RequestStatus interface {
+	// GetReasons returns the Status reasons
+	GetReasons() []v1.ResourceStatusReason
 	// GetStatus returns the Status level
 	GetStatus() Status
 	// GetMessage returns the status message
@@ -21,6 +23,12 @@ type requestStatus struct {
 	status     Status
 	message    string
 	properties map[string]string
+	reasons    []v1.ResourceStatusReason
+}
+
+// GetStatus returns the Status level
+func (rs *requestStatus) GetReasons() []v1.ResourceStatusReason {
+	return rs.reasons
 }
 
 // GetStatus returns the Status level
@@ -44,6 +52,8 @@ type RequestStatusBuilder interface {
 	Success() RequestStatus
 	// Failed - set the status as failed
 	Failed() RequestStatus
+	// RequestStatusBuilder - adds any existing status reasons so they are not lost
+	SetCurrentStatusReasons([]v1.ResourceStatusReason) RequestStatusBuilder
 	// SetMessage - set the request Status message
 	SetMessage(message string) RequestStatusBuilder
 	// SetProperties - set the properties of the RequestStatus
@@ -63,6 +73,12 @@ func NewRequestStatusBuilder() RequestStatusBuilder {
 			properties: make(map[string]string),
 		},
 	}
+}
+
+// SetProperties - set the properties to be sent back to the resource
+func (r *requestStatusBuilder) SetCurrentStatusReasons(reasons []v1.ResourceStatusReason) RequestStatusBuilder {
+	r.status.reasons = reasons
+	return r
 }
 
 // SetProperties - set the properties to be sent back to the resource
@@ -96,19 +112,25 @@ func (r *requestStatusBuilder) Failed() RequestStatus {
 }
 
 // NewStatusReason converts a RequestStatus into a ResourceStatus
-func NewStatusReason(r RequestStatus) *apiv1.ResourceStatus {
+func NewStatusReason(r RequestStatus) *v1.ResourceStatus {
 	if r == nil {
 		return nil
 	}
 
-	return &apiv1.ResourceStatus{
-		Level: r.GetStatus().String(),
-		Reasons: []apiv1.ResourceStatusReason{
-			{
-				Type:      r.GetStatus().String(),
-				Detail:    r.GetMessage(),
-				Timestamp: apiv1.Time(time.Now()),
-			},
-		},
+	reasons := r.GetReasons()
+	if reasons == nil {
+		reasons = []v1.ResourceStatusReason{}
+	}
+
+	// append the new reason
+	reasons = append(reasons, v1.ResourceStatusReason{
+		Type:      r.GetStatus().String(),
+		Detail:    r.GetMessage(),
+		Timestamp: v1.Time(time.Now()),
+	})
+
+	return &v1.ResourceStatus{
+		Level:   r.GetStatus().String(),
+		Reasons: reasons,
 	}
 }

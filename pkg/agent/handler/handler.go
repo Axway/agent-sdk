@@ -4,7 +4,6 @@ import (
 	"context"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	corelog "github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/sirupsen/logrus"
@@ -45,6 +44,7 @@ type client interface {
 	GetResource(url string) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
+	DeleteResourceInstance(ri v1.Interface) error
 }
 
 func isStatusFound(rs *v1.ResourceStatus) bool {
@@ -52,27 +52,6 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 		return false
 	}
 	return true
-}
-
-func shouldIgnoreSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
-	if meta == nil {
-		return false
-	}
-	return action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status"
-}
-
-// shouldProcessPending returns true when the resource is pending, and is not in a deleting state
-func shouldProcessPending(status, state string) bool {
-	return status == prov.Pending.String() && state != v1.ResourceDeleting
-}
-
-// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers
-func shouldProcessDeleting(status, state string, finalizerCount int) bool {
-	return status == prov.Success.String() && state == v1.ResourceDeleting && finalizerCount > 0
-}
-
-func shouldProcessForTrace(status, state string) bool {
-	return status == prov.Success.String() && state != v1.ResourceDeleting
 }
 
 // NewEventContext - create a context for the new event

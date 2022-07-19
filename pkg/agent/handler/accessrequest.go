@@ -25,6 +25,7 @@ type arProvisioner interface {
 }
 
 type accessRequestHandler struct {
+	marketplaceHandler
 	prov          arProvisioner
 	cache         agentcache.Manager
 	client        client
@@ -44,7 +45,7 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -69,7 +70,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 
-	if ok := shouldProcessPending(ar.Status.Level, ar.Metadata.State); ok {
+	if ok := h.shouldProcessPending(ar.Status, ar.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		ar := h.onPending(ctx, ar)
 		err := h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
@@ -87,7 +88,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return err
 	}
 
-	if ok := shouldProcessDeleting(ar.Status.Level, ar.Metadata.State, len(ar.Finalizers)); ok {
+	if ok := h.shouldProcessDeleting(ar.Status, ar.Metadata.State, ar.Finalizers); ok {
 		log.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, ar)
 	}
@@ -146,6 +147,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().
 				SetMessage(fmt.Sprintf("error encrypting access data: %s", err.Error())).
+				SetCurrentStatusReasons(ar.Status.Reasons).
 				Failed()
 		} else {
 			ar.Data = data
@@ -174,7 +176,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 // onError updates the AccessRequest with an error status
 func (h *accessRequestHandler) onError(_ context.Context, ar *mv1.AccessRequest, err error) {
 	ps := prov.NewRequestStatusBuilder()
-	status := ps.SetMessage(err.Error()).Failed()
+	status := ps.SetMessage(err.Error()).SetCurrentStatusReasons(ar.Status.Reasons).Failed()
 	ar.Status = prov.NewStatusReason(status)
 	ar.SubResources = map[string]interface{}{
 		"status": ar.Status,
