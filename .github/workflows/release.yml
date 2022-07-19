@@ -12,8 +12,8 @@ on:
     branches:
       - APIGOV-DALE
       - APIGOV-dale
-    # tags:
-    #   - "v[0-9]+.[0-9]+.[0-9]+"
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   release:
@@ -28,15 +28,13 @@ jobs:
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
         run: |
-          # ./promote.sh ${GITHUB_REF}
-          echo "REF   ${GITHUB_REF}"
-          ./promote.sh refs/tags/v1.1.2
-          echo "HEAD REF   ${{ github.head_ref }}"
+          ./promote.sh ${GITHUB_REF}
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
           branch: APIGOV-updateversion
           commit-message: INT - update to new release
+          title: INT - update to new release
           base: ${{ github.head_ref }}
           delete-branch: true
      
