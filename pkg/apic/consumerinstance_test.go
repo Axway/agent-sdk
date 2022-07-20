@@ -4,8 +4,8 @@ package apic
 import (
 	"testing"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +47,7 @@ func TestServiceClient_buildConsumerInstance(t *testing.T) {
 
 	inst := client.buildConsumerInstance(body, "name", "doc")
 
-	assert.Equal(t, mv1a.ConsumerInstanceGVK(), inst.GroupVersionKind)
+	assert.Equal(t, management.ConsumerInstanceGVK(), inst.GroupVersionKind)
 	assert.Equal(t, "name", inst.Name)
 	assert.Equal(t, body.NameToPush, inst.Title)
 
@@ -109,15 +109,15 @@ func TestServiceClient_updateConsumerInstance(t *testing.T) {
 
 	client, _ := GetTestServiceClient()
 
-	inst := &mv1a.ConsumerInstance{
-		ResourceMeta: v1.ResourceMeta{
+	inst := &management.ConsumerInstance{
+		ResourceMeta: apiv1.ResourceMeta{
 			Title: "oldname",
 			Attributes: map[string]string{
 				"old_attribute": "value",
 			},
 			Name: "name",
 			Tags: []string{"old_tag"},
-			Metadata: v1.Metadata{
+			Metadata: apiv1.Metadata{
 				ResourceVersion: "123",
 			},
 		},
@@ -125,7 +125,7 @@ func TestServiceClient_updateConsumerInstance(t *testing.T) {
 
 	client.updateConsumerInstance(body, inst, "doc")
 
-	assert.Equal(t, mv1a.ConsumerInstanceGVK(), inst.GroupVersionKind)
+	assert.Equal(t, management.ConsumerInstanceGVK(), inst.GroupVersionKind)
 	assert.Equal(t, "name", inst.Name)
 	assert.Equal(t, body.NameToPush, inst.Title)
 

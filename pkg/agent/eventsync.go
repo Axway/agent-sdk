@@ -6,7 +6,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/migrate"
@@ -15,7 +15,7 @@ import (
 // EventSync struct for syncing events from central
 type EventSync struct {
 	mpEnabled      bool
-	watchTopic     *mv1.WatchTopic
+	watchTopic     *management.WatchTopic
 	sequence       events.SequenceProvider
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache

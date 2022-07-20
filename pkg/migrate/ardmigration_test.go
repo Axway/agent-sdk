@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +15,7 @@ func TestArdMigration(t *testing.T) {
 	}
 	c := &mockArdMigClient{}
 	mig := NewArdMigration(c, cfg)
-	ard := mv1a.NewAccessRequestDefinition("asdf", cfg.GetEnvironmentName())
+	ard := management.NewAccessRequestDefinition("asdf", cfg.GetEnvironmentName())
 	ard.Spec.Schema = map[string]interface{}{
 		"properties": map[string]interface{}{
 			"scopes": []string{"scope1", "scope2"},

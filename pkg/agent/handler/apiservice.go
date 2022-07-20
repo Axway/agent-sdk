@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -23,9 +23,9 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.APIServiceGVK().Kind {
+	if resource.Kind != management.APIServiceGVK().Kind {
 		return nil
 	}
 

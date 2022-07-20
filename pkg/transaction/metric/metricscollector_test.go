@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -118,10 +118,10 @@ func cleanUpReportfiles() {
 	os.RemoveAll("./reports")
 }
 
-func createRI(id, name string, subRes map[string]interface{}) *v1.ResourceInstance {
-	return &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+func createRI(id, name string, subRes map[string]interface{}) *apiv1.ResourceInstance {
+	return &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: id,
 			},
 			SubResources: subRes,
@@ -130,7 +130,7 @@ func createRI(id, name string, subRes map[string]interface{}) *v1.ResourceInstan
 	}
 }
 
-func createAPIServiceInstance(id, name string, apiID string) *v1.ResourceInstance {
+func createAPIServiceInstance(id, name string, apiID string) *apiv1.ResourceInstance {
 	sub := map[string]interface{}{
 		defs.XAgentDetails: map[string]interface{}{
 			defs.AttrExternalAPIID: apiID,
@@ -139,15 +139,15 @@ func createAPIServiceInstance(id, name string, apiID string) *v1.ResourceInstanc
 	return createRI(id, name, sub)
 }
 
-func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstance {
+func createManagedApplication(id, name, consumerOrgID string) *apiv1.ResourceInstance {
 	var marketplaceSubRes map[string]interface{}
 	if consumerOrgID != "" {
 		marketplaceSubRes = map[string]interface{}{
-			"marketplace": mv1.ManagedApplicationMarketplace{
+			"marketplace": management.ManagedApplicationMarketplace{
 				Name: name,
-				Resource: mv1.ManagedApplicationMarketplaceResource{
-					Owner: mv1.ManagedApplicationMarketplaceResourceOwner{
-						Organization: mv1.ManagedApplicationMarketplaceResourceOwnerOrganization{
+				Resource: management.ManagedApplicationMarketplaceResource{
+					Owner: management.ManagedApplicationMarketplaceResourceOwner{
+						Organization: management.ManagedApplicationMarketplaceResourceOwnerOrganization{
 							Id: consumerOrgID,
 						},
 					},
@@ -158,12 +158,12 @@ func createManagedApplication(id, name, consumerOrgID string) *v1.ResourceInstan
 	return createRI(id, name, marketplaceSubRes)
 }
 
-func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *v1.ResourceInstance {
-	ar := &mv1.AccessRequest{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *apiv1.ResourceInstance {
+	ar := &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: id,
-				References: []v1.Reference{
+				References: []apiv1.Reference{
 					{
 						ID:   instanceID,
 						Name: instanceName,
@@ -172,12 +172,12 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 			},
 			Name: name,
 		},
-		Spec: mv1.AccessRequestSpec{
+		Spec: management.AccessRequestSpec{
 			ManagedApplication: appName,
 			ApiServiceInstance: instanceName,
 		},
 		References: []interface{}{
-			mv1.AccessRequestReferencesSubscription{
+			management.AccessRequestReferencesSubscription{
 				Kind: defs.Subscription,
 				Name: "catalog/" + subscriptionName,
 			},

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -61,7 +61,7 @@ func TestAttributeMigration(t *testing.T) {
 			res := []*apiv1.ResourceInstance{
 				{
 					ResourceMeta: apiv1.ResourceMeta{
-						GroupVersionKind: mv1a.APIServiceGVK(),
+						GroupVersionKind: management.APIServiceGVK(),
 						Name:             "item-one",
 						Title:            "item-one",
 						Metadata:         apiv1.Metadata{},
@@ -93,7 +93,7 @@ func TestMigrate(t *testing.T) {
 	am := NewAttributeMigration(c, cfg)
 	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: mv1a.APIServiceGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			Attributes: map[string]string{
 				defs.AttrPreviousAPIServiceRevisionID: "1",
 				defs.AttrExternalAPIID:                "2",

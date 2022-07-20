@@ -20,8 +20,8 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -55,18 +55,18 @@ var apiSvcRevTitleDateMap = map[string]string{
 
 func (c *ServiceClient) buildAPIServiceRevision(
 	serviceBody *ServiceBody, name string,
-) *mv1a.APIServiceRevision {
+) *management.APIServiceRevision {
 	owner, _ := c.getOwnerObject(serviceBody, false)
-	rev := &mv1a.APIServiceRevision{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1a.APIServiceRevisionGVK(),
+	rev := &management.APIServiceRevision{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.APIServiceRevisionGVK(),
 			Name:             name,
 			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.RevisionAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1a.EnvironmentGVK().Kind,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
 					Name: c.cfg.GetEnvironmentName(),
 				},
 			},
@@ -83,9 +83,9 @@ func (c *ServiceClient) buildAPIServiceRevision(
 }
 
 func (c *ServiceClient) updateAPIServiceRevision(
-	serviceBody *ServiceBody, revision *mv1a.APIServiceRevision,
-) *mv1a.APIServiceRevision {
-	revision.GroupVersionKind = mv1a.APIServiceRevisionGVK()
+	serviceBody *ServiceBody, revision *management.APIServiceRevision,
+) *management.APIServiceRevision {
+	revision.GroupVersionKind = management.APIServiceRevisionGVK()
 	revision.Metadata.ResourceVersion = ""
 	revision.Title = serviceBody.NameToPush
 	revision.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
@@ -191,8 +191,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
-// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*mv1a.APIServiceRevision
-func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error) {
+// NOTE : this function can go away.  You can call GetAPIServiceRevisions directly from your function to get []*management.APIServiceRevision
+func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error) {
 	revisions, err := c.GetAPIServiceRevisions(query, c.cfg.GetRevisionsURL(), stage)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 }
 
 // GetAPIRevisionByName - Returns the API revision based on its revision name
-func (c *ServiceClient) GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error) {
+func (c *ServiceClient) GetAPIRevisionByName(name string) (*management.APIServiceRevision, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -320,15 +320,15 @@ func (c *ServiceClient) GetAPIRevisionByName(name string) (*mv1a.APIServiceRevis
 		}
 		return nil, nil
 	}
-	apiRevision := new(mv1a.APIServiceRevision)
+	apiRevision := new(management.APIServiceRevision)
 	err = json.Unmarshal(response.Body, apiRevision)
 	return apiRevision, err
 }
 
-func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) mv1a.ApiServiceRevisionSpec {
-	return mv1a.ApiServiceRevisionSpec{
+func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) management.ApiServiceRevisionSpec {
+	return management.ApiServiceRevisionSpec{
 		ApiService: serviceBody.serviceContext.serviceName,
-		Definition: mv1a.ApiServiceRevisionSpecDefinition{
+		Definition: management.ApiServiceRevisionSpecDefinition{
 			Type:  getRevisionDefinitionType(*serviceBody),
 			Value: base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
 		},

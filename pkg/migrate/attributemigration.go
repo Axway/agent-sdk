@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"sync"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -43,19 +43,19 @@ func RemoveTagPattern(tags ...string) {
 
 type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
-	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
-	CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error)
-	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
-	DeleteResourceInstance(ri v1.Interface) error
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
+	DeleteResourceInstance(ri apiv1.Interface) error
 }
 
 type item struct {
-	ri     *v1.ResourceInstance
+	ri     *apiv1.ResourceInstance
 	update bool
 }
 
-type migrateFunc func(ri *v1.ResourceInstance) error
+type migrateFunc func(ri *apiv1.ResourceInstance) error
 
 // AttributeMigration - used for migrating attributes to subresource
 type AttributeMigration struct {
@@ -77,8 +77,8 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 // Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
 // If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
 // that refer to the APIService will all have their attributes updated.
-func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if ri.Kind != mv1a.APIServiceGVK().Kind {
+func (m *AttributeMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.Kind != management.APIServiceGVK().Kind {
 		return ri, nil
 	}
 
@@ -126,7 +126,7 @@ func (m *AttributeMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInsta
 }
 
 // updateSvc updates the attributes on service in place, then updates on api server.
-func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
+func (m *AttributeMigration) updateSvc(ri *apiv1.ResourceInstance) error {
 	url := fmt.Sprintf("%s/%s", m.cfg.GetServicesURL(), ri.Name)
 	r, err := m.getRI(url)
 	if err != nil {
@@ -146,7 +146,7 @@ func (m *AttributeMigration) updateSvc(ri *v1.ResourceInstance) error {
 }
 
 // updateRev gets a list of revisions for the service and updates their attributes.
-func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
+func (m *AttributeMigration) updateRev(ri *apiv1.ResourceInstance) error {
 	m.riMutex.Lock()
 	defer m.riMutex.Unlock()
 	url := m.cfg.GetRevisionsURL()
@@ -158,7 +158,7 @@ func (m *AttributeMigration) updateRev(ri *v1.ResourceInstance) error {
 }
 
 // updateInst gets a list of instances for the service and updates their attributes.
-func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
+func (m *AttributeMigration) updateInst(ri *apiv1.ResourceInstance) error {
 	m.riMutex.Lock()
 	defer m.riMutex.Unlock()
 	revURL := m.cfg.GetRevisionsURL()
@@ -180,7 +180,7 @@ func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
 	for _, rev := range revs {
 		wg.Add(1)
 
-		go func(r *v1.ResourceInstance) {
+		go func(r *apiv1.ResourceInstance) {
 			defer wg.Done()
 
 			q := map[string]string{
@@ -205,7 +205,7 @@ func (m *AttributeMigration) updateInst(ri *v1.ResourceInstance) error {
 }
 
 // updateCI gets a list of consumer instances for the service and updates their attributes.
-func (m *AttributeMigration) updateCI(ri *v1.ResourceInstance) error {
+func (m *AttributeMigration) updateCI(ri *apiv1.ResourceInstance) error {
 	m.riMutex.Lock()
 	defer m.riMutex.Unlock()
 	url := m.cfg.GetConsumerInstancesURL()
@@ -239,7 +239,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 
 		wg.Add(1)
 
-		go func(ri *v1.ResourceInstance) {
+		go func(ri *apiv1.ResourceInstance) {
 			defer wg.Done()
 
 			err := m.updateRI(ri)
@@ -259,7 +259,7 @@ func (m *AttributeMigration) migrate(resourceURL string, query map[string]string
 	return nil
 }
 
-func updateAttrs(ri *v1.ResourceInstance) item {
+func updateAttrs(ri *apiv1.ResourceInstance) item {
 	details := util.GetAgentDetails(ri)
 	if details == nil {
 		details = make(map[string]interface{})

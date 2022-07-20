@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -39,16 +39,16 @@ func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Man
 }
 
 // Handle processes grpc events triggered for ManagedApplications
-func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != management.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
 	log := getLoggerFromContext(ctx).WithComponent("managedApplicationHandler")
 	ctx = setLoggerInContext(ctx, log)
 
-	app := &mv1.ManagedApplication{}
+	app := &management.ManagedApplication{}
 	err := app.FromInstance(resource)
 	if err != nil {
 		log.WithError(err).Error("could not handle application request")
@@ -80,7 +80,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 	return nil
 }
 
-func (h *managedApplication) onPending(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) error {
+func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
 	log := getLoggerFromContext(ctx)
 	status := h.prov.ApplicationRequestProvision(pma)
 
@@ -114,7 +114,7 @@ func (h *managedApplication) onPending(ctx context.Context, app *mv1.ManagedAppl
 	return err
 }
 
-func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApplication, pma provManagedApp) {
+func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
 	status := h.prov.ApplicationRequestDeprovision(pma)
 
@@ -130,7 +130,7 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *mv1.ManagedApp
 }
 
 // onError updates the managed app with an error status
-func (h *managedApplication) onError(ar *mv1.ManagedApplication, err error) {
+func (h *managedApplication) onError(ar *management.ManagedApplication, err error) {
 	ps := prov.NewRequestStatusBuilder()
 	status := ps.SetMessage(err.Error()).Failed()
 	ar.Status = prov.NewStatusReason(status)
@@ -139,7 +139,7 @@ func (h *managedApplication) onError(ar *mv1.ManagedApplication, err error) {
 	}
 }
 
-func (h *managedApplication) getTeamName(_ context.Context, owner *v1.Owner) string {
+func (h *managedApplication) getTeamName(_ context.Context, owner *apiv1.Owner) string {
 	teamName := ""
 	if owner != nil && owner.ID != "" {
 		team := h.cache.GetTeamByID(owner.ID)

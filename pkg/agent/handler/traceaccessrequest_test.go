@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -16,9 +16,9 @@ func TestTraceAccessRequestHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	handler := NewTraceAccessRequestHandler(cm, c)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -29,12 +29,12 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{}
 	handler := NewTraceAccessRequestHandler(cm, c)
-	ar := &mv1.AccessRequest{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.AccessRequestGVK(),
-			Metadata: v1.Metadata{
+	ar := &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.AccessRequestGVK(),
+			Metadata: apiv1.Metadata{
 				ID: "ar",
-				References: []v1.Reference{
+				References: []apiv1.Reference{
 					{
 						ID:   "instanceId",
 						Name: "instance",
@@ -44,12 +44,12 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 			},
 			Name: "ar",
 		},
-		Spec: mv1.AccessRequestSpec{
+		Spec: management.AccessRequestSpec{
 			ManagedApplication: "app",
 			ApiServiceInstance: "instance",
 		},
 		References: []interface{}{
-			mv1.AccessRequestReferencesSubscription{
+			management.AccessRequestReferencesSubscription{
 				Kind: defs.Subscription,
 				Name: "catalog/subscription-name",
 			},
@@ -62,14 +62,14 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
 
-	ar.Status = &v1.ResourceStatus{
+	ar.Status = &apiv1.ResourceStatus{
 		Level: "Success",
 	}
 	ri, _ = ar.AsInstance()
 
-	inst := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+	inst := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: "instanceId",
 			},
 			Name: "instance",
@@ -82,9 +82,9 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	}
 	cm.AddAPIServiceInstance(inst)
 
-	managedApp := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+	managedApp := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: "app",
 			},
 			Name: "app",
@@ -92,9 +92,9 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	}
 	cm.AddManagedApplication(managedApp)
 
-	c.getRI = &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+	c.getRI = &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: "subscription-id",
 			},
 			Name: "subscription-name",

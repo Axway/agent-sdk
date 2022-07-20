@@ -11,8 +11,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -21,7 +21,7 @@ import (
 )
 
 // TODO - this file should be able to be removed once Unified Catalog support has been removed
-func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) mv1a.ConsumerInstanceSpec {
+func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc string, categories []string) management.ConsumerInstanceSpec {
 	subscriptionDefinitionName := serviceBody.SubscriptionName
 
 	autoSubscribe := false
@@ -53,7 +53,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		}
 	}
 
-	return mv1a.ConsumerInstanceSpec{
+	return management.ConsumerInstanceSpec{
 		Name:               serviceBody.NameToPush,
 		ApiServiceInstance: serviceBody.serviceContext.instanceName,
 		Description:        serviceBody.Description,
@@ -64,7 +64,7 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 		Tags:               mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 		Documentation:      doc,
 		OwningTeam:         owningTeam,
-		Subscription: mv1a.ConsumerInstanceSpecSubscription{
+		Subscription: management.ConsumerInstanceSpecSubscription{
 			Enabled:                enableSubscription,
 			AutoSubscribe:          autoSubscribe,
 			SubscriptionDefinition: subscriptionDefinitionName,
@@ -75,13 +75,13 @@ func (c *ServiceClient) buildConsumerInstanceSpec(serviceBody *ServiceBody, doc 
 }
 
 // buildUnstructuredDataProperties - creates the unstructured data properties portion of the consumer instance
-func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) mv1a.ConsumerInstanceSpecUnstructuredDataProperties {
+func (c *ServiceClient) buildUnstructuredDataProperties(serviceBody *ServiceBody) management.ConsumerInstanceSpecUnstructuredDataProperties {
 	if serviceBody.ResourceType != Unstructured {
-		return mv1a.ConsumerInstanceSpecUnstructuredDataProperties{}
+		return management.ConsumerInstanceSpecUnstructuredDataProperties{}
 	}
 
 	const defType = "Asset"
-	unstructuredDataProperties := mv1a.ConsumerInstanceSpecUnstructuredDataProperties{
+	unstructuredDataProperties := management.ConsumerInstanceSpecUnstructuredDataProperties{
 		Type:        defType,
 		ContentType: mimetype.Detect(serviceBody.SpecDefinition).String(),
 		Label:       defType,
@@ -132,18 +132,18 @@ func (c *ServiceClient) enableSubscription(serviceBody *ServiceBody) bool {
 	return enableSubscription
 }
 
-func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *mv1a.ConsumerInstance {
+func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name string, doc string) *management.ConsumerInstance {
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
-	ci := &mv1a.ConsumerInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1a.ConsumerInstanceGVK(),
+	ci := &management.ConsumerInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.ConsumerInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1a.EnvironmentGVK().Kind,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
 					Name: c.cfg.GetEnvironmentName(),
 				},
 			},
@@ -159,8 +159,8 @@ func (c *ServiceClient) buildConsumerInstance(serviceBody *ServiceBody, name str
 	return ci
 }
 
-func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *mv1a.ConsumerInstance, doc string) {
-	ci.GroupVersionKind = mv1a.ConsumerInstanceGVK()
+func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *management.ConsumerInstance, doc string) {
+	ci.GroupVersionKind = management.ConsumerInstanceGVK()
 	ci.Metadata.ResourceVersion = ""
 	ci.Title = serviceBody.NameToPush
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
@@ -215,7 +215,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	httpMethod := http.MethodPost
 	consumerInstanceURL := c.cfg.GetConsumerInstancesURL()
 
-	var instance *mv1a.ConsumerInstance
+	var instance *management.ConsumerInstance
 	var err error
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		instance, err = c.getConsumerInstanceByName(consumerInstanceName)
@@ -269,7 +269,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 }
 
 // getAPIServerConsumerInstance -
-func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[string]string) (*mv1a.ConsumerInstance, error) {
+func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[string]string) (*management.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -295,7 +295,7 @@ func (c *ServiceClient) getAPIServerConsumerInstance(name string, query map[stri
 		}
 		return nil, nil
 	}
-	consumerInstance := new(mv1a.ConsumerInstance)
+	consumerInstance := new(management.ConsumerInstance)
 	err = json.Unmarshal(response.Body, consumerInstance)
 	return consumerInstance, err
 }
@@ -327,7 +327,7 @@ func (c *ServiceClient) UpdateConsumerInstanceSubscriptionDefinition(externalAPI
 }
 
 // getConsumerInstancesByExternalAPIID gets consumer instances.
-func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string) ([]*management.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -360,7 +360,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
+	consumerInstances := make([]*management.ConsumerInstance, 0)
 	err = json.Unmarshal(response.Body, &consumerInstances)
 	if err != nil {
 		return nil, err
@@ -373,7 +373,7 @@ func (c *ServiceClient) getConsumerInstancesByExternalAPIID(externalAPIID string
 }
 
 // getConsumerInstanceByID
-func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*mv1a.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*management.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -401,7 +401,7 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*mv1a.Consum
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
+	consumerInstances := make([]*management.ConsumerInstance, 0)
 	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, errors.New("Unable to find consumerInstance using instanceID " + instanceID)
@@ -411,7 +411,7 @@ func (c *ServiceClient) getConsumerInstanceByID(instanceID string) (*mv1a.Consum
 }
 
 // getConsumerInstanceByName
-func (c *ServiceClient) getConsumerInstanceByName(name string) (*mv1a.ConsumerInstance, error) {
+func (c *ServiceClient) getConsumerInstanceByName(name string) (*management.ConsumerInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -439,7 +439,7 @@ func (c *ServiceClient) getConsumerInstanceByName(name string) (*mv1a.ConsumerIn
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	consumerInstances := make([]*mv1a.ConsumerInstance, 0)
+	consumerInstances := make([]*management.ConsumerInstance, 0)
 	err = json.Unmarshal(response.Body, &consumerInstances)
 	if len(consumerInstances) == 0 {
 		return nil, nil

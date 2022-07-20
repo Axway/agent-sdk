@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
@@ -76,14 +76,14 @@ const mockJSONApiSvc = `{
 	"spec": {}
 }`
 
-var mockEnv = &apiv1.ResourceInstance{}
-var mockEnvUpdated = &apiv1.ResourceInstance{}
-var mockAPISvc = &apiv1.ResourceInstance{}
+var mockEnv = &v1.ResourceInstance{}
+var mockEnvUpdated = &v1.ResourceInstance{}
+var mockAPISvc = &v1.ResourceInstance{}
 var client = &Client{}
 
-func createEnv(client Unscoped) (*apiv1.ResourceInstance, error) {
-	created, err := client.Create(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
+func createEnv(client Unscoped) (*v1.ResourceInstance, error) {
+	created, err := client.Create(&v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",
 			Title:            "test-env-1",
@@ -141,7 +141,7 @@ func TestUnscoped(t *testing.T) {
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(200).
-		JSON([]*apiv1.ResourceInstance{mockEnv})
+		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments/test-env-1").
@@ -212,7 +212,7 @@ func TestScoped(t *testing.T) {
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments/test-env-1/apiservices").
 		Reply(200).
-		JSON([]*apiv1.ResourceInstance{mockAPISvc})
+		JSON([]*v1.ResourceInstance{mockAPISvc})
 
 	gock.New("http://localhost:8080/apis").
 		Delete("/management/v1alpha1/environments/test-env-1/apiservices/test-api-svc").
@@ -237,8 +237,8 @@ func TestScoped(t *testing.T) {
 	}
 	svcClient = svcClient.WithScope(env.Name).(*Client)
 
-	svc, err := svcClient.Create(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
+	svc, err := svcClient.Create(&v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
 			Name:       "test-api-svc",
 			Tags:       []string{"atag"},
 			Attributes: map[string]string{"attr": "value"},
@@ -280,7 +280,7 @@ func TestListWithQuery(t *testing.T) {
 		Get("/management/v1alpha1/environments").
 		MatchHeader("User-Agent", uaHeader).
 		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
-		JSON([]*apiv1.ResourceInstance{mockEnv, mockEnv})
+		JSON([]*v1.ResourceInstance{mockEnv, mockEnv})
 
 	_, err := client.List(WithQuery(And(TagsIn("test"), AttrIn("attr", "val"))))
 	if err != nil {
@@ -295,13 +295,13 @@ func Test_listAll(t *testing.T) {
 		Get("/management/v1alpha1/environments").
 		Reply(200).
 		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
-		JSON([]*apiv1.ResourceInstance{mockEnv})
+		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(200).
 		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
-		JSON([]*apiv1.ResourceInstance{mockEnv})
+		JSON([]*v1.ResourceInstance{mockEnv})
 
 	items, err := client.List(WithQuery(TagsIn("test")))
 	if err != nil {
@@ -331,13 +331,13 @@ func Test_listAll(t *testing.T) {
 		Get("/management/v1alpha1/environments").
 		Reply(200).
 		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
-		JSON([]*apiv1.ResourceInstance{mockEnv})
+		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
 		Get("/management/v1alpha1/environments").
 		Reply(500).
 		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
-		JSON([]*apiv1.ResourceInstance{})
+		JSON([]*v1.ResourceInstance{})
 
 	items, err = client.List()
 	assert.Equal(t, 0, len(items))
@@ -474,8 +474,8 @@ func TestDeleteError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	err := client.Delete(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
+	err := client.Delete(&v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",
 			Title:            "test-env-1",
@@ -511,8 +511,8 @@ func TestUpdateError(t *testing.T) {
 		Reply(500).
 		JSON(mockEnv)
 
-	_, err := client.Update(&apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
+	_, err := client.Update(&v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
 			Name:             "test-env-1",
 			Title:            "test-env-1",
@@ -550,31 +550,31 @@ func TestHTTPClient(t *testing.T) {
 
 func TestUpdateMerge(t *testing.T) {
 	oldAPISvc := &management.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{},
 			Name:             "name",
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
 					Name: "myenv",
 				},
-				References: []apiv1.Reference{},
+				References: []v1.Reference{},
 			},
 			Tags: []string{"old"},
 		},
 	}
 
 	newAPISvc := &management.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind: apiv1.GroupKind{
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{
+				GroupKind: v1.GroupKind{
 					Group: "management",
 					Kind:  "APIService",
 				},
 				APIVersion: "v1alpha1",
 			},
 			Name: "name",
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
 					Name: "myenv",
 				},
 			},
@@ -586,14 +586,14 @@ func TestUpdateMerge(t *testing.T) {
 	t.Log(string(thisBytes))
 
 	mergedTags := &management.APIService{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: apiv1.GroupVersionKind{},
+		ResourceMeta: v1.ResourceMeta{
+			GroupVersionKind: v1.GroupVersionKind{},
 			Name:             "name",
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
+			Metadata: v1.Metadata{
+				Scope: v1.MetadataScope{
 					Name: "myenv",
 				},
-				References: []apiv1.Reference{},
+				References: []v1.Reference{},
 			},
 			Tags: []string{"old", "new"},
 		},
@@ -602,7 +602,7 @@ func TestUpdateMerge(t *testing.T) {
 	mergeError := fmt.Errorf("merge errror")
 
 	getError := InternalServerError{
-		Errors: []apiv1.Error{{Status: 500, Detail: "Unkown error"}},
+		Errors: []v1.Error{{Status: 500, Detail: "Unkown error"}},
 	}
 
 	testCases := []struct {
@@ -611,7 +611,7 @@ func TestUpdateMerge(t *testing.T) {
 		getStatus        int
 		otherStatus      int
 		getResponse      interface{}
-		newResource      apiv1.Interface
+		newResource      v1.Interface
 		mf               MergeFunc
 		expectedErr      error
 		expectedResource interface{}
@@ -622,7 +622,7 @@ func TestUpdateMerge(t *testing.T) {
 			newResource: newAPISvc,
 			getStatus:   404,
 			otherStatus: 201,
-			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+			mf: func(fetched v1.Interface, new v1.Interface) (v1.Interface, error) {
 				return new, nil
 			},
 			expectedErr:      nil,
@@ -634,7 +634,7 @@ func TestUpdateMerge(t *testing.T) {
 			newResource: newAPISvc,
 			getStatus:   200,
 			otherStatus: 200,
-			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+			mf: func(fetched v1.Interface, new v1.Interface) (v1.Interface, error) {
 				return new, nil
 			},
 			expectedErr:      nil,
@@ -646,7 +646,7 @@ func TestUpdateMerge(t *testing.T) {
 			newResource: newAPISvc,
 			getStatus:   200,
 			otherStatus: 200,
-			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+			mf: func(fetched v1.Interface, new v1.Interface) (v1.Interface, error) {
 				f, err := fetched.AsInstance()
 				if err != nil {
 					return nil, err
@@ -665,7 +665,7 @@ func TestUpdateMerge(t *testing.T) {
 			newResource: newAPISvc,
 			getStatus:   200,
 			otherStatus: 200,
-			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+			mf: func(fetched v1.Interface, new v1.Interface) (v1.Interface, error) {
 				return nil, mergeError
 			},
 			expectedErr:      mergeError,
@@ -673,11 +673,11 @@ func TestUpdateMerge(t *testing.T) {
 		},
 		{
 			name:        "get error",
-			getResponse: apiv1.ErrorResponse{Errors: getError.Errors},
+			getResponse: v1.ErrorResponse{Errors: getError.Errors},
 			newResource: newAPISvc,
 			getStatus:   500,
 			otherStatus: 200,
-			mf: func(fetched apiv1.Interface, new apiv1.Interface) (apiv1.Interface, error) {
+			mf: func(fetched v1.Interface, new v1.Interface) (v1.Interface, error) {
 				return nil, mergeError
 			},
 			expectedErr:      getError,

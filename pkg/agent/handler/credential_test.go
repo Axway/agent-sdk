@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
@@ -175,7 +175,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 		{
 			name:           "should deprovision with no error",
 			outboundStatus: prov.Success,
-			resourceState:  v1.ResourceDeleting,
+			resourceState:  apiv1.ResourceDeleting,
 			provStatus:     prov.Success.String(),
 		},
 		{
@@ -188,7 +188,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 		{
 			name:           "should fail to deprovision and set the status to error",
 			outboundStatus: prov.Error,
-			resourceState:  v1.ResourceDeleting,
+			resourceState:  apiv1.ResourceDeleting,
 			provStatus:     prov.Success.String(),
 		},
 	}
@@ -197,7 +197,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cred := credential
 			cred.Status.Level = tc.provStatus
-			cred.Status.Reasons = []v1.ResourceStatusReason{
+			cred.Status.Reasons = []apiv1.ResourceStatusReason{
 				{
 					Type: tc.provStatus,
 					Meta: map[string]interface{}{
@@ -206,7 +206,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 				},
 			}
 			cred.Metadata.State = tc.resourceState
-			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
+			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
 
 			p := &mockCredProv{
 				t: t,
@@ -259,9 +259,9 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 	c := &mockClient{}
 	p := &mockCredProv{}
 	handler := NewCredentialHandler(p, c, nil)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -415,8 +415,8 @@ func TestIDPCredentialDeprovisioning(t *testing.T) {
 
 			cred := credential
 			cred.Status.Level = prov.Success.String()
-			cred.Metadata.State = v1.ResourceDeleting
-			cred.Finalizers = []v1.Finalizer{{Name: crFinalizer}}
+			cred.Metadata.State = apiv1.ResourceDeleting
+			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
 			cred.Spec.Data = map[string]interface{}{
 				"idpTokenURL": tc.tokenURL,
 			}
@@ -645,8 +645,8 @@ func Test_encrypt(t *testing.T) {
 }
 
 type credClient struct {
-	managedApp      *v1.ResourceInstance
-	crd             *v1.ResourceInstance
+	managedApp      *apiv1.ResourceInstance
+	crd             *apiv1.ResourceInstance
 	getAppErr       error
 	getCrdErr       error
 	createSubCalled bool
@@ -658,7 +658,7 @@ type credClient struct {
 	delErr          error
 }
 
-func (m *credClient) GetResource(url string) (*v1.ResourceInstance, error) {
+func (m *credClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
 	if strings.Contains(url, "/managedapplications") {
 		return m.managedApp, m.getAppErr
 	}
@@ -669,16 +669,16 @@ func (m *credClient) GetResource(url string) (*v1.ResourceInstance, error) {
 	return nil, fmt.Errorf("mock client - resource not found")
 }
 
-func (m *credClient) CreateSubResource(_ v1.ResourceMeta, subs map[string]interface{}) error {
+func (m *credClient) CreateSubResource(_ apiv1.ResourceMeta, subs map[string]interface{}) error {
 	if statusI, ok := subs["status"]; ok {
-		status := statusI.(*v1.ResourceStatus)
+		status := statusI.(*apiv1.ResourceStatus)
 		assert.Equal(m.t, m.expectedStatus, status.Level, status.Reasons)
 	}
 	m.createSubCalled = true
 	return m.subError
 }
 
-func (m *credClient) UpdateResourceFinalizer(ri *v1.ResourceInstance, _, _ string, addAction bool) (*v1.ResourceInstance, error) {
+func (m *credClient) UpdateResourceFinalizer(ri *apiv1.ResourceInstance, _, _ string, addAction bool) (*apiv1.ResourceInstance, error) {
 	if m.isDeleting {
 		assert.False(m.t, addAction, "addAction should be false when the resource is deleting")
 	} else {
@@ -688,7 +688,7 @@ func (m *credClient) UpdateResourceFinalizer(ri *v1.ResourceInstance, _, _ strin
 	return nil, nil
 }
 
-func (m *credClient) DeleteResourceInstance(ri v1.Interface) error {
+func (m *credClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	m.deleteResCalled = true
 	return m.delErr
 }
@@ -747,8 +747,8 @@ func newKeyPair() (public string, private string, err error) {
 
 const credAppRefName = "managed-app-name"
 
-var credApp = &v1.ResourceInstance{
-	ResourceMeta: v1.ResourceMeta{
+var credApp = &apiv1.ResourceInstance{
+	ResourceMeta: apiv1.ResourceMeta{
 		Name: credAppRefName,
 		SubResources: map[string]interface{}{
 			defs.XAgentDetails: map[string]interface{}{
@@ -761,8 +761,8 @@ var credApp = &v1.ResourceInstance{
 	},
 }
 
-var crd = &mv1.CredentialRequestDefinition{
-	ResourceMeta: v1.ResourceMeta{
+var crd = &management.CredentialRequestDefinition{
+	ResourceMeta: apiv1.ResourceMeta{
 		Name: credAppRefName,
 		SubResources: map[string]interface{}{
 			defs.XAgentDetails: map[string]interface{}{
@@ -771,10 +771,10 @@ var crd = &mv1.CredentialRequestDefinition{
 		},
 	},
 	Owner:      nil,
-	References: mv1.CredentialRequestDefinitionReferences{},
-	Spec: mv1.CredentialRequestDefinitionSpec{
+	References: management.CredentialRequestDefinitionReferences{},
+	Spec: management.CredentialRequestDefinitionSpec{
 		Schema: nil,
-		Provision: &mv1.CredentialRequestDefinitionSpecProvision{
+		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: map[string]interface{}{
 				"properties": map[string]interface{}{},
 			},
@@ -783,12 +783,12 @@ var crd = &mv1.CredentialRequestDefinition{
 	},
 }
 
-var credential = mv1.Credential{
-	ResourceMeta: v1.ResourceMeta{
-		Metadata: v1.Metadata{
+var credential = management.Credential{
+	ResourceMeta: apiv1.ResourceMeta{
+		Metadata: apiv1.Metadata{
 			ID: "11",
-			Scope: v1.MetadataScope{
-				Kind: mv1.EnvironmentGVK().Kind,
+			Scope: apiv1.MetadataScope{
+				Kind: management.EnvironmentGVK().Kind,
 				Name: "env-1",
 			},
 		},
@@ -798,12 +798,12 @@ var credential = mv1.Credential{
 			},
 		},
 	},
-	Spec: mv1.CredentialSpec{
+	Spec: management.CredentialSpec{
 		CredentialRequestDefinition: "api-key",
 		ManagedApplication:          credAppRefName,
 		Data:                        nil,
 	},
-	Status: &v1.ResourceStatus{
+	Status: &apiv1.ResourceStatus{
 		Level: "",
 	},
 }

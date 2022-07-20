@@ -8,9 +8,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -27,11 +26,11 @@ type discoveryCache struct {
 	isMpEnabled              bool
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
-	watchTopic               *mv1.WatchTopic
+	watchTopic               *management.WatchTopic
 }
 
 type resourceClient interface {
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
 }
 
 // discoverFunc is the func definition for discovering resources to cache
@@ -62,7 +61,7 @@ func newDiscoveryCache(
 	cfg config.CentralConfig,
 	client resourceClient,
 	handlers []handler.Handler,
-	watchTopic *mv1.WatchTopic,
+	watchTopic *management.WatchTopic,
 	opts ...discoveryOpt,
 ) *discoveryCache {
 	logger := log.NewFieldLogger().
@@ -177,17 +176,17 @@ func (dc *discoveryCache) buildMarketplaceDiscoveryFuncs() []discoverFunc {
 func (dc *discoveryCache) buildMarketplaceFuncs(mpResources map[string]discoverFunc) []discoverFunc {
 	var marketplaceFuncs []discoverFunc
 
-	mApps, ok := mpResources[mv1.ManagedApplicationGVK().Kind]
+	mApps, ok := mpResources[management.ManagedApplicationGVK().Kind]
 	if ok {
 		marketplaceFuncs = append(marketplaceFuncs, mApps)
 	}
 
-	accessReq, ok := mpResources[mv1.AccessRequestGVK().Kind]
+	accessReq, ok := mpResources[management.AccessRequestGVK().Kind]
 	if ok {
 		marketplaceFuncs = append(marketplaceFuncs, accessReq)
 	}
 
-	creds, ok := mpResources[mv1.CredentialGVK().Kind]
+	creds, ok := mpResources[management.CredentialGVK().Kind]
 	if ok {
 		marketplaceFuncs = append(marketplaceFuncs, creds)
 	}
@@ -206,15 +205,15 @@ func (dc *discoveryCache) handleMarketplaceFuncs(marketplaceFuncs []discoverFunc
 	}
 }
 
-func (dc *discoveryCache) buildResourceFunc(filter mv1.WatchTopicSpecFilters) discoverFunc {
+func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilters) discoverFunc {
 	return func() error {
 		url := fmt.Sprintf("/%s/v1alpha1", filter.Group)
 		if filter.Scope != nil {
-			scopePlural, _ := v1.GetPluralFromKind(filter.Scope.Kind)
+			scopePlural, _ := apiv1.GetPluralFromKind(filter.Scope.Kind)
 			url = fmt.Sprintf("%s/%s/%s", url, scopePlural, filter.Scope.Name)
 		}
 
-		var kindPlural, _ = v1.GetPluralFromKind(filter.Kind)
+		var kindPlural, _ = apiv1.GetPluralFromKind(filter.Kind)
 		url = fmt.Sprintf("%s/%s", url, kindPlural)
 
 		logger := dc.logger.WithField("kind", filter.Kind)
@@ -230,7 +229,7 @@ func (dc *discoveryCache) buildResourceFunc(filter mv1.WatchTopicSpecFilters) di
 	}
 }
 
-func (dc *discoveryCache) handleResourcesList(list []*apiV1.ResourceInstance) error {
+func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) error {
 	for _, ri := range list {
 		if dc.migrator != nil {
 			var err error
@@ -253,7 +252,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiV1.ResourceInstance) er
 	return nil
 }
 
-func (dc *discoveryCache) handleResource(ri *apiV1.ResourceInstance, action proto.Event_Type) error {
+func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action proto.Event_Type) error {
 	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
 	for _, h := range dc.handlers {
 		err := h.Handle(ctx, nil, ri)
@@ -269,7 +268,7 @@ func (dc *discoveryCache) formatResourceURL(s string) string {
 }
 
 func getAction(state string) proto.Event_Type {
-	if state == v1.ResourceDeleting {
+	if state == apiv1.ResourceDeleting {
 		return proto.Event_UPDATED
 	}
 	return proto.Event_CREATED
@@ -277,11 +276,11 @@ func getAction(state string) proto.Event_Type {
 
 func isMPResource(kind string) bool {
 	switch kind {
-	case mv1.ManagedApplicationGVK().Kind:
+	case management.ManagedApplicationGVK().Kind:
 		return true
-	case mv1.AccessRequestGVK().Kind:
+	case management.AccessRequestGVK().Kind:
 		return true
-	case mv1.CredentialGVK().Kind:
+	case management.CredentialGVK().Kind:
 		return true
 	default:
 		return false

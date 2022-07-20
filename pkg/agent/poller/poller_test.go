@@ -6,7 +6,7 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -15,7 +15,7 @@ import (
 
 func TestPollerRegisterWatch(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	wt := mv1.NewWatchTopic("mocktopic")
+	wt := management.NewWatchTopic("mocktopic")
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	seq.SetSequence(1)
 	mockH := &mockHarvester{}
@@ -40,7 +40,7 @@ func TestPollerRegisterWatch(t *testing.T) {
 
 func TestPollerRegisterWatchError(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	wt := mv1.NewWatchTopic("mocktopic")
+	wt := management.NewWatchTopic("mocktopic")
 	seq := events.NewSequenceProvider(cacheManager, wt.Name)
 	mockH := &mockHarvester{}
 

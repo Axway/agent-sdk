@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
@@ -48,16 +48,16 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.P
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != management.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
 	logger := getLoggerFromContext(ctx).WithComponent("credentialHandler")
 	ctx = setLoggerInContext(ctx, logger)
 
-	cr := &mv1.Credential{}
+	cr := &management.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
 		logger.WithError(err).Error("could not handle credential request")
@@ -95,7 +95,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	return nil
 }
 
-func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) string {
+func (h *credentials) getReasonMetaAction(reasons []apiv1.ResourceStatusReason) string {
 	if len(reasons) != 1 {
 		return ""
 	}
@@ -109,7 +109,7 @@ func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) str
 }
 
 // shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers or when it is in Error and the only reason is CredentialExpired
-func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
+func (h *credentials) shouldProcessDeleting(status *apiv1.ResourceStatus, state string, finalizers []apiv1.Finalizer) bool {
 	switch {
 	case len(finalizers) == 0:
 		return false
@@ -122,7 +122,7 @@ func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state str
 	}
 }
 
-func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.Credential {
+func (h *credentials) onPending(ctx context.Context, cred *management.Credential) *management.Credential {
 	logger := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, cred)
 	if err != nil {
@@ -200,7 +200,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 	return cred
 }
 
-func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
+func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
 	var provData map[string]interface{}
 	if cred.Data != nil {
@@ -231,7 +231,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 
 		// Delete the resource, since it was not in Deleting State
-		if ri.Metadata.State != v1.ResourceDeleting {
+		if ri.Metadata.State != apiv1.ResourceDeleting {
 			h.client.DeleteResourceInstance(ri)
 		}
 	} else {
@@ -243,7 +243,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 }
 
 // onError updates the AccessRequest with an error status
-func (h *credentials) onError(_ context.Context, cred *mv1.Credential, err error) {
+func (h *credentials) onError(_ context.Context, cred *management.Credential, err error) {
 	ps := prov.NewRequestStatusBuilder()
 	status := ps.SetMessage(err.Error()).SetCurrentStatusReasons(cred.Status.Reasons).Failed()
 	cred.Status = prov.NewStatusReason(status)
@@ -252,26 +252,26 @@ func (h *credentials) onError(_ context.Context, cred *mv1.Credential, err error
 	}
 }
 
-func (h *credentials) getManagedApp(ctx context.Context, cred *mv1.Credential) (*mv1.ManagedApplication, error) {
-	app := mv1.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
+func (h *credentials) getManagedApp(ctx context.Context, cred *management.Credential) (*management.ManagedApplication, error) {
+	app := management.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	app = &mv1.ManagedApplication{}
+	app = &management.ManagedApplication{}
 	err = app.FromInstance(ri)
 	return app, err
 }
 
-func (h *credentials) getCRD(ctx context.Context, cred *mv1.Credential) (*mv1.CredentialRequestDefinition, error) {
-	crd := mv1.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
+func (h *credentials) getCRD(ctx context.Context, cred *management.Credential) (*management.CredentialRequestDefinition, error) {
+	crd := management.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	crd = &mv1.CredentialRequestDefinition{}
+	crd = &management.CredentialRequestDefinition{}
 	err = crd.FromInstance(ri)
 	return crd, err
 }
@@ -354,7 +354,7 @@ type idpCredData struct {
 	publicKey       string
 }
 
-func newProvCreds(cr *mv1.Credential, appDetails map[string]interface{}, provData map[string]interface{}, idpProviderRegistry oauth.ProviderRegistry) (*provCreds, error) {
+func newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, idpProviderRegistry oauth.ProviderRegistry) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{

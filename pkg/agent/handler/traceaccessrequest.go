@@ -4,8 +4,8 @@ import (
 	"context"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -24,9 +24,9 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 }
 
 // Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.AccessRequestGVK().Kind {
+	if resource.Kind != management.AccessRequestGVK().Kind {
 		return nil
 	}
 
@@ -34,7 +34,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 		return h.cache.DeleteAccessRequest(resource.Metadata.ID)
 	}
 
-	ar := &mv1.AccessRequest{}
+	ar := &management.AccessRequest{}
 	err := ar.FromInstance(resource)
 	if err != nil {
 		return err

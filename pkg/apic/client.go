@@ -14,9 +14,9 @@ import (
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -50,18 +50,18 @@ type SubscriptionValidator func(subscription Subscription) bool
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	SetConfig(cfg corecfg.CentralConfig)
-	PublishService(serviceBody *ServiceBody) (*mv1a.APIService, error)
+	PublishService(serviceBody *ServiceBody) (*management.APIService, error)
 	RegisterSubscriptionWebhook() error
 	RegisterSubscriptionSchema(schema SubscriptionSchema, update bool) error
 	UpdateSubscriptionSchema(schema SubscriptionSchema) error
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
-	DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error
+	DeleteAPIServiceInstanceWithFinalizers(ri *apiv1.ResourceInstance) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetConsumerInstanceByID(id string) (*mv1a.ConsumerInstance, error)
-	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*mv1a.ConsumerInstance, error)
+	GetConsumerInstanceByID(id string) (*management.ConsumerInstance, error)
+	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*management.ConsumerInstance, error)
 	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddress(ID string) (string, error)
 	GetUserName(ID string) (string, error)
@@ -71,35 +71,35 @@ type Client interface {
 	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
-	GetAPIRevisions(query map[string]string, stage string) ([]*mv1a.APIServiceRevision, error)
-	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*mv1a.APIServiceRevision, error)
-	GetAPIServiceInstances(query map[string]string, URL string) ([]*mv1a.APIServiceInstance, error)
-	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*v1.ResourceInstance, error)
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
-	GetAPIServiceByName(name string) (*mv1a.APIService, error)
-	GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error)
-	GetAPIRevisionByName(name string) (*mv1a.APIServiceRevision, error)
+	GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error)
+	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*management.APIServiceRevision, error)
+	GetAPIServiceInstances(query map[string]string, URL string) ([]*management.APIServiceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIServiceByName(name string) (*management.APIService, error)
+	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
+	GetAPIRevisionByName(name string) (*management.APIServiceRevision, error)
 	CreateCategory(name string) (*catalog.Category, error)
 	GetOrCreateCategory(category string) string
-	GetEnvironment() (*mv1a.Environment, error)
+	GetEnvironment() (*management.Environment, error)
 	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
 	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
-	GetAccessControlList(aclName string) (*mv1a.AccessControlList, error)
-	UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
-	CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error)
+	GetAccessControlList(aclName string) (*management.AccessControlList, error)
+	UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
+	CreateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
 
-	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
-	GetResource(url string) (*v1.ResourceInstance, error)
-	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
+	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
+	GetResource(url string) (*apiv1.ResourceInstance, error)
+	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
 	IsMarketplaceSubsEnabled() bool
 
-	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
-	CreateOrUpdateResource(ri v1.Interface) (*v1.ResourceInstance, error)
-	CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
-	DeleteResourceInstance(ri v1.Interface) error
+	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	DeleteResourceInstance(ri apiv1.Interface) error
 
-	CreateResource(url string, bts []byte) (*v1.ResourceInstance, error)
-	UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error)
+	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 }
 
 // New creates a new Client
@@ -362,7 +362,7 @@ func (c *ServiceClient) setTeamCache() error {
 }
 
 // GetEnvironment get an environment
-func (c *ServiceClient) GetEnvironment() (*mv1a.Environment, error) {
+func (c *ServiceClient) GetEnvironment() (*management.Environment, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, errors.Wrap(ErrAuthenticationCall, err.Error())
@@ -377,7 +377,7 @@ func (c *ServiceClient) GetEnvironment() (*mv1a.Environment, error) {
 	}
 
 	// Get env id from apiServerEnvByte
-	env := &mv1a.Environment{}
+	env := &management.Environment{}
 	err = json.Unmarshal(bytes, env)
 	if err != nil {
 		return nil, errors.Wrap(ErrEnvironmentQuery, err.Error())
@@ -531,7 +531,7 @@ func (c *ServiceClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, e
 }
 
 // GetAccessControlList -
-func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlList, error) {
+func (c *ServiceClient) GetAccessControlList(name string) (*management.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -553,7 +553,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlLi
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var acl *mv1a.AccessControlList
+	var acl *management.AccessControlList
 	err = json.Unmarshal(response.Body, &acl)
 	if err != nil {
 		return nil, err
@@ -563,7 +563,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*mv1a.AccessControlLi
 }
 
 // UpdateAccessControlList - removes existing then creates new AccessControlList
-func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
+func (c *ServiceClient) UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error) {
 	// first delete the existing access control list
 	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
 		return nil, err
@@ -572,11 +572,11 @@ func (c *ServiceClient) UpdateAccessControlList(acl *mv1a.AccessControlList) (*m
 }
 
 // CreateAccessControlList -
-func (c *ServiceClient) CreateAccessControlList(acl *mv1a.AccessControlList) (*mv1a.AccessControlList, error) {
+func (c *ServiceClient) CreateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error) {
 	return c.deployAccessControl(acl, http.MethodPost)
 }
 
-func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method string) (*mv1a.AccessControlList, error) {
+func (c *ServiceClient) deployAccessControl(acl *management.AccessControlList, method string) (*management.AccessControlList, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -620,9 +620,9 @@ func (c *ServiceClient) deployAccessControl(acl *mv1a.AccessControlList, method 
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
 
-	var updatedACL *mv1a.AccessControlList
+	var updatedACL *management.AccessControlList
 	if method == http.MethodPut || method == http.MethodPost {
-		updatedACL = &mv1a.AccessControlList{}
+		updatedACL = &management.AccessControlList{}
 		err = json.Unmarshal(response.Body, updatedACL)
 		if err != nil {
 			return nil, err
@@ -687,12 +687,12 @@ func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
 }
 
 // CreateSubResource creates a sub resource on the provided resource.
-func (c *ServiceClient) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error {
+func (c *ServiceClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
 	_, err := c.createSubResource(rm, subs)
 	return err
 }
 
-func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]interface{}) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) (*apiv1.ResourceInstance, error) {
 	var execErr error
 	var instanceBytes []byte
 	wg := &sync.WaitGroup{}
@@ -729,7 +729,7 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 		return nil, execErr
 	}
 
-	ri := &v1.ResourceInstance{}
+	ri := &apiv1.ResourceInstance{}
 	err := json.Unmarshal(instanceBytes, ri)
 	if err != nil {
 		return nil, err
@@ -739,22 +739,22 @@ func (c *ServiceClient) createSubResource(rm v1.ResourceMeta, subs map[string]in
 }
 
 // GetResource gets a single resource
-func (c *ServiceClient) GetResource(url string) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
 	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(url), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	ri := &v1.ResourceInstance{}
+	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // UpdateResourceFinalizer - Add or remove a finalizer from a resource
-func (c *ServiceClient) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResourceFinalizer(res *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error) {
 	if addAction {
-		res.Finalizers = append(res.Finalizers, v1.Finalizer{Name: finalizer, Description: description})
+		res.Finalizers = append(res.Finalizers, apiv1.Finalizer{Name: finalizer, Description: description})
 	} else {
-		cleanedFinalizer := make([]v1.Finalizer, 0)
+		cleanedFinalizer := make([]apiv1.Finalizer, 0)
 		for _, f := range res.Finalizers {
 			if f.Name != finalizer {
 				cleanedFinalizer = append(cleanedFinalizer, f)
@@ -767,46 +767,46 @@ func (c *ServiceClient) UpdateResourceFinalizer(res *v1.ResourceInstance, finali
 }
 
 // UpdateResource updates a resource
-func (c *ServiceClient) UpdateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
 	log.DeprecationWarningReplace("UpdateResource", "UpdateResourceInstance")
 
 	response, err := c.ExecuteAPI(http.MethodPut, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
-	ri := &v1.ResourceInstance{}
+	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // CreateResource deletes a resource
-func (c *ServiceClient) CreateResource(url string, bts []byte) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error) {
 	log.DeprecationWarningReplace("CreateResource", "CreateResourceInstance")
 
 	response, err := c.ExecuteAPI(http.MethodPost, c.createAPIServerURL(url), nil, bts)
 	if err != nil {
 		return nil, err
 	}
-	ri := &v1.ResourceInstance{}
+	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
 }
 
 // updateORCreateResourceInstance
-func (c *ServiceClient) updateSpecORCreateResourceInstance(data *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// default to post
 	url := c.createAPIServerURL(data.GetKindLink())
 	method := coreapi.POST
 
 	// check if the KIND and ID combo have an item in the cache
-	var existingRI *v1.ResourceInstance
+	var existingRI *apiv1.ResourceInstance
 	var err error
 	switch data.Kind {
-	case mv1a.AccessRequestDefinitionGVK().Kind:
+	case management.AccessRequestDefinitionGVK().Kind:
 		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
-	case mv1a.CredentialRequestDefinitionGVK().Kind:
+	case management.CredentialRequestDefinitionGVK().Kind:
 		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
-	case mv1a.APIServiceInstanceGVK().Kind:
+	case management.APIServiceInstanceGVK().Kind:
 		existingRI, err = c.caches.GetAPIServiceInstanceByName(data.Name)
 	}
 
@@ -839,7 +839,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *v1.ResourceInst
 		return nil, err
 	}
 
-	newRI := &v1.ResourceInstance{}
+	newRI := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, newRI)
 	if err != nil {
 		return nil, err
@@ -857,7 +857,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *v1.ResourceInst
 }
 
 // CreateOrUpdateResource deletes a resource
-func (c *ServiceClient) CreateOrUpdateResource(data v1.Interface) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	data.SetScopeName(c.cfg.GetEnvironmentName())
 	ri, err := data.AsInstance()
 	if err != nil {
@@ -869,7 +869,7 @@ func (c *ServiceClient) CreateOrUpdateResource(data v1.Interface) (*v1.ResourceI
 }
 
 // UpdateResourceInstance - updates a ResourceInstance
-func (c *ServiceClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	inst, err := ri.AsInstance()
 	if err != nil {
 		return nil, err
@@ -886,13 +886,13 @@ func (c *ServiceClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceIns
 	if err != nil {
 		return nil, err
 	}
-	r := &v1.ResourceInstance{}
+	r := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(bts, r)
 	return r, err
 }
 
 // DeleteResourceInstance - deletes a ResourceInstance
-func (c *ServiceClient) DeleteResourceInstance(ri v1.Interface) error {
+func (c *ServiceClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	inst, err := ri.AsInstance()
 	if err != nil {
 		return err
@@ -909,7 +909,7 @@ func (c *ServiceClient) DeleteResourceInstance(ri v1.Interface) error {
 }
 
 // CreateResourceInstance - creates a ResourceInstance
-func (c *ServiceClient) CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+func (c *ServiceClient) CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	inst, err := ri.AsInstance()
 	if err != nil {
 		return nil, err
@@ -926,7 +926,7 @@ func (c *ServiceClient) CreateResourceInstance(ri v1.Interface) (*v1.ResourceIns
 	if err != nil {
 		return nil, err
 	}
-	r := &v1.ResourceInstance{}
+	r := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(bts, r)
 	return r, err
 }

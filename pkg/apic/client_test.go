@@ -8,8 +8,8 @@ import (
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -173,10 +173,10 @@ func TestCreateSubResource(t *testing.T) {
 		},
 	})
 
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
 			Name:             "test-resource",
-			GroupVersionKind: mv1.APIServiceGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			SubResources: map[string]interface{}{
 				defs.XAgentDetails: map[string]interface{}{
 					"externalAPIID":   "12345",
@@ -197,7 +197,7 @@ func TestCreateSubResource(t *testing.T) {
 func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 	tests := []struct {
 		name           string
-		gvk            v1.GroupVersionKind
+		gvk            apiv1.GroupVersionKind
 		oldHash        string
 		newHash        string
 		apiResponses   []api.MockResponse
@@ -206,7 +206,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 	}{
 		{
 			name:    "should error with bad response from api call",
-			gvk:     mv1.AccessRequestDefinitionGVK(),
+			gvk:     management.AccessRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "1235",
 			apiResponses: []api.MockResponse{
@@ -219,7 +219,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 		},
 		{
 			name:           "should not update ARD as hash is unchanged",
-			gvk:            mv1.AccessRequestDefinitionGVK(),
+			gvk:            management.AccessRequestDefinitionGVK(),
 			oldHash:        "1234",
 			newHash:        "1234",
 			apiResponses:   []api.MockResponse{},
@@ -228,7 +228,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 		},
 		{
 			name:           "should not update CRD as hash is unchanged",
-			gvk:            mv1.CredentialRequestDefinitionGVK(),
+			gvk:            management.CredentialRequestDefinitionGVK(),
 			oldHash:        "1234",
 			newHash:        "1234",
 			apiResponses:   []api.MockResponse{},
@@ -237,7 +237,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 		},
 		{
 			name:    "should update ARD as hash has changed",
-			gvk:     mv1.AccessRequestDefinitionGVK(),
+			gvk:     management.AccessRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "5234",
 			apiResponses: []api.MockResponse{
@@ -255,7 +255,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 		},
 		{
 			name:    "should update CRD as hash has changed",
-			gvk:     mv1.CredentialRequestDefinitionGVK(),
+			gvk:     management.CredentialRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "5234",
 			apiResponses: []api.MockResponse{
@@ -282,8 +282,8 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 			// There should be one request for each sub resource of the ResourceInstance
 			mockHTTPClient.SetResponses(tt.apiResponses)
 
-			res := v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			res := apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:             tt.name,
 					GroupVersionKind: tt.gvk,
 					SubResources: map[string]interface{}{
@@ -298,9 +298,9 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 
 			// setup the cachedResources
 			switch tt.gvk.Kind {
-			case mv1.AccessRequestDefinitionGVK().Kind:
+			case management.AccessRequestDefinitionGVK().Kind:
 				svcClient.caches.AddAccessRequestDefinition(&res)
-			case mv1.CredentialRequestDefinitionGVK().Kind:
+			case management.CredentialRequestDefinitionGVK().Kind:
 				svcClient.caches.AddCredentialRequestDefinition(&res)
 			}
 

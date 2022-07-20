@@ -1,7 +1,7 @@
 package apic
 
 import (
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 )
 
@@ -54,7 +54,7 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
-	accessRequestDefinition   *mv1a.AccessRequestDefinition
+	accessRequestDefinition   *management.AccessRequestDefinition
 }
 
 //SetAccessRequestDefinitionName - set the name of the access request definition for this service body
@@ -94,13 +94,13 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 	return s.credentialRequestPolicies
 }
 
-func (s *ServiceBody) setAccessRequestDefinition(accessRequestDefinition *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+func (s *ServiceBody) setAccessRequestDefinition(accessRequestDefinition *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
 	s.accessRequestDefinition = accessRequestDefinition
 	return s.accessRequestDefinition, nil
 }
 
 // GetAccessRequestDefinition -
-func (s *ServiceBody) GetAccessRequestDefinition() *mv1a.AccessRequestDefinition {
+func (s *ServiceBody) GetAccessRequestDefinition() *management.AccessRequestDefinition {
 	return s.accessRequestDefinition
 }
 

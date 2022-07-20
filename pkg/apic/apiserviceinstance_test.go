@@ -3,8 +3,8 @@ package apic
 import (
 	"testing"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -43,12 +43,12 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 	tags := []string{"tag1_value1", "tag2_value2"}
 
 	client, _ := GetTestServiceClient()
-	ep := []mv1a.ApiServiceInstanceSpecEndpoint{
+	ep := []management.ApiServiceInstanceSpecEndpoint{
 		{
 			Host:     "abc.com",
 			Port:     80,
 			Protocol: "http",
-			Routing: mv1a.ApiServiceInstanceSpecRouting{
+			Routing: management.ApiServiceInstanceSpecRouting{
 				BasePath: "/base",
 			},
 		},
@@ -56,14 +56,14 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 			Host:     "123.com",
 			Port:     443,
 			Protocol: "https",
-			Routing: mv1a.ApiServiceInstanceSpecRouting{
+			Routing: management.ApiServiceInstanceSpecRouting{
 				BasePath: "/path",
 			},
 		},
 	}
 	inst := client.buildAPIServiceInstance(body, "name", ep)
 
-	assert.Equal(t, mv1a.APIServiceInstanceGVK(), inst.GroupVersionKind)
+	assert.Equal(t, management.APIServiceInstanceGVK(), inst.GroupVersionKind)
 	assert.Equal(t, "name", inst.Name)
 	assert.Equal(t, body.NameToPush, inst.Title)
 
@@ -126,12 +126,12 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 	tags := []string{"tag1_value1", "tag2_value2"}
 
 	client, _ := GetTestServiceClient()
-	ep := []mv1a.ApiServiceInstanceSpecEndpoint{
+	ep := []management.ApiServiceInstanceSpecEndpoint{
 		{
 			Host:     "abc.com",
 			Port:     80,
 			Protocol: "http",
-			Routing: mv1a.ApiServiceInstanceSpecRouting{
+			Routing: management.ApiServiceInstanceSpecRouting{
 				BasePath: "/base",
 			},
 		},
@@ -139,25 +139,25 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 			Host:     "123.com",
 			Port:     443,
 			Protocol: "https",
-			Routing: mv1a.ApiServiceInstanceSpecRouting{
+			Routing: management.ApiServiceInstanceSpecRouting{
 				BasePath: "/path",
 			},
 		},
 	}
-	inst := &mv1a.APIServiceInstance{
-		ResourceMeta: v1.ResourceMeta{
+	inst := &management.APIServiceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
 			Title: "oldname",
 			Attributes: map[string]string{
 				"old_attr": "value",
 			},
 			Name:     "name",
 			Tags:     []string{"old_tag"},
-			Metadata: v1.Metadata{ResourceVersion: ""},
+			Metadata: apiv1.Metadata{ResourceVersion: ""},
 		},
 	}
 	inst = client.updateAPIServiceInstance(body, inst, ep)
 
-	assert.Equal(t, mv1a.APIServiceInstanceGVK(), inst.GroupVersionKind)
+	assert.Equal(t, management.APIServiceInstanceGVK(), inst.GroupVersionKind)
 	assert.Empty(t, inst.Metadata.ResourceVersion)
 	assert.Equal(t, "name", inst.Name)
 	assert.Equal(t, body.NameToPush, inst.Title)
@@ -193,7 +193,7 @@ func TestServiceClient_updateAPIServiceInstance(t *testing.T) {
 func Test_buildAPIServiceInstanceNilAttributes(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	body := &ServiceBody{}
-	ep := []mv1a.ApiServiceInstanceSpecEndpoint{}
+	ep := []management.ApiServiceInstanceSpecEndpoint{}
 	inst := client.buildAPIServiceInstance(body, "name", ep)
 	assert.NotNil(t, inst.Attributes)
 

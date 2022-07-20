@@ -4,8 +4,8 @@ import (
 	"context"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -21,9 +21,9 @@ func NewARDHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *ardHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *ardHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.AccessRequestDefinitionGVK().Kind {
+	if resource.Kind != management.AccessRequestDefinitionGVK().Kind {
 		return nil
 	}
 

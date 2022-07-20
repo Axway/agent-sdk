@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +44,7 @@ func TestCreateWatchTopic(t *testing.T) {
 				createErr: tc.err,
 			}
 
-			wt := mv1.NewWatchTopic("")
+			wt := management.NewWatchTopic("")
 			err := wt.FromInstance(tc.ri)
 			assert.Nil(t, err)
 
@@ -91,15 +91,15 @@ func Test_parseWatchTopic(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			features := &mockWatchTopicFeatures{isMPSEnabled: tc.isMPSEnabled}
 
-			wt, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", mv1.DiscoveryAgentGVK().GroupKind, features))
+			wt, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", management.DiscoveryAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
 			assert.NotNil(t, wt)
 
-			wt, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", mv1.TraceabilityAgentGVK().GroupKind, features))
+			wt, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", management.TraceabilityAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
 			assert.NotNil(t, wt)
 
-			wt, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", mv1.GovernanceAgentGVK().GroupKind, features))
+			wt, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", management.GovernanceAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
 			assert.NotNil(t, wt)
 		})
@@ -193,8 +193,8 @@ func (m mockCacheGet) Get(_ string) (interface{}, error) {
 
 func Test_shouldPushUpdate(t *testing.T) {
 	type args struct {
-		cur []mv1.WatchTopicSpecFilters
-		new []mv1.WatchTopicSpecFilters
+		cur []management.WatchTopicSpecFilters
+		new []management.WatchTopicSpecFilters
 	}
 	tests := []struct {
 		name string
@@ -204,7 +204,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 		{
 			name: "should not push update",
 			args: args{
-				cur: []mv1.WatchTopicSpecFilters{
+				cur: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -213,7 +213,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 						Type:  []string{"type1", "type2", "type3"},
 					},
 				},
-				new: []mv1.WatchTopicSpecFilters{
+				new: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -228,7 +228,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 		{
 			name: "should push update, second more",
 			args: args{
-				cur: []mv1.WatchTopicSpecFilters{
+				cur: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -237,7 +237,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 						Type:  []string{"type1", "type2", "type3"},
 					},
 				},
-				new: []mv1.WatchTopicSpecFilters{
+				new: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -259,7 +259,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 		{
 			name: "should push update, first more",
 			args: args{
-				cur: []mv1.WatchTopicSpecFilters{
+				cur: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -275,7 +275,7 @@ func Test_shouldPushUpdate(t *testing.T) {
 						Type:  []string{"type1", "type2", "type3"},
 					},
 				},
-				new: []mv1.WatchTopicSpecFilters{
+				new: []management.WatchTopicSpecFilters{
 					{
 						Group: "group",
 						Scope: nil,
@@ -290,8 +290,8 @@ func Test_shouldPushUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			createWatchTopic := func(filters []mv1.WatchTopicSpecFilters) *mv1.WatchTopic {
-				wt := mv1.NewWatchTopic("")
+			createWatchTopic := func(filters []management.WatchTopicSpecFilters) *management.WatchTopic {
+				wt := management.NewWatchTopic("")
 				wt.Spec.Filters = filters
 				return wt
 			}
@@ -305,8 +305,8 @@ func Test_shouldPushUpdate(t *testing.T) {
 
 func Test_filtersEqual(t *testing.T) {
 	type args struct {
-		a mv1.WatchTopicSpecFilters
-		b mv1.WatchTopicSpecFilters
+		a management.WatchTopicSpecFilters
+		b management.WatchTopicSpecFilters
 	}
 	tests := []struct {
 		name      string
@@ -316,14 +316,14 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "group diff",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
 					Name:  "name",
 					Type:  []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group1",
 					Scope: nil,
 					Kind:  "kind",
@@ -336,14 +336,14 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "kind diff",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
 					Name:  "name",
 					Type:  []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind1",
@@ -356,14 +356,14 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "name diff",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
 					Name:  "name",
 					Type:  []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
@@ -376,16 +376,16 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff 1",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
 					Name:  "name",
 					Type:  []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -399,9 +399,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff 2",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -409,7 +409,7 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
 					Scope: nil,
 					Kind:  "kind",
@@ -422,9 +422,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff name",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -432,9 +432,9 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name1",
 					},
@@ -448,9 +448,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff name",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -458,9 +458,9 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind1",
 						Name: "name",
 					},
@@ -474,9 +474,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff types 1",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -484,9 +484,9 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -500,9 +500,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "scope diff types 2",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -510,9 +510,9 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -526,9 +526,9 @@ func Test_filtersEqual(t *testing.T) {
 		{
 			name: "equal",
 			args: args{
-				a: mv1.WatchTopicSpecFilters{
+				a: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -536,9 +536,9 @@ func Test_filtersEqual(t *testing.T) {
 					Name: "name",
 					Type: []string{"type1", "type2", "type3"},
 				},
-				b: mv1.WatchTopicSpecFilters{
+				b: management.WatchTopicSpecFilters{
 					Group: "group",
-					Scope: &mv1.WatchTopicSpecScope{
+					Scope: &management.WatchTopicSpecScope{
 						Kind: "kind",
 						Name: "name",
 					},
@@ -560,7 +560,7 @@ func Test_filtersEqual(t *testing.T) {
 }
 
 func Test_getWatchTopic(t *testing.T) {
-	wt := &mv1.WatchTopic{}
+	wt := &management.WatchTopic{}
 	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
 		ri: ri,
