@@ -27,6 +27,7 @@ type credProv interface {
 }
 
 type credentials struct {
+	marketplaceHandler
 	prov                credProv
 	client              client
 	encryptSchema       encryptSchemaFunc
@@ -49,7 +50,7 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.P
 // Handle processes grpc events triggered for Credentials
 func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != mv1.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -68,7 +69,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	if ok := shouldProcessPending(cr.Status.Level, cr.Metadata.State); ok {
+	if ok := h.shouldProcessPending(cr.Status, cr.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		ar := h.onPending(ctx, cr)
 		err := h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
@@ -86,12 +87,39 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return err
 	}
 
-	if ok := shouldProcessDeleting(cr.Status.Level, cr.Metadata.State, len(cr.Finalizers)); ok {
+	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
 		logger.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, cr)
 	}
 
 	return nil
+}
+
+func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) string {
+	if len(reasons) != 1 {
+		return ""
+	}
+	if reasons[0].Meta == nil {
+		return ""
+	}
+	if action, found := reasons[0].Meta["action"]; found {
+		return fmt.Sprintf("%v", action)
+	}
+	return ""
+}
+
+// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers or when it is in Error and the only reason is CredentialExpired
+func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
+	switch {
+	case len(finalizers) == 0:
+		return false
+	case h.marketplaceHandler.shouldProcessDeleting(status, state, finalizers):
+		fallthrough
+	case status.Level == prov.Error.String() && h.getReasonMetaAction(status.Reasons) == "CredentialExpired":
+		return true
+	default:
+		return false
+	}
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.Credential {
@@ -147,6 +175,7 @@ func (h *credentials) onPending(ctx context.Context, cred *mv1.Credential) *mv1.
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().
 				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
+				SetCurrentStatusReasons(cred.Status.Reasons).
 				Failed()
 		} else {
 			cred.Data = data
@@ -200,6 +229,11 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+
+		// Delete the resource, since it was not in Deleting State
+		if ri.Metadata.State != v1.ResourceDeleting {
+			h.client.DeleteResourceInstance(ri)
+		}
 	} else {
 		err := fmt.Errorf(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")
@@ -211,7 +245,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *mv1.Credential) {
 // onError updates the AccessRequest with an error status
 func (h *credentials) onError(_ context.Context, cred *mv1.Credential, err error) {
 	ps := prov.NewRequestStatusBuilder()
-	status := ps.SetMessage(err.Error()).Failed()
+	status := ps.SetMessage(err.Error()).SetCurrentStatusReasons(cred.Status.Reasons).Failed()
 	cred.Status = prov.NewStatusReason(status)
 	cred.SubResources = map[string]interface{}{
 		"status": cred.Status,
