@@ -376,32 +376,6 @@ func (c *collector) createAPIDetail(api APIDetails, accessReq *management.Access
 	return detail
 }
 
-func (c *collector) getPublishedProduct(accessRequest *management.AccessRequest, log log.FieldLogger) models.Product {
-	publishedProduct := models.Product{
-		ID:   unknown,
-		Name: unknown,
-	}
-	if accessRequest == nil {
-		log.Trace("access request is nil. Setting default values to unknown")
-		return publishedProduct
-	}
-
-	publishProductRef := accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())
-	if publishProductRef.ID == "" || publishProductRef.Name == "" {
-		log.Debug("could not get published product, setting published product to unknown")
-	} else {
-		publishedProduct.ID = publishProductRef.ID
-		publishedProduct.Name = publishProductRef.Name
-	}
-
-	log.
-		WithField("published-product-id", publishedProduct.ID).
-		WithField("published-product-name", publishedProduct.Name).
-		Trace("published product information")
-
-	return publishedProduct
-}
-
 func (c *collector) getAssetResource(accessRequest *management.AccessRequest, log log.FieldLogger) models.AssetResource {
 	// Set default to provider details in case access request or managed apps comes back nil
 	assetResource := models.AssetResource{
