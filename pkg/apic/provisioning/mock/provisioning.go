@@ -1,6 +1,7 @@
 package mock
 
 import (
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 )
@@ -138,6 +139,7 @@ type MockRequestStatus struct {
 	Msg        string
 	Properties map[string]string
 	Status     provisioning.Status
+	Reasons    []v1.ResourceStatusReason
 }
 
 func (m MockRequestStatus) GetStatus() provisioning.Status {
@@ -150,4 +152,9 @@ func (m MockRequestStatus) GetMessage() string {
 
 func (m MockRequestStatus) GetProperties() map[string]string {
 	return m.Properties
+}
+
+// GetStatus returns the Status level
+func (m MockRequestStatus) GetReasons() []v1.ResourceStatusReason {
+	return m.Reasons
 }
