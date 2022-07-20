@@ -28,12 +28,9 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 
 	appName := ar.Spec.ManagedApplication
 	instID := ""
-	for _, ref := range ar.Metadata.References {
-		if ref.Name == ar.Spec.ApiServiceInstance {
-			instID = ref.ID
-			break
-		}
-	}
+
+	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	instID = instRef.ID
 
 	instance, _ := c.GetAPIServiceInstanceByID(instID)
 	apiID := ""

@@ -245,14 +245,8 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 }
 
 func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
-	instID := ""
-	for _, ref := range ar.Metadata.References {
-		if ref.Name == ar.Spec.ApiServiceInstance {
-			instID = ref.ID
-			break
-		}
-	}
-
+	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	instID := instRef.ID
 	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
 	if err != nil {
 		return nil, err
