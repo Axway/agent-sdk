@@ -207,7 +207,6 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			}
 			cred.Metadata.State = tc.resourceState
 			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
-
 			p := &mockCredProv{
 				t: t,
 				expectedStatus: mock.MockRequestStatus{
