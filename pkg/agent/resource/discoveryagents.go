@@ -15,20 +15,6 @@ func discoveryAgent(res *v1.ResourceInstance) *management.DiscoveryAgent {
 	return agentRes
 }
 
-func createDiscoveryAgentStatusResource(agentName, status, prevStatus, message string) *management.DiscoveryAgent {
-	agentRes := management.DiscoveryAgent{}
-	agentRes.Name = agentName
-	agentRes.Status.Version = config.AgentVersion
-	agentRes.Status.LatestAvailableVersion = config.AgentLatestVersion
-	agentRes.Status.State = status
-	agentRes.Status.PreviousState = prevStatus
-	agentRes.Status.Message = message
-	agentRes.Status.LastActivityTime = getTimestamp()
-	agentRes.Status.SdkVersion = config.SDKVersion
-
-	return &agentRes
-}
-
 func mergeDiscoveryAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.CentralConfiguration) {
 	da := discoveryAgent(agentRes)
 	resCfgAdditionalTags := strings.Join(da.Spec.Config.AdditionalTags, ",")

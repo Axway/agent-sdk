@@ -136,3 +136,5 @@ func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return n
 func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
 	return "", nil
 }
+
+func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}

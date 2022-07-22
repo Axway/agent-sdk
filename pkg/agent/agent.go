@@ -395,6 +395,19 @@ func GetAgentResource() *apiV1.ResourceInstance {
 	return agent.agentResourceManager.GetAgentResource()
 }
 
+// AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource
+func AddUpdateAgentDetails(key, value string) {
+	if agent.agentResourceManager != nil {
+		agent.agentResourceManager.AddUpdateAgentDetails(key, value)
+	}
+}
+
+// AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource
+func GetDetailFromAgentResource(key string) string {
+	val, _ := util.GetAgentDetailsValue(agent.agentResourceManager.GetAgentResource(), key)
+	return val
+}
+
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	UpdateStatusWithPrevious(status, status, description)
