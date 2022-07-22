@@ -24,6 +24,11 @@ var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s
 // QA EnvVars
 const qaEnforceDurationLowerLimit = "QA_ENFORCE_DURATION_LOWER_LIMIT"
 
+const (
+	lowerLimitName = "%s-lowerLimit"
+	upperLimitName = "%s-upperLimit"
+)
+
 // SecretPropertyResolver - interface for resolving property values with secret references
 type SecretPropertyResolver interface {
 	ResolveSecret(secretRef string) (string, error)
@@ -188,6 +193,45 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
+// AddDurationProperty - add duration property to the config
+// defaultVal - when not set by configs, the default value of the duration
+// lowerLimitVal - lower range of the duration
+// upperLimitVal - upper range of the duration
+// If either value for the lowerLimitVal or upperLimitVal == 0, the range is rendered invalid
+func (p *properties) AddDurationRangeProperty(name string, defaultVal time.Duration, description string, lowerLimitVal, upperLimitVal time.Duration) {
+	if p.rootCmd != nil {
+		flagName := p.nameToFlagName(name)
+
+		lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
+		upperLimit := fmt.Sprintf(upperLimitName, flagName)
+
+		// Add default value
+		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
+
+		if p.addDurationRange(lowerLimitVal, upperLimitVal) {
+			// add range value
+			p.rootCmd.Flags().Duration(lowerLimit, lowerLimitVal, "the value entered is lower than the supported lower limit for this configuration")
+			p.rootCmd.Flags().Duration(upperLimit, upperLimitVal, "the value entered is higher than the supported higher limit for this configuration")
+		}
+
+		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
+		p.rootCmd.Flags().MarkHidden(flagName)
+	}
+}
+
+func (p *properties) addDurationRange(lowerLimitVal, upperLimitVal time.Duration) bool {
+	// if either range value == 0, return false
+	if lowerLimitVal == 0 || upperLimitVal == 0 {
+		return false
+	}
+
+	// if lowerLimitVal is equal to or greater than upperLimit, the range is invalid, return false
+	if lowerLimitVal >= upperLimitVal {
+		return false
+	}
+	return true
+}
+
 func (p *properties) AddIntProperty(name string, defaultVal int, description string) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
@@ -317,24 +361,72 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
-	// Get config value and check if duration is less than 30s, check if allow lower limits
-	if isDurationLowerLimitEnforced() && d < lowerLimit {
-		flagName := p.nameToFlagName(name)
-		flag := p.rootCmd.Flag(flagName)
+	flagName := p.nameToFlagName(name)
+	flag := p.rootCmd.Flag(flagName)
 
-		// since config value is < 30s, get duration default value
-		d, _ = time.ParseDuration(flag.DefValue)
+	// Check if AddDurationRangeProperty was implemented for this property value
+	if p.isDurationRangeImplemented(d, flagName) {
+		if !p.isInDurationRange(d, flagName) {
+			// If its not in duration range, set value to default
+			d, _ = time.ParseDuration(flag.DefValue)
+		}
+	} else {
+		// AddDurationProperty was implemented for this property value
+		// Get config value and check if duration is less than 30s, check if allow lower limits
+		if isDurationLowerLimitEnforced() && d < lowerLimit {
+			// since config value is < 30s, get duration default value
+			d, _ = time.ParseDuration(flag.DefValue)
 
-		if d >= lowerLimit {
-			// if defaultValue is > 30s, then just set the lower limit
-			d = lowerLimit
-			log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+			if d >= lowerLimit {
+				// if defaultValue is > 30s, then just set the lower limit
+				d = lowerLimit
+				log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+			}
 		}
 	}
 
 	p.addPropertyToFlatMap(name, s)
 	return d
 }
+
+// Check to see if the user set duration is between the lower limit and upper limit range by implementing AddDurationRangeProperty
+func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName string) bool {
+	// range values
+	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimitName := fmt.Sprintf(upperLimitName, flagName)
+
+	lowerLimitFlag := p.rootCmd.Flag(lowerLimitName)
+	upperLimitFlag := p.rootCmd.Flag(upperLimitName)
+
+	if (lowerLimitFlag != nil) && (upperLimitFlag) != nil {
+		// duration range set
+		return true
+	}
+
+	return false
+}
+
+func (p *properties) isInDurationRange(duration time.Duration, flagName string) bool {
+	// range values
+	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimitName := fmt.Sprintf(upperLimitName, flagName)
+
+	lowerLimitFlag := p.rootCmd.Flag(lowerLimitName)
+	upperLimitFlag := p.rootCmd.Flag(upperLimitName)
+
+	lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
+	upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
+
+	// if the user set value is between the lower and upper range return true
+	if (duration >= lowerLimitDuration) && (duration <= upperLimitDuration) {
+		return true
+	}
+
+	// Warn that the user set value is out of range, and return false to set default value
+	log.Warnf("config %s has been set to the the default value of %s. The current value does not fall between the config range of the lower limit %s and upper limit of %s.", flagName, duration, lowerLimitDuration, upperLimitDuration)
+	return false
+}
+
 func (p *properties) IntPropertyValue(name string) int {
 	s := p.parseStringValue(name)
 	i, _ := strconv.Atoi(s)
