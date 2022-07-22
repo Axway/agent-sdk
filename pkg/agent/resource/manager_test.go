@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -141,11 +140,12 @@ func TestAgentConfigOverride(t *testing.T) {
 
 			var resource *v1.ResourceInstance
 			svcClient := &mock.Client{
-				ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-					if method == api.PUT {
-						return buffer, nil
-					}
-					return json.Marshal(resource)
+				GetResourceMock: func(url string) (*v1.ResourceInstance, error) {
+					return resource, nil
+				},
+				CreateSubResourceMock: func(rm v1.ResourceMeta, subs map[string]interface{}) error {
+					resource.SubResources = subs
+					return nil
 				},
 			}
 			resource = tc.resource
@@ -210,24 +210,24 @@ func TestAgentUpdateStatus(t *testing.T) {
 			cfg.AgentName = tc.agentName
 			cfg.AgentType = tc.agentType
 
-			var response []byte
+			var resource *v1.ResourceInstance
 			svcClient := &mock.Client{
-				ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-					if method == api.PUT {
-						response = buffer
-						return buffer, nil
-					}
-					response, _ = json.Marshal(tc.resource)
-					return response, nil
+				GetResourceMock: func(url string) (*v1.ResourceInstance, error) {
+					return resource, nil
+				},
+				CreateSubResourceMock: func(rm v1.ResourceMeta, subs map[string]interface{}) error {
+					resource.SubResources = subs
+					return nil
 				},
 			}
+			resource = tc.resource
 
 			m, err := NewAgentResourceManager(cfg, svcClient, nil)
 
 			assert.Nil(t, err)
 			assert.NotNil(t, m)
 			m.UpdateAgentStatus("stopped", "running", "test")
-			assertAgentStatusResource(t, response, tc.agentName, "stopped", "running", "test")
+			assertAgentStatusResource(t, resource, tc.agentName, "stopped", "running", "test")
 		})
 	}
 }
@@ -241,14 +241,11 @@ func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 	assert.Equal(t, expectedRes.Spec["config"], res.Spec["config"])
 }
 
-func assertAgentStatusResource(t *testing.T, res []byte, agentName, state, previousState, message string) {
-	var agentRes map[string]interface{}
-	fmt.Println(string(res))
-	json.Unmarshal(res, &agentRes)
-	statusSubRes := agentRes["status"].(map[string]interface{})
+func assertAgentStatusResource(t *testing.T, agentRes *v1.ResourceInstance, agentName, state, previousState, message string) {
+	statusSubRes := agentRes.GetSubResource("status").(v1alpha1.DiscoveryAgentStatus)
 
 	assert.NotNil(t, statusSubRes)
-	assert.Equal(t, state, statusSubRes["state"])
-	assert.Equal(t, previousState, statusSubRes["previousState"])
-	assert.Equal(t, message, statusSubRes["message"])
+	assert.Equal(t, state, statusSubRes.State)
+	assert.Equal(t, previousState, statusSubRes.PreviousState)
+	assert.Equal(t, message, statusSubRes.Message)
 }
