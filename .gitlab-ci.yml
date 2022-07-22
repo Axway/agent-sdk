@@ -33,7 +33,6 @@ include:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
-      - "/gitlabci/csrjobs.yml"
   - project: "scurity/gitlabci"
     ref: master
     file:
@@ -41,6 +40,11 @@ include:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
+  - project: "apigov/beano_cicd"
+    ref: master
+    # this one MUST be after the scurity jobs in order for overrides to work correctly!
+    file:
+      - "/gitlabci/csrjobs.yml"
 
 stages:
   - test
@@ -109,18 +113,10 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .dummy
-  # For some reason, twistlock always wants to run on branch pipelines unless this "only" section is here
-  only:
-    refs:
-      - xxxxx
 
 twistlock:on-schedule:
   extends: .dummy
 
 twistlock-master:
   extends: .dummy
-    # For some reason, twistlock always wants to run here unless this "only" section is here
-  only:
-    refs:
-      - xxxxx
 
