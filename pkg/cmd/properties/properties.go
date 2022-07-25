@@ -194,7 +194,7 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
-// AddDurationProperty - add duration property to the config
+// AddDurationRangeProperty - add duration property to the config
 // defaultVal - when not set by configs, the default value of the duration
 // lowerLimitVal - lower range of the duration
 // upperLimitVal - upper range of the duration
