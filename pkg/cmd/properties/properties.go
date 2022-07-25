@@ -41,6 +41,7 @@ type Properties interface {
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
 	AddDurationProperty(name string, defaultVal time.Duration, description string)
+	AddDurationRangeProperty(name string, defaultVal time.Duration, description string, lowerLimit, upperLimit time.Duration)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
@@ -369,6 +370,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 		if !p.isInDurationRange(d, flagName) {
 			// If its not in duration range, set value to default
 			d, _ = time.ParseDuration(flag.DefValue)
+			log.Warnf("config %s has been set to the the default value of %s.", flagName, d)
 		}
 	} else {
 		// AddDurationProperty was implemented for this property value
@@ -380,7 +382,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 			if d >= lowerLimit {
 				// if defaultValue is > 30s, then just set the lower limit
 				d = lowerLimit
-				log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+				log.Warnf("Configuration %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
 			}
 		}
 	}
@@ -400,6 +402,7 @@ func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName
 
 	if (lowerLimitFlag != nil) && (upperLimitFlag) != nil {
 		// duration range set
+		log.Tracef("Duration range has been set for property %s", flagName)
 		return true
 	}
 
@@ -423,7 +426,7 @@ func (p *properties) isInDurationRange(duration time.Duration, flagName string) 
 	}
 
 	// Warn that the user set value is out of range, and return false to set default value
-	log.Warnf("config %s has been set to the the default value of %s. The current value does not fall between the config range of the lower limit %s and upper limit of %s.", flagName, duration, lowerLimitDuration, upperLimitDuration)
+	log.Warnf("The configuration value for %s does not fall between the lower limit of %s and upper limit of %s.", flagName, lowerLimitDuration, upperLimitDuration)
 	return false
 }
 
