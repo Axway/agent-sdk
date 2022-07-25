@@ -391,7 +391,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	return d
 }
 
-// Check to see if the user set duration is between the lower limit and upper limit range by implementing AddDurationRangeProperty
+// Check to see if the user set a lower limit and upper limit range by implementing AddDurationRangeProperty
 func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName string) bool {
 	// range values
 	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
@@ -409,6 +409,7 @@ func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName
 	return false
 }
 
+// Check to see if the user configured duration is between the lower limit and upper limit
 func (p *properties) isInDurationRange(duration time.Duration, flagName string) bool {
 	// range values
 	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
