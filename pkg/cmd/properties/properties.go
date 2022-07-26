@@ -40,7 +40,7 @@ type Properties interface {
 	AddStringProperty(name string, defaultVal string, description string)
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
-	AddDurationProperty(name string, defaultVal time.Duration, description string)
+	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...durationOpt)
 	AddDurationRangeProperty(name string, defaultVal time.Duration, description string, lowerLimit, upperLimit time.Duration)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
@@ -68,11 +68,27 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
+type durationOpt func(prop *properties)
+
+func WithLowerLimit(lowerLimit time.Duration) durationOpt {
+	return func(prop *properties) {
+		prop.lowerLimit = lowerLimit
+	}
+}
+
+func WithUpperLimit(upperLimit time.Duration) durationOpt {
+	return func(prop *properties) {
+		prop.upperLimit = upperLimit
+	}
+}
+
 var aliasKeyPrefix string
 
 type properties struct {
 	Properties
 	rootCmd                  *cobra.Command
+	lowerLimit               time.Duration
+	upperLimit               time.Duration
 	envIntfArrayPropValues   map[string][]map[string]interface{}
 	envIntfArrayPropertyKeys map[string]map[string]bool
 	secretResolver           SecretPropertyResolver
@@ -185,36 +201,27 @@ func (p *properties) AddStringSliceProperty(name string, defaultVal []string, de
 	}
 }
 
-func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string) {
-	if p.rootCmd != nil {
-		flagName := p.nameToFlagName(name)
-		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
-		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
-		p.rootCmd.Flags().MarkHidden(flagName)
-	}
-}
-
-// AddDurationRangeProperty - add duration property to the config
-// defaultVal - when not set by configs, the default value of the duration
-// lowerLimitVal - lower range of the duration
-// upperLimitVal - upper range of the duration
-// If either value for the lowerLimitVal or upperLimitVal == 0, the range is rendered invalid
-func (p *properties) AddDurationRangeProperty(name string, defaultVal time.Duration, description string, lowerLimitVal, upperLimitVal time.Duration) {
+func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string, options ...durationOpt) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 
+		// set up range
 		lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
 		upperLimit := fmt.Sprintf(upperLimitName, flagName)
 
-		// Add default value
-		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
-
-		if p.addDurationRange(lowerLimitVal, upperLimitVal) {
-			// add range value
-			p.rootCmd.Flags().Duration(lowerLimit, lowerLimitVal, "the value entered is lower than the supported lower limit for this configuration")
-			p.rootCmd.Flags().Duration(upperLimit, upperLimitVal, "the value entered is higher than the supported higher limit for this configuration")
+		// validate if WithLowerLimit and WithUpperLimit were called
+		for _, option := range options {
+			option(p)
 		}
 
+		// make sure limits are valid
+		if p.addDurationRange(p.lowerLimit, p.upperLimit) {
+			// add range value
+			p.rootCmd.Flags().Duration(lowerLimit, p.lowerLimit, "the value entered is lower than the supported lower limit for this configuration")
+			p.rootCmd.Flags().Duration(upperLimit, p.upperLimit, "the value entered is higher than the supported higher limit for this configuration")
+		}
+
+		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
 		p.rootCmd.Flags().MarkHidden(flagName)
 	}

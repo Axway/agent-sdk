@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
@@ -59,7 +60,6 @@ func assertDurationCmdFlag(t *testing.T, cmd AgentRootCmd, propertyName, flagNam
 type agentConfig struct {
 	bProp                 bool
 	dProp                 time.Duration
-	rProp                 time.Duration
 	iProp                 int
 	sProp                 string
 	sPropExt              string
@@ -874,7 +874,6 @@ func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
 				agentValidationCalled: false,
 				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
 				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
-				rProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration.range"),
 				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
 				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
 				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
@@ -889,14 +888,13 @@ func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
-	os.Setenv("AGENT_DURATION_RANGE", "5s")
+	os.Setenv("AGENT_DURATION", "15s")
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
-	rootCmd.GetProperties().AddDurationRangeProperty("agent.duration.range", 10*time.Second, "Agent Duration Property", 11*time.Second, 15*time.Second)
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(20*time.Second), properties.WithUpperLimit(30*time.Second))
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
