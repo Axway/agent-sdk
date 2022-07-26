@@ -5,7 +5,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const key_td = "fetch-on-startup"
+const keyTd = "fetch-on-startup"
 
 func (c *cacheManager) AddFetchOnStartupResources(resources []*v1.ResourceInstance) {
 
@@ -13,17 +13,17 @@ func (c *cacheManager) AddFetchOnStartupResources(resources []*v1.ResourceInstan
 	if !c.hasFetchOnStartupKey() {
 		allResources = resources
 	} else {
-		cached, err := c.fetchOnStartup.Get(key_td)
+		cached, err := c.fetchOnStartup.Get(keyTd)
 		if err != nil {
-			log.Errorf("Error fetching key \"%s\" from cache: %v", key_td, err)
+			log.Errorf("Error fetching key \"%s\" from cache: %v", keyTd, err)
 			return
 		}
 		allResources = append(cached.([]*v1.ResourceInstance), resources...)
 	}
 
-	err := c.fetchOnStartup.Set(key_td, allResources)
+	err := c.fetchOnStartup.Set(keyTd, allResources)
 	if err != nil {
-		log.Errorf("Error fetching setting \"%s\" from cache: %v", key_td, err)
+		log.Errorf("Error fetching setting \"%s\" from cache: %v", keyTd, err)
 	}
 }
 
@@ -32,9 +32,9 @@ func (c *cacheManager) GetAllFetchOnStartupResources() []*v1.ResourceInstance {
 	defer c.ReleaseResourceReadLock()
 
 	if c.hasFetchOnStartupKey() {
-		resources, err := c.fetchOnStartup.Get(key_td)
+		resources, err := c.fetchOnStartup.Get(keyTd)
 		if err != nil {
-			log.Errorf("Error fetching key \"%s\" from cache: %v", key_td, err)
+			log.Errorf("Error fetching key \"%s\" from cache: %v", keyTd, err)
 			return make([]*v1.ResourceInstance, 0)
 		}
 		return resources.([]*v1.ResourceInstance)
@@ -44,12 +44,12 @@ func (c *cacheManager) GetAllFetchOnStartupResources() []*v1.ResourceInstance {
 
 func (c *cacheManager) DeleteAllFetchOnStartupResources() error {
 	if c.hasFetchOnStartupKey() {
-		return c.fetchOnStartup.Delete(key_td)
+		return c.fetchOnStartup.Delete(keyTd)
 	}
 	return nil
 }
 
 func (c *cacheManager) hasFetchOnStartupKey() bool {
 	keys := c.fetchOnStartup.GetKeys()
-	return len(keys) == 1 && keys[0] == key_td
+	return len(keys) == 1 && keys[0] == keyTd
 }
