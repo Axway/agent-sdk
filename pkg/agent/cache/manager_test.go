@@ -67,6 +67,16 @@ func createRI(id, name string) *v1.ResourceInstance {
 	}
 }
 
+func createRuntimeConfig(id string) *v1.ResourceInstance {
+	return &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+		},
+	}
+}
+
 // add api service with externalAPIID, externalAPIName
 // add api service with externalAPIPrimaryKey, externalAPIID, externalAPIName
 // add existing api service with externalAPIID, externalAPIName
@@ -371,4 +381,30 @@ func TestFetchOnStartupCache(t *testing.T) {
 	res = m.GetAllFetchOnStartupResources()
 	assert.Empty(t, res)
 
+}
+
+func TestRuntimeConfigCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	rtc1 := createRuntimeConfig("name1")
+	rtc2 := createRuntimeConfig("name2")
+
+	cachedRTC := m.GetRuntimeconfigResource()
+	assert.Empty(t, cachedRTC)
+
+	m.UpdateRuntimeconfigResource(rtc1)
+
+	cachedRTC = m.GetRuntimeconfigResource()
+	assert.Equal(t, rtc1, cachedRTC)
+
+	m.UpdateRuntimeconfigResource(rtc2)
+
+	cachedRTC = m.GetRuntimeconfigResource()
+	assert.NotEqual(t, rtc1, cachedRTC)
+	assert.Equal(t, rtc2, cachedRTC)
+
+	m.Flush()
+	cachedRTC = m.GetRuntimeconfigResource()
+	assert.Empty(t, cachedRTC)
 }

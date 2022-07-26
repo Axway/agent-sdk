@@ -390,5 +390,9 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 			"credentialHandler",
 			handler.NewCredentialHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.authProviderRegistry),
 		)
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"runtimeconfigHandler",
+			handler.NewRuntimeConfigHandler(agent.cacheManager),
+		)
 	}
 }
