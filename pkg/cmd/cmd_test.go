@@ -860,7 +860,7 @@ func newTestServer() *httptest.Server {
 	return s
 }
 
-func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
+func TestRootCmdAgentValidDuration(t *testing.T) {
 	s := newTestServer()
 	defer s.Close()
 
@@ -872,11 +872,7 @@ func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
 				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
 			},
 		}
 		return cfg, nil
@@ -893,12 +889,86 @@ func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
 
-	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(5*time.Second), properties.WithUpperLimit(19*time.Second))
-	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	// duration range is valid
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second), properties.WithUpperLimit(20*time.Second))
+	_ = rootCmd.Execute()
 
+}
+
+func TestRootCmdAgentInvalidLowerLimit(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
+	var rootCmd AgentRootCmd
+	var cfg *configWithValidation
+	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+		cfg = &configWithValidation{
+			configValidationCalled: false,
+			CentralCfg:             centralConfig,
+			AgentCfg: &agentConfig{
+				agentValidationCalled: false,
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+			},
+		}
+		return cfg, nil
+	}
+
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+	os.Setenv("AGENT_DURATION", "30s")
+
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	// duration range is invalid.  Lower limit is greater than configured value
+	/*
+		{"level":"warning","message":"value 30s is lower than the supported lower limit (40s) for configuration agentDuration","time":"2022-07-26T11:16:41-07:00"}
+		{"level":"warning","message":"config agentDuration has been set to the the default value of 25s.","time":"2022-07-26T11:16:41-07:00"}
+	*/
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(40*time.Second))
+	_ = rootCmd.Execute()
+
+}
+
+func TestRootCmdAgentInvalidUpperLimit(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
+	var rootCmd AgentRootCmd
+	var cfg *configWithValidation
+	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+		cfg = &configWithValidation{
+			configValidationCalled: false,
+			CentralCfg:             centralConfig,
+			AgentCfg: &agentConfig{
+				agentValidationCalled: false,
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+			},
+		}
+		return cfg, nil
+	}
+
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+	os.Setenv("AGENT_DURATION", "30s")
+
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	// duration range is invalid.  Upper limit is less than configured value
+	/*
+		{"level":"warning","message":"value 30s is higher than the supported higher limit (20s) for configuration agentDuration","time":"2022-07-26T11:15:48-07:00"}
+		{"level":"warning","message":"config agentDuration has been set to the the default value of 25s.","time":"2022-07-26T11:15:48-07:00"}
+	*/
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithUpperLimit(20*time.Second))
 	_ = rootCmd.Execute()
 
 }
