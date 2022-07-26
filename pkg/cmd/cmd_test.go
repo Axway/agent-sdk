@@ -894,7 +894,7 @@ func TestRootCmdAgentConfigValidationNotInDurationRange(t *testing.T) {
 	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(20*time.Second), properties.WithUpperLimit(30*time.Second))
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 25*time.Second, "Agent Duration Property", properties.WithLowerLimit(5*time.Second), properties.WithUpperLimit(19*time.Second))
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")

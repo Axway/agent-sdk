@@ -207,21 +207,12 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 
-		// set up range
-		lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
-		upperLimit := fmt.Sprintf(upperLimitName, flagName)
-
 		// validate if WithLowerLimit and WithUpperLimit were called
 		for _, option := range options {
 			option(p)
 		}
 
-		// make sure limits are valid
-		if p.addDurationRange(p.lowerLimit, p.upperLimit) {
-			// add range value
-			p.rootCmd.Flags().Duration(lowerLimit, p.lowerLimit, "the value entered is lower than the supported lower limit for this configuration")
-			p.rootCmd.Flags().Duration(upperLimit, p.upperLimit, "the value entered is higher than the supported higher limit for this configuration")
-		}
+		p.configureUpperAndLowerLimits(flagName)
 
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
@@ -229,17 +220,18 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
-func (p *properties) addDurationRange(lowerLimitVal, upperLimitVal time.Duration) bool {
-	// if either range value == 0, return false
-	if lowerLimitVal == 0 || upperLimitVal == 0 {
-		return false
-	}
+func (p *properties) configureUpperAndLowerLimits(flagName string) {
+	lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimit := fmt.Sprintf(upperLimitName, flagName)
 
-	// if lowerLimitVal is equal to or greater than upperLimit, the range is invalid, return false
-	if lowerLimitVal >= upperLimitVal {
-		return false
+	// set lower limit if greater than zero
+	if p.lowerLimit > 0 {
+		p.rootCmd.Flags().Duration(lowerLimit, p.lowerLimit, "value %s is lower than the supported lower limit (%s) for configuration %s")
 	}
-	return true
+	// set upper limit if greater than zero
+	if p.upperLimit > 0 {
+		p.rootCmd.Flags().Duration(upperLimit, p.upperLimit, "value %s is higher than the supported higher limit (%s) for configuration %s")
+	}
 }
 
 func (p *properties) AddIntProperty(name string, defaultVal int, description string) {
@@ -374,15 +366,11 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	flagName := p.nameToFlagName(name)
 	flag := p.rootCmd.Flag(flagName)
 
-	// Check if optional duration range funcs were implemented for this property value
-	if p.isDurationRangeImplemented(d, flagName) {
-		if !p.isInDurationRange(d, flagName) {
-			// If its not in duration range, set value to default
-			d, _ = time.ParseDuration(flag.DefValue)
-			log.Warnf("config %s has been set to the the default value of %s.", flagName, d)
-		}
+	if !p.validateLowerAndUpperLimits(d, flagName) {
+		// If its not in duration range, set value to default
+		d, _ = time.ParseDuration(flag.DefValue)
+		log.Warnf("config %s has been set to the the default value of %s.", flagName, d)
 	} else {
-		// AddDurationProperty was implemented for this property value
 		// Get config value and check if duration is less than 30s, check if allow lower limits
 		if isDurationLowerLimitEnforced() && d < lowerLimit {
 			// since config value is < 30s, get duration default value
@@ -400,44 +388,35 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	return d
 }
 
-// Check to see if the user set a lower limit and upper limit range by implementing options duration range funcs
-func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName string) bool {
-	// range values
-	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
-	upperLimitName := fmt.Sprintf(upperLimitName, flagName)
+// validateLowerAndUpperLimits - check limits individually based on if greater than zero
+func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagName string) bool {
+	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
+	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
 
-	lowerLimitFlag := p.rootCmd.Flag(lowerLimitName)
-	upperLimitFlag := p.rootCmd.Flag(upperLimitName)
+	var lowerLimitDuration time.Duration
+	var upperLimitDuration time.Duration
 
-	if (lowerLimitFlag != nil) && (upperLimitFlag) != nil {
-		// duration range set
-		log.Tracef("Duration range has been set for property %s", flagName)
-		return true
+	if lowerLimitFlag != nil {
+		lowerLimitDuration, _ = time.ParseDuration(lowerLimitFlag.Value.String())
+	}
+	if upperLimitFlag != nil {
+		upperLimitDuration, _ = time.ParseDuration(upperLimitFlag.Value.String())
 	}
 
-	return false
-}
-
-// Check to see if the user configured duration is between the lower limit and upper limit
-func (p *properties) isInDurationRange(duration time.Duration, flagName string) bool {
-	// range values
-	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
-	upperLimitName := fmt.Sprintf(upperLimitName, flagName)
-
-	lowerLimitFlag := p.rootCmd.Flag(lowerLimitName)
-	upperLimitFlag := p.rootCmd.Flag(upperLimitName)
-
-	lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
-	upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
-
-	// if the user set value is between the lower and upper range return true
-	if (duration >= lowerLimitDuration) && (duration <= upperLimitDuration) {
-		return true
+	// validate that lower limit is greater than zero and less than configured duration
+	if lowerLimitDuration > 0 && lowerLimitDuration > duration {
+		log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
+		return false
 	}
 
-	// Warn that the user set value is out of range, and return false to set default value
-	log.Warnf("The configuration value for %s does not fall between the lower limit of %s and upper limit of %s.", flagName, lowerLimitDuration, upperLimitDuration)
-	return false
+	// validate that upper limit is greater than zero and greater than configured duration
+	if upperLimitDuration > 0 && upperLimitDuration < duration {
+		log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
+		return false
+	}
+
+	log.Tracef("Duration range has been set for property %s", flagName)
+	return true
 }
 
 func (p *properties) IntPropertyValue(name string) int {
