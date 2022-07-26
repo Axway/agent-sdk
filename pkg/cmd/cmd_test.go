@@ -862,19 +862,21 @@ func newTestServer() *httptest.Server {
 
 func TestLowerAndUpperLimitDurations(t *testing.T) {
 	testCases := []struct {
-		name            string
-		defaultDuration time.Duration
-		description     string
-		lowerLimit      time.Duration
-		upperLimit      time.Duration
+		name             string
+		durationProperty string
+		defaultDuration  time.Duration
+		description      string
+		lowerLimit       time.Duration
+		upperLimit       time.Duration
 	}{
 		{
 			// valid range
-			name:            "agent.duration",
-			defaultDuration: 25 * time.Second,
-			description:     "Agent Duration Property - valid range",
-			lowerLimit:      20 * time.Second,
-			upperLimit:      40 * time.Second,
+			name:             "Agent Duration Property - valid range",
+			durationProperty: "agent.duration",
+			defaultDuration:  25 * time.Second,
+			description:      "Agent Duration Property - valid range",
+			lowerLimit:       20 * time.Second,
+			upperLimit:       40 * time.Second,
 		},
 		{
 			// lower limit is invalid
@@ -882,12 +884,12 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 				{"level":"warning","message":"value 30s is lower than the supported lower limit (40s) for configuration agentDuration","time":"2022-07-26T14:42:54-07:00"}
 				{"level":"warning","message":"config agentDuration has been set to the the default value of 25s.","time":"2022-07-26T14:42:54-07:00"}
 			*/
-
-			name:            "agent.duration",
-			defaultDuration: 25 * time.Second,
-			description:     "Agent Duration Property - invalid lower limit",
-			lowerLimit:      40 * time.Second,
-			upperLimit:      50 * time.Second,
+			name:             "Agent Duration Property - invalid lower limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  25 * time.Second,
+			description:      "Agent Duration Property - invalid lower limit",
+			lowerLimit:       40 * time.Second,
+			upperLimit:       50 * time.Second,
 		},
 		{
 			// upper limit is invalid
@@ -895,11 +897,12 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 				{"level":"warning","message":"value 30s is higher than the supported higher limit (20s) for configuration agentDuration","time":"2022-07-26T14:42:54-07:00"}
 				{"level":"warning","message":"config agentDuration has been set to the the default value of 30s.","time":"2022-07-26T14:42:54-07:00"}
 			*/
-			name:            "agent.duration",
-			defaultDuration: 30 * time.Second,
-			description:     "Agent Duration Property - invalid upper limit",
-			lowerLimit:      10 * time.Second,
-			upperLimit:      20 * time.Second,
+			name:             "Agent Duration Property - invalid upper limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  30 * time.Second,
+			description:      "Agent Duration Property - invalid upper limit",
+			lowerLimit:       10 * time.Second,
+			upperLimit:       20 * time.Second,
 		},
 	}
 
@@ -932,7 +935,7 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 
 			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 			viper.AddConfigPath("./testdata")
-			rootCmd.GetProperties().AddDurationProperty(test.name, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
+			rootCmd.GetProperties().AddDurationProperty(test.durationProperty, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
 			_ = rootCmd.Execute()
 		})
 	}
