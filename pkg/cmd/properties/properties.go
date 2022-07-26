@@ -68,14 +68,17 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
+// durationOpt - options passed into AddDurationProperty
 type durationOpt func(prop *properties)
 
+// WithLowerLimit - lower limit of the duration range
 func WithLowerLimit(lowerLimit time.Duration) durationOpt {
 	return func(prop *properties) {
 		prop.lowerLimit = lowerLimit
 	}
 }
 
+// WithUpperLimit - upper limit of the duration range
 func WithUpperLimit(upperLimit time.Duration) durationOpt {
 	return func(prop *properties) {
 		prop.upperLimit = upperLimit
