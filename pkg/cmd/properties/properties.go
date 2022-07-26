@@ -41,7 +41,6 @@ type Properties interface {
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
 	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...durationOpt)
-	AddDurationRangeProperty(name string, defaultVal time.Duration, description string, lowerLimit, upperLimit time.Duration)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
@@ -68,7 +67,7 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
-// durationOpt - options passed into AddDurationProperty
+// durationOpt are options passed into AddDurationProperty
 type durationOpt func(prop *properties)
 
 // WithLowerLimit - lower limit of the duration range
@@ -375,7 +374,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	flagName := p.nameToFlagName(name)
 	flag := p.rootCmd.Flag(flagName)
 
-	// Check if AddDurationRangeProperty was implemented for this property value
+	// Check if optional duration range funcs were implemented for this property value
 	if p.isDurationRangeImplemented(d, flagName) {
 		if !p.isInDurationRange(d, flagName) {
 			// If its not in duration range, set value to default
@@ -401,7 +400,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	return d
 }
 
-// Check to see if the user set a lower limit and upper limit range by implementing AddDurationRangeProperty
+// Check to see if the user set a lower limit and upper limit range by implementing options duration range funcs
 func (p *properties) isDurationRangeImplemented(duration time.Duration, flagName string) bool {
 	// range values
 	lowerLimitName := fmt.Sprintf(lowerLimitName, flagName)
