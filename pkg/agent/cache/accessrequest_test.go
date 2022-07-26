@@ -16,8 +16,10 @@ func createAccessRequest(id, name, appName, instanceID, instanceName string) *ma
 				ID: id,
 				References: []v1.Reference{
 					{
-						ID:   instanceID,
-						Name: instanceName,
+						Group: mv1.APIServiceInstanceGVK().Group,
+						Kind:  mv1.APIServiceInstanceGVK().Kind,
+						ID:    instanceID,
+						Name:  instanceName,
 					},
 				},
 			},

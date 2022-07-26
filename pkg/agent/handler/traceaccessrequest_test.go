@@ -36,9 +36,10 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 				ID: "ar",
 				References: []apiv1.Reference{
 					{
-						ID:   "instanceId",
-						Name: "instance",
-						Kind: "APIServiceInstance",
+						ID:    "instanceId",
+						Name:  "instance",
+						Group: mv1.APIServiceInstanceGVK().Group,
+						Kind:  mv1.APIServiceInstanceGVK().Kind,
 					},
 				},
 			},

@@ -415,8 +415,10 @@ var accessReq = management.AccessRequest{
 			ID: "11",
 			References: []v1.Reference{
 				{
-					ID:   instRefID,
-					Name: instRefName,
+					Group: mv1.APIServiceInstanceGVK().Group,
+					Kind:  mv1.APIServiceInstanceGVK().Kind,
+					ID:    instRefID,
+					Name:  instRefName,
 				},
 			},
 			Scope: v1.MetadataScope{
