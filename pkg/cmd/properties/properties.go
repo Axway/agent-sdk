@@ -40,7 +40,7 @@ type Properties interface {
 	AddStringProperty(name string, defaultVal string, description string)
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
-	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...durationOpt)
+	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...DurationOpt)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
@@ -67,18 +67,18 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
-// durationOpt are options passed into AddDurationProperty
-type durationOpt func(prop *properties)
+// DurationOpt are duration range options passed into AddDurationProperty
+type DurationOpt func(prop *properties)
 
 // WithLowerLimit - lower limit of the duration range
-func WithLowerLimit(lowerLimit time.Duration) durationOpt {
+func WithLowerLimit(lowerLimit time.Duration) DurationOpt {
 	return func(prop *properties) {
 		prop.lowerLimit = lowerLimit
 	}
 }
 
 // WithUpperLimit - upper limit of the duration range
-func WithUpperLimit(upperLimit time.Duration) durationOpt {
+func WithUpperLimit(upperLimit time.Duration) DurationOpt {
 	return func(prop *properties) {
 		prop.upperLimit = upperLimit
 	}
@@ -203,7 +203,7 @@ func (p *properties) AddStringSliceProperty(name string, defaultVal []string, de
 	}
 }
 
-func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string, options ...durationOpt) {
+func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string, options ...DurationOpt) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 
