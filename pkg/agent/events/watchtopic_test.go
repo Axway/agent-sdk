@@ -63,6 +63,7 @@ func TestCreateWatchTopic(t *testing.T) {
 type mockWatchTopicFeatures struct {
 	isMPSEnabled bool
 	agentType    config.AgentType
+	filterList   []config.ResourceFilter
 }
 
 func (m *mockWatchTopicFeatures) IsMarketplaceSubsEnabled() bool {
@@ -71,6 +72,10 @@ func (m *mockWatchTopicFeatures) IsMarketplaceSubsEnabled() bool {
 
 func (m *mockWatchTopicFeatures) GetAgentType() config.AgentType {
 	return m.agentType
+}
+
+func (m *mockWatchTopicFeatures) GetWatchResourceFilters() []config.ResourceFilter {
+	return m.filterList
 }
 
 func Test_parseWatchTopic(t *testing.T) {
@@ -108,10 +113,11 @@ func Test_parseWatchTopic(t *testing.T) {
 
 func TestGetOrCreateWatchTopic(t *testing.T) {
 	tests := []struct {
-		name      string
-		client    *mockAPIClient
-		hasErr    bool
-		agentType config.AgentType
+		name       string
+		client     *mockAPIClient
+		hasErr     bool
+		agentType  config.AgentType
+		filterList []config.ResourceFilter
 	}{
 		{
 			name:      "should retrieve a watch topic if it exists",
@@ -124,6 +130,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 					},
 				},
 			},
+			filterList: []config.ResourceFilter{},
 		},
 		{
 			name:      "should create a watch topic for a trace agent if it does not exist",
@@ -137,6 +144,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 					},
 				},
 			},
+			filterList: []config.ResourceFilter{},
 		},
 		{
 			name:      "should create a watch topic for a discovery agent if it does not exist",
@@ -150,6 +158,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 					},
 				},
 			},
+			filterList: []config.ResourceFilter{},
 		},
 		{
 			name:      "should create a watch topic for a governance agent if it does not exist",
@@ -163,13 +172,39 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 					},
 				},
 			},
+			filterList: []config.ResourceFilter{},
+		},
+		{
+			name:      "should create a watch topic for a trace agent with custom filter if it does not exist",
+			agentType: config.TraceabilityAgent,
+			hasErr:    false,
+			client: &mockAPIClient{
+				getErr: fmt.Errorf("not found"),
+				ri: &apiv1.ResourceInstance{
+					ResourceMeta: apiv1.ResourceMeta{
+						Name: "wt-name",
+					},
+				},
+			},
+			filterList: []config.ResourceFilter{
+				{
+					Group:      mv1.CredentialGVK().Group,
+					Kind:       mv1.CredentialGVK().Kind,
+					Name:       "*",
+					EventTypes: []config.ResourceEventType{"created"},
+					Scope: &config.ResourceScope{
+						Kind: mv1.EnvironmentGVK().Kind,
+						Name: "test-env",
+					},
+				},
+			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
-			features := &mockWatchTopicFeatures{isMPSEnabled: true, agentType: tc.agentType}
+			features := &mockWatchTopicFeatures{isMPSEnabled: true, agentType: tc.agentType, filterList: tc.filterList}
 
 			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, features)
 			if tc.hasErr == true {
@@ -178,17 +213,23 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, tc.client.ri.Name, wt.Name)
 			}
+			// validate watch topic with custom filter
+			for _, filter := range tc.filterList {
+				found := false
+				for _, wtFilter := range wt.Spec.Filters {
+					if wtFilter.Group == filter.Group && wtFilter.Kind == filter.Kind && wtFilter.Name == filter.Name {
+						fs := filter.Scope
+						wts := wtFilter.Scope
+						if fs != nil && wts != nil && wts.Kind == fs.Kind && wts.Name == fs.Name {
+							found = true
+							break
+						}
+					}
+				}
+				assert.True(t, found)
+			}
 		})
 	}
-}
-
-type mockCacheGet struct {
-	item interface{}
-	err  error
-}
-
-func (m mockCacheGet) Get(_ string) (interface{}, error) {
-	return m.item, m.err
 }
 
 func Test_shouldPushUpdate(t *testing.T) {
