@@ -393,26 +393,21 @@ func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagNam
 	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
 	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
 
-	var lowerLimitDuration time.Duration
-	var upperLimitDuration time.Duration
-
 	if lowerLimitFlag != nil {
-		lowerLimitDuration, _ = time.ParseDuration(lowerLimitFlag.Value.String())
+		lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
+		// validate that lower limit is greater than zero and less than configured duration
+		if lowerLimitDuration > 0 && lowerLimitDuration > duration {
+			log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
+			return false
+		}
 	}
 	if upperLimitFlag != nil {
-		upperLimitDuration, _ = time.ParseDuration(upperLimitFlag.Value.String())
-	}
-
-	// validate that lower limit is greater than zero and less than configured duration
-	if lowerLimitDuration > 0 && lowerLimitDuration > duration {
-		log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
-		return false
-	}
-
-	// validate that upper limit is greater than zero and greater than configured duration
-	if upperLimitDuration > 0 && upperLimitDuration < duration {
-		log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
-		return false
+		upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
+		// validate that upper limit is greater than zero and greater than configured duration
+		if upperLimitDuration > 0 && upperLimitDuration < duration {
+			log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
+			return false
+		}
 	}
 
 	log.Tracef("Duration range has been set for property %s", flagName)
