@@ -188,12 +188,12 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			},
 			filterList: []config.ResourceFilter{
 				{
-					Group:      mv1.CredentialGVK().Group,
-					Kind:       mv1.CredentialGVK().Kind,
+					Group:      management.CredentialGVK().Group,
+					Kind:       management.CredentialGVK().Kind,
 					Name:       "*",
 					EventTypes: []config.ResourceEventType{"created"},
 					Scope: &config.ResourceScope{
-						Kind: mv1.EnvironmentGVK().Kind,
+						Kind: management.EnvironmentGVK().Kind,
 						Name: "test-env",
 					},
 				},

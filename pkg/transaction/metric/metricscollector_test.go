@@ -118,11 +118,17 @@ func cleanUpReportfiles() {
 	os.RemoveAll("./reports")
 }
 
-func createRI(id, name string, subRes map[string]interface{}) *apiv1.ResourceInstance {
+func createRI(group, kind, id, name string, subRes map[string]interface{}) *apiv1.ResourceInstance {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
 			Metadata: apiv1.Metadata{
 				ID: id,
+			},
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Group: group,
+					Kind:  kind,
+				},
 			},
 			SubResources: subRes,
 			Name:         name,
@@ -136,7 +142,7 @@ func createAPIServiceInstance(id, name string, apiID string) *apiv1.ResourceInst
 			defs.AttrExternalAPIID: apiID,
 		},
 	}
-	return createRI(id, name, sub)
+	return createRI(management.APIServiceInstanceGVK().Group, management.APIServiceInstanceGVK().Kind, id, name, sub)
 }
 
 func createManagedApplication(id, name, consumerOrgID string) *apiv1.ResourceInstance {
@@ -155,7 +161,7 @@ func createManagedApplication(id, name, consumerOrgID string) *apiv1.ResourceIns
 			},
 		}
 	}
-	return createRI(id, name, marketplaceSubRes)
+	return createRI(management.ManagedApplicationGVK().Group, management.ManagedApplicationGVK().Kind, id, name, marketplaceSubRes)
 }
 
 func createAccessRequest(id, name, appName, instanceID, instanceName, subscriptionName string) *apiv1.ResourceInstance {
@@ -165,8 +171,10 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 				ID: id,
 				References: []apiv1.Reference{
 					{
-						ID:   instanceID,
-						Name: instanceName,
+						Group: management.APIServiceInstanceGVK().Group,
+						Kind:  management.APIServiceInstanceGVK().Kind,
+						ID:    instanceID,
+						Name:  instanceName,
 					},
 				},
 			},
@@ -264,7 +272,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 2, // API metric + Provider + Consumer subscription metric
+			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
 		},
 		// Success case with no usage report
@@ -278,7 +286,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{0},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 2,
+			expectedMetricEventsAcked: 0,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
@@ -291,7 +299,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
-			expectedMetricEventsAcked: 3,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Success case, retry metrics
@@ -305,7 +313,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 3,
+			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
 		// Retry limit hit
@@ -327,6 +335,9 @@ func TestMetricCollector(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
+			if test.appName == "managed-app-2" {
+				test.appName = "managed-app-2"
+			}
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
@@ -342,6 +353,7 @@ func TestMetricCollector(t *testing.T) {
 					metricCollector.AddMetricDetail(metricDetail)
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
+
 				metricCollector.Execute()
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)

@@ -38,8 +38,8 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 					{
 						ID:    "instanceId",
 						Name:  "instance",
-						Group: mv1.APIServiceInstanceGVK().Group,
-						Kind:  mv1.APIServiceInstanceGVK().Kind,
+						Group: management.APIServiceInstanceGVK().Group,
+						Kind:  management.APIServiceInstanceGVK().Kind,
 					},
 				},
 			},

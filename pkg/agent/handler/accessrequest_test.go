@@ -415,8 +415,8 @@ var accessReq = management.AccessRequest{
 			ID: "11",
 			References: []v1.Reference{
 				{
-					Group: mv1.APIServiceInstanceGVK().Group,
-					Kind:  mv1.APIServiceInstanceGVK().Kind,
+					Group: management.APIServiceInstanceGVK().Group,
+					Kind:  management.APIServiceInstanceGVK().Kind,
 					ID:    instRefID,
 					Name:  instRefName,
 				},

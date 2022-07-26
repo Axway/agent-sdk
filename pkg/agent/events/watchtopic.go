@@ -90,7 +90,7 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 			eventTypes = append(eventTypes, (string(filterEventType)))
 		}
 
-		wf := mv1.WatchTopicSpecFilters{
+		wf := management.WatchTopicSpecFilters{
 			Group: filter.Group,
 			Kind:  filter.Kind,
 			Name:  filter.Name,
@@ -98,7 +98,7 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 		}
 
 		if filter.Scope != nil {
-			wf.Scope = &mv1.WatchTopicSpecScope{
+			wf.Scope = &management.WatchTopicSpecScope{
 				Kind: filter.Scope.Kind,
 				Name: filter.Scope.Name,
 			}
