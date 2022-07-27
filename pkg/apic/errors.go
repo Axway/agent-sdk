@@ -15,27 +15,25 @@ var (
 
 // Errors hit when calling different Amplify APIs
 var (
-	ErrNoAddressFound = errors.Newf(1140, "could not find the subscriber (%s) email address")
+	ErrNoAddressFound = errors.Newf(1139, "could not find the subscriber (%s) email address")
 	// Subscription APIs
-	ErrSubscriptionQuery                   = errors.New(1141, "error connecting to Amplify Central for subscriptions")
-	ErrSubscriptionResp                    = errors.Newf(1142, "unexpected response code (%d) from Amplify Central for subscription")
-	ErrSubscriptionSchemaCreate            = errors.New(1143, "error creating/updating subscription schema in Amplify Central")
-	ErrSubscriptionSchemaResp              = errors.Newf(1144, "unexpected response code (%d) when creating a subscription schema in Amplify Central")
-	ErrAccessRequestSubscriptionSchemaResp = errors.Newf(1147, "unexpected response code (%d) when creating an acceess request subscription schema in Amplify Central")
-
+	ErrSubscriptionQuery        = errors.New(1140, "error connecting to Amplify Central for subscriptions")
+	ErrSubscriptionResp         = errors.Newf(1141, "unexpected response code (%d) from Amplify Central for subscription")
+	ErrSubscriptionSchemaCreate = errors.New(1142, "error creating/updating subscription schema in Amplify Central")
+	ErrSubscriptionSchemaResp   = errors.Newf(1143, "unexpected response code (%d) when creating a subscription schema in Amplify Central")
 	// APIs related to webhooks
-	ErrCreateWebhook = errors.New(1145, "unable to create webhook")
-	ErrCreateSecret  = errors.New(1146, "unable to create secret")
+	ErrCreateWebhook                       = errors.New(1144, "unable to create webhook")
+	ErrCreateSecret                        = errors.New(1145, "unable to create secret")
+	ErrAccessRequestSubscriptionSchemaResp = errors.Newf(1146, "unexpected response code (%d) when creating an access request subscription schema in Amplify Central")
 
 	ErrGetSubscriptionDefProperties       = errors.New(1155, "error getting subscription definition properties in Amplify Central")
 	ErrUpdateSubscriptionDefProperties    = errors.New(1156, "error updating subscription definition properties in Amplify Central")
 	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
 	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
-	ErrGetAPIServiceInstanceByName        = errors.New(1159, "error getting api service instance by name")
 
 	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")
 
 	// Category
-	ErrCategoryCreate = errors.Newf(1165, "error creating category %s")
+	ErrCategoryCreate = errors.Newf(1164, "error creating category %s")
 )
