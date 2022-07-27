@@ -335,9 +335,6 @@ func TestMetricCollector(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
-			if test.appName == "managed-app-2" {
-				test.appName = "managed-app-2"
-			}
 			for l := 0; l < test.loopCount; l++ {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
