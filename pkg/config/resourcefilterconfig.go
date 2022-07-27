@@ -3,13 +3,14 @@ package config
 // ResourceEventType - watch filter event types
 type ResourceEventType string
 
+// Resource event types
 const (
 	ResourceEventCreated ResourceEventType = "created"
 	ResourceEventUpdated ResourceEventType = "updated"
 	ResourceEventDeleted ResourceEventType = "deleted"
 )
 
-// ResourceFilterScope -  scope config for watch resource filter
+// ResourceScope -  scope config for watch resource filter
 type ResourceScope struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
