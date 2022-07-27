@@ -24,6 +24,11 @@ var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s
 // QA EnvVars
 const qaEnforceDurationLowerLimit = "QA_ENFORCE_DURATION_LOWER_LIMIT"
 
+const (
+	lowerLimitName = "%s-lowerLimit"
+	upperLimitName = "%s-upperLimit"
+)
+
 // SecretPropertyResolver - interface for resolving property values with secret references
 type SecretPropertyResolver interface {
 	ResolveSecret(secretRef string) (string, error)
@@ -35,7 +40,7 @@ type Properties interface {
 	AddStringProperty(name string, defaultVal string, description string)
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
-	AddDurationProperty(name string, defaultVal time.Duration, description string)
+	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...DurationOpt)
 	AddIntProperty(name string, defaultVal int, description string)
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
@@ -62,11 +67,30 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
+// DurationOpt are duration range options passed into AddDurationProperty
+type DurationOpt func(prop *properties)
+
+// WithLowerLimit - lower limit of the duration range
+func WithLowerLimit(lowerLimit time.Duration) DurationOpt {
+	return func(prop *properties) {
+		prop.lowerLimit = lowerLimit
+	}
+}
+
+// WithUpperLimit - upper limit of the duration range
+func WithUpperLimit(upperLimit time.Duration) DurationOpt {
+	return func(prop *properties) {
+		prop.upperLimit = upperLimit
+	}
+}
+
 var aliasKeyPrefix string
 
 type properties struct {
 	Properties
 	rootCmd                  *cobra.Command
+	lowerLimit               time.Duration
+	upperLimit               time.Duration
 	envIntfArrayPropValues   map[string][]map[string]interface{}
 	envIntfArrayPropertyKeys map[string]map[string]bool
 	secretResolver           SecretPropertyResolver
@@ -179,12 +203,34 @@ func (p *properties) AddStringSliceProperty(name string, defaultVal []string, de
 	}
 }
 
-func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string) {
+func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, description string, options ...DurationOpt) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
+
+		// validate if WithLowerLimit and WithUpperLimit were called
+		for _, option := range options {
+			option(p)
+		}
+
+		p.configureUpperAndLowerLimits(flagName)
+
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
 		p.rootCmd.Flags().MarkHidden(flagName)
+	}
+}
+
+func (p *properties) configureUpperAndLowerLimits(flagName string) {
+	lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimit := fmt.Sprintf(upperLimitName, flagName)
+
+	// set lower limit if greater than zero
+	if p.lowerLimit > 0 {
+		p.rootCmd.Flags().Duration(lowerLimit, p.lowerLimit, "value %s is lower than the supported lower limit (%s) for configuration %s")
+	}
+	// set upper limit if greater than zero
+	if p.upperLimit > 0 {
+		p.rootCmd.Flags().Duration(upperLimit, p.upperLimit, "value %s is higher than the supported higher limit (%s) for configuration %s")
 	}
 }
 
@@ -317,24 +363,57 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
-	// Get config value and check if duration is less than 30s, check if allow lower limits
-	if isDurationLowerLimitEnforced() && d < lowerLimit {
-		flagName := p.nameToFlagName(name)
-		flag := p.rootCmd.Flag(flagName)
+	flagName := p.nameToFlagName(name)
+	flag := p.rootCmd.Flag(flagName)
 
-		// since config value is < 30s, get duration default value
+	if !p.validateLowerAndUpperLimits(d, flagName) {
+		// If its not in duration range, set value to default
 		d, _ = time.ParseDuration(flag.DefValue)
+		log.Warnf("config %s has been set to the the default value of %s.", flagName, d)
+	} else {
+		// Get config value and check if duration is less than 30s, check if allow lower limits
+		if isDurationLowerLimitEnforced() && d < lowerLimit {
+			// since config value is < 30s, get duration default value
+			d, _ = time.ParseDuration(flag.DefValue)
 
-		if d >= lowerLimit {
-			// if defaultValue is > 30s, then just set the lower limit
-			d = lowerLimit
-			log.Warnf("config %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+			if d >= lowerLimit {
+				// if defaultValue is > 30s, then just set the lower limit
+				d = lowerLimit
+				log.Warnf("Configuration %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
+			}
 		}
 	}
 
 	p.addPropertyToFlatMap(name, s)
 	return d
 }
+
+// validateLowerAndUpperLimits - check limits individually based on if greater than zero
+func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagName string) bool {
+	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
+	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
+
+	if lowerLimitFlag != nil {
+		lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
+		// validate that lower limit is greater than zero and less than configured duration
+		if lowerLimitDuration > 0 && lowerLimitDuration > duration {
+			log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
+			return false
+		}
+	}
+	if upperLimitFlag != nil {
+		upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
+		// validate that upper limit is greater than zero and greater than configured duration
+		if upperLimitDuration > 0 && upperLimitDuration < duration {
+			log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
+			return false
+		}
+	}
+
+	log.Tracef("Duration range has been set for property %s", flagName)
+	return true
+}
+
 func (p *properties) IntPropertyValue(name string) int {
 	s := p.parseStringValue(name)
 	i, _ := strconv.Atoi(s)

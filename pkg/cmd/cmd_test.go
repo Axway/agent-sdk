@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
@@ -857,4 +858,85 @@ func newTestServer() *httptest.Server {
 	}))
 
 	return s
+}
+
+func TestLowerAndUpperLimitDurations(t *testing.T) {
+	testCases := []struct {
+		name             string
+		durationProperty string
+		defaultDuration  time.Duration
+		description      string
+		lowerLimit       time.Duration
+		upperLimit       time.Duration
+	}{
+		{
+			// valid range
+			name:             "Agent Duration Property - valid range",
+			durationProperty: "agent.duration",
+			defaultDuration:  25 * time.Second,
+			description:      "Agent Duration Property - valid range",
+			lowerLimit:       20 * time.Second,
+			upperLimit:       40 * time.Second,
+		},
+		{
+			// lower limit is invalid
+			/*
+				{"level":"warning","message":"value 30s is lower than the supported lower limit (40s) for configuration agentDuration","time":"2022-07-26T14:42:54-07:00"}
+				{"level":"warning","message":"config agentDuration has been set to the the default value of 25s.","time":"2022-07-26T14:42:54-07:00"}
+			*/
+			name:             "Agent Duration Property - invalid lower limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  25 * time.Second,
+			description:      "Agent Duration Property - invalid lower limit",
+			lowerLimit:       40 * time.Second,
+			upperLimit:       50 * time.Second,
+		},
+		{
+			// upper limit is invalid
+			/*
+				{"level":"warning","message":"value 30s is higher than the supported higher limit (20s) for configuration agentDuration","time":"2022-07-26T14:42:54-07:00"}
+				{"level":"warning","message":"config agentDuration has been set to the the default value of 30s.","time":"2022-07-26T14:42:54-07:00"}
+			*/
+			name:             "Agent Duration Property - invalid upper limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  30 * time.Second,
+			description:      "Agent Duration Property - invalid upper limit",
+			lowerLimit:       10 * time.Second,
+			upperLimit:       20 * time.Second,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			s := newTestServer()
+			defer s.Close()
+
+			var rootCmd AgentRootCmd
+			var cfg *configWithValidation
+			initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+				cfg = &configWithValidation{
+					configValidationCalled: false,
+					CentralCfg:             centralConfig,
+					AgentCfg: &agentConfig{
+						agentValidationCalled: false,
+						dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+					},
+				}
+				return cfg, nil
+			}
+
+			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+			os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+			os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+			os.Setenv("CENTRAL_AUTH_URL", s.URL)
+			os.Setenv("CENTRAL_URL", s.URL)
+			os.Setenv("CENTRAL_SINGLEURL", s.URL)
+			os.Setenv("AGENT_DURATION", "30s")
+
+			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
+			viper.AddConfigPath("./testdata")
+			rootCmd.GetProperties().AddDurationProperty(test.durationProperty, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
+			_ = rootCmd.Execute()
+		})
+	}
 }
