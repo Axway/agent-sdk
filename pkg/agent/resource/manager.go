@@ -1,12 +1,10 @@
 package resource
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -204,10 +202,10 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		return
 	}
 
-	switch a.getAgentResourceType() {
+	switch a.getAgentResourceType().Kind {
 	case management.DiscoveryAgentGVK().Kind:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case management.TraceabilityAgentGVK().Kind
+	case management.TraceabilityAgentGVK().Kind:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	case management.GovernanceAgentGVK().Kind:
 		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
