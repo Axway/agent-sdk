@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -26,13 +26,13 @@ var apiserviceName string
 
 // Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
-	Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error)
+	Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
 type ardCache interface {
-	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
-	AddAccessRequestDefinition(resource *v1.ResourceInstance)
-	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
+	GetCredentialRequestDefinitionByName(name string) (*apiv1.ResourceInstance, error)
+	AddAccessRequestDefinition(resource *apiv1.ResourceInstance)
+	GetAccessRequestDefinitionByName(name string) (*apiv1.ResourceInstance, error)
 }
 
 // MarketplaceMigration - used for migrating attributes to subresource
@@ -59,8 +59,8 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 }
 
 // Migrate -
-func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if ri.Kind != mv1a.APIServiceGVK().Kind {
+func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.Kind != management.APIServiceGVK().Kind {
 		return ri, nil
 	}
 
@@ -93,7 +93,7 @@ func (m *MarketplaceMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceIns
 }
 
 // UpdateService - gets a list of instances for the service and updates their request definitions.
-func (m *MarketplaceMigration) UpdateService(ri *v1.ResourceInstance) error {
+func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -116,7 +116,7 @@ func (m *MarketplaceMigration) UpdateService(ri *v1.ResourceInstance) error {
 	for _, rev := range revs {
 		wg.Add(1)
 
-		go func(revision *v1.ResourceInstance) {
+		go func(revision *apiv1.ResourceInstance) {
 			defer wg.Done()
 
 			q := map[string]string{
@@ -144,7 +144,7 @@ func (m *MarketplaceMigration) UpdateService(ri *v1.ResourceInstance) error {
 }
 
 func (m *MarketplaceMigration) updateSvcInstance(
-	resourceURL string, query map[string]string, revision *v1.ResourceInstance) error {
+	resourceURL string, query map[string]string, revision *apiv1.ResourceInstance) error {
 	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func (m *MarketplaceMigration) updateSvcInstance(
 	for _, resource := range resources {
 		wg.Add(1)
 
-		go func(svcInstance *v1.ResourceInstance) {
+		go func(svcInstance *apiv1.ResourceInstance) {
 			defer wg.Done()
 
 			err := m.handleSvcInstance(svcInstance, revision)
@@ -230,13 +230,13 @@ func (m *MarketplaceMigration) checkCredentialRequestDefinitions(credentialReque
 	return knownCRDs
 }
 
-func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string]string) (*mv1a.AccessRequestDefinition, error) {
+func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string]string) (*management.AccessRequestDefinition, error) {
 
-	callback := func(ard *mv1a.AccessRequestDefinition) (*mv1a.AccessRequestDefinition, error) {
+	callback := func(ard *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
 		return ard, nil
 	}
 
-	var ard *mv1a.AccessRequestDefinition
+	var ard *management.AccessRequestDefinition
 	var err error
 	if len(scopes) > 0 {
 		ard, err = provisioning.NewAccessRequestBuilder(callback).Register()
@@ -248,13 +248,13 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 }
 
 func (m *MarketplaceMigration) handleSvcInstance(
-	svcInstance *v1.ResourceInstance, revision *v1.ResourceInstance) error {
+	svcInstance *apiv1.ResourceInstance, revision *apiv1.ResourceInstance) error {
 	logger := m.logger.
 		WithField(serviceName, apiserviceName).
 		WithField(instanceName, svcInstance.Name).
 		WithField(revisionName, revision.Name)
 
-	apiSvcInst := mv1a.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
+	apiSvcInst := management.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
 	apiSvcInst.FromInstance(svcInstance)
 
 	specProcessor, err := getSpecParser(revision)
@@ -335,12 +335,12 @@ func (m *MarketplaceMigration) handleSvcInstance(
 }
 
 func (m *MarketplaceMigration) newInstanceSpec(
-	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	endpoints []management.ApiServiceInstanceSpecEndpoint,
 	revisionName,
 	ardRIName string,
 	credentialRequestDefinitions []string,
 ) map[string]interface{} {
-	newSpec := mv1a.ApiServiceInstanceSpec{
+	newSpec := management.ApiServiceInstanceSpec{
 		Endpoint:                     endpoints,
 		ApiServiceRevision:           revisionName,
 		CredentialRequestDefinitions: credentialRequestDefinitions,
@@ -369,7 +369,7 @@ func sortCompare(apiSvcInstCRDs, knownCRDs []string) bool {
 	return true
 }
 
-func getSpecParser(revision *v1.ResourceInstance) (apic.SpecProcessor, error) {
+func getSpecParser(revision *apiv1.ResourceInstance) (apic.SpecProcessor, error) {
 	specDefinitionType, ok := revision.Spec["definition"].(map[string]interface{})["type"].(string)
 	if !ok {
 		return nil, fmt.Errorf("could not get the spec definition type from apiservicerevision %s", revision.Name)

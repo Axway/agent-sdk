@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -622,9 +622,9 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 }
 
 func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
-	secret := v1alpha1.Secret{
+	secret := management.Secret{
 		ResourceMeta: v1.ResourceMeta{Name: "agentSecret"},
-		Spec: v1alpha1.SecretSpec{
+		Spec: management.SecretSpec{
 			Data: map[string]string{
 				"secretKey":               "secretValue",
 				"cachedSecretKey":         "cachedSecretValue",
@@ -641,7 +641,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 		},
 	}
 
-	environmentRes := &v1alpha1.Environment{
+	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
 			Name:     "test",
@@ -802,7 +802,7 @@ func newTestServer() *httptest.Server {
 		},
 	}
 
-	environmentRes := &v1alpha1.Environment{
+	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
 			Name:     "test",
@@ -810,9 +810,9 @@ func newTestServer() *httptest.Server {
 		},
 	}
 
-	secret := v1alpha1.Secret{
+	secret := management.Secret{
 		ResourceMeta: v1.ResourceMeta{Name: "agentSecret"},
-		Spec: v1alpha1.SecretSpec{
+		Spec: management.SecretSpec{
 			Data: map[string]string{
 				"secretKey":               "secretValue",
 				"cachedSecretKey":         "cachedSecretValue",

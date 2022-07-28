@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -17,18 +17,18 @@ func TestNewAPISvcHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
-		resource *v1.ResourceInstance
+		resource *apiv1.ResourceInstance
 		action   proto.Event_Type
 	}{
 		{
 			name:     "should save a ResourceClient that has an externalAPIID attribute, and no externalAPIPrimaryKey attribute",
 			hasError: false,
 			action:   proto.Event_CREATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.APIServiceGVK().Kind,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -44,11 +44,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 			name:     "should save a ResourceClient that has an externalAPIID attribute, and has the externalAPIPrimaryKey attribute",
 			hasError: false,
 			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.APIServiceGVK().Kind,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -65,11 +65,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 			name:     "should fail to save the item to the cache when the externalAPIID attribute is not found",
 			hasError: true,
 			action:   proto.Event_CREATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.APIServiceGVK().Kind,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -82,11 +82,11 @@ func TestNewAPISvcHandler(t *testing.T) {
 			name:     "should handle a delete action",
 			hasError: false,
 			action:   proto.Event_DELETED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.APIServiceGVK().Kind,
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.APIServiceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{
@@ -102,10 +102,10 @@ func TestNewAPISvcHandler(t *testing.T) {
 			name:     "should return nil when the ResourceClient kind is not an APIService",
 			hasError: false,
 			action:   proto.Event_CREATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
 							Kind: catalog.CategoryGVK().Kind,
 						},
 					},

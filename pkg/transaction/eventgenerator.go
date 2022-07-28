@@ -9,8 +9,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -237,7 +237,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 }
 
 // getAccessRequest -
-func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent LogEvent) (*v1alpha1.AccessRequest, *v1.ResourceInstance) {
+func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent LogEvent) (*management.AccessRequest, *v1.ResourceInstance) {
 	appName := unknown
 	apiID := summaryEvent.TransactionSummary.Proxy.ID
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
@@ -387,7 +387,7 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 }
 
 // updateWithProviderDetails -
-func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
+func updateWithProviderDetails(accessRequest *management.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
 
 	// Set default to provider details in case access request or managed apps comes back nil
 	summaryEvent.AssetResource = &models.AssetResource{
@@ -417,7 +417,7 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		return summaryEvent
 	}
 
-	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	productRef := accessRequest.GetReferenceByGVK(catalog.ProductGVK())
 	if productRef.ID == "" || productRef.Name == "" {
 		log.Trace("could not get product information, setting product to unknown")
 	} else {
@@ -425,7 +425,7 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		summaryEvent.Product.Name = productRef.Name
 	}
 
-	productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	productReleaseRef := accessRequest.GetReferenceByGVK(catalog.ProductReleaseGVK())
 	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
 		log.Trace("could not get product release information, setting product release to unknown")
 	} else {
@@ -439,7 +439,7 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("product-version-name", summaryEvent.Product.VersionName).
 		Trace("product information")
 
-	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
 	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
 		log.Trace("could not get asset resource, setting asset resource to unknown")
 	} else {
@@ -472,7 +472,7 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("apiservice", apisvc).
 		Trace("api details information")
 
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
 	if productPlanRef.ID == "" {
 		log.Debug("could not get product plan ID, setting product plan to unknown")
 	} else {
@@ -482,7 +482,7 @@ func updateWithProviderDetails(accessRequest *v1alpha1.AccessRequest, managedApp
 		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
 		Trace("product plan ID information")
 
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
 	if quotaRef.ID == "" {
 		log.Debug("could not get quota ID, setting quota to unknown")
 	} else {

@@ -7,7 +7,7 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
@@ -256,7 +256,7 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 	handler := NewAccessRequestHandler(ar, cm, c)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -378,7 +378,7 @@ const instRefID = "inst-id-1"
 const instRefName = "inst-name-1"
 const managedAppRefName = "managed-app-name"
 
-var instance = &mv1.APIServiceInstance{
+var instance = &management.APIServiceInstance{
 	ResourceMeta: v1.ResourceMeta{
 		Name: instRefName,
 		Metadata: v1.Metadata{
@@ -390,7 +390,7 @@ var instance = &mv1.APIServiceInstance{
 			},
 		},
 	},
-	Spec: mv1.ApiServiceInstanceSpec{
+	Spec: management.ApiServiceInstanceSpec{
 		AccessRequestDefinition: "ard",
 	},
 }
@@ -409,7 +409,7 @@ var mApp = &v1.ResourceInstance{
 	},
 }
 
-var accessReq = mv1.AccessRequest{
+var accessReq = management.AccessRequest{
 	ResourceMeta: v1.ResourceMeta{
 		Metadata: v1.Metadata{
 			ID: "11",
@@ -420,7 +420,7 @@ var accessReq = mv1.AccessRequest{
 				},
 			},
 			Scope: v1.MetadataScope{
-				Kind: mv1.EnvironmentGVK().Kind,
+				Kind: management.EnvironmentGVK().Kind,
 				Name: "env-1",
 			},
 		},
@@ -430,7 +430,7 @@ var accessReq = mv1.AccessRequest{
 			},
 		},
 	},
-	Spec: mv1.AccessRequestSpec{
+	Spec: management.AccessRequestSpec{
 		ApiServiceInstance: instRefName,
 		ManagedApplication: managedAppRefName,
 		Data:               map[string]interface{}{},
@@ -440,7 +440,7 @@ var accessReq = mv1.AccessRequest{
 	},
 }
 
-var ard = &mv1.AccessRequestDefinition{
+var ard = &management.AccessRequestDefinition{
 	ResourceMeta: v1.ResourceMeta{
 		Name: credAppRefName,
 		SubResources: map[string]interface{}{
@@ -450,9 +450,9 @@ var ard = &mv1.AccessRequestDefinition{
 		},
 	},
 	Owner: nil,
-	Spec: mv1.AccessRequestDefinitionSpec{
+	Spec: management.AccessRequestDefinitionSpec{
 		Schema: nil,
-		Provision: &mv1.AccessRequestDefinitionSpecProvision{
+		Provision: &management.AccessRequestDefinitionSpecProvision{
 			Schema: map[string]interface{}{
 				"properties": map[string]interface{}{},
 			},

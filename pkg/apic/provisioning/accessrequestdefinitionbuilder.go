@@ -3,13 +3,13 @@ package provisioning
 import (
 	"fmt"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // RegisterAccessRequestDefinition - the function signature used when calling the NewAccessRequestBuilder function
-type RegisterAccessRequestDefinition func(accessRequestDefinition *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error)
+type RegisterAccessRequestDefinition func(accessRequestDefinition *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error)
 
 type accessRequestDef struct {
 	name                   string
@@ -28,7 +28,7 @@ type AccessRequestBuilder interface {
 	SetRequestSchema(schema SchemaBuilder) AccessRequestBuilder
 	SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder
 	SetProvisionSchemaToRequestSchema() AccessRequestBuilder
-	Register() (*v1alpha1.AccessRequestDefinition, error)
+	Register() (*management.AccessRequestDefinition, error)
 }
 
 // NewAccessRequestBuilder - called by the agent package and sends in the function that registers this access request
@@ -96,7 +96,7 @@ func (a *accessRequestDef) SetProvisionSchema(schema SchemaBuilder) AccessReques
 }
 
 // Register - create the access request defintion and send it to Central
-func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error) {
+func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, error) {
 	if a.err != nil {
 		return nil, a.err
 	}
@@ -117,9 +117,9 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.title = a.name
 	}
 
-	spec := v1alpha1.AccessRequestDefinitionSpec{
+	spec := management.AccessRequestDefinitionSpec{
 		Schema: a.requestSchema,
-		Provision: &v1alpha1.AccessRequestDefinitionSpecProvision{
+		Provision: &management.AccessRequestDefinitionSpecProvision{
 			Schema: a.provisionSchema,
 		},
 	}
@@ -130,7 +130,7 @@ func (a *accessRequestDef) Register() (*v1alpha1.AccessRequestDefinition, error)
 		a.name = util.ConvertUnitToString(hashInt)
 	}
 
-	ard := v1alpha1.NewAccessRequestDefinition(a.name, "")
+	ard := management.NewAccessRequestDefinition(a.name, "")
 	ard.Title = a.title
 	ard.Spec = spec
 

@@ -14,7 +14,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	uc "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -120,9 +120,9 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(subsRelations)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/11111") {
-			apiserverRes := &v1alpha1.ConsumerInstance{
+			apiserverRes := &management.ConsumerInstance{
 				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
+					GroupVersionKind: management.ConsumerInstanceGVK(),
 					Name:             "11111",
 					Title:            "ConsumerInstance_11111",
 					Metadata: v1.Metadata{
@@ -144,9 +144,9 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/consumerinstances/22222") {
-			apiserverRes := &v1alpha1.ConsumerInstance{
+			apiserverRes := &management.ConsumerInstance{
 				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1alpha1.ConsumerInstanceGVK(),
+					GroupVersionKind: management.ConsumerInstanceGVK(),
 					Name:             "22222",
 					Title:            "ConsumerInstance_22222",
 					Metadata: v1.Metadata{
@@ -168,9 +168,9 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/apiserviceinstances/11111") {
-			apiserverRes := &v1alpha1.APIServiceInstance{
+			apiserverRes := &management.APIServiceInstance{
 				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
+					GroupVersionKind: management.APIServiceInstanceGVK(),
 					Name:             "11111",
 					Title:            "APIServiceInstance_11111",
 					Metadata: v1.Metadata{
@@ -186,9 +186,9 @@ func TestSubscriptionManagerPollPublishToEnvironmentMode(t *testing.T) {
 			b, _ = json.Marshal(apiserverRes)
 		}
 		if strings.Contains(req.RequestURI, "/apiserviceinstances/22222") {
-			apiserverRes := &v1alpha1.APIServiceInstance{
+			apiserverRes := &management.APIServiceInstance{
 				ResourceMeta: v1.ResourceMeta{
-					GroupVersionKind: v1alpha1.APIServiceInstanceGVK(),
+					GroupVersionKind: management.APIServiceInstanceGVK(),
 					Name:             "22222",
 					Title:            "APIServiceInstance_2222",
 					Metadata: v1.Metadata{

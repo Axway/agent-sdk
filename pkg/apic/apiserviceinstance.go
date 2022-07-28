@@ -9,8 +9,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -18,9 +18,9 @@ import (
 
 func buildAPIServiceInstanceSpec(
 	serviceBody *ServiceBody,
-	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
-) mv1a.ApiServiceInstanceSpec {
-	return mv1a.ApiServiceInstanceSpec{
+	endpoints []management.ApiServiceInstanceSpecEndpoint,
+) management.ApiServiceInstanceSpec {
+	return management.ApiServiceInstanceSpec{
 		ApiServiceRevision: serviceBody.serviceContext.revisionName,
 		Endpoint:           endpoints,
 	}
@@ -28,10 +28,10 @@ func buildAPIServiceInstanceSpec(
 
 func buildAPIServiceInstanceMarketplaceSpec(
 	serviceBody *ServiceBody,
-	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
+	endpoints []management.ApiServiceInstanceSpecEndpoint,
 	knownCRDs []string,
-) mv1a.ApiServiceInstanceSpec {
-	return mv1a.ApiServiceInstanceSpec{
+) management.ApiServiceInstanceSpec {
+	return management.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endpoints,
 		CredentialRequestDefinitions: knownCRDs,
@@ -66,11 +66,11 @@ func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
 func (c *ServiceClient) buildAPIServiceInstance(
 	serviceBody *ServiceBody,
 	name string,
-	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
-) *mv1a.APIServiceInstance {
-	finalizer := make([]v1.Finalizer, 0)
+	endpoints []management.ApiServiceInstanceSpecEndpoint,
+) *management.APIServiceInstance {
+	finalizer := make([]apiv1.Finalizer, 0)
 	if serviceBody.uniqueARD {
-		finalizer = append(finalizer, v1.Finalizer{
+		finalizer = append(finalizer, apiv1.Finalizer{
 			Name:        AccessRequestDefinitionFinalizer,
 			Description: serviceBody.ardName,
 		})
@@ -83,17 +83,17 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	}
 
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
-	instance := &mv1a.APIServiceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1a.APIServiceInstanceGVK(),
+	instance := &management.APIServiceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.APIServiceInstanceGVK(),
 			Name:             name,
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
 			Finalizers:       finalizer,
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1a.EnvironmentGVK().Kind,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
 					Name: c.cfg.GetEnvironmentName(),
 				},
 			},
@@ -111,11 +111,11 @@ func (c *ServiceClient) buildAPIServiceInstance(
 
 func (c *ServiceClient) updateAPIServiceInstance(
 	serviceBody *ServiceBody,
-	instance *mv1a.APIServiceInstance,
-	endpoints []mv1a.ApiServiceInstanceSpecEndpoint,
-) *mv1a.APIServiceInstance {
+	instance *management.APIServiceInstance,
+	endpoints []management.ApiServiceInstanceSpecEndpoint,
+) *management.APIServiceInstance {
 	owner, _ := c.getOwnerObject(serviceBody, false)
-	instance.GroupVersionKind = mv1a.APIServiceInstanceGVK()
+	instance.GroupVersionKind = management.APIServiceInstanceGVK()
 	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
@@ -190,19 +190,19 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	return err
 }
 
-func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceInstanceSpecEndpoint, error) {
-	endPoints := make([]mv1a.ApiServiceInstanceSpecEndpoint, 0)
+func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiServiceInstanceSpecEndpoint, error) {
+	endPoints := make([]management.ApiServiceInstanceSpecEndpoint, 0)
 	var err error
 
 	// To set your own endpoints call AddServiceEndpoint/SetServiceEndpoint on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(endpoints) > 0 {
 		for _, endpointDef := range endpoints {
-			ep := mv1a.ApiServiceInstanceSpecEndpoint{
+			ep := management.ApiServiceInstanceSpecEndpoint{
 				Host:     endpointDef.Host,
 				Port:     endpointDef.Port,
 				Protocol: endpointDef.Protocol,
-				Routing: mv1a.ApiServiceInstanceSpecRouting{
+				Routing: management.ApiServiceInstanceSpecRouting{
 					BasePath: endpointDef.BasePath,
 				},
 			}
@@ -219,7 +219,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]mv1a.ApiServiceIn
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*mv1a.APIServiceInstance, error) {
+func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	// start from latest revision, find first instance
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
 		queryParams := map[string]string{
@@ -239,7 +239,7 @@ func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*
 }
 
 // GetAPIServiceInstanceByName - Returns the API service instance for specified name
-func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*mv1a.APIServiceInstance, error) {
+func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -262,7 +262,7 @@ func (c *ServiceClient) GetAPIServiceInstanceByName(name string) (*mv1a.APIServi
 		}
 		return nil, nil
 	}
-	apiInstance := new(mv1a.APIServiceInstance)
+	apiInstance := new(management.APIServiceInstance)
 	err = json.Unmarshal(response.Body, apiInstance)
 	return apiInstance, err
 }

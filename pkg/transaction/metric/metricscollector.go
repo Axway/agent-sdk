@@ -15,8 +15,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -246,7 +246,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		Name: unknown,
 	}
 	if accessRequest != nil {
-		subRef = accessRequest.GetReferenceByGVK(cv1.SubscriptionGVK())
+		subRef = accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
 	}
 
 	subscriptionID := subRef.ID
@@ -298,7 +298,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 }
 
 // getAccessRequest -
-func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail Detail) (*v1alpha1.AccessRequest, *v1.ResourceInstance) {
+func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail Detail) (*management.AccessRequest, *v1.ResourceInstance) {
 
 	c.logger.
 		WithField("apiID", detail.APIDetails.ID).
@@ -361,7 +361,7 @@ func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
 	return detail
 }
 
-func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRequest) APIDetails {
+func (c *collector) createAPIDetail(api APIDetails, accessReq *management.AccessRequest) APIDetails {
 	detail := APIDetails{
 		ID:                 api.ID,
 		Name:               api.Name,
@@ -376,33 +376,7 @@ func (c *collector) createAPIDetail(api APIDetails, accessReq *v1alpha1.AccessRe
 	return detail
 }
 
-func (c *collector) getPublishedProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
-	publishedProduct := models.Product{
-		ID:   unknown,
-		Name: unknown,
-	}
-	if accessRequest == nil {
-		log.Trace("access request is nil. Setting default values to unknown")
-		return publishedProduct
-	}
-
-	publishProductRef := accessRequest.GetReferenceByGVK(cv1.PublishedProductGVK())
-	if publishProductRef.ID == "" || publishProductRef.Name == "" {
-		log.Debug("could not get published product, setting published product to unknown")
-	} else {
-		publishedProduct.ID = publishProductRef.ID
-		publishedProduct.Name = publishProductRef.Name
-	}
-
-	log.
-		WithField("published-product-id", publishedProduct.ID).
-		WithField("published-product-name", publishedProduct.Name).
-		Trace("published product information")
-
-	return publishedProduct
-}
-
-func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.AssetResource {
+func (c *collector) getAssetResource(accessRequest *management.AccessRequest, log log.FieldLogger) models.AssetResource {
 	// Set default to provider details in case access request or managed apps comes back nil
 	assetResource := models.AssetResource{
 		ID:   unknown,
@@ -414,7 +388,7 @@ func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log 
 		return assetResource
 	}
 
-	assetResourceRef := accessRequest.GetReferenceByGVK(cv1.AssetResourceGVK())
+	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
 	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
 		log.Trace("could not get asset resource, setting asset resource to unknown")
 	} else {
@@ -428,7 +402,7 @@ func (c *collector) getAssetResource(accessRequest *v1alpha1.AccessRequest, log 
 	return assetResource
 }
 
-func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Product {
+func (c *collector) getProduct(accessRequest *management.AccessRequest, log log.FieldLogger) models.Product {
 	product := models.Product{
 		ID:          unknown,
 		Name:        unknown,
@@ -441,7 +415,7 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.Fi
 		return product
 	}
 
-	productRef := accessRequest.GetReferenceByGVK(cv1.ProductGVK())
+	productRef := accessRequest.GetReferenceByGVK(catalog.ProductGVK())
 	if productRef.ID == "" || productRef.Name == "" {
 		log.Trace("could not get product information, setting product to unknown")
 	} else {
@@ -449,7 +423,7 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.Fi
 		product.Name = productRef.Name
 	}
 
-	productReleaseRef := accessRequest.GetReferenceByGVK(cv1.ProductReleaseGVK())
+	productReleaseRef := accessRequest.GetReferenceByGVK(catalog.ProductReleaseGVK())
 	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
 		log.Trace("could not get product release information, setting product release to unknown")
 	} else {
@@ -465,7 +439,7 @@ func (c *collector) getProduct(accessRequest *v1alpha1.AccessRequest, log log.Fi
 
 }
 
-func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.ProductPlan {
+func (c *collector) getProductPlan(accessRequest *management.AccessRequest, log log.FieldLogger) models.ProductPlan {
 	productPlan := models.ProductPlan{
 		ID: unknown,
 	}
@@ -475,7 +449,7 @@ func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, log lo
 		return productPlan
 	}
 
-	productPlanRef := accessRequest.GetReferenceByGVK(cv1.ProductPlanGVK())
+	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
 	if productPlanRef.ID == "" {
 		log.Debug("could not get product plan ID, setting product plan to unknown")
 	} else {
@@ -487,7 +461,7 @@ func (c *collector) getProductPlan(accessRequest *v1alpha1.AccessRequest, log lo
 	return productPlan
 }
 
-func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, log log.FieldLogger) models.Quota {
+func (c *collector) getQuota(accessRequest *management.AccessRequest, log log.FieldLogger) models.Quota {
 	quota := models.Quota{
 		ID: unknown,
 	}
@@ -495,7 +469,7 @@ func (c *collector) getQuota(accessRequest *v1alpha1.AccessRequest, log log.Fiel
 		log.Trace("access request or managed app is nil. Setting default values to unknown")
 		return quota
 	}
-	quotaRef := accessRequest.GetReferenceByGVK(cv1.QuotaGVK())
+	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
 	if quotaRef.ID == "" {
 		log.Debug("could not get quota ID, setting quota to unknown")
 	} else {
@@ -811,7 +785,7 @@ func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
 	}
 
 	// Lookup Subscription
-	app := &v1alpha1.ManagedApplication{}
+	app := &management.ManagedApplication{}
 	app.FromInstance(ri)
 
 	return app.Marketplace.Resource.Owner.Organization.Id
@@ -824,7 +798,7 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, str
 
 	for _, ref := range ri.Metadata.References {
 		// get the ID of the Catalog Application
-		if ref.Kind == cv1.ApplicationGVK().Kind {
+		if ref.Kind == catalog.ApplicationGVK().Kind {
 			return ref.ID, ref.Name
 		}
 	}

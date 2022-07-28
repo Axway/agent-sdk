@@ -21,7 +21,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -45,13 +45,13 @@ type StreamerClient struct {
 	watchCfg                *wm.Config
 	watchOpts               []wm.Option
 	cacheManager            agentcache.Manager
-	loadOnStartup           []v1alpha1.WatchTopicSpecFilters
+	loadOnStartup           []management.WatchTopicSpecFilters
 	resourcesOnStartupTimer *time.Timer
 	fetchOnStartupPageSize  int
 	fetchOnStartupRetention time.Duration
 	logger                  log.FieldLogger
 	environmentURL          string
-	wt                      *v1alpha1.WatchTopic
+	wt                      *management.WatchTopic
 	harvester               harvester.Harvest
 	onEventSyncError        func()
 	mutex                   sync.RWMutex
@@ -83,7 +83,7 @@ func NewStreamerClient(
 		handlers:                handlers,
 		apiClient:               apiClient,
 		watchCfg:                watchCfg,
-		loadOnStartup:           make([]v1alpha1.WatchTopicSpecFilters, 0),
+		loadOnStartup:           make([]management.WatchTopicSpecFilters, 0),
 		newManager:              wm.New,
 		newListener:             events.NewEventListener,
 		logger:                  logger,
@@ -120,7 +120,7 @@ func NewStreamerClient(
 	if cfg.IsFetchOnStartupEnabled() && s.wt != nil {
 		for _, filter := range s.wt.Spec.Filters {
 			for _, ftype := range filter.Type {
-				if filter.Scope.Kind == v1alpha1.EnvironmentGVK().Kind &&
+				if filter.Scope.Kind == management.EnvironmentGVK().Kind &&
 					(ftype == events.WatchTopicFilterTypeCreated || ftype == events.WatchTopicFilterTypeUpdated) {
 					s.loadOnStartup = append(s.loadOnStartup, filter)
 					break

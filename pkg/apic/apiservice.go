@@ -10,39 +10,39 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func buildAPIServiceSpec(serviceBody *ServiceBody) mv1a.ApiServiceSpec {
+func buildAPIServiceSpec(serviceBody *ServiceBody) management.ApiServiceSpec {
 	if serviceBody.Image != "" {
-		return mv1a.ApiServiceSpec{
+		return management.ApiServiceSpec{
 			Description: serviceBody.Description,
-			Icon: mv1a.ApiServiceSpecIcon{
+			Icon: management.ApiServiceSpecIcon{
 				ContentType: serviceBody.ImageContentType,
 				Data:        serviceBody.Image,
 			},
 		}
 	}
-	return mv1a.ApiServiceSpec{
+	return management.ApiServiceSpec{
 		Description: serviceBody.Description,
 	}
 }
 
-func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *mv1a.APIService {
+func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.APIService {
 	owner, ownerErr := c.getOwnerObject(serviceBody, true)
-	svc := &mv1a.APIService{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1a.APIServiceGVK(),
+	svc := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
-			Metadata: v1.Metadata{
-				Scope: v1.MetadataScope{
-					Kind: mv1a.EnvironmentGVK().Kind,
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
 					Name: c.cfg.GetEnvironmentName(),
 				},
 			},
@@ -68,10 +68,10 @@ func (c *ServiceClient) setMigrationFlags(svcDetails map[string]interface{}) {
 	}
 }
 
-func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (*v1.Owner, error) {
+func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (*apiv1.Owner, error) {
 	if id, found := c.getTeamFromCache(serviceBody.TeamName); found {
-		return &v1.Owner{
-			Type: v1.TeamOwner,
+		return &apiv1.Owner{
+			Type: apiv1.TeamOwner,
 			ID:   id,
 		}, nil
 	} else if warning {
@@ -83,10 +83,10 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (
 	return nil, nil
 }
 
-func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.APIService) {
+func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *management.APIService) {
 	owner, ownerErr := c.getOwnerObject(serviceBody, true)
 
-	svc.GroupVersionKind = mv1a.APIServiceGVK()
+	svc.GroupVersionKind = management.APIServiceGVK()
 	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
 	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
@@ -100,24 +100,24 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *mv1a.API
 	util.SetAgentDetails(svc, sub)
 
 	if serviceBody.Image != "" {
-		svc.Spec.Icon = mv1a.ApiServiceSpecIcon{
+		svc.Spec.Icon = management.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
 		}
 	}
 }
 
-func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
+func buildAPIServiceStatusSubResource(ownerErr error) *apiv1.ResourceStatus {
 	// only set status if ownerErr != nil
 	if ownerErr != nil {
 		// get current time
 		activityTime := time.Now()
-		newV1Time := v1.Time(activityTime)
+		newV1Time := apiv1.Time(activityTime)
 		message := ownerErr.Error()
 		level := "Error"
-		return &v1.ResourceStatus{
+		return &apiv1.ResourceStatus{
 			Level: level,
-			Reasons: []v1.ResourceStatusReason{
+			Reasons: []apiv1.ResourceStatusReason{
 				{
 					Type:      level,
 					Detail:    message,
@@ -130,7 +130,7 @@ func buildAPIServiceStatusSubResource(ownerErr error) *v1.ResourceStatus {
 }
 
 // processService -
-func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIService, error) {
+func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.APIService, error) {
 	// Default action to create service
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
@@ -172,7 +172,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*mv1a.APIServi
 	return svc, err
 }
 
-func (c *ServiceClient) updateAPIServiceSubresources(svc *mv1a.APIService) error {
+func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService) error {
 	subResources := make(map[string]interface{})
 	if svc.Status != nil {
 		subResources["status"] = svc.Status
@@ -189,27 +189,27 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *mv1a.APIService) error
 	}
 	return nil
 }
-func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*mv1a.APIService, error) {
+func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*management.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
 		return nil, nil
 	}
-	apiSvc := &mv1a.APIService{}
+	apiSvc := &management.APIService{}
 	err := apiSvc.FromInstance(ri)
 	return apiSvc, err
 }
 
-func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*mv1a.APIService, error) {
+func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*management.APIService, error) {
 	ri := c.caches.GetAPIServiceWithPrimaryKey(primaryKey)
 	if ri == nil {
 		return nil, nil
 	}
-	apiSvc := &mv1a.APIService{}
+	apiSvc := &management.APIService{}
 	err := apiSvc.FromInstance(ri)
 	return apiSvc, err
 }
 
-func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*mv1a.APIService, error) {
+func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*management.APIService, error) {
 	if serviceBody.PrimaryKey != "" {
 		apiService, err := c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
 		if apiService != nil && err == nil {
@@ -225,7 +225,7 @@ func (c *ServiceClient) rollbackAPIService(name string) (string, error) {
 }
 
 // GetAPIServiceByName - Returns the API service based on its name
-func (c *ServiceClient) GetAPIServiceByName(name string) (*mv1a.APIService, error) {
+func (c *ServiceClient) GetAPIServiceByName(name string) (*management.APIService, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func (c *ServiceClient) GetAPIServiceByName(name string) (*mv1a.APIService, erro
 		}
 		return nil, nil
 	}
-	apiService := new(mv1a.APIService)
+	apiService := new(management.APIService)
 	err = json.Unmarshal(response.Body, apiService)
 	return apiService, err
 }

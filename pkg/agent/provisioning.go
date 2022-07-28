@@ -5,8 +5,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
@@ -48,9 +47,9 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 // migrateMarketPlace -
 func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
 	switch ri.Kind {
-	case mv1a.AccessRequestDefinitionGVK().Kind:
+	case management.AccessRequestDefinitionGVK().Kind:
 		agent.cacheManager.AddAccessRequestDefinition(ri)
-	case mv1a.CredentialRequestDefinitionGVK().Kind:
+	case management.CredentialRequestDefinitionGVK().Kind:
 		agent.cacheManager.AddCredentialRequestDefinition(ri)
 	}
 
@@ -102,7 +101,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 }
 
 // createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error) {
+func createOrUpdateCredentialRequestDefinition(data *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
 	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err
@@ -349,7 +348,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 // access request definitions
 
 // createOrUpdateAccessRequestDefinition -
-func createOrUpdateAccessRequestDefinition(data *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
+func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
 	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
 	if ri == nil || err != nil {
 		return nil, err

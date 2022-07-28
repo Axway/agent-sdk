@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -16,23 +16,23 @@ func TestCRDHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
-		resource *v1.ResourceInstance
+		resource *apiv1.ResourceInstance
 		action   proto.Event_Type
 	}{
 		{
 			name:     "should save an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_CREATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					Metadata: v1.Metadata{
+					Metadata: apiv1.Metadata{
 						ID: "123",
 					},
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
@@ -42,16 +42,16 @@ func TestCRDHandler(t *testing.T) {
 			name:     "should update an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					Metadata: v1.Metadata{
+					Metadata: apiv1.Metadata{
 						ID: "123",
 					},
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
@@ -61,16 +61,16 @@ func TestCRDHandler(t *testing.T) {
 			name:     "should delete an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_DELETED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					Metadata: v1.Metadata{
+					Metadata: apiv1.Metadata{
 						ID: "123",
 					},
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.CredentialRequestDefinitionGVK().Kind,
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.CredentialRequestDefinitionGVK().Kind,
 						},
 					},
 				},
@@ -80,15 +80,15 @@ func TestCRDHandler(t *testing.T) {
 			name:     "should return nil when the kind is not an Credential Request Definition",
 			hasError: false,
 			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					Metadata: v1.Metadata{
+					Metadata: apiv1.Metadata{
 						ID: "123",
 					},
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
 							Kind: catalog.CategoryGVK().Kind,
 						},
 					},

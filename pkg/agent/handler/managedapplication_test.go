@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
@@ -134,8 +134,8 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app := managedAppForTest
 			app.Status.Level = prov.Success.String()
-			app.Metadata.State = v1.ResourceDeleting
-			app.Finalizers = []v1.Finalizer{{Name: maFinalizer}}
+			app.Metadata.State = apiv1.ResourceDeleting
+			app.Finalizers = []apiv1.Finalizer{{Name: maFinalizer}}
 
 			status := mock.MockRequestStatus{
 				Status: tc.outboundStatus,
@@ -185,9 +185,9 @@ func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 	}
 	p := &mockManagedAppProv{}
 	handler := NewManagedApplicationHandler(p, cm, c)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -246,13 +246,13 @@ var team = &defs.PlatformTeam{
 	Default: true,
 }
 
-var managedAppForTest = mv1.ManagedApplication{
-	ResourceMeta: v1.ResourceMeta{
+var managedAppForTest = management.ManagedApplication{
+	ResourceMeta: apiv1.ResourceMeta{
 		Name: "app-test",
-		Metadata: v1.Metadata{
+		Metadata: apiv1.Metadata{
 			ID: "11",
-			Scope: v1.MetadataScope{
-				Kind: mv1.EnvironmentGVK().Kind,
+			Scope: apiv1.MetadataScope{
+				Kind: management.EnvironmentGVK().Kind,
 				Name: "env-1",
 			},
 		},
@@ -262,12 +262,12 @@ var managedAppForTest = mv1.ManagedApplication{
 			},
 		},
 	},
-	Owner: &v1.Owner{
+	Owner: &apiv1.Owner{
 		Type: 0,
 		ID:   team.ID,
 	},
-	Spec: mv1.ManagedApplicationSpec{},
-	Status: &v1.ResourceStatus{
+	Spec: management.ManagedApplicationSpec{},
+	Status: &apiv1.ResourceStatus{
 		Level: prov.Pending.String(),
 	},
 }

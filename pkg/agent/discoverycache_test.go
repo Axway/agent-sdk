@@ -10,7 +10,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +28,7 @@ func TestDiscoveryCache_execute(t *testing.T) {
 		accessReqCount  int
 		credCount       int
 		withMigration   bool
-		wt              *mv1.WatchTopic
+		wt              *management.WatchTopic
 	}{
 		{
 			name:            "should fetch resources based on the watch topic",
@@ -78,16 +78,16 @@ func TestDiscoveryCache_execute(t *testing.T) {
 				creds:       newCredentials(scopeName),
 			}
 			svcHandler := &mockHandler{
-				kind: mv1.APIServiceGVK().Kind,
+				kind: management.APIServiceGVK().Kind,
 			}
 			managedAppHandler := &mockHandler{
-				kind: mv1.ManagedApplicationGVK().Kind,
+				kind: management.ManagedApplicationGVK().Kind,
 			}
 			accessReqHandler := &mockHandler{
-				kind: mv1.AccessRequestGVK().Kind,
+				kind: management.AccessRequestGVK().Kind,
 			}
 			credHandler := &mockHandler{
-				kind: mv1.CredentialGVK().Kind,
+				kind: management.CredentialGVK().Kind,
 			}
 
 			handlers := []handler.Handler{
@@ -148,32 +148,32 @@ func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.Re
 }
 
 func newAPIServices(scope string) []*apiv1.ResourceInstance {
-	svc1, _ := mv1.NewAPIService("svc1", scope).AsInstance()
-	svc2, _ := mv1.NewAPIService("svc2", scope).AsInstance()
+	svc1, _ := management.NewAPIService("svc1", scope).AsInstance()
+	svc2, _ := management.NewAPIService("svc2", scope).AsInstance()
 	return []*apiv1.ResourceInstance{
 		svc1, svc2,
 	}
 }
 
 func newManagedApps(scope string) []*apiv1.ResourceInstance {
-	app1, _ := mv1.NewManagedApplication("app1", scope).AsInstance()
-	app2, _ := mv1.NewManagedApplication("app2", scope).AsInstance()
+	app1, _ := management.NewManagedApplication("app1", scope).AsInstance()
+	app2, _ := management.NewManagedApplication("app2", scope).AsInstance()
 	return []*apiv1.ResourceInstance{
 		app1, app2,
 	}
 }
 
 func newAccessReqs(scope string) []*apiv1.ResourceInstance {
-	ar1, _ := mv1.NewAccessRequest("ar1", scope).AsInstance()
-	ar2, _ := mv1.NewAccessRequest("ar2", scope).AsInstance()
+	ar1, _ := management.NewAccessRequest("ar1", scope).AsInstance()
+	ar2, _ := management.NewAccessRequest("ar2", scope).AsInstance()
 	return []*apiv1.ResourceInstance{
 		ar1, ar2,
 	}
 }
 
 func newCredentials(scope string) []*apiv1.ResourceInstance {
-	cred1, _ := mv1.NewCredential("cred1", scope).AsInstance()
-	cred2, _ := mv1.NewCredential("cred2", scope).AsInstance()
+	cred1, _ := management.NewCredential("cred1", scope).AsInstance()
+	cred2, _ := management.NewCredential("cred2", scope).AsInstance()
 	return []*apiv1.ResourceInstance{
 		cred1, cred2,
 	}
@@ -213,44 +213,44 @@ func (m *mockMigrator) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInsta
 	return ri, nil
 }
 
-var mpWatchTopic = &mv1.WatchTopic{
+var mpWatchTopic = &management.WatchTopic{
 	ResourceMeta: apiv1.ResourceMeta{},
 	Owner:        nil,
-	Spec: mv1.WatchTopicSpec{
+	Spec: management.WatchTopicSpec{
 		Description: "",
-		Filters: []mv1.WatchTopicSpecFilters{
+		Filters: []management.WatchTopicSpecFilters{
 			{
 				Group: "management",
-				Kind:  mv1.APIServiceGVK().Kind,
+				Kind:  management.APIServiceGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: envName,
 				},
 			},
 			{
 				Group: "management",
-				Kind:  mv1.ManagedApplicationGVK().Kind,
+				Kind:  management.ManagedApplicationGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: envName,
 				},
 			},
 			{
 				Group: "management",
-				Kind:  mv1.AccessRequestGVK().Kind,
+				Kind:  management.AccessRequestGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: envName,
 				},
 			},
 			{
 				Group: "management",
-				Kind:  mv1.CredentialGVK().Kind,
+				Kind:  management.CredentialGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: envName,
 				},
@@ -259,17 +259,17 @@ var mpWatchTopic = &mv1.WatchTopic{
 	},
 }
 
-var watchTopicNoMP = &mv1.WatchTopic{
+var watchTopicNoMP = &management.WatchTopic{
 	ResourceMeta: apiv1.ResourceMeta{},
 	Owner:        nil,
-	Spec: mv1.WatchTopicSpec{
+	Spec: management.WatchTopicSpec{
 		Description: "",
-		Filters: []mv1.WatchTopicSpecFilters{
+		Filters: []management.WatchTopicSpecFilters{
 			{
 				Group: "management",
-				Kind:  mv1.APIServiceGVK().Kind,
+				Kind:  management.APIServiceGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: envName,
 				},

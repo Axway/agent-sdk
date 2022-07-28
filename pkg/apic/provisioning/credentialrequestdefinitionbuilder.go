@@ -3,13 +3,13 @@ package provisioning
 import (
 	"fmt"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
-type RegisterCredentialRequestDefinition func(credentialRequestDefinition *v1alpha1.CredentialRequestDefinition) (*v1alpha1.CredentialRequestDefinition, error)
+type RegisterCredentialRequestDefinition func(credentialRequestDefinition *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error)
 
 type credentialRequestDef struct {
 	name            string
@@ -29,7 +29,7 @@ type CredentialRequestBuilder interface {
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
-	Register() (*v1alpha1.CredentialRequestDefinition, error)
+	Register() (*management.CredentialRequestDefinition, error)
 }
 
 // NewCRDBuilder - called by the agent package and sends in the function that registers this credential request
@@ -97,7 +97,7 @@ func (c *credentialRequestDef) AddWebhook(webhook string) CredentialRequestBuild
 }
 
 // Register - create the credential request defintion and send it to Central
-func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition, error) {
+func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -106,9 +106,9 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
-	spec := v1alpha1.CredentialRequestDefinitionSpec{
+	spec := management.CredentialRequestDefinitionSpec{
 		Schema: c.requestSchema,
-		Provision: &v1alpha1.CredentialRequestDefinitionSpecProvision{
+		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
 		},
 	}
@@ -119,7 +119,7 @@ func (c *credentialRequestDef) Register() (*v1alpha1.CredentialRequestDefinition
 		c.title = c.name
 	}
 
-	crd := v1alpha1.NewCredentialRequestDefinition(c.name, "")
+	crd := management.NewCredentialRequestDefinition(c.name, "")
 	crd.Title = c.title
 	crd.Spec = spec
 

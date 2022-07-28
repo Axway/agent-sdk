@@ -16,7 +16,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 
@@ -49,7 +49,7 @@ func NewConfigWithLoadOnStartup() config.CentralConfiguration {
 // should create a new streamer and call Start
 func TestNewStreamer(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{}
+	wt := &management.WatchTopic{}
 	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
 	cacheManager := agentcache.NewAgentCacheManager(&cfg, false)
@@ -112,14 +112,14 @@ func TestNewStreamer(t *testing.T) {
 
 func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{
-		Spec: mv1.WatchTopicSpec{
-			Filters: []mv1.WatchTopicSpecFilters{
+	wt := &management.WatchTopic{
+		Spec: management.WatchTopicSpec{
+			Filters: []management.WatchTopicSpecFilters{
 				{
 					Name: "*",
-					Kind: mv1.AccessRequestGVK().Kind,
-					Scope: &mv1.WatchTopicSpecScope{
-						Kind: mv1.EnvironmentGVK().Kind,
+					Kind: management.AccessRequestGVK().Kind,
+					Scope: &management.WatchTopicSpecScope{
+						Kind: management.EnvironmentGVK().Kind,
 						Name: "mock",
 					},
 					Type: []string{events.WatchTopicFilterTypeCreated},
@@ -185,14 +185,14 @@ func TestNewStreamerWithFetchOnStartup(t *testing.T) {
 
 func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{
-		Spec: mv1.WatchTopicSpec{
-			Filters: []mv1.WatchTopicSpecFilters{
+	wt := &management.WatchTopic{
+		Spec: management.WatchTopicSpec{
+			Filters: []management.WatchTopicSpecFilters{
 				{
 					Name: "*",
-					Kind: mv1.AccessRequestGVK().Kind,
-					Scope: &mv1.WatchTopicSpecScope{
-						Kind: mv1.EnvironmentGVK().Kind,
+					Kind: management.AccessRequestGVK().Kind,
+					Scope: &management.WatchTopicSpecScope{
+						Kind: management.EnvironmentGVK().Kind,
 						Name: "mock",
 					},
 					Type: []string{events.WatchTopicFilterTypeCreated},
@@ -250,14 +250,14 @@ func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) 
 
 func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{
-		Spec: mv1.WatchTopicSpec{
-			Filters: []mv1.WatchTopicSpecFilters{
+	wt := &management.WatchTopic{
+		Spec: management.WatchTopicSpec{
+			Filters: []management.WatchTopicSpecFilters{
 				{
 					Name: "*",
-					Kind: mv1.AccessRequestGVK().Kind,
-					Scope: &mv1.WatchTopicSpecScope{
-						Kind: mv1.EnvironmentGVK().Kind,
+					Kind: management.AccessRequestGVK().Kind,
+					Scope: &management.WatchTopicSpecScope{
+						Kind: management.EnvironmentGVK().Kind,
 						Name: "mock",
 					},
 					Type: []string{events.WatchTopicFilterTypeDeleted}, // deleted => hence nothing to load
@@ -310,14 +310,14 @@ func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
 
 func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
 	getToken := &mockTokenGetter{}
-	wt := &mv1.WatchTopic{
-		Spec: mv1.WatchTopicSpec{
-			Filters: []mv1.WatchTopicSpecFilters{
+	wt := &management.WatchTopic{
+		Spec: management.WatchTopicSpec{
+			Filters: []management.WatchTopicSpecFilters{
 				{
 					Name: "foo",
-					Kind: mv1.AccessRequestGVK().Kind,
-					Scope: &mv1.WatchTopicSpecScope{
-						Kind: mv1.EnvironmentGVK().Kind,
+					Kind: management.AccessRequestGVK().Kind,
+					Scope: &management.WatchTopicSpecScope{
+						Kind: management.EnvironmentGVK().Kind,
 						Name: "mock",
 					},
 					Type: []string{events.WatchTopicFilterTypeCreated},

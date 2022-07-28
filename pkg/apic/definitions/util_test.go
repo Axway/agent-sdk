@@ -3,7 +3,7 @@ package definitions
 import (
 	"testing"
 
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,9 +12,9 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	assert.Equal(t, "", subscriptionName)
 
 	// Reference from group other than catalog
-	ar := &mv1.AccessRequest{
+	ar := &management.AccessRequest{
 		References: []interface{}{
-			mv1.AccessRequestReferencesSubscription{
+			management.AccessRequestReferencesSubscription{
 				Kind: Subscription,
 				Name: "management/test",
 			},
@@ -24,9 +24,9 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	assert.Equal(t, "", subscriptionName)
 
 	// Reference from catalog group
-	ar = &mv1.AccessRequest{
+	ar = &management.AccessRequest{
 		References: []interface{}{
-			mv1.AccessRequestReferencesSubscription{
+			management.AccessRequestReferencesSubscription{
 				Kind: Subscription,
 				Name: "catalog/test",
 			},
@@ -35,9 +35,9 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	subscriptionName = GetSubscriptionNameFromAccessRequest(ar)
 	assert.Equal(t, "test", subscriptionName)
 
-	ar = &mv1.AccessRequest{
+	ar = &management.AccessRequest{
 		References: []interface{}{
-			&mv1.AccessRequestReferencesSubscription{
+			&management.AccessRequestReferencesSubscription{
 				Kind: Subscription,
 				Name: "catalog/test",
 			},
@@ -47,15 +47,15 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	assert.Equal(t, "test", subscriptionName)
 
 	ri, _ := ar.AsInstance()
-	ar = &mv1.AccessRequest{}
+	ar = &management.AccessRequest{}
 	ar.FromInstance(ri)
 
 	subscriptionName = GetSubscriptionNameFromAccessRequest(ar)
 	assert.Equal(t, "test", subscriptionName)
 
-	ar = &mv1.AccessRequest{
+	ar = &management.AccessRequest{
 		References: []interface{}{
-			&mv1.AccessRequestReferencesSubscription{
+			&management.AccessRequestReferencesSubscription{
 				Name: "test",
 			},
 		},
@@ -63,9 +63,9 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	subscriptionName = GetSubscriptionNameFromAccessRequest(ar)
 	assert.Equal(t, "", subscriptionName)
 
-	ar = &mv1.AccessRequest{
+	ar = &management.AccessRequest{
 		References: []interface{}{
-			&mv1.AccessRequestReferencesApplication{
+			&management.AccessRequestReferencesApplication{
 				Kind: "Application",
 				Name: "test",
 			},

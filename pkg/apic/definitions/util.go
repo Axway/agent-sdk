@@ -3,11 +3,11 @@ package definitions
 import (
 	"strings"
 
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 // GetSubscriptionNameFromAccessRequest - Returns the subscription name from access request references
-func GetSubscriptionNameFromAccessRequest(ar *mv1.AccessRequest) string {
+func GetSubscriptionNameFromAccessRequest(ar *management.AccessRequest) string {
 	if ar == nil {
 		return ""
 	}
@@ -23,7 +23,7 @@ func GetSubscriptionNameFromAccessRequest(ar *mv1.AccessRequest) string {
 	return subscriptionName
 }
 
-func getSubscriptionRefName(ar *mv1.AccessRequest) string {
+func getSubscriptionRefName(ar *management.AccessRequest) string {
 	for _, ref := range ar.References {
 		switch arRef := ref.(type) {
 		case map[string]interface{}:
@@ -31,16 +31,16 @@ func getSubscriptionRefName(ar *mv1.AccessRequest) string {
 			if kind == Subscription {
 				return arRef["name"].(string)
 			}
-		case mv1.AccessRequestReferencesSubscription:
+		case management.AccessRequestReferencesSubscription:
 			return getSubscriptionName(&arRef)
-		case *mv1.AccessRequestReferencesSubscription:
+		case *management.AccessRequestReferencesSubscription:
 			return getSubscriptionName(arRef)
 		}
 	}
 	return ""
 }
 
-func getSubscriptionName(arRef *mv1.AccessRequestReferencesSubscription) string {
+func getSubscriptionName(arRef *management.AccessRequestReferencesSubscription) string {
 	if arRef.Kind == Subscription {
 		return arRef.Name
 	}

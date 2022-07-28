@@ -4,8 +4,8 @@ import (
 	"context"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -22,9 +22,9 @@ func NewTraceManagedApplicationHandler(cache agentcache.Manager) Handler {
 }
 
 // Handle processes grpc events triggered for ManagedApplications for trace agent
-func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.ManagedApplicationGVK().Kind {
+	if resource.Kind != management.ManagedApplicationGVK().Kind {
 		return nil
 	}
 
@@ -32,7 +32,7 @@ func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta
 		return h.cache.DeleteManagedApplication(resource.Metadata.ID)
 	}
 
-	app := &mv1.ManagedApplication{}
+	app := &management.ManagedApplication{}
 	err := app.FromInstance(resource)
 	if err != nil {
 		return err

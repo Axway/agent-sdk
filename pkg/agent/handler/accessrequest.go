@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -43,9 +43,9 @@ func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, clien
 }
 
 // Handle processes grpc events triggered for AccessRequests
-func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
+func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != mv1.AccessRequestGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
+	if resource.Kind != management.AccessRequestGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
@@ -53,7 +53,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	defer log.Trace("finished processing request")
 	ctx = setLoggerInContext(ctx, log)
 
-	ar := &mv1.AccessRequest{}
+	ar := &management.AccessRequest{}
 	err := ar.FromInstance(resource)
 	if err != nil {
 		log.WithError(err).Error("could not handle access request")
@@ -96,7 +96,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequest) *mv1.AccessRequest {
+func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest) *management.AccessRequest {
 	log := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
@@ -174,7 +174,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *mv1.AccessRequ
 }
 
 // onError updates the AccessRequest with an error status
-func (h *accessRequestHandler) onError(_ context.Context, ar *mv1.AccessRequest, err error) {
+func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessRequest, err error) {
 	ps := prov.NewRequestStatusBuilder()
 	status := ps.SetMessage(err.Error()).SetCurrentStatusReasons(ar.Status.Reasons).Failed()
 	ar.Status = prov.NewStatusReason(status)
@@ -184,7 +184,7 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *mv1.AccessRequest,
 }
 
 // onDeleting deprovisions an access request and removes the finalizer
-func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessRequest) {
+func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
 	log := getLoggerFromContext(ctx)
 	req, err := h.newReq(ctx, ar, map[string]interface{}{})
 	if err != nil {
@@ -208,43 +208,43 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *mv1.AccessReq
 	}
 }
 
-func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *mv1.AccessRequest) (*mv1.ManagedApplication, error) {
-	app := mv1.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
+func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *management.AccessRequest) (*management.ManagedApplication, error) {
+	app := management.NewManagedApplication(ar.Spec.ManagedApplication, ar.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	app = &mv1.ManagedApplication{}
+	app = &management.ManagedApplication{}
 	err = app.FromInstance(ri)
 	return app, err
 }
 
-func (h *accessRequestHandler) getARD(ctx context.Context, ar *mv1.AccessRequest) (*mv1.AccessRequestDefinition, error) {
+func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.AccessRequest) (*management.AccessRequestDefinition, error) {
 	// get the instance from the cache
 	instance, err := h.getServiceInstance(ctx, ar)
 	if err != nil {
 		return nil, err
 	}
-	svcInst := mv1.NewAPIServiceInstance(instance.Name, instance.Metadata.Scope.Name)
+	svcInst := management.NewAPIServiceInstance(instance.Name, instance.Metadata.Scope.Name)
 	err = svcInst.FromInstance(instance)
 	if err != nil {
 		return nil, err
 	}
 
 	// now get the access request definition from the instance
-	ard := mv1.NewAccessRequestDefinition(svcInst.Spec.AccessRequestDefinition, ar.Metadata.Scope.Name)
+	ard := management.NewAccessRequestDefinition(svcInst.Spec.AccessRequestDefinition, ar.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(ard.GetSelfLink())
 	if err != nil {
 		return nil, err
 	}
 
-	ard = &mv1.AccessRequestDefinition{}
+	ard = &management.AccessRequestDefinition{}
 	err = ard.FromInstance(ri)
 	return ard, err
 }
 
-func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *mv1.AccessRequest) (*v1.ResourceInstance, error) {
+func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
 	instID := ""
 	for _, ref := range ar.Metadata.References {
 		if ref.Name == ar.Spec.ApiServiceInstance {
@@ -260,7 +260,7 @@ func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *mv1.Acc
 	return instance, nil
 }
 
-func (h *accessRequestHandler) newReq(ctx context.Context, ar *mv1.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
+func (h *accessRequestHandler) newReq(ctx context.Context, ar *management.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
 	instance, err := h.getServiceInstance(ctx, ar)
 	if err != nil {
 		return nil, err

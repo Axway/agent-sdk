@@ -3,7 +3,7 @@ package provisioning
 import (
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +33,7 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registerFuncCalled := false
-			registerFunc := func(accessRequestDefinition *v1alpha1.AccessRequestDefinition) (*v1alpha1.AccessRequestDefinition, error) {
+			registerFunc := func(accessRequestDefinition *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
 				assert.NotNil(t, accessRequestDefinition)
 				if !tt.noSchema {
 					assert.Len(t, accessRequestDefinition.Spec.Schema["properties"], 1)

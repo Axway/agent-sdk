@@ -13,8 +13,8 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/api"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -85,8 +85,8 @@ func TestCreateService(t *testing.T) {
 	// Setup category cache
 	for _, category := range testCategories {
 		newID := uuid.New().String()
-		categoryInstance := &v1.ResourceInstance{
-			ResourceMeta: v1.ResourceMeta{
+		categoryInstance := &apiv1.ResourceInstance{
+			ResourceMeta: apiv1.ResourceMeta{
 				Name:  newID,
 				Title: category,
 			},
@@ -213,8 +213,8 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 	assert.Nil(t, svc)
 
 	// Should return the service and no error
-	apiSvc := &mv1a.APIService{
-		ResourceMeta: v1.ResourceMeta{
+	apiSvc := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
 			SubResources: map[string]interface{}{
@@ -224,7 +224,7 @@ func Test_getAPIServiceFromCache(t *testing.T) {
 				},
 			},
 		},
-		Spec: mv1a.ApiServiceSpec{},
+		Spec: management.ApiServiceSpec{},
 	}
 	// should return the resource when found by the external api id
 	ri, _ := apiSvc.AsInstance()
@@ -471,8 +471,8 @@ func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
 	assert.Nil(t, instances)
 
 	// good
-	ri := &v1.ResourceInstance{ResourceMeta: v1.ResourceMeta{
-		GroupVersionKind: v1.GroupVersionKind{},
+	ri := &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{
+		GroupVersionKind: apiv1.GroupVersionKind{},
 		Name:             "name",
 		Title:            "title",
 	}}
@@ -497,8 +497,8 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 			RespCode: http.StatusNoContent, // delete OK
 		},
 	})
-	svc := &mv1a.APIService{
-		ResourceMeta: v1.ResourceMeta{
+	svc := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
 			Name:  "abc",
 			Title: "abc",
 			SubResources: map[string]interface{}{
@@ -507,7 +507,7 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 				},
 			},
 		},
-		Spec: mv1a.ApiServiceSpec{},
+		Spec: management.ApiServiceSpec{},
 	}
 	ri, _ := svc.AsInstance()
 	client.caches.AddAPIService(ri)
@@ -669,7 +669,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 
 	// Get second to last request as consumerinstance
-	var consInst mv1a.ConsumerInstance
+	var consInst management.ConsumerInstance
 	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
 	assert.Nil(t, err)
 
@@ -734,7 +734,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 
 	// Get last request as consumerinstance
-	consInst = mv1a.ConsumerInstance{}
+	consInst = management.ConsumerInstance{}
 	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-2].Body))
 	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
 	assert.Nil(t, err)
@@ -781,7 +781,7 @@ func TestServiceClient_buildAPIService(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	svc := client.buildAPIService(body)
 
-	assert.Equal(t, mv1a.APIServiceGVK(), svc.GroupVersionKind)
+	assert.Equal(t, management.APIServiceGVK(), svc.GroupVersionKind)
 	assert.Empty(t, svc.Name)
 	assert.Equal(t, body.NameToPush, svc.Title)
 	assert.Contains(t, svc.Tags, tags[0])
@@ -843,9 +843,9 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 		},
 	}
 
-	svc := &mv1a.APIService{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+	svc := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ResourceVersion: "123",
 			},
 			SubResources: map[string]interface{}{
@@ -861,7 +861,7 @@ func TestServiceClient_updateAPIService(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	client.updateAPIService(body, svc)
 
-	assert.Equal(t, mv1a.APIServiceGVK(), svc.GroupVersionKind)
+	assert.Equal(t, management.APIServiceGVK(), svc.GroupVersionKind)
 	assert.Empty(t, svc.Metadata.ResourceVersion)
 	assert.Empty(t, svc.Name)
 

@@ -14,14 +14,18 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func resetResources() {
 	agent.agentResourceManager = nil
-	agent.cacheManager = nil
+	if agent.cacheManager != nil {
+		agent.cacheManager.ApplyResourceReadLock()
+		defer agent.cacheManager.ReleaseResourceReadLock()
+		agent.cacheManager = nil
+	}
 	agent.isInitialized = false
 	agent.apicClient = nil
 	agent.agentFeaturesCfg = nil
@@ -51,16 +55,16 @@ func createOfflineCentralCfg(url, env string) *config.CentralConfiguration {
 }
 
 func createDiscoveryAgentRes(id, name, dataplane, filter string) *v1.ResourceInstance {
-	res := &v1alpha1.DiscoveryAgent{
+	res := &management.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.DiscoveryAgentSpec{
+		Spec: management.DiscoveryAgentSpec{
 			DataplaneType: dataplane,
-			Config: v1alpha1.DiscoveryAgentSpecConfig{
+			Config: management.DiscoveryAgentSpecConfig{
 				Filter: filter,
 			},
 		},
@@ -70,16 +74,16 @@ func createDiscoveryAgentRes(id, name, dataplane, filter string) *v1.ResourceIns
 }
 
 func createTraceabilityAgentRes(id, name, dataplane string, processHeaders bool) *v1.ResourceInstance {
-	res := &v1alpha1.TraceabilityAgent{
+	res := &management.TraceabilityAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
 			},
 		},
-		Spec: v1alpha1.TraceabilityAgentSpec{
+		Spec: management.TraceabilityAgentSpec{
 			DataplaneType: dataplane,
-			Config: v1alpha1.TraceabilityAgentSpecConfig{
+			Config: management.TraceabilityAgentSpecConfig{
 				ProcessHeaders: processHeaders,
 			},
 		},
@@ -110,7 +114,7 @@ func TestAgentInitialize(t *testing.T) {
 			Default: true,
 		},
 	}
-	environmentRes := &v1alpha1.Environment{
+	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
 			Name:     "v7",
@@ -173,7 +177,7 @@ func TestAgentInitialize(t *testing.T) {
 	assert.Nil(t, da)
 
 	cfg.AgentType = config.DiscoveryAgent
-	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
+	AgentResourceType = management.DiscoveryAgentResourceName
 	cfg.AgentName = daName
 	resetResources()
 	err = Initialize(cfg)
@@ -183,7 +187,7 @@ func TestAgentInitialize(t *testing.T) {
 	assertResource(t, da, discoveryAgentRes)
 
 	cfg.AgentType = config.TraceabilityAgent
-	AgentResourceType = v1alpha1.TraceabilityAgentResourceName
+	AgentResourceType = management.TraceabilityAgentResourceName
 	cfg.AgentName = taName
 	resetResources()
 	err = Initialize(cfg)
@@ -228,7 +232,7 @@ func TestAgentConfigOverride(t *testing.T) {
 			Default: true,
 		},
 	}
-	environmentRes := &v1alpha1.Environment{
+	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
 			Name:     "v7",
@@ -273,7 +277,7 @@ func TestAgentConfigOverride(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "v7")
 
-	AgentResourceType = v1alpha1.DiscoveryAgentResourceName
+	AgentResourceType = management.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"
 	resetResources()
 	err := Initialize(cfg)

@@ -3,7 +3,7 @@ package provisioning
 import (
 	"testing"
 
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,9 +34,9 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ar := v1alpha1.NewAccessRequest("name", "environment")
+			ar := management.NewAccessRequest("name", "environment")
 			if tt.intervalString != "" {
-				ar.Spec.Quota = &v1alpha1.AccessRequestSpecQuota{
+				ar.Spec.Quota = &management.AccessRequestSpecQuota{
 					Limit:    float64(tt.limit),
 					Interval: tt.intervalString,
 				}

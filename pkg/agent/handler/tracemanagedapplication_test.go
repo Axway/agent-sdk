@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -14,9 +14,9 @@ import (
 func TestTraceManagedApplicationHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	handler := NewTraceManagedApplicationHandler(cm)
-	ri := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: mv1.EnvironmentGVK(),
+	ri := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -26,9 +26,9 @@ func TestTraceManagedApplicationHandler_wrong_kind(t *testing.T) {
 func TestTraceManagedApplicationHandler(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	handler := NewTraceManagedApplicationHandler(cm)
-	managedApp := &mv1.ManagedApplication{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
+	managedApp := &management.ManagedApplication{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
 				ID: "appId",
 			},
 			Name: "appName",
@@ -41,7 +41,7 @@ func TestTraceManagedApplicationHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
 
-	managedApp.Status = &v1.ResourceStatus{
+	managedApp.Status = &apiv1.ResourceStatus{
 		Level: "Success",
 	}
 

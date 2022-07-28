@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -17,7 +17,7 @@ func TestEventSync_pollMode(t *testing.T) {
 
 	mc := &mock.Client{}
 	mc.GetResourceMock = func(url string) (*apiv1.ResourceInstance, error) {
-		wt := v1alpha1.NewWatchTopic("mock-wt")
+		wt := management.NewWatchTopic("mock-wt")
 		ri, err := wt.AsInstance()
 		return ri, err
 	}
@@ -53,7 +53,7 @@ func TestEventSync_streamMode(t *testing.T) {
 
 	mc := &mock.Client{}
 	mc.GetResourceMock = func(url string) (*apiv1.ResourceInstance, error) {
-		wt := v1alpha1.NewWatchTopic("mock-wt")
+		wt := management.NewWatchTopic("mock-wt")
 		ri, err := wt.AsInstance()
 		return ri, err
 	}

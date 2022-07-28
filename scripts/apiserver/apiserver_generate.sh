@@ -32,9 +32,9 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
   cp ./fake_example_test.tmpl ${OUTDIR}/clients/management/v1alpha1/fake_example_test.go
 
   # replace the access control model files
-  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/catalog/v1alpha1/model_access_control_list_spec.go
-  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/definitions/v1alpha1/model_access_control_list_spec.go
-  cp ./model_access_control_list_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-catalog.tmpl ${OUTDIR}/models/catalog/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-definitions.tmpl ${OUTDIR}/models/definitions/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-management.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_control_list_spec.go
 
   # replace the credential request definition spec files
   # cp ./model_credential_request_definition_spec_capabilities.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_capabilities.go

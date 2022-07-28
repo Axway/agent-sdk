@@ -90,7 +90,7 @@ const writeSubResources = (subResources) => {
 		for (let versionKey in groupObj) {
 			const data = JSON.stringify(groupObj[versionKey]);
 			const res = execSync(
-				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${versionKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
+				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
 			);
 		}
 	}

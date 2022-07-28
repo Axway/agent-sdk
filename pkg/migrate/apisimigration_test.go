@@ -8,8 +8,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -18,10 +17,10 @@ import (
 
 var defEnvName = config.NewTestCentralConfig(config.DiscoveryAgent).GetEnvironmentName()
 
-func createRevisionsResponse(serviceName string, numRevs int) []*v1.ResourceInstance {
-	revs := []*v1.ResourceInstance{}
+func createRevisionsResponse(serviceName string, numRevs int) []*apiv1.ResourceInstance {
+	revs := []*apiv1.ResourceInstance{}
 	for i := 1; i <= numRevs; i++ {
-		rev := mv1a.NewAPIServiceRevision(fmt.Sprintf("%v.%v", serviceName, i), defEnvName)
+		rev := management.NewAPIServiceRevision(fmt.Sprintf("%v.%v", serviceName, i), defEnvName)
 		rev.Spec.ApiService = serviceName
 
 		ri, _ := rev.AsInstance()
@@ -30,10 +29,10 @@ func createRevisionsResponse(serviceName string, numRevs int) []*v1.ResourceInst
 	return revs
 }
 
-func createInstanceResponse(serviceName string, numRevs int) []*v1.ResourceInstance {
-	insts := []*v1.ResourceInstance{}
+func createInstanceResponse(serviceName string, numRevs int) []*apiv1.ResourceInstance {
+	insts := []*apiv1.ResourceInstance{}
 	for i := 1; i <= numRevs; i++ {
-		inst := mv1a.NewAPIServiceInstance(fmt.Sprintf("%v.%v", serviceName, i), defEnvName)
+		inst := management.NewAPIServiceInstance(fmt.Sprintf("%v.%v", serviceName, i), defEnvName)
 		inst.Spec.ApiServiceRevision = fmt.Sprintf("%v.%v", serviceName, i)
 
 		ri, _ := inst.AsInstance()
@@ -50,38 +49,38 @@ func createInstanceResponse(serviceName string, numRevs int) []*v1.ResourceInsta
 func TestAPISIMigration(t *testing.T) {
 	tests := []struct {
 		name              string
-		resource          v1.Interface
+		resource          apiv1.Interface
 		expectErr         bool
 		turnOff           bool
 		migrationComplete bool
 		setMigCompelete   bool
-		revisions         []*v1.ResourceInstance
-		instances         []*v1.ResourceInstance
+		revisions         []*apiv1.ResourceInstance
+		instances         []*apiv1.ResourceInstance
 		expectedDeletes   int
 	}{
 		{
 			name:     "called with non-apiservice returns without error",
-			resource: mv1a.NewAccessRequestDefinition("asdf", defEnvName),
+			resource: management.NewAccessRequestDefinition("asdf", defEnvName),
 		},
 		{
 			name:     "called with apiservice and config off returns without error",
-			resource: mv1a.NewAPIService("asdf", defEnvName),
+			resource: management.NewAPIService("asdf", defEnvName),
 			turnOff:  true,
 		},
 		{
 			name:              "called with apiservice that previously was migrated",
-			resource:          mv1a.NewAPIService("asdf", defEnvName),
+			resource:          management.NewAPIService("asdf", defEnvName),
 			setMigCompelete:   true,
 			migrationComplete: true,
 		},
 		{
 			name:              "called with apiservice and with no revisions returns without error",
-			resource:          mv1a.NewAPIService("asdf", defEnvName),
+			resource:          management.NewAPIService("asdf", defEnvName),
 			migrationComplete: true,
 		},
 		{
 			name:              "called with apiservice, revisions, and instances of same stage returns without error",
-			resource:          mv1a.NewAPIService("apisi", defEnvName),
+			resource:          management.NewAPIService("apisi", defEnvName),
 			revisions:         createRevisionsResponse("apisi", 10),
 			instances:         createInstanceResponse("apisi", 10),
 			expectedDeletes:   9,
@@ -89,7 +88,7 @@ func TestAPISIMigration(t *testing.T) {
 		},
 		{
 			name:              "called with apiservice, revisions, and instances of diff stages returns without error",
-			resource:          mv1a.NewAPIService("apisi", defEnvName),
+			resource:          management.NewAPIService("apisi", defEnvName),
 			revisions:         append(createRevisionsResponse("apisi-stage1", 5), createRevisionsResponse("apisi-stage2", 5)...),
 			instances:         append(createInstanceResponse("apisi-stage1", 5), createInstanceResponse("apisi-stage2", 5)...),
 			expectedDeletes:   8,
@@ -133,8 +132,8 @@ func TestAPISIMigration(t *testing.T) {
 type mockAPISIMigClient struct {
 	sync.Mutex
 	deleteCalls      int
-	revisions        []*v1.ResourceInstance
-	instances        []*v1.ResourceInstance
+	revisions        []*apiv1.ResourceInstance
+	instances        []*apiv1.ResourceInstance
 	instanceReturned bool
 }
 

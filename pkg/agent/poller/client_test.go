@@ -7,7 +7,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -27,7 +27,7 @@ var cfg = &config.CentralConfiguration{
 }
 
 func TestPollClientStart(t *testing.T) {
-	wt := mv1.NewWatchTopic("mocktopic")
+	wt := management.NewWatchTopic("mocktopic")
 	ri, _ := wt.AsInstance()
 	httpClient := &mockAPIClient{
 		ri: ri,
@@ -135,17 +135,17 @@ func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event)
 	return 0, m.err
 }
 
-var watchTopic = &mv1.WatchTopic{
+var watchTopic = &management.WatchTopic{
 	ResourceMeta: apiv1.ResourceMeta{},
 	Owner:        nil,
-	Spec: mv1.WatchTopicSpec{
+	Spec: management.WatchTopicSpec{
 		Description: "",
-		Filters: []mv1.WatchTopicSpecFilters{
+		Filters: []management.WatchTopicSpecFilters{
 			{
 				Group: "management",
-				Kind:  mv1.APIServiceGVK().Kind,
+				Kind:  management.APIServiceGVK().Kind,
 				Name:  "*",
-				Scope: &mv1.WatchTopicSpecScope{
+				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",
 					Name: "mockEnvName",
 				},

@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -16,19 +16,19 @@ func TestNewCategoryHandler(t *testing.T) {
 	tests := []struct {
 		name     string
 		hasError bool
-		resource *v1.ResourceInstance
+		resource *apiv1.ResourceInstance
 		action   proto.Event_Type
 	}{
 		{
 			name:     "should save a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_CREATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
 							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
@@ -39,12 +39,12 @@ func TestNewCategoryHandler(t *testing.T) {
 			name:     "should update a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
 							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
@@ -55,12 +55,12 @@ func TestNewCategoryHandler(t *testing.T) {
 			name:     "should delete a category ResourceClient",
 			hasError: false,
 			action:   proto.Event_DELETED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
 							Kind: catalog.CategoryGVK().Kind,
 						},
 					},
@@ -71,13 +71,13 @@ func TestNewCategoryHandler(t *testing.T) {
 			name:     "should return nil when the kind is not a Category",
 			hasError: false,
 			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
+			resource: &apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{
 					Name:  "name",
 					Title: "title",
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: mv1.APIServiceGVK().Kind,
+					GroupVersionKind: apiv1.GroupVersionKind{
+						GroupKind: apiv1.GroupKind{
+							Kind: management.APIServiceGVK().Kind,
 						},
 					},
 				},

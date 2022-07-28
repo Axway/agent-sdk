@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -35,8 +35,8 @@ func NewAPISIMigration(client client, cfg config.CentralConfig) *APISIMigration 
 }
 
 // Migrate checks an APIServiceInstance for the "scopes" key in the schema, and removes it if it is found.
-func (m *APISIMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	if ri.Kind != mv1a.APIServiceGVK().Kind {
+func (m *APISIMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.Kind != management.APIServiceGVK().Kind {
 		return ri, nil
 	}
 
@@ -63,13 +63,13 @@ func (m *APISIMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance,
 	// get all instances for each revision
 	wg := &sync.WaitGroup{}
 	errCh := make(chan error, len(revisions))
-	instances := []*v1.ResourceInstance{}
+	instances := []*apiv1.ResourceInstance{}
 	instancesLock := sync.RWMutex{}
 
 	for _, rev := range revisions {
 		wg.Add(1)
 
-		go func(r *v1.ResourceInstance) {
+		go func(r *apiv1.ResourceInstance) {
 			defer wg.Done()
 
 			revisionInstances, err := m.getInstances(r)
@@ -104,7 +104,7 @@ func (m *APISIMigration) Migrate(ri *v1.ResourceInstance) (*v1.ResourceInstance,
 }
 
 // updateRev gets a list of revisions for the service
-func (m *APISIMigration) getRevisions(ri *v1.ResourceInstance) ([]*v1.ResourceInstance, error) {
+func (m *APISIMigration) getRevisions(ri *apiv1.ResourceInstance) ([]*apiv1.ResourceInstance, error) {
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -114,7 +114,7 @@ func (m *APISIMigration) getRevisions(ri *v1.ResourceInstance) ([]*v1.ResourceIn
 }
 
 // updateRev gets a list of revisions for the service
-func (m *APISIMigration) getInstances(ri *v1.ResourceInstance) ([]*v1.ResourceInstance, error) {
+func (m *APISIMigration) getInstances(ri *apiv1.ResourceInstance) ([]*apiv1.ResourceInstance, error) {
 	url := m.cfg.GetInstancesURL()
 	q := map[string]string{
 		"query": queryFunc(ri.Name),
@@ -123,10 +123,10 @@ func (m *APISIMigration) getInstances(ri *v1.ResourceInstance) ([]*v1.ResourceIn
 	return m.getAllRI(url, q)
 }
 
-func (m *APISIMigration) cleanInstances(logger log.FieldLogger, instances []*v1.ResourceInstance) error {
+func (m *APISIMigration) cleanInstances(logger log.FieldLogger, instances []*apiv1.ResourceInstance) error {
 	logger.Tracef("cleaning instances")
 	type instanceNameIndex struct {
-		ri    *v1.ResourceInstance
+		ri    *apiv1.ResourceInstance
 		index int
 	}
 

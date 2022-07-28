@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func createAccessRequest(id, name, appName, instanceID, instanceName string) *mv1.AccessRequest {
-	return &mv1.AccessRequest{
+func createAccessRequest(id, name, appName, instanceID, instanceName string) *management.AccessRequest {
+	return &management.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
@@ -23,7 +23,7 @@ func createAccessRequest(id, name, appName, instanceID, instanceName string) *mv
 			},
 			Name: name,
 		},
-		Spec: mv1.AccessRequestSpec{
+		Spec: management.AccessRequestSpec{
 			ManagedApplication: appName,
 			ApiServiceInstance: instanceName,
 		},

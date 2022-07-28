@@ -21,6 +21,10 @@
       - [Access Request Provisioning](#access-request-provisioning)
     - [Credential Request Provision and Deprovision](#credential-request-provision-and-deprovision)
       - [Credential Provisioning](#credential-provisioning)
+      - [IDP Credential provisioning](#idp-credential-provisioning)
+        - [IDP Registration](#idp-registration)
+        - [Registering the Credential request definition for IDP](#registering-the-credential-request-definition-for-idp)
+        - [IDP Credential provisioning/deprovisioning processing](#idp-credential-provisioningdeprovisioning-processing)
 
 Marketplace Provisioning allows the consumer to create applications, associate products, and create credentials. Amplify Agents SDK watches for API server resources to trigger provisioning events for the agent to handle. The agents can configure data that is required from consumers to provision access or create credentials for the resource in the connected gateway.
 
@@ -73,7 +77,7 @@ type AccessRequestBuilder interface {
   // Helper to replicate the Request Schema into the Provision Schema
   SetProvisionSchemaToRequestSchema() AccessRequestBuilder
   // Builds the AccessRequestDefinition and sends it to API Central
-  Register() (*v1alpha1.AccessRequestDefinition, error)
+  Register() (*management.AccessRequestDefinition, error)
 }
 ```
 
@@ -133,7 +137,7 @@ type CredentialRequestBuilder interface {
   // Adds a webhook name, separately created in Central, that is called on Credential state transitions
   AddWebhook(webhook string) CredentialRequestBuilder
   // Builds the CredentialRequestDefinition and sends it to API Central
-  Register() (*v1alpha1.CredentialRequestDefinition, error)
+  Register() (*management.CredentialRequestDefinition, error)
 }
 ```
 

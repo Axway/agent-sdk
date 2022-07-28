@@ -3,8 +3,8 @@ package apic
 import (
 	"testing"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1a "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -143,7 +143,7 @@ func Test_buildAPIServiceRevision(t *testing.T) {
 	client, _ := GetTestServiceClient()
 	revision := client.buildAPIServiceRevision(body, "name")
 
-	assert.Equal(t, mv1a.APIServiceRevisionGVK(), revision.GroupVersionKind)
+	assert.Equal(t, management.APIServiceRevisionGVK(), revision.GroupVersionKind)
 	assert.Equal(t, "name", revision.Name)
 	assert.Contains(t, revision.Title, body.APIName)
 	assert.Contains(t, revision.Title, body.Stage)
@@ -207,20 +207,20 @@ func Test_updateAPIServiceRevision(t *testing.T) {
 	tags := []string{"tag1_value1", "tag2_value2"}
 
 	client, _ := GetTestServiceClient()
-	revision := &mv1a.APIServiceRevision{
-		ResourceMeta: v1.ResourceMeta{
+	revision := &management.APIServiceRevision{
+		ResourceMeta: apiv1.ResourceMeta{
 			Name:       "name",
 			Title:      "oldtitle",
 			Tags:       []string{"oldtag1"},
 			Attributes: map[string]string{"old_attribute": "old_value"},
-			Metadata: v1.Metadata{
+			Metadata: apiv1.Metadata{
 				ResourceVersion: "123",
 			},
 		},
 	}
 	revision = client.updateAPIServiceRevision(body, revision)
 
-	assert.Equal(t, mv1a.APIServiceRevisionGVK(), revision.GroupVersionKind)
+	assert.Equal(t, management.APIServiceRevisionGVK(), revision.GroupVersionKind)
 	assert.Empty(t, revision.Metadata.ResourceVersion)
 	assert.Equal(t, "name", revision.Name)
 

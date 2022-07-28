@@ -1,6 +1,6 @@
 package provisioning
 
-import "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+import management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 
 // Quota - interface for accessing an access requests quota
 type Quota interface {
@@ -55,7 +55,7 @@ type quota struct {
 }
 
 //NewQuotaFromAccessRequest create a Quota interface from an access request or nil if no quota on access request
-func NewQuotaFromAccessRequest(ar *v1alpha1.AccessRequest) Quota {
+func NewQuotaFromAccessRequest(ar *management.AccessRequest) Quota {
 	if ar.Spec.Quota == nil {
 		return nil
 	}

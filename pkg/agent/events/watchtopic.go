@@ -12,8 +12,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
 //go:embed assets/watch-topic-template.json
@@ -49,8 +49,8 @@ var (
 )
 
 // getOrCreateWatchTopic attempts to retrieve a watch topic from central, or create one if it does not exist.
-func getOrCreateWatchTopic(name, scope string, client APIClient, features watchTopicFeatures) (*mv1.WatchTopic, error) {
-	wt := mv1.NewWatchTopic("")
+func getOrCreateWatchTopic(name, scope string, client APIClient, features watchTopicFeatures) (*management.WatchTopic, error) {
+	wt := management.NewWatchTopic("")
 	ri, err := client.GetResource(fmt.Sprintf("%s/%s", wt.GetKindLink(), name))
 
 	if err == nil {
@@ -65,13 +65,13 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 
 	switch features.GetAgentType() {
 	case config.DiscoveryAgent:
-		agentResourceGroupKind = mv1.DiscoveryAgentGVK().GroupKind
+		agentResourceGroupKind = management.DiscoveryAgentGVK().GroupKind
 		tmplValuesFunc = NewDiscoveryWatchTopic
 	case config.TraceabilityAgent:
-		agentResourceGroupKind = mv1.TraceabilityAgentGVK().GroupKind
+		agentResourceGroupKind = management.TraceabilityAgentGVK().GroupKind
 		tmplValuesFunc = NewTraceWatchTopic
 	case config.GovernanceAgent:
-		agentResourceGroupKind = mv1.GovernanceAgentGVK().GroupKind
+		agentResourceGroupKind = management.GovernanceAgentGVK().GroupKind
 		tmplValuesFunc = NewGovernanceAgentWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
@@ -97,8 +97,8 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 	return wt, nil
 }
 
-func shouldPushUpdate(cur, new *mv1.WatchTopic) bool {
-	filtersDiff := func(a, b []mv1.WatchTopicSpecFilters) bool {
+func shouldPushUpdate(cur, new *management.WatchTopic) bool {
+	filtersDiff := func(a, b []management.WatchTopicSpecFilters) bool {
 		for _, aFilter := range a {
 			found := false
 			for _, bFilter := range b {
@@ -121,7 +121,7 @@ func shouldPushUpdate(cur, new *mv1.WatchTopic) bool {
 	return filtersDiff(new.Spec.Filters, cur.Spec.Filters)
 }
 
-func filtersEqual(a, b mv1.WatchTopicSpecFilters) (equal bool) {
+func filtersEqual(a, b management.WatchTopicSpecFilters) (equal bool) {
 	if a.Group != b.Group ||
 		a.Kind != b.Kind ||
 		a.Name != b.Name ||
@@ -160,7 +160,7 @@ func filtersEqual(a, b mv1.WatchTopicSpecFilters) (equal bool) {
 }
 
 // executeTemplate parses a WatchTopic from a template
-func parseWatchTopicTemplate(values WatchTopicValues) (*mv1.WatchTopic, error) {
+func parseWatchTopicTemplate(values WatchTopicValues) (*management.WatchTopic, error) {
 	tmpl, err := template.New("watch-topic-tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(agentTemplate)
 	if err != nil {
 		return nil, err
@@ -172,13 +172,13 @@ func parseWatchTopicTemplate(values WatchTopicValues) (*mv1.WatchTopic, error) {
 		return nil, err
 	}
 
-	wt := mv1.NewWatchTopic("")
+	wt := management.NewWatchTopic("")
 	err = json.Unmarshal(buf.Bytes(), wt)
 	return wt, err
 }
 
 // createOrUpdateWatchTopic creates a WatchTopic
-func createOrUpdateWatchTopic(wt *mv1.WatchTopic, rc APIClient) (*mv1.WatchTopic, error) {
+func createOrUpdateWatchTopic(wt *management.WatchTopic, rc APIClient) (*management.WatchTopic, error) {
 	if wt.Metadata.ID != "" {
 		err := rc.DeleteResourceInstance(wt)
 		if err != nil {
@@ -216,18 +216,18 @@ type WatchTopicValues struct {
 func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: cv1.CategoryGVK().GroupKind, EventTypes: all},
-		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.AccessControlListGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: catalog.CategoryGVK().GroupKind, EventTypes: all},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.AccessControlListGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: mv1.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: mv1.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{
@@ -242,13 +242,13 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{
@@ -262,18 +262,18 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 // NewGovernanceAgentWatchTopic creates a WatchTopic template string
 func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
-		{GroupKind: mv1.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: mv1.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: mv1.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: mv1.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: mv1.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: mv1.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{
@@ -285,7 +285,7 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 }
 
 // GetWatchTopic retrieves a watch topic based on the agent config. Creates a watch topic if one does not exist.
-func GetWatchTopic(cfg config.CentralConfig, client APIClient) (*mv1.WatchTopic, error) {
+func GetWatchTopic(cfg config.CentralConfig, client APIClient) (*management.WatchTopic, error) {
 	env := cfg.GetEnvironmentName()
 
 	wtName := getWatchTopicName(env, cfg.GetAgentType())
