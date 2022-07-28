@@ -402,7 +402,7 @@ func AddUpdateAgentDetails(key, value string) {
 	}
 }
 
-// AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource
+// GetDetailFromAgentResource - gets the value of an agent detail from the resource
 func GetDetailFromAgentResource(key string) string {
 	val, _ := util.GetAgentDetailsValue(agent.agentResourceManager.GetAgentResource(), key)
 	return val
