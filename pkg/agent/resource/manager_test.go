@@ -242,7 +242,7 @@ func assertAgentResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 }
 
 func assertAgentStatusResource(t *testing.T, agentRes *v1.ResourceInstance, agentName, state, previousState, message string) {
-	statusSubRes := agentRes.GetSubResource("status").(v1alpha1.DiscoveryAgentStatus)
+	statusSubRes := agentRes.GetSubResource("status").(management.DiscoveryAgentStatus)
 
 	assert.NotNil(t, statusSubRes)
 	assert.Equal(t, state, statusSubRes.State)
