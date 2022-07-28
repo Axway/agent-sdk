@@ -1,12 +1,14 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
@@ -125,6 +127,8 @@ type CentralConfig interface {
 	IsMarketplaceSubsEnabled() bool
 	GetSingleURL() string
 	GetMigrationSettings() MigrationConfig
+	GetWatchResourceFilters() []ResourceFilter
+	SetWatchResourceFilters([]ResourceFilter) error
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -162,6 +166,7 @@ type CentralConfiguration struct {
 	teamID                    string
 	isAxwayManaged            bool
 	isMarketplaceSubs         bool
+	WatchResourceFilters      []ResourceFilter
 }
 
 // FetchOnStartup - Fetch on startup config
@@ -547,6 +552,46 @@ func (c *CentralConfiguration) GetCacheStorageInterval() time.Duration {
 // GetSingleURL - Returns the Alternate base URL
 func (c *CentralConfiguration) GetSingleURL() string {
 	return c.SingleURL
+}
+
+// GetWatchResourceFilters - returns the custom watch filter config
+func (c *CentralConfiguration) GetWatchResourceFilters() []ResourceFilter {
+	if c.WatchResourceFilters == nil {
+		c.WatchResourceFilters = make([]ResourceFilter, 0)
+	}
+	return c.WatchResourceFilters
+}
+
+// SetWatchResourceFilters - sets the custom watch filter config
+func (c *CentralConfiguration) SetWatchResourceFilters(filters []ResourceFilter) error {
+	c.WatchResourceFilters = make([]ResourceFilter, 0)
+	for _, filter := range filters {
+		if filter.Group == "" || filter.Kind == "" {
+			return errors.New("invalid watch filter configuration, group and kind are required")
+		}
+
+		if filter.Name == "" {
+			filter.Name = "*"
+		}
+		if len(filter.EventTypes) == 0 {
+			filter.EventTypes = []ResourceEventType{ResourceEventCreated, ResourceEventUpdated, ResourceEventDeleted}
+		}
+
+		if filter.Scope == nil {
+			filter.Scope = &ResourceScope{
+				Kind: mv1.EnvironmentGVK().Kind,
+				Name: c.GetEnvironmentName(),
+			}
+		} else {
+			if filter.Scope.Kind == "" || filter.Scope.Name == "" {
+				return errors.New("invalid watch filter configuration, scope kind and name are required")
+			}
+		}
+
+		c.WatchResourceFilters = append(c.WatchResourceFilters, filter)
+	}
+
+	return nil
 }
 
 const (

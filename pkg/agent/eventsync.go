@@ -10,6 +10,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // EventSync struct for syncing events from central
@@ -141,7 +142,9 @@ func (es *EventSync) startPollMode() error {
 		return fmt.Errorf("could not start the harvester poll client: %s", err)
 	}
 
-	newEventProcessorJob(pc, "Poll Client")
+	if util.IsNotTest() {
+		newEventProcessorJob(pc, "Poll Client")
+	}
 
 	return err
 }
@@ -166,7 +169,10 @@ func (es *EventSync) startStreamMode() error {
 	}
 
 	agent.streamer = sc
-	newEventProcessorJob(sc, "Stream Client")
+
+	if util.IsNotTest() {
+		newEventProcessorJob(sc, "Stream Client")
+	}
 
 	return err
 }

@@ -28,6 +28,7 @@ var agentTypesMap = map[config.AgentType]string{
 type watchTopicFeatures interface {
 	IsMarketplaceSubsEnabled() bool
 	GetAgentType() config.AgentType
+	GetWatchResourceFilters() []config.ResourceFilter
 }
 
 const (
@@ -80,6 +81,30 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 	newWT, err := parseWatchTopicTemplate(tmplValuesFunc(name, scope, agentResourceGroupKind, features))
 	if err != nil {
 		return nil, err
+	}
+
+	filters := features.GetWatchResourceFilters()
+	for _, filter := range filters {
+		eventTypes := make([]string, 0)
+		for _, filterEventType := range filter.EventTypes {
+			eventTypes = append(eventTypes, (string(filterEventType)))
+		}
+
+		wf := management.WatchTopicSpecFilters{
+			Group: filter.Group,
+			Kind:  filter.Kind,
+			Name:  filter.Name,
+			Type:  eventTypes,
+		}
+
+		if filter.Scope != nil {
+			wf.Scope = &management.WatchTopicSpecScope{
+				Kind: filter.Scope.Kind,
+				Name: filter.Scope.Name,
+			}
+		}
+
+		newWT.Spec.Filters = append(newWT.Spec.Filters, wf)
 	}
 
 	// if the existing wt has no name then it does not exist yet

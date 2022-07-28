@@ -246,7 +246,10 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		Name: unknown,
 	}
 	if accessRequest != nil {
-		subRef = accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
+		accessReqSub := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
+		if accessReqSub.ID != "" {
+			subRef = accessReqSub
+		}
 	}
 
 	subscriptionID := subRef.ID
@@ -255,7 +258,8 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 
 	statusCode := detail.StatusCode
 
-	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + apiID + "." + statusCode)
+	hAPIID := strings.ReplaceAll(apiID, ".", "#")
+	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + hAPIID + "." + statusCode)
 
 	appMap, ok := c.metricMap[subscriptionID]
 	if !ok {
@@ -615,7 +619,7 @@ func (c *collector) processMetric(metricName string, metric interface{}) {
 	if len(elements) == 5 {
 		subscriptionID := elements[1]
 		appID := elements[2]
-		apiID := elements[3]
+		apiID := strings.ReplaceAll(elements[3], "#", ".")
 		statusCode := elements[4]
 		if appMap, ok := c.metricMap[subscriptionID]; ok {
 			if apiMap, ok := appMap[appID]; ok {

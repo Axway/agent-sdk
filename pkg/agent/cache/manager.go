@@ -95,6 +95,13 @@ type Manager interface {
 	GetAccessRequest(id string) *v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 
+	GetWatchResourceCacheKeys(group, kind string) []string
+	AddWatchResource(resource *v1.ResourceInstance)
+	GetWatchResourceByKey(key string) *v1.ResourceInstance
+	GetWatchResourceByID(group, kind, id string) *v1.ResourceInstance
+	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
+	DeleteWatchResource(group, kind, id string) error
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -107,6 +114,7 @@ type cacheManager struct {
 	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
+	watchResourceMap        cache.Cache
 	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	fetchOnStartup          cache.Cache
@@ -135,6 +143,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		accessRequestMap:        cache.New(),
 		subscriptionMap:         cache.New(),
 		sequenceCache:           cache.New(),
+		watchResourceMap:        cache.New(),
 		fetchOnStartup:          cache.New(),
 		teams:                   cache.New(),
 		ardMap:                  cache.New(),
@@ -168,6 +177,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		"subscriptions":       func(loaded cache.Cache) { c.subscriptionMap = loaded },
 		"accReq":              func(loaded cache.Cache) { c.accessRequestMap = loaded },
 		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
+		"watchResource":       func(loaded cache.Cache) { c.watchResourceMap = loaded },
 		"fetchOnStartup":      func(loaded cache.Cache) { c.fetchOnStartup = loaded },
 	}
 
@@ -311,6 +321,7 @@ func (c *cacheManager) Flush() {
 	c.managedApplicationMap.Flush()
 	c.sequenceCache.Flush()
 	c.subscriptionMap.Flush()
+	c.watchResourceMap.Flush()
 
 	c.SaveCache()
 }
