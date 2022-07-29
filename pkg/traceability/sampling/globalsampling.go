@@ -1,7 +1,6 @@
 package sampling
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -42,7 +41,7 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 
 	// Validate the config to make sure it is not out of bounds
 	if cfg.Percentage < 0 || cfg.Percentage > countMax {
-		return fmt.Errorf("sampling percentage must be between 0 and 100")
+		return ErrSamplingCfg
 	}
 	agentSamples = &sample{
 		config:        cfg,
