@@ -350,7 +350,6 @@ type mockARProvision struct {
 	expectedAppName       string
 	expectedProvType      string
 	expectedStatus        mock.MockRequestStatus
-	statusReasons         []v1.ResourceStatusReason
 	t                     *testing.T
 }
 

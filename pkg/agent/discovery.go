@@ -3,6 +3,7 @@ package agent
 import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -147,6 +148,29 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		}
 	}
 	return nil
+}
+
+// RemovePublishedAPIAgentDetail -
+func RemovePublishedAPIAgentDetail(externalAPIID, detailKey string) error {
+	apiSvc := agent.cacheManager.GetAPIServiceWithAPIID(externalAPIID)
+
+	details := util.GetAgentDetails(apiSvc)
+	if _, ok := details[detailKey]; !ok {
+		return nil
+	}
+
+	delete(details, detailKey)
+
+	util.SetAgentDetails(apiSvc, details)
+
+	err := agent.apicClient.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: details})
+	if err != nil {
+		return err
+	}
+
+	err = agent.cacheManager.AddAPIService(apiSvc)
+	return err
+
 }
 
 func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.ResourceInstance, error) {
