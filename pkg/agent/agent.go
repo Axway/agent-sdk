@@ -404,6 +404,9 @@ func AddUpdateAgentDetails(key, value string) {
 
 // GetDetailFromAgentResource - gets the value of an agent detail from the resource
 func GetDetailFromAgentResource(key string) string {
+	if agent.agentResourceManager == nil {
+		return ""
+	}
 	val, _ := util.GetAgentDetailsValue(agent.agentResourceManager.GetAgentResource(), key)
 	return val
 }
