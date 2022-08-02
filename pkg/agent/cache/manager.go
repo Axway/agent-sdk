@@ -60,14 +60,14 @@ type Manager interface {
 	GetAccessControlList() *v1.ResourceInstance
 	DeleteAccessControlList() error
 
-	// AccessRequestDefintion cache related methods
+	// AccessRequestDefinition cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
 	GetAccessRequestDefinitionKeys() []string
 	GetAccessRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 	GetAccessRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
 	DeleteAccessRequestDefinition(id string) error
 
-	// CredentialRequestDefintion cache related methods
+	// CredentialRequestDefinition cache related methods
 	AddCredentialRequestDefinition(resource *v1.ResourceInstance)
 	GetCredentialRequestDefinitionKeys() []string
 	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
