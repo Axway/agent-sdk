@@ -393,12 +393,17 @@ func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagNam
 	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
 	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
 
+	var floorSet bool
+	var ceilingSet bool
+
 	if lowerLimitFlag != nil {
 		lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
 		// validate that lower limit is greater than zero and less than configured duration
 		if lowerLimitDuration > 0 && lowerLimitDuration > duration {
 			log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
 			return false
+		} else {
+			floorSet = true
 		}
 	}
 	if upperLimitFlag != nil {
@@ -407,10 +412,15 @@ func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagNam
 		if upperLimitDuration > 0 && upperLimitDuration < duration {
 			log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
 			return false
+		} else {
+			ceilingSet = true
 		}
 	}
 
-	log.Tracef("Duration range has been set for property %s", flagName)
+	if floorSet && ceilingSet {
+		log.Tracef("Duration range has been set for property %s", flagName)
+	}
+
 	return true
 }
 
