@@ -402,9 +402,8 @@ func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagNam
 		if lowerLimitDuration > 0 && lowerLimitDuration > duration {
 			log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
 			return false
-		} else {
-			floorSet = true
 		}
+		floorSet = true
 	}
 	if upperLimitFlag != nil {
 		upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
@@ -412,9 +411,8 @@ func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagNam
 		if upperLimitDuration > 0 && upperLimitDuration < duration {
 			log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
 			return false
-		} else {
-			ceilingSet = true
 		}
+		ceilingSet = true
 	}
 
 	if floorSet && ceilingSet {
