@@ -347,6 +347,14 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 				properties.SetAliasKeyPrefix(c.agentName)
 				log.SetIsLogP()
 			}
+
+			// Verify we can connect to central.  If we cannot, then kill the agent
+			_, err := agent.GetCentralClient().GetTeam((map[string]string{}))
+			if err != nil {
+				log.Error("Stopping agent - error connecting to Amplify Central. Check docs.axway.com for more info on this error code")
+				os.Exit(0)
+			}
+
 			err = c.commandHandler()
 			if err != nil {
 				log.Error(err.Error())
