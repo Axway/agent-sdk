@@ -113,7 +113,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
-	c.addBaseProps()
+	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
@@ -154,7 +154,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		properties.SetAliasKeyPrefix(c.agentName)
 	}
 
-	c.addBaseProps()
+	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
@@ -168,11 +168,13 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 }
 
 // Add the command line properties for the logger and path config
-func (c *agentRootCommand) addBaseProps() {
+func (c *agentRootCommand) addBaseProps(agentType config.AgentType) {
 	c.props.AddStringPersistentFlag(pathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
-	c.props.AddStringProperty(cpuprofile, "", "write cpu profile to `file`")
-	c.props.AddStringProperty(memprofile, "", "write memory profile to `file`")
+	if agentType == config.DiscoveryAgent {
+		c.props.AddStringProperty(cpuprofile, "", "write cpu profile to `file`")
+		c.props.AddStringProperty(memprofile, "", "write memory profile to `file`")
+	}
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
@@ -184,8 +186,10 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	_, agentConfigFilePath := c.props.StringFlagValue(pathConfigFlag)
 	_, beatsConfigFilePath := c.props.StringFlagValue(beatsPathConfigFlag)
-	_, c.cpuprofile = c.props.StringFlagValue(cpuprofile)
-	_, c.memprofile = c.props.StringFlagValue(memprofile)
+	if c.agentType == config.DiscoveryAgent {
+		_, c.cpuprofile = c.props.StringFlagValue(cpuprofile)
+		_, c.memprofile = c.props.StringFlagValue(memprofile)
+	}
 
 	// If the Agent pathConfig value is set and the beats path.config is not then use the pathConfig value for both
 	if beatsConfigFilePath == "" && agentConfigFilePath != "" {
