@@ -202,6 +202,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	return nil
 }
 
+// InitializeProfiling - setup the CPU and Memory profiling if options given
 func InitializeProfiling(cpuProfile, memProfile string) {
 	if memProfile != "" || cpuProfile != "" {
 		setupProfileSignalProcessor(cpuProfile, memProfile)
