@@ -31,6 +31,8 @@ const (
 	beatsPathConfigFlag   = "path.config"
 	EnvFileFlag           = "envFile"
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
+	cpuprofile            = "cpuprofile"
+	memprofile            = "memprofile"
 )
 
 // CommandHandler - Root command execution handler
@@ -65,6 +67,8 @@ type agentRootCommand struct {
 	agentCfg          interface{}
 	secretResolver    resolver.SecretResolver
 	initialized       bool
+	memprofile        string
+	cpuprofile        string
 }
 
 func init() {
@@ -167,6 +171,8 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 func (c *agentRootCommand) addBaseProps() {
 	c.props.AddStringPersistentFlag(pathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDesciption)
+	c.props.AddStringProperty(cpuprofile, "", "write cpu profile to `file`")
+	c.props.AddStringProperty(memprofile, "", "write memory profile to `file`")
 }
 
 func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
@@ -178,6 +184,8 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	_, agentConfigFilePath := c.props.StringFlagValue(pathConfigFlag)
 	_, beatsConfigFilePath := c.props.StringFlagValue(beatsPathConfigFlag)
+	_, c.cpuprofile = c.props.StringFlagValue(cpuprofile)
+	_, c.memprofile = c.props.StringFlagValue(memprofile)
 
 	// If the Agent pathConfig value is set and the beats path.config is not then use the pathConfig value for both
 	if beatsConfigFilePath == "" && agentConfigFilePath != "" {
@@ -277,6 +285,7 @@ func (c *agentRootCommand) initConfig() error {
 	if err != nil {
 		return err
 	}
+	agent.InitializeProfiling(c.cpuprofile, c.memprofile)
 
 	jobs.UpdateDurations(c.statusCfg.GetHealthCheckInterval(), c.centralCfg.GetJobExecutionTimeout())
 
