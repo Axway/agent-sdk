@@ -19,6 +19,26 @@ func (c *cacheManager) GetCredentialRequestDefinitionKeys() []string {
 	return c.crdMap.GetKeys()
 }
 
+func (c *cacheManager) ListCredentialRequestDefinitions() []*v1.ResourceInstance {
+	keys := c.GetCredentialRequestDefinitionKeys()
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	var instances []*v1.ResourceInstance
+
+	for _, key := range keys {
+		item, _ := c.crdMap.Get(key)
+		if item != nil {
+			instance, ok := item.(*v1.ResourceInstance)
+			if ok {
+				instances = append(instances, instance)
+			}
+		}
+	}
+
+	return instances
+}
+
 // GetCredentialRequestDefinitionByName - returns resource from CredentialRequestDefinition cache based on resource name
 func (c *cacheManager) GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error) {
 	c.ApplyResourceReadLock()

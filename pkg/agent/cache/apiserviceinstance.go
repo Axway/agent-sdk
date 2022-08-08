@@ -64,3 +64,23 @@ func (c *cacheManager) DeleteAllAPIServiceInstance() {
 
 	c.instanceMap.Flush()
 }
+
+func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
+	keys := c.GetAPIServiceInstanceKeys()
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	var instances []*v1.ResourceInstance
+
+	for _, key := range keys {
+		item, _ := c.instanceMap.Get(key)
+		if item != nil {
+			instance, ok := item.(*v1.ResourceInstance)
+			if ok {
+				instances = append(instances, instance)
+			}
+		}
+	}
+
+	return instances
+}

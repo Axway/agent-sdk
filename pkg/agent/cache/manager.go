@@ -41,6 +41,7 @@ type Manager interface {
 	GetAPIServiceInstanceByName(apiName string) (*v1.ResourceInstance, error)
 	DeleteAPIServiceInstance(id string) error
 	DeleteAllAPIServiceInstance()
+	ListAPIServiceInstances() []*v1.ResourceInstance
 
 	// Category cache related methods
 	AddCategory(resource *v1.ResourceInstance)
@@ -73,6 +74,7 @@ type Manager interface {
 	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 	GetCredentialRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
 	DeleteCredentialRequestDefinition(id string) error
+	ListCredentialRequestDefinitions() []*v1.ResourceInstance
 
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
