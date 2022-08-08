@@ -161,27 +161,32 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		}
 	}
 
+	data := map[string]interface{}{}
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
-	if status.GetStatus() == prov.Success {
+	if status.GetStatus() == prov.Success && credentialData != nil {
 		credentialData = h.getProvisionedCredentialData(provCreds, credentialData)
 		sec := app.Spec.Security
-		data, err := h.encryptSchema(
-			crd.Spec.Provision.Schema,
-			credentialData.GetData(),
-			sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
-		)
+		d := credentialData.GetData()
+		if crd.Spec.Provision == nil {
+			data = d
+		} else if d != nil {
+			data, err = h.encryptSchema(
+				crd.Spec.Provision.Schema,
+				d,
+				sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+			)
+		}
 
 		if err != nil {
 			status = prov.NewRequestStatusBuilder().
 				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
 				SetCurrentStatusReasons(cred.Status.Reasons).
 				Failed()
-		} else {
-			cred.Data = data
 		}
 	}
 
+	cred.Data = data
 	cred.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
@@ -192,6 +197,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		// only add finalizer on success
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
 	}
+
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
 		"data":             cred.Data,
