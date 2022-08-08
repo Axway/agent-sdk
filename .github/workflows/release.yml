@@ -35,6 +35,6 @@ jobs:
           branch: APIGOV-updateversion
           commit-message: INT - update to new release
           title: INT - update to new release
-          base: ${{ github.head_ref }}
+          base: main
           delete-branch: true
      
