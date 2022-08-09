@@ -12,6 +12,7 @@ type AgentFeaturesConfig interface {
 	PersistCacheEnabled() bool
 	MarketplaceProvisioningEnabled() bool
 	GetExternalIDPConfig() ExternalIDPConfig
+	SdkAgentStatusUpdatesEnabled() bool
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -24,6 +25,7 @@ type AgentFeaturesConfiguration struct {
 	PersistCache            bool              `config:"persistCache"`
 	MarketplaceProvisioning bool              `config:"marketplaceProvisioning"`
 	ExternalIDPConfig       ExternalIDPConfig `config:"idp"`
+	SdkAgentStatusUpdates   bool              `config:"sdkAgentStatusUpdates"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -34,6 +36,7 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 		VersionChecker:          true,
 		PersistCache:            false,
 		MarketplaceProvisioning: false,
+		SdkAgentStatusUpdates:   true,
 	}
 }
 
@@ -67,12 +70,18 @@ func (c *AgentFeaturesConfiguration) GetExternalIDPConfig() ExternalIDPConfig {
 	return c.ExternalIDPConfig
 }
 
+// SdkAgentStatusUpdatesEnabled - True if the agent SDK should manage the status update.
+func (c *AgentFeaturesConfiguration) SdkAgentStatusUpdatesEnabled() bool {
+	return c.SdkAgentStatusUpdates
+}
+
 const (
 	pathConnectToCentral        = "agentFeatures.connectToCentral"
 	pathProcessSystemSignals    = "agentFeatures.processSystemSignals"
 	pathVersionChecker          = "agentFeatures.versionChecker"
 	pathPersistCache            = "agentFeatures.persistCache"
 	pathMarketplaceProvisioning = "agentFeatures.marketplaceProvisioning"
+	pathSdkAgentStatusUpdates   = "agentFeatures.sdkAgentStatusUpdates"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -90,6 +99,7 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 	props.AddBoolProperty(pathPersistCache, false, "Controls whether the agent SDK will persist agent cache or not")
 	props.AddBoolProperty(pathMarketplaceProvisioning, false, "Controls whether the agent should handle Marketplace Subscriptions or not")
+	props.AddBoolProperty(pathSdkAgentStatusUpdates, false, "Controls whether the agent should manage the status update or not")
 	addExternalIDPProperties(props)
 }
 
@@ -101,6 +111,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		VersionChecker:          props.BoolPropertyValueOrTrue(pathVersionChecker),
 		PersistCache:            props.BoolPropertyValueOrTrue(pathPersistCache),
 		MarketplaceProvisioning: props.BoolPropertyValueOrTrue(pathMarketplaceProvisioning),
+		SdkAgentStatusUpdates:   props.BoolPropertyValueOrTrue(pathSdkAgentStatusUpdates),
 	}
 	externalIDPCfg, err := parseExternalIDPConfig(props)
 	if err != nil {
