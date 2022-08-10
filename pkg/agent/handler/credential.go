@@ -512,14 +512,15 @@ func (c *idpCredData) GetPublicKey() string {
 func encryptSchema(
 	schema, credData map[string]interface{}, key, alg, hash string,
 ) (map[string]interface{}, error) {
+	data := make(map[string]interface{})
 	enc, err := util.NewEncryptor(key, alg, hash)
 	if err != nil {
-		return nil, err
+		return data, err
 	}
 
 	schemaProps, ok := schema["properties"]
 	if !ok {
-		return nil, fmt.Errorf("properties field not found on schema")
+		return data, fmt.Errorf("properties field not found on schema")
 	}
 
 	props, ok := schemaProps.(map[string]interface{})
@@ -527,8 +528,7 @@ func encryptSchema(
 		props = make(map[string]interface{})
 	}
 
-	data := encryptMap(enc, props, credData)
-	return data, nil
+	return encryptMap(enc, props, credData), nil
 }
 
 // encryptMap loops through all data and checks the value against the provisioning schema to see if it should be encrypted.
