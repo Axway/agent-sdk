@@ -164,25 +164,27 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	data := map[string]interface{}{}
 	status, credentialData := h.prov.CredentialProvision(provCreds)
 
-	if status.GetStatus() == prov.Success && credentialData != nil {
+	if status.GetStatus() == prov.Success {
 		credentialData = h.getProvisionedCredentialData(provCreds, credentialData)
-		sec := app.Spec.Security
-		d := credentialData.GetData()
-		if crd.Spec.Provision == nil {
-			data = d
-		} else if d != nil {
-			data, err = h.encryptSchema(
-				crd.Spec.Provision.Schema,
-				d,
-				sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
-			)
-		}
+		if credentialData != nil {
+			sec := app.Spec.Security
+			d := credentialData.GetData()
+			if crd.Spec.Provision == nil {
+				data = d
+			} else if d != nil {
+				data, err = h.encryptSchema(
+					crd.Spec.Provision.Schema,
+					d,
+					sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+				)
+			}
 
-		if err != nil {
-			status = prov.NewRequestStatusBuilder().
-				SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
-				SetCurrentStatusReasons(cred.Status.Reasons).
-				Failed()
+			if err != nil {
+				status = prov.NewRequestStatusBuilder().
+					SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
+					SetCurrentStatusReasons(cred.Status.Reasons).
+					Failed()
+			}
 		}
 	}
 
