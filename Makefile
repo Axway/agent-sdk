@@ -22,7 +22,7 @@ dep-check:
 
 resolve-dependencies:
 	@echo "Resolving go package dependencies"
-	@go mod tidy
+	@go mod tidy -go=1.17
 	@echo "Package dependencies completed"
 
 dep: resolve-dependencies
