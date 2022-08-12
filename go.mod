@@ -1,6 +1,6 @@
 module github.com/Axway/agent-sdk
 
-go 1.18
+go 1.17
 
 require (
 	github.com/elastic/beats/v7 v7.17.5
