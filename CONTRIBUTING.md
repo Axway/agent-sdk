@@ -77,9 +77,9 @@ Please make sure the following is done before submitting a pull request:
 
 # Development Prerequisites
 
-* You have Go 1.13 or newer installed
-* Install goimports - `go get -u golang.org/x/tools/cmd/goimports`
-* Install golint - `go get -u golang.org/x/lint/golint`
+* You have Go 1.18 or newer installed
+* Install goimports - `go install golang.org/x/tools/cmd/goimports`
+* Install golint - `go install golang.org/x/lint/golint`
 
 # Development Workflow
 
