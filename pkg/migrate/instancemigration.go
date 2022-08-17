@@ -27,6 +27,10 @@ func (im *InstanceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.Resourc
 		return ri, nil
 	}
 
+	if len(ri.Finalizers) == 0 {
+		return ri, nil
+	}
+
 	ri.Finalizers = make([]apiv1.Finalizer, 0)
 
 	return im.migration.client.UpdateResourceInstance(ri)
