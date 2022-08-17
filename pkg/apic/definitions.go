@@ -36,8 +36,6 @@ const (
 	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
 
 	DefaultTeamKey = "DefaultTeam"
-
-	AccessRequestDefinitionFinalizer = "agent.cleanup.accessrequestdefinition"
 )
 
 // consts for state
