@@ -6,6 +6,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
+// InstanceMigration - migrates api service instances
 type InstanceMigration struct {
 	migration
 }
@@ -20,6 +21,7 @@ func NewInstanceMigration(client client, cfg config.CentralConfig) *InstanceMigr
 	}
 }
 
+// Migrate migrates an api service instance
 func (im *InstanceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if ri.Kind != management.APIServiceInstanceGVK().Kind {
 		return ri, nil
