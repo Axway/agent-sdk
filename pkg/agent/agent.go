@@ -182,9 +182,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-			if agent.agentFeaturesCfg.SdkAgentStatusUpdatesEnabled() {
-				StartAgentStatusUpdate()
-			}
+			StartAgentStatusUpdate()
 			registerExternalIDPs()
 			startTeamACLCache()
 
@@ -194,7 +192,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			}
 
 			// Set agent running
-			if agent.agentResourceManager != nil {
+			if agent.agentResourceManager != nil && agent.agentFeaturesCfg.SdkAgentStatusUpdatesEnabled() {
 				UpdateStatusWithPrevious(AgentRunning, "", "")
 			}
 		}
