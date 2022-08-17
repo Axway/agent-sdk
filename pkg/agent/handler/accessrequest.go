@@ -107,7 +107,9 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
-		err = fmt.Errorf("error can't handle access request when application is not yet successful")
+		errStr1 := "your application is currently being processed and has not yet been created on the corresponding Gateway. "
+		errStr2 := "Therefore, your access request cannot be completed. Please refresh.  If the error persists, you can try to delete the application, re-create it and request access again."
+		err = fmt.Errorf("%s%s", errStr1, errStr2)
 		h.onError(ctx, ar, err)
 		return ar
 	}
