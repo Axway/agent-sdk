@@ -68,13 +68,6 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	name string,
 	endpoints []management.ApiServiceInstanceSpecEndpoint,
 ) *management.APIServiceInstance {
-	finalizer := make([]apiv1.Finalizer, 0)
-	if serviceBody.uniqueARD {
-		finalizer = append(finalizer, apiv1.Finalizer{
-			Name:        AccessRequestDefinitionFinalizer,
-			Description: serviceBody.ardName,
-		})
-	}
 
 	spec := buildAPIServiceInstanceSpec(serviceBody, endpoints)
 	if c.cfg.IsMarketplaceSubsEnabled() {
@@ -90,7 +83,6 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
 			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
-			Finalizers:       finalizer,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Kind: management.EnvironmentGVK().Kind,

@@ -140,50 +140,6 @@ func (c *ServiceClient) checkReferencesToAccessRequestDefinition(ard string) int
 	return count
 }
 
-// DeleteAPIServiceInstanceWithFinalizers deletes an api service instance in central, handling finalizers
-func (c *ServiceClient) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error {
-	url := c.cfg.GetInstancesURL() + "/" + ri.Name
-	finalizers := ri.Finalizers
-	ri.Finalizers = make([]v1.Finalizer, 0)
-
-	// handle finalizers
-	for _, f := range finalizers {
-		if f.Name == AccessRequestDefinitionFinalizer {
-			// check if we should remove the accessrequestdefinition
-			if c.checkReferencesToAccessRequestDefinition(f.Description) > 1 {
-				continue // do not add the finalizer back
-			}
-			// 1 or fewer references to the ARD, clean it up
-			tempARD := management.NewAccessRequestDefinition(f.Description, c.cfg.GetEnvironmentName())
-			_, err := c.apiServiceDeployAPI(http.MethodDelete, c.createAPIServerURL(tempARD.GetSelfLink()), nil)
-			if err == nil {
-				continue // do not add the finalizer back
-			}
-		}
-		ri.Finalizers = append(ri.Finalizers, f)
-	}
-
-	// get the full instance
-	currentRI, err := c.executeAPIServiceAPI(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	// update the finalizers in the instance from central
-	currentRI.Finalizers = ri.Finalizers
-
-	// update instance
-	updatedInstance, err := json.Marshal(currentRI)
-	if err != nil {
-		return err
-	}
-	_, err = c.apiServiceDeployAPI(http.MethodPut, url, updatedInstance)
-	if err != nil && err.Error() != strconv.Itoa(http.StatusNotFound) {
-		return err
-	}
-
-	return c.DeleteAPIServiceInstance(ri.Name)
-}
-
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*management.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID(consumerInstanceID)

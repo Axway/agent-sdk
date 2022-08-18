@@ -99,13 +99,7 @@ func (j *instanceValidator) deleteServiceInstanceOrService(ri *apiV1.ResourceIns
 	log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", ri.Title)
 	msg := "Deleted catalog item %s from Amplify Central"
 
-	var err error
-
-	if len(ri.Finalizers) == 0 {
-		err = agent.apicClient.DeleteAPIServiceInstance(ri.Name)
-	} else {
-		err = agent.apicClient.DeleteAPIServiceInstanceWithFinalizers(ri)
-	}
+	err := agent.apicClient.DeleteAPIServiceInstance(ri.Name)
 	if err != nil {
 		log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(ri.Title))
 		return
