@@ -21,7 +21,6 @@ type Client struct {
 	GetSubscriptionManagerMock                               func() apic.SubscriptionManager
 	GetCatalogItemIDForConsumerInstanceMock                  func(instanceID string) (string, error)
 	DeleteAPIServiceInstanceMock                             func(name string) error
-	DeleteAPIServiceInstanceWithFinalizersMock               func(ri *v1.ResourceInstance) error
 	DeleteConsumerInstanceMock                               func(name string) error
 	DeleteServiceByNameMock                                  func(name string) error
 	GetConsumerInstanceByIDMock                              func(consumerInstanceID string) (*management.ConsumerInstance, error)
@@ -211,13 +210,6 @@ func (m *Client) DeleteConsumerInstance(instanceName string) error {
 func (m *Client) DeleteAPIServiceInstance(instanceName string) error {
 	if m.DeleteAPIServiceInstanceMock != nil {
 		return m.DeleteAPIServiceInstanceMock(instanceName)
-	}
-	return nil
-}
-
-func (m *Client) DeleteAPIServiceInstanceWithFinalizers(ri *v1.ResourceInstance) error {
-	if m.DeleteAPIServiceInstanceWithFinalizersMock != nil {
-		return m.DeleteAPIServiceInstanceWithFinalizersMock(ri)
 	}
 	return nil
 }

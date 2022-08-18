@@ -57,7 +57,6 @@ type Client interface {
 	GetSubscriptionManager() SubscriptionManager
 	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
-	DeleteAPIServiceInstanceWithFinalizers(ri *apiv1.ResourceInstance) error
 	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
 	GetConsumerInstanceByID(id string) (*management.ConsumerInstance, error)
