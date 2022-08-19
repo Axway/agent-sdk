@@ -124,6 +124,7 @@ func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 	return nil
 }
 
+// InstanceAlreadyMigrated - check to see if apiservice already migrated
 func (m *MarketplaceMigration) InstanceAlreadyMigrated(ri *apiv1.ResourceInstance) bool {
 
 	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
