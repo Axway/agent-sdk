@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"fmt"
-
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -75,26 +73,27 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-		mig.UpdateService(svc)
+		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to migrate service: %s", err)
-		}
+		// Check if migration already happened for apiservice
+		if !alreadyMigrated {
+			mig.UpdateService(svc)
 
-		// Mark marketplace migration completed here in provisioning
-		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
-		ri, err = GetCentralClient().UpdateResourceInstance(svc)
-		if err != nil {
-			return nil, err
-		}
-		//update sub resources
-		inst, err := svc.AsInstance()
-		if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
-			err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
+			// Mark marketplace migration completed here in provisioning
+			util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
+			ri, err = GetCentralClient().UpdateResourceInstance(svc)
 			if err != nil {
 				return nil, err
 			}
-			log.Debugf("updated x-agent-details with marketplace-migration: completed")
+			//update sub resources
+			inst, err := svc.AsInstance()
+			if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
+				err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
+				if err != nil {
+					return nil, err
+				}
+				log.Debugf("updated x-agent-details with marketplace-migration: completed")
+			}
 		}
 	}
 	return ri, nil
