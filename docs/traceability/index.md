@@ -644,6 +644,7 @@ type SummaryBuilder interface {
  SetProduct(product string) SummaryBuilder
  SetTeam(teamID string) SummaryBuilder
  SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
+ SetProxyWithStage(proxyID, proxyName, stageName string, proxyRevision int) SummaryBuilder
  SetRunTime(runtimeID, runtimeName string) SummaryBuilder
  SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
 
@@ -727,17 +728,27 @@ type JMSProtocolBuilder interface {
 }
 ```
 
-The sample code below demonstrates building up the transaction summary log event
+The two sample code below demonstrates building up the transaction summary log event
 
 ```
   txSummary, err := transaction.NewTransactionSummaryBuilder().
-  SetTimestamp(eventTime).
-  SetTransactionID(txID).
-  SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
-  SetTeam(teamID).
-  SetEntryPoint("http", method, uri, host).
-  SetProxy("unknown", "", 0).
-  Build()
+    SetTimestamp(eventTime).
+    SetTransactionID(txID).
+    SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+    SetTeam(teamID).
+    SetEntryPoint("http", method, uri, host).
+    SetProxy("unknown", "", 0).
+    Build()
+  
+  // if the Proxy being used includes a stage
+  txSummary, err := transaction.NewTransactionSummaryBuilder().
+    SetTimestamp(eventTime).
+    SetTransactionID(txID).
+    SetStatus(m.getTransactionSummaryStatus(statusCode), strconv.Itoa(statusCode)).
+    SetTeam(teamID).
+    SetEntryPoint("http", method, uri, host).
+    SetProxyWithStage("unknown", "", "stage", 0).
+    Build()
 ```
 
 Below is an example code for building transaction event with HTTP protocol details
