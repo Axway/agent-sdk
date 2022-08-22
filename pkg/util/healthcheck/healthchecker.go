@@ -103,7 +103,7 @@ func GetStatus(endpoint string) StatusLevel {
 		logger.
 			WithField("details", statusCheck.Status.Details).
 			WithField("result", statusCheck.Status.Result).
-			Error("health check for %s in not OK", endpoint)
+			Errorf("health check for %s in not OK", endpoint)
 	}
 	return statusCheck.Status.Result
 }
@@ -280,7 +280,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(data))
 }
 
-//QueryForStatus - create a URL string and call teh GetHealthcheckOutput func
+// QueryForStatus - create a URL string and call teh GetHealthcheckOutput func
 func QueryForStatus(port int) (statusOut string) {
 	var err error
 	urlObj := url.URL{
