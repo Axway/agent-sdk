@@ -111,9 +111,7 @@ func StartAgentStatusUpdate() {
 		return
 	}
 	startPeriodicStatusUpdate(logger)
-	if agent.agentFeaturesCfg.SdkAgentStatusUpdatesEnabled() {
-		startImmediateStatusUpdate(logger)
-	}
+	startImmediateStatusUpdate(logger)
 }
 
 // startPeriodicStatusUpdate - start periodic status updates based on report activity frequency config
