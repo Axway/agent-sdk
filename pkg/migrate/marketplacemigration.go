@@ -60,7 +60,7 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 
 // Migrate -
 func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	if ri.Kind != management.APIServiceGVK().Kind {
+	if ri.Kind != management.APIServiceGVK().Kind || m.InstanceAlreadyMigrated(ri) {
 		return ri, nil
 	}
 
