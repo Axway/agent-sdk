@@ -70,13 +70,13 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 	for _, svc := range apiSvcResources {
 		var err error
 
-		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
-
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
 		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
 
 		// Check if migration already happened for apiservice
 		if !alreadyMigrated {
+			logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+
 			mig.UpdateService(svc)
 
 			// Mark marketplace migration completed here in provisioning
