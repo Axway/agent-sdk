@@ -19,24 +19,24 @@ type AgentFeaturesConfig interface {
 type AgentFeaturesConfiguration struct {
 	AgentFeaturesConfig
 	IConfigValidator
-	ConnectToCentral         bool              `config:"connectToCentral"`
-	ProcessSystemSignals     bool              `config:"processSystemSignals"`
-	VersionChecker           bool              `config:"versionChecker"`
-	PersistCache             bool              `config:"persistCache"`
-	MarketplaceProvisioning  bool              `config:"marketplaceProvisioning"`
-	ExternalIDPConfig        ExternalIDPConfig `config:"idp"`
-	EnableAgentStatusUpdates bool              `config:"enableAgentStatusUpdates"`
+	ConnectToCentral        bool              `config:"connectToCentral"`
+	ProcessSystemSignals    bool              `config:"processSystemSignals"`
+	VersionChecker          bool              `config:"versionChecker"`
+	PersistCache            bool              `config:"persistCache"`
+	MarketplaceProvisioning bool              `config:"marketplaceProvisioning"`
+	ExternalIDPConfig       ExternalIDPConfig `config:"idp"`
+	AgentStatusUpdates      bool              `config:"agentStatusUpdates"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
 func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 	return &AgentFeaturesConfiguration{
-		ConnectToCentral:         true,
-		ProcessSystemSignals:     true,
-		VersionChecker:           true,
-		PersistCache:             false,
-		MarketplaceProvisioning:  false,
-		EnableAgentStatusUpdates: true,
+		ConnectToCentral:        true,
+		ProcessSystemSignals:    true,
+		VersionChecker:          true,
+		PersistCache:            false,
+		MarketplaceProvisioning: false,
+		AgentStatusUpdates:      true,
 	}
 }
 
@@ -72,16 +72,16 @@ func (c *AgentFeaturesConfiguration) GetExternalIDPConfig() ExternalIDPConfig {
 
 // AgentStatusUpdatesEnabled - True if the agent SDK should manage the status update.
 func (c *AgentFeaturesConfiguration) AgentStatusUpdatesEnabled() bool {
-	return c.EnableAgentStatusUpdates
+	return c.AgentStatusUpdates
 }
 
 const (
-	pathConnectToCentral         = "agentFeatures.connectToCentral"
-	pathProcessSystemSignals     = "agentFeatures.processSystemSignals"
-	pathVersionChecker           = "agentFeatures.versionChecker"
-	pathPersistCache             = "agentFeatures.persistCache"
-	pathMarketplaceProvisioning  = "agentFeatures.marketplaceProvisioning"
-	pathEnableAgentStatusUpdates = "agentFeatures.enableAgentStatusUpdates"
+	pathConnectToCentral        = "agentFeatures.connectToCentral"
+	pathProcessSystemSignals    = "agentFeatures.processSystemSignals"
+	pathVersionChecker          = "agentFeatures.versionChecker"
+	pathPersistCache            = "agentFeatures.persistCache"
+	pathMarketplaceProvisioning = "agentFeatures.marketplaceProvisioning"
+	pathAgentStatusUpdates      = "agentFeatures.agentStatusUpdates"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -99,19 +99,19 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 	props.AddBoolProperty(pathPersistCache, false, "Controls whether the agent SDK will persist agent cache or not")
 	props.AddBoolProperty(pathMarketplaceProvisioning, false, "Controls whether the agent should handle Marketplace Subscriptions or not")
-	props.AddBoolProperty(pathEnableAgentStatusUpdates, false, "Controls whether the agent should manage the status update or not")
+	props.AddBoolProperty(pathAgentStatusUpdates, true, "Controls whether the agent should manage the status update or not")
 	addExternalIDPProperties(props)
 }
 
 // ParseAgentFeaturesConfig - Parses the AgentFeatures Config values from the command line
 func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig, error) {
 	cfg := &AgentFeaturesConfiguration{
-		ConnectToCentral:         props.BoolPropertyValueOrTrue(pathConnectToCentral),
-		ProcessSystemSignals:     props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
-		VersionChecker:           props.BoolPropertyValueOrTrue(pathVersionChecker),
-		PersistCache:             props.BoolPropertyValueOrTrue(pathPersistCache),
-		MarketplaceProvisioning:  props.BoolPropertyValueOrTrue(pathMarketplaceProvisioning),
-		EnableAgentStatusUpdates: props.BoolPropertyValueOrTrue(pathEnableAgentStatusUpdates),
+		ConnectToCentral:        props.BoolPropertyValueOrTrue(pathConnectToCentral),
+		ProcessSystemSignals:    props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
+		VersionChecker:          props.BoolPropertyValueOrTrue(pathVersionChecker),
+		PersistCache:            props.BoolPropertyValueOrTrue(pathPersistCache),
+		MarketplaceProvisioning: props.BoolPropertyValueOrTrue(pathMarketplaceProvisioning),
+		AgentStatusUpdates:      props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
 	}
 	externalIDPCfg, err := parseExternalIDPConfig(props)
 	if err != nil {
