@@ -5,12 +5,9 @@ BIN=watchclient
 
 .PHONY: clean
 
-_all: clean lint build ## Build everything
+_all: clean build ## Build everything
 
 all: clean build
-
-lint: ## Lint the files
-	@golint	-set_exit_status	${PKG_LIST}
 
 build: ## Build the binary for linux
 	CGO_ENABLED=0 GOARCH=amd64 go build -o ./bin/$(BIN)
