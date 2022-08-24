@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -346,7 +345,7 @@ func isRunningInDockerContainer() bool {
 	// Within the cgroup file, if you are not in a docker container all entries are like these devices:/
 	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
 	// So, all we need to do is see if ":/docker" exists somewhere in the file.
-	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
+	bytes, err := os.ReadFile("/proc/1/cgroup")
 	if err != nil {
 		return false
 	}

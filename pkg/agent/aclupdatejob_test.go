@@ -2,7 +2,7 @@ package agent
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -124,7 +124,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 					resp.Write([]byte(token))
 				}
 				if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+test.envName+"/accesscontrollists") {
-					aclReturn, _ := ioutil.ReadAll(req.Body)
+					aclReturn, _ := io.ReadAll(req.Body)
 					switch {
 					case req.Method == http.MethodDelete:
 						resp.WriteHeader(http.StatusNoContent)

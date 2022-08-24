@@ -36,7 +36,7 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 	}
 
 	if marketplaceMigration != nil {
-		_, err = migrateMarketPlace(marketplaceMigration, ri)
+		migrateMarketPlace(marketplaceMigration, ri)
 	}
 
 	return ri, nil

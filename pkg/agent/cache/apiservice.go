@@ -10,6 +10,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
+// apiServiceToInstanceCount
+type apiServiceToInstanceCount struct {
+	count         int
+	apiServiceKey string
+}
+
 // API service cache management
 
 // AddAPIService - add/update APIService resource in cache
@@ -136,4 +142,61 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 		err = c.apiMap.DeleteBySecondaryKey(key)
 	}
 	return err
+}
+
+func (c *cacheManager) addToServiceInstanceCount(primaryKey string) error {
+	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	key := fmt.Sprintf("count-%v", svc.Name)
+
+	svcCountI, _ := c.instanceCountMap.Get(key)
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI == nil {
+		svcCount = apiServiceToInstanceCount{
+			count:         0,
+			apiServiceKey: svc.Metadata.ID,
+		}
+	} else {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+	}
+	svcCount.count++
+
+	c.apiMap.Set(key, svcCount)
+	return nil
+}
+
+func (c *cacheManager) removeFromServiceInstanceCount(primaryKey string) error {
+	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	key := fmt.Sprintf("count-%v", svc.Name)
+
+	svcCountI, err := c.instanceCountMap.Get(key)
+	if err != nil {
+		return err
+	}
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI != nil {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+		svcCount.count--
+	}
+
+	return nil
+}
+
+func (c *cacheManager) deleteAllServiceInstanceCounts() {
+	c.instanceCountMap.Flush()
+}
+
+func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
+	key := fmt.Sprintf("count-%v", svcName)
+
+	svcCountI, err := c.apiMap.Get(key)
+	if err != nil {
+		return 0
+	}
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI != nil {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+		return svcCount.count
+	}
+
+	return 0
 }

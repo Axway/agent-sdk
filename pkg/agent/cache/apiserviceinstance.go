@@ -2,6 +2,8 @@ package cache
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // API service instance management
@@ -11,6 +13,9 @@ func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
 	c.instanceMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+
+	primaryKey, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIPrimaryKey)
+	c.addToServiceInstanceCount(primaryKey)
 }
 
 // GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
@@ -55,6 +60,12 @@ func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceIns
 func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 	defer c.setCacheUpdated(true)
 
+	ri, _ := c.GetAPIServiceInstanceByID(id)
+	if ri != nil {
+		primaryKey, _ := util.GetAgentDetailsValue(ri, defs.AttrExternalAPIPrimaryKey)
+		c.removeFromServiceInstanceCount(primaryKey)
+	}
+
 	return c.instanceMap.Delete(id)
 }
 
@@ -62,6 +73,7 @@ func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 func (c *cacheManager) DeleteAllAPIServiceInstance() {
 	defer c.setCacheUpdated(true)
 
+	c.deleteAllServiceInstanceCounts()
 	c.instanceMap.Flush()
 }
 
