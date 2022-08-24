@@ -36,8 +36,10 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 
 			c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
 			c.apiMap.SetSecondaryKey(primaryKey, apiName)
+			c.apiMap.SetSecondaryKey(primaryKey, svc.Name)
 		} else {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
+			c.apiMap.SetSecondaryKey(apiID, svc.Name)
 		}
 		c.logger.
 			WithField("api-name", apiName).
@@ -146,6 +148,9 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 
 func (c *cacheManager) addToServiceInstanceCount(primaryKey string) error {
 	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	if svc == nil {
+		return nil
+	}
 	key := fmt.Sprintf("count-%v", svc.Name)
 
 	svcCountI, _ := c.instanceCountMap.Get(key)
@@ -160,12 +165,15 @@ func (c *cacheManager) addToServiceInstanceCount(primaryKey string) error {
 	}
 	svcCount.count++
 
-	c.apiMap.Set(key, svcCount)
+	c.instanceCountMap.Set(key, svcCount)
 	return nil
 }
 
 func (c *cacheManager) removeFromServiceInstanceCount(primaryKey string) error {
 	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	if svc == nil {
+		return nil
+	}
 	key := fmt.Sprintf("count-%v", svc.Name)
 
 	svcCountI, err := c.instanceCountMap.Get(key)
@@ -178,6 +186,7 @@ func (c *cacheManager) removeFromServiceInstanceCount(primaryKey string) error {
 		svcCount.count--
 	}
 
+	c.instanceCountMap.Set(key, svcCount)
 	return nil
 }
 
@@ -188,7 +197,7 @@ func (c *cacheManager) deleteAllServiceInstanceCounts() {
 func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
 	key := fmt.Sprintf("count-%v", svcName)
 
-	svcCountI, err := c.apiMap.Get(key)
+	svcCountI, err := c.instanceCountMap.Get(key)
 	if err != nil {
 		return 0
 	}
