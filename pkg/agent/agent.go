@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -68,6 +69,8 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
+	publishingGroup        sync.WaitGroup
+	validatingGroup        sync.WaitGroup
 
 	// profiling
 	profileDone chan struct{}
@@ -174,6 +177,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	if !agent.isInitialized {
+		agent.publishingGroup = sync.WaitGroup{}
+		agent.validatingGroup = sync.WaitGroup{}
 		setupSignalProcessor()
 		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {

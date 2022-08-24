@@ -127,7 +127,6 @@ func TestTeamCache(t *testing.T) {
 			agent.teamMap = nil
 			err := Initialize(cfg)
 			assert.Nil(t, err)
-			assert.NotNil(t, agent)
 			assert.NotNil(t, agent.apicClient)
 
 			job := centralTeamsCache{}

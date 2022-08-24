@@ -118,33 +118,21 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
+	agent.validatingGroup.Wait()
+	agent.publishingGroup.Add(1)
+	defer agent.publishingGroup.Done()
 	if agent.apicClient != nil {
-		var accReqDef *apiV1.ResourceInstance
 		if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 			var err error
-			accReqDef, err = publishAccessRequestDefinition(&serviceBody)
+			_, err = publishAccessRequestDefinition(&serviceBody)
 			if err != nil {
 				return err
 			}
 		}
 
-		ret, err := agent.apicClient.PublishService(&serviceBody)
+		_, err := agent.apicClient.PublishService(&serviceBody)
 		if err == nil {
 			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
-			// when in grpc mode cache updates happen when events are received. Only update the cache here for poll mode.
-			apiSvc, e := ret.AsInstance()
-			if e == nil {
-				addErr := agent.cacheManager.AddAPIService(apiSvc)
-				if addErr != nil {
-					log.Error(addErr)
-				}
-			}
-		} else {
-			if accReqDef != nil {
-				// rollback the access request definition if an error was hit publishing the linked service
-				agent.apicClient.DeleteResourceInstance(accReqDef)
-			}
-			return err
 		}
 	}
 	return nil
