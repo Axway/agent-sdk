@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,8 +14,9 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	sub := map[string]interface{}{
-		defs.AttrExternalAPIID:   apiID,
-		defs.AttrExternalAPIName: apiName,
+		defs.AttrExternalAPIID:         apiID,
+		defs.AttrExternalAPIName:       apiName,
+		defs.AttrExternalAPIPrimaryKey: primaryKey,
 	}
 
 	if primaryKey != "" {
@@ -23,6 +25,7 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: fmt.Sprintf("name-%s", apiName),
 			SubResources: map[string]interface{}{
 				defs.XAgentDetails: sub,
 			},
@@ -37,6 +40,7 @@ func createAPIServiceInstance(id, apiID, stage string) *v1.ResourceInstance {
 	}
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: fmt.Sprintf("name-%s", id),
 			Metadata: v1.Metadata{
 				ID: id,
 			},
@@ -140,9 +144,11 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	assert.NotNil(t, m)
 	assert.Equal(t, []string{}, m.GetAPIServiceInstanceKeys())
 
+	api1 := createAPIService("apiID1", "api1", "api1key")
 	instance1 := createAPIServiceInstance("id1", "apiID1", "stage1")
 	instance2 := createAPIServiceInstance("id2", "apiID2", "stage2")
 
+	m.AddAPIService(api1)
 	m.AddAPIServiceInstance(instance1)
 	m.AddAPIServiceInstance(instance2)
 	assert.ElementsMatch(t, []string{"id1", "id2"}, m.GetAPIServiceInstanceKeys())
@@ -150,6 +156,7 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	cachedInstance, err := m.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)
 	assert.Equal(t, instance1, cachedInstance)
+	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
 
 	err = m.DeleteAPIServiceInstance("id1")
 	assert.Nil(t, err)
@@ -158,6 +165,7 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	cachedInstance, err = m.GetAPIServiceInstanceByID("id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedInstance)
+	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
 
 	m.DeleteAllAPIServiceInstance()
 	assert.ElementsMatch(t, []string{}, m.GetAPIServiceInstanceKeys())

@@ -109,6 +109,7 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 	setupCache("12345", "test")
 	instance := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: "instance123456",
 			Metadata: v1.Metadata{
 				ID: "instance-" + "123456",
 			},

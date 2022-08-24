@@ -71,6 +71,7 @@ func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	api, _ := c.apiMap.Get(apiID)
 	if api == nil {
 		api, _ = c.apiMap.GetBySecondaryKey(apiID)
+		api, _ = c.apiMap.GetBySecondaryKey(apiID)
 	}
 
 	if api != nil {
@@ -146,10 +147,14 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 	return err
 }
 
-func (c *cacheManager) addToServiceInstanceCount(primaryKey string) error {
+func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error {
 	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
 	if svc == nil {
-		return nil
+		svc = c.GetAPIServiceWithAPIID(apiID)
+		if svc == nil {
+			// can't increment a count for a service we can't find
+			return nil
+		}
 	}
 	key := fmt.Sprintf("count-%v", svc.Name)
 
@@ -169,10 +174,14 @@ func (c *cacheManager) addToServiceInstanceCount(primaryKey string) error {
 	return nil
 }
 
-func (c *cacheManager) removeFromServiceInstanceCount(primaryKey string) error {
+func (c *cacheManager) removeFromServiceInstanceCount(apiID, primaryKey string) error {
 	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
 	if svc == nil {
-		return nil
+		svc = c.GetAPIServiceWithAPIID(apiID)
+		if svc == nil {
+			// can't decrement a count for a service we can't find
+			return nil
+		}
 	}
 	key := fmt.Sprintf("count-%v", svc.Name)
 

@@ -12,10 +12,14 @@ import (
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
+	cachedRI, _ := c.GetAPIServiceInstanceByID(resource.Metadata.ID)
 	c.instanceMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 
-	primaryKey, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIPrimaryKey)
-	c.addToServiceInstanceCount(primaryKey)
+	if cachedRI == nil {
+		apiID, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIID)
+		primaryKey, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIPrimaryKey)
+		c.addToServiceInstanceCount(apiID, primaryKey)
+	}
 }
 
 // GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
@@ -62,8 +66,9 @@ func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 
 	ri, _ := c.GetAPIServiceInstanceByID(id)
 	if ri != nil {
+		apiID, _ := util.GetAgentDetailsValue(ri, defs.AttrExternalAPIID)
 		primaryKey, _ := util.GetAgentDetailsValue(ri, defs.AttrExternalAPIPrimaryKey)
-		c.removeFromServiceInstanceCount(primaryKey)
+		c.removeFromServiceInstanceCount(apiID, primaryKey)
 	}
 
 	return c.instanceMap.Delete(id)
