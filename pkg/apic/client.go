@@ -96,7 +96,7 @@ type Client interface {
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
-	GetResources(ri apiv1.Interface) []apiv1.Interface
+	GetResources(ri apiv1.Interface) ([]apiv1.Interface, error)
 
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -731,23 +731,28 @@ func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error)
 }
 
 // GetResource gets a single resource
-func (c *ServiceClient) GetResources(iface apiv1.Interface) []apiv1.Interface {
+func (c *ServiceClient) GetResources(iface apiv1.Interface) ([]apiv1.Interface, error) {
 	inst, err := iface.AsInstance()
 	if err != nil {
-		return nil
+		return nil, err
 	}
+
 	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(inst.GetKindLink()), nil, nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
+
 	instances := []*apiv1.ResourceInstance{}
-	json.Unmarshal(response, &instances)
+	err = json.Unmarshal(response, &instances)
+	if err != nil {
+		return nil, err
+	}
+
 	ifaces := []apiv1.Interface{}
 	for i := range instances {
 		ifaces = append(ifaces, instances[i])
 	}
-
-	return ifaces
+	return ifaces, nil
 }
 
 // UpdateResourceFinalizer - Add or remove a finalizer from a resource

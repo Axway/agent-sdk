@@ -57,7 +57,11 @@ func (j *aclUpdateJob) Execute() error {
 
 func (j aclUpdateJob) getACLsFromServer() {
 	emptyACL, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, agent.cfg.GetEnvironmentName())
-	acls := agent.apicClient.GetResources(emptyACL)
+	acls, err := agent.apicClient.GetResources(emptyACL)
+	if err != nil {
+		return
+	}
+
 	for _, acl := range acls {
 		ri, _ := acl.AsInstance()
 		if ri.Name == j.getACLName() {
