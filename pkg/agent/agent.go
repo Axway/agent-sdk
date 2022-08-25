@@ -69,8 +69,8 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
-	publishingGroup        sync.WaitGroup
-	validatingGroup        sync.WaitGroup
+	publishingGroup        sync.WaitGroup // wait group to block validator from publishing is happening
+	validatingGroup        sync.WaitGroup // wait group to block publishing while validator is running
 
 	// profiling
 	profileDone chan struct{}

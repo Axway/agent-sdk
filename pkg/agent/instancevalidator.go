@@ -95,7 +95,7 @@ func (j *instanceValidator) deleteServiceInstance(ri *apiV1.ResourceInstance, pr
 }
 
 func (j *instanceValidator) deleteService(ri *apiV1.ResourceInstance) {
-	log.Infof("API no longer exists on the dataplane; deleting the API Service %s", ri.Title)
+	log.Infof("API Service no longer has a service instance; deleting the API Service %s", ri.Title)
 
 	// deleting the service will delete all associated resources, including the consumerInstance
 	err := agent.apicClient.DeleteServiceByName(ri.Name)
