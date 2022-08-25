@@ -92,6 +92,8 @@ func TestAPIServiceCache(t *testing.T) {
 
 	api1 := createAPIService("id1", "api1", "")
 	api2 := createAPIService("id2", "api2", "api2key")
+	api1.Owner = &v1.Owner{Type: v1.TeamOwner, ID: "teamID1"}
+	api2.Owner = &v1.Owner{Type: v1.TeamOwner, ID: "teamID2"}
 
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
@@ -101,6 +103,9 @@ func TestAPIServiceCache(t *testing.T) {
 
 	err = m.AddAPIService(api2)
 	assert.Nil(t, err)
+
+	teamIDs := m.GetTeamsIDsInAPIServices()
+	assert.ElementsMatch(t, []string{"teamID1", "teamID2"}, teamIDs)
 
 	cachedAPI := m.GetAPIServiceWithAPIID("id1")
 	assert.Equal(t, api1, cachedAPI)
@@ -153,7 +158,15 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	m.AddAPIServiceInstance(instance2)
 	assert.ElementsMatch(t, []string{"id1", "id2"}, m.GetAPIServiceInstanceKeys())
 
+	allInstances := m.ListAPIServiceInstances()
+	assert.ElementsMatch(t, []*v1.ResourceInstance{instance1, instance2}, allInstances)
+
 	cachedInstance, err := m.GetAPIServiceInstanceByID("id1")
+	assert.Nil(t, err)
+	assert.Equal(t, instance1, cachedInstance)
+	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
+
+	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
 	assert.Nil(t, err)
 	assert.Equal(t, instance1, cachedInstance)
 	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
@@ -163,6 +176,11 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	assert.ElementsMatch(t, []string{"id2"}, m.GetAPIServiceInstanceKeys())
 
 	cachedInstance, err = m.GetAPIServiceInstanceByID("id1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedInstance)
+	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
+
+	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedInstance)
 	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
@@ -335,6 +353,12 @@ func TestCredentialRequestDefinitionCache(t *testing.T) {
 
 	m.AddCredentialRequestDefinition(crd1)
 	m.AddCredentialRequestDefinition(crd2)
+
+	crdKeys := m.GetCredentialRequestDefinitionKeys()
+	assert.ElementsMatch(t, []string{"id1", "id2"}, crdKeys)
+
+	cachedCRDs := m.ListCredentialRequestDefinitions()
+	assert.ElementsMatch(t, []*v1.ResourceInstance{crd1, crd2}, cachedCRDs)
 
 	cachedCRD, err := m.GetCredentialRequestDefinitionByName("name1")
 	assert.Nil(t, err)
