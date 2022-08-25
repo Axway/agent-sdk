@@ -39,6 +39,10 @@ func (j *aclUpdateJob) Status() error {
 }
 
 func (j *aclUpdateJob) Execute() error {
+	if agent.cacheManager.GetAccessControlList() == nil {
+		j.getACLsFromServer()
+	}
+
 	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
 	sort.Strings(newTeamIDs)
 	if j.lastTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(j.lastTeamIDs, "") {
@@ -49,6 +53,18 @@ func (j *aclUpdateJob) Execute() error {
 	}
 	j.lastTeamIDs = sort.StringSlice(newTeamIDs)
 	return nil
+}
+
+func (j aclUpdateJob) getACLsFromServer() {
+	emptyACL, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, agent.cfg.GetEnvironmentName())
+	acls := agent.apicClient.GetResources(emptyACL)
+	for _, acl := range acls {
+		ri, _ := acl.AsInstance()
+		if ri.Name == j.getACLName() {
+			agent.cacheManager.SetAccessControlList(ri)
+			return
+		}
+	}
 }
 
 func (j *aclUpdateJob) getACLName() string {
