@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -69,6 +69,8 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
+	publishingGroup        sync.WaitGroup // wait group to block validator from publishing is happening
+	validatingGroup        sync.WaitGroup // wait group to block publishing while validator is running
 
 	// profiling
 	profileDone chan struct{}
@@ -175,6 +177,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	if !agent.isInitialized {
+		agent.publishingGroup = sync.WaitGroup{}
+		agent.validatingGroup = sync.WaitGroup{}
 		setupSignalProcessor()
 		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
@@ -346,7 +350,7 @@ func isRunningInDockerContainer() bool {
 	// Within the cgroup file, if you are not in a docker container all entries are like these devices:/
 	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
 	// So, all we need to do is see if ":/docker" exists somewhere in the file.
-	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
+	bytes, err := os.ReadFile("/proc/1/cgroup")
 	if err != nil {
 		return false
 	}

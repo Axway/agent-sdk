@@ -11,7 +11,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -158,22 +157,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 			}
 		}
 		return err
-	}
-
-	if err == nil && len(instance.SubResources) > 0 {
-		ri.SubResources = instance.SubResources // add the subresources to the instance that will be cached
-		if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
-			subResources := map[string]interface{}{
-				defs.XAgentDetails: xAgentDetail,
-			}
-			err = c.CreateSubResource(instance.ResourceMeta, subResources)
-			if err != nil {
-				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-				if rollbackErr != nil {
-					return errors.New(err.Error() + rollbackErr.Error())
-				}
-			}
-		}
 	}
 
 	c.caches.AddAPIServiceInstance(ri)

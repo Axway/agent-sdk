@@ -31,6 +31,7 @@ type Manager interface {
 	GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance
 	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
+	GetAPIServiceInstanceCount(apiName string) int
 	GetTeamsIDsInAPIServices() []string
 	DeleteAPIService(apiID string) error
 
@@ -112,6 +113,7 @@ type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
 	apiMap                  cache.Cache
+	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
@@ -139,6 +141,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
 		apiMap:                  cache.New(),
+		instanceCountMap:        cache.New(),
 		instanceMap:             cache.New(),
 		categoryMap:             cache.New(),
 		managedApplicationMap:   cache.New(),

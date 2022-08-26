@@ -55,6 +55,9 @@ func TestAccessRequestCache(t *testing.T) {
 	m.AddAccessRequest(ar1ri)
 	m.AddAccessRequest(ar2ri)
 
+	keys := m.GetAccessRequestCacheKeys()
+	assert.ElementsMatch(t, []string{"ac1", "ac2"}, keys)
+
 	cachedAccessReq = m.GetAccessRequest("ac1")
 	assert.Equal(t, ar1ri, cachedAccessReq)
 

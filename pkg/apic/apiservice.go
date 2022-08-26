@@ -169,6 +169,9 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 			return nil, errors.New(err.Error() + e.Error())
 		}
 	}
+
+	ri, _ := svc.AsInstance()
+	c.caches.AddAPIService(ri)
 	return svc, err
 }
 
