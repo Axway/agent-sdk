@@ -96,6 +96,7 @@ type Client interface {
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
+	GetResources(ri apiv1.Interface) ([]apiv1.Interface, error)
 
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
@@ -666,25 +667,6 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 	}
 }
 
-// linkSubResource creates a sub resource by calling the provided url. url should be the link to the resource.
-// subResourceName is the name of the sub resource to add to the resource found at the given url.
-// subResourceName will be appended to the end of the url for the PUT request.
-// body is the payload of the subresource to create.
-func (c *ServiceClient) linkSubResource(url string, body interface{}) error {
-	// https://apicentral.axway.com/apis/management/v1alpha1/environments/wc-env/apiservices/eeeee/:extension
-	bts, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CreateSubResource creates a sub resource on the provided resource.
 func (c *ServiceClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
 	_, err := c.createSubResource(rm, subs)
@@ -746,6 +728,31 @@ func (c *ServiceClient) GetResource(url string) (*apiv1.ResourceInstance, error)
 	ri := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(response, ri)
 	return ri, err
+}
+
+// GetResource gets a single resource
+func (c *ServiceClient) GetResources(iface apiv1.Interface) ([]apiv1.Interface, error) {
+	inst, err := iface.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.ExecuteAPI(http.MethodGet, c.createAPIServerURL(inst.GetKindLink()), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	instances := []*apiv1.ResourceInstance{}
+	err = json.Unmarshal(response, &instances)
+	if err != nil {
+		return nil, err
+	}
+
+	ifaces := []apiv1.Interface{}
+	for i := range instances {
+		ifaces = append(ifaces, instances[i])
+	}
+	return ifaces, nil
 }
 
 // UpdateResourceFinalizer - Add or remove a finalizer from a resource

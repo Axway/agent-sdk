@@ -118,28 +118,6 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 	return nil
 }
 
-func (c *ServiceClient) checkReferencesToAccessRequestDefinition(ard string) int {
-	count := 0
-	for _, instanceKey := range c.caches.GetAPIServiceInstanceKeys() {
-		serviceInstance, err := c.caches.GetAPIServiceInstanceByID(instanceKey)
-		if err != nil || serviceInstance == nil {
-			// skip this key as it did not return a service instance
-			continue
-		}
-		// check the references
-		for _, ref := range serviceInstance.Metadata.References {
-			if ref.Kind == management.AccessRequestDefinitionGVK().Kind {
-				if ref.Name == ard {
-					count++
-				}
-				// only 1 ard per service instance
-				continue
-			}
-		}
-	}
-	return count
-}
-
 // GetConsumerInstanceByID -
 func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*management.ConsumerInstance, error) {
 	return c.getConsumerInstanceByID(consumerInstanceID)

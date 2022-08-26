@@ -1,7 +1,7 @@
 package apic
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -10,7 +10,7 @@ import (
 
 func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
 	specFileDescriptor, _ := os.Open(specFile)
-	specData, _ := ioutil.ReadAll(specFileDescriptor)
+	specData, _ := io.ReadAll(specFileDescriptor)
 	specParser := NewSpecResourceParser(specData, specType)
 	err := specParser.Parse()
 	return specParser, err

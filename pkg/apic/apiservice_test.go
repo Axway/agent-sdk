@@ -3,7 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -98,7 +98,7 @@ func TestCreateService(t *testing.T) {
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ := io.ReadAll(oas2Json)
 	cloneServiceBody := serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
 
@@ -303,7 +303,7 @@ func TestUpdateService(t *testing.T) {
 	cloneServiceBody.APIUpdateSeverity = "MINOR"
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ := io.ReadAll(oas2Json)
 	cloneServiceBody.SpecDefinition = oas2Bytes
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
@@ -361,7 +361,7 @@ func TestUpdateService(t *testing.T) {
 	// Test oas2 object
 	oas2Json, _ = os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ = ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ = io.ReadAll(oas2Json)
 
 	cloneServiceBody = serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
@@ -652,7 +652,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	// Test thrift object
 	const filename = "multiplication.thrift"
 	thriftFile, _ := os.Open("./testdata/" + filename) // OAS2
-	thriftBytes, _ := ioutil.ReadAll(thriftFile)
+	thriftBytes, _ := io.ReadAll(thriftFile)
 	thriftFile.Close() // close now, no need to wait until the test is finished
 
 	assetType := "Apache Thrift"

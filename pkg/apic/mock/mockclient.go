@@ -55,6 +55,7 @@ type Client struct {
 	DeleteResourceInstanceMock                               func(ri v1.Interface) error
 	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
+	GetResourcesMock                                         func(ri v1.Interface) ([]v1.Interface, error)
 	CreateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                                       func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizerMock                              func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
@@ -355,6 +356,13 @@ func (m *Client) CreateSubResource(rm v1.ResourceMeta, subs map[string]interface
 func (m *Client) GetResource(url string) (*v1.ResourceInstance, error) {
 	if m.GetResourceMock != nil {
 		return m.GetResourceMock(url)
+	}
+	return nil, nil
+}
+
+func (m *Client) GetResources(ri v1.Interface) ([]v1.Interface, error) {
+	if m.GetResourceMock != nil {
+		return m.GetResourcesMock(ri)
 	}
 	return nil, nil
 }
