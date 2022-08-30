@@ -38,7 +38,7 @@ type APIService struct {
 	Details ApiServiceDetails `json:"details"`
 	Owner   *apiv1.Owner      `json:"owner"`
 	Spec    ApiServiceSpec    `json:"spec"`
-	// 	Status  ApiServiceStatus  `json:"status"`
+	// Status  ApiServiceStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -179,7 +179,7 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

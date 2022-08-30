@@ -12,6 +12,9 @@ package catalog
 // ProductVisibilitySpec  (catalog.v1alpha1.ProductVisibility)
 type ProductVisibilitySpec struct {
 	// Defines where the visibility settings apply.
-	Products []ProductVisibilitySpecProducts `json:"products,omitempty"`
-	Subjects []ProductVisibilitySpecSubjects `json:"subjects,omitempty"`
+	Products []ProductVisibilitySpecProducts `json:"products"`
+	// Determins if the list of subjects should be excluded from the product visibility.
+	Exclude bool `json:"exclude,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Subjects []interface{} `json:"subjects,omitempty"`
 }

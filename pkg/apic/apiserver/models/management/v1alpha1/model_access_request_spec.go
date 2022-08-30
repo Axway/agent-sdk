@@ -1,6 +1,6 @@
 package management
 
-// GENERATE: All of the code below was replaced after code gneration
+// GENERATE: All of the code below was replaced after code generation
 
 // AccessRequestSpec  (management.v1alpha1.AccessRequest)
 type AccessRequestSpec struct {

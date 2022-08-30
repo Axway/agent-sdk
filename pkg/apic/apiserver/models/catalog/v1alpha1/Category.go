@@ -35,6 +35,7 @@ func init() {
 // Category Resource
 type Category struct {
 	apiv1.ResourceMeta
+	Icon  interface{}  `json:"icon"`
 	Owner *apiv1.Owner `json:"owner"`
 	Spec  CategorySpec `json:"spec"`
 }
@@ -115,6 +116,7 @@ func (res *Category) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -144,6 +146,20 @@ func (res *Category) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Icon
+	if v, ok := aux.SubResources["icon"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "icon")
+		err = json.Unmarshal(sr, &res.Icon)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

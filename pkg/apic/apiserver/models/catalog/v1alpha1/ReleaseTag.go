@@ -39,7 +39,7 @@ type ReleaseTag struct {
 	Owner *apiv1.Owner   `json:"owner"`
 	Spec  ReleaseTagSpec `json:"spec"`
 	State interface{}    `json:"state"`
-	// 	Status ReleaseTagStatus `json:"status"`
+	// Status ReleaseTagStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -191,7 +191,7 @@ func (res *ReleaseTag) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

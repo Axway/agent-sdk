@@ -39,7 +39,7 @@ type VirtualAPI struct {
 	Owner *apiv1.Owner   `json:"owner"`
 	Spec  VirtualApiSpec `json:"spec"`
 	State interface{}    `json:"state"`
-	// 	Status VirtualApiStatus `json:"status"`
+	// Status VirtualApiStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -189,7 +189,7 @@ func (res *VirtualAPI) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

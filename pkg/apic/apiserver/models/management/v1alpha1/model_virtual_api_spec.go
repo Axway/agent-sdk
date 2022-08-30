@@ -15,5 +15,5 @@ type VirtualApiSpec struct {
 	Description string `json:"description,omitempty"`
 	Type        string `json:"type,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	Api VirtualApiSpecOas `json:"api,omitempty"`
+	Api interface{} `json:"api,omitempty"`
 }

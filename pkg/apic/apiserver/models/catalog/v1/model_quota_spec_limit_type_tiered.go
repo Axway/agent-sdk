@@ -9,10 +9,8 @@
 
 package catalog
 
-// ProductVisibilitySpecSubjects  (catalog.v1alpha1.ProductVisibility)
-type ProductVisibilitySpecSubjects struct {
-	// Type of the subject
-	Type string `json:"type,omitempty"`
-	// ID of the subject
-	Id string `json:"id,omitempty"`
+// QuotaSpecLimitTypeTiered struct for QuotaSpecLimitTypeTiered
+type QuotaSpecLimitTypeTiered struct {
+	Type  string                          `json:"type"`
+	Tiers []QuotaSpecLimitTypeTieredTiers `json:"tiers"`
 }

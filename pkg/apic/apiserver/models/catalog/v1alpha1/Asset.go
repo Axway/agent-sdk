@@ -35,12 +35,13 @@ func init() {
 // Asset Resource
 type Asset struct {
 	apiv1.ResourceMeta
+	Access     AssetAccess  `json:"access"`
 	Icon       interface{}  `json:"icon"`
 	Owner      *apiv1.Owner `json:"owner"`
 	References interface{}  `json:"references"`
 	Spec       AssetSpec    `json:"spec"`
 	State      AssetState   `json:"state"`
-	// 	Status     AssetStatus  `json:"status"`
+	// Status     AssetStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -120,6 +121,7 @@ func (res *Asset) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["access"] = res.Access
 	out["icon"] = res.Icon
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -153,6 +155,20 @@ func (res *Asset) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Access
+	if v, ok := aux.SubResources["access"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "access")
+		err = json.Unmarshal(sr, &res.Access)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Icon
@@ -205,7 +221,7 @@ func (res *Asset) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

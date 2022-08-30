@@ -11,7 +11,8 @@ package catalog
 
 import (
 	// GENERATE: The following code has been modified after code generation
-	// 	"time"
+	//
+	//	"time"
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
@@ -21,6 +22,6 @@ type ProductReleaseStatusSuccess struct {
 	// Time when the change occured.
 	Timestamp time.Time `json:"timestamp"`
 	// message of the result
-	Detail string                            `json:"detail"`
-	Meta   map[string]map[string]interface{} `json:"meta,omitempty"`
+	Detail string                          `json:"detail"`
+	Meta   ProductReleaseStatusPendingMeta `json:"meta,omitempty"`
 }

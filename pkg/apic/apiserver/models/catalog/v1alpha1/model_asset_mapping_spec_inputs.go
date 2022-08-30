@@ -12,7 +12,7 @@ package catalog
 // AssetMappingSpecInputs The list of the inputs provided to the template. (catalog.v1alpha1.AssetMapping)
 type AssetMappingSpecInputs struct {
 	ApiService         string `json:"apiService"`
-	ApiServiceRevision string `json:"apiServiceRevision"`
+	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
 	// name of the stage
 	Stage string `json:"stage,omitempty"`

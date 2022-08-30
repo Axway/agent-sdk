@@ -5,7 +5,11 @@ import (
 	"strings"
 )
 
-const ResourceDeleting = "DELETING"
+const (
+	ResourceDeleting = "DELETING"
+	Inactive         = "inactive"
+	Active           = "active"
+)
 
 // Meta interface for API Server resource metadata
 type Meta interface {

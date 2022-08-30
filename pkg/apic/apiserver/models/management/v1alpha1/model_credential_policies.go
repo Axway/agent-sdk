@@ -9,7 +9,9 @@
 
 package management
 
-// VirtualApiSpecOas The OAS specification.
-type VirtualApiSpecOas struct {
-	Oas map[string]interface{} `json:"oas"`
+// CredentialPolicies  (management.v1alpha1.Credential)
+type CredentialPolicies struct {
+	// Defines on if Credential can be renewed.
+	Renewable bool                     `json:"renewable,omitempty"`
+	Expiry    CredentialPoliciesExpiry `json:"expiry,omitempty"`
 }
