@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -57,7 +56,7 @@ func TestAuthConfig(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.auth.privateKey, please set and/or check its value", err.Error())
 
-	fs, err := ioutil.TempFile(".", "test*")
+	fs, _ := os.CreateTemp(".", "test*")
 	authCfg.PrivateKey = "./" + fs.Name()
 	err = validateAuth(cfg)
 	assert.NotNil(t, err)

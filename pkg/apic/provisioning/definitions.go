@@ -80,6 +80,24 @@ func (c State) String() string {
 	}[c]
 }
 
+// CredentialAction - the Action the agent needs to take for this CredentialUpdate request
+type CredentialAction int
+
+const (
+	// Renew - renew the credential on the dataplane
+	Renew CredentialAction = iota + 1
+	// Revoke - remove the credential from the dataplane
+	Revoke
+)
+
+// String returns the string value of the CredentialAction
+func (c CredentialAction) String() string {
+	return map[CredentialAction]string{
+		Renew:  "Renew",
+		Revoke: "Revoke",
+	}[c]
+}
+
 // Provisioning - interface to be implemented by agents for access provisioning
 type Provisioning interface {
 	AccessRequestDeprovision(AccessRequest) RequestStatus
@@ -88,4 +106,5 @@ type Provisioning interface {
 	ApplicationRequestProvision(ApplicationRequest) RequestStatus
 	CredentialDeprovision(CredentialRequest) RequestStatus
 	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
+	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
 }

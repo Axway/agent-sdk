@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -48,7 +48,7 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.P
 }
 
 // Handle processes grpc events triggered for Credentials
-func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if resource.Kind != management.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
@@ -95,7 +95,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	return nil
 }
 
-func (h *credentials) getReasonMetaAction(reasons []apiv1.ResourceStatusReason) string {
+func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) string {
 	if len(reasons) != 1 {
 		return ""
 	}
@@ -109,13 +109,13 @@ func (h *credentials) getReasonMetaAction(reasons []apiv1.ResourceStatusReason) 
 }
 
 // shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers or when it is in Error and the only reason is CredentialExpired
-func (h *credentials) shouldProcessDeleting(status *apiv1.ResourceStatus, state string, finalizers []apiv1.Finalizer) bool {
+func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
 	switch {
 	case len(finalizers) == 0:
 		return false
 	case h.marketplaceHandler.shouldProcessDeleting(status, state, finalizers):
 		fallthrough
-	case status.Level == prov.Error.String() && h.getReasonMetaAction(status.Reasons) == "CredentialExpired":
+	case status.Level == prov.Error.String() && h.getReasonMetaAction(status.Reasons) == "CredentialExpired" && state != v1.ResourceDeleting:
 		return true
 	default:
 		return false
@@ -239,7 +239,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
 
 		// Delete the resource, since it was not in Deleting State
-		if ri.Metadata.State != apiv1.ResourceDeleting {
+		if ri.Metadata.State != v1.ResourceDeleting {
 			h.client.DeleteResourceInstance(ri)
 		}
 	} else {

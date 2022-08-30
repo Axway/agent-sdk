@@ -118,7 +118,7 @@ var tlsVersions = map[string]TLSVersion{
 
 var tlsVersionsInverse = make(map[TLSVersion]string, len(tlsVersions))
 
-//Unpack transforms the string into a constant.
+// Unpack transforms the string into a constant.
 func (v *TLSVersion) Unpack(s string) error {
 	if s == "" {
 		return nil
@@ -314,15 +314,15 @@ func (c *TLSConfiguration) ValidateCfg() (err error) {
 // Validate -
 func (c *TLSConfiguration) validateConfig() {
 	if c.MinVersion != 0 && !c.isValidMinVersion() {
-		exception.Throw(errors.New("Error: ssl.minVersion not valid in config"))
+		exception.Throw(errors.New("ssl.minVersion not valid in config"))
 	}
 
 	if c.MaxVersion != 0 && !c.isValidMaxVersion() {
-		exception.Throw(errors.New("Error: ssl.maxVersion not valid in config"))
+		exception.Throw(errors.New("ssl.maxVersion not valid in config"))
 	}
 
 	if len(c.CipherSuites) != 0 && !c.isValidCiphers() {
-		exception.Throw(errors.New("Error: ssl.cipherSuites not valid in config"))
+		exception.Throw(errors.New("ssl.cipherSuites not valid in config"))
 	}
 }
 
