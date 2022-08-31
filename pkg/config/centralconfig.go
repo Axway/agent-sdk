@@ -129,6 +129,7 @@ type CentralConfig interface {
 	GetMigrationSettings() MigrationConfig
 	GetWatchResourceFilters() []ResourceFilter
 	SetWatchResourceFilters([]ResourceFilter) error
+	GetCredentialConfig() CredentialConfig
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -161,6 +162,7 @@ type CentralConfiguration struct {
 	GRPCCfg                   GRPCConfig           `config:"grpc"`
 	CacheStoragePath          string               `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration        `config:"cacheStorageInterval"`
+	CredentialConfig          CredentialConfig     `config:"credential"`
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
@@ -210,6 +212,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 			},
 		},
 		MigrationSettings: newMigrationConfig(),
+		CredentialConfig:  newCredentialConfig(),
 	}
 }
 
@@ -502,6 +505,11 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 		return NewUsageReporting()
 	}
 	return c.UsageReporting
+}
+
+// GetCredentialConfig -
+func (c *CentralConfiguration) GetCredentialConfig() CredentialConfig {
+	return c.CredentialConfig
 }
 
 // IsUsingGRPC -
@@ -809,6 +817,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 		AddMigrationConfigProperties(props)
+		AddCredentialConfigProperties(props)
 	}
 }
 
@@ -888,6 +897,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
+		cfg.CredentialConfig = ParseCredentialConfig(props)
 	}
 	return cfg, nil
 }
