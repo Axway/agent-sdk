@@ -366,8 +366,8 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 					break
 				}
 			}
-			if isDefaultValueValid == false {
-				return nil, fmt.Errorf("Default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
+			if !isDefaultValueValid {
+				return nil, fmt.Errorf("default value (%s) must be present in the enum list (%s)", p.defaultValue, p.enums)
 			}
 		}
 		def.DefaultValue = p.defaultValue
@@ -425,10 +425,10 @@ func (p *numberSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	if p.defaultValue != nil {
 		if p.minValue != nil && *p.defaultValue < *p.minValue {
-			return nil, fmt.Errorf("Default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
+			return nil, fmt.Errorf("default value (%f) must be equal or greater than min value (%f)", *p.defaultValue, *p.minValue)
 		}
 		if p.maxValue != nil && *p.defaultValue > *p.maxValue {
-			return nil, fmt.Errorf("Default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
+			return nil, fmt.Errorf("default value (%f) must be equal or lower than max value (%f)", *p.defaultValue, *p.maxValue)
 		}
 		def.DefaultValue = p.defaultValue
 	}

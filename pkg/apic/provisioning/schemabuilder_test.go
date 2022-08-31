@@ -122,7 +122,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	assert.Contains(t, schemaMap2[axwayOrder], "name1")
 
 	// set property order, however, no properties were added to match any properties in property order
-	schemaMap3, err := NewSchemaBuilder().
+	schemaMap3, _ := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		SetPropertyOrder([]string{"name3", "name2", "name1"}).

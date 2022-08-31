@@ -111,6 +111,7 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 
 type crdBuilderOptions struct {
 	name      string
+	renewable bool
 	provProps []provisioning.PropertyBuilder
 	reqProps  []provisioning.PropertyBuilder
 }
@@ -118,6 +119,7 @@ type crdBuilderOptions struct {
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
+		renewable: false,
 		provProps: make([]provisioning.PropertyBuilder, 0),
 		reqProps:  make([]provisioning.PropertyBuilder, 0),
 	}
@@ -135,16 +137,34 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		reqSchema.AddProperty(props)
 	}
 
-	return provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
+	builder := provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
 		SetName(thisCred.name).
 		SetProvisionSchema(provSchema).
-		SetRequestSchema(reqSchema)
+		SetRequestSchema(reqSchema).
+		SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
+
+	if thisCred.renewable {
+		builder.IsRenewable()
+	}
+
+	if agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
+		builder.SetDeprovisionExpired()
+	}
+
+	return builder
 }
 
 // WithCRDName - set another name for the CRD
 func WithCRDName(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.name = name
+	}
+}
+
+// WithCRDIsRenewable - set another name for the CRD
+func WithCRDIsRenewable() func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.renewable = true
 	}
 }
 

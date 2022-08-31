@@ -17,8 +17,11 @@ type credentialRequestDef struct {
 	provisionSchema map[string]interface{}
 	requestSchema   map[string]interface{}
 	webhooks        []string
+	actions         []string
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
+	renewable       bool
+	period          int
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -29,6 +32,9 @@ type CredentialRequestBuilder interface {
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
+	IsRenewable() CredentialRequestBuilder
+	SetExpirationDays(days int) CredentialRequestBuilder
+	SetDeprovisionExpired() CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
@@ -37,6 +43,7 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 	return &credentialRequestDef{
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,
+		actions:      make([]string, 0),
 	}
 }
 
@@ -96,6 +103,24 @@ func (c *credentialRequestDef) AddWebhook(webhook string) CredentialRequestBuild
 	return c
 }
 
+// IsRenewable - the credential can be asked to be renewed
+func (c *credentialRequestDef) IsRenewable() CredentialRequestBuilder {
+	c.renewable = true
+	return c
+}
+
+// SetExpirationDays - the number of days a credential of this type can live
+func (c *credentialRequestDef) SetExpirationDays(days int) CredentialRequestBuilder {
+	c.period = days
+	return c
+}
+
+// SetDeprovisionExpired - when set the agent will remove expired credentials from the data plane
+func (c *credentialRequestDef) SetDeprovisionExpired() CredentialRequestBuilder {
+	c.actions = append(c.actions, "deprovision")
+	return c
+}
+
 // Register - create the credential request defintion and send it to Central
 func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
@@ -110,7 +135,26 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		Schema: c.requestSchema,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
+			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{
+				Renewable: c.renewable,
+			},
 		},
+	}
+
+	actions := make([]management.CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions, 0)
+	if len(c.actions) > 0 {
+		for _, a := range c.actions {
+			actions = append(actions, management.CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions{
+				Type: a,
+			})
+		}
+	}
+
+	if c.period > 0 {
+		spec.Provision.Policies.Expiry = management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
+			Actions: actions,
+			Period:  int32(c.period),
+		}
 	}
 
 	hashInt, _ := util.ComputeHash(spec)
