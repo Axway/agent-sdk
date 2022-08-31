@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"strings"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -17,13 +18,15 @@ import (
 )
 
 const (
+	update          = "update"
 	xAxwayEncrypted = "x-axway-encrypted"
 	crFinalizer     = "agent.credential.provisioned"
 )
 
 type credProv interface {
-	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential)
+	CredentialProvision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentials prov.Credential)
 	CredentialDeprovision(credentialRequest prov.CredentialRequest) (status prov.RequestStatus)
+	CredentialUpdate(credentialRequest prov.CredentialRequest) (status prov.RequestStatus, credentials prov.Credential)
 }
 
 type credentials struct {
@@ -57,6 +60,13 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	logger := getLoggerFromContext(ctx).WithComponent("credentialHandler")
 	ctx = setLoggerInContext(ctx, logger)
 
+	inter := reflect.TypeOf((*credProv)(nil)).Elem()
+	if reflect.TypeOf(h).Implements(inter) {
+		logger.Info("implements updates")
+	} else {
+		logger.Info("does not implement updates")
+	}
+
 	cr := &management.Credential{}
 	err := cr.FromInstance(resource)
 	if err != nil {
@@ -69,83 +79,91 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	if ok := h.shouldProcessPending(cr.Status, cr.Metadata.State); ok {
+	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
+		logger.Trace("processing resource in deleting state")
+		h.onDeleting(ctx, cr)
+		return nil
+	}
+
+	var credential *management.Credential
+	if ok := h.shouldProcessPending(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
 		log.Trace("processing resource in pending status")
-		ar := h.onPending(ctx, cr)
-		err := h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
+		credential = h.onPending(ctx, cr)
+	} else if action, ok := h.shouldProcessUpdate(cr.Status, cr.State.Name, cr.Finalizers); ok {
+		log.Trace("processing resource in updating status")
+		if action == prov.Revoke {
+			credential = h.onUpdateRevoke(ctx, cr)
+		} else {
+			credential = h.onUpdateRenew(ctx, cr)
+		}
+	}
+
+	if credential != nil {
+		err = h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
 		if err != nil {
 			logger.WithError(err).Error("error creating subresources")
 		}
 
-		// update the status regardless of errors updating the other subresources
-		statusErr := h.client.CreateSubResource(ar.ResourceMeta, map[string]interface{}{"status": ar.Status})
+		// update the status resource regardless of errors updating the other subresources
+		statusErr := h.client.CreateSubResource(credential.ResourceMeta, map[string]interface{}{"status": credential.Status})
 		if statusErr != nil {
 			logger.WithError(statusErr).Error("error creating status subresources")
 			return statusErr
 		}
-
-		return err
 	}
 
-	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
-		logger.Trace("processing resource in deleting state")
-		h.onDeleting(ctx, cr)
-	}
+	return err
 
-	return nil
 }
 
-func (h *credentials) getReasonMetaAction(reasons []v1.ResourceStatusReason) string {
-	if len(reasons) != 1 {
-		return ""
+// shouldProcessDeleting - return true if cred has the agent finalizer, resource is in deleting, and not in error from agent
+func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, resourceState string, finalizers []v1.Finalizer) bool {
+	if hasAgentCredentialFinalizer(finalizers) && resourceState == v1.ResourceDeleting {
+		return !hasAgentCredentialError(status) // don't process delete when error from agent
 	}
-	if reasons[0].Meta == nil {
-		return ""
-	}
-	if action, found := reasons[0].Meta["action"]; found {
-		return fmt.Sprintf("%v", action)
-	}
-	return ""
+	return false
 }
 
-// shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers or when it is in Error and the only reason is CredentialExpired
-func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
-	switch {
-	case len(finalizers) == 0:
-		return false
-	case h.marketplaceHandler.shouldProcessDeleting(status, state, finalizers):
-		fallthrough
-	case status.Level == prov.Error.String() && h.getReasonMetaAction(status.Reasons) == "CredentialExpired" && state != v1.ResourceDeleting:
-		return true
-	default:
-		return false
+// shouldProcessPending - return true if cred does not have the agent finalizer, resource is in pending, and resource is not deleting
+func (m *credentials) shouldProcessPending(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
+	if !hasAgentCredentialFinalizer(finalizers) {
+		return m.marketplaceHandler.shouldProcessPending(status, state)
 	}
+	return false
+}
+
+// shouldProcessUpdate
+// - revoke when cred has the agent finalizer, resource is in pending, and state is inactive
+// - renew  when cred has the agent finalizer, resource is in pending, and state is active
+func (h *credentials) shouldProcessUpdate(status *v1.ResourceStatus, credentialState string, finalizers []v1.Finalizer) (prov.CredentialAction, bool) {
+	inter := reflect.TypeOf((*credProv)(nil)).Elem()
+	if !reflect.TypeOf(h).Implements(inter) {
+		return 0, false
+	}
+
+	if !hasAgentCredentialFinalizer(finalizers) || status.Level != prov.Pending.String() {
+		return 0, false
+	}
+
+	if credentialState == v1.Inactive {
+		// revoke
+		return prov.Revoke, true
+	} else if credentialState == v1.Active {
+		// renew
+		return prov.Renew, true
+	}
+	return 0, false // no credentialState
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *management.Credential) *management.Credential {
-	logger := getLoggerFromContext(ctx)
-	app, err := h.getManagedApp(ctx, cred)
-	if err != nil {
-		logger.WithError(err).Error("error getting managed app")
-		h.onError(ctx, cred, err)
-		return cred
-	}
-
 	// check the application status
-	if app.Status.Level != prov.Success.String() {
-		err = fmt.Errorf("cannot handle credential when application is not yet successful")
-		h.onError(ctx, cred, err)
+	logger := getLoggerFromContext(ctx)
+	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
+	if shouldReturn {
 		return cred
 	}
 
-	crd, err := h.getCRD(ctx, cred)
-	if err != nil {
-		logger.WithError(err).Error("error getting credential request definition")
-		h.onError(ctx, cred, err)
-		return cred
-	}
-
-	provCreds, err := newProvCreds(cred, util.GetAgentDetails(app), nil, h.idpProviderRegistry)
+	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, 0)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -161,8 +179,16 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		}
 	}
 
-	data := map[string]interface{}{}
 	status, credentialData := h.prov.CredentialProvision(provCreds)
+
+	h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
+
+	return cred
+}
+
+func (h *credentials) provisionPostProcess(status prov.RequestStatus, credentialData prov.Credential, app *management.ManagedApplication, crd *management.CredentialRequestDefinition, provCreds *provCreds, cred *management.Credential) {
+	var err error
+	data := map[string]interface{}{}
 
 	if status.GetStatus() == prov.Success {
 		credentialData = h.getProvisionedCredentialData(provCreds, credentialData)
@@ -194,8 +220,8 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
-	ri, _ := cred.AsInstance()
-	if cred.Status.Level == prov.Success.String() {
+	if cred.Status.Level == prov.Success.String() && !hasAgentCredentialFinalizer(cred.Finalizers) {
+		ri, _ := cred.AsInstance()
 		// only add finalizer on success
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
 	}
@@ -204,20 +230,56 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		defs.XAgentDetails: util.GetAgentDetails(cred),
 		"data":             cred.Data,
 	}
+}
 
-	return cred
+func hasAgentCredentialError(status *v1.ResourceStatus) bool {
+	for _, r := range status.Reasons {
+		if strings.HasPrefix(r.Detail, "Agent:") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAgentCredentialFinalizer(finalizers []v1.Finalizer) bool {
+	for _, f := range finalizers {
+		if f.Name == crFinalizer {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.Credential) (*management.ManagedApplication, *management.CredentialRequestDefinition, bool) {
+	logger := getLoggerFromContext(ctx)
+	app, err := h.getManagedApp(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting managed app")
+		h.onError(ctx, cred, err)
+		return nil, nil, true
+	}
+
+	if app.Status.Level != prov.Success.String() {
+		err = fmt.Errorf("cannot handle credential when application is not yet successful")
+		h.onError(ctx, cred, err)
+		return nil, nil, true
+	}
+
+	crd, err := h.getCRD(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting credential request definition")
+		h.onError(ctx, cred, err)
+		return nil, nil, true
+	}
+
+	return app, crd, false
 }
 
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
-	var provData map[string]interface{}
-	if cred.Data != nil {
-		if m, ok := cred.Data.(map[string]interface{}); ok {
-			provData = m
-		}
-	}
+	provData := h.deprovisionPreProcess(ctx, cred)
 
-	provCreds, err := newProvCreds(cred, map[string]interface{}{}, provData, h.idpProviderRegistry)
+	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -225,6 +287,11 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	}
 
 	status := h.prov.CredentialDeprovision(provCreds)
+
+	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
+}
+
+func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
 	if status.GetStatus() == prov.Success {
 		if provCreds.IsIDPCredential() {
 			err := h.unregisterIDPClientCredential(provCreds)
@@ -237,11 +304,6 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
-
-		// Delete the resource, since it was not in Deleting State
-		if ri.Metadata.State != v1.ResourceDeleting {
-			h.client.DeleteResourceInstance(ri)
-		}
 	} else {
 		err := fmt.Errorf(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")
@@ -250,10 +312,69 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	}
 }
 
+func (*credentials) deprovisionPreProcess(ctx context.Context, cred *management.Credential) map[string]interface{} {
+	var provData map[string]interface{}
+	if cred.Data != nil {
+		if m, ok := cred.Data.(map[string]interface{}); ok {
+			provData = m
+		}
+	}
+	return provData
+}
+
+func (h *credentials) onUpdateRevoke(ctx context.Context, cred *management.Credential) *management.Credential {
+	// check the application status
+	logger := getLoggerFromContext(ctx)
+	provData := h.deprovisionPreProcess(ctx, cred)
+
+	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, prov.Revoke)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		h.onError(ctx, cred, err)
+		return cred
+	}
+
+	status, _ := h.prov.CredentialUpdate(provCreds)
+
+	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
+	return cred
+}
+
+func (h *credentials) onUpdateRenew(ctx context.Context, cred *management.Credential) *management.Credential {
+	// check the application status
+	logger := getLoggerFromContext(ctx)
+	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
+	if shouldReturn {
+		return cred
+	}
+
+	// check crd if renew is possible
+	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, prov.Renew)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		h.onError(ctx, cred, err)
+		return cred
+	}
+
+	if provCreds.IsIDPCredential() {
+		err := h.registerIDPClientCredential(provCreds)
+		if err != nil {
+			logger.WithError(err).Error("error provisioning credential request with IDP")
+			h.onError(ctx, cred, err)
+			return cred
+		}
+	}
+
+	status, credentialData := h.prov.CredentialUpdate(provCreds)
+
+	h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
+	return cred
+}
+
 // onError updates the AccessRequest with an error status
 func (h *credentials) onError(_ context.Context, cred *management.Credential, err error) {
 	ps := prov.NewRequestStatusBuilder()
-	status := ps.SetMessage(err.Error()).SetCurrentStatusReasons(cred.Status.Reasons).Failed()
+	status := ps.SetMessage(fmt.Sprintf("Agent: %s", err.Error())).SetCurrentStatusReasons(cred.Status.Reasons).Failed()
 	cred.Status = prov.NewStatusReason(status)
 	cred.SubResources = map[string]interface{}{
 		"status": cred.Status,
@@ -343,6 +464,7 @@ type provCreds struct {
 	credType    string
 	id          string
 	name        string
+	credAction  prov.CredentialAction
 	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
@@ -362,7 +484,7 @@ type idpCredData struct {
 	publicKey       string
 }
 
-func newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, idpProviderRegistry oauth.ProviderRegistry) (*provCreds, error) {
+func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, action prov.CredentialAction) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{
@@ -373,11 +495,12 @@ func newProvCreds(cr *management.Credential, appDetails map[string]interface{}, 
 		managedApp:  cr.Spec.ManagedApplication,
 		id:          cr.Metadata.ID,
 		name:        cr.Name,
+		credAction:  action,
 	}
 
 	// Setup external credential request data to be used for provisioning
-	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok && idpProviderRegistry != nil {
-		p, err := idpProviderRegistry.GetProviderByTokenEndpoint(idpTokenURL)
+	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok && h.idpProviderRegistry != nil {
+		p, err := h.idpProviderRegistry.GetProviderByTokenEndpoint(idpTokenURL)
 		if err != nil {
 			return nil, fmt.Errorf("IDP provider not found for credential request")
 		}
@@ -428,6 +551,11 @@ func (c provCreds) GetCredentialType() string {
 // GetCredentialData gets the data of the credential
 func (c provCreds) GetCredentialData() map[string]interface{} {
 	return c.credData
+}
+
+// GetCredentialAction gets the data of the credential
+func (c provCreds) GetCredentialAction() prov.CredentialAction {
+	return c.credAction
 }
 
 // IsIDPCredential returns boolean indicating if the credential request is for IDP provider

@@ -24,6 +24,8 @@ type CredentialRequest interface {
 	IsIDPCredential() bool
 	// GetIDPProvider returns the interface for IDP provider if the credential request is for IDP provider
 	GetIDPProvider() o.Provider
-	// GetIDPCredentialData() returns the credential data for IDP from the request
+	// GetIDPCredentialData returns the credential data for IDP from the request
 	GetIDPCredentialData() IDPCredentialData
+	// GetCredentialAction returns the action to be handled for this credential
+	GetCredentialAction() CredentialAction
 }

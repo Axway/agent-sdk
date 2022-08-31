@@ -498,6 +498,16 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 	return m.expectedStatus
 }
 
+func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
+	m.expectedProvType = update
+	v := cr.(*provCreds)
+	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
+	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
+	assert.Equal(m.t, m.expectedCredType, v.credType)
+	return m.expectedStatus, &mockProvCredential{}
+}
+
 type mockProvCredential struct{}
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
