@@ -190,6 +190,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 				StartAgentStatusUpdate()
 			}
 
+			// if credentials can expire then start the credential checker
+			if agent.cfg.GetCredentialConfig().GetExpirationDays() > 0 {
+				registerCredentialChecker()
+			}
+
 			registerExternalIDPs()
 			startTeamACLCache()
 
