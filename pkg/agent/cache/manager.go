@@ -233,8 +233,8 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 		rawResource, _ := json.Marshal(item)
 		// If instance count then use apiServiceToInstanceCount type
 		if cacheKey == instanceCount {
-			ic := &apiServiceToInstanceCount{}
-			if json.Unmarshal(rawResource, ic) == nil {
+			ic := apiServiceToInstanceCount{}
+			if json.Unmarshal(rawResource, &ic) == nil {
 				riCache.Set(key, ic)
 			}
 		} else {
