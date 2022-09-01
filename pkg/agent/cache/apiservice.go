@@ -12,8 +12,8 @@ import (
 
 // apiServiceToInstanceCount
 type apiServiceToInstanceCount struct {
-	count         int
-	apiServiceKey string
+	Count         int
+	ApiServiceKey string
 }
 
 // API service cache management
@@ -162,13 +162,13 @@ func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI == nil {
 		svcCount = apiServiceToInstanceCount{
-			count:         0,
-			apiServiceKey: svc.Metadata.ID,
+			Count:         0,
+			ApiServiceKey: svc.Metadata.ID,
 		}
 	} else {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
 	}
-	svcCount.count++
+	svcCount.Count++
 
 	c.instanceCountMap.Set(key, svcCount)
 	return nil
@@ -192,7 +192,7 @@ func (c *cacheManager) removeFromServiceInstanceCount(apiID, primaryKey string) 
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI != nil {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
-		svcCount.count--
+		svcCount.Count--
 	}
 
 	c.instanceCountMap.Set(key, svcCount)
@@ -213,7 +213,7 @@ func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI != nil {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
-		return svcCount.count
+		return svcCount.Count
 	}
 
 	return 0
