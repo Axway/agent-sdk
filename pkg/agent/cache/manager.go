@@ -15,6 +15,7 @@ import (
 )
 
 const defaultCacheStoragePath = "./data/cache"
+const instanceCount = "instanceCount"
 
 // Manager - interface to manage agent resource
 type Manager interface {
@@ -175,6 +176,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		"apiServices":         func(loaded cache.Cache) { c.apiMap = loaded },
 		"apiServiceInstances": func(loaded cache.Cache) { c.instanceMap = loaded },
 		"categories":          func(loaded cache.Cache) { c.categoryMap = loaded },
+		instanceCount:         func(loaded cache.Cache) { c.instanceCountMap = loaded },
 		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
 		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
 		"teams":               func(loaded cache.Cache) { c.teams = loaded },
@@ -229,10 +231,19 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 	for _, key := range keys {
 		item, _ := riCache.Get(key)
 		rawResource, _ := json.Marshal(item)
-		ri := &v1.ResourceInstance{}
-		if json.Unmarshal(rawResource, ri) == nil {
-			riCache.Set(key, ri)
+		// If instance count then use apiServiceToInstanceCount type
+		if cacheKey == instanceCount {
+			ic := apiServiceToInstanceCount{}
+			if err := json.Unmarshal(rawResource, &ic); err == nil {
+				riCache.Set(key, ic)
+			}
+		} else {
+			ri := &v1.ResourceInstance{}
+			if json.Unmarshal(rawResource, ri) == nil {
+				riCache.Set(key, ri)
+			}
 		}
+
 	}
 	cacheMap.Set(cacheKey, riCache)
 	return riCache, isNew

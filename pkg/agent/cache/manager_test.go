@@ -245,13 +245,13 @@ func TestSequenceCache(t *testing.T) {
 // create manager
 // add items to cache
 // save cache
-// create manager intialized with persisted cache
-// vallidate all original cached items exists
+// create manager initialized with persisted cache
+// validate all original cached items exists
 func TestCachePersistenc(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 	assert.NotNil(t, m)
 
-	api1 := createAPIService("id1", "api1", "")
+	api1 := createAPIService("id1", "apiID", "")
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
 
@@ -278,6 +278,7 @@ func TestCachePersistenc(t *testing.T) {
 	persistedAPI := m2.GetAPIServiceWithAPIID("id1")
 	assert.ElementsMatch(t, m.GetAPIServiceKeys(), m2.GetAPIServiceKeys())
 	assertResourceInstance(t, api1, persistedAPI)
+	assert.Equal(t, 1, m2.GetAPIServiceInstanceCount(api1.Name))
 
 	persistedInstance, err := m2.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)

@@ -12,8 +12,8 @@ import (
 
 // apiServiceToInstanceCount
 type apiServiceToInstanceCount struct {
-	count         int
-	apiServiceKey string
+	Count         int
+	ApiServiceKey string
 }
 
 // API service cache management
@@ -28,6 +28,7 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 		defer c.setCacheUpdated(true)
 		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+		cachedRI, _ := c.GetAPIServiceInstanceByName(apiName)
 		if primaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(apiID); err != nil {
@@ -41,6 +42,11 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
 			c.apiMap.SetSecondaryKey(apiID, svc.Name)
 		}
+
+		if cachedRI == nil {
+			c.countCachedInstancesForAPIService(apiID, primaryKey)
+		}
+
 		c.logger.
 			WithField("api-name", apiName).
 			WithField("api-id", apiID).
@@ -162,13 +168,13 @@ func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI == nil {
 		svcCount = apiServiceToInstanceCount{
-			count:         0,
-			apiServiceKey: svc.Metadata.ID,
+			Count:         0,
+			ApiServiceKey: svc.Metadata.ID,
 		}
 	} else {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
 	}
-	svcCount.count++
+	svcCount.Count++
 
 	c.instanceCountMap.Set(key, svcCount)
 	return nil
@@ -192,7 +198,7 @@ func (c *cacheManager) removeFromServiceInstanceCount(apiID, primaryKey string) 
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI != nil {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
-		svcCount.count--
+		svcCount.Count--
 	}
 
 	c.instanceCountMap.Set(key, svcCount)
@@ -213,7 +219,7 @@ func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
 	svcCount := apiServiceToInstanceCount{}
 	if svcCountI != nil {
 		svcCount = svcCountI.(apiServiceToInstanceCount)
-		return svcCount.count
+		return svcCount.Count
 	}
 
 	return 0
