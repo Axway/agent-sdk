@@ -79,7 +79,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
+	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.State.Name, cr.Finalizers); ok {
 		logger.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, cr)
 		return nil
@@ -116,19 +116,24 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 
 }
 
-// shouldProcessDeleting - return true if cred has the agent finalizer, resource is in deleting, and not in error from agent
-func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, resourceState string, finalizers []v1.Finalizer) bool {
-	if hasAgentCredentialFinalizer(finalizers) && resourceState == v1.ResourceDeleting {
+// shouldProcessDeleting
+// - delete when cred has the agent finalizer, resource is in deleting, and not in error from agent
+// expire when the cred has the agent finalizer, resource is in Success, state is inactive,  and not in error from agent
+func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, resourceState string, credentialState string, finalizers []v1.Finalizer) bool {
+	if hasAgentCredentialFinalizer(finalizers) && (resourceState == v1.ResourceDeleting ||
+		(status.Level == prov.Success.String() && credentialState == v1.Inactive)) {
 		return !hasAgentCredentialError(status) // don't process delete when error from agent
 	}
+
 	return false
 }
 
-// shouldProcessPending - return true if cred does not have the agent finalizer, resource is in pending, and resource is not deleting
+// shouldProcessPending - return true if cred does not have the agent finalizer, resource is in pending, and resource is deleting
 func (m *credentials) shouldProcessPending(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
 	if !hasAgentCredentialFinalizer(finalizers) {
 		return m.marketplaceHandler.shouldProcessPending(status, state)
 	}
+
 	return false
 }
 

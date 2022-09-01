@@ -84,10 +84,12 @@ func (c State) String() string {
 type CredentialAction int
 
 const (
-	// Renew - renew the credential on the dataplane
+	// Renew - renew the credential on the data plane
 	Renew CredentialAction = iota + 1
-	// Revoke - remove the credential from the dataplane
+	// Revoke - disable or remove the credential from the data plane
 	Revoke
+	// Expire - remove the credential from the data plane
+	Expire
 )
 
 // String returns the string value of the CredentialAction
@@ -95,6 +97,7 @@ func (c CredentialAction) String() string {
 	return map[CredentialAction]string{
 		Renew:  "Renew",
 		Revoke: "Revoke",
+		Expire: "Expire",
 	}[c]
 }
 
