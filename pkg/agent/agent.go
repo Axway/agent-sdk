@@ -3,10 +3,12 @@ package agent
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/pprof"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -67,6 +69,11 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
+	publishingGroup        sync.WaitGroup // wait group to block validator from publishing is happening
+	validatingGroup        sync.WaitGroup // wait group to block publishing while validator is running
+
+	// profiling
+	profileDone chan struct{}
 }
 
 var agent agentData
@@ -87,7 +94,6 @@ func Initialize(centralCfg config.CentralConfig) error {
 
 // InitializeWithAgentFeatures - Initializes the agent with agent features
 func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
-
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
@@ -171,6 +177,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	if !agent.isInitialized {
+		agent.publishingGroup = sync.WaitGroup{}
+		agent.validatingGroup = sync.WaitGroup{}
 		setupSignalProcessor()
 		// only do the periodic health check stuff if NOT in unit tests and running binary agents
 		if util.IsNotTest() && !isRunningInDockerContainer() {
@@ -178,7 +186,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-			StartAgentStatusUpdate()
+			if agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
+				StartAgentStatusUpdate()
+			}
+
 			registerExternalIDPs()
 			startTeamACLCache()
 
@@ -188,7 +199,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			}
 
 			// Set agent running
-			if agent.agentResourceManager != nil {
+			if agent.agentResourceManager != nil && agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
 				UpdateStatusWithPrevious(AgentRunning, "", "")
 			}
 		}
@@ -196,6 +207,13 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	agent.isInitialized = true
 	return nil
+}
+
+// InitializeProfiling - setup the CPU and Memory profiling if options given
+func InitializeProfiling(cpuProfile, memProfile string) {
+	if memProfile != "" || cpuProfile != "" {
+		setupProfileSignalProcessor(cpuProfile, memProfile)
+	}
 }
 
 func registerExternalIDPs() {
@@ -332,7 +350,7 @@ func isRunningInDockerContainer() bool {
 	// Within the cgroup file, if you are not in a docker container all entries are like these devices:/
 	// If in a docker container, entries are like this: devices:/docker/xxxxxxxxx.
 	// So, all we need to do is see if ":/docker" exists somewhere in the file.
-	bytes, err := ioutil.ReadFile("/proc/1/cgroup")
+	bytes, err := os.ReadFile("/proc/1/cgroup")
 	if err != nil {
 		return false
 	}
@@ -441,10 +459,64 @@ func setupSignalProcessor() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-sigs
-		cleanUp()
 		logger.Info("Stopping agent")
+		if agent.profileDone != nil {
+			<-agent.profileDone
+		}
+		cleanUp()
 		agent.cacheManager.SaveCache()
 		os.Exit(0)
+	}()
+}
+
+func setupProfileSignalProcessor(cpuProfile, memProfile string) {
+	if agent.agentFeaturesCfg.ProcessSystemSignalsEnabled() {
+		// create channel for base signal processor
+		agent.profileDone = make(chan struct{})
+	}
+
+	// start the CPU profiling
+	var cpuFile *os.File
+	if cpuProfile != "" {
+		var err error
+		cpuFile, err = os.Create(cpuProfile)
+		if err != nil {
+			fmt.Printf("Error creating cpu profiling file: %v", err)
+		}
+		if err := pprof.StartCPUProfile(cpuFile); err != nil {
+			fmt.Printf("Error running the cpu profiling: %v", err)
+		}
+	}
+
+	// Listen for a system signal to stop the agent
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-sigs
+
+		// stop cpu profiling if it was started
+		if cpuProfile != "" {
+			pprof.StopCPUProfile()
+			cpuFile.Close()
+		}
+
+		// run the memory profiling
+		if memProfile != "" {
+			memFile, err := os.Create(memProfile)
+			if err != nil {
+				fmt.Printf("Error creating memory profiling file: %v", err)
+			}
+			runtime.GC() // get up-to-date statistics
+			if err := pprof.WriteHeapProfile(memFile); err != nil {
+				fmt.Printf("Error running the memory profiling: %v", err)
+			}
+			memFile.Close() // error handling omitted for example
+		}
+
+		if agent.agentFeaturesCfg.ProcessSystemSignalsEnabled() {
+			// signal the base signal processor now that the profiling output is complete
+			agent.profileDone <- struct{}{}
+		}
 	}()
 }
 

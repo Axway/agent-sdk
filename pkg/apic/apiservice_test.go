@@ -3,7 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -98,7 +98,7 @@ func TestCreateService(t *testing.T) {
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ := io.ReadAll(oas2Json)
 	cloneServiceBody := serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
 
@@ -274,7 +274,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			FileName: "./testdata/servicerevision.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -282,15 +282,11 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision subresource
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceRevision subresource
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance subresource
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceRevision subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -307,11 +303,13 @@ func TestUpdateService(t *testing.T) {
 	cloneServiceBody.APIUpdateSeverity = "MINOR"
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ := ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ := io.ReadAll(oas2Json)
 	cloneServiceBody.SpecDefinition = oas2Bytes
 	apiSvc, err := client.PublishService(&cloneServiceBody)
 	assert.Nil(t, err)
 	assert.NotNil(t, apiSvc)
+
+	fmt.Println("*********************")
 
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
@@ -324,7 +322,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -340,7 +338,15 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{
@@ -355,7 +361,7 @@ func TestUpdateService(t *testing.T) {
 	// Test oas2 object
 	oas2Json, _ = os.Open("./testdata/petstore-swagger2.json") // OAS2
 	defer oas2Json.Close()
-	oas2Bytes, _ = ioutil.ReadAll(oas2Json)
+	oas2Bytes, _ = io.ReadAll(oas2Json)
 
 	cloneServiceBody = serviceBody
 	cloneServiceBody.SpecDefinition = oas2Bytes
@@ -618,10 +624,6 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusCreated,
 		},
@@ -650,7 +652,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	// Test thrift object
 	const filename = "multiplication.thrift"
 	thriftFile, _ := os.Open("./testdata/" + filename) // OAS2
-	thriftBytes, _ := ioutil.ReadAll(thriftFile)
+	thriftBytes, _ := io.ReadAll(thriftFile)
 	thriftFile.Close() // close now, no need to wait until the test is finished
 
 	assetType := "Apache Thrift"
@@ -679,6 +681,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
 	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
 
+	fmt.Println("*************************")
 	// this should be a full go right path
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -690,7 +693,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
@@ -703,10 +706,18 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
 			RespCode: http.StatusOK,
 		},
 		{

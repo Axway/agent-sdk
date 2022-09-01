@@ -17,6 +17,7 @@ import (
 func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v1.ResourceInstance) {
 	svc := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: "service",
 			Metadata: v1.Metadata{
 				ID: "svc-" + externalAPIID,
 			},
@@ -31,6 +32,7 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 	}
 	instance := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: "instance",
 			Metadata: v1.Metadata{
 				ID: "instance-" + externalAPIID,
 			},
@@ -45,8 +47,8 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 	}
 
 	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	agent.cacheManager.AddAPIServiceInstance(instance)
 	agent.cacheManager.AddAPIService(svc)
+	agent.cacheManager.AddAPIServiceInstance(instance)
 	return svc, instance
 }
 
@@ -107,6 +109,7 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 	setupCache("12345", "test")
 	instance := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: "instance123456",
 			Metadata: v1.Metadata{
 				ID: "instance-" + "123456",
 			},

@@ -15,6 +15,7 @@ import (
 )
 
 const defaultCacheStoragePath = "./data/cache"
+const instanceCount = "instanceCount"
 
 // Manager - interface to manage agent resource
 type Manager interface {
@@ -31,6 +32,7 @@ type Manager interface {
 	GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance
 	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
+	GetAPIServiceInstanceCount(apiName string) int
 	GetTeamsIDsInAPIServices() []string
 	DeleteAPIService(apiID string) error
 
@@ -41,6 +43,7 @@ type Manager interface {
 	GetAPIServiceInstanceByName(apiName string) (*v1.ResourceInstance, error)
 	DeleteAPIServiceInstance(id string) error
 	DeleteAllAPIServiceInstance()
+	ListAPIServiceInstances() []*v1.ResourceInstance
 
 	// Category cache related methods
 	AddCategory(resource *v1.ResourceInstance)
@@ -73,6 +76,7 @@ type Manager interface {
 	GetCredentialRequestDefinitionByName(name string) (*v1.ResourceInstance, error)
 	GetCredentialRequestDefinitionByID(id string) (*v1.ResourceInstance, error)
 	DeleteCredentialRequestDefinition(id string) error
+	ListCredentialRequestDefinitions() []*v1.ResourceInstance
 
 	// Watch Sequence cache related methods
 	AddSequence(watchTopicName string, sequenceID int64)
@@ -110,6 +114,7 @@ type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
 	apiMap                  cache.Cache
+	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
@@ -137,6 +142,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
 		apiMap:                  cache.New(),
+		instanceCountMap:        cache.New(),
 		instanceMap:             cache.New(),
 		categoryMap:             cache.New(),
 		managedApplicationMap:   cache.New(),
@@ -170,6 +176,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 		"apiServices":         func(loaded cache.Cache) { c.apiMap = loaded },
 		"apiServiceInstances": func(loaded cache.Cache) { c.instanceMap = loaded },
 		"categories":          func(loaded cache.Cache) { c.categoryMap = loaded },
+		instanceCount:         func(loaded cache.Cache) { c.instanceCountMap = loaded },
 		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
 		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
 		"teams":               func(loaded cache.Cache) { c.teams = loaded },
@@ -224,10 +231,19 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 	for _, key := range keys {
 		item, _ := riCache.Get(key)
 		rawResource, _ := json.Marshal(item)
-		ri := &v1.ResourceInstance{}
-		if json.Unmarshal(rawResource, ri) == nil {
-			riCache.Set(key, ri)
+		// If instance count then use apiServiceToInstanceCount type
+		if cacheKey == instanceCount {
+			ic := apiServiceToInstanceCount{}
+			if err := json.Unmarshal(rawResource, &ic); err == nil {
+				riCache.Set(key, ic)
+			}
+		} else {
+			ri := &v1.ResourceInstance{}
+			if json.Unmarshal(rawResource, ri) == nil {
+				riCache.Set(key, ri)
+			}
 		}
+
 	}
 	cacheMap.Set(cacheKey, riCache)
 	return riCache, isNew

@@ -60,30 +60,11 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 
 // Migrate -
 func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	if ri.Kind != management.APIServiceGVK().Kind {
+	if ri.Kind != management.APIServiceGVK().Kind || m.InstanceAlreadyMigrated(ri) {
 		return ri, nil
 	}
 
-	// check resource to see if this apiservice has already been run through migration
-	apiSvc, err := ri.AsInstance()
-	if err != nil {
-		return nil, err
-	}
-
-	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
-	if isMigrationCompleted(ri, definitions.MarketplaceMigration) {
-		// migration ran already
-		m.logger.
-			WithField(serviceName, apiSvc).
-			Debugf("marketplace provision migration already completed")
-		return ri, nil
-	}
-
-	m.logger.
-		WithField(serviceName, ri.Name).
-		Tracef("perform marketplace provision")
-
-	m.UpdateService(ri)
+	err := m.UpdateService(ri)
 
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
@@ -141,6 +122,21 @@ func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 	}
 
 	return nil
+}
+
+// InstanceAlreadyMigrated - check to see if apiservice already migrated
+func (m *MarketplaceMigration) InstanceAlreadyMigrated(ri *apiv1.ResourceInstance) bool {
+
+	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
+	if isMigrationCompleted(ri, definitions.MarketplaceMigration) {
+		return true
+	}
+
+	m.logger.
+		WithField(serviceName, ri.Name).
+		Tracef("perform marketplace provision")
+
+	return false
 }
 
 func (m *MarketplaceMigration) updateSvcInstance(

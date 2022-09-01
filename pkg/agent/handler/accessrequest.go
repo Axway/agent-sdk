@@ -126,20 +126,18 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 		return ar
 	}
 
-	status, accessData := h.prov.AccessRequestProvision(req)
 	data := map[string]interface{}{}
-	if accessData != nil {
-		if d := accessData.GetData(); d != nil {
-			data = d
-		}
-	}
+	status, accessData := h.prov.AccessRequestProvision(req)
 
-	if status.GetStatus() == prov.Success {
+	if status.GetStatus() == prov.Success && accessData != nil {
 		sec := app.Spec.Security
-		if ard.Spec.Provision != nil {
+		d := accessData.GetData()
+		if ard.Spec.Provision == nil {
+			data = d // no provision schema found, return the data
+		} else if d != nil {
 			data, err = h.encryptSchema(
 				ard.Spec.Provision.Schema,
-				data,
+				d,
 				sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
 			)
 		}
@@ -149,11 +147,10 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 				SetMessage(fmt.Sprintf("error encrypting access data: %s", err.Error())).
 				SetCurrentStatusReasons(ar.Status.Reasons).
 				Failed()
-		} else {
-			ar.Data = data
 		}
 	}
 
+	ar.Data = data
 	ar.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(ar), status.GetProperties())

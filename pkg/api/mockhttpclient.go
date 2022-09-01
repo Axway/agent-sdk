@@ -72,6 +72,9 @@ func (c *MockHTTPClient) Send(request Request) (*Response, error) {
 	defer c.Unlock()
 
 	c.Requests = append(c.Requests, request)
+
+	fmt.Printf("%v - %v\n", request.Method, request.URL)
+
 	if c.Responses != nil && len(c.Responses) > 0 {
 		return c.sendMultiple(request)
 	}

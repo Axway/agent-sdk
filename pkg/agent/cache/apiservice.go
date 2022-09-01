@@ -10,6 +10,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
+// apiServiceToInstanceCount
+type apiServiceToInstanceCount struct {
+	Count         int
+	ApiServiceKey string
+}
+
 // API service cache management
 
 // AddAPIService - add/update APIService resource in cache
@@ -22,6 +28,7 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 		defer c.setCacheUpdated(true)
 		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+		cachedRI, _ := c.GetAPIServiceInstanceByName(apiName)
 		if primaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(apiID); err != nil {
@@ -30,9 +37,16 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 
 			c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
 			c.apiMap.SetSecondaryKey(primaryKey, apiName)
+			c.apiMap.SetSecondaryKey(primaryKey, svc.Name)
 		} else {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
+			c.apiMap.SetSecondaryKey(apiID, svc.Name)
 		}
+
+		if cachedRI == nil {
+			c.countCachedInstancesForAPIService(apiID, primaryKey)
+		}
+
 		c.logger.
 			WithField("api-name", apiName).
 			WithField("api-id", apiID).
@@ -62,6 +76,7 @@ func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 
 	api, _ := c.apiMap.Get(apiID)
 	if api == nil {
+		api, _ = c.apiMap.GetBySecondaryKey(apiID)
 		api, _ = c.apiMap.GetBySecondaryKey(apiID)
 	}
 
@@ -136,4 +151,76 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 		err = c.apiMap.DeleteBySecondaryKey(key)
 	}
 	return err
+}
+
+func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error {
+	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	if svc == nil {
+		svc = c.GetAPIServiceWithAPIID(apiID)
+		if svc == nil {
+			// can't increment a count for a service we can't find
+			return nil
+		}
+	}
+	key := fmt.Sprintf("count-%v", svc.Name)
+
+	svcCountI, _ := c.instanceCountMap.Get(key)
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI == nil {
+		svcCount = apiServiceToInstanceCount{
+			Count:         0,
+			ApiServiceKey: svc.Metadata.ID,
+		}
+	} else {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+	}
+	svcCount.Count++
+
+	c.instanceCountMap.Set(key, svcCount)
+	return nil
+}
+
+func (c *cacheManager) removeFromServiceInstanceCount(apiID, primaryKey string) error {
+	svc := c.GetAPIServiceWithPrimaryKey(primaryKey)
+	if svc == nil {
+		svc = c.GetAPIServiceWithAPIID(apiID)
+		if svc == nil {
+			// can't decrement a count for a service we can't find
+			return nil
+		}
+	}
+	key := fmt.Sprintf("count-%v", svc.Name)
+
+	svcCountI, err := c.instanceCountMap.Get(key)
+	if err != nil {
+		return err
+	}
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI != nil {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+		svcCount.Count--
+	}
+
+	c.instanceCountMap.Set(key, svcCount)
+	return nil
+}
+
+func (c *cacheManager) deleteAllServiceInstanceCounts() {
+	c.instanceCountMap.Flush()
+}
+
+func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
+	key := fmt.Sprintf("count-%v", svcName)
+
+	svcCountI, err := c.instanceCountMap.Get(key)
+	if err != nil {
+		return 0
+	}
+	svcCount := apiServiceToInstanceCount{}
+	if svcCountI != nil {
+		svcCount = svcCountI.(apiServiceToInstanceCount)
+		return svcCount.Count
+	}
+
+	return 0
 }

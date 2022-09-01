@@ -34,6 +34,7 @@ type MockCredentialRequest struct {
 	ID          string
 	AppDetails  map[string]string
 	AppName     string
+	Name        string
 	CredDefName string
 	Details     map[string]string
 	CredData    map[string]interface{}
@@ -45,6 +46,10 @@ func (m MockCredentialRequest) GetApplicationName() string {
 
 func (m MockCredentialRequest) GetID() string {
 	return m.ID
+}
+
+func (m MockCredentialRequest) GetName() string {
+	return m.AppName
 }
 
 func (m MockCredentialRequest) GetCredentialDetailsValue(key string) string {

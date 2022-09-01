@@ -71,21 +71,18 @@ Please make sure the following is done before submitting a pull request:
 2. If you’ve fixed a bug or added code that should be tested, then add tests.
 3. Ensure the test suite passes by running `make test`.
 4. Format your code with `make format`.
-5. Lint your code with `make lint`.
-6. If you haven’t already, complete the CLA.
-7. Make sure your pull request describes the issue you are fixing, or the feature you are adding. The description should also have a comment specifying which issue the pull request will resolve. For example, if the issue you are working on is #100, then please leave a comment saying 'Resolves #100'. This will cause the issue to be closed automatically when the pull request is closed.
+5. If you haven’t already, complete the CLA.
+6. Make sure your pull request describes the issue you are fixing, or the feature you are adding. The description should also have a comment specifying which issue the pull request will resolve. For example, if the issue you are working on is #100, then please leave a comment saying 'Resolves #100'. This will cause the issue to be closed automatically when the pull request is closed.
 
 # Development Prerequisites
 
-* You have Go 1.13 or newer installed
-* Install goimports - `go get -u golang.org/x/tools/cmd/goimports`
-* Install golint - `go get -u golang.org/x/lint/golint`
+* You have Go 1.18 or newer installed
+* Install goimports - `go install golang.org/x/tools/cmd/goimports`
 
 # Development Workflow
 
 After cloning the Amplify Agents SDK, run `make download` to download all the project dependencies.
 
-* `make lint` checks the code style.
 * `make format` formats your code.
 * `make test` runs all the unit tests with the `-race` flag to check for race conditions.
 

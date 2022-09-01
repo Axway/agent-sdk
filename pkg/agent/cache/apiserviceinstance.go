@@ -2,6 +2,8 @@ package cache
 
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // API service instance management
@@ -10,7 +12,14 @@ import (
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
+	cachedRI, _ := c.GetAPIServiceInstanceByID(resource.Metadata.ID)
 	c.instanceMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+
+	if cachedRI == nil {
+		apiID, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIID)
+		primaryKey, _ := util.GetAgentDetailsValue(resource, defs.AttrExternalAPIPrimaryKey)
+		c.addToServiceInstanceCount(apiID, primaryKey)
+	}
 }
 
 // GetAPIServiceInstanceKeys - returns keys for APIServiceInstance cache
@@ -55,6 +64,13 @@ func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceIns
 func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 	defer c.setCacheUpdated(true)
 
+	ri, _ := c.GetAPIServiceInstanceByID(id)
+	if ri != nil {
+		apiID, _ := util.GetAgentDetailsValue(ri, defs.AttrExternalAPIID)
+		primaryKey, _ := util.GetAgentDetailsValue(ri, defs.AttrExternalAPIPrimaryKey)
+		c.removeFromServiceInstanceCount(apiID, primaryKey)
+	}
+
 	return c.instanceMap.Delete(id)
 }
 
@@ -62,5 +78,42 @@ func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 func (c *cacheManager) DeleteAllAPIServiceInstance() {
 	defer c.setCacheUpdated(true)
 
+	c.deleteAllServiceInstanceCounts()
 	c.instanceMap.Flush()
+}
+
+func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
+	keys := c.GetAPIServiceInstanceKeys()
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	var instances []*v1.ResourceInstance
+
+	for _, key := range keys {
+		item, _ := c.instanceMap.Get(key)
+		if item != nil {
+			instance, ok := item.(*v1.ResourceInstance)
+			if ok {
+				instances = append(instances, instance)
+			}
+		}
+	}
+
+	return instances
+}
+
+// countCachedInstancesForAPIService - count any instances in the cache for hte newly added api
+func (c *cacheManager) countCachedInstancesForAPIService(apiID, primaryKey string) {
+	for _, k := range c.instanceMap.GetKeys() {
+		item, _ := c.instanceMap.Get(k)
+		inst, ok := item.(*v1.ResourceInstance)
+		if !ok {
+			continue
+		}
+		instAPIID, _ := util.GetAgentDetailsValue(inst, defs.AttrExternalAPIID)
+		instPrimary, _ := util.GetAgentDetailsValue(inst, defs.AttrExternalAPIPrimaryKey)
+		if apiID == instAPIID || primaryKey == instPrimary {
+			c.addToServiceInstanceCount(apiID, primaryKey)
+		}
+	}
 }

@@ -34,6 +34,9 @@ func (j *instanceValidator) Status() error {
 
 // Execute -
 func (j *instanceValidator) Execute() error {
+	agent.publishingGroup.Wait()
+	agent.validatingGroup.Add(1)
+	defer agent.validatingGroup.Done()
 	j.validateAPIOnDataplane()
 	return nil
 }
@@ -42,7 +45,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	j.cacheLock.Lock()
 	defer j.cacheLock.Unlock()
 
-	log.Debug("validating api service instance on dataplane")
+	log.Debug("validating api service instances on dataplane")
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
 		instance, err := agent.cacheManager.GetAPIServiceInstanceByID(key)
@@ -60,77 +63,47 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
 		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
-			j.deleteServiceInstanceOrService(instance, externalPrimaryKey, externalAPIID)
+			j.deleteServiceInstance(instance, externalPrimaryKey, externalAPIID)
+		}
+	}
+
+	log.Debug("validating api services have at least one instance on dataplane")
+	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
+		service := agent.cacheManager.GetAPIServiceWithPrimaryKey(key)
+		if service == nil {
+			continue
+		}
+
+		if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
+			j.deleteService(service)
 		}
 	}
 }
 
-func (j *instanceValidator) shouldDeleteService(primaryKey, apiID string) bool {
-	count := 0
-	if primaryKey != "" {
-		count = j.getServiceInstanceCount(defs.AttrExternalAPIPrimaryKey, primaryKey)
-		log.Tracef("Query instances with externalPrimaryKey attribute : %s", primaryKey)
-	} else {
-		count = j.getServiceInstanceCount(defs.AttrExternalAPIID, apiID)
-		log.Tracef("Query instances with externalAPIID attribute : %s", apiID)
-	}
-
-	log.Tracef("Instances count : %d", count)
-
-	return count == 0
-}
-
-func (j *instanceValidator) getServiceInstanceCount(attName, attValue string) int {
-	count := 0
-	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
-		instance, _ := agent.cacheManager.GetAPIServiceInstanceByID(key)
-		if instance != nil {
-			v, _ := util.GetAgentDetailsValue(instance, attName)
-			if attValue == v {
-				count++
-			}
-		}
-	}
-	return count
-}
-
-func (j *instanceValidator) deleteServiceInstanceOrService(ri *apiV1.ResourceInstance, primaryKey, apiID string) {
+func (j *instanceValidator) deleteServiceInstance(ri *apiV1.ResourceInstance, primaryKey, apiID string) {
 	// delete if it is an api service instance
-	log.Infof("API no longer exists on the dataplane, deleting the catalog item %s", ri.Title)
-	msg := "Deleted catalog item %s from Amplify Central"
+	log.Infof("API no longer exists on the dataplane, deleting the API Service Instance %s", ri.Title)
 
-	var err error
-
-	if len(ri.Finalizers) == 0 {
-		err = agent.apicClient.DeleteAPIServiceInstance(ri.Name)
-	} else {
-		err = agent.apicClient.DeleteAPIServiceInstanceWithFinalizers(ri)
-	}
+	err := agent.apicClient.DeleteAPIServiceInstance(ri.Name)
 	if err != nil {
-		log.Error(utilErrors.Wrap(ErrDeletingCatalogItem, err.Error()).FormatError(ri.Title))
+		log.Error(utilErrors.Wrap(ErrDeletingServiceInstanceItem, err.Error()).FormatError(ri.Title))
 		return
 	}
 	agent.cacheManager.DeleteAPIServiceInstance(ri.Metadata.ID)
 
-	// delete if it is an api service
-	if j.shouldDeleteService(primaryKey, apiID) {
-		log.Infof("API no longer exists on the dataplane; deleting the API Service and corresponding catalog item %s", ri.Title)
-		msg = "Deleted API Service for catalog item %s from Amplify Central"
+	log.Debugf("Deleted API Service Instance item %s from Amplify Central", ri.Title)
+}
 
-		svc := agent.cacheManager.GetAPIServiceWithAPIID(apiID)
-		if svc == nil {
-			log.Errorf("api service %s not found in cache. unable to delete it from central", apiID)
-			return
-		}
+func (j *instanceValidator) deleteService(ri *apiV1.ResourceInstance) {
+	log.Infof("API Service no longer has a service instance; deleting the API Service %s", ri.Title)
 
-		// deleting the service will delete all associated resources, including the consumerInstance
-		err = agent.apicClient.DeleteServiceByName(svc.Name)
-		agent.cacheManager.DeleteAPIService(apiID)
-		if err != nil {
-			log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title))
-			return
-		}
+	// deleting the service will delete all associated resources, including the consumerInstance
+	err := agent.apicClient.DeleteServiceByName(ri.Name)
+	if err != nil {
+		log.Error(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title))
+		return
 	}
+	agent.cacheManager.DeleteAPIService(ri.Name)
 
-	log.Debugf(msg, ri.Title)
+	log.Debugf("Deleted API Service %s from Amplify Central", ri.Title)
 }

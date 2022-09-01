@@ -62,7 +62,6 @@ stages:
   only:
     - main
   except:
-    - web
     - triggers
     - schedules
 

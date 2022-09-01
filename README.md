@@ -12,7 +12,7 @@ The Amplify Agents SDK is supported under [Axway support policy](https://docs.ax
 
 Make sure you have [Go installed](https://golang.org/doc/install) and then use the following command to install the Amplify Agents SDK
 
-go get github.com/Axway/agent-sdk/
+go install github.com/Axway/agent-sdk/
 
 ## Packages
 

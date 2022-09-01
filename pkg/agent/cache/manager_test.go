@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,8 +14,9 @@ import (
 
 func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 	sub := map[string]interface{}{
-		defs.AttrExternalAPIID:   apiID,
-		defs.AttrExternalAPIName: apiName,
+		defs.AttrExternalAPIID:         apiID,
+		defs.AttrExternalAPIName:       apiName,
+		defs.AttrExternalAPIPrimaryKey: primaryKey,
 	}
 
 	if primaryKey != "" {
@@ -23,6 +25,7 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: fmt.Sprintf("name-%s", apiName),
 			SubResources: map[string]interface{}{
 				defs.XAgentDetails: sub,
 			},
@@ -37,6 +40,7 @@ func createAPIServiceInstance(id, apiID, stage string) *v1.ResourceInstance {
 	}
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Name: fmt.Sprintf("name-%s", id),
 			Metadata: v1.Metadata{
 				ID: id,
 			},
@@ -88,6 +92,8 @@ func TestAPIServiceCache(t *testing.T) {
 
 	api1 := createAPIService("id1", "api1", "")
 	api2 := createAPIService("id2", "api2", "api2key")
+	api1.Owner = &v1.Owner{Type: v1.TeamOwner, ID: "teamID1"}
+	api2.Owner = &v1.Owner{Type: v1.TeamOwner, ID: "teamID2"}
 
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
@@ -97,6 +103,9 @@ func TestAPIServiceCache(t *testing.T) {
 
 	err = m.AddAPIService(api2)
 	assert.Nil(t, err)
+
+	teamIDs := m.GetTeamsIDsInAPIServices()
+	assert.ElementsMatch(t, []string{"teamID1", "teamID2"}, teamIDs)
 
 	cachedAPI := m.GetAPIServiceWithAPIID("id1")
 	assert.Equal(t, api1, cachedAPI)
@@ -140,16 +149,27 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	assert.NotNil(t, m)
 	assert.Equal(t, []string{}, m.GetAPIServiceInstanceKeys())
 
+	api1 := createAPIService("apiID1", "api1", "api1key")
 	instance1 := createAPIServiceInstance("id1", "apiID1", "stage1")
 	instance2 := createAPIServiceInstance("id2", "apiID2", "stage2")
 
+	m.AddAPIService(api1)
 	m.AddAPIServiceInstance(instance1)
 	m.AddAPIServiceInstance(instance2)
 	assert.ElementsMatch(t, []string{"id1", "id2"}, m.GetAPIServiceInstanceKeys())
 
+	allInstances := m.ListAPIServiceInstances()
+	assert.ElementsMatch(t, []*v1.ResourceInstance{instance1, instance2}, allInstances)
+
 	cachedInstance, err := m.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)
 	assert.Equal(t, instance1, cachedInstance)
+	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
+
+	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
+	assert.Nil(t, err)
+	assert.Equal(t, instance1, cachedInstance)
+	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
 
 	err = m.DeleteAPIServiceInstance("id1")
 	assert.Nil(t, err)
@@ -158,6 +178,12 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	cachedInstance, err = m.GetAPIServiceInstanceByID("id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedInstance)
+	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
+
+	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedInstance)
+	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
 
 	m.DeleteAllAPIServiceInstance()
 	assert.ElementsMatch(t, []string{}, m.GetAPIServiceInstanceKeys())
@@ -219,13 +245,13 @@ func TestSequenceCache(t *testing.T) {
 // create manager
 // add items to cache
 // save cache
-// create manager intialized with persisted cache
-// vallidate all original cached items exists
+// create manager initialized with persisted cache
+// validate all original cached items exists
 func TestCachePersistenc(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 	assert.NotNil(t, m)
 
-	api1 := createAPIService("id1", "api1", "")
+	api1 := createAPIService("id1", "apiID", "")
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
 
@@ -252,6 +278,7 @@ func TestCachePersistenc(t *testing.T) {
 	persistedAPI := m2.GetAPIServiceWithAPIID("id1")
 	assert.ElementsMatch(t, m.GetAPIServiceKeys(), m2.GetAPIServiceKeys())
 	assertResourceInstance(t, api1, persistedAPI)
+	assert.Equal(t, 1, m2.GetAPIServiceInstanceCount(api1.Name))
 
 	persistedInstance, err := m2.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)
@@ -327,6 +354,12 @@ func TestCredentialRequestDefinitionCache(t *testing.T) {
 
 	m.AddCredentialRequestDefinition(crd1)
 	m.AddCredentialRequestDefinition(crd2)
+
+	crdKeys := m.GetCredentialRequestDefinitionKeys()
+	assert.ElementsMatch(t, []string{"id1", "id2"}, crdKeys)
+
+	cachedCRDs := m.ListCredentialRequestDefinitions()
+	assert.ElementsMatch(t, []*v1.ResourceInstance{crd1, crd2}, cachedCRDs)
 
 	cachedCRD, err := m.GetCredentialRequestDefinitionByName("name1")
 	assert.Nil(t, err)
