@@ -28,6 +28,7 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 		defer c.setCacheUpdated(true)
 		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+		cachedRI, _ := c.GetAPIServiceInstanceByName(apiName)
 		if primaryKey != "" {
 			// Verify secondary key and validate if we need to remove it from the apiMap (cache)
 			if _, err := c.apiMap.Get(apiID); err != nil {
@@ -41,6 +42,11 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
 			c.apiMap.SetSecondaryKey(apiID, svc.Name)
 		}
+
+		if cachedRI == nil {
+			c.countCachedInstancesForAPIService(apiID, primaryKey)
+		}
+
 		c.logger.
 			WithField("api-name", apiName).
 			WithField("api-id", apiID).
