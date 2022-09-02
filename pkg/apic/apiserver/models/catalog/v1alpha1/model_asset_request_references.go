@@ -15,7 +15,8 @@ type AssetRequestReferences struct {
 	// Reference to Release that got created from this asset request.
 	AssetRelease string `json:"assetRelease,omitempty"`
 	// Reference to Release that got created from this asset request.
-	Asset string `json:"asset,omitempty"`
+	Asset                        string   `json:"asset,omitempty"`
+	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
 	// Reference to Access Request resource
 	AccessRequest string `json:"accessRequest,omitempty"`
 }

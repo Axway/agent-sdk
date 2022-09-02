@@ -19,7 +19,7 @@ import (
 // ReleaseTagStatusSuccess struct for ReleaseTagStatusSuccess
 type ReleaseTagStatusSuccess struct {
 	Type string `json:"type"`
-	// Time when the change occured.
+	// Time when the change occurred.
 	Timestamp time.Time `json:"timestamp"`
 	// message of the result
 	Detail string                      `json:"detail"`
