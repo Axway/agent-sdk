@@ -14,6 +14,8 @@ import (
 
 const (
 	credExpDetail = "agent.credential.expired"
+	status        = "status"
+	state         = "state"
 )
 
 type cacheManager interface {
@@ -22,7 +24,7 @@ type cacheManager interface {
 }
 
 type apicClient interface {
-	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
+	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type credentialValidator struct {
@@ -89,18 +91,24 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 	}
 
 	expTime := time.Time(cred.Policies.Expiry.Timestamp)
+	if expTime.IsZero() {
+		// cred does not expire
+		return
+	}
 
 	logger = logger.WithField("credName", cred.Name).WithField("expiration", expTime.Format(v1.APIServerTimeFormat))
 	logger.Trace("validating credential")
 
 	if expTime.Before(now) {
 		logger.Info("Credential has expired, updating Central")
-		cred.Status.Reasons = append(cred.Status.Reasons, v1.ResourceStatusReason{
-			Type:      provisioning.Error.String(),
-			Detail:    credExpDetail,
-			Timestamp: v1.Time(now),
-			Meta:      map[string]interface{}{},
-		})
+		cred.Status.Reasons = []v1.ResourceStatusReason{
+			{
+				Type:      provisioning.Error.String(),
+				Detail:    credExpDetail,
+				Timestamp: v1.Time(now),
+				Meta:      map[string]interface{}{},
+			},
+		}
 
 		// update state if action is to deprovision
 		if j.deprovisionExpired {
@@ -110,9 +118,14 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 			}
 		}
 
-		_, err := j.client.UpdateResourceInstance(cred)
+		// only update a subset of the sub resources
+		subResources := map[string]interface{}{
+			status: cred.Status,
+			state:  cred.State,
+		}
+		err = j.client.CreateSubResource(cred.ResourceMeta, subResources)
 		if err != nil {
-			logger.Error("error updating the credential as expired")
+			logger.WithError(err).Error("error creating subresources")
 		}
 	}
 }

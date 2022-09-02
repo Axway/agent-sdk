@@ -28,4 +28,6 @@ type CredentialRequest interface {
 	GetIDPCredentialData() IDPCredentialData
 	// GetCredentialAction returns the action to be handled for this credential
 	GetCredentialAction() CredentialAction
+	// GetCredentialExpirationDays returns the number of days this credential has to live
+	GetCredentialExpirationDays() int
 }

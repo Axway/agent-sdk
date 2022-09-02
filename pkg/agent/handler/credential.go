@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -59,13 +60,6 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 
 	logger := getLoggerFromContext(ctx).WithComponent("credentialHandler")
 	ctx = setLoggerInContext(ctx, logger)
-
-	inter := reflect.TypeOf((*credProv)(nil)).Elem()
-	if reflect.TypeOf(h).Implements(inter) {
-		logger.Info("implements updates")
-	} else {
-		logger.Info("does not implement updates")
-	}
 
 	cr := &management.Credential{}
 	err := cr.FromInstance(resource)
@@ -142,7 +136,8 @@ func (m *credentials) shouldProcessPending(status *v1.ResourceStatus, state stri
 // - renew  when cred has the agent finalizer, resource is in pending, and state is active
 func (h *credentials) shouldProcessUpdate(status *v1.ResourceStatus, credentialState string, finalizers []v1.Finalizer) (prov.CredentialAction, bool) {
 	inter := reflect.TypeOf((*credProv)(nil)).Elem()
-	if !reflect.TypeOf(h).Implements(inter) {
+	if !reflect.TypeOf(h.prov).Implements(inter) {
+		log.Debugf("credential updates not supported by agent")
 		return 0, false
 	}
 
@@ -168,7 +163,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, 0)
+	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, 0, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -222,6 +217,16 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	cred.Data = data
 	cred.Status = prov.NewStatusReason(status)
 
+	if provCreds.days != 0 {
+		// update the expiration timestamp
+		expTS := time.Now().AddDate(0, 0, provCreds.days)
+		cred.Policies.Expiry.Timestamp = v1.Time(expTS)
+
+		// copy over actions
+		cred.Policies.Expiry.Actions = crd.Spec.Provision.Policies.Expiry.Actions
+	}
+	cred.Policies.Renewable = crd.Spec.Provision.Policies.Renewable
+
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
@@ -234,6 +239,7 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
 		"data":             cred.Data,
+		"policies":         cred.Policies,
 	}
 }
 
@@ -284,7 +290,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	logger := getLoggerFromContext(ctx)
 	provData := h.deprovisionPreProcess(ctx, cred)
 
-	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0)
+	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0, nil)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -332,7 +338,7 @@ func (h *credentials) onUpdateRevoke(ctx context.Context, cred *management.Crede
 	logger := getLoggerFromContext(ctx)
 	provData := h.deprovisionPreProcess(ctx, cred)
 
-	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, prov.Revoke)
+	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, prov.Revoke, nil)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -353,8 +359,19 @@ func (h *credentials) onUpdateRenew(ctx context.Context, cred *management.Creden
 		return cred
 	}
 
+	// only continue if the crd says the cred is renewable
+	renewable := false
+	if crd.Spec.Provision != nil &&
+		crd.Spec.Provision.Policies != nil &&
+		crd.Spec.Provision.Policies.Renewable {
+		renewable = true
+	}
+	if !renewable {
+		return cred
+	}
+
 	// check crd if renew is possible
-	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, prov.Renew)
+	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, prov.Renew, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -469,12 +486,13 @@ type provCreds struct {
 	credType    string
 	id          string
 	name        string
+	days        int
 	credAction  prov.CredentialAction
 	credData    map[string]interface{}
 	credDetails map[string]interface{}
 	appDetails  map[string]interface{}
-	idpCredData *idpCredData
 	idpProvider oauth.Provider
+	idpCredData *idpCredData
 }
 
 type idpCredData struct {
@@ -489,7 +507,7 @@ type idpCredData struct {
 	publicKey       string
 }
 
-func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, action prov.CredentialAction) (*provCreds, error) {
+func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{
@@ -501,6 +519,14 @@ func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[str
 		id:          cr.Metadata.ID,
 		name:        cr.Name,
 		credAction:  action,
+		days:        0,
+	}
+
+	if crd != nil &&
+		crd.Spec.Provision != nil &&
+		crd.Spec.Provision.Policies != nil &&
+		crd.Spec.Provision.Policies.Expiry.Period != 0 {
+		provCred.days = int(crd.Spec.Provision.Policies.Expiry.Period)
 	}
 
 	// Setup external credential request data to be used for provisioning
@@ -561,6 +587,11 @@ func (c provCreds) GetCredentialData() map[string]interface{} {
 // GetCredentialAction gets the data of the credential
 func (c provCreds) GetCredentialAction() prov.CredentialAction {
 	return c.credAction
+}
+
+// GetID gets the id of the credential resource
+func (c provCreds) GetCredentialExpirationDays() int {
+	return c.days
 }
 
 // IsIDPCredential returns boolean indicating if the credential request is for IDP provider
