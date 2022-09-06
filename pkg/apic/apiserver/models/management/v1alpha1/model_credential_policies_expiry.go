@@ -20,6 +20,4 @@ import (
 type CredentialPoliciesExpiry struct {
 	// Time when the Credential is set to be expired.
 	Timestamp time.Time `json:"timestamp"`
-	// The actions taken when the Credentials expire.
-	Actions []CredentialPoliciesExpiryActions `json:"actions,omitempty"`
 }

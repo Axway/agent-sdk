@@ -135,25 +135,15 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		Schema: c.requestSchema,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
-			Policies: &management.CredentialRequestDefinitionSpecProvisionPolicies{
+			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{
 				Renewable: c.renewable,
 			},
 		},
 	}
 
-	actions := make([]management.CredentialPoliciesExpiryActions, 0)
-	if len(c.actions) > 0 {
-		for _, a := range c.actions {
-			actions = append(actions, management.CredentialPoliciesExpiryActions{
-				Type: a,
-			})
-		}
-	}
-
 	if c.period > 0 {
 		spec.Provision.Policies.Expiry = management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
-			Actions: actions,
-			Period:  int32(c.period),
+			Period: int32(c.period),
 		}
 	}
 

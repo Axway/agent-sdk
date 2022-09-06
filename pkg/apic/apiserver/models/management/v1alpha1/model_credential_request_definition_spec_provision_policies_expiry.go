@@ -14,5 +14,5 @@ type CredentialRequestDefinitionSpecProvisionPoliciesExpiry struct {
 	// The number of days after the Credentials are considered to be expired.
 	Period int32 `json:"period"`
 	// The actions taken when the Credentials expire.
-	Actions []CredentialPoliciesExpiryActions `json:"actions,omitempty"`
+	Actions []CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions `json:"actions,omitempty"`
 }
