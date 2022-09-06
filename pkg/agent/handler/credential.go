@@ -225,7 +225,9 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		// copy over actions
 		cred.Policies.Expiry.Actions = crd.Spec.Provision.Policies.Expiry.Actions
 	}
-	cred.Policies.Renewable = crd.Spec.Provision.Policies.Renewable
+	if crd.Spec.Provision != nil && crd.Spec.Provision.Policies != nil {
+		cred.Policies.Renewable = crd.Spec.Provision.Policies.Renewable
+	}
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))

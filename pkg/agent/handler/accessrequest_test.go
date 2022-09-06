@@ -300,7 +300,6 @@ func Test_arReq(t *testing.T) {
 
 type mockClient struct {
 	createSubCalled bool
-	deleteResCalled bool
 	expectedStatus  string
 	getErr          error
 	getARDErr       error
@@ -308,7 +307,6 @@ type mockClient struct {
 	ard             *v1.ResourceInstance
 	isDeleting      bool
 	subError        error
-	delErr          error
 	t               *testing.T
 }
 
@@ -336,11 +334,6 @@ func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string
 	}
 
 	return nil, nil
-}
-
-func (m *mockClient) DeleteResourceInstance(ri v1.Interface) error {
-	m.deleteResCalled = true
-	return m.delErr
 }
 
 type mockARProvision struct {

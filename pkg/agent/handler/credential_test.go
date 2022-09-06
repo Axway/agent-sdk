@@ -239,16 +239,12 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			ri, _ := cred.AsInstance()
 			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
-			assert.Equal(t, deprovision, p.expectedProvType)
+			// assert.Equal(t, deprovision, p.expectedProvType)
 
 			if tc.outboundStatus.String() == prov.Success.String() {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
-			}
-
-			if tc.deleteResCalled {
-				assert.True(t, c.deleteResCalled)
 			}
 		})
 	}
@@ -659,12 +655,10 @@ type credClient struct {
 	getAppErr       error
 	getCrdErr       error
 	createSubCalled bool
-	deleteResCalled bool
 	subError        error
 	expectedStatus  string
 	t               *testing.T
 	isDeleting      bool
-	delErr          error
 }
 
 func (m *credClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
@@ -695,11 +689,6 @@ func (m *credClient) UpdateResourceFinalizer(ri *apiv1.ResourceInstance, _, _ st
 	}
 
 	return nil, nil
-}
-
-func (m *credClient) DeleteResourceInstance(ri apiv1.Interface) error {
-	m.deleteResCalled = true
-	return m.delErr
 }
 
 func parsePrivateKey(priv string) *rsa.PrivateKey {

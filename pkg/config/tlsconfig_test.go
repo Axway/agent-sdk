@@ -70,7 +70,7 @@ func TestValidate(t *testing.T) {
 
 	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error: ssl.minVersion not valid in config", err.Error())
+	assert.Equal(t, "ssl.minVersion not valid in config", err.Error())
 	cfg2.MinVersion = min
 
 	max := cfg2.MaxVersion
@@ -83,14 +83,14 @@ func TestValidate(t *testing.T) {
 	cfgValidator2, _ = cfg.(IConfigValidator)
 	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error: ssl.maxVersion not valid in config", err.Error())
+	assert.Equal(t, "ssl.maxVersion not valid in config", err.Error())
 	cfg2.MaxVersion = max
 
 	cfg2.CipherSuites = []TLSCipherSuite{TLSCipherSuite(888)}
 	cfgValidator2, _ = cfg.(IConfigValidator)
 	err = cfgValidator2.ValidateCfg()
 	assert.NotNil(t, err)
-	assert.Equal(t, "Error: ssl.cipherSuites not valid in config", err.Error())
+	assert.Equal(t, "ssl.cipherSuites not valid in config", err.Error())
 }
 
 func TestUnpackTLSVersion(t *testing.T) {
