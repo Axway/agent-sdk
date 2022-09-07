@@ -172,31 +172,42 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
-		name            string
-		outboundStatus  prov.Status
-		resourceState   string
-		provStatus      string
-		action          string
-		deleteResCalled bool
+		name             string
+		outboundStatus   prov.Status
+		resourceState    string
+		provStatus       string
+		action           string
+		expectedProvType string
+		deleteResCalled  bool
 	}{
 		{
-			name:           "should deprovision with no error",
-			outboundStatus: prov.Success,
-			resourceState:  apiv1.ResourceDeleting,
-			provStatus:     prov.Success.String(),
+			name:             "should deprovision with no error",
+			outboundStatus:   prov.Success,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
 		},
 		{
-			name:            "should deprovision with no error when CredentialExpired",
+			name:            "should not deprovision when CredentialExpired and not Deleting",
 			outboundStatus:  prov.Success,
 			provStatus:      prov.Error.String(),
 			action:          "CredentialExpired",
-			deleteResCalled: true,
+			deleteResCalled: false,
 		},
 		{
-			name:           "should fail to deprovision and set the status to error",
-			outboundStatus: prov.Error,
-			resourceState:  apiv1.ResourceDeleting,
-			provStatus:     prov.Success.String(),
+			name:             "should deprovision with no error when CredentialExpired and Deleting",
+			outboundStatus:   prov.Success,
+			provStatus:       prov.Error.String(),
+			action:           "CredentialExpired",
+			resourceState:    apiv1.ResourceDeleting,
+			expectedProvType: deprovision,
+		},
+		{
+			name:             "should fail to deprovision and set the status to error",
+			outboundStatus:   prov.Error,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
 		},
 	}
 
@@ -246,7 +257,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			ri, _ := cred.AsInstance()
 			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
-			// assert.Equal(t, deprovision, p.expectedProvType)
+			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 
 			if tc.outboundStatus.String() == prov.Success.String() {
 				assert.False(t, c.createSubCalled)
