@@ -16,6 +16,7 @@ import (
 	"time"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -37,7 +38,9 @@ func TestCredentialHandler(t *testing.T) {
 		getAppErr        error
 		getCrdErr        error
 		hasError         bool
+		isRenew          bool
 		inboundStatus    string
+		inboundState     prov.CredentialAction
 		name             string
 		outboundStatus   string
 		subError         error
@@ -116,6 +119,10 @@ func TestCredentialHandler(t *testing.T) {
 
 			cred := credential
 			cred.Status.Level = tc.inboundStatus
+			cred.Spec.State.Name = tc.inboundState.String()
+			if tc.inboundState.String() == "" {
+				cred.Spec.State.Name = v1.Active
+			}
 
 			p := &mockCredProv{
 				t: t,

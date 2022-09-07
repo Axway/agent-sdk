@@ -73,23 +73,19 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 		return nil
 	}
 
-	if ok := h.shouldProcessDeleting(cr.Status, cr.Metadata.State, cr.State.Name, cr.Finalizers); ok {
+	if ok := h.shouldProcessDeleting(cr); ok {
 		logger.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, cr)
 		return nil
 	}
 
 	var credential *management.Credential
-	if ok := h.shouldProcessPending(cr.Status, cr.Metadata.State, cr.Finalizers); ok {
+	if ok := h.shouldProcessPending(cr); ok {
 		log.Trace("processing resource in pending status")
 		credential = h.onPending(ctx, cr)
-	} else if action, ok := h.shouldProcessUpdate(cr.Status, cr.State.Name, cr.Finalizers); ok {
+	} else if actions := h.shouldProcessUpdating(cr); len(actions) != 0 {
 		log.Trace("processing resource in updating status")
-		if action == prov.Revoke {
-			credential = h.onUpdateRevoke(ctx, cr)
-		} else {
-			credential = h.onUpdateRenew(ctx, cr)
-		}
+		credential = h.onUpdates(ctx, cr, actions)
 	}
 
 	if credential != nil {
@@ -107,52 +103,50 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	}
 
 	return err
+}
 
+// shouldProvision
+func (h *credentials) shouldProcessPending(cr *management.Credential) bool {
+	if h.marketplaceHandler.shouldProcessPending(cr.Status, cr.Metadata.State) {
+		return cr.Spec.State.Name == v1.Active && !cr.Spec.State.Rotate && cr.State.Name != v1.Inactive
+	}
+	return false
 }
 
 // shouldProcessDeleting
-// - delete when cred has the agent finalizer, resource is in deleting, and not in error from agent
-// expire when the cred has the agent finalizer, resource is in Success, state is inactive,  and not in error from agent
-func (h *credentials) shouldProcessDeleting(status *v1.ResourceStatus, resourceState string, credentialState string, finalizers []v1.Finalizer) bool {
-	if hasAgentCredentialFinalizer(finalizers) && (resourceState == v1.ResourceDeleting ||
-		(status.Level == prov.Success.String() && credentialState == v1.Inactive)) {
-		return !hasAgentCredentialError(status) // don't process delete when error from agent
+func (h *credentials) shouldProcessDeleting(cr *management.Credential) bool {
+	if hasAgentCredentialFinalizer(cr.Finalizers) && cr.Metadata.State == v1.ResourceDeleting {
+		return !hasAgentCredentialError(cr.Status) // don't process delete when error from agent
 	}
 
 	return false
 }
 
-// shouldProcessPending - return true if cred does not have the agent finalizer, resource is in pending, and resource is deleting
-func (m *credentials) shouldProcessPending(status *v1.ResourceStatus, state string, finalizers []v1.Finalizer) bool {
-	if !hasAgentCredentialFinalizer(finalizers) {
-		return m.marketplaceHandler.shouldProcessPending(status, state)
-	}
-
-	return false
-}
-
-// shouldProcessUpdate
-// - revoke when cred has the agent finalizer, resource is in pending, and state is inactive
-// - renew  when cred has the agent finalizer, resource is in pending, and state is active
-func (h *credentials) shouldProcessUpdate(status *v1.ResourceStatus, credentialState string, finalizers []v1.Finalizer) (prov.CredentialAction, bool) {
+// shouldProcessUpdating
+func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.CredentialAction {
+	actions := []prov.CredentialAction{}
 	inter := reflect.TypeOf((*credProv)(nil)).Elem()
 	if !reflect.TypeOf(h.prov).Implements(inter) {
 		log.Debugf("credential updates not supported by agent")
-		return 0, false
+		return actions
 	}
 
-	if !hasAgentCredentialFinalizer(finalizers) || status.Level != prov.Pending.String() {
-		return 0, false
+	if !hasAgentCredentialFinalizer(cr.Finalizers) || cr.Status.Level != prov.Pending.String() {
+		return actions
 	}
 
-	if credentialState == v1.Inactive {
-		// revoke
-		return prov.Revoke, true
-	} else if credentialState == v1.Active {
-		// renew
-		return prov.Renew, true
+	if cr.Spec.State.Name == v1.Inactive && cr.State.Name == v1.Active {
+		// suspend
+		actions = append(actions, prov.Suspend)
+	} else if cr.Spec.State.Name == v1.Active && cr.State.Name == v1.Inactive {
+		// enable
+		actions = append(actions, prov.Enable)
 	}
-	return 0, false // no credentialState
+
+	if cr.Spec.State.Rotate {
+		actions = append(actions, prov.Rotate)
+	}
+	return actions
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *management.Credential) *management.Credential {
@@ -221,27 +215,37 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		// update the expiration timestamp
 		expTS := time.Now().AddDate(0, 0, provCreds.days)
 		cred.Policies.Expiry.Timestamp = v1.Time(expTS)
-
-		// copy over actions
-		cred.Policies.Expiry.Actions = crd.Spec.Provision.Policies.Expiry.Actions
 	}
-	if crd.Spec.Provision != nil && crd.Spec.Provision.Policies != nil {
+	// mark this cred as renewable
+	if crd.Spec.Provision != nil {
 		cred.Policies.Renewable = crd.Spec.Provision.Policies.Renewable
 	}
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
-	if cred.Status.Level == prov.Success.String() && !hasAgentCredentialFinalizer(cred.Finalizers) {
-		ri, _ := cred.AsInstance()
-		// only add finalizer on success
-		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	if cred.Status.Level == prov.Success.String() {
+		if !hasAgentCredentialFinalizer(cred.Finalizers) {
+			ri, _ := cred.AsInstance()
+			// only add finalizer on success
+			h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+		}
+
+		if provCreds.GetCredentialAction() != prov.Rotate {
+			// if this is not a rotate action update the state to the desired state
+			cred.State.Name = cred.Spec.State.Name
+		} else {
+			// if the action was rotate lets remove the rotate flag from spec
+			cred.Spec.State.Rotate = false
+			h.client.UpdateResourceInstance(cred)
+		}
 	}
 
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
 		"data":             cred.Data,
 		"policies":         cred.Policies,
+		"state":            cred.State,
 	}
 }
 
@@ -335,63 +339,35 @@ func (*credentials) deprovisionPreProcess(ctx context.Context, cred *management.
 	return provData
 }
 
-func (h *credentials) onUpdateRevoke(ctx context.Context, cred *management.Credential) *management.Credential {
-	// check the application status
-	logger := getLoggerFromContext(ctx)
-	provData := h.deprovisionPreProcess(ctx, cred)
-
-	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, prov.Revoke, nil)
-	if err != nil {
-		logger.WithError(err).Error("error preparing credential request")
-		h.onError(ctx, cred, err)
-		return cred
-	}
-
-	status, _ := h.prov.CredentialUpdate(provCreds)
-
-	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
-	return cred
-}
-
-func (h *credentials) onUpdateRenew(ctx context.Context, cred *management.Credential) *management.Credential {
-	// check the application status
+func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential, actions []prov.CredentialAction) *management.Credential {
 	logger := getLoggerFromContext(ctx)
 	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
+	provData := h.deprovisionPreProcess(ctx, cred)
 	if shouldReturn {
 		return cred
 	}
 
-	// only continue if the crd says the cred is renewable
-	renewable := false
-	if crd.Spec.Provision != nil &&
-		crd.Spec.Provision.Policies != nil &&
-		crd.Spec.Provision.Policies.Renewable {
-		renewable = true
-	}
-	if !renewable {
-		return cred
-	}
-
-	// check crd if renew is possible
-	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, prov.Renew, crd)
-	if err != nil {
-		logger.WithError(err).Error("error preparing credential request")
-		h.onError(ctx, cred, err)
-		return cred
-	}
-
-	if provCreds.IsIDPCredential() {
-		err := h.registerIDPClientCredential(provCreds)
+	for _, action := range actions {
+		provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, action, nil)
 		if err != nil {
-			logger.WithError(err).Error("error provisioning credential request with IDP")
+			logger.WithError(err).Error("error preparing credential request")
 			h.onError(ctx, cred, err)
 			return cred
 		}
+
+		if action != prov.Suspend && provCreds.IsIDPCredential() {
+			err := h.registerIDPClientCredential(provCreds)
+			if err != nil {
+				logger.WithError(err).Error("error provisioning credential request with IDP")
+				h.onError(ctx, cred, err)
+				return cred
+			}
+		}
+
+		status, credentialData := h.prov.CredentialUpdate(provCreds)
+		h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
 	}
 
-	status, credentialData := h.prov.CredentialUpdate(provCreds)
-
-	h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
 	return cred
 }
 
@@ -526,7 +502,6 @@ func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[str
 
 	if crd != nil &&
 		crd.Spec.Provision != nil &&
-		crd.Spec.Provision.Policies != nil &&
 		crd.Spec.Provision.Policies.Expiry.Period != 0 {
 		provCred.days = int(crd.Spec.Provision.Policies.Expiry.Period)
 	}
