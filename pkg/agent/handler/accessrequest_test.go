@@ -336,6 +336,10 @@ func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string
 	return nil, nil
 }
 
+func (m *mockClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
+	return nil, nil
+}
+
 type mockARProvision struct {
 	expectedAccessDetails map[string]interface{}
 	expectedAPIID         string

@@ -135,16 +135,19 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 		return actions
 	}
 
+	// suspend
 	if cr.Spec.State.Name == v1.Inactive && cr.State.Name == v1.Active {
-		// suspend
 		actions = append(actions, prov.Suspend)
-	} else if cr.Spec.State.Name == v1.Active && cr.State.Name == v1.Inactive {
-		// enable
-		actions = append(actions, prov.Enable)
 	}
 
+	// rotate
 	if cr.Spec.State.Rotate {
 		actions = append(actions, prov.Rotate)
+	}
+
+	// enable
+	if cr.Spec.State.Name == v1.Active && cr.State.Name == v1.Inactive {
+		actions = append(actions, prov.Enable)
 	}
 	return actions
 }

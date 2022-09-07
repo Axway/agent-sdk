@@ -121,7 +121,7 @@ func TestCredentialHandler(t *testing.T) {
 			cred.Status.Level = tc.inboundStatus
 			cred.Spec.State.Name = tc.inboundState.String()
 			if tc.inboundState.String() == "" {
-				cred.Spec.State.Name = v1.Active
+				cred.Spec.State.Name = apiv1.Active
 			}
 
 			p := &mockCredProv{
@@ -698,6 +698,10 @@ func (m *credClient) UpdateResourceFinalizer(ri *apiv1.ResourceInstance, _, _ st
 	return nil, nil
 }
 
+func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	return nil, nil
+}
+
 func parsePrivateKey(priv string) *rsa.PrivateKey {
 	block, _ := pem.Decode([]byte(priv))
 	if block == nil {
@@ -807,6 +811,9 @@ var credential = management.Credential{
 		CredentialRequestDefinition: "api-key",
 		ManagedApplication:          credAppRefName,
 		Data:                        nil,
+		State: management.CredentialSpecState{
+			Name: v1.Active,
+		},
 	},
 	Status: &apiv1.ResourceStatus{
 		Level: "",
