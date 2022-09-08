@@ -12,6 +12,5 @@ package management
 // CredentialPolicies  (management.v1alpha1.Credential)
 type CredentialPolicies struct {
 	// Defines on if Credential can be renewed.
-	Renewable bool                     `json:"renewable,omitempty"`
-	Expiry    CredentialPoliciesExpiry `json:"expiry,omitempty"`
+	Expiry CredentialPoliciesExpiry `json:"expiry,omitempty"`
 }
