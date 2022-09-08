@@ -21,6 +21,8 @@ const (
 	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
+
+	CredExpDetail = "Agent: CredentialExpired"
 )
 
 // RequestType - the type of credential request being sent

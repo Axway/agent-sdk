@@ -16,7 +16,6 @@ import (
 	"time"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -169,6 +168,123 @@ func TestCredentialHandler(t *testing.T) {
 }
 
 func TestCredentialHandler_deleting(t *testing.T) {
+	crdRI, _ := crd.AsInstance()
+
+	tests := []struct {
+		name             string
+		outboundStatus   prov.Status
+		resourceState    string
+		provStatus       string
+		expectedProvType string
+		specState        string
+		specStateReason  string
+		deleteResCalled  bool
+		skipFinalizers   bool
+	}{
+		{
+			name:             "should deprovision with no error",
+			outboundStatus:   prov.Success,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
+		},
+		{
+			name:             "should deprovision expired with no error and not Deleting",
+			outboundStatus:   prov.Success,
+			expectedProvType: deprovision,
+			provStatus:       prov.Success.String(),
+			specState:        apiv1.Inactive,
+			specStateReason:  prov.CredExpDetail,
+		},
+		{
+			name:            "should not deprovision when error and not Deleting",
+			outboundStatus:  prov.Success,
+			provStatus:      prov.Error.String(),
+			deleteResCalled: false,
+		},
+		{
+			name:             "should deprovision when and Deleting",
+			outboundStatus:   prov.Success,
+			provStatus:       prov.Error.String(),
+			resourceState:    apiv1.ResourceDeleting,
+			expectedProvType: deprovision,
+		},
+		{
+			name:             "should fail to deprovision and set the status to error",
+			outboundStatus:   prov.Error,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
+		},
+		{
+			name:           "should not deprovision with no agent finalizers",
+			resourceState:  apiv1.ResourceDeleting,
+			provStatus:     prov.Success.String(),
+			outboundStatus: prov.Success,
+			skipFinalizers: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cred := credential
+			cred.Spec.State.Name = tc.specState
+			cred.Spec.State.Reason = tc.specStateReason
+			cred.Status.Level = tc.provStatus
+			cred.Status.Reasons = []apiv1.ResourceStatusReason{
+				{
+					Type:   tc.provStatus,
+					Detail: tc.specStateReason,
+				},
+			}
+			cred.Metadata.State = tc.resourceState
+			if !tc.skipFinalizers {
+				cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
+			}
+			p := &mockCredProv{
+				t: t,
+				expectedStatus: mock.MockRequestStatus{
+					Status: tc.outboundStatus,
+					Msg:    "msg",
+					Properties: map[string]string{
+						"status_key": "status_val",
+					},
+				},
+				expectedAppDetails:  map[string]interface{}{},
+				expectedCredDetails: util.GetAgentDetails(&cred),
+				expectedManagedApp:  credAppRefName,
+				expectedCredType:    cred.Spec.CredentialRequestDefinition,
+			}
+
+			c := &credClient{
+				crd:            crdRI,
+				expectedStatus: tc.outboundStatus.String(),
+				isDeleting:     true,
+				managedApp:     credApp,
+				t:              t,
+			}
+
+			handler := NewCredentialHandler(p, c, nil)
+			v := handler.(*credentials)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
+
+			ri, _ := cred.AsInstance()
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
+
+			if tc.outboundStatus.String() == prov.Success.String() {
+				assert.False(t, c.createSubCalled)
+			} else {
+				assert.True(t, c.createSubCalled)
+			}
+		})
+	}
+}
+
+func TestCredentialHandler_update(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
@@ -823,7 +939,7 @@ var credential = management.Credential{
 		ManagedApplication:          credAppRefName,
 		Data:                        nil,
 		State: management.CredentialSpecState{
-			Name: v1.Active,
+			Name: apiv1.Active,
 		},
 	},
 	Status: &apiv1.ResourceStatus{

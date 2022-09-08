@@ -115,8 +115,18 @@ func (h *credentials) shouldProcessPending(cr *management.Credential) bool {
 
 // shouldProcessDeleting
 func (h *credentials) shouldProcessDeleting(cr *management.Credential) bool {
-	if hasAgentCredentialFinalizer(cr.Finalizers) && cr.Metadata.State == v1.ResourceDeleting {
-		return !hasAgentCredentialError(cr.Status) // don't process delete when error from agent
+	if !hasAgentCredentialFinalizer(cr.Finalizers) {
+		return false
+	}
+
+	if cr.Spec.State.Name == v1.Inactive && cr.Spec.State.Reason == prov.CredExpDetail && cr.Status.Level == prov.Pending.String() {
+		// expired credential
+		return true
+	}
+
+	if cr.Metadata.State == v1.ResourceDeleting {
+		// don't process delete when error from agent
+		return !hasAgentCredentialError(cr.Status)
 	}
 
 	return false
@@ -324,6 +334,19 @@ func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCred
 
 		ri, _ := cred.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+
+		// update sub resources when expire
+		if cred.Metadata.State != v1.ResourceDeleting {
+			cred.State.Name = v1.Inactive
+			cred.Status.Level = prov.Success.String()
+			cred.Status.Reasons = []v1.ResourceStatusReason{}
+			h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
+				"state": cred.State,
+			})
+			h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
+				"status": cred.Status,
+			})
+		}
 	} else {
 		err := fmt.Errorf(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")

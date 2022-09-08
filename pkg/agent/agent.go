@@ -190,8 +190,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 				StartAgentStatusUpdate()
 			}
 
-			// if credentials can expire then start the credential checker
-			if agent.cfg.GetCredentialConfig().GetExpirationDays() > 0 {
+			// if credentials can expire and need to be deprovisioned then start the credential checker
+			if agent.cfg.GetCredentialConfig().GetExpirationDays() > 0 && agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
 				registerCredentialChecker()
 			}
 

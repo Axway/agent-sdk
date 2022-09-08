@@ -13,9 +13,8 @@ import (
 )
 
 const (
-	credExpDetail = "agent.credential.expired"
-	status        = "status"
-	state         = "state"
+	status = "status"
+	state  = "state"
 )
 
 type cacheManager interface {
@@ -24,24 +23,23 @@ type cacheManager interface {
 }
 
 type apicClient interface {
+	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type credentialValidator struct {
 	jobs.Job
-	id                 string
-	logger             log.FieldLogger
-	cacheManager       cacheManager
-	deprovisionExpired bool
-	client             apicClient
+	id           string
+	logger       log.FieldLogger
+	cacheManager cacheManager
+	client       apicClient
 }
 
 func newCredentialChecker(cacheManager cacheManager, cfg config.CentralConfig, client apicClient) *credentialValidator {
 	return &credentialValidator{
-		logger:             log.NewFieldLogger().WithComponent("credentialValidator"),
-		cacheManager:       cacheManager,
-		deprovisionExpired: cfg.GetCredentialConfig().ShouldDeprovisionExpired(),
-		client:             client,
+		logger:       log.NewFieldLogger().WithComponent("credentialValidator"),
+		cacheManager: cacheManager,
+		client:       client,
 	}
 }
 
@@ -101,21 +99,12 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 
 	if expTime.Before(now) {
 		logger.Info("Credential has expired, updating Central")
-		cred.Status.Reasons = []v1.ResourceStatusReason{
-			{
-				Type:      provisioning.Error.String(),
-				Detail:    credExpDetail,
-				Timestamp: v1.Time(now),
-				Meta:      map[string]interface{}{},
-			},
-		}
+		cred.Status.Level = provisioning.Pending.String()
 
-		// update state if action is to deprovision
-		if j.deprovisionExpired {
-			cred.State = management.CredentialState{
-				Name:   v1.Inactive,
-				Reason: credExpDetail,
-			}
+		// update state so the inactivated credential will come back for removal
+		cred.Spec.State = management.CredentialSpecState{
+			Name:   v1.Inactive,
+			Reason: provisioning.CredExpDetail,
 		}
 
 		// only update a subset of the sub resources
@@ -123,6 +112,12 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 			status: cred.Status,
 			state:  cred.State,
 		}
+
+		_, err = j.client.UpdateResourceInstance(cred)
+		if err != nil {
+			logger.WithError(err).Error("error update credential resources")
+		}
+
 		err = j.client.CreateSubResource(cred.ResourceMeta, subResources)
 		if err != nil {
 			logger.WithError(err).Error("error creating subresources")
@@ -146,7 +141,8 @@ func registerCredentialChecker() *credentialValidator {
 		return nil
 	}
 
-	id, err := jobs.RegisterScheduledJobWithName(c, "hourly", "CredentialValidator")
+	id, err := jobs.RegisterScheduledJobWithName(c, "* * * * *", "CredentialValidator")
+	// id, err := jobs.RegisterScheduledJobWithName(c, "hourly", "CredentialValidator")
 	if err != nil {
 		c.logger.WithError(err).Error("could not start the credential validator job")
 		return nil
