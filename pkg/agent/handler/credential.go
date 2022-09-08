@@ -314,10 +314,6 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		expTS := time.Now().AddDate(0, 0, provCreds.days)
 		cred.Policies.Expiry.Timestamp = v1.Time(expTS)
 	}
-	// mark this cred as renewable
-	if crd.Spec.Provision != nil {
-		cred.Policies.Renewable = crd.Spec.Provision.Policies.Renewable
-	}
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
