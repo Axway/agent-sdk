@@ -129,7 +129,7 @@ func (c *credentialRequestDef) SetDeprovisionExpired() CredentialRequestBuilder 
 	return c
 }
 
-// Register - create the credential request defintion and send it to Central
+// Register - create the credential request definition and send it to Central
 func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
 		return nil, c.err
