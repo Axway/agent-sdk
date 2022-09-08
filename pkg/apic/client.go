@@ -823,13 +823,14 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		// do not perform any actions if hash is the same
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
-		if oldHash == newHash {
+		if oldHash == newHash && existingRI.Title == data.Title {
 			return existingRI, nil
 		}
 
 		// Update the spec and agent details subresource, if they exist in incoming data
 		existingRI.Spec = data.Spec
 		existingRI.SubResources = data.SubResources
+		existingRI.Title = data.Title
 
 		// set the data and subresources to be pushed
 		data = existingRI

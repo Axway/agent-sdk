@@ -111,6 +111,7 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 
 type crdBuilderOptions struct {
 	name      string
+	title     string
 	renewable bool
 	provProps []provisioning.PropertyBuilder
 	reqProps  []provisioning.PropertyBuilder
@@ -139,6 +140,7 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 
 	builder := provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
 		SetName(thisCred.name).
+		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
 		SetRequestSchema(reqSchema).
 		SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
@@ -158,6 +160,13 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 func WithCRDName(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.name = name
+	}
+}
+
+// WithCRDName - set another name for the CRD
+func WithCRDTitle(title string) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.title = title
 	}
 }
 
@@ -188,6 +197,7 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 		if c.name == "" {
 			name := util.ConvertToDomainNameCompliant(p.GetName())
 			c.name = name + "-" + provisioning.OAuthIDPCRD
+			c.title = "OAuth" + p.GetName()
 		}
 
 		setIDPClientSecretSchemaProperty(c)
@@ -303,6 +313,7 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthSecretCRD
+			c.title = "OAuth Secret"
 		}
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
@@ -319,6 +330,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthPublicKeyCRD
+			c.title = "OAuth Key"
 		}
 
 		c.reqProps = append(c.reqProps,
@@ -334,6 +346,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	apiKeyOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.APIKeyCRD),
+		WithCRDTitle("API Key"),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.APIKey).
