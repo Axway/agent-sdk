@@ -35,7 +35,7 @@ type credentialValidator struct {
 	client       apicClient
 }
 
-func newCredentialChecker(cacheManager cacheManager, cfg config.CentralConfig, client apicClient) *credentialValidator {
+func newCredentialChecker(cacheManager cacheManager, client apicClient) *credentialValidator {
 	return &credentialValidator{
 		logger:       log.NewFieldLogger().WithComponent("credentialValidator"),
 		cacheManager: cacheManager,
@@ -126,7 +126,7 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 }
 
 func registerCredentialChecker() *credentialValidator {
-	c := newCredentialChecker(agent.cacheManager, agent.cfg, agent.apicClient)
+	c := newCredentialChecker(agent.cacheManager, agent.apicClient)
 
 	err := agent.cfg.SetWatchResourceFilters([]config.ResourceFilter{
 		{

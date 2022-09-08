@@ -178,7 +178,6 @@ func TestCredentialHandler_deleting(t *testing.T) {
 		expectedProvType string
 		specState        string
 		specStateReason  string
-		deleteResCalled  bool
 		skipFinalizers   bool
 	}{
 		{
@@ -197,10 +196,9 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			specStateReason:  prov.CredExpDetail,
 		},
 		{
-			name:            "should not deprovision when error and not Deleting",
-			outboundStatus:  prov.Success,
-			provStatus:      prov.Error.String(),
-			deleteResCalled: false,
+			name:           "should not deprovision when error and not Deleting",
+			outboundStatus: prov.Success,
+			provStatus:     prov.Error.String(),
 		},
 		{
 			name:             "should deprovision when and Deleting",
