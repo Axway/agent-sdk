@@ -21,6 +21,7 @@ type credentialRequestDef struct {
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
 	renewable       bool
+	suspendable     bool
 	period          int
 }
 
@@ -33,6 +34,7 @@ type CredentialRequestBuilder interface {
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
 	IsRenewable() CredentialRequestBuilder
+	IsSuspendable() CredentialRequestBuilder
 	SetExpirationDays(days int) CredentialRequestBuilder
 	SetDeprovisionExpired() CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
@@ -109,6 +111,12 @@ func (c *credentialRequestDef) IsRenewable() CredentialRequestBuilder {
 	return c
 }
 
+// IsSuspendable - the credential can be asked to be suspended
+func (c *credentialRequestDef) IsSuspendable() CredentialRequestBuilder {
+	c.suspendable = true
+	return c
+}
+
 // SetExpirationDays - the number of days a credential of this type can live
 func (c *credentialRequestDef) SetExpirationDays(days int) CredentialRequestBuilder {
 	c.period = days
@@ -136,7 +144,8 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
 			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{
-				Renewable: c.renewable,
+				Renewable:   c.renewable,
+				Suspendable: c.suspendable,
 			},
 		},
 	}

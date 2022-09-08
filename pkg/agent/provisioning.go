@@ -110,11 +110,12 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 }
 
 type crdBuilderOptions struct {
-	name      string
-	title     string
-	renewable bool
-	provProps []provisioning.PropertyBuilder
-	reqProps  []provisioning.PropertyBuilder
+	name        string
+	title       string
+	renewable   bool
+	suspendable bool
+	provProps   []provisioning.PropertyBuilder
+	reqProps    []provisioning.PropertyBuilder
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
@@ -149,6 +150,10 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		builder.IsRenewable()
 	}
 
+	if thisCred.suspendable {
+		builder.IsSuspendable()
+	}
+
 	if agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
 		builder.SetDeprovisionExpired()
 	}
@@ -174,6 +179,13 @@ func WithCRDTitle(title string) func(c *crdBuilderOptions) {
 func WithCRDIsRenewable() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.renewable = true
+	}
+}
+
+// WithCRDIsSuspendable - set another name for the CRD
+func WithCRDIsSuspendable() func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.suspendable = true
 	}
 }
 
