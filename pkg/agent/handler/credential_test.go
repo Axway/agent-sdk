@@ -190,9 +190,9 @@ func TestCredentialHandler_deleting(t *testing.T) {
 		},
 		{
 			name:             "should deprovision expired with no error and not Deleting",
-			outboundStatus:   prov.Success,
 			expectedProvType: deprovision,
-			provStatus:       prov.Success.String(),
+			outboundStatus:   prov.Success,
+			provStatus:       prov.Pending.String(),
 			specState:        apiv1.Inactive,
 			specStateReason:  prov.CredExpDetail,
 		},
@@ -275,7 +275,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 
-			if tc.outboundStatus.String() == prov.Success.String() {
+			if tc.outboundStatus.String() == prov.Success.String() && tc.specStateReason != prov.CredExpDetail {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
@@ -289,68 +289,76 @@ func TestCredentialHandler_update(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		outboundStatus   prov.Status
-		resourceState    string
-		provStatus       string
-		action           string
+		isRotating       bool
+		inboundStatus    string
+		inboundSpecState string
+		inboundState     string
+		outboundState    string
 		expectedProvType string
-		deleteResCalled  bool
+		outboundStatus   prov.Status
 	}{
 		{
-			name:             "should deprovision with no error",
-			outboundStatus:   prov.Success,
-			expectedProvType: deprovision,
-			resourceState:    apiv1.ResourceDeleting,
-			provStatus:       prov.Success.String(),
+			name:             "should update credential on rotate",
+			isRotating:       true,
+			inboundState:     apiv1.Active,
+			expectedProvType: update,
 		},
 		{
-			name:            "should not deprovision when CredentialExpired and not Deleting",
-			outboundStatus:  prov.Success,
-			provStatus:      prov.Error.String(),
-			action:          "CredentialExpired",
-			deleteResCalled: false,
+			name:             "should update credential on suspend",
+			inboundSpecState: apiv1.Active,
+			inboundState:     apiv1.Inactive,
+			outboundState:    apiv1.Active,
+			expectedProvType: update,
 		},
 		{
-			name:             "should deprovision with no error when CredentialExpired and Deleting",
-			outboundStatus:   prov.Success,
-			provStatus:       prov.Error.String(),
-			action:           "CredentialExpired",
-			resourceState:    apiv1.ResourceDeleting,
-			expectedProvType: deprovision,
+			name:             "should update credential on enable",
+			inboundSpecState: apiv1.Inactive,
+			inboundState:     apiv1.Active,
+			outboundState:    apiv1.Inactive,
+			expectedProvType: update,
 		},
 		{
-			name:             "should fail to deprovision and set the status to error",
-			outboundStatus:   prov.Error,
-			expectedProvType: deprovision,
-			resourceState:    apiv1.ResourceDeleting,
-			provStatus:       prov.Success.String(),
+			name:             "should update credential on suspend and rotate",
+			inboundSpecState: apiv1.Active,
+			inboundState:     apiv1.Inactive,
+			outboundState:    apiv1.Active,
+			expectedProvType: update,
+			isRotating:       true,
+		},
+		{
+			name:             "should update credential on rotate and enable",
+			inboundSpecState: apiv1.Inactive,
+			inboundState:     apiv1.Active,
+			outboundState:    apiv1.Inactive,
+			expectedProvType: update,
+			isRotating:       true,
 		},
 	}
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cred := credential
-			cred.Status.Level = tc.provStatus
-			cred.Status.Reasons = []apiv1.ResourceStatusReason{
-				{
-					Type: tc.provStatus,
-					Meta: map[string]interface{}{
-						"action": tc.action,
-					},
-				},
+			cred.Status.Level = tc.inboundStatus
+			if tc.inboundStatus == "" {
+				cred.Status.Level = prov.Pending.String()
 			}
-			cred.Metadata.State = tc.resourceState
+			cred.Metadata.State = tc.inboundStatus
+			cred.State.Name = tc.inboundState
+			cred.Spec.State.Name = tc.inboundSpecState
+			cred.Spec.State.Rotate = tc.isRotating
 			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
+
+			if tc.outboundStatus.String() == "" {
+				tc.outboundStatus = prov.Success
+			}
+
 			p := &mockCredProv{
-				t: t,
+				t:                t,
+				expectedProvType: tc.expectedProvType,
 				expectedStatus: mock.MockRequestStatus{
 					Status: tc.outboundStatus,
 					Msg:    "msg",
-					Properties: map[string]string{
-						"status_key": "status_val",
-					},
 				},
-				expectedAppDetails:  map[string]interface{}{},
+				expectedAppDetails:  util.GetAgentDetails(credApp),
 				expectedCredDetails: util.GetAgentDetails(&cred),
 				expectedManagedApp:  credAppRefName,
 				expectedCredType:    cred.Spec.CredentialRequestDefinition,
@@ -359,7 +367,6 @@ func TestCredentialHandler_update(t *testing.T) {
 			c := &credClient{
 				crd:            crdRI,
 				expectedStatus: tc.outboundStatus.String(),
-				isDeleting:     true,
 				managedApp:     credApp,
 				t:              t,
 			}
@@ -374,12 +381,6 @@ func TestCredentialHandler_update(t *testing.T) {
 			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
-
-			if tc.outboundStatus.String() == prov.Success.String() {
-				assert.False(t, c.createSubCalled)
-			} else {
-				assert.True(t, c.createSubCalled)
-			}
 		})
 	}
 }
