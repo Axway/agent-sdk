@@ -325,7 +325,7 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthSecretCRD
-			c.title = "OAuth Secret"
+			c.title = "OAuth Client ID & Secret"
 		}
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
@@ -342,7 +342,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthPublicKeyCRD
-			c.title = "OAuth Key"
+			c.title = "OAuth Client ID & Private Key"
 		}
 
 		c.reqProps = append(c.reqProps,
