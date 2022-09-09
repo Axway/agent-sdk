@@ -23,7 +23,7 @@ type anyOfPropertyDefinitions struct {
 type propertyDefinition struct {
 	Type               string                        `json:"type"`
 	Title              string                        `json:"title"`
-	Description        string                        `json:"description"`
+	Description        string                        `json:"description,omitempty"`
 	Enum               []string                      `json:"enum,omitempty"`
 	DefaultValue       interface{}                   `json:"default,omitempty"`
 	ReadOnly           bool                          `json:"readOnly,omitempty"`
@@ -37,6 +37,7 @@ type propertyDefinition struct {
 	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
 	Widget             string                        `json:"x-axway-widget,omitempty"`
+	IsCopyable         bool                          `json:"x-axway-copyable,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -86,6 +87,8 @@ type StringPropertyBuilder interface {
 	AddEnumValue(value string) StringPropertyBuilder
 	// IsEncrypted - Set that this field must be encrypted at rest
 	IsEncrypted() StringPropertyBuilder
+	// IsCopyable - Set that this field may be copied via the UI
+	IsCopyable() StringPropertyBuilder
 	// SetDefaultValue - Define the initial value for the property
 	SetDefaultValue(value string) StringPropertyBuilder
 	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
@@ -265,6 +268,7 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 type stringSchemaProperty struct {
 	schemaProperty *schemaProperty
 	isEncrypted    bool
+	isCopyable     bool
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
@@ -336,6 +340,12 @@ func (p *stringSchemaProperty) IsEncrypted() StringPropertyBuilder {
 	return p
 }
 
+// IsCopyable - Sets that this field may be copied via the UI
+func (p *stringSchemaProperty) IsCopyable() StringPropertyBuilder {
+	p.isCopyable = true
+	return p
+}
+
 // Build - create a string propertyDefinition for use in the subscription schema builder
 func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
@@ -375,6 +385,9 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 
 	// set if the property is encrypted at rest
 	def.IsEncrypted = p.isEncrypted
+
+	// set if the property is copyable
+	def.IsCopyable = p.isCopyable
 
 	// set field to be rendered as a textarea box within the UI
 	def.Widget = p.widget

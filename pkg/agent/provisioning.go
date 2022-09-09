@@ -381,7 +381,8 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 				SetName(provisioning.OauthClientID).
 				SetLabel("Client ID").
 				SetRequired().
-				IsString()),
+				IsString().
+				IsCopyable()),
 	}
 
 	oauthOptions = append(oauthOptions, options...)
