@@ -51,7 +51,7 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 
 // SetName - set the name of the credential request
 func (c *credentialRequestDef) SetName(name string) CredentialRequestBuilder {
-	c.name = name
+	c.name = util.NormalizeNameForCentral(name)
 	return c
 }
 

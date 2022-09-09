@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/fs"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -324,7 +323,7 @@ func ConvertUnitToString(val uint64) string {
 
 // ReadPrivateKeyFile - reads and parses the private key content
 func ReadPrivateKeyFile(privateKeyFile, passwordFile string) (*rsa.PrivateKey, error) {
-	keyBytes, err := ioutil.ReadFile(privateKeyFile)
+	keyBytes, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -369,12 +368,12 @@ func ReadPrivateKeyFile(privateKeyFile, passwordFile string) (*rsa.PrivateKey, e
 }
 
 func readPassword(passwordFile string) ([]byte, error) {
-	return ioutil.ReadFile(passwordFile)
+	return os.ReadFile(passwordFile)
 }
 
 // ReadPublicKeyBytes - reads the public key bytes from file
 func ReadPublicKeyBytes(publicKeyFile string) ([]byte, error) {
-	keyBytes, err := ioutil.ReadFile(publicKeyFile)
+	keyBytes, err := os.ReadFile(publicKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +416,7 @@ func parseRSAPrivateKeyFromPEMWithBytePassword(key []byte, password []byte) (*rs
 	return pkey, nil
 }
 
-//ParsePublicKey - parses the public key content
+// ParsePublicKey - parses the public key content
 func ParsePublicKey(publicKey []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode(publicKey)
 	if block == nil {
