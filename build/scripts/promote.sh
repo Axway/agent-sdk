@@ -14,7 +14,7 @@ check_required_param() {
 
 set_version_variables() {
     # remove refs/tags/v
-    incoming_version=$1
+    incoming_version=1.2.3
     version="${incoming_version:11}"
 
     let MAJOR_VERSION=$(echo $version | cut -d. -f1)
