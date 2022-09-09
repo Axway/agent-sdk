@@ -60,13 +60,6 @@ commit_promotion() {
 }
 
 main() {
-    ## check_required_param $1
-    # if [ $? -eq 1 ]; then
-    #     echo "Promotion of release not completed. Missing parameter for release version (e.g. v1.2.3)"
-    #     echo "version file not updated. You can update it manually if you wish."
-    #     exit
-    # fi
-
     checkout_main
 
     set_version_variables $1
