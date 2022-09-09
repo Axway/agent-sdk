@@ -23,12 +23,10 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v2
-      - name: Update version file
-        working-directory: ./build/scripts
-        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
-        run: |
-          ./promote.sh ${GITHUB_REF}
+      - name: Checkout main
+        uses: actions/checkout@v2
+        with:
+          ref: main
       - name: Create pull request
         uses: peter-evans/create-pull-request@v4
         with:
@@ -37,4 +35,10 @@ jobs:
           title: INT - update to new release
           base: main
           delete-branch: true
+      - name: Update version file
+        working-directory: ./build/scripts
+        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+        run: |
+          ./promote.sh ${GITHUB_REF}
+
      
