@@ -14,7 +14,7 @@ check_required_param() {
 
 set_version_variables() {
     # remove refs/tags/v
-    incoming_version=1.2.3
+    incoming_version=$1
     version="${incoming_version:11}"
 
     let MAJOR_VERSION=$(echo $version | cut -d. -f1)
@@ -60,7 +60,14 @@ commit_promotion() {
 }
 
 main() {
-    checkout_main
+    check_required_param $1
+    if [ $? -eq 1 ]; then
+        echo "Promotion of release not completed. Missing parameter for release version (e.g. v1.2.3)"
+        echo "version file not updated. You can update it manually if you wish."
+        exit
+    fi
+    
+    # checkout_main
 
     set_version_variables $1
 
