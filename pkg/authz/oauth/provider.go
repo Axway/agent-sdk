@@ -18,6 +18,7 @@ type ProviderType int
 // Provider - interface for external IdP provider
 type Provider interface {
 	GetName() string
+	GetTitle() string
 	GetIssuer() string
 	GetTokenEndpoint() string
 	GetAuthorizationEndpoint() string
@@ -115,6 +116,11 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 // GetName - returns the name of the provider
 func (p *provider) GetName() string {
 	return p.cfg.GetIDPName()
+}
+
+// GetTitle - returns the friendly name of the provider
+func (p *provider) GetTitle() string {
+	return p.cfg.GetIDPTitle()
 }
 
 // GetIssuer - returns the issuer for the provider
