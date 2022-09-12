@@ -151,7 +151,7 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	}
 
 	if c.period > 0 {
-		spec.Provision.Policies.Expiry = management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
+		spec.Provision.Policies.Expiry = &management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
 			Period: int32(c.period),
 		}
 	}
