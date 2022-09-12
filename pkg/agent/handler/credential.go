@@ -321,7 +321,10 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	if provCreds.days != 0 {
 		// update the expiration timestamp
 		expTS := time.Now().AddDate(0, 0, provCreds.days)
-		cred.Policies.Expiry.Timestamp = v1.Time(expTS)
+
+		cred.Policies.Expiry = &management.CredentialPoliciesExpiry{
+			Timestamp: v1.Time(expTS),
+		}
 	}
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
