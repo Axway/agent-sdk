@@ -106,6 +106,10 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 }
 
 // shouldProcessDeleting
+// Finalizers = has agent finalizer and
+//  (Spec.State.Name = Inactive, StateReason = Credential Expired, Status.Level = Pending) or
+//  (Metadata.State = Deleting)
+
 func (h *credentials) shouldProcessDeleting(cr *management.Credential) bool {
 	if !hasAgentCredentialFinalizer(cr.Finalizers) {
 		return false
@@ -125,9 +129,14 @@ func (h *credentials) shouldProcessDeleting(cr *management.Credential) bool {
 }
 
 // shouldProvision
+// Status.Level = Pending and
+// Metadata.State = !Deleting and
+// Spec.State.Name = Active and
+// Spec.State.Rotate = false and
+// Finalizers = no agent finalizer
 func (h *credentials) shouldProcessPending(cr *management.Credential) bool {
 	if h.marketplaceHandler.shouldProcessPending(cr.Status, cr.Metadata.State) {
-		return cr.Spec.State.Name == v1.Active && !cr.Spec.State.Rotate && cr.State.Name != v1.Inactive
+		return cr.Spec.State.Name == v1.Active && !cr.Spec.State.Rotate && !hasAgentCredentialFinalizer(cr.Finalizers)
 	}
 	return false
 }

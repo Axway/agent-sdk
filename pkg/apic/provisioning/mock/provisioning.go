@@ -38,6 +38,7 @@ type MockCredentialRequest struct {
 	CredDefName string
 	Details     map[string]string
 	CredData    map[string]interface{}
+	Action      provisioning.CredentialAction
 }
 
 func (m MockCredentialRequest) GetApplicationName() string {
@@ -66,6 +67,10 @@ func (m MockCredentialRequest) GetCredentialType() string {
 
 func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 	return m.CredData
+}
+
+func (m MockCredentialRequest) GetCredentialAction() provisioning.CredentialAction {
+	return m.Action
 }
 
 func (m MockCredentialRequest) IsIDPCredential() bool {
