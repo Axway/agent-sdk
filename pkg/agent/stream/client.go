@@ -118,15 +118,7 @@ func NewStreamerClient(
 	}
 
 	if cfg.IsFetchOnStartupEnabled() && s.wt != nil {
-		for _, filter := range s.wt.Spec.Filters {
-			for _, ftype := range filter.Type {
-				if filter.Scope.Kind == management.EnvironmentGVK().Kind &&
-					(ftype == events.WatchTopicFilterTypeCreated || ftype == events.WatchTopicFilterTypeUpdated) {
-					s.loadOnStartup = append(s.loadOnStartup, filter)
-					break
-				}
-			}
-		}
+		loadTopicFilters(s)
 	}
 
 	if cfg.IsFetchOnStartupEnabled() {
@@ -137,6 +129,18 @@ func NewStreamerClient(
 	}
 
 	return s, nil
+}
+
+func loadTopicFilters(s *StreamerClient) {
+	for _, filter := range s.wt.Spec.Filters {
+		for _, ftype := range filter.Type {
+			if filter.Scope.Kind == management.EnvironmentGVK().Kind &&
+				(ftype == events.WatchTopicFilterTypeCreated || ftype == events.WatchTopicFilterTypeUpdated) {
+				s.loadOnStartup = append(s.loadOnStartup, filter)
+				break
+			}
+		}
+	}
 }
 
 func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {

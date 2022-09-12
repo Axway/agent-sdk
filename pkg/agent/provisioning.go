@@ -67,9 +67,19 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 		}
 	}
 
+	var err error
+	ri, err = migrateResourceInstances(apiSvcResources, marketplaceMigration, ri)
+	if err != nil {
+		return nil, err
+	}
+
+	return ri, nil
+}
+
+func migrateResourceInstances(apiSvcResources []*v1.ResourceInstance, marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
+	newRI := ri
 	for _, svc := range apiSvcResources {
 		var err error
-
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
 		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
 
@@ -81,7 +91,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 			// Mark marketplace migration completed here in provisioning
 			util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
-			ri, err = GetCentralClient().UpdateResourceInstance(svc)
+			newRI, err = GetCentralClient().UpdateResourceInstance(svc)
 			if err != nil {
 				return nil, err
 			}
@@ -96,7 +106,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 			}
 		}
 	}
-	return ri, nil
+	return newRI, nil
 }
 
 // createOrUpdateCredentialRequestDefinition -
