@@ -26,6 +26,7 @@ func newTestMigrationConfig() MigrationConfig {
 }
 
 func (m *MigrationSettings) validate() {
+	// empty implementation of interface
 }
 
 // ShouldCleanInstances - returns the value fo CleanInstances
