@@ -237,7 +237,25 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		return err
 	}
 
-	_, err = c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
+	err = c.deployAPI(httpMethod, serviceBody, consumerInstanceURL, buffer)
+	if err != nil {
+		return err
+	}
+
+	if len(instance.SubResources) > 0 {
+		err = c.handleSubresources(instance, serviceBody)
+		if err != nil {
+			return err
+		}
+	}
+
+	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
+
+	return err
+}
+
+func (c *ServiceClient) deployAPI(httpMethod string, serviceBody *ServiceBody, consumerInstanceURL string, buffer []byte) error {
+	_, err := c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -247,25 +265,24 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		}
 		return err
 	}
+	return nil
+}
 
-	if err == nil && len(instance.SubResources) > 0 {
-		if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
-			subResources := map[string]interface{}{
-				defs.XAgentDetails: xAgentDetail,
-			}
-			err = c.CreateSubResource(instance.ResourceMeta, subResources)
-			if err != nil {
-				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-				if rollbackErr != nil {
-					return errors.New(err.Error() + rollbackErr.Error())
-				}
+func (c *ServiceClient) handleSubresources(instance *management.ConsumerInstance, serviceBody *ServiceBody) error {
+	if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
+		subResources := map[string]interface{}{
+			defs.XAgentDetails: xAgentDetail,
+		}
+		err := c.CreateSubResource(instance.ResourceMeta, subResources)
+		if err != nil {
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				return errors.New(err.Error() + rollbackErr.Error())
 			}
 		}
 	}
 
-	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
-
-	return err
+	return nil
 }
 
 // getAPIServerConsumerInstance -

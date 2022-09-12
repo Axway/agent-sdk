@@ -147,65 +147,83 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
-		err = initializeTokenRequester(centralCfg)
+		err = handleCentralConfig(centralCfg)
 		if err != nil {
-			return fmt.Errorf("could not authenticate to Amplify, please check your keys and key password")
-		}
-
-		// Init apic client when the agent starts, and on config change.
-		agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
-
-		if util.IsNotTest() {
-			err = initEnvResources(centralCfg, agent.apicClient)
-			if err != nil {
-				return err
-			}
-		}
-
-		if centralCfg.GetAgentName() != "" {
-			if agent.agentResourceManager == nil {
-				agent.agentResourceManager, err = resource.NewAgentResourceManager(
-					agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
-				)
-				if err != nil {
-					return err
-				}
-			} else {
-				agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
-			}
+			return err
 		}
 	}
 
 	if !agent.isInitialized {
-		agent.publishingGroup = sync.WaitGroup{}
-		agent.validatingGroup = sync.WaitGroup{}
-		setupSignalProcessor()
-		// only do the periodic health check stuff if NOT in unit tests and running binary agents
-		if util.IsNotTest() && !isRunningInDockerContainer() {
-			hc.StartPeriodicHealthCheck()
-		}
-
-		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-			if agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
-				StartAgentStatusUpdate()
-			}
-
-			registerExternalIDPs()
-			startTeamACLCache()
-
-			err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
-			if err != nil {
-				return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
-			}
-
-			// Set agent running
-			if agent.agentResourceManager != nil && agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
-				UpdateStatusWithPrevious(AgentRunning, "", "")
-			}
+		err = handleInitialization()
+		if err != nil {
+			return err
 		}
 	}
 
 	agent.isInitialized = true
+	return nil
+}
+
+func handleCentralConfig(centralCfg config.CentralConfig) error {
+	err := initializeTokenRequester(centralCfg)
+	if err != nil {
+		return fmt.Errorf("could not authenticate to Amplify, please check your keys and key password")
+	}
+
+	// Init apic client when the agent starts, and on config change.
+	agent.apicClient = apic.New(centralCfg, agent.tokenRequester, agent.cacheManager)
+
+	if util.IsNotTest() {
+		err = initEnvResources(centralCfg, agent.apicClient)
+		if err != nil {
+			return err
+		}
+	}
+
+	if centralCfg.GetAgentName() != "" {
+		if agent.agentResourceManager == nil {
+			agent.agentResourceManager, err = resource.NewAgentResourceManager(
+				agent.cfg, agent.apicClient, agent.agentResourceChangeHandler,
+			)
+			if err != nil {
+				return err
+			}
+		} else {
+			agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
+		}
+	}
+
+	return nil
+}
+
+func handleInitialization() error {
+	agent.publishingGroup = sync.WaitGroup{}
+	agent.validatingGroup = sync.WaitGroup{}
+	setupSignalProcessor()
+	// only do the periodic health check stuff if NOT in unit tests and running binary agents
+	if util.IsNotTest() && !isRunningInDockerContainer() {
+		hc.StartPeriodicHealthCheck()
+	}
+
+	if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
+		if agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
+			StartAgentStatusUpdate()
+		}
+
+		registerExternalIDPs()
+		startTeamACLCache()
+
+		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+		if err != nil {
+			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
+		}
+
+		// Set agent running
+		if agent.agentResourceManager != nil && agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
+			UpdateStatusWithPrevious(AgentRunning, "", "")
+		}
+	}
+
 	return nil
 }
 
