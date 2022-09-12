@@ -11,8 +11,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-//TODO
 /*
+	TODO
 	1. Search for comment "DEPRECATED to be removed on major release"
 	2. Remove deprecated code left from APIGOV-19751
 */
@@ -439,7 +439,7 @@ func (s *SubscriptionConfiguration) validateSubscriptionConfig() error {
 	}
 
 	for variable, template := range templates {
-		emailTemplate.IsAPIKey = !(variable == oauthEnvVar) // apikey for all but oauth
+		emailTemplate.IsAPIKey = variable != oauthEnvVar // apikey for all but oauth
 		_, err := emailtemplate.ValidateSubscriptionConfigOnStartup(template, "", emailTemplate)
 		if err != nil {
 			templateErr := fmt.Errorf("%s template is not valid: %s", variable, err.Error())
