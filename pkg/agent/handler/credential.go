@@ -533,7 +533,7 @@ func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[str
 
 	if crd != nil &&
 		crd.Spec.Provision != nil &&
-		crd.Spec.Provision.Policies.Expiry.Period != 0 {
+		crd.Spec.Provision.Policies.Expiry != nil {
 		provCred.days = int(crd.Spec.Provision.Policies.Expiry.Period)
 	}
 
