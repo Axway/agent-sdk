@@ -243,7 +243,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	}
 
 	if len(instance.SubResources) > 0 {
-		err = c.handleSubresources(instance, serviceBody)
+		err = c.handleInstanceSubresources(instance, serviceBody)
 		if err != nil {
 			return err
 		}
@@ -268,7 +268,7 @@ func (c *ServiceClient) deployAPI(httpMethod string, serviceBody *ServiceBody, c
 	return nil
 }
 
-func (c *ServiceClient) handleSubresources(instance *management.ConsumerInstance, serviceBody *ServiceBody) error {
+func (c *ServiceClient) handleInstanceSubresources(instance *management.ConsumerInstance, serviceBody *ServiceBody) error {
 	if xAgentDetail, ok := instance.SubResources[defs.XAgentDetails]; ok {
 		subResources := map[string]interface{}{
 			defs.XAgentDetails: xAgentDetail,

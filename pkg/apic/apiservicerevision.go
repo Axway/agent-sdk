@@ -129,29 +129,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 	if serviceBody.serviceContext.revisionAction == addAPI {
 		httpMethod = http.MethodPost
-
-		// revisionCount is the total number of revisions so far. Add 1 since the action is to create a new revision.
-		serviceBody.serviceContext.revisionCount = serviceBody.serviceContext.revisionCount + 1
-		revisionCount := serviceBody.serviceContext.revisionCount
-
-		if serviceBody.AltRevisionPrefix == "" {
-			revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
-		}
-
-		revision = c.buildAPIServiceRevision(serviceBody, revisionName)
-
-		if serviceBody.serviceContext.previousRevision != nil {
-			err := util.SetAgentDetailsKey(
-				revision,
-				defs.AttrPreviousAPIServiceRevisionID,
-				serviceBody.serviceContext.previousRevision.Metadata.ID,
-			)
-			if err != nil {
-				log.Errorf("failed to set previous revision id to subresource for %s. error: %s", serviceBody.APIName, err)
-			}
-		}
-
-		log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+		revision = c.prepareAddAPI(serviceBody, revisionName, revision, revisionPrefix)
 	}
 
 	buffer, err := json.Marshal(revision)
@@ -170,24 +148,59 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	if err == nil && len(revision.SubResources) > 0 {
-		if xAgentDetail, ok := revision.SubResources[defs.XAgentDetails]; ok {
-			subResources := map[string]interface{}{
-				defs.XAgentDetails: xAgentDetail,
-			}
-			err = c.CreateSubResource(revision.ResourceMeta, subResources)
-			if err != nil {
-				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-				if rollbackErr != nil {
-					return errors.New(err.Error() + rollbackErr.Error())
-				}
-			}
+	if len(revision.SubResources) > 0 {
+		err = c.handleRevisionSubresources(serviceBody, revision)
+		if err != nil {
+			return err
 		}
 	}
 
 	serviceBody.serviceContext.revisionName = revisionName
 
 	return nil
+}
+
+func (c *ServiceClient) handleRevisionSubresources(serviceBody *ServiceBody, revision *management.APIServiceRevision) error {
+	if xAgentDetail, ok := revision.SubResources[defs.XAgentDetails]; ok {
+		subResources := map[string]interface{}{
+			defs.XAgentDetails: xAgentDetail,
+		}
+		err := c.CreateSubResource(revision.ResourceMeta, subResources)
+		if err != nil {
+			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
+			if rollbackErr != nil {
+				return errors.New(err.Error() + rollbackErr.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *ServiceClient) prepareAddAPI(serviceBody *ServiceBody, revisionName string, revision *management.APIServiceRevision, revisionPrefix string) *management.APIServiceRevision {
+	// revisionCount is the total number of revisions so far. Add 1 since the action is to create a new revision.
+	serviceBody.serviceContext.revisionCount = serviceBody.serviceContext.revisionCount + 1
+	revisionCount := serviceBody.serviceContext.revisionCount
+
+	if serviceBody.AltRevisionPrefix == "" {
+		revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
+	}
+
+	newRevision := c.buildAPIServiceRevision(serviceBody, revisionName)
+
+	if serviceBody.serviceContext.previousRevision != nil {
+		err := util.SetAgentDetailsKey(
+			revision,
+			defs.AttrPreviousAPIServiceRevisionID,
+			serviceBody.serviceContext.previousRevision.Metadata.ID,
+		)
+		if err != nil {
+			log.Errorf("failed to set previous revision id to subresource for %s. error: %s", serviceBody.APIName, err)
+		}
+	}
+
+	log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+	return newRevision
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
