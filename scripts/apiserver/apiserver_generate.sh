@@ -42,6 +42,7 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
   cp ./model_credential_request_definition_spec_provision_policies.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_provision_policies.go
   cp ./model_credential_request_definition_spec_webhook.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_webhook.go
   cp ./model_credential_request_definition_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec.go
+  cp ./model_credential_policies.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_policies.go
 
   # replace an access request definition spec files
   cp ./model_access_request_definition_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_request_definition_spec.go
