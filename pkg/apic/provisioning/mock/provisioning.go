@@ -50,7 +50,7 @@ func (m MockCredentialRequest) GetID() string {
 }
 
 func (m MockCredentialRequest) GetName() string {
-	return m.AppName
+	return m.Name
 }
 
 func (m MockCredentialRequest) GetCredentialDetailsValue(key string) string {
