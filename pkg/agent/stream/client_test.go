@@ -1,9 +1,10 @@
 package stream
 
 import (
+	"testing"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
-	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -60,7 +61,7 @@ func TestNewStreamer(t *testing.T) {
 		return manager, nil
 	}
 
-	assert.NotNil(t, streamer.Status())
+	assert.Nil(t, streamer.Status())
 
 	errCh := make(chan error)
 	go func() {
