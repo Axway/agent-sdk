@@ -312,24 +312,6 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 	return agent.authProviderRegistry
 }
 
-// HandleFetchOnStartupResources to be called for fetch watched resource on startup, so that they are processed by handlers
-// this operation is performed in a go routine
-func HandleFetchOnStartupResources() {
-	if agent.cfg != nil {
-		if agent.cfg.IsFetchOnStartupEnabled() {
-			if agent.streamer != nil {
-				go agent.streamer.HandleFetchOnStartupResources()
-			} else {
-				log.Errorf("Handling fetch-on-startup resources will no occur as streamer is not initialized, check the logs for other errors")
-			}
-		} else {
-			log.Warnf("Handling fetch-on-startup resources will no occur as central.grpc.fetchOnStartup.enabled=false")
-		}
-	} else {
-		log.Warnf("Handling fetch-on-startup resources will no occur as config is not set. Test mode: %v", !util.IsNotTest())
-	}
-}
-
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
 		return client.RegisterSubscriptionWebhook()
