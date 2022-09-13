@@ -72,9 +72,6 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		GRPCCfg: corecfg.GRPCConfig{
 			Enabled:  true,
 			Insecure: config.Insecure,
-			FetchOnStartup: corecfg.FetchOnStartup{
-				Enabled: false,
-			},
 		},
 	}
 

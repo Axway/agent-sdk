@@ -19,6 +19,7 @@ type credentialRequestDef struct {
 	webhooks        []string
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
+	agentDetails    map[string]interface{}
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -29,6 +30,7 @@ type CredentialRequestBuilder interface {
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
+	AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
@@ -37,7 +39,14 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 	return &credentialRequestDef{
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,
+		agentDetails: map[string]interface{}{},
 	}
+}
+
+// AddXAgentDetails - adds a key value pair to x-agent-details
+func (c *credentialRequestDef) AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder {
+	c.agentDetails[key] = value
+	return c
 }
 
 // SetName - set the name of the credential request
@@ -124,6 +133,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	crd.Spec = spec
 
 	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
+
+	d := util.GetAgentDetails(crd)
+	for key, value := range c.agentDetails {
+		d[key] = value
+	}
+
+	util.SetAgentDetails(crd, d)
 
 	return c.registerFunc(crd)
 }
