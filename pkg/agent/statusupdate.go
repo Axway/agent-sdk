@@ -26,6 +26,7 @@ const (
 )
 
 var previousStatus string // The global previous status to be used by both update jobs
+var previousStatusDetail string
 var updateStatusMutex *sync.Mutex
 
 func init() {
@@ -47,7 +48,7 @@ var immediateStatusUpdate *agentStatusUpdate
 func (su *agentStatusUpdate) Ready() bool {
 	ctx := context.WithValue(context.Background(), ctxLogger, su.logger)
 	// Do not start until status will be running
-	status := su.getCombinedStatus(ctx)
+	status, _ := su.getCombinedStatus(ctx)
 	if status != AgentRunning && su.immediateStatusChange {
 		return false
 	}
@@ -76,28 +77,33 @@ func (su *agentStatusUpdate) Execute() error {
 	}()
 
 	// get the status from the health check and jobs
-	status := su.getCombinedStatus(ctx)
+	status, statusDetail := su.getCombinedStatus(ctx)
 	log.Tracef("Type of agent status update being checked : %s ", su.typeOfStatusUpdate)
 
 	if su.typeOfStatusUpdate == periodic {
 		// always update on the periodic status update, even if the status has not changed
 		log.
 			WithField("previous-status", previousStatus).
+			WithField("previous-status-detail", previousStatusDetail).
 			WithField("new-status", status).
+			WithField("new-status-detail", statusDetail).
 			Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
-		UpdateStatusWithContext(ctx, status, previousStatus, "")
+		UpdateStatusWithContext(ctx, status, previousStatus, statusDetail)
 		su.previousActivityTime = su.currentActivityTime
-	} else if previousStatus != status {
+	} else if previousStatus != status || previousStatusDetail != statusDetail {
 		// if the status has changed then report that on the immediate check
 		log.
 			WithField("previous-status", previousStatus).
+			WithField("previous-status-detail", previousStatusDetail).
 			WithField("new-status", status).
+			WithField("new-status-detail", statusDetail).
 			Debug("status is changing")
-		UpdateStatusWithContext(ctx, status, previousStatus, "")
+		UpdateStatusWithContext(ctx, status, previousStatus, statusDetail)
 		su.previousActivityTime = su.currentActivityTime
 	}
 
 	previousStatus = status
+	previousStatusDetail = statusDetail
 	return nil
 }
 
@@ -144,25 +150,35 @@ func startImmediateStatusUpdate(logger log.FieldLogger) {
 	}
 }
 
-func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) string {
+func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) (string, string) {
 	log := ctx.Value(ctxLogger).(log.FieldLogger)
 	status := su.getJobPoolStatus(ctx)
-	hcStatus := su.getHealthcheckStatus(ctx)
+	statusDetail := ""
+	if status != AgentRunning {
+		statusDetail = "agent job pool not running"
+	}
+
+	hcStatus, hcStatusDetail := su.getHealthcheckStatus(ctx)
 	if hcStatus != AgentRunning {
 		log.
 			WithField("pool-status", status).
 			WithField("healthcheck-status", hcStatus).
+			WithField("healthcheck-status-detail", hcStatusDetail).
 			Info("agent not in running status")
 		status = hcStatus
+		statusDetail = hcStatusDetail
 	}
-	return status
+
+	return status, statusDetail
 }
 
 // getJobPoolStatus
 func (su *agentStatusUpdate) getJobPoolStatus(ctx context.Context) string {
 	log := ctx.Value(ctxLogger).(log.FieldLogger)
 	status := jobs.GetStatus()
-	log.Tracef("status from pool: %s", status)
+	log.
+		WithField("status", status).
+		Trace("global job pool status")
 
 	// update the status only if not running
 	if status == jobs.PoolStatusStopped.String() {
@@ -172,16 +188,20 @@ func (su *agentStatusUpdate) getJobPoolStatus(ctx context.Context) string {
 }
 
 // getHealthcheckStatus
-func (su *agentStatusUpdate) getHealthcheckStatus(ctx context.Context) string {
+func (su *agentStatusUpdate) getHealthcheckStatus(ctx context.Context) (string, string) {
 	log := ctx.Value(ctxLogger).(log.FieldLogger)
-	hcStatus := hc.GetGlobalStatus()
-	log.Tracef("status from healthcheck: %s", hcStatus)
+	hc.RunChecks()
+	hcStatus, hcStatusDetail := hc.GetGlobalStatus()
+	log.
+		WithField("status", hcStatus).
+		WithField("detail", hcStatusDetail).
+		Trace("global healthcheck status")
 
 	// update the status only if not running
 	if hcStatus == string(hc.FAIL) {
-		return AgentUnhealthy
+		return AgentUnhealthy, hcStatusDetail
 	}
-	return AgentRunning
+	return AgentRunning, ""
 }
 
 // runStatusUpdateCheck - returns an error if agent name is blank

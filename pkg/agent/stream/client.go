@@ -157,12 +157,13 @@ func (s *StreamerClient) Start() error {
 	listenCh := s.listener.Listen()
 
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
-	if err != nil {
-		return err
-	}
-
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
+	}
+
+	if err != nil {
+		s.listener.Stop()
+		return err
 	}
 
 	select {

@@ -14,7 +14,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/google/uuid"
@@ -35,16 +34,6 @@ func init() {
 		WithComponent("healthChecker")
 }
 
-// StartPeriodicHealthCheck - starts a job that runs the periodic health checks
-func StartPeriodicHealthCheck() {
-	interval := defaultCheckInterval
-	if GetStatusConfig() != nil {
-		interval = GetStatusConfig().GetHealthCheckInterval()
-	}
-	periodicHealthCheckJob := &periodicHealthCheck{interval: interval}
-	jobs.RegisterIntervalJobWithName(periodicHealthCheckJob, periodicHealthCheckJob.interval, "Periodic Health Check")
-}
-
 // SetNameAndVersion - sets the name and version of the globalHealthChecker
 func SetNameAndVersion(name, version string) {
 	globalHealthChecker.Name = name
@@ -54,7 +43,7 @@ func SetNameAndVersion(name, version string) {
 // RegisterHealthcheck - register a new dependency with this service
 func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
 	if _, ok := globalHealthChecker.Checks[endpoint]; ok {
-		return "", fmt.Errorf("A check with the endpoint of %s already exists", endpoint)
+		return "", fmt.Errorf("a check with the endpoint of %s already exists", endpoint)
 	}
 
 	newID, _ := uuid.NewUUID()
@@ -110,20 +99,16 @@ func GetStatus(endpoint string) StatusLevel {
 
 // RunChecks - loop through all
 func RunChecks() StatusLevel {
-	passed := true
-
+	status := Status{Result: OK}
 	for _, check := range globalHealthChecker.Checks {
 		check.executeCheck()
-		if check.Status.Result == FAIL {
-			globalHealthChecker.Status = FAIL
-			passed = false
+		if check.Status.Result == FAIL && status.Result == OK {
+			status = *check.Status
 		}
 	}
 
-	// Only return to OK when all health checks pass
-	if passed {
-		globalHealthChecker.Status = OK
-	}
+	globalHealthChecker.Status = status.Result
+	globalHealthChecker.StatusDetail = status.Details
 	return globalHealthChecker.Status
 }
 
@@ -191,8 +176,8 @@ func CheckIsRunning() error {
 }
 
 // GetGlobalStatus - return the status of the global health checker
-func GetGlobalStatus() string {
-	return string(globalHealthChecker.Status)
+func GetGlobalStatus() (string, string) {
+	return string(globalHealthChecker.Status), globalHealthChecker.StatusDetail
 }
 
 // GetHealthcheckOutput - query the http endpoint and return the body
@@ -201,26 +186,26 @@ func GetHealthcheckOutput(url string) (string, error) {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		return "", fmt.Errorf("Could not query for the status")
+		return "", fmt.Errorf("could not query for the status")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("Could not read the body of the response")
+		return "", fmt.Errorf("could not read the body of the response")
 	}
 
 	// Marshall the body to the interface sent in
 	var statusResp healthChecker
 	err = json.Unmarshal(body, &statusResp)
 	if err != nil {
-		return "", fmt.Errorf("Could not marshall into the expected type")
+		return "", fmt.Errorf("could not marshall into the expected type")
 	}
 	// Close the response body and the server
 	resp.Body.Close()
 
 	output, err := json.MarshalIndent(statusResp, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("Error formatting the Status Check into Indented JSON")
+		return "", fmt.Errorf("error formatting the Status Check into Indented JSON")
 	}
 
 	return string(output), nil

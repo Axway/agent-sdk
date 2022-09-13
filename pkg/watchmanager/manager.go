@@ -148,10 +148,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
-	m.mutex.Lock()
-	m.clientMap[subID] = client
-	m.mutex.Unlock()
-
 	if m.options.sequence != nil && m.options.sequence.GetSequence() == 0 {
 		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
 		m.logger.Error(err.Error())
@@ -167,8 +163,16 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		return subID, err
 	}
 
-	client.processRequest()
+	if err := client.processRequest(); err != nil {
+		m.logger.WithError(err).Error("failed to connect with watch service")
+		m.CloseWatch(subID)
+		return subID, err
+	}
 	go client.processEvents()
+
+	m.mutex.Lock()
+	m.clientMap[subID] = client
+	m.mutex.Unlock()
 
 	m.logger.
 		WithField("id", subID).

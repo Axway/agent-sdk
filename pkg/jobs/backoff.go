@@ -28,7 +28,7 @@ func (b *backoff) increaseTimeout() {
 	defer b.backoffMutex.Unlock()
 	b.current = b.current * time.Duration(b.factor)
 	if b.current > b.max {
-		b.current = b.max // use the max timeout
+		b.current = b.base // reset to base timeout
 	}
 }
 

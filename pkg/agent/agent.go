@@ -180,10 +180,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.publishingGroup = sync.WaitGroup{}
 		agent.validatingGroup = sync.WaitGroup{}
 		setupSignalProcessor()
-		// only do the periodic health check stuff if NOT in unit tests and running binary agents
-		if util.IsNotTest() && !isRunningInDockerContainer() {
-			hc.StartPeriodicHealthCheck()
-		}
 
 		if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 			if agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {

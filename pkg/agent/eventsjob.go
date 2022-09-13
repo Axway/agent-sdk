@@ -10,7 +10,7 @@ import (
 
 // constants for retry interval for stream job
 const (
-	defaultRetryInterval = 100 * time.Millisecond
+	defaultRetryInterval = 1 * time.Second
 	maxRetryInterval     = 5 * time.Minute
 )
 
@@ -81,6 +81,13 @@ func (j *eventProcessorJob) renewRegistration() {
 	jobID := j.jobID
 	j.mutex.RUnlock()
 
+	defer time.AfterFunc(j.retryInterval, func() {
+		jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
+		j.mutex.Lock()
+		defer j.mutex.Unlock()
+		j.jobID = jobID
+	})
+
 	if jobID != "" {
 		j.mutex.Lock()
 		defer j.mutex.Unlock()
@@ -92,13 +99,5 @@ func (j *eventProcessorJob) renewRegistration() {
 		if j.retryInterval > maxRetryInterval {
 			j.retryInterval = defaultRetryInterval
 		}
-
-		time.AfterFunc(j.retryInterval, func() {
-			jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
-			j.mutex.Lock()
-			defer j.mutex.Unlock()
-			j.jobID = jobID
-		})
-		return
 	}
 }
