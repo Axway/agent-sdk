@@ -7,11 +7,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/jobs"
 )
 
-const maxConsecutiveErr = 3
-
 type periodicHealthCheck struct {
 	jobs.Job
-	errCount int
 	interval time.Duration
 }
 

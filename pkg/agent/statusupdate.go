@@ -190,7 +190,6 @@ func (su *agentStatusUpdate) getJobPoolStatus(ctx context.Context) string {
 // getHealthcheckStatus
 func (su *agentStatusUpdate) getHealthcheckStatus(ctx context.Context) (string, string) {
 	log := ctx.Value(ctxLogger).(log.FieldLogger)
-	hc.RunChecks()
 	hcStatus, hcStatusDetail := hc.GetGlobalStatus()
 	log.
 		WithField("status", hcStatus).

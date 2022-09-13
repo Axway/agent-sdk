@@ -10,8 +10,9 @@ import (
 
 // constants for retry interval for stream job
 const (
-	defaultRetryInterval = 1 * time.Second
-	maxRetryInterval     = 5 * time.Minute
+	defaultRetryInterval   = 5 * time.Second
+	maxRetryInterval       = 5 * time.Minute
+	maxNumRetryForInterval = 3
 )
 
 // eventsJob interface for a job to execute to retrieve events in either stream or poll mode
@@ -28,6 +29,7 @@ type eventProcessorJob struct {
 	stop          chan interface{}
 	jobID         string
 	retryInterval time.Duration
+	numRetry      int
 	name          string
 	mutex         sync.RWMutex
 }
@@ -38,6 +40,7 @@ func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 		streamer:      eventJob,
 		stop:          make(chan interface{}),
 		retryInterval: defaultRetryInterval,
+		numRetry:      0,
 		name:          name,
 	}
 
@@ -67,6 +70,7 @@ func (j *eventProcessorJob) Status() error {
 	status := j.streamer.Status()
 	if status == nil {
 		j.retryInterval = defaultRetryInterval
+		j.numRetry = 0
 	}
 	return status
 }
@@ -94,10 +98,13 @@ func (j *eventProcessorJob) renewRegistration() {
 
 		jobs.UnregisterJob(j.jobID)
 		j.jobID = ""
-
-		j.retryInterval = j.retryInterval * 2
-		if j.retryInterval > maxRetryInterval {
-			j.retryInterval = defaultRetryInterval
+		j.numRetry++
+		if j.numRetry == maxNumRetryForInterval {
+			j.numRetry = 0
+			j.retryInterval = j.retryInterval * 2
+			if j.retryInterval > maxRetryInterval {
+				j.retryInterval = defaultRetryInterval
+			}
 		}
 	}
 }
