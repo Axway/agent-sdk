@@ -51,6 +51,7 @@ type StreamerClient struct {
 	harvester               harvester.Harvest
 	onEventSyncError        func()
 	mutex                   sync.RWMutex
+	isInitialized           bool
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -151,6 +152,7 @@ func (s *StreamerClient) Start() error {
 	}
 
 	s.manager = manager
+	s.isInitialized = false
 
 	s.mutex.Unlock()
 
@@ -161,11 +163,14 @@ func (s *StreamerClient) Start() error {
 		s.onStreamConnection()
 	}
 
+	s.mutex.Lock()
+	s.isInitialized = true
+	s.mutex.Unlock()
+
 	if err != nil {
 		s.listener.Stop()
 		return err
 	}
-
 	select {
 	case err := <-listenCh:
 		return err
@@ -178,6 +183,10 @@ func (s *StreamerClient) Start() error {
 func (s *StreamerClient) Status() error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+	if !s.isInitialized {
+		return nil
+	}
+
 	if s.manager == nil || s.listener == nil {
 		return fmt.Errorf("stream client is not ready")
 	}
