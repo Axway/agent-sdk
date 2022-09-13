@@ -86,7 +86,7 @@ func (c *watchClient) processRequest() error {
 	var err error
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-
+	wait := true
 	go func() {
 		for {
 			select {
@@ -98,12 +98,14 @@ func (c *watchClient) processRequest() error {
 				return
 			case <-c.timer.C:
 				err = c.send()
-				wg.Done()
+				if wait {
+					wg.Done()
+					wait = false
+				}
 				if err != nil {
 					c.handleError(err)
 					return
 				}
-
 			}
 		}
 	}()
