@@ -434,7 +434,7 @@ func (c *ServiceClient) getConsumerInstanceByName(name string) (*management.Cons
 	if err != nil {
 		return nil, err
 	}
-	if response.Code == http.StatusOK {
+	if response.Code != http.StatusOK {
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
 	}
