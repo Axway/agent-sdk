@@ -287,28 +287,35 @@ func (p *properties) parseStringValueForKey(key string) string {
 		if len(matches) > 0 {
 			expSlice := matches[0]
 			if len(expSlice) > 2 {
-				envVar := string(expSlice[1])
-				defaultVal := ""
-				if envVar == "" {
-					if len(expSlice) >= 4 {
-						envVar = strings.Trim(string(expSlice[3]), "\"")
-					}
-				} else {
-					if len(expSlice) >= 3 {
-						defaultVal = strings.Trim(string(expSlice[2]), "\"")
-					}
-				}
-
-				if envVar != "" {
-					s = os.Getenv(envVar)
-					if s == "" && defaultVal != "" {
-						s = defaultVal
-					}
-				}
+				s = p.parseSlice(s, expSlice)
 			}
 		}
 	}
 	return s
+}
+
+func (p *properties) parseSlice(s string, expSlice [][]byte) string {
+	rtnS := s
+	envVar := string(expSlice[1])
+	defaultVal := ""
+	if envVar == "" {
+		if len(expSlice) >= 4 {
+			envVar = strings.Trim(string(expSlice[3]), "\"")
+		}
+	} else {
+		if len(expSlice) >= 3 {
+			defaultVal = strings.Trim(string(expSlice[2]), "\"")
+		}
+	}
+
+	if envVar != "" {
+		rtnS = os.Getenv(envVar)
+		if rtnS == "" && defaultVal != "" {
+			rtnS = defaultVal
+		}
+	}
+
+	return rtnS
 }
 
 func (p *properties) parseStringValue(key string) string {
