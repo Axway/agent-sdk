@@ -47,6 +47,12 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		WithComponent("baseJob").
 		WithField("job-name", name).
 		WithField("job-id", id)
+
+	backoff := newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2)
+	if jobType != JobTypeDetachedChannel && jobType != JobTypeDetachedInterval {
+		backoff = nil
+	}
+
 	return baseJob{
 		id:            id,
 		name:          name,
@@ -59,7 +65,7 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		backoffLock:   &sync.RWMutex{},
 		failsLock:     &sync.RWMutex{},
 		errorLock:     &sync.RWMutex{},
-		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
+		backoff:       backoff,
 		isReady:       false,
 		stopReadyChan: make(chan interface{}),
 		logger:        logger,
@@ -114,9 +120,12 @@ func (b *baseJob) executeCronJob() {
 
 // getBackoff - get the job backoff
 func (b *baseJob) getBackoff() *backoff {
-	b.backoffLock.Lock()
-	defer b.backoffLock.Unlock()
-	return b.backoff
+	if b.backoff != nil {
+		b.backoffLock.Lock()
+		defer b.backoffLock.Unlock()
+		return b.backoff
+	}
+	return nil
 }
 
 // setBackoff - set the job backoff
@@ -241,19 +250,26 @@ func (b *baseJob) waitForReady() {
 	for {
 		select {
 		case <-b.stopReadyChan:
-			b.getBackoff().reset()
+			if b.getBackoff() != nil {
+				b.getBackoff().reset()
+			}
+
 			b.UnsetIsReady()
 			return
 		default:
 			if b.job.Ready() {
-				b.getBackoff().reset()
+				if b.getBackoff() != nil {
+					b.getBackoff().reset()
+				}
 				b.logger.Debug("job is ready")
 				b.SetIsReady()
 				return
 			}
-			b.logger.Tracef("job is not ready, checking again in %v seconds", b.getBackoff().getCurrentTimeout())
-			b.getBackoff().sleep()
-			b.getBackoff().increaseTimeout()
+			if b.getBackoff() != nil {
+				b.logger.Tracef("job is not ready, checking again in %v seconds", b.getBackoff().getCurrentTimeout())
+				b.getBackoff().sleep()
+				b.getBackoff().increaseTimeout()
+			}
 		}
 	}
 }
