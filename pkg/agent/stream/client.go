@@ -145,6 +145,7 @@ func (s *StreamerClient) Start() error {
 		s.sequence,
 		s.handlers...,
 	)
+	defer s.listener.Stop()
 
 	manager, err := s.newManager(s.watchCfg, s.watchOpts...)
 	if err != nil {
@@ -168,9 +169,9 @@ func (s *StreamerClient) Start() error {
 	s.mutex.Unlock()
 
 	if err != nil {
-		s.listener.Stop()
 		return err
 	}
+
 	select {
 	case err := <-listenCh:
 		return err
