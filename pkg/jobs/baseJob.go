@@ -120,12 +120,9 @@ func (b *baseJob) executeCronJob() {
 
 // getBackoff - get the job backoff
 func (b *baseJob) getBackoff() *backoff {
-	if b.backoff != nil {
-		b.backoffLock.Lock()
-		defer b.backoffLock.Unlock()
-		return b.backoff
-	}
-	return nil
+	b.backoffLock.Lock()
+	defer b.backoffLock.Unlock()
+	return b.backoff
 }
 
 // setBackoff - set the job backoff
