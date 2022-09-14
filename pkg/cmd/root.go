@@ -313,35 +313,26 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	if !c.initialized {
-		err = c.finishInitialization()
-		if err != nil {
-			return err
+		if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+			eventSync, err := agent.NewEventSync()
+			if err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
+
+			if err := eventSync.SyncCache(); err != nil {
+				return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			}
+		}
+
+		// Start the initial and recurring version check jobs
+		startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
+
+		if util.IsNotTest() {
+			healthCheckServer := &hc.Server{}
+			healthCheckServer.HandleRequests()
 		}
 	}
 	c.initialized = true
-	return nil
-}
-
-func (c *agentRootCommand) finishInitialization() error {
-	if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		eventSync, err := agent.NewEventSync()
-		if err != nil {
-			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
-		}
-
-		if err := eventSync.SyncCache(); err != nil {
-			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
-		}
-	}
-
-	// Start the initial and recurring version check jobs
-	startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
-
-	if util.IsNotTest() {
-		healthCheckServer := &hc.Server{}
-		healthCheckServer.HandleRequests()
-	}
-
 	return nil
 }
 
