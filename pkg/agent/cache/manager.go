@@ -15,7 +15,23 @@ import (
 )
 
 const defaultCacheStoragePath = "./data/cache"
-const instanceCount = "instanceCount"
+
+// cache keys
+const (
+	apiServicesKey         = "apiServices"
+	apiServiceInstancesKey = "apiServiceInstances"
+	categoriesKey          = "categories"
+	instanceCountKey       = "instanceCount"
+	credReqDefKey          = "credReqDef"
+	accReqDefKey           = "accReqDef"
+	teamsKey               = "teams"
+	managedAppKey          = "managedApp"
+	subscriptionsKey       = "subscriptions"
+	accReqKey              = "accReq"
+	watchSequenceKey       = "watchSequence"
+	watchResourceKey       = "watchResource"
+	fetchOnStartupKey      = "fetchOnStartup"
+)
 
 // Manager - interface to manage agent resource
 type Manager interface {
@@ -97,6 +113,7 @@ type Manager interface {
 	AddAccessRequest(resource *v1.ResourceInstance)
 	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance
 	GetAccessRequest(id string) *v1.ResourceInstance
+	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 
 	GetWatchResourceCacheKeys(group, kind string) []string
@@ -133,6 +150,7 @@ type cacheManager struct {
 	isPersistedCacheLoaded  bool
 	isCacheUpdated          bool
 	isPersistedCacheEnabled bool
+	migrators               []cacheMigrate
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
@@ -157,9 +175,14 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
+		migrators:               []cacheMigrate{},
 	}
 
 	if m.isPersistedCacheEnabled {
+		m.migrators = []cacheMigrate{
+			m.migrateAccessRequest,
+			m.migrateInstanceCount,
+		}
 		m.initializePersistedCache(cfg)
 	}
 
@@ -173,19 +196,19 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	cacheMap.Load(c.cacheFilename)
 
 	cacheKeys := map[string]func(cache.Cache){
-		"apiServices":         func(loaded cache.Cache) { c.apiMap = loaded },
-		"apiServiceInstances": func(loaded cache.Cache) { c.instanceMap = loaded },
-		"categories":          func(loaded cache.Cache) { c.categoryMap = loaded },
-		instanceCount:         func(loaded cache.Cache) { c.instanceCountMap = loaded },
-		"credReqDef":          func(loaded cache.Cache) { c.crdMap = loaded },
-		"accReqDef":           func(loaded cache.Cache) { c.ardMap = loaded },
-		"teams":               func(loaded cache.Cache) { c.teams = loaded },
-		"managedApp":          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
-		"subscriptions":       func(loaded cache.Cache) { c.subscriptionMap = loaded },
-		"accReq":              func(loaded cache.Cache) { c.accessRequestMap = loaded },
-		"watchSequence":       func(loaded cache.Cache) { c.sequenceCache = loaded },
-		"watchResource":       func(loaded cache.Cache) { c.watchResourceMap = loaded },
-		"fetchOnStartup":      func(loaded cache.Cache) { c.fetchOnStartup = loaded },
+		apiServicesKey:         func(loaded cache.Cache) { c.apiMap = loaded },
+		apiServiceInstancesKey: func(loaded cache.Cache) { c.instanceMap = loaded },
+		categoriesKey:          func(loaded cache.Cache) { c.categoryMap = loaded },
+		instanceCountKey:       func(loaded cache.Cache) { c.instanceCountMap = loaded },
+		credReqDefKey:          func(loaded cache.Cache) { c.crdMap = loaded },
+		accReqDefKey:           func(loaded cache.Cache) { c.ardMap = loaded },
+		teamsKey:               func(loaded cache.Cache) { c.teams = loaded },
+		managedAppKey:          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
+		subscriptionsKey:       func(loaded cache.Cache) { c.subscriptionMap = loaded },
+		accReqKey:              func(loaded cache.Cache) { c.accessRequestMap = loaded },
+		watchSequenceKey:       func(loaded cache.Cache) { c.sequenceCache = loaded },
+		watchResourceKey:       func(loaded cache.Cache) { c.watchResourceMap = loaded },
+		fetchOnStartupKey:      func(loaded cache.Cache) { c.fetchOnStartup = loaded },
 	}
 
 	c.isPersistedCacheLoaded = true
@@ -196,6 +219,11 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 			c.isPersistedCacheLoaded = false
 		}
 		cacheKeys[key](loadedMap)
+	}
+
+	// after loading check for migrations
+	for key := range cacheKeys {
+		c.migratePersistentCache(key)
 	}
 
 	c.persistedCache = cacheMap
@@ -232,7 +260,7 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 		item, _ := riCache.Get(key)
 		rawResource, _ := json.Marshal(item)
 		// If instance count then use apiServiceToInstanceCount type
-		if cacheKey == instanceCount {
+		if cacheKey == instanceCountKey {
 			ic := apiServiceToInstanceCount{}
 			if err := json.Unmarshal(rawResource, &ic); err == nil {
 				riCache.Set(key, ic)
@@ -243,8 +271,8 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 				riCache.Set(key, ri)
 			}
 		}
-
 	}
+
 	cacheMap.Set(cacheKey, riCache)
 	return riCache, isNew
 }

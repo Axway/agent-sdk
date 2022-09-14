@@ -1,12 +1,16 @@
 package cache
 
 import (
+	"fmt"
+
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
+
+func formatAppForeignKey(appName string) string { return fmt.Sprintf("ManagedApplication:%v", appName) }
 
 // AccessRequest cache related methods
 func (c *cacheManager) GetAccessRequestCacheKeys() []string {
@@ -41,6 +45,7 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	}
 
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ri)
+	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formatAppForeignKey(appName))
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
@@ -54,6 +59,24 @@ func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteA
 		}
 	}
 	return nil
+}
+
+func (c *cacheManager) GetAccessRequestsByApp(appName string) []*v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	items, _ := c.accessRequestMap.GetItemsByForeignKey(formatAppForeignKey(appName))
+
+	accessRequests := []*v1.ResourceInstance{}
+	for _, item := range items {
+		if item != nil {
+			if ri, ok := item.GetObject().(*v1.ResourceInstance); ok {
+				accessRequests = append(accessRequests, ri)
+			}
+		}
+	}
+
+	return accessRequests
 }
 
 func (c *cacheManager) GetAccessRequest(id string) *v1.ResourceInstance {

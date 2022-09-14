@@ -292,7 +292,7 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	data := map[string]interface{}{}
 
 	if status.GetStatus() == prov.Success {
-		credentialData = h.getProvisionedCredentialData(provCreds, credentialData)
+		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
 		if credentialData != nil {
 			sec := app.Spec.Security
 			d := credentialData.GetData()
@@ -318,7 +318,12 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	cred.Data = data
 	cred.Status = prov.NewStatusReason(status)
 
-	if provCreds.days != 0 {
+	// use the expiration time sent back with the data
+	if credentialData != nil && !credentialData.GetExpirationTime().IsZero() {
+		cred.Policies.Expiry = &management.CredentialPoliciesExpiry{
+			Timestamp: v1.Time(credentialData.GetExpirationTime()),
+		}
+	} else if provCreds.days != 0 {
 		// update the expiration timestamp
 		expTS := time.Now().AddDate(0, 0, provCreds.days)
 

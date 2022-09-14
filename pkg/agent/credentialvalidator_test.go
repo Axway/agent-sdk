@@ -16,7 +16,9 @@ import (
 
 func setupCredCache(expireTime time.Time) {
 	cred := management.NewCredential("cred", "env")
-	cred.Policies.Expiry.Timestamp = v1.Time(expireTime)
+	cred.Policies.Expiry = &management.CredentialPoliciesExpiry{
+		Timestamp: v1.Time(expireTime),
+	}
 	ri, _ := cred.AsInstance()
 
 	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)

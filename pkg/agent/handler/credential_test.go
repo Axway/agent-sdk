@@ -643,6 +643,10 @@ func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}
 }
 
+func (m *mockProvCredential) GetExpirationTime() time.Time {
+	return time.Now()
+}
+
 func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[string]interface{} {
 	enc := func(v string) ([]byte, error) {
 		switch alg {

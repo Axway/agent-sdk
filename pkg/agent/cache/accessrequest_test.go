@@ -67,6 +67,14 @@ func TestAccessRequestCache(t *testing.T) {
 	cachedAccessReq = m.GetAccessRequestByAppAndAPI("app2", "testAPI", "testStage")
 	assert.Equal(t, ar2ri, cachedAccessReq)
 
+	cachedAccessReqs := m.GetAccessRequestsByApp("app1")
+	assert.Len(t, cachedAccessReqs, 1)
+	assert.Equal(t, ar1ri, cachedAccessReqs[0])
+
+	cachedAccessReqs = m.GetAccessRequestsByApp("app2")
+	assert.Len(t, cachedAccessReqs, 1)
+	assert.Equal(t, ar2ri, cachedAccessReqs[0])
+
 	err := m.DeleteAccessRequest("ac1")
 	assert.Nil(t, err)
 
