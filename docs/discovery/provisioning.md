@@ -110,11 +110,13 @@ func createCredentialRequestDefinitions() {
   agent.NewOAuthCredentialRequestBuilder(             // Oauth CRD builder helper, adds client id field
     agent.WithCRDOAuthSecret(),                       // its a secret based credential, add client secret field
     agent.WithCRDRequestSchemaProperty(oAuthTypeProp) // add a request schema property
+    agent.WithIsRenewable(), // set that this credential type may be renewed
   ).Register() 
     
   agent.NewOAuthCredentialRequestBuilder(              // Oauth CRD builder helper, adds client id field
     agent.WithCRDOAuthPublicKey(),                     // its a key based credential, add public key request property
     agent.WithCRDRequestSchemaProperty(oAuthTypeProp), // add a request schema property
+    agent.WithIsSuspendable(), // set that this credential type may be suspended
   ).Register()
 }
 ```
@@ -136,6 +138,16 @@ type CredentialRequestBuilder interface {
   SetWebhooks(webhooks []string) CredentialRequestBuilder
   // Adds a webhook name, separately created in Central, that is called on Credential state transitions
   AddWebhook(webhook string) CredentialRequestBuilder
+  // Add additional details about this credential request definition on the resource
+  AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder
+  // sets that this credential type may be renewed
+  IsRenewable() CredentialRequestBuilder
+  // sets that this credential type may be suspended
+  IsSuspendable() CredentialRequestBuilder
+  // set the default time to live, in days, for this credential type
+  SetExpirationDays(days int) CredentialRequestBuilder
+  // set that the credential will be deprovisioned on expiration
+  SetDeprovisionExpired() CredentialRequestBuilder
   // Builds the CredentialRequestDefinition and sends it to API Central
   Register() (*management.CredentialRequestDefinition, error)
 }
@@ -363,6 +375,8 @@ All Provisioning request methods will expect a RequestStatus object to be return
 type RequestStatusBuilder interface {
   // SetMessage - set the request Status message
   SetMessage(message string) RequestStatusBuilder
+  // RequestStatusBuilder - adds any existing status reasons so they are not lost
+  SetCurrentStatusReasons([]v1.ResourceStatusReason) RequestStatusBuilder
   // SetProperties - set the properties of the RequestStatus
   SetProperties(map[string]string) RequestStatusBuilder
   // AddProperty - add a new property on the RequestStatus
@@ -437,6 +451,8 @@ type AccessRequest interface {
   GetAccessRequestProvisioningData() interface{}
   // GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
   GetInstanceDetails() map[string]interface{}
+  // GetQuota returns the quota from within the access request
+  GetQuota() Quota
 }
 ```
 
@@ -481,6 +497,8 @@ type CredentialRequest interface {
   GetApplicationName() string
   // GetID returns the ID of the resource for the request
   GetID() string
+  // GetName returns the name of the resource for the request
+  GetName() string
   // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credential
   GetCredentialDetailsValue(key string) string
   // GetCredentialType returns the type of credential related to this request
@@ -493,6 +511,10 @@ type CredentialRequest interface {
   GetIDPProvider() o.Provider
   // GetIDPCredentialData() returns the credential data for IDP from the request
   GetIDPCredentialData() IDPCredentialData
+  // GetCredentialAction returns the action to be handled for this credential
+  GetCredentialAction() CredentialAction
+  // GetCredentialExpirationDays returns the number of days this credential has to live
+  GetCredentialExpirationDays() int
 }
 ```
 
@@ -512,6 +534,8 @@ The provision handling expects a response with 2 values, the [RequestStatus](#re
 ```go
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
+  // Sets the expiration time for this credential, returns the builder
+  SetExpirationTime(expTime time.Time) CredentialBuilder
   // Create a Credential that only sets an OAuth Client ID value
   SetOAuthID(id string) Credential
   // Create a Credential that sets an OAuth Client ID and Secret value
