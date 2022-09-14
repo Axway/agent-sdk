@@ -32,6 +32,8 @@ func TestAccessRequestHandler(t *testing.T) {
 		subError         error
 		appStatus        string
 		getARDErr        error
+		state            string
+		finalizers       []v1.Finalizer
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -111,6 +113,14 @@ func TestAccessRequestHandler(t *testing.T) {
 			name:           "should handle an error when the instance is not found in the cache, and set a failed status",
 			outboundStatus: prov.Error.String(),
 		},
+		{
+			action:         proto.Event_DELETED,
+			inboundStatus:  prov.Success.String(),
+			name:           "should handle an error when the instance is not found in the cache for a delete event",
+			outboundStatus: prov.Success.String(),
+			state:          v1.ResourceDeleting,
+			finalizers:     []v1.Finalizer{{Name: "abc"}},
+		},
 	}
 
 	for _, tc := range tests {
@@ -125,6 +135,12 @@ func TestAccessRequestHandler(t *testing.T) {
 			ar := accessReq
 			ar.Status.Level = tc.inboundStatus
 			ar.Metadata.References = tc.references
+			if tc.state != "" {
+				ar.Metadata.State = tc.state
+			}
+			if tc.finalizers != nil {
+				ar.Finalizers = tc.finalizers
+			}
 
 			instanceRI, _ := instance.AsInstance()
 			cm.AddAPIServiceInstance(instanceRI)
@@ -154,6 +170,10 @@ func TestAccessRequestHandler(t *testing.T) {
 				subError:       tc.subError,
 				t:              t,
 				ard:            ardRI,
+			}
+
+			if tc.state == v1.ResourceDeleting {
+				c.isDeleting = true
 			}
 
 			handler := NewAccessRequestHandler(arp, cm, c)

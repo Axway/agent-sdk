@@ -20,6 +20,7 @@ type credentialRequestDef struct {
 	actions         []string
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
+	agentDetails    map[string]interface{}
 	renewable       bool
 	suspendable     bool
 	period          int
@@ -33,6 +34,7 @@ type CredentialRequestBuilder interface {
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
+	AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder
 	IsRenewable() CredentialRequestBuilder
 	IsSuspendable() CredentialRequestBuilder
 	SetExpirationDays(days int) CredentialRequestBuilder
@@ -46,7 +48,14 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,
 		actions:      make([]string, 0),
+		agentDetails: map[string]interface{}{},
 	}
+}
+
+// AddXAgentDetails - adds a key value pair to x-agent-details
+func (c *credentialRequestDef) AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder {
+	c.agentDetails[key] = value
+	return c
 }
 
 // SetName - set the name of the credential request
@@ -167,6 +176,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	crd.Spec = spec
 
 	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
+
+	d := util.GetAgentDetails(crd)
+	for key, value := range c.agentDetails {
+		d[key] = value
+	}
+
+	util.SetAgentDetails(crd, d)
 
 	return c.registerFunc(crd)
 }

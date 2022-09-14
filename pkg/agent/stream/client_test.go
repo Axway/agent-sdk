@@ -1,14 +1,9 @@
 package stream
 
 import (
-	"context"
-	"testing"
-	"time"
-
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -34,16 +29,6 @@ func NewConfig() config.CentralConfiguration {
 		TLS:           &config.TLSConfiguration{},
 		SingleURL:     "https://abc.com",
 	}
-}
-
-func NewConfigWithLoadOnStartup() config.CentralConfiguration {
-	cfg := NewConfig()
-	cfg.GRPCCfg.FetchOnStartup = config.FetchOnStartup{
-		Enabled:   true,
-		PageSize:  10,
-		Retention: 300 * time.Millisecond,
-	}
-	return cfg
 }
 
 // should create a new streamer and call Start
@@ -110,274 +95,6 @@ func TestNewStreamer(t *testing.T) {
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
 }
 
-func TestNewStreamerWithFetchOnStartup(t *testing.T) {
-	getToken := &mockTokenGetter{}
-	wt := &management.WatchTopic{
-		Spec: management.WatchTopicSpec{
-			Filters: []management.WatchTopicSpecFilters{
-				{
-					Name: "*",
-					Kind: management.AccessRequestGVK().Kind,
-					Scope: &management.WatchTopicSpecScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: "mock",
-					},
-					Type: []string{events.WatchTopicFilterTypeCreated},
-				},
-			},
-		},
-	}
-	httpClient := &mockAPIClient{
-		paged: []*apiv1.ResourceInstance{
-			createRI("123", "foo"),
-			createRI("456", "bar"),
-		},
-	}
-	cfg := NewConfigWithLoadOnStartup()
-
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-
-	tHandler := &mockHandler{}
-	underTest, err := NewStreamerClient(
-		httpClient,
-		&cfg,
-		getToken,
-		[]handler.Handler{tHandler},
-		WithCacheManager(cacheManager),
-		WithWatchTopic(wt),
-	)
-	assert.NotNil(t, underTest)
-	assert.NoError(t, err)
-
-	manager := &mockManager{
-		status:  true,
-		readyCh: make(chan struct{}),
-	}
-
-	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
-		return manager, nil
-	}
-
-	assert.NotNil(t, underTest.Status())
-
-	errCh := make(chan error)
-	go func() {
-		err := underTest.Start()
-		errCh <- err
-	}()
-
-	<-manager.readyCh
-
-	assert.True(t, httpClient.pagedCalled)
-
-	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-	assert.Equal(t, 2, len(res))
-
-	// make sure handler are called
-	underTest.HandleFetchOnStartupResources()
-	assert.Equal(t, 2, len(tHandler.received))
-
-	// and won't be anymore
-	assert.Empty(t, underTest.cacheManager.GetAllFetchOnStartupResources())
-
-	stop(t, underTest, errCh)
-}
-
-func TestNewStreamerWithFetchOnStartupRetentionToZeroEmptiesCache(t *testing.T) {
-	getToken := &mockTokenGetter{}
-	wt := &management.WatchTopic{
-		Spec: management.WatchTopicSpec{
-			Filters: []management.WatchTopicSpecFilters{
-				{
-					Name: "*",
-					Kind: management.AccessRequestGVK().Kind,
-					Scope: &management.WatchTopicSpecScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: "mock",
-					},
-					Type: []string{events.WatchTopicFilterTypeCreated},
-				},
-			},
-		},
-	}
-	httpClient := &mockAPIClient{
-		paged: []*apiv1.ResourceInstance{
-			createRI("123", "foo"),
-			createRI("456", "bar"),
-		},
-	}
-	cfg := NewConfigWithLoadOnStartup()
-	cfg.GRPCCfg.FetchOnStartup.Retention = time.Millisecond
-
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	tHandler := &mockHandler{}
-
-	underTest, err := NewStreamerClient(httpClient,
-		&cfg,
-		getToken,
-		[]handler.Handler{tHandler},
-		WithCacheManager(cacheManager),
-		WithWatchTopic(wt),
-	)
-	assert.NotNil(t, underTest)
-	assert.NoError(t, err)
-
-	manager := &mockManager{
-		status:  true,
-		readyCh: make(chan struct{}),
-	}
-	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
-		return manager, nil
-	}
-
-	assert.NotNil(t, underTest.Status())
-
-	errCh := make(chan error)
-	go func() {
-		err := underTest.Start()
-		errCh <- err
-	}()
-
-	<-manager.readyCh
-
-	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-
-	assert.Equal(t, 2, len(res))
-
-	stop(t, underTest, errCh)
-
-}
-
-func TestNewStreamerWithFetchOnStartupButNothingToLoad(t *testing.T) {
-	getToken := &mockTokenGetter{}
-	wt := &management.WatchTopic{
-		Spec: management.WatchTopicSpec{
-			Filters: []management.WatchTopicSpecFilters{
-				{
-					Name: "*",
-					Kind: management.AccessRequestGVK().Kind,
-					Scope: &management.WatchTopicSpecScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: "mock",
-					},
-					Type: []string{events.WatchTopicFilterTypeDeleted}, // deleted => hence nothing to load
-				},
-			},
-		},
-	}
-	httpClient := &mockAPIClient{
-		paged: []*apiv1.ResourceInstance{
-			createRI("132", "foo"),
-			createRI("456", "bar"),
-		},
-	}
-	cfg := NewConfigWithLoadOnStartup()
-
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	tHandler := &mockHandler{}
-	underTest, err := NewStreamerClient(httpClient,
-		&cfg,
-		getToken,
-		[]handler.Handler{tHandler},
-		WithCacheManager(cacheManager),
-		WithWatchTopic(wt),
-	)
-	assert.NotNil(t, underTest)
-	assert.NoError(t, err)
-
-	manager := &mockManager{
-		status:  true,
-		readyCh: make(chan struct{}),
-	}
-	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
-		return manager, nil
-	}
-
-	errCh := make(chan error)
-	go func() {
-		err := underTest.Start()
-		errCh <- err
-	}()
-
-	<-manager.readyCh
-
-	// at this stage we should have resources loaded... but here nothing to load (all deleted)
-	underTest.HandleFetchOnStartupResources()
-	assert.Nil(t, tHandler.received)
-
-	stop(t, underTest, errCh)
-}
-
-func TestNewStreamerWithFetchOnStartupWithNamedTopic(t *testing.T) {
-	getToken := &mockTokenGetter{}
-	wt := &management.WatchTopic{
-		Spec: management.WatchTopicSpec{
-			Filters: []management.WatchTopicSpecFilters{
-				{
-					Name: "foo",
-					Kind: management.AccessRequestGVK().Kind,
-					Scope: &management.WatchTopicSpecScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: "mock",
-					},
-					Type: []string{events.WatchTopicFilterTypeCreated},
-				},
-			},
-		},
-	}
-	httpClient := &mockAPIClient{
-		resource: createRI("123", "foo"),
-	}
-
-	cfg := NewConfigWithLoadOnStartup()
-
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-
-	tHandler := &mockHandler{}
-	underTest, err := NewStreamerClient(
-		httpClient,
-		&cfg, getToken,
-		[]handler.Handler{tHandler},
-		WithCacheManager(cacheManager),
-		WithWatchTopic(wt),
-	)
-	assert.NoError(t, err)
-
-	manager := &mockManager{
-		status:  true,
-		readyCh: make(chan struct{}),
-	}
-	underTest.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
-		return manager, nil
-	}
-
-	errCh := make(chan error)
-	go func() {
-		err := underTest.Start()
-		errCh <- err
-	}()
-
-	<-manager.readyCh
-
-	assert.False(t, httpClient.pagedCalled)
-
-	res := underTest.cacheManager.GetAllFetchOnStartupResources()
-	assert.Equal(t, 1, len(res))
-
-	// make sure handler are called
-	underTest.HandleFetchOnStartupResources()
-	assert.Equal(t, 1, len(tHandler.received))
-	assert.Equal(t, "foo", tHandler.received[0].Name)
-	assert.Equal(t, "123", tHandler.received[0].Metadata.ID)
-
-	// and won't be anymore
-	assert.Empty(t, underTest.cacheManager.GetAllFetchOnStartupResources())
-
-	// should stop the listener and write nil to the listener's error channel
-	stop(t, underTest, errCh)
-
-}
-
 func TestClientOptions(t *testing.T) {
 	sequence := &mockSequence{}
 	sequence.SetSequence(1)
@@ -404,17 +121,6 @@ func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 
 	err := <-errCh
 	assert.Nil(t, err)
-}
-
-func createRI(id, name string) *apiv1.ResourceInstance {
-	return &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			Metadata: apiv1.Metadata{
-				ID: id,
-			},
-			Name: name,
-		},
-	}
 }
 
 type mockManager struct {
@@ -475,19 +181,6 @@ type mockTokenGetter struct {
 
 func (m *mockTokenGetter) GetToken() (string, error) {
 	return m.token, m.err
-}
-
-type mockHandler struct {
-	err      error
-	received []*apiv1.ResourceInstance
-}
-
-func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.ResourceInstance) error {
-	if m.received == nil {
-		m.received = make([]*apiv1.ResourceInstance, 0, 1)
-	}
-	m.received = append(m.received, ri)
-	return m.err
 }
 
 type mockHarvester struct{}

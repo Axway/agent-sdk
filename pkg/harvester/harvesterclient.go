@@ -69,7 +69,6 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 		TenantID:         cfg.GetTenantID(),
 		TLSCfg:           cfg.GetTLSConfig().BuildTLSConfig(),
 		TokenGetter:      getToken.GetToken,
-		skipPublish:      cfg.IsFetchOnStartupEnabled(),
 	}
 }
 
