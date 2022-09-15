@@ -62,6 +62,14 @@ func (b *channelJob) handleExecution() {
 func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
+
+	// This could happen while rescheduling the job, pool tries to start
+	// and one of the job fails which triggers stop setting the flag to not ready
+	// Return in this case to allow pool to reschedule the job
+	if !b.IsReady() {
+		return
+	}
+
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
 	b.SetStatus(JobStatusRunning)
 	b.setIsStopped(false)

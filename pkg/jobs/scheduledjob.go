@@ -54,6 +54,13 @@ func (b *scheduleJob) start() {
 	b.startLog()
 	b.waitForReady()
 
+	// This could happen while rescheduling the job, pool tries to start
+	// and one of the job fails which triggers stop setting the flag to not ready
+	// Return in this case to allow pool to reschedule the job
+	if !b.IsReady() {
+		return
+	}
+
 	ticker := time.NewTicker(b.getNextExecution())
 	defer ticker.Stop()
 	b.SetStatus(JobStatusRunning)
