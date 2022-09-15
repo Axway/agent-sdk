@@ -97,7 +97,7 @@ func (b *channelJob) stop() {
 		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
 		b.UnsetIsReady()
 	} else {
-		b.stopReadyChan <- nil
+		b.stopReadyIfWaiting(0)
 	}
 	b.setIsStopped(true)
 }
