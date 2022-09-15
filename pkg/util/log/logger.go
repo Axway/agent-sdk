@@ -286,7 +286,7 @@ func (l *logger) Traceln(args ...interface{}) {
 		lgp.Named(traceSelector).Debug(args...)
 		return
 	}
-	l.entry.Trace(args...)
+	l.entry.Traceln(args...)
 }
 
 // Warnln prints a warn line
@@ -326,7 +326,7 @@ func (l *logger) Panicln(args ...interface{}) {
 		lgp.Panic(args...)
 		return
 	}
-	l.entry.Panic(args...)
+	l.entry.Panicln(args...)
 }
 
 // TraceRedacted redacts a trace message

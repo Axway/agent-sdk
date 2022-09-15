@@ -278,7 +278,7 @@ func (c *ServiceClient) updateSubscriptionSchema(defName string, spec *managemen
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 	}
@@ -310,7 +310,7 @@ func (c *ServiceClient) updateAccessRequestSubscriptionSchema(defName string, sp
 	if err != nil {
 		return agenterrors.Wrap(ErrSubscriptionSchemaCreate, err.Error())
 	}
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		readResponseErrors(response.Code, response.Body)
 		return agenterrors.Wrap(ErrAccessRequestSubscriptionSchemaResp, coreapi.PUT).FormatError(response.Code)
 	}

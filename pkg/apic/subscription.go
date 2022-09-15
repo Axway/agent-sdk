@@ -332,7 +332,7 @@ func (s *CentralSubscription) updatePropertyValue(propertyKey string, value map[
 		return err
 	}
 
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
@@ -365,7 +365,7 @@ func (s *CentralSubscription) UpdatePropertyValues(values map[string]interface{}
 		return err
 	}
 
-	if !(response.Code == http.StatusOK) {
+	if response.Code != http.StatusOK {
 		readResponseErrors(response.Code, response.Body)
 		return ErrSubscriptionResp.FormatError(response.Code)
 	}
