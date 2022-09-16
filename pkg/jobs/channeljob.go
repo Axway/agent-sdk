@@ -1,14 +1,8 @@
 package jobs
 
-import (
-	"sync"
-)
-
 type channelJobProps struct {
-	signalStop  chan interface{}
-	stopChan    chan bool
-	isStopped   bool
-	stoppedLock *sync.Mutex
+	signalStop chan interface{}
+	stopChan   chan bool
 }
 
 type channelJob struct {
@@ -21,9 +15,8 @@ func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string,
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
 		channelJobProps{
-			signalStop:  signalStop,
-			stopChan:    make(chan bool),
-			stoppedLock: &sync.Mutex{},
+			signalStop: signalStop,
+			stopChan:   make(chan bool),
 		},
 	}
 
@@ -36,9 +29,8 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
 		channelJobProps{
-			signalStop:  signalStop,
-			stopChan:    make(chan bool),
-			stoppedLock: &sync.Mutex{},
+			signalStop: signalStop,
+			stopChan:   make(chan bool),
 		},
 	}
 
@@ -78,18 +70,6 @@ func (b *channelJob) start() {
 	<-b.stopChan
 	b.signalStop <- nil // signal the execution to stop
 	b.SetStatus(JobStatusStopped)
-}
-
-func (b *channelJob) getIsStopped() bool {
-	b.stoppedLock.Lock()
-	defer b.stoppedLock.Unlock()
-	return b.isStopped
-}
-
-func (b *channelJob) setIsStopped(stopped bool) {
-	b.stoppedLock.Lock()
-	defer b.stoppedLock.Unlock()
-	b.isStopped = stopped
 }
 
 //stop - write to the stop channel to stop the execution loop

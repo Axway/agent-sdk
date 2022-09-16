@@ -46,7 +46,7 @@ func (b *scheduleJob) getNextExecution() time.Duration {
 	b.cronLock.Lock()
 	defer b.cronLock.Unlock()
 	nextTime := b.cronExp.Next(time.Now())
-	return nextTime.Sub(time.Now())
+	return time.Until(nextTime)
 }
 
 //start - calls the Execute function from the Job definition
@@ -60,7 +60,7 @@ func (b *scheduleJob) start() {
 	if !b.IsReady() {
 		return
 	}
-
+	b.setIsStopped(false)
 	ticker := time.NewTicker(b.getNextExecution())
 	defer ticker.Stop()
 	b.SetStatus(JobStatusRunning)
@@ -74,7 +74,6 @@ func (b *scheduleJob) start() {
 			b.executeCronJob()
 			if b.getError() != nil {
 				b.setExecutionError()
-				b.SetStatus(JobStatusStopped)
 			}
 			ticker.Stop()
 			ticker = time.NewTicker(b.getNextExecution())
@@ -84,6 +83,11 @@ func (b *scheduleJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
+	if b.getIsStopped() {
+		b.baseJob.logger.Tracef("job has already been stopped")
+		return
+	}
+
 	b.stopLog()
 	if b.IsReady() {
 		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
@@ -93,4 +97,5 @@ func (b *scheduleJob) stop() {
 	} else {
 		b.stopReadyIfWaiting(0)
 	}
+	b.setIsStopped(true)
 }

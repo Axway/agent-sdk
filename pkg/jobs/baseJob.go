@@ -31,6 +31,8 @@ type baseJob struct {
 	isReadyWait      bool
 	stopReadyChan    chan int
 	logger           log.FieldLogger
+	isStopped        bool
+	stoppedLock      *sync.Mutex
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
@@ -51,9 +53,6 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		WithField("job-id", id)
 
 	backoff := newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2)
-	if jobType != JobTypeDetachedChannel && jobType != JobTypeDetachedInterval {
-		backoff = newBackoffTimeout(10*time.Millisecond, 10*time.Millisecond, 1)
-	}
 
 	return baseJob{
 		id:              id,
@@ -73,6 +72,7 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		isReadyWait:     false,
 		stopReadyChan:   make(chan int, 1),
 		logger:          logger,
+		stoppedLock:     &sync.Mutex{},
 	}
 }
 
@@ -178,6 +178,18 @@ func (b *baseJob) IsReady() bool {
 	return b.isReady
 }
 
+func (b *baseJob) getIsStopped() bool {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	return b.isStopped
+}
+
+func (b *baseJob) setIsStopped(stopped bool) {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	b.isStopped = stopped
+}
+
 //Lock - locks the job, execution can not take place until the Unlock func is called
 func (b *baseJob) Lock() {
 	b.jobLock.Lock()
@@ -216,16 +228,16 @@ func (b *baseJob) setError(err error) {
 func (b *baseJob) updateStatus() JobStatus {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
-	newStatus := JobStatusRunning // reset to running before checking
+	newStatus := b.status
 	jobStatus := b.callWithTimeout(b.job.Status)
 	if jobStatus != nil { // on error set the status to failed
-		b.failChan <- b.id
 		b.logger.WithError(jobStatus).Error("job failed")
 
 		newStatus = JobStatusFailed
 	}
 
 	b.status = newStatus
+	b.logger.Tracef("current job status %s", jobStatusToString[newStatus])
 	return b.status
 }
 

@@ -34,8 +34,8 @@ func (b *intervalJob) handleExecution() {
 	if b.getError() != nil {
 		b.setExecutionError()
 		b.logger.Error(b.getError())
-		b.SetStatus(JobStatusStopped)
 		b.setConsecutiveFails(b.getConsecutiveFails() + 1)
+		return
 	}
 	b.setConsecutiveFails(0)
 }
@@ -52,12 +52,14 @@ func (b *intervalJob) start() {
 		return
 	}
 
+	b.setIsStopped(false)
+	b.SetStatus(JobStatusRunning)
+
 	// Execute the job now and then start the interval period
 	b.handleExecution()
 
 	ticker := time.NewTicker(b.interval)
 	defer ticker.Stop()
-	b.SetStatus(JobStatusRunning)
 	for {
 		// Non-blocking channel read, if stopped then exit
 		select {
@@ -74,6 +76,10 @@ func (b *intervalJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
+	if b.getIsStopped() {
+		b.baseJob.logger.Tracef("job has already been stopped")
+		return
+	}
 	b.stopLog()
 	if b.IsReady() {
 		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
@@ -83,4 +89,5 @@ func (b *intervalJob) stop() {
 	} else {
 		b.stopReadyIfWaiting(0)
 	}
+	b.setIsStopped(true)
 }
