@@ -9,11 +9,12 @@ const defaultCheckInterval = 30 * time.Second
 
 // healthChecker - info about the service
 type healthChecker struct {
-	Name       string                  `json:"name"`
-	Version    string                  `json:"version,omitempty"`
-	Status     StatusLevel             `json:"status"`
-	Checks     map[string]*statusCheck `json:"statusChecks"`
-	registered bool
+	Name         string                  `json:"name"`
+	Version      string                  `json:"version,omitempty"`
+	Status       StatusLevel             `json:"status"`
+	StatusDetail string                  `json:"-"`
+	Checks       map[string]*statusCheck `json:"statusChecks"`
+	registered   bool
 }
 
 // Status - the status of this healthcheck

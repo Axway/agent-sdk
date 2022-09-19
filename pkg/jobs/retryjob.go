@@ -49,7 +49,6 @@ func (b *retryJob) start() {
 //stop - noop
 func (b *retryJob) stop() {
 	b.stopLog()
-	return
 }
 
 func (b *retryJob) setExecutionRetryError() {

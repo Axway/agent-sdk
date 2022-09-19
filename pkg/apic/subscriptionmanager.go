@@ -242,7 +242,7 @@ func (sm *subscriptionManager) Start() {
 	// clean out the map each time start is called
 	sm.locklist = make(map[string]string)
 
-	if !sm.isRunning {
+	if !sm.isRunning && !sm.apicClient.cfg.IsMarketplaceSubsEnabled() {
 		sm.receiverQuitChannel = make(chan bool)
 
 		sm.ucSubPublishChan = make(chan interface{})

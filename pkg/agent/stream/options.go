@@ -46,7 +46,7 @@ func WithEventSyncError(cb func()) StreamerOpt {
 func WithOnStreamConnection() StreamerOpt {
 	return func(pc *StreamerClient) {
 		pc.onStreamConnection = func() {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", pc.Healthcheck)
+			hc.RegisterHealthcheck(util.AmplifyCentral, util.CentralHealthCheckEndpoint, pc.Healthcheck)
 		}
 	}
 }

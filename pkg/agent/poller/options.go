@@ -30,7 +30,7 @@ func WithOnClientStop(cb func()) ClientOpt {
 func WithOnConnect() ClientOpt {
 	return func(pc *PollClient) {
 		pc.onStreamConnection = func() {
-			hc.RegisterHealthcheck(util.AmplifyCentral, "central", pc.Healthcheck)
+			hc.RegisterHealthcheck(util.AmplifyCentral, util.CentralHealthCheckEndpoint, pc.Healthcheck)
 		}
 	}
 }

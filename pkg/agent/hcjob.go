@@ -33,7 +33,7 @@ func (c *centralHealthCheckJob) Status() error {
 }
 
 func (c *centralHealthCheckJob) Ready() bool {
-	return c.check() == nil
+	return true
 }
 
 func (c *centralHealthCheckJob) check() error {
