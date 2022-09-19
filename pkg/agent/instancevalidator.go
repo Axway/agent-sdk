@@ -10,6 +10,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -24,7 +25,8 @@ func newInstanceValidator() *instanceValidator {
 
 // Ready -
 func (j *instanceValidator) Ready() bool {
-	return true
+	status := hc.GetStatus(util.CentralHealthCheckEndpoint)
+	return status == hc.OK
 }
 
 // Status -
