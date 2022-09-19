@@ -290,7 +290,7 @@ func (c *ServiceClient) createSecret() error {
 		if err != nil {
 			return err
 		}
-		if !(response.Code == http.StatusOK) {
+		if response.Code != http.StatusOK {
 			responseErr := readResponseErrors(response.Code, response.Body)
 			return utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}
@@ -358,7 +358,7 @@ func (c *ServiceClient) createWebhook() error {
 		if err != nil {
 			return err
 		}
-		if !(response.Code == http.StatusOK) {
+		if response.Code != http.StatusOK {
 			responseErr := readResponseErrors(response.Code, response.Body)
 			return utilerrors.Wrap(ErrRequestQuery, responseErr)
 		}

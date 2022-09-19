@@ -287,28 +287,35 @@ func (p *properties) parseStringValueForKey(key string) string {
 		if len(matches) > 0 {
 			expSlice := matches[0]
 			if len(expSlice) > 2 {
-				envVar := string(expSlice[1])
-				defaultVal := ""
-				if envVar == "" {
-					if len(expSlice) >= 4 {
-						envVar = strings.Trim(string(expSlice[3]), "\"")
-					}
-				} else {
-					if len(expSlice) >= 3 {
-						defaultVal = strings.Trim(string(expSlice[2]), "\"")
-					}
-				}
-
-				if envVar != "" {
-					s = os.Getenv(envVar)
-					if s == "" && defaultVal != "" {
-						s = defaultVal
-					}
-				}
+				s = p.parseSlice(s, expSlice)
 			}
 		}
 	}
 	return s
+}
+
+func (p *properties) parseSlice(s string, expSlice [][]byte) string {
+	rtnS := s
+	envVar := string(expSlice[1])
+	defaultVal := ""
+	if envVar == "" {
+		if len(expSlice) >= 4 {
+			envVar = strings.Trim(string(expSlice[3]), "\"")
+		}
+	} else {
+		if len(expSlice) >= 3 {
+			defaultVal = strings.Trim(string(expSlice[2]), "\"")
+		}
+	}
+
+	if envVar != "" {
+		rtnS = os.Getenv(envVar)
+		if rtnS == "" && defaultVal != "" {
+			rtnS = defaultVal
+		}
+	}
+
+	return rtnS
 }
 
 func (p *properties) parseStringValue(key string) string {
@@ -577,31 +584,34 @@ func (p *properties) parseEnvPropertiesFlatMap() map[string]map[string]map[strin
 		name := variable[0]
 		val := variable[1]
 		for prefix, iPropNames := range p.envIntfArrayPropertyKeys {
-			if strings.HasPrefix(name, prefix) {
-				n := strings.ReplaceAll(name, prefix, "")
-				elements := strings.Split(name, "_")
-				lastSuffix := elements[len(elements)-1]
-				_, ok := envVarsMap[prefix]
-
-				if !ok {
-					envVarsMap[prefix] = make(map[string]map[string]string)
-				}
-
-				m, ok := envVarsMap[prefix][lastSuffix]
-				if !ok {
-					m = make(map[string]string)
-				}
-				for pName := range iPropNames {
-					propName := strings.ReplaceAll(pName, ".", "_")
-					propName = strings.ToUpper(propName)
-					if strings.HasPrefix(n, propName) {
-						m[pName] = val
-						envVarsMap[prefix][lastSuffix] = m
-					}
-				}
-
-			}
+			p.fillEnvVarsMap(name, val, prefix, iPropNames, envVarsMap)
 		}
 	}
 	return envVarsMap
+}
+
+func (p *properties) fillEnvVarsMap(name string, val string, prefix string, iPropNames map[string]bool, envVarsMap map[string]map[string]map[string]string) {
+	if strings.HasPrefix(name, prefix) {
+		n := strings.ReplaceAll(name, prefix, "")
+		elements := strings.Split(name, "_")
+		lastSuffix := elements[len(elements)-1]
+		_, ok := envVarsMap[prefix]
+
+		if !ok {
+			envVarsMap[prefix] = make(map[string]map[string]string)
+		}
+
+		m, ok := envVarsMap[prefix][lastSuffix]
+		if !ok {
+			m = make(map[string]string)
+		}
+		for pName := range iPropNames {
+			propName := strings.ReplaceAll(pName, ".", "_")
+			propName = strings.ToUpper(propName)
+			if strings.HasPrefix(n, propName) {
+				m[pName] = val
+				envVarsMap[prefix][lastSuffix] = m
+			}
+		}
+	}
 }

@@ -46,9 +46,9 @@ commit_promotion() {
     # maybe define a user that can push and go git config --locak(global) user
     # maybe this? https://github.com/marketplace/actions/add-commit or this https://github.com/peter-evans/create-pull-request
     # echo "Committing the new promoted version to main"
-    cd ${BASE_DIR}
-    git add version
-    git commit -m "INT - ${MSG}"
+    # cd ${BASE_DIR}
+    # git add version
+    # git commit -m "INT - ${MSG}"
     # git push --force origin main
 
     echo "Until the script can be fixed, you must manually do the next steps"
@@ -66,8 +66,8 @@ main() {
         echo "version file not updated. You can update it manually if you wish."
         exit
     fi
-
-    checkout_main
+    
+    # checkout_main
 
     set_version_variables $1
 

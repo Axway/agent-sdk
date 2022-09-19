@@ -448,7 +448,6 @@ func registerHealthCheckers(config *Config) error {
 	return nil
 }
 
-// TODO: From here down all temporary until Jobs interface finishes full implementation
 func registerHealthChecker(hcJob *condorHealthCheckJob, host string) error {
 	checkStatus := hcJob.agentHealthChecker.connectionHealthcheck
 

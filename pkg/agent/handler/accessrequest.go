@@ -182,19 +182,20 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessR
 
 // onDeleting deprovisions an access request and removes the finalizer
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
+	ri, _ := ar.AsInstance()
+
 	log := getLoggerFromContext(ctx)
 	req, err := h.newReq(ctx, ar, map[string]interface{}{})
 	if err != nil {
-		log.WithError(err).Error("error getting deprovision request details")
-		h.onError(ctx, ar, err)
-		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+		log.WithError(err).Debug("removing finalizers on the access request")
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
+		h.cache.DeleteAccessRequest(ri.Metadata.ID)
 		return
 	}
 
 	status := h.prov.AccessRequestDeprovision(req)
 
-	ri, _ := ar.AsInstance()
-	if status.GetStatus() == prov.Success {
+	if status.GetStatus() == prov.Success || err != nil {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 		h.cache.DeleteAccessRequest(ri.Metadata.ID)
 	} else {

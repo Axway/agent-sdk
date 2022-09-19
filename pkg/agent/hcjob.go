@@ -40,7 +40,7 @@ func (c *centralHealthCheckJob) check() error {
 	status := c.healthChecker.Healthcheck("")
 	if status == nil || status.Result != hc.OK {
 		err := fmt.Errorf("central health check status is not OK")
-		c.logger.Info(err)
+		c.logger.WithError(err).Error(status.Details)
 		return err
 	}
 	return nil
