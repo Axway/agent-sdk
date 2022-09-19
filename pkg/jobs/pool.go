@@ -329,6 +329,7 @@ func (p *Pool) waitStartStop(jobStatus JobStatus) bool {
 			}
 			if running {
 				done <- true
+				break
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
