@@ -33,7 +33,7 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 		scheduleJobProps{
 			cronExp:  exp,
 			schedule: schedule,
-			stopChan: make(chan bool),
+			stopChan: make(chan bool, 1),
 		},
 		&sync.Mutex{},
 	}

@@ -38,7 +38,7 @@ type eventProcessorJob struct {
 func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 	streamJob := &eventProcessorJob{
 		streamer:      eventJob,
-		stop:          make(chan interface{}),
+		stop:          make(chan interface{}, 1),
 		retryInterval: defaultRetryInterval,
 		numRetry:      0,
 		name:          name,

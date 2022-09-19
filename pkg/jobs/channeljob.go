@@ -30,7 +30,7 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
 		channelJobProps{
 			signalStop: signalStop,
-			stopChan:   make(chan bool),
+			stopChan:   make(chan bool, 1),
 		},
 	}
 

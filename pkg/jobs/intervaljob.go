@@ -20,7 +20,7 @@ func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan
 		createBaseJob(newJob, failJobChan, name, JobTypeInterval),
 		intervalJobProps{
 			interval: interval,
-			stopChan: make(chan bool),
+			stopChan: make(chan bool, 1),
 		},
 	}
 
