@@ -434,11 +434,9 @@ func (p *Pool) jobChecker() {
 				}
 			}()
 		case failedJob := <-p.failJobChan:
-			if p.GetStatus() != PoolStatusStopped.String() {
-				p.setFailedJob(failedJob) // this is the job for the current fail loop
-				p.stopJobsChan <- true
-				p.SetStatus(PoolStatusStopped)
-			}
+			p.setFailedJob(failedJob) // this is the job for the current fail loop
+			p.stopJobsChan <- true
+			p.SetStatus(PoolStatusStopped)
 		}
 	}
 }
