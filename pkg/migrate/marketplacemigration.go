@@ -278,8 +278,6 @@ func (m *MarketplaceMigration) handleSvcInstance(
 		// get oauth scopes
 		oauthScopes := processor.GetOAuthScopes()
 
-		var updateRequestDefinition = false
-
 		// Check if ARD exists
 		if apiSvcInst.Spec.AccessRequestDefinition == "" && len(oauthScopes) > 0 {
 			// Only migrate resource with oauth scopes. Spec with type apiKey will be handled on startup
@@ -298,35 +296,44 @@ func (m *MarketplaceMigration) handleSvcInstance(
 
 		// Find only the known CRDs
 		credentialRequestDefinitions := m.checkCredentialRequestDefinitions(credentialRequestPolicies)
-		if len(credentialRequestDefinitions) > 0 && !sortCompare(apiSvcInst.Spec.CredentialRequestDefinitions, credentialRequestDefinitions) {
-			logger.Debugf("adding the following credential request definitions %s to apiserviceinstance %s", credentialRequestDefinitions, apiSvcInst.Name)
+		m.updateRequestDefinition(credentialRequestDefinitions, ardRIName, revision, apiSvcInst, svcInstance, logger)
+
+	}
+
+	return nil
+}
+
+func (m *MarketplaceMigration) updateRequestDefinition(credentialRequestDefinitions []string, ardRIName string, revision *apiv1.ResourceInstance,
+	apiSvcInst *management.APIServiceInstance, svcInstance *apiv1.ResourceInstance, logger log.FieldLogger) error {
+	var updateRequestDefinition = false
+
+	if len(credentialRequestDefinitions) > 0 && !sortCompare(apiSvcInst.Spec.CredentialRequestDefinitions, credentialRequestDefinitions) {
+		logger.Debugf("adding the following credential request definitions %s to apiserviceinstance %s", credentialRequestDefinitions, apiSvcInst.Name)
+		updateRequestDefinition = true
+	}
+
+	existingARD, _ := m.cache.GetAccessRequestDefinitionByName(ardRIName)
+	if existingARD == nil {
+		ardRIName = ""
+	} else {
+		if apiSvcInst.Spec.AccessRequestDefinition == "" {
+			logger.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
 			updateRequestDefinition = true
-		}
-
-		existingARD, _ := m.cache.GetAccessRequestDefinitionByName(ardRIName)
-		if existingARD == nil {
-			ardRIName = ""
-		} else {
-			if apiSvcInst.Spec.AccessRequestDefinition == "" {
-				logger.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
-				updateRequestDefinition = true
-			}
-		}
-
-		// update apiserivceinstane spec with necessary request definitions
-		if updateRequestDefinition {
-			inInterface := m.newInstanceSpec(apiSvcInst.Spec.Endpoint, revision.Name, ardRIName, credentialRequestDefinitions)
-			svcInstance.Spec = inInterface
-
-			err = m.updateRI(svcInstance)
-			if err != nil {
-				return err
-			}
-
-			logger.Debugf("migrated instance %s with the necessary request definitions", apiSvcInst.Name)
 		}
 	}
 
+	// update apiserivceinstane spec with necessary request definitions
+	if updateRequestDefinition {
+		inInterface := m.newInstanceSpec(apiSvcInst.Spec.Endpoint, revision.Name, ardRIName, credentialRequestDefinitions)
+		svcInstance.Spec = inInterface
+
+		err := m.updateRI(svcInstance)
+		if err != nil {
+			return err
+		}
+
+		logger.Debugf("migrated instance %s with the necessary request definitions", apiSvcInst.Name)
+	}
 	return nil
 }
 
