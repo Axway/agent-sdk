@@ -16,7 +16,7 @@ func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string,
 		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
 		channelJobProps{
 			signalStop: signalStop,
-			stopChan:   make(chan bool),
+			stopChan:   make(chan bool, 1),
 		},
 	}
 

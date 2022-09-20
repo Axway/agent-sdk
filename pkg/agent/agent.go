@@ -59,6 +59,7 @@ type agentData struct {
 	teamMap                    cache.Cache
 	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
+	apiValidatorLock           sync.Mutex
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler

@@ -25,6 +25,10 @@ func newInstanceValidator() *instanceValidator {
 
 // Ready -
 func (j *instanceValidator) Ready() bool {
+	if getAPIValidator() == nil {
+		return true
+	}
+
 	status := hc.GetStatus(util.CentralHealthCheckEndpoint)
 	return status == hc.OK
 }
@@ -36,10 +40,13 @@ func (j *instanceValidator) Status() error {
 
 // Execute -
 func (j *instanceValidator) Execute() error {
-	agent.publishingGroup.Wait()
-	agent.validatingGroup.Add(1)
-	defer agent.validatingGroup.Done()
-	j.validateAPIOnDataplane()
+	if getAPIValidator() != nil {
+		agent.publishingGroup.Wait()
+		agent.validatingGroup.Add(1)
+		defer agent.validatingGroup.Done()
+		j.validateAPIOnDataplane()
+	}
+
 	return nil
 }
 
@@ -64,7 +71,8 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+		apiValidator := getAPIValidator()
+		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
 			j.deleteServiceInstance(instance, externalPrimaryKey, externalAPIID)
 		}
 	}
