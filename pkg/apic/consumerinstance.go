@@ -232,6 +232,11 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		instance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 	}
 
+	return c.deployAPI(instance, httpMethod, consumerInstanceURL, serviceBody, consumerInstanceName)
+
+}
+
+func (c *ServiceClient) deployAPI(instance *management.ConsumerInstance, httpMethod, consumerInstanceURL string, serviceBody *ServiceBody, consumerInstanceName string) error {
 	buffer, err := json.Marshal(instance)
 	if err != nil {
 		return err
@@ -264,8 +269,7 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 	}
 
 	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
-
-	return err
+	return nil
 }
 
 // getAPIServerConsumerInstance -
