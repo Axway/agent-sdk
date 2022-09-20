@@ -1,6 +1,9 @@
 package provisioning
 
-import management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+import (
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+)
 
 // Quota - interface for accessing an access requests quota
 type Quota interface {
@@ -10,6 +13,8 @@ type Quota interface {
 	GetIntervalString() string
 	// GetLimit returns the quota limit from within the access request
 	GetLimit() int64
+	// GetPlanName returns the product plan name from within the access request
+	GetPlanName() string
 }
 
 // QuotaInterval is the quota limit
@@ -52,9 +57,10 @@ func quotaIntervalFromString(limit string) QuotaInterval {
 type quota struct {
 	interval QuotaInterval
 	limit    int64
+	planName string
 }
 
-//NewQuotaFromAccessRequest create a Quota interface from an access request or nil if no quota on access request
+// NewQuotaFromAccessRequest create a Quota interface from an access request or nil if no quota on access request
 func NewQuotaFromAccessRequest(ar *management.AccessRequest) Quota {
 	if ar.Spec.Quota == nil {
 		return nil
@@ -63,9 +69,16 @@ func NewQuotaFromAccessRequest(ar *management.AccessRequest) Quota {
 	if interval == -1 {
 		return nil
 	}
+
+	planName := ""
+	planData := ar.GetReferenceByGVK(catalog.ProductPlanGVK())
+	if planData != nil {
+		planName = planData.Name
+	}
 	return &quota{
 		limit:    int64(ar.Spec.Quota.Limit),
 		interval: interval,
+		planName: planName,
 	}
 }
 
@@ -79,4 +92,8 @@ func (q *quota) GetIntervalString() string {
 
 func (q *quota) GetLimit() int64 {
 	return q.limit
+}
+
+func (q *quota) GetPlanName() string {
+	return q.planName
 }
