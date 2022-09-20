@@ -72,7 +72,7 @@ func NewQuotaFromAccessRequest(ar *management.AccessRequest) Quota {
 
 	planName := ""
 	planData := ar.GetReferenceByGVK(catalog.ProductPlanGVK())
-	if planData != nil {
+	if planData.Name != "" {
 		planName = planData.Name
 	}
 	return &quota{
