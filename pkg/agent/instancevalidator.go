@@ -25,7 +25,7 @@ func newInstanceValidator() *instanceValidator {
 
 // Ready -
 func (j *instanceValidator) Ready() bool {
-	if agent.apiValidator == nil {
+	if getAPIValidator() == nil {
 		return true
 	}
 
@@ -40,7 +40,7 @@ func (j *instanceValidator) Status() error {
 
 // Execute -
 func (j *instanceValidator) Execute() error {
-	if agent.apiValidator != nil {
+	if getAPIValidator() != nil {
 		agent.publishingGroup.Wait()
 		agent.validatingGroup.Add(1)
 		defer agent.validatingGroup.Done()
@@ -71,7 +71,8 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		// Check if the consumer instance was published by agent, i.e. following attributes are set
 		// - externalAPIID should not be empty
 		// - externalAPIStage could be empty for dataplanes that do not support it
-		if externalAPIID != "" && !agent.apiValidator(externalAPIID, externalAPIStage) {
+		apiValidator := getAPIValidator()
+		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
 			j.deleteServiceInstance(instance, externalPrimaryKey, externalAPIID)
 		}
 	}
