@@ -485,6 +485,9 @@ func (p *Pool) watchJobs() {
 		case <-ticker.C:
 			p.startPool()
 			ticker = time.NewTicker(p.getBackoff().getCurrentTimeout())
+			p.logger.
+				WithField("interval", p.getBackoff().getCurrentTimeout()).
+				Debug("setting next job restart backoff interval")
 		}
 	}
 }
