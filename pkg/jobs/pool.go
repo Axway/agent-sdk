@@ -383,7 +383,6 @@ func (p *Pool) startAll() bool {
 //           other jobs are single run and should not need stopped
 func (p *Pool) stopAll() {
 	p.logger.Debug("Stopping all cron jobs")
-	maxErrors := 0
 
 	// Must do the map copy so that the loop can run without a race condition.
 	// Can NOT do a defer on this unlock, or will get stuck
@@ -394,17 +393,11 @@ func (p *Pool) stopAll() {
 	for _, job := range mapCopy {
 		p.logger.WithField("job-name", job.GetName()).Trace("stopping job")
 		job.stop()
-		if job.getConsecutiveFails() > maxErrors {
-			maxErrors = job.getConsecutiveFails()
-		}
 		p.logger.WithField("job-name", job.GetName()).Tracef("finished stopping job")
 	}
 
 	if p.waitStartStop(JobStatusStopped) {
 		p.SetStatus(PoolStatusStopped)
-	}
-	for i := 1; i < maxErrors; i++ {
-		p.getBackoff().increaseTimeout()
 	}
 }
 
