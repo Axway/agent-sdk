@@ -1,14 +1,8 @@
 package jobs
 
-import (
-	"sync"
-)
-
 type channelJobProps struct {
-	signalStop  chan interface{}
-	stopChan    chan bool
-	isStopped   bool
-	stoppedLock *sync.Mutex
+	signalStop chan interface{}
+	stopChan   chan bool
 }
 
 type channelJob struct {
@@ -21,9 +15,8 @@ func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string,
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
 		channelJobProps{
-			signalStop:  signalStop,
-			stopChan:    make(chan bool),
-			stoppedLock: &sync.Mutex{},
+			signalStop: signalStop,
+			stopChan:   make(chan bool, 1),
 		},
 	}
 
@@ -36,9 +29,8 @@ func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJob
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
 		channelJobProps{
-			signalStop:  signalStop,
-			stopChan:    make(chan bool),
-			stoppedLock: &sync.Mutex{},
+			signalStop: signalStop,
+			stopChan:   make(chan bool, 1),
 		},
 	}
 
@@ -62,6 +54,14 @@ func (b *channelJob) handleExecution() {
 func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
+
+	// This could happen while rescheduling the job, pool tries to start
+	// and one of the job fails which triggers stop setting the flag to not ready
+	// Return in this case to allow pool to reschedule the job
+	if !b.IsReady() {
+		return
+	}
+
 	go b.handleExecution() // start a single execution in a go routine as it runs forever
 	b.SetStatus(JobStatusRunning)
 	b.setIsStopped(false)
@@ -70,18 +70,6 @@ func (b *channelJob) start() {
 	<-b.stopChan
 	b.signalStop <- nil // signal the execution to stop
 	b.SetStatus(JobStatusStopped)
-}
-
-func (b *channelJob) getIsStopped() bool {
-	b.stoppedLock.Lock()
-	defer b.stoppedLock.Unlock()
-	return b.isStopped
-}
-
-func (b *channelJob) setIsStopped(stopped bool) {
-	b.stoppedLock.Lock()
-	defer b.stoppedLock.Unlock()
-	b.isStopped = stopped
 }
 
 //stop - write to the stop channel to stop the execution loop
@@ -95,9 +83,9 @@ func (b *channelJob) stop() {
 		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
 		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
+		b.UnsetIsReady()
 	} else {
-		b.stopReadyChan <- nil
+		b.stopReadyIfWaiting(0)
 	}
 	b.setIsStopped(true)
-	b.UnsetIsReady()
 }

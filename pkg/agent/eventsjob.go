@@ -10,8 +10,9 @@ import (
 
 // constants for retry interval for stream job
 const (
-	defaultRetryInterval = 100 * time.Millisecond
-	maxRetryInterval     = 5 * time.Minute
+	defaultRetryInterval   = 5 * time.Second
+	maxRetryInterval       = 5 * time.Minute
+	maxNumRetryForInterval = 3
 )
 
 // eventsJob interface for a job to execute to retrieve events in either stream or poll mode
@@ -28,6 +29,7 @@ type eventProcessorJob struct {
 	stop          chan interface{}
 	jobID         string
 	retryInterval time.Duration
+	numRetry      int
 	name          string
 	mutex         sync.RWMutex
 }
@@ -36,8 +38,9 @@ type eventProcessorJob struct {
 func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 	streamJob := &eventProcessorJob{
 		streamer:      eventJob,
-		stop:          make(chan interface{}),
+		stop:          make(chan interface{}, 1),
 		retryInterval: defaultRetryInterval,
+		numRetry:      0,
 		name:          name,
 	}
 
@@ -67,6 +70,7 @@ func (j *eventProcessorJob) Status() error {
 	status := j.streamer.Status()
 	if status == nil {
 		j.retryInterval = defaultRetryInterval
+		j.numRetry = 0
 	}
 	return status
 }
@@ -81,24 +85,26 @@ func (j *eventProcessorJob) renewRegistration() {
 	jobID := j.jobID
 	j.mutex.RUnlock()
 
+	defer time.AfterFunc(j.retryInterval, func() {
+		jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
+		j.mutex.Lock()
+		defer j.mutex.Unlock()
+		j.jobID = jobID
+	})
+
 	if jobID != "" {
 		j.mutex.Lock()
 		defer j.mutex.Unlock()
 
 		jobs.UnregisterJob(j.jobID)
 		j.jobID = ""
-
-		j.retryInterval = j.retryInterval * 2
-		if j.retryInterval > maxRetryInterval {
-			j.retryInterval = defaultRetryInterval
+		j.numRetry++
+		if j.numRetry == maxNumRetryForInterval {
+			j.numRetry = 0
+			j.retryInterval = j.retryInterval * 2
+			if j.retryInterval > maxRetryInterval {
+				j.retryInterval = defaultRetryInterval
+			}
 		}
-
-		time.AfterFunc(j.retryInterval, func() {
-			jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
-			j.mutex.Lock()
-			defer j.mutex.Unlock()
-			j.jobID = jobID
-		})
-		return
 	}
 }

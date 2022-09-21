@@ -19,6 +19,7 @@ type baseJob struct {
 	err              error         // the error thrown
 	statusLock       *sync.RWMutex // lock on preventing status write/read at the same time
 	isReadyLock      *sync.RWMutex // lock on preventing isReady write/read at the same time
+	isReadyWaitLock  *sync.RWMutex // lock on preventing isReady write/read at the same time
 	backoffLock      *sync.RWMutex // lock on preventing backoff write/read at the same time
 	failsLock        *sync.RWMutex // lock on preventing consecutiveFails write/read at the same time
 	failChan         chan string   // channel to send signal to pool of failure
@@ -27,8 +28,11 @@ type baseJob struct {
 	consecutiveFails int
 	backoff          *backoff
 	isReady          bool
-	stopReadyChan    chan interface{}
+	isReadyWait      bool
+	stopReadyChan    chan int
 	logger           log.FieldLogger
+	isStopped        bool
+	stoppedLock      *sync.Mutex
 }
 
 //newBaseJob - creates a single run job and sets up the structure for different job types
@@ -47,22 +51,28 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 		WithComponent("baseJob").
 		WithField("job-name", name).
 		WithField("job-id", id)
+
+	backoff := newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2)
+
 	return baseJob{
-		id:            id,
-		name:          name,
-		job:           newJob,
-		jobType:       jobType,
-		status:        JobStatusInitializing,
-		failChan:      failJobChan,
-		statusLock:    &sync.RWMutex{},
-		isReadyLock:   &sync.RWMutex{},
-		backoffLock:   &sync.RWMutex{},
-		failsLock:     &sync.RWMutex{},
-		errorLock:     &sync.RWMutex{},
-		backoff:       newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2),
-		isReady:       false,
-		stopReadyChan: make(chan interface{}),
-		logger:        logger,
+		id:              id,
+		name:            name,
+		job:             newJob,
+		jobType:         jobType,
+		status:          JobStatusInitializing,
+		failChan:        failJobChan,
+		statusLock:      &sync.RWMutex{},
+		isReadyLock:     &sync.RWMutex{},
+		isReadyWaitLock: &sync.RWMutex{},
+		backoffLock:     &sync.RWMutex{},
+		failsLock:       &sync.RWMutex{},
+		errorLock:       &sync.RWMutex{},
+		backoff:         backoff,
+		isReady:         false,
+		isReadyWait:     false,
+		stopReadyChan:   make(chan int, 1),
+		logger:          logger,
+		stoppedLock:     &sync.Mutex{},
 	}
 }
 
@@ -133,6 +143,20 @@ func (b *baseJob) SetStatus(status JobStatus) {
 	b.status = status
 }
 
+//setReadyWait - set flag to indicate the job is waiting for ready
+func (b *baseJob) setReadyWait(waitReady bool) {
+	b.isReadyWaitLock.Lock()
+	defer b.isReadyWaitLock.Unlock()
+	b.isReadyWait = waitReady
+}
+
+//isWaitingForReady - return true if job is waiting for ready
+func (b *baseJob) isWaitingForReady() bool {
+	b.isReadyWaitLock.Lock()
+	defer b.isReadyWaitLock.Unlock()
+	return b.isReadyWait
+}
+
 //SetIsReady - set that the job is now ready
 func (b *baseJob) SetIsReady() {
 	b.isReadyLock.Lock()
@@ -152,6 +176,18 @@ func (b *baseJob) IsReady() bool {
 	b.isReadyLock.Lock()
 	defer b.isReadyLock.Unlock()
 	return b.isReady
+}
+
+func (b *baseJob) getIsStopped() bool {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	return b.isStopped
+}
+
+func (b *baseJob) setIsStopped(stopped bool) {
+	b.stoppedLock.Lock()
+	defer b.stoppedLock.Unlock()
+	b.isStopped = stopped
 }
 
 //Lock - locks the job, execution can not take place until the Unlock func is called
@@ -192,16 +228,16 @@ func (b *baseJob) setError(err error) {
 func (b *baseJob) updateStatus() JobStatus {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
-	newStatus := JobStatusRunning // reset to running before checking
+	newStatus := b.status
 	jobStatus := b.callWithTimeout(b.job.Status)
 	if jobStatus != nil { // on error set the status to failed
-		b.failChan <- b.id
 		b.logger.WithError(jobStatus).Error("job failed")
 
 		newStatus = JobStatusFailed
 	}
 
 	b.status = newStatus
+	b.logger.Tracef("current job status %s", jobStatusToString[newStatus])
 	return b.status
 }
 
@@ -238,24 +274,41 @@ func (b *baseJob) Ready() bool {
 //waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
 	b.logger.Debugf("waiting for job to be ready: %s", b.GetName())
+	b.setReadyWait(true)
+	defer b.setReadyWait(false)
+
 	for {
 		select {
-		case <-b.stopReadyChan:
-			b.getBackoff().reset()
-			b.UnsetIsReady()
+		case ready := <-b.stopReadyChan:
+			if b.getBackoff() != nil {
+				b.getBackoff().reset()
+			}
+			if ready == 1 {
+				b.SetIsReady()
+			} else {
+				b.UnsetIsReady()
+			}
 			return
 		default:
 			if b.job.Ready() {
-				b.getBackoff().reset()
 				b.logger.Debug("job is ready")
-				b.SetIsReady()
-				return
+				b.stopReadyIfWaiting(1)
+			} else {
+				if b.getBackoff() != nil {
+					b.logger.Tracef("job is not ready, checking again in %v seconds", b.getBackoff().getCurrentTimeout())
+					b.getBackoff().sleep()
+					b.getBackoff().increaseTimeout()
+				}
 			}
-			b.logger.Tracef("job is not ready, checking again in %v seconds", b.getBackoff().getCurrentTimeout())
-			b.getBackoff().sleep()
-			b.getBackoff().increaseTimeout()
 		}
 	}
+}
+
+func (b *baseJob) stopReadyIfWaiting(ready int) {
+	if b.isWaitingForReady() {
+		b.stopReadyChan <- ready
+	}
+
 }
 
 //start - waits for Ready to return true then calls the Execute function from the Job definition

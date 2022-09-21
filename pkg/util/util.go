@@ -32,7 +32,8 @@ import (
 
 const (
 	// AmplifyCentral amplify central
-	AmplifyCentral = "Amplify Central"
+	AmplifyCentral             = "Amplify Central"
+	CentralHealthCheckEndpoint = "central"
 )
 
 // ComputeHash - get the hash of the byte array sent in

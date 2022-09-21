@@ -20,7 +20,7 @@ func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan
 		createBaseJob(newJob, failJobChan, name, JobTypeInterval),
 		intervalJobProps{
 			interval: interval,
-			stopChan: make(chan bool),
+			stopChan: make(chan bool, 1),
 		},
 	}
 
@@ -34,8 +34,8 @@ func (b *intervalJob) handleExecution() {
 	if b.getError() != nil {
 		b.setExecutionError()
 		b.logger.Error(b.getError())
-		b.SetStatus(JobStatusStopped)
 		b.setConsecutiveFails(b.getConsecutiveFails() + 1)
+		return
 	}
 	b.setConsecutiveFails(0)
 }
@@ -45,12 +45,21 @@ func (b *intervalJob) start() {
 	b.startLog()
 	b.waitForReady()
 
+	// This could happen while rescheduling the job, pool tries to start
+	// and one of the job fails which triggers stop setting the flag to not ready
+	// Return in this case to allow pool to reschedule the job
+	if !b.IsReady() {
+		return
+	}
+
+	b.setIsStopped(false)
+	b.SetStatus(JobStatusRunning)
+
 	// Execute the job now and then start the interval period
 	b.handleExecution()
 
 	ticker := time.NewTicker(b.interval)
 	defer ticker.Stop()
-	b.SetStatus(JobStatusRunning)
 	for {
 		// Non-blocking channel read, if stopped then exit
 		select {
@@ -67,13 +76,18 @@ func (b *intervalJob) start() {
 
 //stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
+	if b.getIsStopped() {
+		b.baseJob.logger.Tracef("job has already been stopped")
+		return
+	}
 	b.stopLog()
 	if b.IsReady() {
 		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
 		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
+		b.UnsetIsReady()
 	} else {
-		b.stopReadyChan <- nil
+		b.stopReadyIfWaiting(0)
 	}
-	b.UnsetIsReady()
+	b.setIsStopped(true)
 }

@@ -82,7 +82,11 @@ func (c *watchClient) recv() error {
 }
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
-func (c *watchClient) processRequest() {
+func (c *watchClient) processRequest() error {
+	var err error
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wait := true
 	go func() {
 		for {
 			select {
@@ -93,7 +97,11 @@ func (c *watchClient) processRequest() {
 				c.handleError(c.stream.Context().Err())
 				return
 			case <-c.timer.C:
-				err := c.send()
+				err = c.send()
+				if wait {
+					wg.Done()
+					wait = false
+				}
 				if err != nil {
 					c.handleError(err)
 					return
@@ -101,6 +109,9 @@ func (c *watchClient) processRequest() {
 			}
 		}
 	}()
+
+	wg.Wait()
+	return err
 }
 
 // send a message with a new token to the grpc server and returns the expiration time

@@ -1,7 +1,5 @@
 package wsdl
 
-// TODO: Add all types from the spec.
-
 import "encoding/xml"
 
 // Definitions is the root element of a WSDL document.
@@ -238,7 +236,7 @@ type Part struct {
 	XMLName xml.Name `xml:"part"`
 	Name    string   `xml:"name,attr"`
 	Type    string   `xml:"type,attr,omitempty"`
-	Element string   `xml:"element,attr,omitempty"` // TODO: not sure omitempty
+	Element string   `xml:"element,attr,omitempty"`
 }
 
 // PortType describes a set of operations.

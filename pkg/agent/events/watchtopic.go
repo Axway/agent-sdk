@@ -162,26 +162,26 @@ func filtersEqual(a, b management.WatchTopicSpecFilters) (equal bool) {
 		}
 	}
 
-	typesDiff := func(aTypes, bTypes []string) bool {
-		for _, aType := range aTypes {
-			found := false
-			for _, bType := range bTypes {
-				if aType == bType {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return true
+	if areTypesEqual(a.Type, b.Type) {
+		return false
+	}
+	return !areTypesEqual(b.Type, a.Type)
+}
+
+func areTypesEqual(aTypes, bTypes []string) bool {
+	for _, aType := range aTypes {
+		found := false
+		for _, bType := range bTypes {
+			if aType == bType {
+				found = true
+				break
 			}
 		}
-		return false
+		if !found {
+			return true
+		}
 	}
-
-	if typesDiff(a.Type, b.Type) {
-		return false
-	}
-	return !typesDiff(b.Type, a.Type)
+	return false
 }
 
 // executeTemplate parses a WatchTopic from a template

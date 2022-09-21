@@ -59,9 +59,9 @@ func setupAPICClient(mockResponse []api.MockResponse) {
 }
 
 func setupAPIValidator(apiValidation bool) {
-	agent.apiValidator = func(apiID, stageName string) bool {
+	setAPIValidator(func(apiID, stageName string) bool {
 		return apiValidation
-	}
+	})
 }
 
 func TestValidatorAPIExistsOnDataplane(t *testing.T) {
@@ -131,9 +131,9 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 			RespCode: http.StatusNoContent, // delete instance
 		},
 	})
-	agent.apiValidator = func(apiID, stageName string) bool {
+	setAPIValidator(func(apiID, stageName string) bool {
 		return apiID != "12345"
-	}
+	})
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
 	assert.NotNil(t, err)
