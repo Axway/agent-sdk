@@ -174,8 +174,14 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
 	provData := h.deprovisionPreProcess(ctx, cred)
+	crd, err := h.getCRD(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting credential request definition")
+		h.onError(ctx, cred, err)
+		return
+	}
 
-	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0, nil)
+	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -499,17 +505,20 @@ func hasAgentCredentialFinalizer(finalizers []v1.Finalizer) bool {
 }
 
 type provCreds struct {
-	managedApp  string
-	credType    string
-	id          string
-	name        string
-	days        int
-	credAction  prov.CredentialAction
-	credData    map[string]interface{}
-	credDetails map[string]interface{}
-	appDetails  map[string]interface{}
-	idpProvider oauth.Provider
-	idpCredData *idpCredData
+	managedApp        string
+	credType          string
+	id                string
+	name              string
+	days              int
+	credAction        prov.CredentialAction
+	credData          map[string]interface{}
+	credDetails       map[string]interface{}
+	appDetails        map[string]interface{}
+	idpProvider       oauth.Provider
+	idpCredData       *idpCredData
+	credSchema        map[string]interface{}
+	credProvSchema    map[string]interface{}
+	credSchemaDetails map[string]interface{}
 }
 
 type idpCredData struct {
@@ -539,10 +548,18 @@ func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[str
 		days:        0,
 	}
 
-	if crd != nil &&
-		crd.Spec.Provision != nil &&
-		crd.Spec.Provision.Policies.Expiry != nil {
-		provCred.days = int(crd.Spec.Provision.Policies.Expiry.Period)
+	if crd != nil {
+		if crd.Spec.Provision != nil &&
+			crd.Spec.Provision.Policies.Expiry != nil {
+			provCred.days = int(crd.Spec.Provision.Policies.Expiry.Period)
+		}
+
+		credSchemaDetails := util.GetAgentDetails(crd)
+		provCred.credSchema = crd.Spec.Schema
+		if crd.Spec.Provision != nil {
+			provCred.credProvSchema = crd.Spec.Provision.Schema
+		}
+		provCred.credSchemaDetails = credSchemaDetails
 	}
 
 	// Setup external credential request data to be used for provisioning
@@ -608,6 +625,25 @@ func (c provCreds) GetCredentialAction() prov.CredentialAction {
 // GetID gets the id of the credential resource
 func (c provCreds) GetCredentialExpirationDays() int {
 	return c.days
+}
+
+// GetCredentialSchema returns the schema for the credential request.
+func (c provCreds) GetCredentialSchema() map[string]interface{} {
+	return c.credSchema
+}
+
+// GetCredentialProvisionSchema returns the provisioning schema for the credential request.
+func (c provCreds) GetCredentialProvisionSchema() map[string]interface{} {
+	return c.credProvSchema
+}
+
+// GetCredentialSchemaDetailsValue returns a value found on the 'x-agent-details' sub resource of the crd.
+func (c provCreds) GetCredentialSchemaDetailsValue(key string) interface{} {
+	if c.credSchemaDetails == nil {
+		return nil
+	}
+
+	return c.credSchemaDetails[key]
 }
 
 // IsIDPCredential returns boolean indicating if the credential request is for IDP provider

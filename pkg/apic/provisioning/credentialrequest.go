@@ -20,6 +20,12 @@ type CredentialRequest interface {
 	GetCredentialType() string
 	// GetCredentialData returns the map[string]interface{} of data from the request
 	GetCredentialData() map[string]interface{}
+	// GetCredentialSchema returns the schema for the credential request.
+	GetCredentialSchema() map[string]interface{}
+	// GetCredentialProvisionSchema returns the provisioning schema for the credential request.
+	GetCredentialProvisionSchema() map[string]interface{}
+	// GetCredentialSchemaDetails returns a value found on the 'x-agent-details' sub resource of the crd.
+	GetCredentialSchemaDetailsValue(key string) interface{}
 	// IsIDPCredential returns boolean indicating if the credential request is for IDP provider
 	IsIDPCredential() bool
 	// GetIDPProvider returns the interface for IDP provider if the credential request is for IDP provider
