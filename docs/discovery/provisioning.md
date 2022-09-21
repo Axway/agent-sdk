@@ -454,6 +454,18 @@ type AccessRequest interface {
   // GetQuota returns the quota from within the access request
   GetQuota() Quota
 }
+
+// Quota - interface for accessing an access requests quota
+type Quota interface {
+  // GetInterval returns the quota interval from within the access request
+	GetInterval() QuotaInterval
+	// GetIntervalString returns the string representation of the quota interval from within the access request
+	GetIntervalString() string
+	// GetLimit returns the quota limit from within the access request
+	GetLimit() int64
+	// GetPlanName returns the product plan name from within the access request
+	GetPlanName() string
+}
 ```
 
 `GetAccessRequestData()` will have the data requested from the Consumer while creating the request.  This data will match the Access Request Definition schema.

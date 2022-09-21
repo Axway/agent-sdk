@@ -96,6 +96,7 @@ type MockAccessRequest struct {
 	AccessRequestProvisioningData interface{}
 	QuotaLimit                    int64
 	QuotaInterval                 provisioning.QuotaInterval
+	PlanName                      string
 }
 
 func (m MockAccessRequest) GetID() string {
@@ -131,6 +132,10 @@ func (m MockAccessRequest) GetQuota() provisioning.Quota {
 		return nil
 	}
 	return m
+}
+
+func (m MockAccessRequest) GetPlanName() string {
+	return m.PlanName
 }
 
 func (m MockAccessRequest) GetLimit() int64 {
