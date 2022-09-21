@@ -141,7 +141,7 @@ func registerCredentialChecker() *credentialValidator {
 		return nil
 	}
 
-	id, err := jobs.RegisterScheduledJobWithName(c, "hourly", "CredentialValidator")
+	id, err := jobs.RegisterScheduledJobWithName(c, "@hourly", "CredentialValidator")
 	if err != nil {
 		c.logger.WithError(err).Error("could not start the credential validator job")
 		return nil
