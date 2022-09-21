@@ -36,8 +36,8 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           branch: APIGOV-updateversion
-          commit-message: INT - update to new release
-          title: INT - update to new release
+          commit-message: INT - update to new release ${GITHUB_REF_NAME}
+          title: INT - update to new release ${GITHUB_REF_NAME}
           base: main
           delete-branch: true
 
