@@ -3,7 +3,6 @@ package mock
 import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 )
 
 type MockApplicationRequest struct {
@@ -31,14 +30,18 @@ func (m MockApplicationRequest) GetTeamName() string {
 
 type MockCredentialRequest struct {
 	provisioning.CredentialRequest
-	ID          string
-	AppDetails  map[string]string
-	AppName     string
-	Name        string
-	CredDefName string
-	Details     map[string]string
-	CredData    map[string]interface{}
-	Action      provisioning.CredentialAction
+	ID            string
+	AppDetails    map[string]string
+	AppName       string
+	Name          string
+	CredDefName   string
+	Details       map[string]string
+	CredData      map[string]interface{}
+	Action        provisioning.CredentialAction
+	IDPCredData   provisioning.IDPCredentialData
+	CRDSchema     map[string]interface{}
+	CRDProvSchema map[string]interface{}
+	CRDDetails    map[string]interface{}
 }
 
 func (m MockCredentialRequest) GetApplicationName() string {
@@ -73,16 +76,27 @@ func (m MockCredentialRequest) GetCredentialAction() provisioning.CredentialActi
 	return m.Action
 }
 
+func (m MockCredentialRequest) GetCredentialSchema() map[string]interface{} {
+	return m.CRDSchema
+}
+
+func (m MockCredentialRequest) GetCredentialProvisionSchema() map[string]interface{} {
+	return m.CRDProvSchema
+}
+
+func (m MockCredentialRequest) GetCredentialSchemaDetailsValue(key string) interface{} {
+	if m.CRDDetails == nil {
+		return nil
+	}
+	return m.CRDDetails[key]
+}
+
 func (m MockCredentialRequest) IsIDPCredential() bool {
-	return false
+	return m.IDPCredData != nil
 }
 
-func GetIDPProvider() oauth.Provider {
-	return nil
-}
-
-func GetIDPCredentialData() provisioning.IDPCredentialData {
-	return nil
+func (m MockCredentialRequest) GetIDPCredentialData() provisioning.IDPCredentialData {
+	return m.IDPCredData
 }
 
 type MockAccessRequest struct {
@@ -172,4 +186,53 @@ func (m MockRequestStatus) GetProperties() map[string]string {
 // GetStatus returns the Status level
 func (m MockRequestStatus) GetReasons() []v1.ResourceStatusReason {
 	return m.Reasons
+}
+
+type MockIDPCredentialData struct {
+	provisioning.IDPCredentialData
+	ClientID                string
+	ClientSecret            string
+	Scopes                  []string
+	GrantTypes              []string
+	TokenEndpointAuthMethod string
+	ResponseTypes           []string
+	RedirectUris            []string
+	JwksURI                 string
+	PublicKey               string
+}
+
+func (m MockIDPCredentialData) GetClientID() string {
+	return m.ClientID
+}
+
+func (m MockIDPCredentialData) GetClientSecret() string {
+	return m.ClientSecret
+}
+
+func (m MockIDPCredentialData) GetScopes() []string {
+	return m.Scopes
+}
+
+func (m MockIDPCredentialData) GetGrantTypes() []string {
+	return m.GrantTypes
+}
+
+func (m MockIDPCredentialData) GetTokenEndpointAuthMethod() string {
+	return m.TokenEndpointAuthMethod
+}
+
+func (m MockIDPCredentialData) GetResponseTypes() []string {
+	return m.ResponseTypes
+}
+
+func (m MockIDPCredentialData) GetRedirectURIs() []string {
+	return m.RedirectUris
+}
+
+func (m MockIDPCredentialData) GetJwksURI() string {
+	return m.JwksURI
+}
+
+func (m MockIDPCredentialData) GetPublicKey() string {
+	return m.PublicKey
 }
