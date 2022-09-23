@@ -383,7 +383,6 @@ func (p *Pool) startAll() bool {
 //           other jobs are single run and should not need stopped
 func (p *Pool) stopAll() {
 	p.logger.Debug("Stopping all cron jobs")
-	maxErrors := 0
 
 	// Must do the map copy so that the loop can run without a race condition.
 	// Can NOT do a defer on this unlock, or will get stuck
@@ -394,17 +393,11 @@ func (p *Pool) stopAll() {
 	for _, job := range mapCopy {
 		p.logger.WithField("job-name", job.GetName()).Trace("stopping job")
 		job.stop()
-		if job.getConsecutiveFails() > maxErrors {
-			maxErrors = job.getConsecutiveFails()
-		}
 		p.logger.WithField("job-name", job.GetName()).Tracef("finished stopping job")
 	}
 
 	if p.waitStartStop(JobStatusStopped) {
 		p.SetStatus(PoolStatusStopped)
-	}
-	for i := 1; i < maxErrors; i++ {
-		p.getBackoff().increaseTimeout()
 	}
 }
 
@@ -428,7 +421,6 @@ func (p *Pool) jobChecker() {
 				if !p.getIsStartStop() {
 					if failedJob != "" {
 						p.failJobChan <- failedJob
-						p.SetStatus(PoolStatusStopped)
 					} else {
 						p.SetStatus(PoolStatusRunning)
 					}
@@ -437,6 +429,7 @@ func (p *Pool) jobChecker() {
 		case failedJob := <-p.failJobChan:
 			p.setFailedJob(failedJob) // this is the job for the current fail loop
 			p.stopJobsChan <- true
+			p.SetStatus(PoolStatusStopped)
 		}
 	}
 }
@@ -485,6 +478,9 @@ func (p *Pool) watchJobs() {
 		case <-ticker.C:
 			p.startPool()
 			ticker = time.NewTicker(p.getBackoff().getCurrentTimeout())
+			p.logger.
+				WithField("interval", p.getBackoff().getCurrentTimeout()).
+				Debug("setting next job restart backoff interval")
 		}
 	}
 }
