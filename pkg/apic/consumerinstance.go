@@ -232,20 +232,19 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 		instance = c.buildConsumerInstance(serviceBody, consumerInstanceName, doc)
 	}
 
+	return c.deployAPI(instance, httpMethod, consumerInstanceURL, serviceBody, consumerInstanceName)
+
+}
+
+func (c *ServiceClient) deployAPI(instance *management.ConsumerInstance, httpMethod, consumerInstanceURL string, serviceBody *ServiceBody, consumerInstanceName string) error {
 	buffer, err := json.Marshal(instance)
 	if err != nil {
 		return err
 	}
 
 	_, err = c.apiServiceDeployAPI(httpMethod, consumerInstanceURL, buffer)
-	if err != nil {
-		if serviceBody.serviceContext.serviceAction == addAPI {
-			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-			if rollbackErr != nil {
-				return errors.New(err.Error() + rollbackErr.Error())
-			}
-		}
-		return err
+	if err != nil && serviceBody.serviceContext.serviceAction == addAPI {
+		return c.rollback(serviceBody.serviceContext.serviceName, err)
 	}
 
 	if err == nil && len(instance.SubResources) > 0 {
@@ -255,16 +254,23 @@ func (c *ServiceClient) processConsumerInstance(serviceBody *ServiceBody) error 
 			}
 			err = c.CreateSubResource(instance.ResourceMeta, subResources)
 			if err != nil {
-				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-				if rollbackErr != nil {
-					return errors.New(err.Error() + rollbackErr.Error())
-				}
+				return c.rollback(serviceBody.serviceContext.serviceName, err)
 			}
+			return err
 		}
 	}
 
 	serviceBody.serviceContext.consumerInstanceName = consumerInstanceName
+	return nil
+}
 
+func (c *ServiceClient) rollback(serviceName string, err error) error {
+	if err != nil {
+		_, rollbackErr := c.rollbackAPIService(serviceName)
+		if rollbackErr != nil {
+			return errors.New(err.Error() + rollbackErr.Error())
+		}
+	}
 	return err
 }
 

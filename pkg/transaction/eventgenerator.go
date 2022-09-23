@@ -147,35 +147,54 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	if summaryEvent.TransactionSummary != nil {
-		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
-		if txnSummary != nil {
-			jsonData, err := json.Marshal(&txnSummary)
-			if err != nil {
-				return nil, err
-			}
-			e.logger.Trace(string(jsonData))
-			summaryEvent.TransactionSummary = txnSummary
+		err := e.updateByAccessRequest(summaryEvent)
+		if err != nil {
+			return events, err
 		}
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if summaryEvent == (LogEvent{}) {
-
-		for _, event := range detailEvents {
-			if metaData == nil {
-				metaData = common.MapStr{}
-			}
-			metaData.Put(sampling.SampleKey, true)
-			newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
-			if err == nil {
-				events = append(events, newEvent)
-			}
-		}
-
-		return events, nil
-
+		return e.prepTransactionEventsForPublishing(events, detailEvents, metaData, eventTime, eventFields, privateData)
 	}
 
+	events, err := e.processSample(metaData, summaryEvent, events)
+	if err != nil {
+		return events, err
+	}
+
+	return e.processEvents(events, detailEvents, summaryEvent, eventTime, metaData, eventFields, privateData)
+}
+
+func (e *Generator) updateByAccessRequest(summaryEvent LogEvent) error {
+	txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
+	if txnSummary != nil {
+		jsonData, err := json.Marshal(&txnSummary)
+		if err != nil {
+			return err
+		}
+		e.logger.Trace(string(jsonData))
+		summaryEvent.TransactionSummary = txnSummary
+	}
+	return nil
+}
+
+func (e *Generator) prepTransactionEventsForPublishing(events []beat.Event, detailEvents []LogEvent, metaData common.MapStr, eventTime time.Time, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+	for _, event := range detailEvents {
+		if metaData == nil {
+			metaData = common.MapStr{}
+		}
+		metaData.Put(sampling.SampleKey, true)
+		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+		if err == nil {
+			events = append(events, newEvent)
+		}
+	}
+
+	return events, nil
+}
+
+func (e *Generator) processSample(metaData common.MapStr, summaryEvent LogEvent, events []beat.Event) ([]beat.Event, error) {
 	// Add this to sample or not
 	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {
@@ -187,7 +206,11 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		}
 		metaData.Put(sampling.SampleKey, true)
 	}
+	return events, nil
+}
 
+func (e *Generator) processEvents(events []beat.Event, detailEvents []LogEvent, summaryEvent LogEvent, eventTime time.Time,
+	metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
 
 	if err != nil {
@@ -214,7 +237,8 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 }
 
 // updateTxnSummaryByAccessRequest - get the consumer information to add to transaction event.  If we don't have any
-// 		information we need to get the consumer information, then we just return nil
+//
+//	information we need to get the consumer information, then we just return nil
 func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summary {
 	cacheManager := agent.GetCacheManager()
 
