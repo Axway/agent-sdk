@@ -19,7 +19,7 @@ func (c *cacheManager) migratePersistentCache(key string) error {
 	errs := make([]error, len(c.migrators))
 	for i, m := range c.migrators {
 		wg.Add(1)
-		func(index int, migFunc cacheMigrate) {
+		go func(index int, migFunc cacheMigrate) {
 			defer wg.Done()
 			errs[index] = migFunc(key)
 		}(i, m)
@@ -47,7 +47,7 @@ func (c *cacheManager) migrateAccessRequest(key string) error {
 		errs := make([]error, len(c.accessRequestMap.GetKeys()))
 		for i, k := range c.accessRequestMap.GetKeys() {
 			wg.Add(1)
-			func(index int, key string) {
+			go func(index int, key string) {
 				defer wg.Done()
 				inst, _ := c.accessRequestMap.Get(key)
 				if inst != nil {
@@ -83,7 +83,7 @@ func (c *cacheManager) migrateInstanceCount(key string) error {
 
 		for i, k := range c.instanceMap.GetKeys() {
 			wg.Add(1)
-			func(index int, key string) {
+			go func(index int, key string) {
 				defer wg.Done()
 				inst, _ := c.instanceMap.Get(key)
 				if inst != nil {
