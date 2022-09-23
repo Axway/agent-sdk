@@ -155,7 +155,7 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 	}
 
 	// suspend
-	if cr.Spec.State.Name == v1.Inactive && cr.State.Name == v1.Active {
+	if cr.Spec.State.Name == v1.Inactive && (cr.State.Name == v1.Active || cr.State.Name == "") {
 		actions = append(actions, prov.Suspend)
 	}
 
