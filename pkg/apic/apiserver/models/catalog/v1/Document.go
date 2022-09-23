@@ -39,7 +39,7 @@ type Document struct {
 	Icon  interface{}  `json:"icon"`
 	Owner *apiv1.Owner `json:"owner"`
 	Spec  DocumentSpec `json:"spec"`
-	// 	Status DocumentStatus `json:"status"`
+	// Status DocumentStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -191,7 +191,7 @@ func (res *Document) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

@@ -37,7 +37,9 @@ func TestCredentialHandler(t *testing.T) {
 		getAppErr        error
 		getCrdErr        error
 		hasError         bool
+		isRenew          bool
 		inboundStatus    string
+		inboundState     prov.CredentialAction
 		name             string
 		outboundStatus   string
 		subError         error
@@ -116,6 +118,10 @@ func TestCredentialHandler(t *testing.T) {
 
 			cred := credential
 			cred.Status.Level = tc.inboundStatus
+			cred.Spec.State.Name = tc.inboundState.String()
+			if tc.inboundState.String() == "" {
+				cred.Spec.State.Name = apiv1.Active
+			}
 
 			p := &mockCredProv{
 				t: t,
@@ -165,48 +171,74 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
-		name            string
-		outboundStatus  prov.Status
-		resourceState   string
-		provStatus      string
-		action          string
-		deleteResCalled bool
+		name             string
+		outboundStatus   prov.Status
+		resourceState    string
+		provStatus       string
+		expectedProvType string
+		specState        string
+		specStateReason  string
+		skipFinalizers   bool
 	}{
 		{
-			name:           "should deprovision with no error",
+			name:             "should deprovision with no error",
+			outboundStatus:   prov.Success,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
+		},
+		{
+			name:             "should deprovision expired with no error and not Deleting",
+			expectedProvType: deprovision,
+			outboundStatus:   prov.Success,
+			provStatus:       prov.Pending.String(),
+			specState:        apiv1.Inactive,
+			specStateReason:  prov.CredExpDetail,
+		},
+		{
+			name:           "should not deprovision when error and not Deleting",
 			outboundStatus: prov.Success,
-			resourceState:  apiv1.ResourceDeleting,
-			provStatus:     prov.Success.String(),
+			provStatus:     prov.Error.String(),
 		},
 		{
-			name:            "should deprovision with no error when CredentialExpired",
-			outboundStatus:  prov.Success,
-			provStatus:      prov.Error.String(),
-			action:          "CredentialExpired",
-			deleteResCalled: true,
+			name:             "should deprovision when and Deleting",
+			outboundStatus:   prov.Success,
+			provStatus:       prov.Error.String(),
+			resourceState:    apiv1.ResourceDeleting,
+			expectedProvType: deprovision,
 		},
 		{
-			name:           "should fail to deprovision and set the status to error",
-			outboundStatus: prov.Error,
+			name:             "should fail to deprovision and set the status to error",
+			outboundStatus:   prov.Error,
+			expectedProvType: deprovision,
+			resourceState:    apiv1.ResourceDeleting,
+			provStatus:       prov.Success.String(),
+		},
+		{
+			name:           "should not deprovision with no agent finalizers",
 			resourceState:  apiv1.ResourceDeleting,
 			provStatus:     prov.Success.String(),
+			outboundStatus: prov.Success,
+			skipFinalizers: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cred := credential
+			cred.Spec.State.Name = tc.specState
+			cred.Spec.State.Reason = tc.specStateReason
 			cred.Status.Level = tc.provStatus
 			cred.Status.Reasons = []apiv1.ResourceStatusReason{
 				{
-					Type: tc.provStatus,
-					Meta: map[string]interface{}{
-						"action": tc.action,
-					},
+					Type:   tc.provStatus,
+					Detail: tc.specStateReason,
 				},
 			}
 			cred.Metadata.State = tc.resourceState
-			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
+			if !tc.skipFinalizers {
+				cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
+			}
 			p := &mockCredProv{
 				t: t,
 				expectedStatus: mock.MockRequestStatus{
@@ -239,17 +271,114 @@ func TestCredentialHandler_deleting(t *testing.T) {
 			ri, _ := cred.AsInstance()
 			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
-			assert.Equal(t, deprovision, p.expectedProvType)
+			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 
-			if tc.outboundStatus.String() == prov.Success.String() {
+			if tc.outboundStatus.String() == prov.Success.String() && tc.specStateReason != prov.CredExpDetail {
 				assert.False(t, c.createSubCalled)
 			} else {
 				assert.True(t, c.createSubCalled)
 			}
+		})
+	}
+}
 
-			if tc.deleteResCalled {
-				assert.True(t, c.deleteResCalled)
+func TestCredentialHandler_update(t *testing.T) {
+	crdRI, _ := crd.AsInstance()
+
+	tests := []struct {
+		name             string
+		isRotating       bool
+		inboundStatus    string
+		inboundSpecState string
+		inboundState     string
+		outboundState    string
+		expectedProvType string
+		outboundStatus   prov.Status
+	}{
+		{
+			name:             "should update credential on rotate",
+			isRotating:       true,
+			inboundState:     apiv1.Active,
+			expectedProvType: update,
+		},
+		{
+			name:             "should update credential on suspend",
+			inboundSpecState: apiv1.Active,
+			inboundState:     apiv1.Inactive,
+			outboundState:    apiv1.Active,
+			expectedProvType: update,
+		},
+		{
+			name:             "should update credential on enable",
+			inboundSpecState: apiv1.Inactive,
+			inboundState:     apiv1.Active,
+			outboundState:    apiv1.Inactive,
+			expectedProvType: update,
+		},
+		{
+			name:             "should update credential on suspend and rotate",
+			inboundSpecState: apiv1.Active,
+			inboundState:     apiv1.Inactive,
+			outboundState:    apiv1.Active,
+			expectedProvType: update,
+			isRotating:       true,
+		},
+		{
+			name:             "should update credential on rotate and enable",
+			inboundSpecState: apiv1.Inactive,
+			inboundState:     apiv1.Active,
+			outboundState:    apiv1.Inactive,
+			expectedProvType: update,
+			isRotating:       true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cred := credential
+			cred.Status.Level = tc.inboundStatus
+			if tc.inboundStatus == "" {
+				cred.Status.Level = prov.Pending.String()
 			}
+			cred.Metadata.State = tc.inboundStatus
+			cred.State.Name = tc.inboundState
+			cred.Spec.State.Name = tc.inboundSpecState
+			cred.Spec.State.Rotate = tc.isRotating
+			cred.Finalizers = []apiv1.Finalizer{{Name: crFinalizer}}
+
+			if tc.outboundStatus.String() == "" {
+				tc.outboundStatus = prov.Success
+			}
+
+			p := &mockCredProv{
+				t:                t,
+				expectedProvType: tc.expectedProvType,
+				expectedStatus: mock.MockRequestStatus{
+					Status: tc.outboundStatus,
+					Msg:    "msg",
+				},
+				expectedAppDetails:  util.GetAgentDetails(credApp),
+				expectedCredDetails: util.GetAgentDetails(&cred),
+				expectedManagedApp:  credAppRefName,
+				expectedCredType:    cred.Spec.CredentialRequestDefinition,
+			}
+
+			c := &credClient{
+				crd:            crdRI,
+				expectedStatus: tc.outboundStatus.String(),
+				managedApp:     credApp,
+				t:              t,
+			}
+
+			handler := NewCredentialHandler(p, c, nil)
+			v := handler.(*credentials)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
+
+			ri, _ := cred.AsInstance()
+			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 		})
 	}
 }
@@ -498,10 +627,24 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 	return m.expectedStatus
 }
 
+func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
+	m.expectedProvType = update
+	v := cr.(*provCreds)
+	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
+	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
+	assert.Equal(m.t, m.expectedCredType, v.credType)
+	return m.expectedStatus, &mockProvCredential{}
+}
+
 type mockProvCredential struct{}
 
 func (m *mockProvCredential) GetData() map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func (m *mockProvCredential) GetExpirationTime() time.Time {
+	return time.Now()
 }
 
 func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[string]interface{} {
@@ -649,12 +792,10 @@ type credClient struct {
 	getAppErr       error
 	getCrdErr       error
 	createSubCalled bool
-	deleteResCalled bool
 	subError        error
 	expectedStatus  string
 	t               *testing.T
 	isDeleting      bool
-	delErr          error
 }
 
 func (m *credClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
@@ -687,9 +828,8 @@ func (m *credClient) UpdateResourceFinalizer(ri *apiv1.ResourceInstance, _, _ st
 	return nil, nil
 }
 
-func (m *credClient) DeleteResourceInstance(ri apiv1.Interface) error {
-	m.deleteResCalled = true
-	return m.delErr
+func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	return nil, nil
 }
 
 func parsePrivateKey(priv string) *rsa.PrivateKey {
@@ -801,6 +941,9 @@ var credential = management.Credential{
 		CredentialRequestDefinition: "api-key",
 		ManagedApplication:          credAppRefName,
 		Data:                        nil,
+		State: management.CredentialSpecState{
+			Name: apiv1.Active,
+		},
 	},
 	Status: &apiv1.ResourceStatus{
 		Level: "",

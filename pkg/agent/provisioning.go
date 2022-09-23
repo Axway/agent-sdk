@@ -110,14 +110,18 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 }
 
 type crdBuilderOptions struct {
-	name      string
-	provProps []provisioning.PropertyBuilder
-	reqProps  []provisioning.PropertyBuilder
+	name        string
+	title       string
+	renewable   bool
+	suspendable bool
+	provProps   []provisioning.PropertyBuilder
+	reqProps    []provisioning.PropertyBuilder
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
+		renewable: false,
 		provProps: make([]provisioning.PropertyBuilder, 0),
 		reqProps:  make([]provisioning.PropertyBuilder, 0),
 	}
@@ -135,16 +139,53 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		reqSchema.AddProperty(props)
 	}
 
-	return provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
+	builder := provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
 		SetName(thisCred.name).
+		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
-		SetRequestSchema(reqSchema)
+		SetRequestSchema(reqSchema).
+		SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
+
+	if thisCred.renewable {
+		builder.IsRenewable()
+	}
+
+	if thisCred.suspendable {
+		builder.IsSuspendable()
+	}
+
+	if agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
+		builder.SetDeprovisionExpired()
+	}
+
+	return builder
 }
 
 // WithCRDName - set another name for the CRD
 func WithCRDName(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.name = name
+	}
+}
+
+// WithCRDName - set another name for the CRD
+func WithCRDTitle(title string) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.title = title
+	}
+}
+
+// WithCRDIsRenewable - set another name for the CRD
+func WithCRDIsRenewable() func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.renewable = true
+	}
+}
+
+// WithCRDIsSuspendable - set another name for the CRD
+func WithCRDIsSuspendable() func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.suspendable = true
 	}
 }
 
@@ -168,6 +209,7 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 		if c.name == "" {
 			name := util.ConvertToDomainNameCompliant(p.GetName())
 			c.name = name + "-" + provisioning.OAuthIDPCRD
+			c.title = "OAuth" + p.GetName()
 		}
 
 		setIDPClientSecretSchemaProperty(c)
@@ -283,6 +325,7 @@ func WithCRDOAuthSecret() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthSecretCRD
+			c.title = "OAuth Client ID & Secret"
 		}
 		c.provProps = append(c.provProps,
 			provisioning.NewSchemaPropertyBuilder().
@@ -299,6 +342,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		if c.name == "" {
 			c.name = provisioning.OAuthPublicKeyCRD
+			c.title = "OAuth Client ID & Private Key"
 		}
 
 		c.reqProps = append(c.reqProps,
@@ -314,6 +358,7 @@ func WithCRDOAuthPublicKey() func(c *crdBuilderOptions) {
 func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	apiKeyOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.APIKeyCRD),
+		WithCRDTitle("API Key"),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.APIKey).
@@ -336,7 +381,8 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 				SetName(provisioning.OauthClientID).
 				SetLabel("Client ID").
 				SetRequired().
-				IsString()),
+				IsString().
+				IsCopyable()),
 	}
 
 	oauthOptions = append(oauthOptions, options...)

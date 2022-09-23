@@ -30,7 +30,8 @@ type ConsumerInstanceSpec struct {
 	// List of tags to be set on the Catalog Item. Max allowed tags for the Catalog Item is 80.
 	Tags []string `json:"tags,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	// 	Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`
+	//
+	//	Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`
 	Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`
 	// Markdown documentation for the Catalog Item documentation.
 	Documentation              string                                         `json:"documentation,omitempty"`

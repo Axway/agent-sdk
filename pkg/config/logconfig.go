@@ -106,7 +106,7 @@ const (
 	logFilePermissionsPath = "logging.files.permissions"
 )
 
-//LogConfigOverrides - override the filebeat config options
+// LogConfigOverrides - override the filebeat config options
 func LogConfigOverrides() []cfgfile.ConditionalOverride {
 	overrides := make([]cfgfile.ConditionalOverride, 0)
 	overrides = setLogLevel(overrides)
@@ -187,10 +187,7 @@ func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.Conditi
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
 			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogFormat), 0)
-			if strings.ToLower(output) == "json" {
-				return true
-			}
-			return false
+			return strings.ToLower(output) == "json"
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
 			logJSONYAMLPath: true,
@@ -202,10 +199,7 @@ func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.Conditi
 		Check: func(cfg *common.Config) bool {
 			aliasKeyPrefix := properties.GetAliasKeyPrefix()
 			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
-			if strings.ToLower(output) == "stdout" {
-				return true
-			}
-			return false
+			return strings.ToLower(output) == "stdout"
 		},
 		Config: common.MustNewConfigFrom(map[string]interface{}{
 			logSTDERRYAMLPath: true,

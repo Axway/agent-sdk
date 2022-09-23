@@ -102,7 +102,7 @@ func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
 	return instances
 }
 
-// countCachedInstancesForAPIService - count any instances in the cache for hte newly added api
+// countCachedInstancesForAPIService - count any instances in the cache for the newly added api
 func (c *cacheManager) countCachedInstancesForAPIService(apiID, primaryKey string) {
 	for _, k := range c.instanceMap.GetKeys() {
 		item, _ := c.instanceMap.Get(k)

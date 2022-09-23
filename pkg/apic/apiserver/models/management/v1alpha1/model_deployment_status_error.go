@@ -11,7 +11,8 @@ package management
 
 import (
 	// GENERATE: The following code has been modified after code generation
-	// 	"time"
+	//
+	//	"time"
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 

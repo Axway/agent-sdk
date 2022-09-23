@@ -13,11 +13,13 @@ package management
 type VirtualServiceSpecServiceRoutingService struct {
 	// The path prefix to match. Example /api/v1
 	Prefix    string                                             `json:"prefix"`
-	Protocol  string                                             `json:"protocol,omitempty"`
+	Protocol  string                                             `json:"protocol"`
 	Endpoints []VirtualServiceSpecServiceRoutingServiceEndpoints `json:"endpoints"`
 	Codec     string                                             `json:"codec"`
 	// Timeout in seconds.
 	ConnectTimeout int32 `json:"connectTimeout,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	ServerCertValidation VirtualServiceSpecServercertvalidation `json:"serverCertValidation,omitempty"`
 	// The backend credentials.
 	// GENERATE: The following code has been modified after code generation
 	Credentials []interface{} `json:"credentials,omitempty"`

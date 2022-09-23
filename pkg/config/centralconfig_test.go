@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	tmpFile, _ := ioutil.TempFile(".", "test*")
+	tmpFile, _ := os.CreateTemp(".", "test*")
 	authCfg.PrivateKey = "./" + tmpFile.Name()
 	authCfg.PublicKey = "./" + tmpFile.Name()
 
@@ -106,7 +105,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	tmpFile, _ := ioutil.TempFile(".", "test*")
+	tmpFile, _ := os.CreateTemp(".", "test*")
 	authCfg.PrivateKey = "./" + tmpFile.Name()
 	authCfg.PublicKey = "./" + tmpFile.Name()
 
@@ -192,7 +191,7 @@ func TestTeamConfig(t *testing.T) {
 	authCfg.URL = "test"
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
-	tmpFile, _ := ioutil.TempFile(".", "test*")
+	tmpFile, _ := os.CreateTemp(".", "test*")
 	authCfg.PrivateKey = "./" + tmpFile.Name()
 	authCfg.PublicKey = "./" + tmpFile.Name()
 	centralConfig.TenantID = "1111"

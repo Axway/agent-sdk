@@ -11,7 +11,7 @@ package management
 
 // ConsumerInstanceSpecAdditionalDataProperties The Catalog Item properties for additional data. (management.v1alpha1.ConsumerInstance)
 type ConsumerInstanceSpecAdditionalDataProperties struct {
-	// Defines the unstrucured data type. Example 'APIBuilderConnector' or 'SDK'.
+	// Defines the unstructured data type. Example 'APIBuilderConnector' or 'SDK'.
 	Type string `json:"type"`
 	// Defines the Content Type of the data.
 	ContentType string `json:"contentType"`

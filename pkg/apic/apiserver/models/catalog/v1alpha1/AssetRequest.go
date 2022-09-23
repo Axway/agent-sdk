@@ -40,7 +40,7 @@ type AssetRequest struct {
 	Owner      *apiv1.Owner           `json:"owner"`
 	References AssetRequestReferences `json:"references"`
 	Spec       AssetRequestSpec       `json:"spec"`
-	// 	Status     AssetRequestStatus     `json:"status"`
+	// Status     AssetRequestStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -211,7 +211,7 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -37,6 +36,7 @@ type AuthConfiguration struct {
 	PrivateKeyData string        `config:"privateKeyData"`
 	PublicKeyData  string        `config:"publicKeyData"`
 	KeyPwd         string        `config:"keyPassword"`
+	ClientIDReuse  bool          `config:"clientIdReuse"`
 	Timeout        time.Duration `config:"timeout"`
 }
 
@@ -174,5 +174,5 @@ func fileExists(filename string) bool {
 
 func saveKeyData(filename string, data string) {
 	dataBytes := []byte(data)
-	ioutil.WriteFile(filename, dataBytes, 0600)
+	os.WriteFile(filename, dataBytes, 0600)
 }

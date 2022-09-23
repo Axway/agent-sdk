@@ -16,5 +16,6 @@ type CredentialSpec struct {
 	// Reference to the ManagedApplication for which the Credential belongs to
 	ManagedApplication string `json:"managedApplication"`
 	// data matching the credential request definition schema. (management.v1alpha1.Credential)
-	Data map[string]interface{} `json:"data"`
+	Data  map[string]interface{} `json:"data"`
+	State CredentialSpecState    `json:"state,omitempty"`
 }

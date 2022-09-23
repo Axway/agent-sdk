@@ -1,5 +1,7 @@
 package provisioning
 
+import "time"
+
 const (
 	apiKey = "api-key"
 	oauth  = "oauth"
@@ -9,20 +11,27 @@ const (
 // Credential - holds the details about the credential to send to encrypt and send to platform
 type Credential interface {
 	GetData() map[string]interface{}
+	GetExpirationTime() time.Time
 }
 
 type credential struct {
 	Credential
 	credentialType string
 	data           map[string]interface{}
+	expTime        time.Time
 }
 
 func (c credential) GetData() map[string]interface{} {
 	return c.data
 }
 
+func (c credential) GetExpirationTime() time.Time {
+	return c.expTime
+}
+
 // CredentialBuilder - builder to create new credentials to send to Central
 type CredentialBuilder interface {
+	SetExpirationTime(expTime time.Time) CredentialBuilder
 	SetOAuthID(id string) Credential
 	SetOAuthIDAndSecret(id, secret string) Credential
 	SetAPIKey(key string) Credential
@@ -66,6 +75,12 @@ func (c *credentialBuilder) SetAPIKey(key string) Credential {
 		APIKey: key,
 	}
 	return c.credential
+}
+
+// SetExpirationTime - set the credential expiration time
+func (c *credentialBuilder) SetExpirationTime(expTime time.Time) CredentialBuilder {
+	c.credential.expTime = expTime
+	return c
 }
 
 // SetCredential - set the credential

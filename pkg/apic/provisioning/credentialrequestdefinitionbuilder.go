@@ -17,9 +17,13 @@ type credentialRequestDef struct {
 	provisionSchema map[string]interface{}
 	requestSchema   map[string]interface{}
 	webhooks        []string
+	actions         []string
 	registerFunc    RegisterCredentialRequestDefinition
 	err             error
 	agentDetails    map[string]interface{}
+	renewable       bool
+	suspendable     bool
+	period          int
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -31,6 +35,10 @@ type CredentialRequestBuilder interface {
 	SetWebhooks(webhooks []string) CredentialRequestBuilder
 	AddWebhook(webhook string) CredentialRequestBuilder
 	AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder
+	IsRenewable() CredentialRequestBuilder
+	IsSuspendable() CredentialRequestBuilder
+	SetExpirationDays(days int) CredentialRequestBuilder
+	SetDeprovisionExpired() CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
@@ -39,6 +47,7 @@ func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialR
 	return &credentialRequestDef{
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,
+		actions:      make([]string, 0),
 		agentDetails: map[string]interface{}{},
 	}
 }
@@ -51,7 +60,7 @@ func (c *credentialRequestDef) AddXAgentDetails(key string, value interface{}) C
 
 // SetName - set the name of the credential request
 func (c *credentialRequestDef) SetName(name string) CredentialRequestBuilder {
-	c.name = name
+	c.name = util.NormalizeNameForCentral(name)
 	return c
 }
 
@@ -105,7 +114,31 @@ func (c *credentialRequestDef) AddWebhook(webhook string) CredentialRequestBuild
 	return c
 }
 
-// Register - create the credential request defintion and send it to Central
+// IsRenewable - the credential can be asked to be renewed
+func (c *credentialRequestDef) IsRenewable() CredentialRequestBuilder {
+	c.renewable = true
+	return c
+}
+
+// IsSuspendable - the credential can be asked to be suspended
+func (c *credentialRequestDef) IsSuspendable() CredentialRequestBuilder {
+	c.suspendable = true
+	return c
+}
+
+// SetExpirationDays - the number of days a credential of this type can live
+func (c *credentialRequestDef) SetExpirationDays(days int) CredentialRequestBuilder {
+	c.period = days
+	return c
+}
+
+// SetDeprovisionExpired - when set the agent will remove expired credentials from the data plane
+func (c *credentialRequestDef) SetDeprovisionExpired() CredentialRequestBuilder {
+	c.actions = append(c.actions, "deprovision")
+	return c
+}
+
+// Register - create the credential request definition and send it to Central
 func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
 		return nil, c.err
@@ -119,7 +152,17 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		Schema: c.requestSchema,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
+			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{
+				Renewable:   c.renewable,
+				Suspendable: c.suspendable,
+			},
 		},
+	}
+
+	if c.period > 0 {
+		spec.Provision.Policies.Expiry = &management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
+			Period: int32(c.period),
+		}
 	}
 
 	hashInt, _ := util.ComputeHash(spec)

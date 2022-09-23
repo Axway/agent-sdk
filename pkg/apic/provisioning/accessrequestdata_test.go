@@ -28,8 +28,7 @@ func TestAccessRequestDataBuilder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := provisioning.NewAccessDataBuilder()
 
-			var accData provisioning.AccessData
-			accData = builder.SetData(tt.data)
+			accData := builder.SetData(tt.data)
 
 			assert.NotNil(t, accData)
 			assert.Equal(t, tt.data, accData.GetData())

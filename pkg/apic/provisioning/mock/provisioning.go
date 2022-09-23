@@ -38,6 +38,7 @@ type MockCredentialRequest struct {
 	CredDefName string
 	Details     map[string]string
 	CredData    map[string]interface{}
+	Action      provisioning.CredentialAction
 }
 
 func (m MockCredentialRequest) GetApplicationName() string {
@@ -49,7 +50,7 @@ func (m MockCredentialRequest) GetID() string {
 }
 
 func (m MockCredentialRequest) GetName() string {
-	return m.AppName
+	return m.Name
 }
 
 func (m MockCredentialRequest) GetCredentialDetailsValue(key string) string {
@@ -66,6 +67,10 @@ func (m MockCredentialRequest) GetCredentialType() string {
 
 func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 	return m.CredData
+}
+
+func (m MockCredentialRequest) GetCredentialAction() provisioning.CredentialAction {
+	return m.Action
 }
 
 func (m MockCredentialRequest) IsIDPCredential() bool {
@@ -91,6 +96,7 @@ type MockAccessRequest struct {
 	AccessRequestProvisioningData interface{}
 	QuotaLimit                    int64
 	QuotaInterval                 provisioning.QuotaInterval
+	PlanName                      string
 }
 
 func (m MockAccessRequest) GetID() string {
@@ -126,6 +132,10 @@ func (m MockAccessRequest) GetQuota() provisioning.Quota {
 		return nil
 	}
 	return m
+}
+
+func (m MockAccessRequest) GetPlanName() string {
+	return m.PlanName
 }
 
 func (m MockAccessRequest) GetLimit() int64 {

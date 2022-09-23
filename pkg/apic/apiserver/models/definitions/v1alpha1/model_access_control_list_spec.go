@@ -1,6 +1,6 @@
 package definitions
 
-// GENERATE: All of the code below was replaced after code gneration
+// GENERATE: All of the code below was replaced after code generation
 
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 

@@ -44,8 +44,15 @@ type {{.res.kind}} struct {
 	{{range $field, $isNotEmpty := .res.fields -}}
 		{{$type := $field | strings.Title -}}
 		{{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
-        {{- $type}} {{if $isNotEmpty}} {{ $varName }}{{ $type }} {{else}} {{if eq $type "Owner"}} *apiv1.Owner {{else}} interface{} {{end}} {{end}} `json:"{{$field | strings.ToLower}}"`
-	{{end}}
+        {{- $type }} {{ if $isNotEmpty -}}
+                        {{ $varName }}{{ $type }} 
+                    {{- else -}} 
+                        {{- if eq $type "Owner" }} *apiv1.Owner 
+                        {{- else }} interface{} 
+                        {{- end -}} 
+                    {{- end -}} 
+                        `json:"{{$field | strings.ToLower}}"`
+	                {{ end }}
 }
 
 // New{{.res.kind}} creates an empty *{{.res.kind}}

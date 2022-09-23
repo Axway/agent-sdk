@@ -13,4 +13,6 @@ package catalog
 type CategorySpec struct {
 	// Markdown representing the category description.
 	Description string `json:"description,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Restriction interface{} `json:"restriction,omitempty"`
 }

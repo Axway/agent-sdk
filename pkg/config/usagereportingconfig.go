@@ -144,8 +144,8 @@ func (u *UsageReportingConfiguration) Validate() {
 	}
 
 	u.validateInterval() // DEPRECATE
-	eventAggSeconds := u.Interval
-	if eventAggSeconds < 60*time.Second {
+	eventAgg := u.Interval
+	if eventAgg < 60*time.Second {
 		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingInterval))
 	}
 
