@@ -39,7 +39,7 @@ type Subscription struct {
 	Marketplace SubscriptionMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner            `json:"owner"`
 	Spec        SubscriptionSpec        `json:"spec"`
-	// 	Status      SubscriptionStatus      `json:"status"`
+	// Status      SubscriptionStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -189,7 +189,7 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

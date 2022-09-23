@@ -38,10 +38,11 @@ type AccessRequest struct {
 	Data  interface{}  `json:"data"`
 	Owner *apiv1.Owner `json:"owner"`
 	// GENERATE: The following code has been modified after code generation
-	// 	References interface{}         `json:"references"`
+	//
+	//	References interface{}         `json:"references"`
 	References []interface{}     `json:"references"`
 	Spec       AccessRequestSpec `json:"spec"`
-	// 	Status     AccessRequestStatus `json:"status"`
+	// Status     AccessRequestStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -197,7 +198,7 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

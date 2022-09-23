@@ -21,6 +21,8 @@ const (
 	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
+
+	CredExpDetail = "Agent: CredentialExpired"
 )
 
 // RequestType - the type of credential request being sent
@@ -80,6 +82,30 @@ func (c State) String() string {
 	}[c]
 }
 
+// CredentialAction - the Action the agent needs to take for this CredentialUpdate request
+type CredentialAction int
+
+const (
+	// Enable - enable a credential
+	Enable CredentialAction = iota + 1
+	// Suspend - disable a credential
+	Suspend
+	// Rotate - create a new secret for a credential
+	Rotate
+	// Expire - mark the credential as expired
+	Expire
+)
+
+// String returns the string value of the CredentialAction
+func (c CredentialAction) String() string {
+	return map[CredentialAction]string{
+		Enable:  "Enable",
+		Suspend: "Suspend",
+		Rotate:  "Rotate",
+		Expire:  "Expire",
+	}[c]
+}
+
 // Provisioning - interface to be implemented by agents for access provisioning
 type Provisioning interface {
 	AccessRequestDeprovision(AccessRequest) RequestStatus
@@ -88,4 +114,5 @@ type Provisioning interface {
 	ApplicationRequestProvision(ApplicationRequest) RequestStatus
 	CredentialDeprovision(CredentialRequest) RequestStatus
 	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
+	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
 }

@@ -76,6 +76,7 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	prop, err := property.Build()
 	if err == nil {
 		s.properties[prop.Name] = *prop
+
 		// If property order wasn't set, add property as they come in
 		if !s.propertyOrderSet {
 			s.propertyOrder = append(s.propertyOrder, prop.Name)
@@ -120,12 +121,21 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	}
 
 	// validate that the properties in the property order were added
+	// and that all props in property order are only in once
 	if len(s.propertyOrder) > 0 {
+		newOrder := []string{}
+		props := map[string]struct{}{}
 		for _, orderedProperty := range s.propertyOrder {
 			if _, ok := s.properties[orderedProperty]; !ok {
 				log.Warnf("ordered property %s, was not added as a property", orderedProperty)
 			}
+
+			if _, ok := props[orderedProperty]; !ok {
+				newOrder = append(newOrder, orderedProperty)
+				props[orderedProperty] = struct{}{}
+			}
 		}
+		s.propertyOrder = newOrder
 	}
 
 	// Create the list of required properties

@@ -12,7 +12,7 @@ import (
 // Makes call to ValidateCfg method except if the struct variable is of CentralConfig type
 // as the validation for CentralConfig is already done during parseCentralConfig
 func ValidateConfig(cfg interface{}) error {
-	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IConfigValidator interface
+	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embeds the IConfigValidator interface
 	// within its struct, but does NOT implement the ValidateCfg method. While it might be that this method really isn't necessary, we will
 	// log an error alerting the user in case it wasn't intentional.
 	defer util.HandleInterfaceFuncNotImplemented(cfg, "ValidateCfg", "IConfigValidator")
@@ -63,14 +63,11 @@ func validateFields(cfg interface{}, v reflect.Value) error {
 }
 
 func shouldValidateField(cfg interface{}, fieldInterface interface{}) bool {
-	_, isToplevelCentrlCfg := cfg.(CentralConfig)
-	if isToplevelCentrlCfg {
+	_, isTopLevelCentralCfg := cfg.(CentralConfig)
+	if isTopLevelCentralCfg {
 		return true
 	}
 
 	_, isFieldCentralCfg := fieldInterface.(CentralConfig)
-	if !isFieldCentralCfg {
-		return true
-	}
-	return false
+	return !isFieldCentralCfg
 }

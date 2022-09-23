@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
@@ -226,7 +225,7 @@ func TestParseAddr(t *testing.T) {
 }
 
 func TestComputeKIDFromDER(t *testing.T) {
-	key, err := ioutil.ReadFile("testdata/public_key")
+	key, err := os.ReadFile("testdata/public_key")
 	if err != nil {
 		t.Errorf("unable to read public_key")
 	}
@@ -240,7 +239,7 @@ func TestComputeKIDFromDER(t *testing.T) {
 	}
 
 	// der file format
-	key, err = ioutil.ReadFile("testdata/public_key.der")
+	key, err = os.ReadFile("testdata/public_key.der")
 	if err != nil {
 		t.Errorf("unable to read public_key.der")
 	}

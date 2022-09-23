@@ -39,7 +39,7 @@ type ProductPlan struct {
 	References ProductPlanReferences `json:"references"`
 	Spec       ProductPlanSpec       `json:"spec"`
 	State      ProductPlanState      `json:"state"`
-	// 	Status     ProductPlanStatus     `json:"status"`
+	// Status     ProductPlanStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -189,7 +189,7 @@ func (res *ProductPlan) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

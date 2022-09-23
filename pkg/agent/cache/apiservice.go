@@ -77,7 +77,6 @@ func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	api, _ := c.apiMap.Get(apiID)
 	if api == nil {
 		api, _ = c.apiMap.GetBySecondaryKey(apiID)
-		api, _ = c.apiMap.GetBySecondaryKey(apiID)
 	}
 
 	if api != nil {

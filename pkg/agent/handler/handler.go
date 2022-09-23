@@ -44,7 +44,7 @@ type client interface {
 	GetResource(url string) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
-	DeleteResourceInstance(ri v1.Interface) error
+	UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error)
 }
 
 func isStatusFound(rs *v1.ResourceStatus) bool {

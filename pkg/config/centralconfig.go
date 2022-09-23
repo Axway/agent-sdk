@@ -126,6 +126,7 @@ type CentralConfig interface {
 	GetMigrationSettings() MigrationConfig
 	GetWatchResourceFilters() []ResourceFilter
 	SetWatchResourceFilters([]ResourceFilter) error
+	GetCredentialConfig() CredentialConfig
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -158,6 +159,7 @@ type CentralConfiguration struct {
 	GRPCCfg                   GRPCConfig           `config:"grpc"`
 	CacheStoragePath          string               `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration        `config:"cacheStorageInterval"`
+	CredentialConfig          CredentialConfig     `config:"credential"`
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
@@ -194,6 +196,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		CacheStorageInterval:      10 * time.Second,
 		GRPCCfg:                   GRPCConfig{},
 		MigrationSettings:         newMigrationConfig(),
+		CredentialConfig:          newCredentialConfig(),
 	}
 }
 
@@ -488,6 +491,11 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
+// GetCredentialConfig -
+func (c *CentralConfiguration) GetCredentialConfig() CredentialConfig {
+	return c.CredentialConfig
+}
+
 // IsUsingGRPC -
 func (c *CentralConfiguration) IsUsingGRPC() bool {
 	return c.GRPCCfg.Enabled
@@ -757,6 +765,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 		AddMigrationConfigProperties(props)
+		AddCredentialConfigProperties(props)
 	}
 }
 
@@ -831,6 +840,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
+		cfg.CredentialConfig = ParseCredentialConfig(props)
 	}
 	return cfg, nil
 }

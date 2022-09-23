@@ -2,7 +2,6 @@ package agent
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/migrate"
@@ -113,29 +112,12 @@ func (dc *discoveryCache) execute() error {
 }
 
 func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) error {
-	errCh := make(chan error, len(discoveryFuncs))
-	wg := &sync.WaitGroup{}
-
 	for _, fun := range discoveryFuncs {
-		wg.Add(1)
-
-		go func(f func() error) {
-			defer wg.Done()
-
-			err := f()
-			errCh <- err
-		}(fun)
-	}
-
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return e
+		err := fun()
+		if err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 

@@ -14,6 +14,7 @@ const (
 
 	pathExternalIDP     = "agentFeatures.idp"
 	fldName             = "name"
+	fldTitle            = "title"
 	fldType             = "type"
 	fldMetadataURL      = "metadataUrl"
 	fldExtraProperties  = "extraProperties"
@@ -29,6 +30,7 @@ const (
 
 var configProperties = []string{
 	fldName,
+	fldTitle,
 	fldType,
 	fldMetadataURL,
 	fldExtraProperties,
@@ -115,6 +117,8 @@ type IDPConfig interface {
 	GetIDPType() string
 	// GetIDPName - for the identity provider
 	GetIDPName() string
+	// GetIDPTitle - for the identity provider friendly name
+	GetIDPTitle() string
 	// GetAuthConfig - to be used for authentication with IDP
 	GetAuthConfig() IDPAuthConfig
 	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
@@ -143,6 +147,7 @@ type IDPAuthConfiguration struct {
 // IDPConfiguration - Structure to hold the IdP provider config
 type IDPConfiguration struct {
 	Name             string          `json:"name,omitempty"`
+	Title            string          `json:"title,omitempty"`
 	Type             string          `json:"type,omitempty"`
 	MetadataURL      string          `json:"metadataUrl,omitempty"`
 	AuthConfig       IDPAuthConfig   `json:"auth,omitempty"`
@@ -156,6 +161,11 @@ type IDPConfiguration struct {
 // GetIDPName - for the identity provider
 func (i *IDPConfiguration) GetIDPName() string {
 	return i.Name
+}
+
+// GetIDPName - for the identity provider frinedly name
+func (i *IDPConfiguration) GetIDPTitle() string {
+	return i.Title
 }
 
 // GetIDPType - IDP type ("generic" or "okta")
@@ -202,6 +212,9 @@ func (i *IDPConfiguration) GetAuthResponseType() string {
 func (i *IDPConfiguration) validate() {
 	if i.Name == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldName))
+	}
+	if i.Title == "" {
+		i.Title = i.Name
 	}
 
 	if i.MetadataURL == "" {

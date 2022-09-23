@@ -40,6 +40,8 @@ type Product struct {
 	References ProductReferences `json:"references"`
 	Spec       ProductSpec       `json:"spec"`
 	State      ProductState      `json:"state"`
+	// Status     ProductStatus     `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // NewProduct creates an empty *Product
@@ -123,6 +125,7 @@ func (res *Product) MarshalJSON() ([]byte, error) {
 	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["state"] = res.State
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -189,6 +192,22 @@ func (res *Product) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "state")
 		err = json.Unmarshal(sr, &res.State)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "status")
+		// err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

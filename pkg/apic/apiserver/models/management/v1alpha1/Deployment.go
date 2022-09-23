@@ -38,7 +38,7 @@ type Deployment struct {
 	Owner      *apiv1.Owner         `json:"owner"`
 	References DeploymentReferences `json:"references"`
 	Spec       DeploymentSpec       `json:"spec"`
-	// 	Status     DeploymentStatus     `json:"status"`
+	// Status     DeploymentStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -179,7 +179,7 @@ func (res *Deployment) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

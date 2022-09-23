@@ -37,9 +37,11 @@ type Credential struct {
 	apiv1.ResourceMeta
 	Data       interface{}          `json:"data"`
 	Owner      *apiv1.Owner         `json:"owner"`
+	Policies   CredentialPolicies   `json:"policies"`
 	References CredentialReferences `json:"references"`
 	Spec       CredentialSpec       `json:"spec"`
-	// 	Status     CredentialStatus     `json:"status"`
+	State      CredentialState      `json:"state"`
+	// Status     CredentialStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -127,8 +129,10 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 
 	out["data"] = res.Data
 	out["owner"] = res.Owner
+	out["policies"] = res.Policies
 	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
@@ -173,6 +177,20 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 		}
 	}
 
+	// marshalling subresource Policies
+	if v, ok := aux.SubResources["policies"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "policies")
+		err = json.Unmarshal(sr, &res.Policies)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource References
 	if v, ok := aux.SubResources["references"]; ok {
 		sr, err = json.Marshal(v)
@@ -187,6 +205,20 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 		}
 	}
 
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource Status
 	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
@@ -195,7 +227,7 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// 		err = json.Unmarshal(sr, &res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
 		res.Status = &apiv1.ResourceStatus{}
 		err = json.Unmarshal(sr, res.Status)
 		if err != nil {

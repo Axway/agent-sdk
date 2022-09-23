@@ -41,7 +41,7 @@ func TestCategoryConfig(t *testing.T) {
 	validatecategoryconfig(t, defaultExpectedCategoryConfig, cfg)
 
 	// update auto creation
-	cfg = newCategoryConfig()
+	newCategoryConfig()
 	rootCmd := &cobra.Command{}
 	props := properties.NewProperties(rootCmd)
 	props.AddBoolProperty(fmt.Sprintf("%s.%s", testBasePath, pathCategoryAutoCreation), true, "")
@@ -51,7 +51,7 @@ func TestCategoryConfig(t *testing.T) {
 	validatecategoryconfig(t, expected, cfg)
 
 	// set a mapping
-	cfg = newCategoryConfig()
+	newCategoryConfig()
 	rootCmd = &cobra.Command{}
 	props = properties.NewProperties(rootCmd)
 	props.AddBoolProperty(fmt.Sprintf("%s.%s", testBasePath, pathCategoryAutoCreation), true, "")

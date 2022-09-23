@@ -51,6 +51,10 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 								SetName("prop").
 								IsString())).
 				SetWebhooks([]string{"webhook1", "webhook2"}).
+				IsRenewable().
+				IsSuspendable().
+				SetExpirationDays(90).
+				SetDeprovisionExpired().
 				AddWebhook("webhook3")
 
 			if tt.wantErr {

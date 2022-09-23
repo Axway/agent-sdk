@@ -276,9 +276,9 @@ func (c *itemCache) getItemsByForeignKeys(thisAction cacheAction) (thisReply cac
 	for _, item := range c.Items {
 		if item.ForeignKey == thisAction.forKey {
 			items = append(items, item)
-
 		}
 	}
+
 	thisReply = cacheReply{
 		items: items,
 		err:   nil,
@@ -419,7 +419,7 @@ func (c *itemCache) delete(thisAction cacheAction) (thisReply cacheReply) {
 	return
 }
 
-//deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
+// deleteSecondaryKey - removes a secondary key reference in the cache, but locks the items before doing so
 func (c *itemCache) deleteSecondaryKey(thisAction cacheAction) (thisReply cacheReply) {
 	secondaryKey := thisAction.secKey
 
@@ -429,7 +429,7 @@ func (c *itemCache) deleteSecondaryKey(thisAction cacheAction) (thisReply cacheR
 	return
 }
 
-//removeSecondaryKey - removes a secondary key reference in the cache
+// removeSecondaryKey - removes a secondary key reference in the cache
 func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	// Check that the secondaryKey given is in the cache
 	key, ok := c.SecKeys[secondaryKey]
@@ -442,7 +442,7 @@ func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	return nil
 }
 
-//deleteForeignKey - removes a foreign key reference in the cache, but locks the items before doing so
+// deleteForeignKey - removes a foreign key reference in the cache, but locks the items before doing so
 func (c *itemCache) deleteForeignKey(thisAction cacheAction) (thisReply cacheReply) {
 	key := thisAction.key
 
