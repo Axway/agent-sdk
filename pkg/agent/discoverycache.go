@@ -125,7 +125,7 @@ func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 	resources := make(map[string]discoverFunc)
 
 	for _, filter := range dc.watchTopic.Spec.Filters {
-		dc.logger.Debugf("adding function %s to be executed", filter.Name)
+		dc.logger.Debugf("adding function %s to be executed", filter.Kind)
 		f := dc.buildResourceFunc(filter)
 		if !isMPResource(filter.Kind) {
 			resources[filter.Kind] = f

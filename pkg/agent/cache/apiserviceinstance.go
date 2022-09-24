@@ -11,6 +11,9 @@ import (
 // AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
+	c.logger.
+		WithField("resource", resource.Name).
+		Trace("AddAPIServiceInstance")
 
 	cachedRI, _ := c.GetAPIServiceInstanceByID(resource.Metadata.ID)
 	c.instanceMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
@@ -104,6 +107,11 @@ func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
 
 // countCachedInstancesForAPIService - count any instances in the cache for the newly added api
 func (c *cacheManager) countCachedInstancesForAPIService(apiID, primaryKey string) {
+	c.logger.
+		WithField("primary-key", primaryKey).
+		WithField("api-id", apiID).
+		Trace("countCachedInstancesForAPIService")
+
 	for _, k := range c.instanceMap.GetKeys() {
 		item, _ := c.instanceMap.Get(k)
 		inst, ok := item.(*v1.ResourceInstance)
