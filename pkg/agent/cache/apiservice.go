@@ -152,8 +152,14 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 	return err
 }
 
-func formatKey(svcName string) string {
-	return fmt.Sprintf("count-%v", svcName)
+// FormatKey -
+func (c *cacheManager) FormatKey(svcName string) string {
+	formatKey := fmt.Sprintf("count-%v", svcName)
+	c.logger.
+		WithField("svc-name", svcName).
+		WithField("format-key", formatKey).
+		Debug("format key to be stored for instance count")
+	return formatKey
 }
 
 func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error {
@@ -162,10 +168,14 @@ func (c *cacheManager) addToServiceInstanceCount(apiID, primaryKey string) error
 		svc = c.GetAPIServiceWithAPIID(apiID)
 		if svc == nil {
 			// can't increment a count for a service we can't find
+			c.logger.
+				WithField("primary-key", primaryKey).
+				WithField("api-id", apiID).
+				Debug("cannot increment a count for a service we cannot find")
 			return nil
 		}
 	}
-	key := formatKey(svc.Name)
+	key := c.FormatKey(svc.Name)
 
 	svcCountI, _ := c.instanceCountMap.Get(key)
 	svcCount := apiServiceToInstanceCount{}
@@ -192,7 +202,7 @@ func (c *cacheManager) removeFromServiceInstanceCount(apiID, primaryKey string) 
 			return nil
 		}
 	}
-	key := formatKey(svc.Name)
+	key := c.FormatKey(svc.Name)
 
 	svcCountI, err := c.instanceCountMap.Get(key)
 	if err != nil {
@@ -213,7 +223,7 @@ func (c *cacheManager) deleteAllServiceInstanceCounts() {
 }
 
 func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
-	key := formatKey(svcName)
+	key := c.FormatKey(svcName)
 
 	svcCountI, err := c.instanceCountMap.Get(key)
 	if err != nil {
