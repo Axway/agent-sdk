@@ -410,6 +410,12 @@ func Test_creds(t *testing.T) {
 			"def": "789",
 		},
 		id: "cred-id",
+		credSchema: map[string]interface{}{
+			"properties": "test",
+		},
+		credProvSchema: map[string]interface{}{
+			"properties": "test",
+		},
 	}
 
 	assert.Equal(t, c.managedApp, c.GetApplicationName())
@@ -418,11 +424,20 @@ func Test_creds(t *testing.T) {
 	assert.Equal(t, c.credData, c.GetCredentialData())
 	assert.Equal(t, c.credDetails["abc"], c.GetCredentialDetailsValue("abc"))
 	assert.Equal(t, c.appDetails["def"], c.GetApplicationDetailsValue("def"))
+	assert.Equal(t, c.credSchema, c.GetCredentialSchema())
+	assert.Equal(t, c.credProvSchema, c.GetCredentialProvisionSchema())
+	assert.Empty(t, c.GetCredentialSchemaDetailsValue("prop"))
+
+	c.credSchemaDetails = map[string]interface{}{
+		"detail": "test",
+	}
+	assert.Equal(t, c.credSchemaDetails["prop"], c.GetCredentialSchemaDetailsValue("prop"))
 
 	c.credDetails = nil
 	c.appDetails = nil
 	assert.Empty(t, c.GetApplicationDetailsValue("app_details_key"))
 	assert.Empty(t, c.GetCredentialDetailsValue("access_details_key"))
+	assert.Empty(t, c.GetCredentialSchemaDetailsValue("invalid_key"))
 }
 
 func TestIDPCredentialProvisioning(t *testing.T) {
