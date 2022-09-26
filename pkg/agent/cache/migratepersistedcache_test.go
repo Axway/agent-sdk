@@ -15,7 +15,7 @@ func TestMigrateInstanceCount(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 	assert.NotNil(t, m)
 
-	api1 := createAPIService("id1", "apiID", "")
+	api1 := createAPIService("apiID", "apiID", "")
 	err := m.AddAPIService(api1)
 	assert.Nil(t, err)
 
@@ -37,9 +37,10 @@ func TestMigrateInstanceCount(t *testing.T) {
 	count := m.GetAPIServiceInstanceCount(api1.Name)
 	assert.Equal(t, 2, count)
 
+	// instance count not updated properly check
 	m.(*cacheManager).instanceCountMap = cache.New()
 	count = m.GetAPIServiceInstanceCount(api1.Name)
-	assert.Equal(t, 0, count)
+	assert.Equal(t, 2, count)
 
 	m.(*cacheManager).migratePersistentCache(instanceCountKey)
 
