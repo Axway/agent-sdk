@@ -24,7 +24,6 @@ jobs:
         working-directory: .
     steps:
       - name: Checkout main
-        id: vars
         uses: actions/checkout@v2
         with:
           ref: main
