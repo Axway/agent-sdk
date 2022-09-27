@@ -42,7 +42,7 @@ jobs:
           echo ::set-output name=major_ver::$(echo {FOO#refs/*/*.} | cut -d. -f2)
           echo ::set-output name=minor_ver::$(echo {FOO#refs/*/} | cut -d. -f2)
           # echo ::set-output name=patch_ver::$(echo {FOO#refs/*/} | cut -d. -f3)
-          let x=$(echo {FOO#refs/*/} | cut -d. -f3)
+          let x=echo $({FOO#refs/*/} | cut -d. -f3)
           echo "$x"
           # echo ::set-output name=major2_ver::${x}
           # echo ::set-output name=major_ver::${GITHUB_REF#refs/*/} | cut -d. -f1
