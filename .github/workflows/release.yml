@@ -42,6 +42,7 @@ jobs:
           echo ::set-output name=major_ver::${FOO#refs/*/*.}
           echo ::set-output name=minor_ver::${FOO#refs/*/*.*.}
           echo ::set-output name=patch_ver::${FOO#refs/*/*.*.*}
+          echo ::set-output name=major_ver2::(${GITHUB_REF#refs/*/} | cut -d. -f1)
           # echo ::set-output name=major_ver::${GITHUB_REF#refs/*/} | cut -d. -f1
           # echo ::set-output name=minor_ver::${GITHUB_REF#refs/*/} | cut -d. -f2
           # echo ::set-output name=patch_ver::${GITHUB_REF#refs/*/} | cut -d. -f3
@@ -54,6 +55,7 @@ jobs:
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
         run: |
           echo "major ${{ steps.vars.outputs.major_ver }}"
+          echo "major2 ${{ steps.vars.outputs.major2_ver }}"
           echo "minor ${{ steps.vars.outputs.minor_ver }}"
           echo "patch ${{ steps.vars.outputs.patch_ver }}"
           echo "next ${{ steps.vars.outputs.patch_ver }}"
