@@ -28,9 +28,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: main
-      - name: Update version file
-        working-directory: ./build/scripts
-        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+      - name: Set version variables
+        id: vars
         run: |
           echo "github_ref ${GITHUB_REF}"
           echo "github_ref_name ${GITHUB_REF_NAME}"
@@ -42,19 +41,23 @@ jobs:
           export FOO="/refs/tags/v1.2.3"
           echo "foo ${FOO#refs/*/}"
           echo ::set-output name=major_ver::${FOO#refs/*/} | cut -d. -f1
-          echo "major ${{ steps.vars.outputs.major_ver }}"
           echo ::set-output name=minor_ver::${FOO#refs/*/} | cut -d. -f2
-          echo "minor ${{ steps.vars.outputs.minor_ver }}"
           echo ::set-output name=patch_ver::${FOO#refs/*/} | cut -d. -f3
-          echo "patch ${{ steps.vars.outputs.patch_ver }}"
           # echo ::set-output name=major_ver::${GITHUB_REF#refs/*/} | cut -d. -f1
           # echo ::set-output name=minor_ver::${GITHUB_REF#refs/*/} | cut -d. -f2
           # echo ::set-output name=patch_ver::${GITHUB_REF#refs/*/} | cut -d. -f3
           echo ::set-output name=next_ver::${{ steps.vars.outputs.patch_ver }} + 1
           echo "here1"
-          echo "next ${{ steps.vars.outputs.patch_ver }}"
           echo "here2"
           echo ::set-output name=new_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.next_ver }}
+      - name: Update version file
+        working-directory: ./build/scripts
+        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+        run: |
+          echo "major ${{ steps.vars.outputs.major_ver }}"
+          echo "minor ${{ steps.vars.outputs.minor_ver }}"
+          echo "patch ${{ steps.vars.outputs.patch_ver }}"
+          echo "next ${{ steps.vars.outputs.patch_ver }}"
           echo "next ${{ steps.vars.outputs.new_ver }}"
 
       #     ./promote.sh ${GITHUB_REF}
