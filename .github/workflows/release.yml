@@ -46,8 +46,8 @@ jobs:
           echo "tag1 $tag"
           tag=$(echo ${FOO#*v} | cut -d. -f3)
           echo "tag2 $tag"
-          next_patch={${tag}+"1"}
-          next_patch1=$({tag}+"1")
+          next_patch=echo $((${tag}+"1"))
+          next_patch1=echo $((${tag}+1))
           echo "next_patch ${next_patch}"
           echo "next_patch1 ${next_patch1}"
           echo ::set-output name=major_ver::$(echo ${FOO#refs/*/} | cut -d. -f1)
