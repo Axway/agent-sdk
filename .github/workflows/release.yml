@@ -28,6 +28,7 @@ jobs:
         with:
           ref: main
       - name: Update version file
+        id: vars
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
         run: |
