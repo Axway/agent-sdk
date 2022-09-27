@@ -39,7 +39,7 @@ jobs:
           echo "tag ${GITHUB_REF#refs/*/}"
           export FOO="/refs/tags/v1.2.3"
           echo "foo ${FOO#refs/*/}"
-          echo "foo1 ${FOO#refs/*/v}"
+          echo "foo1 ${FOO#*v}"
           tag=$(echo ${FOO} | cut -d/ -f3)
           echo "tag $tag"
           tag=$(echo ${foo1} | cut -d/ -f1)
