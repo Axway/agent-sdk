@@ -31,14 +31,8 @@ jobs:
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
         run: |
-          ./promote.sh ${GITHUB_REF}
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v4
-        with:
-          branch: APIGOV-updateversion
-          commit-message: INT - update to new release ${GITHUB_REF_NAME}
-          title: INT - update to new release ${GITHUB_REF_NAME}
-          base: main
-          delete-branch: true
+          echo "${GITHUB_REF}"
+          echo "${GITHUB_REF_NAME}"
+          echo "INT - update to new release ${GITHUB_REF_NAME}"
 
      
