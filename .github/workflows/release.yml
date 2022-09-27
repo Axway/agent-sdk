@@ -39,9 +39,9 @@ jobs:
           echo "tag ${GITHUB_REF#refs/*/}"
           export FOO="/refs/tags/v1.2.3"
           echo "foo ${FOO#refs/*/}"
-          echo ::set-output name=major_ver::${FOO#refs/*/} | cut -d. -f1
-          echo ::set-output name=minor_ver::${FOO#refs/*/} | cut -d. -f2
-          echo ::set-output name=patch_ver::${FOO#refs/*/} | cut -d. -f3
+          echo ::set-output name=major_ver::${FOO#refs/*/*.}
+          echo ::set-output name=minor_ver::${FOO#refs/*/*.*.}
+          echo ::set-output name=patch_ver::${FOO#refs/*/*.*.*}
           # echo ::set-output name=major_ver::${GITHUB_REF#refs/*/} | cut -d. -f1
           # echo ::set-output name=minor_ver::${GITHUB_REF#refs/*/} | cut -d. -f2
           # echo ::set-output name=patch_ver::${GITHUB_REF#refs/*/} | cut -d. -f3
