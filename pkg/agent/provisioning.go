@@ -54,12 +54,7 @@ func runMarketplaceMigration(ri *v1.ResourceInstance, marketplaceMigration migra
 		existingRI, _ = agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 	}
 
-	if existingRI == nil {
-		if marketplaceMigration != nil {
-			return true
-		}
-	}
-	return false
+	return existingRI == nil && marketplaceMigration != nil
 }
 
 // migrateMarketPlace -
