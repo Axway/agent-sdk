@@ -2,6 +2,7 @@ package agent
 
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -35,11 +36,25 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 		return nil, err
 	}
 
-	if marketplaceMigration != nil {
+	if runMarketplaceMigration(ri, marketplaceMigration) {
 		migrateMarketPlace(marketplaceMigration, ri)
 	}
 
 	return ri, nil
+}
+
+func runMarketplaceMigration(ri *v1.ResourceInstance, marketplaceMigration migrate.Migrator) bool {
+	// check if the KIND and ID combo have an item in the cache
+	var existingRI *apiv1.ResourceInstance
+
+	switch ri.Kind {
+	case management.AccessRequestDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
+	case management.CredentialRequestDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+	}
+
+	return existingRI == nil && marketplaceMigration != nil
 }
 
 // migrateMarketPlace -
@@ -71,30 +86,27 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 		var err error
 
 		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
 
-		// Check if migration already happened for apiservice
-		if !alreadyMigrated {
-			logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
-			mig.UpdateService(svc)
+		mig.UpdateService(svc)
 
-			// Mark marketplace migration completed here in provisioning
-			util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
-			ri, err = GetCentralClient().UpdateResourceInstance(svc)
+		// Mark marketplace migration completed here in provisioning
+		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
+		ri, err = GetCentralClient().UpdateResourceInstance(svc)
+		if err != nil {
+			return nil, err
+		}
+		//update sub resources
+		inst, err := svc.AsInstance()
+		if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
+			err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
 			if err != nil {
 				return nil, err
 			}
-			//update sub resources
-			inst, err := svc.AsInstance()
-			if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
-				err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
-				if err != nil {
-					return nil, err
-				}
-				log.Debugf("updated x-agent-details with marketplace-migration: completed")
-			}
+			log.Debugf("updated x-agent-details with marketplace-migration: completed")
 		}
+
 	}
 	return ri, nil
 }
