@@ -7,7 +7,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
-	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -52,30 +51,10 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 		agent.cacheManager.AddCredentialRequestDefinition(ri)
 	}
 
+	apiSvcResources := make([]*v1.ResourceInstance, 0)
+
 	cache := agent.cacheManager.GetAPIServiceCache()
 
-	apiSvcResources := getAPISvcResources(cache)
-	for _, svc := range apiSvcResources {
-
-		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
-
-		// Check if migration already happened for apiservice
-		if !alreadyMigrated {
-			logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
-
-			mig.UpdateService(svc)
-			err := setAgentDetails(svc, ri)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return ri, nil
-}
-
-func getAPISvcResources(cache cache.Cache) []*v1.ResourceInstance {
-	apiSvcResources := make([]*v1.ResourceInstance, 0)
 	for _, key := range cache.GetKeys() {
 		item, _ := cache.Get(key)
 		if item == nil {
@@ -87,27 +66,37 @@ func getAPISvcResources(cache cache.Cache) []*v1.ResourceInstance {
 			apiSvcResources = append(apiSvcResources, svc)
 		}
 	}
-	return apiSvcResources
-}
 
-func setAgentDetails(svc *v1.ResourceInstance, ri *v1.ResourceInstance) error {
-	var err error
-	// Mark marketplace migration completed here in provisioning
-	util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
-	ri, err = GetCentralClient().UpdateResourceInstance(svc)
-	if err != nil {
-		return err
-	}
-	//update sub resources
-	inst, err := svc.AsInstance()
-	if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
-		err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
-		if err != nil {
-			return err
+	for _, svc := range apiSvcResources {
+		var err error
+
+		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
+		alreadyMigrated := mig.InstanceAlreadyMigrated(svc)
+
+		// Check if migration already happened for apiservice
+		if !alreadyMigrated {
+			logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
+
+			mig.UpdateService(svc)
+
+			// Mark marketplace migration completed here in provisioning
+			util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
+			ri, err = GetCentralClient().UpdateResourceInstance(svc)
+			if err != nil {
+				return nil, err
+			}
+			//update sub resources
+			inst, err := svc.AsInstance()
+			if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
+				err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
+				if err != nil {
+					return nil, err
+				}
+				log.Debugf("updated x-agent-details with marketplace-migration: completed")
+			}
 		}
-		log.Debugf("updated x-agent-details with marketplace-migration: completed")
 	}
-	return nil
+	return ri, nil
 }
 
 // createOrUpdateCredentialRequestDefinition -
