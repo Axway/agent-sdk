@@ -106,6 +106,7 @@ replace (
 )
 
 retract ( // errored versions
+	[v1.1.35, v1.1.36]
 	[v1.1.21, v1.1.23]
 	v1.1.16
 	[v1.1.4, v1.1.9]
