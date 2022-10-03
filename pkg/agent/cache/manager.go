@@ -111,6 +111,7 @@ type Manager interface {
 	GetAccessRequest(id string) *v1.ResourceInstance
 	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error
+	ListAccessRequest() []*v1.ResourceInstance
 
 	GetWatchResourceCacheKeys(group, kind string) []string
 	AddWatchResource(resource *v1.ResourceInstance)
