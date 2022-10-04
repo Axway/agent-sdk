@@ -88,6 +88,10 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 		return
 	}
 
+	if cred.Policies.Expiry == nil {
+		return
+	}
+
 	expTime := time.Time(cred.Policies.Expiry.Timestamp)
 	if expTime.IsZero() {
 		// cred does not expire
