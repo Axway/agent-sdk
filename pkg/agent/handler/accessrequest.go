@@ -61,9 +61,9 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	// add or update the cache with the access request
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		h.cache.AddAccessRequest(resource)
-	}
+	// if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+	// 	h.cache.AddAccessRequest(resource)
+	// }
 
 	if ok := isStatusFound(ar.Status); !ok {
 		log.Debug("could not handle access request as it did not have a status subresource")
@@ -73,6 +73,10 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if ok := h.shouldProcessPending(ar.Status, ar.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		ar := h.onPending(ctx, ar)
+
+		ri, _ := ar.AsInstance()
+		defer h.cache.AddAccessRequest(ri)
+
 		err := h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
 			log.WithError(err).Error("error creating subresources")
