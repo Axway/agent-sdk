@@ -61,9 +61,9 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	// add or update the cache with the access request
-	// if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-	// 	h.cache.AddAccessRequest(resource)
-	// }
+	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+		h.cache.AddAccessRequest(resource)
+	}
 
 	if ok := isStatusFound(ar.Status); !ok {
 		log.Debug("could not handle access request as it did not have a status subresource")
