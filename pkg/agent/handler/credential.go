@@ -356,6 +356,8 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 			cred.Spec.State.Rotate = false
 			h.client.UpdateResourceInstance(cred)
 		}
+	} else if cred.State.Name == "" {
+		cred.State.Name = v1.Inactive
 	}
 
 	cred.SubResources = map[string]interface{}{
