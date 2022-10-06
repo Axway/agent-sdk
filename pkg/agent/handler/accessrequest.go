@@ -73,6 +73,10 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if ok := h.shouldProcessPending(ar.Status, ar.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		ar := h.onPending(ctx, ar)
+
+		ri, _ := ar.AsInstance()
+		defer h.cache.AddAccessRequest(ri)
+
 		err := h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		if err != nil {
 			log.WithError(err).Error("error creating subresources")
