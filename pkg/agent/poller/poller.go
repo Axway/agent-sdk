@@ -34,6 +34,10 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 		WithPackage("sdk.agent.poller")
 
 	ctx, cancel := context.WithCancel(context.Background())
+	//shouldn't be nil.  trace line used for triage purposes
+	if ctx != nil {
+		logger.Trace("context with cancel")
+	}
 
 	pm := &pollExecutor{
 		logger:   logger,
@@ -47,11 +51,15 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 		opt(pm)
 	}
 
+	logger.Trace("range through executor")
+
 	return pm
 }
 
 // RegisterWatch registers a watch topic for polling events and publishing events on a channel
 func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan error) {
+	m.logger.Trace("register watch topic for polling events")
+
 	if m.harvester == nil {
 		go func() {
 			m.Stop()
@@ -77,6 +85,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 }
 
 func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) error {
+	m.logger.Trace("poller sync execution")
 	if err := m.harvester.EventCatchUp(topicSelfLink, eventChan); err != nil {
 		m.logger.WithError(err).Error("harvester returned an error when syncing events")
 		m.onHarvesterErr()
@@ -84,8 +93,12 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 	}
 
 	m.lock.Lock()
+	m.logger.Trace("poller sync lock")
 	m.isReady = true
+
 	m.lock.Unlock()
+	m.logger.Trace("poller sync unlock, poller is ready")
+
 	for {
 		select {
 		case <-m.ctx.Done():
