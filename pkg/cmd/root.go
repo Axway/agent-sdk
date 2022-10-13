@@ -373,8 +373,8 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			// Check to confirm all health checks pass on start up before starting agent
 			status := hc.RunChecks()
 			if status != hc.OK {
-				log.Error("Stopping agent - Check docs.axway.com for more info on the reported error code")
-				os.Exit(0)
+				log.Error("Would be stopping agent - Check docs.axway.com for more info on the reported error code")
+				// os.Exit(0)
 			}
 
 			err = c.commandHandler()

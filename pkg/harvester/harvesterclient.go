@@ -120,9 +120,14 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 			QueryParams: pageableQueryParams,
 		}
 
+		h.logger.Tracef("request URL %s", req.URL)
+
 		req.Headers["Authorization"] = "Bearer " + token
 		req.Headers["X-Axway-Tenant-Id"] = h.Cfg.TenantID
 		req.Headers["Content-Type"] = "application/json"
+
+		h.logger.Trace("SEND IT")
+
 		res, err := h.Client.Send(req)
 		if err != nil {
 			h.logger.Tracef("send failure, tenantID %s, last id %d, and err - %s", h.Cfg.TenantID, lastID, err.Error())
