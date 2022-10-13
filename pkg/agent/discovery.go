@@ -5,6 +5,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -117,23 +118,31 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
-	agent.validatingGroup.Wait()
-	agent.publishingGroup.Add(1)
-	defer agent.publishingGroup.Done()
-	if agent.apicClient != nil {
-		if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-			var err error
-			_, err = publishAccessRequestDefinition(&serviceBody)
-			if err != nil {
-				return err
+
+	// Make sure all checks pass before continuing discovery
+	status := hc.RunChecks()
+	if status != hc.OK {
+		log.Warnf("Bypassing publishing of service %v until healthchecks are OK", serviceBody.APIName)
+	} else {
+		agent.validatingGroup.Wait()
+		agent.publishingGroup.Add(1)
+		defer agent.publishingGroup.Done()
+		if agent.apicClient != nil {
+			if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+				var err error
+				_, err = publishAccessRequestDefinition(&serviceBody)
+				if err != nil {
+					return err
+				}
+			}
+
+			_, err := agent.apicClient.PublishService(&serviceBody)
+			if err == nil {
+				log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 			}
 		}
-
-		_, err := agent.apicClient.PublishService(&serviceBody)
-		if err == nil {
-			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
-		}
 	}
+
 	return nil
 }
 

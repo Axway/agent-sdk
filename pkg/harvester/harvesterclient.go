@@ -175,19 +175,28 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	if h.Client == nil || h.Cfg.SequenceProvider == nil {
 		return nil
 	}
+	h.logger.Trace("event catch up")
 
 	sequenceID := h.Cfg.SequenceProvider.GetSequence()
+
+	h.logger.Trace("get initial %s", fmt.Sprintf("sequenceID = %d", sequenceID))
+
 	if sequenceID > 0 {
+		h.logger.Trace("sequenceID is greater than 0")
 		var err error
 		lastSequenceID, err := h.ReceiveSyncEvents(link, sequenceID, events)
+		h.logger.Trace("get initial %s", fmt.Sprintf("lastSequenceID = %d", lastSequenceID))
 		if err != nil {
 			return err
 		}
 
 		if lastSequenceID > 0 {
+			h.logger.Trace("lastSequenceID is greater than 0")
 			// wait for all current sequences to be processed before processing new ones
 			for sequenceID < lastSequenceID {
+				h.logger.Trace("sequenceID is less than lastSequenceID")
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
+				h.logger.Trace("now sequenceID is %s", fmt.Sprintf("lastSequenceID = %d", lastSequenceID))
 			}
 		} else {
 			return nil
@@ -195,7 +204,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	} else {
 		return nil
 	}
-
+	h.logger.Trace("keep looping")
 	return h.EventCatchUp(link, events)
 }
 
