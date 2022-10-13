@@ -11,7 +11,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -64,14 +63,9 @@ func NewPollClient(
 
 // Start the polling client
 func (p *PollClient) Start() error {
-	logger := log.NewFieldLogger().
-		WithComponent("pollExecutor").
-		WithPackage("sdk.agent.poller")
-
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
 
 	p.mutex.Lock()
-	logger.Trace("mutex lock")
 
 	p.listener = p.newListener(
 		eventCh,
@@ -79,7 +73,6 @@ func (p *PollClient) Start() error {
 		p.harvesterConfig.sequence,
 		p.handlers...,
 	)
-	logger.Trace("created new poller listener")
 
 	poller := p.newPollManager(
 		p.interval,
@@ -89,10 +82,8 @@ func (p *PollClient) Start() error {
 	p.poller = poller
 
 	p.mutex.Unlock()
-	logger.Trace("mutex unlock")
 
 	listenCh := p.listener.Listen()
-	logger.Trace("establish listener")
 
 	p.poller.RegisterWatch(eventCh, eventErrorCh)
 
