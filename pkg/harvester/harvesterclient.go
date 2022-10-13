@@ -158,8 +158,8 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		page++
 	}
 
-	h.logger.Tracef("last id %d, and err - %s", lastID, err.Error())
-	return lastID, err
+	h.logger.Tracef("last id %d", lastID)
+	return lastID, nil
 }
 
 func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]string {
