@@ -196,7 +196,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 			for sequenceID < lastSequenceID {
 				h.logger.Trace("sequenceID is less than lastSequenceID")
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
-				h.logger.Trace("now sequenceID is %s", fmt.Sprintf("lastSequenceID = %d", lastSequenceID))
+				h.logger.Trace("now sequenceID is %s", fmt.Sprintf("sequenceID = %d", sequenceID))
 			}
 		} else {
 			return nil
