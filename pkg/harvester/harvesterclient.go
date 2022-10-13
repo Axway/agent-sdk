@@ -125,6 +125,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["Content-Type"] = "application/json"
 		res, err := h.Client.Send(req)
 		if err != nil {
+			h.logger.Tracef("send failure, tenantID %s, last id %d, and err - %s", h.Cfg.TenantID, lastID, err.Error())
 			return lastID, err
 		}
 
