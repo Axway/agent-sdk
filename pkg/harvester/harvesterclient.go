@@ -98,19 +98,16 @@ func NewClient(cfg *Config) *Client {
 
 // ReceiveSyncEvents fetches events based on the sequence id and watch topic self link, and publishes the events to the event channel
 func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
-	h.logger.Trace("receive sync events")
 	var lastID int64
 	token, err := h.Cfg.TokenGetter()
 	if err != nil {
 		return lastID, err
 	}
 
-	h.logger.Trace("got token successfully")
 	morePages := true
 	page := 1
 
 	for morePages {
-		h.logger.Tracef("more pages %d", page)
 		pageableQueryParams := h.buildParams(sequenceID, page, h.Cfg.PageSize)
 
 		req := api.Request{
@@ -120,21 +117,14 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 			QueryParams: pageableQueryParams,
 		}
 
-		h.logger.Tracef("request URL %s", req.URL)
-
 		req.Headers["Authorization"] = "Bearer " + token
 		req.Headers["X-Axway-Tenant-Id"] = h.Cfg.TenantID
 		req.Headers["Content-Type"] = "application/json"
-
-		h.logger.Trace("SEND IT")
-
 		res, err := h.Client.Send(req)
 		if err != nil {
-			h.logger.Tracef("send failure, tenantID %s, last id %d, and err - %s", h.Cfg.TenantID, lastID, err.Error())
 			return lastID, err
 		}
 
-		h.logger.Tracef("send res code %d", res.Code)
 		if res.Code != http.StatusOK {
 			return lastID, fmt.Errorf("expected a 200 response but received %d", res.Code)
 		}
@@ -142,29 +132,23 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		pagedEvents := make([]*resourceEntryExternalEvent, 0)
 		err = json.Unmarshal(res.Body, &pagedEvents)
 		if err != nil {
-			h.logger.Tracef("unmarshal error, last id %d, and err - %s", lastID, err.Error())
 			return lastID, err
 		}
 
 		if len(pagedEvents) < h.Cfg.PageSize {
-			h.logger.Tracef("len page events is less than configured page size %d", h.Cfg.PageSize)
-			h.logger.Trace("setting more pages to false")
 			morePages = false
 		}
 
 		for _, event := range pagedEvents {
 			lastID = event.Metadata.GetSequenceID()
-			h.logger.Tracef("lastID from paged event - %d", lastID)
 			if !h.skipPublish && eventCh != nil {
-				h.logger.Trace("send to event channel")
 				eventCh <- event.toProtoEvent()
 			}
 		}
 		page++
 	}
 
-	h.logger.Tracef("last id %d", lastID)
-	return lastID, nil
+	return lastID, err
 }
 
 func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]string {
@@ -191,28 +175,19 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	if h.Client == nil || h.Cfg.SequenceProvider == nil {
 		return nil
 	}
-	h.logger.Trace("event catch up")
 
 	sequenceID := h.Cfg.SequenceProvider.GetSequence()
-
-	h.logger.Tracef("get initial %s", fmt.Sprintf("sequenceID = %d", sequenceID))
-
 	if sequenceID > 0 {
-		h.logger.Trace("sequenceID is greater than 0")
 		var err error
 		lastSequenceID, err := h.ReceiveSyncEvents(link, sequenceID, events)
-		h.logger.Tracef("get initial %s", fmt.Sprintf("lastSequenceID = %d", lastSequenceID))
 		if err != nil {
 			return err
 		}
 
 		if lastSequenceID > 0 {
-			h.logger.Trace("lastSequenceID is greater than 0")
 			// wait for all current sequences to be processed before processing new ones
 			for sequenceID < lastSequenceID {
-				h.logger.Trace("sequenceID is less than lastSequenceID")
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
-				h.logger.Tracef("now sequenceID is %s", fmt.Sprintf("sequenceID = %d", sequenceID))
 			}
 		} else {
 			return nil
@@ -220,7 +195,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	} else {
 		return nil
 	}
-	h.logger.Trace("keep looping")
+
 	return h.EventCatchUp(link, events)
 }
 

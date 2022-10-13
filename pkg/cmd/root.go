@@ -370,12 +370,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 				log.SetIsLogP()
 			}
 
-			// Check to confirm all health checks pass on start up before starting agent
-			status := hc.RunChecks()
-			if status != hc.OK {
-				log.Error("Would be stopping agent - Check docs.axway.com for more info on the reported error code")
-				// os.Exit(0)
-			}
+			c.healthCheckTicker()
 
 			err = c.commandHandler()
 			if err != nil {
@@ -392,6 +387,31 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	}
 	agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
 	return
+}
+
+// Run health check ticker for every 5 seconds
+// If after 5 minutes, the health checker still returns HC status !OK, exit the agent.  Otherwise, return true and continue processing
+func (c *agentRootCommand) healthCheckTicker() {
+	log.Trace("run health checker ticker to check health status on RunChecks")
+	ticker := time.NewTicker(5 * time.Second)
+	tickerTimeout := time.NewTicker(5 * time.Minute)
+
+	defer ticker.Stop()
+	defer tickerTimeout.Stop()
+
+	for {
+		select {
+		case <-tickerTimeout.C:
+			log.Error("Healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
+			os.Exit(0)
+		case <-ticker.C:
+			status := hc.RunChecks()
+			if status == hc.OK {
+				log.Trace("health checker on startup is OK. Continue processing")
+				return
+			}
+		}
+	}
 }
 
 func (c *agentRootCommand) RootCmd() *cobra.Command {
