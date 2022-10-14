@@ -402,13 +402,15 @@ func (c *agentRootCommand) healthCheckTicker() {
 	for {
 		select {
 		case <-tickerTimeout.C:
-			log.Error("Healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
+			log.Error("healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
 			os.Exit(0)
 		case <-ticker.C:
 			status := hc.RunChecks()
 			if status == hc.OK {
-				log.Trace("health checker on startup is OK. Continue processing")
+				log.Trace("healthcheck on startup is OK. Continue processing")
 				return
+			} else {
+				log.Warn("healthchecks on startup are still processing")
 			}
 		}
 	}
