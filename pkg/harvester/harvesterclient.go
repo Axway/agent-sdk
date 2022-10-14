@@ -98,6 +98,7 @@ func NewClient(cfg *Config) *Client {
 
 // ReceiveSyncEvents fetches events based on the sequence id and watch topic self link, and publishes the events to the event channel
 func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+	h.logger.Trace("receive sync events based on sequence id %d, and self link %s", sequenceID, topicSelfLink)
 	var lastID int64
 	token, err := h.Cfg.TokenGetter()
 	if err != nil {
@@ -120,6 +121,8 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["Authorization"] = "Bearer " + token
 		req.Headers["X-Axway-Tenant-Id"] = h.Cfg.TenantID
 		req.Headers["Content-Type"] = "application/json"
+
+		h.logger.Tracef("sending request for URL - %s, more pages - %d", req.URL, morePages)
 		res, err := h.Client.Send(req)
 		if err != nil {
 			return lastID, err
@@ -172,6 +175,7 @@ func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]st
 
 // EventCatchUp syncs all events
 func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
+	h.logger.Trace("event catchup, to sync all events")
 	if h.Client == nil || h.Cfg.SequenceProvider == nil {
 		return nil
 	}

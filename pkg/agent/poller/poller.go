@@ -52,6 +52,7 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 
 // RegisterWatch registers a watch topic for polling events and publishing events on a channel
 func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan error) {
+	m.logger.Trace("register watch topic for polling and publishing events")
 	if m.harvester == nil {
 		go func() {
 			m.Stop()
@@ -77,6 +78,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 }
 
 func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) error {
+	m.logger.Trace("sync events")
 	if err := m.harvester.EventCatchUp(topicSelfLink, eventChan); err != nil {
 		m.logger.WithError(err).Error("harvester returned an error when syncing events")
 		m.onHarvesterErr()
