@@ -126,15 +126,12 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
+	setCentralConfig(centralCfg)
+
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
-		agent.cfg = centralCfg
-		setCentralConfig(centralCfg)
 		return nil
 	}
-
-	agent.cfg = centralCfg
-	setCentralConfig(centralCfg)
 
 	singleEntryFilter := []string{
 		// Traceability host URL will be added by the traceability factory
