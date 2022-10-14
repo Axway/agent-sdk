@@ -78,6 +78,7 @@ type agentData struct {
 }
 
 var agent agentData
+var agentMutex sync.RWMutex
 
 var logger log.FieldLogger
 
@@ -86,6 +87,7 @@ func init() {
 		WithPackage("sdk.agent").
 		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
+	agentMutex = sync.RWMutex{}
 }
 
 // Initialize - Initializes the agent
@@ -127,10 +129,13 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
 		agent.cfg = centralCfg
+		setCentralConfig(centralCfg)
 		return nil
 	}
 
 	agent.cfg = centralCfg
+	setCentralConfig(centralCfg)
+
 	singleEntryFilter := []string{
 		// Traceability host URL will be added by the traceability factory
 		centralCfg.GetURL(),
@@ -394,7 +399,16 @@ func GetCentralClient() apic.Client {
 
 // GetCentralConfig - Returns the APIC Client
 func GetCentralConfig() config.CentralConfig {
+	agentMutex.Lock()
+	defer agentMutex.Unlock()
 	return agent.cfg
+}
+
+// setCentralConfig - Sets the central config
+func setCentralConfig(cfg config.CentralConfig) {
+	agentMutex.Lock()
+	defer agentMutex.Unlock()
+	agent.cfg = cfg
 }
 
 // GetAPICache - Returns the cache
