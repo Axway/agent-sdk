@@ -31,54 +31,42 @@ jobs:
         id: vars
         run: |
           echo "github_ref ${GITHUB_REF}"
-          echo "github_ref_name ${GITHUB_REF_NAME}"
           echo "github.refname ${{  github.ref_name }}"
-          echo "INT - update to new release ${GITHUB_REF_NAME}"
 
-          echo "tag ${GITHUB_REF#refs/*/}"
-          echo "tag ${GITHUB_REF#refs/*/}"
-          export FOO="/refs/tags/v1.2.3"
-          echo "foo ${FOO#refs/*/}"
+          # temp
+          GH_REF="/refs/tags/v1.2.3"
+
+          echo "t1 ${FOO#refs/*/}"
           echo "foo1 ${FOO#*v}"
-          tag1=$(echo ${FOO#*v} | cut -d. -f1)
-          echo "tag $tag1"
-          tag2=$(echo ${FOO#*v} | cut -d. -f2)
-          echo "tag2 $tag2"
-          tag3=$(echo ${FOO#*v} | cut -d. -f3)
-          echo "tag3 $tag3"
-          declare -i tag3
-          tag3+=1
-          echo "tag3 now $tag3"
-          # next_patch=echo $((${tag}+"1"))
-          echo "here"
-          echo "next_patch ${next_patch}"
-          next_patch1=echo $((${tag}+1))
-          echo "there"
-          echo "next_patch ${next_patch}"
-          echo "next_patch1 ${next_patch1}"
-          echo ::set-output name=major_ver::$(echo ${FOO#refs/*/} | cut -d. -f1)
-          echo ::set-output name=minor_ver::$(echo ${FOO#refs/*/} | cut -d. -f2)
-          echo ::set-output name=patch_ver::$(echo ${FOO#refs/*/} | cut -d. -f3)
+          MAJOR_VER=$(echo ${#*v} | cut -d. -f1)
+          echo "MAJOR_VER $MAJOR_VER"
+          MINOR_VER=$(echo ${FOO#*v} | cut -d. -f2)
+          echo "MINOR_VER $MINOR_VER"
+          PATCH_VER=$(echo ${FOO#*v} | cut -d. -f3)
+          echo "PATCH_VER $PATCH_VER"
+          declare -i PATCH_VER
+          PATCH_VER+=1
+          echo "PATCH_VER now $PATCH_VER3"
+          echo ::set-output name=major_ver::${MAJOR_VER}
+          echo ::set-output name=minor_ver::${MINOR_VER}
+          echo ::set-output name=patch_ver::${PATCH_VER}
+          echo "INT - update to new release v${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}"
+
           # let x=echo $({FOO#refs/*/} | cut -d. -f3)
           # echo "$x"
           # echo ::set-output name=major2_ver::${x}
           # echo ::set-output name=major_ver::${GITHUB_REF#refs/*/} | cut -d. -f1
           # echo ::set-output name=minor_ver::${GITHUB_REF#refs/*/} | cut -d. -f2
           # echo ::set-output name=patch_ver::${GITHUB_REF#refs/*/} | cut -d. -f3
-          echo ::set-output name=next_ver::$$( ${{ steps.vars.outputs.patch_ver }} + 1)
-          echo "here1"
-          echo "here2"
-          echo ::set-output name=new_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.next_ver }}
+          # echo ::set-output name=next_ver::$$( ${{ steps.vars.outputs.patch_ver }} + 1)
+          echo ::set-output name=new_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.patch_ver }}
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
         run: |
           echo "major ${{ steps.vars.outputs.major_ver }}"
-          echo "major2 ${{ steps.vars.outputs.major2_ver }}"
           echo "minor ${{ steps.vars.outputs.minor_ver }}"
           echo "patch ${{ steps.vars.outputs.patch_ver }}"
-          echo "next ${{ steps.vars.outputs.patch_ver }}"
-          echo "next ${{ steps.vars.outputs.new_ver }}"
 
       #     ./promote.sh ${GITHUB_REF}
       # - name: Create pull request
