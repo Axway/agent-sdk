@@ -109,9 +109,16 @@ var globalMetricCollector Collector
 
 // GetMetricCollector - Create metric collector
 func GetMetricCollector() Collector {
+	// There are beat params on execution that doesn't require central config to be instantiated
+	if agent.GetCentralConfig() == nil {
+		// if this is the case, check central config and if not instantiated, return nil
+		return nil
+	}
+
 	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
 	}
+
 	return globalMetricCollector
 }
 

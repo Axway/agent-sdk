@@ -70,14 +70,13 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
-	publishingGroup        sync.WaitGroup // wait group to block validator from publishing is happening
-	validatingGroup        sync.WaitGroup // wait group to block publishing while validator is running
 
 	// profiling
 	profileDone chan struct{}
 }
 
 var agent agentData
+var agentMutex sync.RWMutex
 
 var logger log.FieldLogger
 
@@ -86,6 +85,7 @@ func init() {
 		WithPackage("sdk.agent").
 		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
+	agentMutex = sync.RWMutex{}
 }
 
 // Initialize - Initializes the agent
@@ -124,13 +124,13 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
+	setCentralConfig(centralCfg)
+
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
-		agent.cfg = centralCfg
 		return nil
 	}
 
-	agent.cfg = centralCfg
 	singleEntryFilter := []string{
 		// Traceability host URL will be added by the traceability factory
 		centralCfg.GetURL(),
@@ -198,8 +198,6 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 }
 
 func handleInitialization() error {
-	agent.publishingGroup = sync.WaitGroup{}
-	agent.validatingGroup = sync.WaitGroup{}
 	setupSignalProcessor()
 	// only do the periodic health check stuff if NOT in unit tests and running binary agents
 	if util.IsNotTest() && !isRunningInDockerContainer() {
@@ -394,7 +392,16 @@ func GetCentralClient() apic.Client {
 
 // GetCentralConfig - Returns the APIC Client
 func GetCentralConfig() config.CentralConfig {
+	agentMutex.Lock()
+	defer agentMutex.Unlock()
 	return agent.cfg
+}
+
+// setCentralConfig - Sets the central config
+func setCentralConfig(cfg config.CentralConfig) {
+	agentMutex.Lock()
+	defer agentMutex.Unlock()
+	agent.cfg = cfg
 }
 
 // GetAPICache - Returns the cache

@@ -95,3 +95,14 @@ func (c *cacheManager) GetAccessRequest(id string) *v1.ResourceInstance {
 func (c *cacheManager) DeleteAccessRequest(id string) error {
 	return c.accessRequestMap.Delete(id)
 }
+
+func (c *cacheManager) ListAccessRequests() []*v1.ResourceInstance {
+	list := make([]*v1.ResourceInstance, 0)
+	for _, key := range c.accessRequestMap.GetKeys() {
+		item, _ := c.accessRequestMap.Get(key)
+		if v, ok := item.(*v1.ResourceInstance); ok && v != nil {
+			list = append(list, v)
+		}
+	}
+	return list
+}

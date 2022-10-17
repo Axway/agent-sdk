@@ -107,7 +107,7 @@ func NewStreamerClient(
 		singleEntryURL, err := url.Parse(cfg.GetSingleURL())
 		if err == nil {
 			singleEntryAddr := util.ParseAddr(singleEntryURL)
-			wm.WithSingleEntryAddr(singleEntryAddr)
+			s.watchOpts = append(s.watchOpts, wm.WithSingleEntryAddr(singleEntryAddr))
 		}
 	}
 

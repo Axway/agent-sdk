@@ -41,9 +41,6 @@ func (j *instanceValidator) Status() error {
 // Execute -
 func (j *instanceValidator) Execute() error {
 	if getAPIValidator() != nil {
-		agent.publishingGroup.Wait()
-		agent.validatingGroup.Add(1)
-		defer agent.validatingGroup.Done()
 		j.validateAPIOnDataplane()
 	}
 
