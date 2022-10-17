@@ -46,8 +46,9 @@ jobs:
           echo "tag2 $tag2"
           tag3=$(echo ${FOO#*v} | cut -d. -f3)
           echo "tag3 $tag3"
-          tagN=$tag3+1
-          echo "tagN $tagN"
+          declare -i tag3
+          tag3+=1
+          echo "tag3 now $tag3"
           # next_patch=echo $((${tag}+"1"))
           echo "here"
           echo "next_patch ${next_patch}"
