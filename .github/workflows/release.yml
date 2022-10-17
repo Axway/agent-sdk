@@ -36,13 +36,13 @@ jobs:
           # temp
           GH_REF="/refs/tags/v1.2.3"
 
-          echo "t1 ${FOO#refs/*/}"
-          echo "foo1 ${FOO#*v}"
-          MAJOR_VER=$(echo ${#*v} | cut -d. -f1)
+          echo "t1 ${GH_REF#refs/*/}"
+          echo "foo1 ${GH_REF#*v}"
+          MAJOR_VER=$(echo ${GH_REF#*v} | cut -d. -f1)
           echo "MAJOR_VER $MAJOR_VER"
-          MINOR_VER=$(echo ${FOO#*v} | cut -d. -f2)
+          MINOR_VER=$(echo ${GH_REF#*v} | cut -d. -f2)
           echo "MINOR_VER $MINOR_VER"
-          PATCH_VER=$(echo ${FOO#*v} | cut -d. -f3)
+          PATCH_VER=$(echo ${GH_REF#*v} | cut -d. -f3)
           echo "PATCH_VER $PATCH_VER"
           declare -i PATCH_VER
           PATCH_VER+=1
