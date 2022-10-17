@@ -70,8 +70,6 @@ type agentData struct {
 	marketplaceMigration   migrate.Migrator
 	streamer               *stream.StreamerClient
 	authProviderRegistry   oauth.ProviderRegistry
-	publishingGroup        sync.WaitGroup // wait group to block validator from publishing is happening
-	validatingGroup        sync.WaitGroup // wait group to block publishing while validator is running
 
 	// profiling
 	profileDone chan struct{}
@@ -200,8 +198,6 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 }
 
 func handleInitialization() error {
-	agent.publishingGroup = sync.WaitGroup{}
-	agent.validatingGroup = sync.WaitGroup{}
 	setupSignalProcessor()
 	// only do the periodic health check stuff if NOT in unit tests and running binary agents
 	if util.IsNotTest() && !isRunningInDockerContainer() {
