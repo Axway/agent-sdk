@@ -868,6 +868,7 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 		description      string
 		lowerLimit       time.Duration
 		upperLimit       time.Duration
+		expectPanic      bool
 	}{
 		{
 			// valid range
@@ -886,10 +887,20 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 			*/
 			name:             "Agent Duration Property - invalid lower limit",
 			durationProperty: "agent.duration",
-			defaultDuration:  25 * time.Second,
+			defaultDuration:  40 * time.Second,
 			description:      "Agent Duration Property - invalid lower limit",
 			lowerLimit:       40 * time.Second,
 			upperLimit:       50 * time.Second,
+		},
+		{
+			// default lower than lower limit
+			name:             "Agent Duration Property - invalid upper limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  5 * time.Second,
+			description:      "Agent Duration Property - invalid upper limit",
+			lowerLimit:       10 * time.Second,
+			upperLimit:       20 * time.Second,
+			expectPanic:      true,
 		},
 		{
 			// upper limit is invalid
@@ -899,10 +910,30 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 			*/
 			name:             "Agent Duration Property - invalid upper limit",
 			durationProperty: "agent.duration",
-			defaultDuration:  30 * time.Second,
+			defaultDuration:  20 * time.Second,
 			description:      "Agent Duration Property - invalid upper limit",
 			lowerLimit:       10 * time.Second,
 			upperLimit:       20 * time.Second,
+		},
+		{
+			// default higher than upper limit
+			name:             "Agent Duration Property - invalid upper limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  40 * time.Second,
+			description:      "Agent Duration Property - invalid upper limit",
+			lowerLimit:       10 * time.Second,
+			upperLimit:       20 * time.Second,
+			expectPanic:      true,
+		},
+		{
+			// upper lower than lower limit
+			name:             "Agent Duration Property - invalid upper limit",
+			durationProperty: "agent.duration",
+			defaultDuration:  15 * time.Second,
+			description:      "Agent Duration Property - invalid upper limit",
+			lowerLimit:       10 * time.Second,
+			upperLimit:       5 * time.Second,
+			expectPanic:      true,
 		},
 	}
 
@@ -935,8 +966,15 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 
 			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 			viper.AddConfigPath("./testdata")
-			rootCmd.GetProperties().AddDurationProperty(test.durationProperty, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
-			_ = rootCmd.Execute()
+			fExecute := func() {
+				rootCmd.GetProperties().AddDurationProperty(test.durationProperty, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
+			}
+			if test.expectPanic {
+				assert.Panics(t, fExecute)
+			} else {
+				assert.NotPanics(t, fExecute)
+				_ = rootCmd.Execute()
+			}
 		})
 	}
 }

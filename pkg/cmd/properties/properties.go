@@ -126,12 +126,12 @@ func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver Secr
 	return cmdprops
 }
 
-//SetAliasKeyPrefix -
+// SetAliasKeyPrefix -
 func SetAliasKeyPrefix(keyPrefix string) {
 	aliasKeyPrefix = keyPrefix
 }
 
-//GetAliasKeyPrefix -
+// GetAliasKeyPrefix -
 func GetAliasKeyPrefix() string {
 	return aliasKeyPrefix
 }
@@ -212,7 +212,7 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 			option(p)
 		}
 
-		p.configureUpperAndLowerLimits(flagName)
+		p.configureUpperAndLowerLimits(defaultVal, flagName)
 
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
@@ -220,17 +220,32 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
-func (p *properties) configureUpperAndLowerLimits(flagName string) {
-	lowerLimit := fmt.Sprintf(lowerLimitName, flagName)
-	upperLimit := fmt.Sprintf(upperLimitName, flagName)
+func (p *properties) configureUpperAndLowerLimits(defaultVal time.Duration, flagName string) {
+	lowerLimitFlag := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimitFlag := fmt.Sprintf(upperLimitName, flagName)
 
 	// set lower limit if greater than zero
+	lowerLimit := 30 * time.Second
 	if p.lowerLimit > 0 {
-		p.rootCmd.Flags().Duration(lowerLimit, p.lowerLimit, "value %s is lower than the supported lower limit (%s) for configuration %s")
+		lowerLimit = p.lowerLimit
+		if defaultVal < lowerLimit {
+			panic(fmt.Errorf("default value (%s) can not be smaller than lower limit (%s) for %s", defaultVal, p.lowerLimit, flagName))
+		}
 	}
+	p.rootCmd.Flags().Duration(lowerLimitFlag, lowerLimit, "value %s is lower than the supported lower limit (%s) for configuration %s")
+	p.rootCmd.Flags().MarkHidden(lowerLimitFlag)
+
 	// set upper limit if greater than zero
 	if p.upperLimit > 0 {
-		p.rootCmd.Flags().Duration(upperLimit, p.upperLimit, "value %s is higher than the supported higher limit (%s) for configuration %s")
+		p.rootCmd.Flags().Duration(upperLimitFlag, p.upperLimit, "value %s is higher than the supported higher limit (%s) for configuration %s")
+		p.rootCmd.Flags().MarkHidden(upperLimitFlag)
+		// check for valid upper and lower limits
+		if p.upperLimit < p.lowerLimit {
+			panic(fmt.Errorf("upper limit (%s) can not be smaller than lower limit (%s) for %s", p.upperLimit, p.lowerLimit, flagName))
+		}
+		if defaultVal > p.upperLimit {
+			panic(fmt.Errorf("default value (%s) can not be larger than upper limit (%s) for %s", defaultVal, p.upperLimit, flagName))
+		}
 	}
 }
 
@@ -365,68 +380,45 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
-	lowerLimit, _ := time.ParseDuration("30s")
-
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
+	if !isDurationLowerLimitEnforced() {
+		return d
+	}
+
 	flagName := p.nameToFlagName(name)
 	flag := p.rootCmd.Flag(flagName)
+	lowerLimit, upperLimit := p.getDurationLimits(flagName)
+	defaultVal, _ := time.ParseDuration(flag.DefValue)
 
-	if !p.validateLowerAndUpperLimits(d, flagName) {
-		// If its not in duration range, set value to default
-		d, _ = time.ParseDuration(flag.DefValue)
-		log.Warnf("config %s has been set to the the default value of %s.", flagName, d)
-	} else {
-		// Get config value and check if duration is less than 30s, check if allow lower limits
-		if isDurationLowerLimitEnforced() && d < lowerLimit {
-			// since config value is < 30s, get duration default value
-			d, _ = time.ParseDuration(flag.DefValue)
-
-			if d >= lowerLimit {
-				// if defaultValue is > 30s, then just set the lower limit
-				d = lowerLimit
-				log.Warnf("Configuration %s has been set to the lower limit value of %s. Please update this value greater than the lower limit if necessary", name, d)
-			}
-		}
+	if lowerLimit > 0 && d < lowerLimit {
+		d = defaultVal
+		log.Warnf("Configuration %s has been set to the lower limit value of %s. Please update this value greater than the lower limit of %s", name, d, lowerLimit)
+	} else if upperLimit > 0 && d > upperLimit {
+		d = defaultVal
+		log.Warnf("Configuration %s has been set to the upper limit value of %s. Please update this value lower than the upper limit of %s", name, d, upperLimit)
 	}
 
 	p.addPropertyToFlatMap(name, s)
 	return d
 }
 
-// validateLowerAndUpperLimits - check limits individually based on if greater than zero
-func (p *properties) validateLowerAndUpperLimits(duration time.Duration, flagName string) bool {
+// getDurationLimits - returns the duration limits, negative number returned for unset
+func (p *properties) getDurationLimits(flagName string) (time.Duration, time.Duration) {
 	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
 	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
 
-	var floorSet bool
-	var ceilingSet bool
-
+	lowerLimit := -1 * time.Second
+	upperLimit := -1 * time.Second
 	if lowerLimitFlag != nil {
-		lowerLimitDuration, _ := time.ParseDuration(lowerLimitFlag.Value.String())
-		// validate that lower limit is greater than zero and less than configured duration
-		if lowerLimitDuration > 0 && lowerLimitDuration > duration {
-			log.Warnf(lowerLimitFlag.Usage, duration, lowerLimitDuration, flagName)
-			return false
-		}
-		floorSet = true
+		lowerLimit, _ = time.ParseDuration(lowerLimitFlag.Value.String())
 	}
 	if upperLimitFlag != nil {
-		upperLimitDuration, _ := time.ParseDuration(upperLimitFlag.Value.String())
-		// validate that upper limit is greater than zero and greater than configured duration
-		if upperLimitDuration > 0 && upperLimitDuration < duration {
-			log.Warnf(upperLimitFlag.Usage, duration, upperLimitDuration, flagName)
-			return false
-		}
-		ceilingSet = true
+		upperLimit, _ = time.ParseDuration(upperLimitFlag.Value.String())
 	}
 
-	if floorSet && ceilingSet {
-		log.Tracef("Duration range has been set for property %s", flagName)
-	}
-
-	return true
+	return lowerLimit, upperLimit
 }
 
 func (p *properties) IntPropertyValue(name string) int {
