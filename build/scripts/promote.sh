@@ -1,5 +1,6 @@
 #!/bin/bash
 check_required_param() {
+    echo "CHECK REQUIRED"
     echo $1
     if [ -z $1 ]; then
         return 1
@@ -61,6 +62,7 @@ commit_promotion() {
 }
 
 main() {
+    echo "MAIN"
     echo "foo $1"
     # check_required_param $1
     # if [ $? -eq 1 ]; then
@@ -71,9 +73,9 @@ main() {
     
     # checkout_main
 
-    set_version_variables $1
+    # set_version_variables $1
 
-    update_version_file
+    # update_version_file
 
     # commit_promotion
 }
