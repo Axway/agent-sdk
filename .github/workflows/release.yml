@@ -75,14 +75,11 @@ jobs:
           echo ${NEXT_VERSION}
           ./promote.sh ${NEXT_VERSION}
       - name: Create pull request
-        run: |
-          NEXT_VERSION=${{ steps.vars.outputs.next_ver }}
-          echo ${NEXT_VERSION}
         uses: peter-evans/create-pull-request@v4
         with:
           branch: APIGOV-updateversion
-          commit-message: INT - update to new release ${NEXT_VERSION}
-          title: INT - update to new release ${NEXT_VERSION}
+          commit-message: INT - update to new release ${{ steps.vars.outputs.next_ver }}
+          title: INT - update to new release ${{ steps.vars.outputs.next_ver }}
           base: main
           delete-branch: true
 
