@@ -5,7 +5,7 @@ check_required_param() {
         return 1
     fi
 
-    pat='v[0-9]+\.[0-9]+\.[0-9]+'
+    pat='[0-9]+\.[0-9]+\.[0-9]+'
     if [[ $1 =~ $pat ]]; then
         return 0
     fi
@@ -51,12 +51,12 @@ commit_promotion() {
     # git commit -m "INT - ${MSG}"
     # git push --force origin main
 
-    echo "Until the script can be fixed, you must manually do the next steps"
-    echo "  1) create a new SDK branch"
-    echo "  2) update the version file by adding 1 to the last digit"
-    echo "  3) commit the branch with the following message: 'INT - ${MSG}'"
-    echo "  4) create a pull request on github and await approval"
-    echo "  5) merge the branch into main"
+    # echo "Until the script can be fixed, you must manually do the next steps"
+    # echo "  1) create a new SDK branch"
+    # echo "  2) update the version file by adding 1 to the last digit"
+    # echo "  3) commit the branch with the following message: 'INT - ${MSG}'"
+    # echo "  4) create a pull request on github and await approval"
+    # echo "  5) merge the branch into main"
 }
 
 main() {
@@ -69,11 +69,11 @@ main() {
     
     # checkout_main
 
-    set_version_variables $1
+    # set_version_variables $1
 
     update_version_file
 
-    commit_promotion
+    # commit_promotion
 }
 
 main $@
