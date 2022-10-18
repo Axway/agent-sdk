@@ -49,7 +49,7 @@ jobs:
           echo ::set-output name=major_ver::${MAJOR_VER}
           echo ::set-output name=minor_ver::${MINOR_VER}
           echo ::set-output name=patch_ver::${PATCH_VER}
-          echo ::set-output name=new_ver::v$MAJOR_VER}.${MINOR_VER}.${PATCH_VER}
+          echo ::set-output name=next_ver::v$MAJOR_VER}.${MINOR_VER}.${PATCH_VER}
           # echo "INT - update to new release v${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}"
 
           # let x=echo $({FOO#refs/*/} | cut -d. -f3)
@@ -59,7 +59,7 @@ jobs:
           # echo ::set-output name=minor_ver::${GITHUB_REF#refs/*/} | cut -d. -f2
           # echo ::set-output name=patch_ver::${GITHUB_REF#refs/*/} | cut -d. -f3
           # echo ::set-output name=next_ver::$$( ${{ steps.vars.outputs.patch_ver }} + 1)
-          echo ::set-output name=new_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.patch_ver }}
+          # echo ::set-output name=nex_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.patch_ver }}
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript.
