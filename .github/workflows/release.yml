@@ -26,15 +26,12 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v3
         with:
-          ref: APIGOV-dale
+          ref: main
       - name: Set version variables
         id: vars
         run: |
           # The full GITHUB_REF should look like: refs/tags/vn.n.n
           echo "GITHUB_REF: ${GITHUB_REF}"
-
-          # temp
-          GITHUB_REF="/refs/tags/v1.2.3"
 
           # this mess parses GITHUB_REF into its major/minor/patch parts
           MAJOR_VER=$(echo ${GITHUB_REF#*v} | cut -d. -f1)
