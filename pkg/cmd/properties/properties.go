@@ -394,10 +394,10 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 
 	if lowerLimit > 0 && d < lowerLimit {
 		d = defaultVal
-		log.Warnf("Configuration %s has been set to the lower limit value of %s. Please update this value greater than the lower limit of %s", name, d, lowerLimit)
+		log.Warnf("Configuration %s has been set to the default value of %s. Please update this value greater than the lower limit of %s", name, d, lowerLimit)
 	} else if upperLimit > 0 && d > upperLimit {
 		d = defaultVal
-		log.Warnf("Configuration %s has been set to the upper limit value of %s. Please update this value lower than the upper limit of %s", name, d, upperLimit)
+		log.Warnf("Configuration %s has been set to the default value of %s. Please update this value lower than the upper limit of %s", name, d, upperLimit)
 	}
 
 	p.addPropertyToFlatMap(name, s)
