@@ -14,16 +14,17 @@ check_required_param() {
 
 set_version_variables() {
     # remove refs/tags/v
-    incoming_version=$1
-    version="${incoming_version:11}"
+    # incoming_version=$1
+    # version="${incoming_version:11}"
 
-    let MAJOR_VERSION=$(echo $version | cut -d. -f1)
-    let MINOR_VERSION=$(echo $version | cut -d. -f2)
-    let PATCH_VERSION=$(echo $version | cut -d. -f3)
-    let NEW_PATCH_VERSION=($PATCH_VERSION+1)
+    # let MAJOR_VERSION=$(echo $version | cut -d. -f1)
+    # let MINOR_VERSION=$(echo $version | cut -d. -f2)
+    # let PATCH_VERSION=$(echo $version | cut -d. -f3)
+    # let NEW_PATCH_VERSION=($PATCH_VERSION+1)
 
     # right now, this only does patch versioning.
-    export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
+    # export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
+    export NEW_VERSION=$1"
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
 }
@@ -69,7 +70,7 @@ main() {
     
     # checkout_main
 
-    # set_version_variables $1
+    set_version_variables $1
 
     update_version_file
 
