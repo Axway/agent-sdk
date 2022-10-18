@@ -1,17 +1,15 @@
 #!/bin/bash
 check_required_param() {
+    echo $1
     if [ -z $1 ]; then
-        echo "return1111"
-        # return 1
+        return 1
     fi
 
     pat='[0-9]+\.[0-9]+\.[0-9]+'
     if [[ $1 =~ $pat ]]; then
-        echo "return22222"
-        # return 0
+        return 0
     fi
-    echo "return33333"
-    # return 1
+    return 1
 }
 
 set_version_variables() {
@@ -26,7 +24,7 @@ set_version_variables() {
 
     # right now, this only does patch versioning.
     # export NEW_VERSION="${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
-    export NEW_VERSION=$1"
+    export NEW_VERSION=$1
     export BASE_DIR=$(realpath $(dirname $0)/../..)
     export MSG="update to new release ${NEW_VERSION}"
 }
@@ -73,9 +71,9 @@ main() {
     
     # checkout_main
 
-    # set_version_variables $1
+    set_version_variables $1
 
-    # update_version_file
+    update_version_file
 
     # commit_promotion
 }
