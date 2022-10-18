@@ -1,6 +1,5 @@
 #!/bin/bash
 check_required_param() {
-    echo $1
     if [ -z $1 ]; then
         echo "return1111"
         # return 1
