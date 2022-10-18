@@ -26,7 +26,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v3
         with:
-          ref: main
+          ref: APIGOV-dale
       - name: Set version variables
         id: vars
         run: |
