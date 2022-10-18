@@ -71,6 +71,7 @@ jobs:
           echo "${PATCH}"
 
           VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo ${VERSION}
 
       #     ./promote.sh ${VERSION}
       # - name: Create pull request
