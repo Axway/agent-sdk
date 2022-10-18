@@ -2,16 +2,16 @@
 check_required_param() {
     echo $1
     if [ -z $1 ]; then
-        echo "return1"
+        echo "return1111"
         return 1
     fi
 
     pat='[0-9]+\.[0-9]+\.[0-9]+'
     if [[ $1 =~ $pat ]]; then
-        echo "return2"
+        echo "return22222"
         return 0
     fi
-    echo "return3"
+    echo "return33333"
     return 1
 }
 
@@ -64,6 +64,7 @@ commit_promotion() {
 }
 
 main() {
+    echo "foo $1"
     check_required_param $1
     if [ $? -eq 1 ]; then
         echo "Promotion of release not completed. Missing parameter for release version (e.g. v1.2.3)"
