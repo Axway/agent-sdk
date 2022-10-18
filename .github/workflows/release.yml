@@ -49,7 +49,7 @@ jobs:
           echo ::set-output name=major_ver::${MAJOR_VER}
           echo ::set-output name=minor_ver::${MINOR_VER}
           echo ::set-output name=patch_ver::${PATCH_VER}
-          echo ::set-output name=next_ver::v$MAJOR_VER}.${MINOR_VER}.${PATCH_VER}
+          echo ::set-output name=next_ver::v${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}
           # echo "INT - update to new release v${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}"
 
           # let x=echo $({FOO#refs/*/} | cut -d. -f3)
