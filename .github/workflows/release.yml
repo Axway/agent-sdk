@@ -45,7 +45,7 @@ jobs:
           echo "PATCH_VER $PATCH_VER"
           declare -i PATCH_VER
           PATCH_VER+=1
-          echo "PATCH_VER now $PATCH_VER3"
+          echo "PATCH_VER now $PATCH_VER"
           echo ::set-output name=major_ver::${MAJOR_VER}
           echo ::set-output name=minor_ver::${MINOR_VER}
           echo ::set-output name=patch_ver::${PATCH_VER}
@@ -66,7 +66,7 @@ jobs:
           MAJOR=${{ steps.vars.outputs.major_ver }}
           MINOR=${{ steps.vars.outputs.minor_ver }}
           PATCH=${{ steps.vars.outputs.patch_ver }}
-          echo "${MAJOR}
+          echo "${MAJOR}"
           echo "${MINOR}"
           echo "${PATCH}"
 
