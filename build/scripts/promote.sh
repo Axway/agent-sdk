@@ -58,7 +58,7 @@ commit_promotion() {
     # echo "  2) update the version file by adding 1 to the last digit"
     # echo "  3) commit the branch with the following message: 'INT - ${MSG}'"
     # echo "  4) create a pull request on github and await approval"
-    # echo "  5) merge the branch into main"
+    echo "  5) merge the branch into main"a
 }
 
 main() {
