@@ -30,14 +30,13 @@ jobs:
       - name: Set version variables
         id: vars
         run: |
+          # The full GITHUB_REF is refs/tags/vn.n.n
           echo "github_ref ${GITHUB_REF}"
-          echo "github.refname ${{  github.ref_name }}"
 
           # temp
           GH_REF="/refs/tags/v1.2.3"
 
-          echo "t1 ${GH_REF#refs/*/}"
-          echo "foo1 ${GH_REF#*v}"
+          # this mess parses GITHUB_REF into its major/minor/patch parts
           MAJOR_VER=$(echo ${GH_REF#*v} | cut -d. -f1)
           echo "MAJOR_VER $MAJOR_VER"
           MINOR_VER=$(echo ${GH_REF#*v} | cut -d. -f2)
@@ -62,19 +61,24 @@ jobs:
           echo ::set-output name=new_ver::v${{ steps.vars.outputs.major_ver }}.${{ steps.vars.outputs.minor_ver }}.${{ steps.vars.outputs.patch_ver }}
       - name: Update version file
         working-directory: ./build/scripts
-        # This passes vn.n.n to the shellscript. The full GITHUB_REF is refs/tags/vn.n.n
+        # This passes vn.n.n to the shellscript.
         run: |
-          echo "major ${{ steps.vars.outputs.major_ver }}"
-          echo "minor ${{ steps.vars.outputs.minor_ver }}"
-          echo "patch ${{ steps.vars.outputs.patch_ver }}"
+          MAJOR=${{ steps.vars.outputs.major_ver }}
+          MINOR=${{ steps.vars.outputs.minor_ver }}
+          PATCH=${{ steps.vars.outputs.patch_ver }}
+          echo "${MAJOR}
+          echo "${MINOR}"
+          echo "${PATCH}"
 
-      #     ./promote.sh ${GITHUB_REF}
+          VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+
+      #     ./promote.sh ${VERSION}
       # - name: Create pull request
       #   uses: peter-evans/create-pull-request@v4
       #   with:
       #     branch: APIGOV-updateversion
-      #     commit-message: INT - update to new release ${GITHUB_REF_NAME}
-      #     title: INT - update to new release ${GITHUB_REF_NAME}
+      #     commit-message: INT - update to new release ${VERSION}
+      #     title: INT - update to new release ${VERSION}
       #     base: main
       #     delete-branch: true
 
