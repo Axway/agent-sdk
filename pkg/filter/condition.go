@@ -3,8 +3,6 @@ package filter
 import (
 	"go/token"
 	"strconv"
-
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // Condition - Interface for the filter condition
@@ -22,12 +20,6 @@ type SimpleCondition struct {
 
 // Evaluate - evaluates a simple/call expression condition
 func (sf *SimpleCondition) Evaluate(data Data) (res bool) {
-	// validate that the value is not nil. This happens (for example) when the filter expression value is not double quoted
-	if sf.Value == nil {
-		log.Error(ErrFilterExpression.Error())
-		return false
-	}
-
 	lhsValue, err := sf.LHSExpr.Execute(data)
 	if err != nil {
 		return false
@@ -35,16 +27,19 @@ func (sf *SimpleCondition) Evaluate(data Data) (res bool) {
 	callType := sf.LHSExpr.GetType()
 	switch callType {
 	case ANY:
-		res = sf.Value.any(lhsValue)
-		if sf.Operator == token.NEQ.String() {
-			res = !res
+		if sf.Value != nil {
+			res = sf.Value.any(lhsValue)
+			if sf.Operator == token.NEQ.String() {
+				res = !res
+			}
 		}
 	default:
 		if callType != GETVALUE {
 			res = lhsValue.(bool)
 			lhsValue = strconv.FormatBool(res)
 		}
-		if sf.Operator != "" {
+
+		if sf.Operator != "" && sf.Value != nil {
 			if sf.Operator == token.EQL.String() {
 				res = sf.Value.eq(lhsValue)
 			} else if sf.Operator == token.NEQ.String() {
