@@ -9,12 +9,19 @@ import (
 
 func TestCredentialBuilder(t *testing.T) {
 	tests := []struct {
-		name   string
-		key    string
-		id     string
-		secret string
-		other  map[string]interface{}
+		name     string
+		username string
+		password string
+		key      string
+		id       string
+		secret   string
+		other    map[string]interface{}
 	}{
+		{
+			name:     "Build Basic Auth Credential",
+			username: "basic-user",
+			password: "basic-pass",
+		},
 		{
 			name: "Build API Key Credential",
 			key:  "api-key-data",
@@ -44,6 +51,8 @@ func TestCredentialBuilder(t *testing.T) {
 			switch {
 			case tt.key != "":
 				cred = builder.SetAPIKey(tt.key)
+			case tt.username != "":
+				cred = builder.SetHTTPBasic(tt.username, tt.password)
 			case tt.id != "" && tt.secret != "":
 				cred = builder.SetOAuthIDAndSecret(tt.key, tt.secret)
 			case tt.id != "":

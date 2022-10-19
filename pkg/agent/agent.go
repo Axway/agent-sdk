@@ -65,11 +65,10 @@ type agentData struct {
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
-	instanceValidatorJobID string
-	provisioner            provisioning.Provisioning
-	marketplaceMigration   migrate.Migrator
-	streamer               *stream.StreamerClient
-	authProviderRegistry   oauth.ProviderRegistry
+	provisioner          provisioning.Provisioning
+	marketplaceMigration migrate.Migrator
+	streamer             *stream.StreamerClient
+	authProviderRegistry oauth.ProviderRegistry
 
 	// profiling
 	profileDone chan struct{}

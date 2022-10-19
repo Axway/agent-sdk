@@ -57,7 +57,7 @@ type ServiceBody struct {
 	accessRequestDefinition   *management.AccessRequestDefinition
 }
 
-//SetAccessRequestDefinitionName - set the name of the access request definition for this service body
+// SetAccessRequestDefinitionName - set the name of the access request definition for this service body
 func (s *ServiceBody) SetAccessRequestDefinitionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
@@ -73,7 +73,7 @@ func (s *ServiceBody) GetAPIKeyInfo() []APIKeyInfo {
 	return s.apiKeyInfo
 }
 
-//GetScopes - returns the array of scopes for this service instance
+// GetScopes - returns the array of scopes for this service instance
 func (s *ServiceBody) GetScopes() map[string]string {
 	return s.scopes
 }
@@ -84,6 +84,9 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 		return s.credentialRequestPolicies
 	}
 	for _, policy := range s.authPolicies {
+		if policy == Basic {
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, provisioning.BasicAuthCRD)
+		}
 		if policy == Apikey {
 			s.credentialRequestPolicies = append(s.credentialRequestPolicies, provisioning.APIKeyCRD)
 		}

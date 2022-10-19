@@ -3,6 +3,7 @@ package apic
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -311,16 +312,23 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		// get oauth scopes
 		b.serviceBody.scopes = val.GetOAuthScopes()
 
-		// only set ard name based on spec if not already set
-		if b.serviceBody.ardName == "" {
-			if len(b.serviceBody.apiKeyInfo) > 0 {
-				b.serviceBody.ardName = "api-key"
-			}
+		// if the spec has multiple then use the oauth ard
+		err := b.serviceBody.createAccessRequestDefinition()
+		if err != nil {
+			return b.serviceBody, err
+		}
 
-			// if the spec has api key and oauth use the oauth ard
-			err := b.serviceBody.createAccessRequestDefinition()
-			if err != nil {
-				return b.serviceBody, err
+		// only set ard name based on spec if not already set, use first auth we find
+		if b.serviceBody.ardName == "" {
+			for _, p := range b.serviceBody.authPolicies {
+				if p == Basic {
+					b.serviceBody.ardName = provisioning.BasicAuthARD
+					break
+				}
+				if p == Apikey {
+					b.serviceBody.ardName = provisioning.APIKeyARD
+					break
+				}
 			}
 		}
 	}
