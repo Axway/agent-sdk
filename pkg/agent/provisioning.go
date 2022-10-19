@@ -386,7 +386,7 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 
 // NewBasicAuthCredentialRequestBuilder - add basic auth base properties for provisioning schema
 func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
-	apiKeyOptions := []func(*crdBuilderOptions){
+	basicAuthOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.BasicAuthCRD),
 		WithCRDTitle("Basic Auth"),
 		WithCRDProvisionSchemaProperty(
@@ -405,9 +405,9 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 				IsEncrypted()),
 	}
 
-	apiKeyOptions = append(apiKeyOptions, options...)
+	basicAuthOptions = append(basicAuthOptions, options...)
 
-	return NewCredentialRequestBuilder(apiKeyOptions...)
+	return NewCredentialRequestBuilder(basicAuthOptions...)
 }
 
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
