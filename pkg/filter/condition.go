@@ -27,16 +27,19 @@ func (sf *SimpleCondition) Evaluate(data Data) (res bool) {
 	callType := sf.LHSExpr.GetType()
 	switch callType {
 	case ANY:
-		res = sf.Value.any(lhsValue)
-		if sf.Operator == token.NEQ.String() {
-			res = !res
+		if sf.Value != nil {
+			res = sf.Value.any(lhsValue)
+			if sf.Operator == token.NEQ.String() {
+				res = !res
+			}
 		}
 	default:
 		if callType != GETVALUE {
 			res = lhsValue.(bool)
 			lhsValue = strconv.FormatBool(res)
 		}
-		if sf.Operator != "" {
+
+		if sf.Operator != "" && sf.Value != nil {
 			if sf.Operator == token.EQL.String() {
 				res = sf.Value.eq(lhsValue)
 			} else if sf.Operator == token.NEQ.String() {
