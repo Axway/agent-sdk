@@ -3,7 +3,9 @@ package provisioning
 // default names of ARD and CRDs
 const (
 	APIKeyARD         = "api-key"
+	BasicAuthARD      = "http-basic"
 	APIKeyCRD         = "api-key"
+	BasicAuthCRD      = "http-basic"
 	OAuthSecretCRD    = "oauth-secret"
 	OAuthPublicKeyCRD = "oauth-public-key"
 	OAuthIDPCRD       = "oauth-idp"
@@ -21,6 +23,9 @@ const (
 	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
+
+	BasicAuthUsername = "username"
+	BasicAuthPassword = "password"
 
 	CredExpDetail = "Agent: CredentialExpired"
 )

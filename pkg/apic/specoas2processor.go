@@ -15,6 +15,8 @@ var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "
 const (
 	oasSecurityAPIKey = "apiKey"
 	oasSecurityOauth  = "oauth2"
+	oasSecurityBasic  = "basic"
+	oasSecurityHttp   = "http"
 )
 
 // oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
@@ -75,6 +77,8 @@ func (p *oas2SpecProcessor) ParseAuthInfo() {
 	scopes := make(map[string]string)
 	for _, scheme := range p.spec.SecurityDefinitions {
 		switch scheme.Type {
+		case oasSecurityBasic:
+			authPolicies = append(authPolicies, Basic)
 		case oasSecurityAPIKey:
 			authPolicies = append(authPolicies, Apikey)
 			keyInfo = append(keyInfo, APIKeyInfo{

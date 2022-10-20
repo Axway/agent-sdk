@@ -152,6 +152,10 @@ func (p *oas3SpecProcessor) ParseAuthInfo() {
 	scopes := make(map[string]string)
 	for _, scheme := range p.spec.Components.SecuritySchemes {
 		switch scheme.Value.Type {
+		case oasSecurityHttp:
+			if scheme.Value.Scheme == oasSecurityBasic {
+				authPolicies = append(authPolicies, Basic)
+			}
 		case oasSecurityAPIKey:
 			authPolicies = append(authPolicies, Apikey)
 			keyInfo = append(keyInfo, APIKeyInfo{

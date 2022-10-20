@@ -3,9 +3,8 @@ package provisioning
 import "time"
 
 const (
-	apiKey = "api-key"
-	oauth  = "oauth"
-	other  = "other"
+	oauth = "oauth"
+	other = "other"
 )
 
 // Credential - holds the details about the credential to send to encrypt and send to platform
@@ -35,6 +34,7 @@ type CredentialBuilder interface {
 	SetOAuthID(id string) Credential
 	SetOAuthIDAndSecret(id, secret string) Credential
 	SetAPIKey(key string) Credential
+	SetHTTPBasic(username, password string) Credential
 	SetCredential(data map[string]interface{}) Credential
 }
 
@@ -70,9 +70,19 @@ func (c *credentialBuilder) SetOAuthIDAndSecret(id, secret string) Credential {
 
 // SetAPIKey - set the credential as an API Key type
 func (c *credentialBuilder) SetAPIKey(key string) Credential {
-	c.credential.credentialType = apiKey
+	c.credential.credentialType = APIKeyCRD
 	c.credential.data = map[string]interface{}{
 		APIKey: key,
+	}
+	return c.credential
+}
+
+// SetHTTPBasic - set the credential as an API Key type
+func (c *credentialBuilder) SetHTTPBasic(username, password string) Credential {
+	c.credential.credentialType = BasicAuthCRD
+	c.credential.data = map[string]interface{}{
+		BasicAuthUsername: username,
+		BasicAuthPassword: password,
 	}
 	return c.credential
 }

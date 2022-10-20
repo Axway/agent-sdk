@@ -39,6 +39,10 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 		expectedName string
 	}{
 		{
+			name:         "Test Basic Auth Helper",
+			expectedName: "http-basic",
+		},
+		{
 			name:         "Test APIKey Helper",
 			expectedName: "api-key",
 		},
@@ -57,6 +61,8 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			var err error
 			var crd *management.CredentialRequestDefinition
 			switch test.expectedName {
+			case "http-basic":
+				crd, err = NewBasicAuthCredentialRequestBuilder().Register()
 			case "api-key":
 				crd, err = NewAPIKeyCredentialRequestBuilder().Register()
 			case "oauth":

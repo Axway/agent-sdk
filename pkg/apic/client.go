@@ -30,6 +30,7 @@ const (
 	Apikey      = "verify-api-key"
 	Passthrough = "pass-through"
 	Oauth       = "verify-oauth-token"
+	Basic       = "http-basic"
 )
 
 // other consts
@@ -38,7 +39,7 @@ const (
 )
 
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
-var ValidPolicies = []string{Apikey, Passthrough, Oauth}
+var ValidPolicies = []string{Apikey, Passthrough, Oauth, Basic}
 
 // SubscriptionProcessor - callback method type to process subscriptions
 type SubscriptionProcessor func(subscription Subscription)

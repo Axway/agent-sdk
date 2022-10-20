@@ -2,7 +2,6 @@ package agent
 
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -45,7 +44,7 @@ func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Mi
 
 func runMarketplaceMigration(ri *v1.ResourceInstance, marketplaceMigration migrate.Migrator) bool {
 	// check if the KIND and ID combo have an item in the cache
-	var existingRI *apiv1.ResourceInstance
+	var existingRI *v1.ResourceInstance
 
 	switch ri.Kind {
 	case management.AccessRequestDefinitionGVK().Kind:
@@ -385,6 +384,32 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 	return NewCredentialRequestBuilder(apiKeyOptions...)
 }
 
+// NewBasicAuthCredentialRequestBuilder - add basic auth base properties for provisioning schema
+func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
+	basicAuthOptions := []func(*crdBuilderOptions){
+		WithCRDName(provisioning.BasicAuthCRD),
+		WithCRDTitle("Basic Auth"),
+		WithCRDProvisionSchemaProperty(
+			provisioning.NewSchemaPropertyBuilder().
+				SetName(provisioning.BasicAuthUsername).
+				SetLabel("Username").
+				SetRequired().
+				IsString().
+				IsEncrypted()),
+		WithCRDProvisionSchemaProperty(
+			provisioning.NewSchemaPropertyBuilder().
+				SetName(provisioning.BasicAuthPassword).
+				SetLabel("Password").
+				SetRequired().
+				IsString().
+				IsEncrypted()),
+	}
+
+	basicAuthOptions = append(basicAuthOptions, options...)
+
+	return NewCredentialRequestBuilder(basicAuthOptions...)
+}
+
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	oauthOptions := []func(*crdBuilderOptions){
@@ -417,6 +442,11 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+}
+
+// NewBasicAuthAccessRequestBuilder - called by the agents
+func NewBasicAuthAccessRequestBuilder() provisioning.AccessRequestBuilder {
+	return NewAccessRequestBuilder().SetName(provisioning.BasicAuthARD)
 }
 
 // NewAPIKeyAccessRequestBuilder - called by the agents
