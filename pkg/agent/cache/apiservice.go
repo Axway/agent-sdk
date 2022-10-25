@@ -155,10 +155,6 @@ func (c *cacheManager) DeleteAPIService(key string) error {
 // FormatKey -
 func (c *cacheManager) FormatKey(svcName string) string {
 	formatKey := fmt.Sprintf("count-%v", svcName)
-	c.logger.
-		WithField("svc-name", svcName).
-		WithField("format-key", formatKey).
-		Debug("format key to be stored for instance count")
 	return formatKey
 }
 
