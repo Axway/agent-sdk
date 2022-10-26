@@ -98,7 +98,7 @@ func NewClient(cfg *Config) *Client {
 
 // ReceiveSyncEvents fetches events based on the sequence id and watch topic self link, and publishes the events to the event channel
 func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
-	h.logger.Trace("receive sync events based on sequence id %d, and self link %s", sequenceID, topicSelfLink)
+	h.logger.Tracef("receive sync events based on sequence id %v, and self link %v", sequenceID, topicSelfLink)
 	var lastID int64
 	token, err := h.Cfg.TokenGetter()
 	if err != nil {

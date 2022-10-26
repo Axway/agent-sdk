@@ -117,6 +117,9 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
+	agent.validatingLock.wait()
+	agent.publishingLock.increment()
+	defer agent.publishingLock.decrement()
 	if agent.apicClient != nil {
 		if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
 			var err error

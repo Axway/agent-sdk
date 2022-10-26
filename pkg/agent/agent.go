@@ -60,6 +60,7 @@ type agentData struct {
 	cacheManager               agentcache.Manager
 	apiValidator               APIValidator
 	apiValidatorLock           sync.Mutex
+	apiValidatorJobID          string
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
@@ -69,6 +70,9 @@ type agentData struct {
 	marketplaceMigration migrate.Migrator
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
+
+	validatingLock *atomicUint
+	publishingLock *atomicUint
 
 	// profiling
 	profileDone chan struct{}
@@ -85,6 +89,8 @@ func init() {
 		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 	agentMutex = sync.RWMutex{}
+	agent.validatingLock = &atomicUint{}
+	agent.publishingLock = &atomicUint{}
 }
 
 // Initialize - Initializes the agent

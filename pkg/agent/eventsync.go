@@ -9,6 +9,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
@@ -102,13 +103,12 @@ func (es *EventSync) SyncCache() error {
 }
 
 func (es *EventSync) registerInstanceValidator() error {
-	// Disabling validator until further notice
-	// if agent.instanceValidatorJobID == "" && agent.cfg.GetAgentType() == config.DiscoveryAgent {
-	// 	validator := newInstanceValidator()
-	// 	jobID, err := jobs.RegisterIntervalJobWithName(validator, agent.cfg.GetPollInterval(), "API service instance validator")
-	// 	agent.instanceValidatorJobID = jobID
-	// 	return err
-	// }
+	if agent.apiValidatorJobID == "" && agent.cfg.GetAgentType() == config.DiscoveryAgent {
+		validator := newInstanceValidator()
+		jobID, err := jobs.RegisterIntervalJobWithName(validator, agent.cfg.GetPollInterval(), "API service instance validator")
+		agent.apiValidatorJobID = jobID
+		return err
+	}
 	return nil
 }
 

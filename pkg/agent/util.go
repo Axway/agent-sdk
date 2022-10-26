@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"fmt"
 	"reflect"
+	"sync/atomic"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -49,4 +52,50 @@ func ApplyResourceToConfig(cfg interface{}) error {
 		}
 	}
 	return nil
+}
+
+type atomicUint struct {
+	num uint32
+}
+
+// value - returns the uint value within the atomicUint
+func (a *atomicUint) value() uint32 {
+	return atomic.LoadUint32(&a.num)
+}
+
+// increment - increases the uint value by 1
+func (a *atomicUint) increment() uint32 {
+	return atomic.AddUint32(&a.num, uint32(1))
+}
+
+// decrement - decreases the uint value by 1
+func (a *atomicUint) decrement() uint32 {
+	return atomic.AddUint32(&a.num, ^uint32(0))
+}
+
+// wait - waits for the uint to become 0, with no time limit
+func (a *atomicUint) wait() {
+	// waits for the int to be 0 before returning
+	for {
+		if atomic.LoadUint32(&a.num) == 0 {
+			return
+		}
+	}
+}
+
+// waitMaxDuration - waits for the uint to become 0, up to duration
+func (a *atomicUint) waitMaxDuration(duration time.Duration) error {
+	// waits for the int to be 0 before returning
+	maxDur := time.NewTicker(duration)
+	defer maxDur.Stop()
+	for {
+		select {
+		case <-maxDur.C:
+			return fmt.Errorf("max duration hit while waiting")
+		default:
+			if atomic.LoadUint32(&a.num) == 0 {
+				return nil
+			}
+		}
+	}
 }
