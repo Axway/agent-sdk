@@ -32,6 +32,7 @@ func newInstanceValidator() *instanceValidator {
 // Ready -
 func (j *instanceValidator) Ready() bool {
 	status, _ := hc.GetGlobalStatus()
+	agent.validatingLock.reset()
 	return status == string(hc.OK)
 }
 

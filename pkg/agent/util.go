@@ -58,6 +58,11 @@ type atomicUint struct {
 	num uint32
 }
 
+// reset - sets the uint to 0
+func (a *atomicUint) reset() {
+	atomic.StoreUint32(&a.num, uint32(0))
+}
+
 // value - returns the uint value within the atomicUint
 func (a *atomicUint) value() uint32 {
 	return atomic.LoadUint32(&a.num)
