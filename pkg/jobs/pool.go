@@ -356,8 +356,9 @@ func (p *Pool) getIsStartStop() bool {
 }
 
 // startAll - starts all jobs defined in the cronJobs map, used by watchJobs
-//           other jobs are single run and never restarted
-// 					 returns true when successful, false when not
+//
+//	          other jobs are single run and never restarted
+//						 returns true when successful, false when not
 func (p *Pool) startAll() bool {
 	// Check that all are ready before starting
 	p.logger.Debug("Checking for all cron jobs to be ready")
@@ -380,7 +381,8 @@ func (p *Pool) startAll() bool {
 }
 
 // stopAll - stops all jobs defined in the cronJobs map, used by watchJobs
-//           other jobs are single run and should not need stopped
+//
+//	other jobs are single run and should not need stopped
 func (p *Pool) stopAll() {
 	p.logger.Debug("Stopping all cron jobs")
 
@@ -480,7 +482,7 @@ func (p *Pool) watchJobs() {
 			ticker = time.NewTicker(p.getBackoff().getCurrentTimeout())
 			p.logger.
 				WithField("interval", p.getBackoff().getCurrentTimeout()).
-				Debug("setting next job restart backoff interval")
+				Trace("setting next job restart backoff interval")
 		}
 	}
 }

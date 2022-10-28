@@ -38,7 +38,10 @@ func (j *instanceValidator) Ready() bool {
 
 // Status -
 func (j *instanceValidator) Status() error {
-	j.logger.Trace("validating status")
+	j.logger.Trace("status check")
+	if agent.validatingLock.value() != 0 {
+		j.logger.Trace("validator running")
+	}
 	if status, _ := hc.GetGlobalStatus(); status != string(hc.OK) {
 		err := fmt.Errorf("agent is marked as not running")
 		j.logger.WithError(err).Trace("status failed")
@@ -66,6 +69,7 @@ func (j *instanceValidator) Execute() error {
 		j.logger.Trace("no registered validator")
 	}
 
+	j.logger.Trace("finished executing")
 	return nil
 }
 
@@ -75,7 +79,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 
 	logger := j.logger
 
-	logger.Debug("validating api service instances on dataplane")
+	logger.Trace("validating api service instances on dataplane")
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
 		logger := logger.WithField("instanceCacheID", key)
@@ -115,7 +119,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		}
 	}
 
-	logger.Debug("validating api services have at least one instance on dataplane")
+	logger.Trace("validating api services have at least one instance on dataplane")
 	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
 		logger := logger.WithField("serviceCacheID", key)
 		logger.Tracef("validating")
