@@ -163,7 +163,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 
 	svc.Name = serviceBody.serviceContext.serviceName
 	err = c.updateAPIServiceSubresources(svc)
-	if err != nil {
+	if err != nil && serviceBody.serviceContext.serviceAction == addAPI {
 		_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 		if e != nil {
 			return nil, errors.New(err.Error() + e.Error())

@@ -80,6 +80,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	logger := j.logger
 
 	logger.Trace("validating api service instances on dataplane")
+
 	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
 		logger := logger.WithField("instanceCacheID", key)

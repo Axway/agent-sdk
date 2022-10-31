@@ -119,9 +119,13 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		revisionName = serviceBody.AltRevisionPrefix
 	}
 
-	if serviceBody.serviceContext.revisionAction == updateAPI {
+	if serviceBody.serviceContext.revisionAction == updateAPI && revision != nil {
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
+
+		// add the environment info as it is not part of the returned data form the get revisions call
+		revision.Metadata.Scope.Kind = management.EnvironmentGVK().Kind
+		revision.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
 
 		revision = c.updateAPIServiceRevision(serviceBody, revision)
 		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
