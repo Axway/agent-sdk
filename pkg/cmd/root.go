@@ -33,6 +33,7 @@ const (
 	EnvFileFlagDesciption = "Path of the file with environment variables to override configuration"
 	cpuprofile            = "cpuprofile"
 	memprofile            = "memprofile"
+	httpprofile           = "httpprofile"
 )
 
 // CommandHandler - Root command execution handler
@@ -69,6 +70,7 @@ type agentRootCommand struct {
 	initialized       bool
 	memprofile        string
 	cpuprofile        string
+	httpprofile       bool
 }
 
 func init() {
@@ -174,6 +176,7 @@ func (c *agentRootCommand) addBaseProps(agentType config.AgentType) {
 	if agentType == config.DiscoveryAgent {
 		c.props.AddStringProperty(cpuprofile, "", "write cpu profile to `file`")
 		c.props.AddStringProperty(memprofile, "", "write memory profile to `file`")
+		c.props.AddBoolProperty(httpprofile, false, "set to setup the http profiling endpoints")
 	}
 }
 
@@ -189,6 +192,7 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	if c.agentType == config.DiscoveryAgent {
 		_, c.cpuprofile = c.props.StringFlagValue(cpuprofile)
 		_, c.memprofile = c.props.StringFlagValue(memprofile)
+		c.httpprofile = c.props.BoolFlagValue(httpprofile)
 	}
 
 	// If the Agent pathConfig value is set and the beats path.config is not then use the pathConfig value for both
@@ -264,7 +268,7 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	c.statusCfg, err = config.ParseStatusConfig(c.GetProperties())
+	c.statusCfg, _ = config.ParseStatusConfig(c.GetProperties())
 	err = c.statusCfg.ValidateCfg()
 	if err != nil {
 		return err
@@ -338,7 +342,7 @@ func (c *agentRootCommand) finishInit() error {
 	startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 
 	if util.IsNotTest() {
-		healthCheckServer := &hc.Server{}
+		healthCheckServer := hc.NewServer(c.httpprofile)
 		healthCheckServer.HandleRequests()
 	}
 

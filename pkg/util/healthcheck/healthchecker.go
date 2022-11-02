@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/pprof"
 	"net/url"
 	"strconv"
 	"strings"
@@ -147,13 +148,30 @@ func (check *statusCheck) executeCheck() {
 
 // Server contains an http server for health checks.
 type Server struct {
+	router   *http.ServeMux
+	httpprof bool
+}
+
+func NewServer(httpprof bool) *Server {
+	return &Server{
+		router:   http.NewServeMux(),
+		httpprof: httpprof,
+	}
 }
 
 // HandleRequests - starts the http server
 func (s *Server) HandleRequests() {
 	if !globalHealthChecker.registered {
-		http.HandleFunc("/status", statusHandler)
+		s.router.HandleFunc("/status", statusHandler)
 		globalHealthChecker.registered = true
+	}
+
+	if s.httpprof {
+		s.router.HandleFunc("/debug/pprof/", pprof.Index)
+		s.router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		s.router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		s.router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		s.router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
 
 	s.startHealthCheckServer()
@@ -162,7 +180,7 @@ func (s *Server) HandleRequests() {
 func (s *Server) startHealthCheckServer() {
 	if statusConfig != nil && statusConfig.GetPort() > 0 {
 		addr := fmt.Sprintf(":%d", statusConfig.GetPort())
-		go http.ListenAndServe(addr, nil)
+		go http.ListenAndServe(addr, s.router)
 	}
 }
 
