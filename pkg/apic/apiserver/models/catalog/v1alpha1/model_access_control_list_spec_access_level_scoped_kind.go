@@ -15,4 +15,10 @@ type AccessControlListSpecAccessLevelScopedKind struct {
 	Level string `json:"level,omitempty"`
 	// The kind of scoped resources to provide access to or \"*\" for all kinds.
 	Kind string `json:"kind"`
+	// Set true to allow users to create scoped resources of the specified kind.
+	AllowCreate bool `json:"allowCreate,omitempty"`
+	// Set true to allow users to delete scoped resources of the specified kind.
+	AllowDelete bool `json:"allowDelete,omitempty"`
+	// Set true to allow users to update scoped resources of the specified kind.
+	AllowWrite bool `json:"allowWrite,omitempty"`
 }

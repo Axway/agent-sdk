@@ -35,12 +35,13 @@ func init() {
 // AssetRequest Resource
 type AssetRequest struct {
 	apiv1.ResourceMeta
-	Approval   AssetRequestApproval   `json:"approval"`
-	Data       interface{}            `json:"data"`
-	Owner      *apiv1.Owner           `json:"owner"`
-	References AssetRequestReferences `json:"references"`
-	Spec       AssetRequestSpec       `json:"spec"`
-	// Status     AssetRequestStatus     `json:"status"`
+	Approval    AssetRequestApproval    `json:"approval"`
+	Data        interface{}             `json:"data"`
+	Marketplace AssetRequestMarketplace `json:"marketplace"`
+	Owner       *apiv1.Owner            `json:"owner"`
+	References  AssetRequestReferences  `json:"references"`
+	Spec        AssetRequestSpec        `json:"spec"`
+	// Status      AssetRequestStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -128,6 +129,7 @@ func (res *AssetRequest) MarshalJSON() ([]byte, error) {
 
 	out["approval"] = res.Approval
 	out["data"] = res.Data
+	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -184,6 +186,20 @@ func (res *AssetRequest) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "data")
 		err = json.Unmarshal(sr, &res.Data)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Marketplace
+	if v, ok := aux.SubResources["marketplace"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "marketplace")
+		err = json.Unmarshal(sr, &res.Marketplace)
 		if err != nil {
 			return err
 		}

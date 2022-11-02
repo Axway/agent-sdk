@@ -9,11 +9,11 @@
 
 package catalog
 
-// CredentialSpecState Desired state of the Credential. (catalog.v1alpha1.Credential)
+// CredentialSpecState Desired state of the Credential.
 type CredentialSpecState struct {
 	Name string `json:"name"`
 	// Additional info on the state.
 	Reason string `json:"reason,omitempty"`
-	// Additional info on the state.
+	// Defines if credential needs to be rotated.
 	Rotate bool `json:"rotate,omitempty"`
 }

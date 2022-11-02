@@ -9,8 +9,8 @@
 
 package management
 
-// SecretSpec  (management.v1alpha1.Secret)
+// SecretSpec struct for SecretSpec
 type SecretSpec struct {
-	// Key value pairs. The value will be stored encrypted. (management.v1alpha1.Secret)
+	// Key value pairs. The value will be stored encrypted.
 	Data map[string]string `json:"data,omitempty"`
 }

@@ -17,4 +17,8 @@ type AccessControlListSpecAccessLevelScopedResource struct {
 	Kind string `json:"kind"`
 	// The name of the scoped resource to provide access to.
 	Name string `json:"name"`
+	// Set true to allow users to delete the referenced scoped resource.
+	AllowDelete bool `json:"allowDelete,omitempty"`
+	// Set true to allow users to update the referenced scoped resource.
+	AllowWrite bool `json:"allowWrite,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// AmplifyOAuth2AuthRuleSpec  (management.v1alpha1.AmplifyOAuth2AuthRule)
+// AmplifyOAuth2AuthRuleSpec struct for AmplifyOAuth2AuthRuleSpec
 type AmplifyOAuth2AuthRuleSpec struct {
 	// The description of the authentication rule.
 	Description        string `json:"description,omitempty"`

@@ -9,14 +9,12 @@
 
 package management
 
-// K8SResourceSpec  (management.v1alpha1.K8SResource)
+// K8SResourceSpec struct for K8SResourceSpec
 type K8SResourceSpec struct {
 	ResourceDiscovery string                           `json:"resourceDiscovery,omitempty"`
 	ResourceVersion   string                           `json:"resourceVersion,omitempty"`
 	Uid               string                           `json:"uid,omitempty"`
 	OwnerReferences   []K8SResourceSpecOwnerReferences `json:"ownerReferences,omitempty"`
-	//  (management.v1alpha1.K8SResource)
-	ResourceSpec map[string]interface{} `json:"resourceSpec,omitempty"`
-	//  (management.v1alpha1.K8SResource)
-	ResourceStatus map[string]interface{} `json:"resourceStatus,omitempty"`
+	ResourceSpec      map[string]interface{}           `json:"resourceSpec,omitempty"`
+	ResourceStatus    map[string]interface{}           `json:"resourceStatus,omitempty"`
 }

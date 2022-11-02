@@ -13,4 +13,6 @@ package management
 type VirtualServiceSpecAmplifyoauth2authrule struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
+	// Parameter not required meaning auth credentials are not forwarded to the backend by default. If set to true, auth credentials are forwarded.
+	ForwardAuthCredentials bool `json:"forwardAuthCredentials,omitempty"`
 }

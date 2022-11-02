@@ -9,7 +9,7 @@
 
 package management
 
-// AmplifyJwtAuthRuleSpecJwks  (management.v1alpha1.AmplifyJWTAuthRule)
+// AmplifyJwtAuthRuleSpecJwks struct for AmplifyJwtAuthRuleSpecJwks
 type AmplifyJwtAuthRuleSpecJwks struct {
 	// The URI from which to fetch the JSON Web Key Set(JWKS).
 	Uri string `json:"uri"`

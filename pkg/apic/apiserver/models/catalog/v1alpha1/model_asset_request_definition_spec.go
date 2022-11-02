@@ -9,9 +9,9 @@
 
 package catalog
 
-// AssetRequestDefinitionSpec  (catalog.v1alpha1.AssetRequestDefinition)
+// AssetRequestDefinitionSpec struct for AssetRequestDefinitionSpec
 type AssetRequestDefinitionSpec struct {
-	// JSON Schema draft \\#7 for defining the AssetRequest properties needed to get access to an APIServiceInstance. (catalog.v1alpha1.AssetRequestDefinition)
+	// JSON Schema draft \\#7 for defining the AssetRequest properties needed to get access to an APIServiceInstance.
 	Schema    map[string]interface{}              `json:"schema"`
 	Provision AssetRequestDefinitionSpecProvision `json:"provision,omitempty"`
 }

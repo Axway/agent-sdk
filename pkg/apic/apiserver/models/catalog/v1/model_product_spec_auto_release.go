@@ -9,10 +9,7 @@
 
 package catalog
 
-// DocumentSpecAssetResourceRef struct for DocumentSpecAssetResourceRef
-type DocumentSpecAssetResourceRef struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-	// Title for the article.
-	Title string `json:"title"`
+// ProductSpecAutoRelease Defines if a product should create releases everytime there is an update to the product references.
+type ProductSpecAutoRelease struct {
+	ReleaseType string `json:"releaseType"`
 }

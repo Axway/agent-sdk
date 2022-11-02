@@ -71,6 +71,7 @@ type Set struct {
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
+	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
@@ -90,6 +91,7 @@ type Set struct {
 	AccessControlListCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                                *catalog_v1.CategoryClient
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
+	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
 	QuotaCatalogV1                                   *catalog_v1.UnscopedQuotaClient
@@ -332,6 +334,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductVisibility: %s", err))
 	}
+	s.SupportContactCatalogV1alpha1, err = catalog_v1alpha1.NewSupportContactClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SupportContact: %s", err))
+	}
 	s.ProductCatalogV1alpha1, err = catalog_v1alpha1.NewProductClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Product: %s", err))
@@ -407,6 +413,10 @@ func New(b cAPIV1.Base) *Set {
 	s.MarketplaceCatalogV1, err = catalog_v1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Marketplace: %s", err))
+	}
+	s.SupportContactCatalogV1, err = catalog_v1.NewSupportContactClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.SupportContact: %s", err))
 	}
 	s.ProductCatalogV1, err = catalog_v1.NewProductClient(b)
 	if err != nil {

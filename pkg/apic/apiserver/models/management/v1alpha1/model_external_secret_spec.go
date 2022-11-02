@@ -9,7 +9,7 @@
 
 package management
 
-// ExternalSecretSpec  (management.v1alpha1.ExternalSecret)
+// ExternalSecretSpec struct for ExternalSecretSpec
 type ExternalSecretSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	Config interface{} `json:"config"`

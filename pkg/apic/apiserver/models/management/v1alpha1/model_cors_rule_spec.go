@@ -9,7 +9,7 @@
 
 package management
 
-// CorsRuleSpec  (management.v1alpha1.CorsRule)
+// CorsRuleSpec struct for CorsRuleSpec
 type CorsRuleSpec struct {
 	// CORS configuration rule.
 	Description                   string   `json:"description,omitempty"`

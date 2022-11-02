@@ -9,9 +9,9 @@
 
 package management
 
-// MeshServiceSpec  (management.v1alpha1.MeshService)
+// MeshServiceSpec struct for MeshServiceSpec
 type MeshServiceSpec struct {
-	// The labels used by the service to match workloads it exposes. (management.v1alpha1.MeshService)
+	// The labels used by the service to match workloads it exposes.
 	Selector map[string]string `json:"selector,omitempty"`
 	// Reference to the K8SResource derived from the Kubernetes Service.
 	Resource string `json:"resource,omitempty"`

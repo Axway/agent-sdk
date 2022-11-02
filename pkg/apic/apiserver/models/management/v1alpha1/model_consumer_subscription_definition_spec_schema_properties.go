@@ -9,10 +9,10 @@
 
 package management
 
-// ConsumerSubscriptionDefinitionSpecSchemaProperties  (management.v1alpha1.ConsumerSubscriptionDefinition)
+// ConsumerSubscriptionDefinitionSpecSchemaProperties struct for ConsumerSubscriptionDefinitionSpecSchemaProperties
 type ConsumerSubscriptionDefinitionSpecSchemaProperties struct {
 	// The Catalog Item subscription spec key. For API type subscriptions, the key needs to be 'profile'.
 	Key string `json:"key"`
-	// JSON schema to specify data needed from consumers when subscriptions are created. (management.v1alpha1.ConsumerSubscriptionDefinition)
+	// JSON schema to specify data needed from consumers when subscriptions are created.
 	Value map[string]interface{} `json:"value"`
 }

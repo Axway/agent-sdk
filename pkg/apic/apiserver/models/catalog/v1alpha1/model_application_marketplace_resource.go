@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationMarketplaceResource The Marketplace Application resource details. (catalog.v1alpha1.Application)
+// ApplicationMarketplaceResource The Marketplace Application resource details.
 type ApplicationMarketplaceResource struct {
 	Metadata ApplicationMarketplaceResourceMetadata `json:"metadata"`
 	Owner    ApplicationMarketplaceResourceOwner    `json:"owner,omitempty"`

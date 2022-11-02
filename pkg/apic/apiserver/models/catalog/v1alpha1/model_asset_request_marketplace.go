@@ -9,8 +9,9 @@
 
 package catalog
 
-// CredentialMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.Credential)
-type CredentialMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// AssetRequestMarketplace Details about the marketplace Access Request.
+type AssetRequestMarketplace struct {
+	// The name of the Marketplace.
+	Name     string                          `json:"name"`
+	Resource AssetRequestMarketplaceResource `json:"resource"`
 }

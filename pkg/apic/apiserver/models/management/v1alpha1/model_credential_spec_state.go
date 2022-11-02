@@ -9,11 +9,11 @@
 
 package management
 
-// CredentialSpecState Desired state of the Credential. (management.v1alpha1.Credential)
+// CredentialSpecState Desired state of the Credential.
 type CredentialSpecState struct {
 	Name string `json:"name"`
 	// Additional info on the desired state.
 	Reason string `json:"reason,omitempty"`
-	// Defines on if credential needs to be rotated.
+	// Defines if credential needs to be rotated.
 	Rotate bool `json:"rotate,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// AmplifyConfigSpec  (management.v1alpha1.AmplifyConfig)
+// AmplifyConfigSpec struct for AmplifyConfigSpec
 type AmplifyConfigSpec struct {
 	Address AmplifyConfigSpecAddress `json:"address"`
 }
