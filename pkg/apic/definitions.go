@@ -76,7 +76,7 @@ type EndpointDefinition struct {
 	Port     int32
 	Protocol string
 	BasePath string
-	Details  map[string]map[string]interface{}
+	Details  map[string]interface{}
 }
 
 // APIError - api response error

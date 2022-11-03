@@ -14,5 +14,6 @@ type ApiServiceInstanceSpecRouting struct {
 	// The base path to the API. Example: '/api'.
 	BasePath string `json:"basePath,omitempty"`
 	// Specify any additional routing details needed
-	Details map[string]map[string]interface{} `json:"details,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Details map[string]interface{} `json:"details,omitempty"`
 }

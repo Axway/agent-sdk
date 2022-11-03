@@ -263,12 +263,10 @@ func ValidateAsyncAPIProcessors(t *testing.T, specParser SpecResourceParser) {
 	assert.Equal(t, int32(5676), endPoints[0].Port)
 	assert.Equal(t, "mqtt", endPoints[0].Protocol)
 	assert.Equal(t, "", endPoints[0].BasePath)
-	assert.Equal(t, map[string]map[string]interface{}{
-		"bindings": {
-			"solace": map[string]interface{}{
-				"msgVpn":  "apim-test",
-				"version": "0.2.0",
-			},
+	assert.Equal(t, map[string]interface{}{
+		"solace": map[string]interface{}{
+			"msgVpn":  "apim-test",
+			"version": "0.2.0",
 		},
 	}, endPoints[0].Details)
 }

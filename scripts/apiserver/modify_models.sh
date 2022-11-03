@@ -245,3 +245,22 @@ for file in ${MODELS}; do
         go fmt ${file}
     fi
 done
+
+
+######################
+# Change Endpoint details to map[string]interface{}
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "model_api_service_instance_spec_routing.go"`
+
+SEARCH="\s*Details.*$"
+REPLACE="Details map[string]interface{} \`json:\"details,omitempty\"\`"
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
+        # replace the float32 type
+        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done
