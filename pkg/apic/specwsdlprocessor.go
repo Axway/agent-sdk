@@ -3,7 +3,6 @@ package apic
 import (
 	"net"
 	"net/url"
-	"reflect"
 	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -62,7 +61,8 @@ func (p *wsdlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 
 func (p *wsdlProcessor) contains(endpts []EndpointDefinition, endpt EndpointDefinition) bool {
 	for _, pt := range endpts {
-		if reflect.DeepEqual(pt, endpt) {
+		if pt.Host == endpt.Host && pt.Port == endpt.Port &&
+			pt.Protocol == endpt.Protocol && pt.BasePath == endpt.BasePath {
 			return true
 		}
 	}
