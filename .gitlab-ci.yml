@@ -102,23 +102,14 @@ trigger-azure-discovery-agent:
 ####################
 # CSR - overridden from csrjobs.yml to effectively not see this job ever
 ####################
-.dummy:
-  stage: security-scans
-  only:
-    refs:
-      - xxxxx
-  script:
-    - ""
-
 fetch-iriusrisk:
-  extends: .dummy
+  extends: .only-never
 
 twistlock:
   extends: .dummy
 
 twistlock:on-schedule:
-  extends: .dummy
+  extends: .only-never
 
 twistlock-master:
-  extends: .dummy
-
+  extends: .only-never
