@@ -76,6 +76,7 @@ type EndpointDefinition struct {
 	Port     int32
 	Protocol string
 	BasePath string
+	Details  map[string]map[string]interface{}
 }
 
 // APIError - api response error
@@ -90,7 +91,7 @@ type ResponseError struct {
 	Errors []APIError `json:"errors,omitempty"`
 }
 
-//UnstructuredProperties -
+// UnstructuredProperties -
 type UnstructuredProperties struct {
 	AssetType   string
 	ContentType string

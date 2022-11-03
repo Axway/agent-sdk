@@ -55,6 +55,7 @@ func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[string]inte
 	protocol := ""
 	serverURL := ""
 	var serverVariables map[string]string
+	serverBindings := map[string]map[string]interface{}{}
 	for key, valueInterface := range serverObjInterface {
 		value, ok := valueInterface.(string)
 		if ok {
@@ -71,6 +72,9 @@ func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[string]inte
 				serverVariables, _ = p.parseVariables(variablesInterface)
 			}
 		}
+		if key == "bindings" {
+			serverBindings["bindings"] = valueInterface.(map[string]interface{})
+		}
 	}
 	endpoint := EndpointDefinition{}
 	endpoint.Protocol = protocol
@@ -84,6 +88,7 @@ func (p *asyncAPIProcessor) parseServerObject(serverObjInterface map[string]inte
 	port, _ := strconv.Atoi(parseURL.Port())
 	endpoint.Port = int32(port)
 	endpoint.BasePath = parseURL.Path
+	endpoint.Details = serverBindings
 	return endpoint, err
 }
 

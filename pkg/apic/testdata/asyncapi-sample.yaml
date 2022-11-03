@@ -16,6 +16,10 @@ servers:
           - '5676'
           - '5677'
         default: '5676'
+    bindings: 
+      solace: 
+        msgVpn: apim-test
+        version: 0.2.0
 
 channels:
   accounts.1.0.action.user.signup:
