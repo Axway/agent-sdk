@@ -119,9 +119,13 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		revisionName = serviceBody.AltRevisionPrefix
 	}
 
-	if serviceBody.serviceContext.revisionAction == updateAPI {
+	if serviceBody.serviceContext.revisionAction == updateAPI && revision != nil {
 		httpMethod = http.MethodPut
 		revisionURL += "/" + revisionName
+
+		// add the environment info as it is not part of the returned data form the get revisions call
+		revision.Metadata.Scope.Kind = management.EnvironmentGVK().Kind
+		revision.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
 
 		revision = c.updateAPIServiceRevision(serviceBody, revision)
 		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
@@ -220,8 +224,9 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// Get revisions for the service and use the latest one as last reference
 		queryParams := map[string]string{
-			"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
-			"sort":  "metadata.audit.createTimestamp,DESC",
+			"query":  "metadata.references.name==" + serviceBody.serviceContext.serviceName,
+			"sort":   "metadata.audit.createTimestamp,DESC",
+			"fields": "name",
 		}
 
 		revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), serviceBody.Stage)

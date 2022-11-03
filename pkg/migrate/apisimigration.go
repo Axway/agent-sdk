@@ -107,7 +107,8 @@ func (m *APISIMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceIns
 func (m *APISIMigration) getRevisions(ri *apiv1.ResourceInstance) ([]*apiv1.ResourceInstance, error) {
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query":  queryFunc(ri.Name),
+		"fields": "name",
 	}
 
 	return m.getAllRI(url, q)
