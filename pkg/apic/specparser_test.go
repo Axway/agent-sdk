@@ -34,7 +34,7 @@ func TestSpecDiscovery(t *testing.T) {
 			name:      "Protobuf input type with OAS2 Spec",
 			inputFile: "./testdata/petstore-openapi2.yaml",
 			parseErr:  true,
-			inputType: Protobuf,
+			inputType: AsyncAPI,
 		},
 		{
 			name:      "OAS3 input type with WSDL Spec",
@@ -46,13 +46,23 @@ func TestSpecDiscovery(t *testing.T) {
 			name:      "AsyncAPI input type with Protobuf Spec",
 			inputFile: "./testdata/petstore.proto",
 			parseErr:  true,
-			inputType: AsyncAPI,
+			inputType: Oas2,
 		},
 		{
 			name:      "Protobuf input type with AsyncAPI Spec",
 			inputFile: "./testdata/asyncapi-sample.yaml",
 			parseErr:  true,
-			inputType: Protobuf,
+			inputType: Wsdl,
+		},
+		{
+			name:         "No input type bad OAS version creates Unstructured",
+			inputFile:    "./testdata/petstore-openapi-bad-version.json",
+			expectedType: Unstructured,
+		},
+		{
+			name:         "No input type bad Swagger version creates Unstructured",
+			inputFile:    "./testdata/petstore-swagger-bad-version.json",
+			expectedType: Unstructured,
 		},
 		{
 			name:         "No input type OAS3 Spec",
@@ -80,7 +90,7 @@ func TestSpecDiscovery(t *testing.T) {
 			expectedType: Protobuf,
 		},
 		{
-			name:         "No input type AsyncAPI Spec",
+			name:         "No input type AsyncAPI Spec YAML",
 			inputFile:    "./testdata/asyncapi-sample.yaml",
 			expectedType: AsyncAPI,
 		},
@@ -102,6 +112,9 @@ func TestSpecDiscovery(t *testing.T) {
 			specProcessor := specParser.GetSpecProcessor()
 			assert.NotNil(t, specProcessor)
 			assert.Equal(t, tc.expectedType, specProcessor.getResourceType())
+			if tc.expectedType != specProcessor.getResourceType() {
+				return
+			}
 			ok := false
 			switch tc.expectedType {
 			case Oas3:
