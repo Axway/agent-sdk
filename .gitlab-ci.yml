@@ -106,7 +106,7 @@ fetch-iriusrisk:
   extends: .only-never
 
 twistlock:
-  extends: .dummy
+  extends: .only-never
 
 twistlock:on-schedule:
   extends: .only-never
