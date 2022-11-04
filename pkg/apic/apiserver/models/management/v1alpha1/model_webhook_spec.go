@@ -9,11 +9,11 @@
 
 package management
 
-// WebhookSpec struct for WebhookSpec
+// WebhookSpec  (management.v1alpha1.Webhook)
 type WebhookSpec struct {
 	Auth    WebhookSpecAuth `json:"auth,omitempty"`
 	Enabled bool            `json:"enabled,omitempty"`
 	Url     string          `json:"url"`
-	// A list of headers that will be sent as par of the http call to the webhook endpoint.
+	// A list of headers that will be sent as par of the http call to the webhook endpoint. (management.v1alpha1.Webhook)
 	Headers map[string]string `json:"headers,omitempty"`
 }

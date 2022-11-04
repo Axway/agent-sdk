@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerInstanceReferences struct for ConsumerInstanceReferences
+// ConsumerInstanceReferences  (management.v1alpha1.ConsumerInstance)
 type ConsumerInstanceReferences struct {
 	// Reference to Amplify Central APIService
 	ApiService string `json:"apiService,omitempty"`

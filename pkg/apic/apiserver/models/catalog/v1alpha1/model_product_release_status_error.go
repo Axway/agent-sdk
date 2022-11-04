@@ -22,6 +22,6 @@ type ProductReleaseStatusError struct {
 	// Details of the error.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time         `json:"timestamp"`
-	Meta      ProductStatusMeta `json:"meta,omitempty"`
+	Timestamp time.Time                       `json:"timestamp"`
+	Meta      ProductReleaseStatusPendingMeta `json:"meta,omitempty"`
 }

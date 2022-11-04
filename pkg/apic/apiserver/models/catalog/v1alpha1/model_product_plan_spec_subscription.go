@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecSubscription Defines Plan's subscription information
+// ProductPlanSpecSubscription Defines Plan's subscription information (catalog.v1alpha1.ProductPlan)
 type ProductPlanSpecSubscription struct {
 	Interval ProductPlanSpecSubscriptionInterval `json:"interval,omitempty"`
 	Renewal  string                              `json:"renewal,omitempty"`

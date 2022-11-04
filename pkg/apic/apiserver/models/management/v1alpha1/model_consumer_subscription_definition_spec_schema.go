@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerSubscriptionDefinitionSpecSchema Subscription definition properties to be used by the consumers.
+// ConsumerSubscriptionDefinitionSpecSchema Subscription definition properties to be used by the consumers. (management.v1alpha1.ConsumerSubscriptionDefinition)
 type ConsumerSubscriptionDefinitionSpecSchema struct {
 	// Defines the subscription schema properties as key/value pairs.
 	Properties []ConsumerSubscriptionDefinitionSpecSchemaProperties `json:"properties,omitempty"`

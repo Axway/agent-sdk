@@ -9,7 +9,7 @@
 
 package management
 
-// VirtualHostSpec struct for VirtualHostSpec
+// VirtualHostSpec  (management.v1alpha1.VirtualHost)
 type VirtualHostSpec struct {
 	// The fully qualifield domain name as described in RFC 1035
 	Domain string `json:"domain"`

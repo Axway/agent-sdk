@@ -9,7 +9,7 @@
 
 package management
 
-// VirtualServiceSpec struct for VirtualServiceSpec
+// VirtualServiceSpec  (management.v1alpha1.VirtualService)
 type VirtualServiceSpec struct {
 	// The path prefix to match. Example /api/v1
 	Prefix string `json:"prefix"`

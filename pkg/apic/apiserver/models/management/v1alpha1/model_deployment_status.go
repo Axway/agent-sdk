@@ -9,7 +9,7 @@
 
 package management
 
-// DeploymentStatus struct for DeploymentStatus
+// DeploymentStatus  (management.v1alpha1.Deployment)
 type DeploymentStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

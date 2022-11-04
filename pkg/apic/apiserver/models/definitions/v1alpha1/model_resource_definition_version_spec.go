@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionVersionSpec struct for ResourceDefinitionVersionSpec
+// ResourceDefinitionVersionSpec  (definitions.v1alpha1.ResourceDefinitionVersion)
 type ResourceDefinitionVersionSpec struct {
 	// A reference to a resource definition.
 	ResourceDefinition string `json:"resourceDefinition"`
@@ -19,6 +19,6 @@ type ResourceDefinitionVersionSpec struct {
 	Served bool `json:"served"`
 	// Defines if this version is used when storing the resource instance details.
 	Storage bool `json:"storage"`
-	// Defines the strucure of the spec for this resource version.
+	// Defines the strucure of the spec for this resource version. (definitions.v1alpha1.ResourceDefinitionVersion)
 	Spec map[string]interface{} `json:"spec,omitempty"`
 }

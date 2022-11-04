@@ -9,7 +9,7 @@
 
 package management
 
-// VirtualApiStatus struct for VirtualApiStatus
+// VirtualApiStatus  (management.v1alpha1.VirtualAPI)
 type VirtualApiStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

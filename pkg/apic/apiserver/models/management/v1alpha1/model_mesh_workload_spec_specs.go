@@ -9,7 +9,7 @@
 
 package management
 
-// MeshWorkloadSpecSpecs API specs exposed by this workload on this port.
+// MeshWorkloadSpecSpecs API specs exposed by this workload on this port. (management.v1alpha1.MeshWorkload)
 type MeshWorkloadSpecSpecs struct {
 	// Array of references to apispecs discovered by the discovery agent.
 	DiscoveredSpecs []string `json:"discoveredSpecs,omitempty"`

@@ -9,7 +9,7 @@
 
 package management
 
-// VirtualApiSpec struct for VirtualApiSpec
+// VirtualApiSpec  (management.v1alpha1.VirtualAPI)
 type VirtualApiSpec struct {
 	// description of the asset.
 	Description string `json:"description,omitempty"`

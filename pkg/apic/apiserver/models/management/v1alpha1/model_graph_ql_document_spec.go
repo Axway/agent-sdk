@@ -9,8 +9,9 @@
 
 package management
 
-// GraphQlDocumentSpec struct for GraphQlDocumentSpec
+// GraphQlDocumentSpec  (management.v1alpha1.GraphQLDocument)
 type GraphQlDocumentSpec struct {
-	VirtualService string                 `json:"virtualService"`
-	Graphql        map[string]interface{} `json:"graphql"`
+	VirtualService string `json:"virtualService"`
+	//  (management.v1alpha1.GraphQLDocument)
+	Graphql map[string]interface{} `json:"graphql"`
 }

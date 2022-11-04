@@ -9,7 +9,7 @@
 
 package management
 
-// MeshServiceSpecPorts struct for MeshServiceSpecPorts
+// MeshServiceSpecPorts  (management.v1alpha1.MeshService)
 type MeshServiceSpecPorts struct {
 	Name      string                     `json:"name,omitempty"`
 	Port      int32                      `json:"port,omitempty"`

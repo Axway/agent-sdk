@@ -9,7 +9,7 @@
 
 package management
 
-// AmplifyJwtAuthRuleSpec struct for AmplifyJwtAuthRuleSpec
+// AmplifyJwtAuthRuleSpec  (management.v1alpha1.AmplifyJWTAuthRule)
 type AmplifyJwtAuthRuleSpec struct {
 	// The description of the authentication rule.
 	Description string                     `json:"description,omitempty"`

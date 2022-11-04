@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReleaseSpecRelease struct for ProductReleaseSpecRelease
+// ProductReleaseSpecRelease  (catalog.v1.ProductRelease)
 type ProductReleaseSpecRelease struct {
 	Name string `json:"name,omitempty"`
 	// The AssetRelease version.

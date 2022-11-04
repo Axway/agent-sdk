@@ -16,12 +16,13 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AccessRequestStatusReasons struct for AccessRequestStatusReasons
+// AccessRequestStatusReasons  (management.v1alpha1.AccessRequest)
 type AccessRequestStatusReasons struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time                         `json:"timestamp"`
-	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	//  (management.v1alpha1.AccessRequest)
+	Meta map[string]map[string]interface{} `json:"meta,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// ReleaseTagStatus struct for ReleaseTagStatus
+// ReleaseTagStatus  (management.v1alpha1.ReleaseTag)
 type ReleaseTagStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

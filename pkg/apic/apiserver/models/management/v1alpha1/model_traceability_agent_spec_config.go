@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfig Represents the traceability agent config
+// TraceabilityAgentSpecConfig Represents the traceability agent config (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfig struct {
 	// Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
 	OwningTeam string `json:"owningTeam,omitempty"`

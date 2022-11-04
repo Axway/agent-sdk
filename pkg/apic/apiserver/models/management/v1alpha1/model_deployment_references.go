@@ -9,7 +9,7 @@
 
 package management
 
-// DeploymentReferences struct for DeploymentReferences
+// DeploymentReferences  (management.v1alpha1.Deployment)
 type DeploymentReferences struct {
 	// Reference to the API Service that got created from this deployment.
 	ApiService string `json:"apiService,omitempty"`

@@ -9,7 +9,7 @@
 
 package management
 
-// ApiKeyAuthRuleSpec struct for ApiKeyAuthRuleSpec
+// ApiKeyAuthRuleSpec  (management.v1alpha1.APIKeyAuthRule)
 type ApiKeyAuthRuleSpec struct {
 	// The description of the authentication rule.
 	Description string `json:"description,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// QuotaSpec struct for QuotaSpec
+// QuotaSpec  (catalog.v1.Quota)
 type QuotaSpec struct {
 	// description of the quota.
 	Description string `json:"description,omitempty"`
