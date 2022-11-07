@@ -9,8 +9,8 @@
 
 package catalog
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float64 `json:"value,omitempty"`
+// AssetRequestMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.AssetRequest)
+type AssetRequestMarketplaceResourceOwnerOrganization struct {
+	// Id of the organization.
+	Id string `json:"id"`
 }

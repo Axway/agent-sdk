@@ -13,4 +13,10 @@ package management
 type AccessControlListSpecAccessLevelScope struct {
 	// Resource level at which access is being granted.
 	Level string `json:"level,omitempty"`
+	// Set true to allow users to create scoped resources.
+	AllowCreateScoped bool `json:"allowCreateScoped,omitempty"`
+	// Set true to allow users to delete the unscoped resource.
+	AllowDelete bool `json:"allowDelete,omitempty"`
+	// Set true to allow users to update the unscoped resource.
+	AllowWrite bool `json:"allowWrite,omitempty"`
 }

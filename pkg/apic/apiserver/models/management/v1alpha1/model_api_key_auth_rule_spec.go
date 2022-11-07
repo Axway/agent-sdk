@@ -15,6 +15,6 @@ type ApiKeyAuthRuleSpec struct {
 	Description string `json:"description,omitempty"`
 	// Where to look for the API key, defaults to header.
 	In string `json:"in,omitempty"`
-	// name of the API key field, defaults to x-api-key.
+	// The name of the API key, defaults to x-api-key.
 	Name string `json:"name,omitempty"`
 }

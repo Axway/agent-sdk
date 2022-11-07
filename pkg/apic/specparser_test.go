@@ -17,84 +17,132 @@ func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
 }
 
 func TestSpecDiscovery(t *testing.T) {
-	// JSON OAS3 specification
-	specParser, err := createSpecParser("./testdata/petstore-openapi3.json", "")
-	assert.Nil(t, err)
-	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas3SpecProcessor)
-	assert.True(t, ok)
+	tests := []struct {
+		name         string
+		inputFile    string
+		inputType    string
+		parseErr     bool
+		expectedType string
+	}{
+		{
+			name:      "Protobuf input type with OAS3 Spec",
+			inputFile: "./testdata/petstore-openapi3.json",
+			parseErr:  true,
+			inputType: Protobuf,
+		},
+		{
+			name:      "Protobuf input type with OAS2 Spec",
+			inputFile: "./testdata/petstore-openapi2.yaml",
+			parseErr:  true,
+			inputType: AsyncAPI,
+		},
+		{
+			name:      "OAS3 input type with WSDL Spec",
+			inputFile: "./testdata/weather.xml",
+			parseErr:  true,
+			inputType: Oas3,
+		},
+		{
+			name:      "AsyncAPI input type with Protobuf Spec",
+			inputFile: "./testdata/petstore.proto",
+			parseErr:  true,
+			inputType: Oas2,
+		},
+		{
+			name:      "Protobuf input type with AsyncAPI Spec",
+			inputFile: "./testdata/asyncapi-sample.yaml",
+			parseErr:  true,
+			inputType: Wsdl,
+		},
+		{
+			name:         "No input type bad OAS version creates Unstructured",
+			inputFile:    "./testdata/petstore-openapi-bad-version.json",
+			expectedType: Unstructured,
+		},
+		{
+			name:         "No input type bad Swagger version creates Unstructured",
+			inputFile:    "./testdata/petstore-swagger-bad-version.json",
+			expectedType: Unstructured,
+		},
+		{
+			name:         "No input type OAS3 Spec",
+			inputFile:    "./testdata/petstore-openapi3.json",
+			expectedType: Oas3,
+		},
+		{
+			name:         "No input type OAS2 Spec",
+			inputFile:    "./testdata/petstore-openapi2.yaml",
+			expectedType: Oas2,
+		},
+		{
+			name:         "No input type OAS2 swagger Spec",
+			inputFile:    "./testdata/petstore-swagger2.json",
+			expectedType: Oas2,
+		},
+		{
+			name:         "No input type WSDL Spec",
+			inputFile:    "./testdata/weather.xml",
+			expectedType: Wsdl,
+		},
+		{
+			name:         "No input type Protobuf Spec",
+			inputFile:    "./testdata/petstore.proto",
+			expectedType: Protobuf,
+		},
+		{
+			name:         "No input type AsyncAPI Spec YAML",
+			inputFile:    "./testdata/asyncapi-sample.yaml",
+			expectedType: AsyncAPI,
+		},
+		{
+			name:         "No input type Unstructured",
+			inputFile:    "./testdata/multiplication.thrift",
+			expectedType: Unstructured,
+		},
+	}
 
-	// YAML OAS2 specification
-	specParser, err = createSpecParser("./testdata/petstore-openapi2.yaml", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*oas2SpecProcessor)
-	assert.True(t, ok)
-
-	// JSON OAS2 specification
-	specParser, err = createSpecParser("./testdata/petstore-swagger2.json", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok = specProcessor.(*oas2SpecProcessor)
-	assert.True(t, ok)
-
-	// WSDL specification
-	specParser, err = createSpecParser("./testdata/weather.xml", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Wsdl, specProcessor.getResourceType())
-	_, ok = specProcessor.(*wsdlProcessor)
-	assert.True(t, ok)
-
-	// Protobuf specification
-	specParser, err = createSpecParser("./testdata/petstore.proto", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Protobuf, specProcessor.getResourceType())
-	_, ok = specProcessor.(*protobufProcessor)
-	assert.True(t, ok)
-
-	// AsyncAPI specification
-	specParser, err = createSpecParser("./testdata/asyncapi-sample.yaml", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, AsyncAPI, specProcessor.getResourceType())
-	_, ok = specProcessor.(*asyncAPIProcessor)
-	assert.True(t, ok)
-
-	// Unstructured specification
-	specParser, err = createSpecParser("./testdata/multiplication.thrift", "")
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Unstructured, specProcessor.getResourceType())
-	_, ok = specProcessor.(*unstructuredProcessor)
-	assert.True(t, ok)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			specParser, err := createSpecParser(tc.inputFile, tc.inputType)
+			if tc.parseErr {
+				assert.NotNil(t, err)
+				return
+			}
+			assert.Nil(t, err)
+			specProcessor := specParser.GetSpecProcessor()
+			assert.NotNil(t, specProcessor)
+			assert.Equal(t, tc.expectedType, specProcessor.getResourceType())
+			if tc.expectedType != specProcessor.getResourceType() {
+				return
+			}
+			ok := false
+			switch tc.expectedType {
+			case Oas3:
+				_, ok = specProcessor.(*oas3SpecProcessor)
+				ValidateOAS3Processors(t, specParser)
+			case Oas2:
+				_, ok = specProcessor.(*oas2SpecProcessor)
+				ValidateOAS2Processors(t, specParser, tc.inputFile)
+			case Wsdl:
+				_, ok = specProcessor.(*wsdlProcessor)
+				ValidateWsdlProcessors(t, specParser)
+			case Protobuf:
+				_, ok = specProcessor.(*protobufProcessor)
+				ValidateProtobufProcessors(t, specParser)
+			case AsyncAPI:
+				_, ok = specProcessor.(*asyncAPIProcessor)
+				ValidateAsyncAPIProcessors(t, specParser)
+			case Unstructured:
+				_, ok = specProcessor.(*unstructuredProcessor)
+			}
+			assert.True(t, ok)
+		})
+	}
 }
 
-func TestSpecOAS3Processors(t *testing.T) {
+func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser) {
 	// JSON OAS3 specification
-	specParser, err := createSpecParser("./testdata/petstore-openapi3.json", Protobuf)
-	assert.NotNil(t, err)
-
-	// JSON OAS3 specification
-	specParser, err = createSpecParser("./testdata/petstore-openapi3.json", Oas3)
-	assert.Nil(t, err)
 	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Oas3, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas3SpecProcessor)
-	assert.True(t, ok)
-
 	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas3")
@@ -182,55 +230,26 @@ func TestSpecOAS3Processors(t *testing.T) {
 	}
 }
 
-func TestSpecOAS2Processors(t *testing.T) {
-	specParser, err := createSpecParser("./testdata/petstore-swagger2.json", Protobuf)
-	assert.NotNil(t, err)
-
-	// JSON OAS3 specification
-	specParser, err = createSpecParser("./testdata/petstore-swagger2.json", Oas2)
-	assert.Nil(t, err)
+func ValidateOAS2Processors(t *testing.T, specParser SpecResourceParser, inputFile string) {
 	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Oas2, specProcessor.getResourceType())
-	_, ok := specProcessor.(*oas2SpecProcessor)
-	assert.True(t, ok)
-
 	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas2")
 	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
 	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
-	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "/v2", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
-
-	specParser, err = createSpecParser("./testdata/petstore-openapi2.yaml", Oas2)
-	assert.Nil(t, err)
-	specProcessor = specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	endPoints, err = specProcessor.GetEndpoints()
-
-	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas2")
-	assert.Len(t, endPoints, 1, "The returned end points array did not have exactly 1 endpoint")
-	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(80), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "/v1", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
+	if inputFile == "./testdata/petstore-swagger2.json" {
+		assert.Equal(t, int32(443), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+		assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+		assert.Equal(t, "/v2", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
+	} else {
+		assert.Equal(t, int32(80), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
+		assert.Equal(t, "http", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
+		assert.Equal(t, "/v1", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
+	}
 }
 
-func TestSpecWsdlProcessors(t *testing.T) {
-	specParser, err := createSpecParser("./testdata/weather.xml", Oas3)
-	assert.NotNil(t, err)
-
-	// JSON OAS3 specification
-	specParser, err = createSpecParser("./testdata/weather.xml", Wsdl)
-	assert.Nil(t, err)
+func ValidateWsdlProcessors(t *testing.T, specParser SpecResourceParser) {
 	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Wsdl, specProcessor.getResourceType())
-	_, ok := specProcessor.(*wsdlProcessor)
-	assert.True(t, ok)
-
 	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with wsdl")
@@ -240,38 +259,16 @@ func TestSpecWsdlProcessors(t *testing.T) {
 	assert.Equal(t, "https", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 }
 
-func TestSpecProtobufProcessors(t *testing.T) {
-	specParser, err := createSpecParser("./testdata/petstore.proto", AsyncAPI)
-	assert.NotNil(t, err)
-
-	// JSON OAS3 specification
-	specParser, err = createSpecParser("./testdata/petstore.proto", Protobuf)
-	assert.Nil(t, err)
+func ValidateProtobufProcessors(t *testing.T, specParser SpecResourceParser) {
 	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, Protobuf, specProcessor.getResourceType())
-	_, ok := specProcessor.(*protobufProcessor)
-	assert.True(t, ok)
-
 	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with protobuf")
 	assert.Len(t, endPoints, 0, "The returned end points array is not empty")
 }
 
-func TestSpecAsyncAPIProcessors(t *testing.T) {
-	specParser, err := createSpecParser("./testdata/asyncapi-sample.yaml", Protobuf)
-	assert.NotNil(t, err)
-
-	// JSON OAS3 specification
-	specParser, err = createSpecParser("./testdata/asyncapi-sample.yaml", AsyncAPI)
-	assert.Nil(t, err)
+func ValidateAsyncAPIProcessors(t *testing.T, specParser SpecResourceParser) {
 	specProcessor := specParser.GetSpecProcessor()
-	assert.NotNil(t, specProcessor)
-	assert.Equal(t, AsyncAPI, specProcessor.getResourceType())
-	_, ok := specProcessor.(*asyncAPIProcessor)
-	assert.True(t, ok)
-
 	endPoints, err := specProcessor.GetEndpoints()
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with asyncapi")
@@ -279,4 +276,10 @@ func TestSpecAsyncAPIProcessors(t *testing.T) {
 	assert.Equal(t, int32(5676), endPoints[0].Port)
 	assert.Equal(t, "mqtt", endPoints[0].Protocol)
 	assert.Equal(t, "", endPoints[0].BasePath)
+	assert.Equal(t, map[string]interface{}{
+		"solace": map[string]interface{}{
+			"msgVpn":  "apim-test",
+			"version": "0.2.0",
+		},
+	}, endPoints[0].Details)
 }

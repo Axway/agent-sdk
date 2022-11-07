@@ -179,6 +179,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 				Protocol: endpointDef.Protocol,
 				Routing: management.ApiServiceInstanceSpecRouting{
 					BasePath: endpointDef.BasePath,
+					Details:  endpointDef.Details,
 				},
 			}
 			endPoints = append(endPoints, ep)

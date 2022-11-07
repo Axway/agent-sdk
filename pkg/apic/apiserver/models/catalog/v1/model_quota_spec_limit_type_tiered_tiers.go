@@ -16,9 +16,7 @@ type QuotaSpecLimitTypeTieredTiers struct {
 	// The limit end of the tier provided.
 	To int32 `json:"to"`
 	// The tier price.
-	// GENERATE: The following code has been modified after code generation
 	Cost float64 `json:"cost"`
 	// The flat fee for the tier.
-	// GENERATE: The following code has been modified after code generation
 	FlatFee float64 `json:"flatFee"`
 }

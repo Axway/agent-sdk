@@ -12,6 +12,5 @@ package catalog
 // QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
 type QuotaSpecLimitTypeLooseOverages struct {
 	// The overage price per unit.
-	// GENERATE: The following code has been modified after code generation
 	Value float64 `json:"value,omitempty"`
 }

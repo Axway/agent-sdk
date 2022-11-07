@@ -14,6 +14,6 @@ type CredentialSpecState struct {
 	Name string `json:"name"`
 	// Additional info on the state.
 	Reason string `json:"reason,omitempty"`
-	// Additional info on the state.
+	// Defines if credential needs to be rotated.
 	Rotate bool `json:"rotate,omitempty"`
 }

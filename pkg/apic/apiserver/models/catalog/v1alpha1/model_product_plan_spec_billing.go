@@ -13,7 +13,6 @@ package catalog
 type ProductPlanSpecBilling struct {
 	Currency string `json:"currency"`
 	// The base price for the plan.
-	// GENERATE: The following code has been modified after code generation
 	Price float64 `json:"price,omitempty"`
 	// The billing cycle type.
 	Cycle    string `json:"cycle,omitempty"`

@@ -12,7 +12,8 @@ package management
 // AmplifyJwtAuthRuleSpecFrom  (management.v1alpha1.AmplifyJWTAuthRule)
 type AmplifyJwtAuthRuleSpecFrom struct {
 	// Where to look for the token.
-	In   string `json:"in,omitempty"`
+	In string `json:"in"`
+	// Name of the JWT key field, defaults to Authorization.
 	Name string `json:"name"`
 	// The token prefix, e.g. \"Bearer \".
 	Prefix string `json:"prefix,omitempty"`

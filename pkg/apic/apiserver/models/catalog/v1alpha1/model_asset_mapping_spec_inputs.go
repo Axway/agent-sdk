@@ -18,4 +18,6 @@ type AssetMappingSpecInputs struct {
 	Stage string `json:"stage,omitempty"`
 	// list of categories for the asset.
 	Categories []string `json:"categories,omitempty"`
+	// title for generated asset resource.
+	AssetResourceTitle string `json:"assetResourceTitle,omitempty"`
 }

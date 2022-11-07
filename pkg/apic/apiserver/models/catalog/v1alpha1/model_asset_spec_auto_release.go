@@ -9,8 +9,7 @@
 
 package catalog
 
-// QuotaSpecLimitTypeLooseOverages struct for QuotaSpecLimitTypeLooseOverages
-type QuotaSpecLimitTypeLooseOverages struct {
-	// The overage price per unit.
-	Value float64 `json:"value,omitempty"`
+// AssetSpecAutoRelease Defines if an asset should create releases everytime there is an update to the resources. (catalog.v1alpha1.Asset)
+type AssetSpecAutoRelease struct {
+	ReleaseType string `json:"releaseType"`
 }

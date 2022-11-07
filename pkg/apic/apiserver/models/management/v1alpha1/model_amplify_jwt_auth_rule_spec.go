@@ -20,7 +20,7 @@ type AmplifyJwtAuthRuleSpec struct {
 	Audiences []string `json:"audiences,omitempty"`
 	// The name of the field in the JWT payload representing the client Id. Default: cid
 	ClientIdKey string `json:"clientIdKey,omitempty"`
-	// The list of loactions from which to read the JWT tokens.
+	// The list of locations from which to read the JWT tokens.
 	From []AmplifyJwtAuthRuleSpecFrom `json:"from,omitempty"`
 	// The maximum clock skew allowed when verify time constraints (default 60secs).
 	ClockSkewSeconds int32 `json:"clockSkewSeconds,omitempty"`
