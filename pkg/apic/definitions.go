@@ -61,6 +61,7 @@ const (
 
 type serviceContext struct {
 	serviceName          string
+	serviceID            string
 	serviceAction        actionType
 	revisionName         string
 	revisionCount        int

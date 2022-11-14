@@ -54,8 +54,12 @@ func (m *migration) getAllRI(url string, q map[string]string) ([]*v1.ResourceIns
 	return resources, nil
 }
 
-func queryFunc(name string) string {
+func queryFuncByMetadataName(name string) string {
 	return fmt.Sprintf("metadata.references.name==%s", name)
+}
+
+func queryFuncByMetadataID(id string) string {
+	return fmt.Sprintf("metadata.references.id==%s", id)
 }
 
 func isMigrationCompleted(h v1.Interface, migrationKey string) bool {

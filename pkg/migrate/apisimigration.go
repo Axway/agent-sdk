@@ -3,7 +3,6 @@ package migrate
 import (
 	"regexp"
 	"strconv"
-	"sync"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -53,44 +52,22 @@ func (m *APISIMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceIns
 		return ri, nil
 	}
 
-	// get all revisions for this service
+	// get all revisions for this service (should only really return the latest one)
 	revisions, err := m.getRevisions(ri)
+
 	if err != nil {
 		return ri, err
 	}
-	logger.WithField("revisions", revisions).Debug("all revisions")
 
-	// get all instances for each revision
-	wg := &sync.WaitGroup{}
-	errCh := make(chan error, len(revisions))
 	instances := []*apiv1.ResourceInstance{}
-	instancesLock := sync.RWMutex{}
 
-	for _, rev := range revisions {
-		wg.Add(1)
-
-		go func(r *apiv1.ResourceInstance) {
-			defer wg.Done()
-
-			revisionInstances, err := m.getInstances(r)
-
-			instancesLock.Lock()
-			defer instancesLock.Unlock()
-			instances = append(instances, revisionInstances...)
-
-			errCh <- err
-		}(rev)
+	if len(revisions) > 0 {
+		revision := revisions[0]
+		logger.WithField("revision", revision).Debugf("got revision %s", revision.Name)
+		revisionInstances, _ := m.getInstances(revision)
+		instances = append(instances, revisionInstances...)
+		logger.WithField("instances", instances).Debug("all instances")
 	}
-
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return ri, e
-		}
-	}
-	logger.WithField("instances", instances).Debug("all instances")
 
 	err = m.cleanInstances(logger, instances)
 	if err != nil {
@@ -107,18 +84,21 @@ func (m *APISIMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceIns
 func (m *APISIMigration) getRevisions(ri *apiv1.ResourceInstance) ([]*apiv1.ResourceInstance, error) {
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		"query":  queryFunc(ri.Name),
-		"fields": "name",
+		"query":    queryFuncByMetadataID(ri.Metadata.ID),
+		"fields":   "id",
+		"sort":     "metadata.audit.createTimestamp,DESC",
+		"page":     strconv.Itoa(1),
+		"pageSize": strconv.Itoa(1),
 	}
 
 	return m.getAllRI(url, q)
 }
 
-// updateRev gets a list of revisions for the service
+// getInstances gets a list of instances for the service
 func (m *APISIMigration) getInstances(ri *apiv1.ResourceInstance) ([]*apiv1.ResourceInstance, error) {
 	url := m.cfg.GetInstancesURL()
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query": queryFuncByMetadataName(ri.Name),
 	}
 
 	return m.getAllRI(url, q)

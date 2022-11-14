@@ -11,6 +11,7 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
@@ -156,9 +157,14 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		return nil, err
 	}
 
-	serviceBody.serviceContext.serviceName, err = c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	ri, err := c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
 	if err != nil {
 		return nil, err
+	}
+
+	if ri != nil {
+		serviceBody.serviceContext.serviceName = ri.Name
+		serviceBody.serviceContext.serviceID = ri.Metadata.ID
 	}
 
 	svc.Name = serviceBody.serviceContext.serviceName
@@ -170,7 +176,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		}
 	}
 
-	ri, _ := svc.AsInstance()
+	ri, _ = svc.AsInstance()
 	c.caches.AddAPIService(ri)
 	return svc, err
 }
@@ -223,7 +229,7 @@ func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*manag
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
-func (c *ServiceClient) rollbackAPIService(name string) (string, error) {
+func (c *ServiceClient) rollbackAPIService(name string) (*v1.ResourceInstance, error) {
 	return c.apiServiceDeployAPI(http.MethodDelete, c.cfg.DeleteServicesURL()+"/"+name, nil)
 }
 
