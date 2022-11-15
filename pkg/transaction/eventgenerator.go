@@ -147,17 +147,9 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	err := e.processTxnSummary(summaryEvent)
-	// if summaryEvent.TransactionSummary != nil {
-	// 	txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
-	// 	if txnSummary != nil {
-	// 		jsonData, err := json.Marshal(&txnSummary)
 	if err != nil {
 		return nil, err
 	}
-	// 		e.logger.Trace(string(jsonData))
-	// 		summaryEvent.TransactionSummary = txnSummary
-	// 	}
-	// }
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if summaryEvent == (LogEvent{}) {
