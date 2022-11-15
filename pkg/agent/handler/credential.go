@@ -341,6 +341,35 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
+	h.processCredentialLevelSuccess(provCreds, cred)
+	// if cred.Status.Level == prov.Success.String() {
+	// 	if !hasAgentCredentialFinalizer(cred.Finalizers) {
+	// 		ri, _ := cred.AsInstance()
+	// 		// only add finalizer on success
+	// 		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	// 	}
+
+	// 	if provCreds.GetCredentialAction() != prov.Rotate {
+	// 		// if this is not a rotate action update the state to the desired state
+	// 		cred.State.Name = cred.Spec.State.Name
+	// 	} else {
+	// 		// if the action was rotate lets remove the rotate flag from spec
+	// 		cred.Spec.State.Rotate = false
+	// 		h.client.UpdateResourceInstance(cred)
+	// 	}
+	// } else if cred.State.Name == "" {
+	// 	cred.State.Name = v1.Inactive
+	// }
+
+	cred.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(cred),
+		"data":             cred.Data,
+		"policies":         cred.Policies,
+		"state":            cred.State,
+	}
+}
+
+func (h *credentials) processCredentialLevelSuccess(provCreds *provCreds, cred *management.Credential) {
 	if cred.Status.Level == prov.Success.String() {
 		if !hasAgentCredentialFinalizer(cred.Finalizers) {
 			ri, _ := cred.AsInstance()
@@ -358,13 +387,6 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		}
 	} else if cred.State.Name == "" {
 		cred.State.Name = v1.Inactive
-	}
-
-	cred.SubResources = map[string]interface{}{
-		defs.XAgentDetails: util.GetAgentDetails(cred),
-		"data":             cred.Data,
-		"policies":         cred.Policies,
-		"state":            cred.State,
 	}
 }
 

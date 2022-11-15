@@ -146,34 +146,22 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return events, nil
 	}
 
-	if summaryEvent.TransactionSummary != nil {
-		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
-		if txnSummary != nil {
-			jsonData, err := json.Marshal(&txnSummary)
-			if err != nil {
-				return nil, err
-			}
-			e.logger.Trace(string(jsonData))
-			summaryEvent.TransactionSummary = txnSummary
-		}
+	err := e.processTxnSummary(summaryEvent)
+	// if summaryEvent.TransactionSummary != nil {
+	// 	txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
+	// 	if txnSummary != nil {
+	// 		jsonData, err := json.Marshal(&txnSummary)
+	if err != nil {
+		return nil, err
 	}
+	// 		e.logger.Trace(string(jsonData))
+	// 		summaryEvent.TransactionSummary = txnSummary
+	// 	}
+	// }
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if summaryEvent == (LogEvent{}) {
-
-		for _, event := range detailEvents {
-			if metaData == nil {
-				metaData = common.MapStr{}
-			}
-			metaData.Put(sampling.SampleKey, true)
-			newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
-			if err == nil {
-				events = append(events, newEvent)
-			}
-		}
-
-		return events, nil
-
+		return e.handleTransactionEvents(detailEvents, eventTime, metaData, eventFields, privateData)
 	}
 
 	// Add this to sample or not
@@ -211,6 +199,38 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	e.trackMetrics(summaryEvent, int64(bytes))
 
 	return events, nil
+}
+
+func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+	events := make([]beat.Event, 0)
+	for _, event := range detailEvents {
+		if metaData == nil {
+			metaData = common.MapStr{}
+		}
+		metaData.Put(sampling.SampleKey, true)
+		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+		if err == nil {
+			events = append(events, newEvent)
+		}
+	}
+
+	return events, nil
+
+}
+
+func (e *Generator) processTxnSummary(summaryEvent LogEvent) error {
+	if summaryEvent.TransactionSummary != nil {
+		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
+		if txnSummary != nil {
+			jsonData, err := json.Marshal(&txnSummary)
+			if err != nil {
+				return err
+			}
+			e.logger.Trace(string(jsonData))
+			summaryEvent.TransactionSummary = txnSummary
+		}
+	}
+	return nil
 }
 
 // updateTxnSummaryByAccessRequest - get the consumer information to add to transaction event.  If we don't have any

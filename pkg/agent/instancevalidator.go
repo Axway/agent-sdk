@@ -120,6 +120,29 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		}
 	}
 
+	j.validateServices()
+	// logger.Trace("validating api services have at least one instance on dataplane")
+	// for _, key := range agent.cacheManager.GetAPIServiceKeys() {
+	// 	logger := logger.WithField("serviceCacheID", key)
+	// 	logger.Tracef("validating")
+
+	// 	service := agent.cacheManager.GetAPIServiceWithPrimaryKey(key)
+	// 	if service == nil {
+	// 		logger.Trace("service was no longer in the cache")
+	// 		continue
+	// 	}
+	// 	logger = logger.WithField("name", service.Name)
+	// 	instanceCount := agent.cacheManager.GetAPIServiceInstanceCount(service.Name)
+	// 	logger = logger.WithField("instanceCount", instanceCount)
+
+	// 	if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
+	// 		logger.Trace("service has no more instances")
+	// 		j.deleteService(logger, service)
+	// 	}
+	// }
+}
+
+func (j *instanceValidator) validateServices() {
 	logger.Trace("validating api services have at least one instance on dataplane")
 	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
 		logger := logger.WithField("serviceCacheID", key)
