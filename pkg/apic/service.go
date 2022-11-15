@@ -197,16 +197,9 @@ func sanitizeAPIName(name string) string {
 }
 
 // apiServiceDeployAPI -
-func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (string, error) {
+func (c *ServiceClient) apiServiceDeployAPI(method, url string, buffer []byte) (*v1.ResourceInstance, error) {
 	ri, err := c.executeAPIServiceAPI(method, url, buffer)
-	if err != nil {
-		return "", err
-	}
-	resourceName := ""
-	if ri != nil {
-		resourceName = ri.Name
-	}
-	return resourceName, nil
+	return ri, err
 }
 
 // executeAPIServiceAPI -

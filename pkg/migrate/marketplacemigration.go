@@ -77,7 +77,7 @@ func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.Resou
 func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query": queryFuncByMetadataName(ri.Name),
 	}
 
 	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
@@ -101,7 +101,7 @@ func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 			defer wg.Done()
 
 			q := map[string]string{
-				"query": queryFunc(revision.Name),
+				"query": queryFuncByMetadataName(revision.Name),
 			}
 			url := m.cfg.GetInstancesURL()
 

@@ -3,6 +3,7 @@ package migrate
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"sync"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -151,7 +152,11 @@ func (m *AttributeMigration) updateRev(ri *apiv1.ResourceInstance) error {
 	defer m.riMutex.Unlock()
 	url := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query":    queryFuncByMetadataID(ri.Metadata.ID),
+		"sort":     "metadata.audit.createTimestamp,DESC",
+		"page":     strconv.Itoa(1),
+		"pageSize": strconv.Itoa(1),
+		"fields":   "id",
 	}
 
 	return m.migrate(url, q)
@@ -164,7 +169,7 @@ func (m *AttributeMigration) updateInst(ri *apiv1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 
 	q := map[string]string{
-		"query":  queryFunc(ri.Name),
+		"query":  queryFuncByMetadataName(ri.Name),
 		"fields": "name",
 	}
 
@@ -184,7 +189,7 @@ func (m *AttributeMigration) updateInst(ri *apiv1.ResourceInstance) error {
 			defer wg.Done()
 
 			q := map[string]string{
-				"query": queryFunc(r.Name),
+				"query": queryFuncByMetadataName(r.Name),
 			}
 			url := m.cfg.GetInstancesURL()
 			err := m.migrate(url, q)
@@ -210,7 +215,7 @@ func (m *AttributeMigration) updateCI(ri *apiv1.ResourceInstance) error {
 	defer m.riMutex.Unlock()
 	url := m.cfg.GetConsumerInstancesURL()
 	q := map[string]string{
-		"query": queryFunc(ri.Name),
+		"query": queryFuncByMetadataName(ri.Name),
 	}
 
 	return m.migrate(url, q)
