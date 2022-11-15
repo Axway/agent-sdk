@@ -49,6 +49,7 @@ type client interface {
 	CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
 	DeleteResourceInstance(ri apiv1.Interface) error
+	GetResource(url string) (*apiv1.ResourceInstance, error)
 }
 
 type item struct {

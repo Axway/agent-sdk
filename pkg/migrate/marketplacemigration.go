@@ -77,7 +77,9 @@ func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.Resou
 func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
 	revURL := m.cfg.GetRevisionsURL()
 	q := map[string]string{
-		"query": queryFuncByMetadataName(ri.Name),
+		"query":  queryFuncByMetadataName(ri.Name),
+		"sort":   "metadata.audit.createTimestamp,DESC",
+		"fields": "name,metadata",
 	}
 
 	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
@@ -148,6 +150,10 @@ func (m *MarketplaceMigration) updateSvcInstance(
 
 	wg := &sync.WaitGroup{}
 	errCh := make(chan error, len(resources))
+
+	if len(resources) > 0 {
+		revision, err = m.client.GetResource(revision.GetSelfLink())
+	}
 
 	for _, resource := range resources {
 		wg.Add(1)

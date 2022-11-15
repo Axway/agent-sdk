@@ -186,3 +186,7 @@ func (m *mockMPMigClient) CreateOrUpdateResource(i apiv1.Interface) (*apiv1.Reso
 func (m *mockMPMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	return nil
 }
+
+func (m *mockMPMigClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return nil, nil
+}
