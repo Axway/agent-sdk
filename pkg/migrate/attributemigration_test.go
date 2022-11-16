@@ -182,3 +182,7 @@ func (m *mockAttrMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byt
 func (m mockAttrMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	return nil
 }
+
+func (m mockAttrMigClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return nil, nil
+}

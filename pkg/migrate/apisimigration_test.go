@@ -170,3 +170,7 @@ func (m *mockAPISIMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	m.deleteCalls++
 	return nil
 }
+
+func (m *mockAPISIMigClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return nil, nil
+}

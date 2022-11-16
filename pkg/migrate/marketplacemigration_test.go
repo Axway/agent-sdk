@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,7 @@ const ardID = "0987"
 
 func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 	rev := newRevision(svcName, "api-key-revision")
+	rev.ResourceMeta.Metadata.SelfLink = fmt.Sprintf("/management/v1alpha1/environments/azure/apiservicerevisions/%s", rev.Name)
 
 	c := &mockMPMigClient{
 		revisions: []*apiv1.ResourceInstance{
@@ -29,6 +31,7 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 			newInstance(rev.Name, "inst2", "", []string{"api-key"}),
 		},
 	}
+
 	cfg := &config.CentralConfiguration{
 		Environment:      envName,
 		APIServerVersion: "v1alpha1",
@@ -53,6 +56,7 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 
 func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	rev := newOAuthRev(svcName, "oauth-revision")
+	rev.ResourceMeta.Metadata.SelfLink = fmt.Sprintf("/management/v1alpha1/environments/azure/apiservicerevisions/%s", rev.Name)
 
 	c := &mockMPMigClient{
 		revisions: []*apiv1.ResourceInstance{
@@ -185,4 +189,17 @@ func (m *mockMPMigClient) CreateOrUpdateResource(i apiv1.Interface) (*apiv1.Reso
 
 func (m *mockMPMigClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	return nil
+}
+
+func (m *mockMPMigClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	// may need to revisit this in the future.  Hardcoded the return of the version based on the request definition
+	var rev *apiv1.ResourceInstance
+
+	if strings.Contains(url, "api-key-revision") {
+		rev = newRevision(svcName, "api-key-revision")
+	} else {
+		rev = newOAuthRev(svcName, "oauth-revision")
+	}
+
+	return rev, nil
 }
