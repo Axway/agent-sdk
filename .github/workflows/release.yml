@@ -39,7 +39,7 @@ jobs:
           PATCH_VER=$(echo ${GITHUB_REF#*v} | cut -d. -f3)
           declare -i PATCH_VER
           PATCH_VER+=1
-          echo ::set-output name=next_ver::${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}
+          echo "next_ver=${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}" >> $GITHUB_OUTPUT
       - name: Update version file
         working-directory: ./build/scripts
         # This passes vn.n.n to the shellscript.
