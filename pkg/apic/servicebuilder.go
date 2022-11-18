@@ -283,6 +283,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 	specProcessor := specParser.GetSpecProcessor()
 	b.serviceBody.ResourceType = specProcessor.getResourceType()
+	b.serviceBody.specHash = fmt.Sprintf("%v", specParser.specHash)
 
 	// Check if the type is unstructured to gather more info
 

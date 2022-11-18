@@ -307,8 +307,10 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		return nil, err
 	}
 	reqID := uuid.New().String()
+
 	// Logging for the HTTP request
 	statusCode := 0
+	receivedData := int64(0)
 	defer func() {
 		duration := time.Since(startTime)
 		targetURL := req.URL.String()
@@ -318,23 +320,21 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 				targetURL = req.URL.Scheme + "://" + entryHost + req.URL.Path
 			}
 		}
+
+		logger := c.logger.
+			WithField("id", reqID).
+			WithField("method", req.Method).
+			WithField("status", statusCode).
+			WithField("duration(ms)", duration.Milliseconds()).
+			WithField("url", targetURL).
+			WithField("sent", req.ContentLength).
+			WithField("received", receivedData)
+
 		if err != nil {
-			c.logger.
-				WithField("id", reqID).
-				WithField("method", req.Method).
-				WithField("status", statusCode).
-				WithField("duration(ms)", duration.Milliseconds()).
-				WithField("url", targetURL).
-				WithError(err).
+			logger.WithError(err).
 				Trace("request failed")
 		} else {
-			c.logger.
-				WithField("id", reqID).
-				WithField("method", req.Method).
-				WithField("status", statusCode).
-				WithField("duration(ms)", duration.Milliseconds()).
-				WithField("url", targetURL).
-				Trace("request succeeded")
+			logger.Trace("request succeeded")
 		}
 	}()
 
@@ -356,6 +356,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	defer res.Body.Close()
 
 	statusCode = res.StatusCode
+	receivedData = res.ContentLength
 	parseResponse, err := c.prepareAPIResponse(res, timer)
 
 	return parseResponse, err

@@ -54,7 +54,9 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
+	specHash                  string
 	accessRequestDefinition   *management.AccessRequestDefinition
+	specHashes                map[string]string // map of hash values to revision names
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body

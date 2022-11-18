@@ -38,12 +38,15 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 			serviceBody.teamID = teamID
 		}
 	}
+
+	// API Service
 	apiSvc, err := c.processService(serviceBody)
 	if err != nil {
 		return nil, err
 	}
 	// Update description title after creating APIService to include the stage name if it exists
 	c.postAPIServiceUpdate(serviceBody)
+
 	// RevisionProcessor
 	err = c.processRevision(serviceBody)
 	if err != nil {

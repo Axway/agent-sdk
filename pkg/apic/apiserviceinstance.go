@@ -173,7 +173,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
 	if len(endpoints) > 0 {
 		for _, endpointDef := range endpoints {
-			ep := management.ApiServiceInstanceSpecEndpoint{
+			endPoints = append(endPoints, management.ApiServiceInstanceSpecEndpoint{
 				Host:     endpointDef.Host,
 				Port:     endpointDef.Port,
 				Protocol: endpointDef.Protocol,
@@ -181,8 +181,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 					BasePath: endpointDef.BasePath,
 					Details:  endpointDef.Details,
 				},
-			}
-			endPoints = append(endPoints, ep)
+			})
 		}
 	} else {
 		log.Debug("Processing API service instance with no endpoint")
@@ -198,6 +197,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	// start from latest revision, find first instance
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
+		// TODO: change to id
 		queryParams := map[string]string{
 			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
 		}

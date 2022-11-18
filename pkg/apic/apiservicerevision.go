@@ -34,6 +34,7 @@ import (
 const (
 	apiSvcRevTemplate = "{{.APIServiceName}}{{if ne .Stage \"\"}} ({{.StageLabel}}: {{.Stage}}){{end}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
 	defaultDateFormat = "2006/01/02"
+	specHashes        = "specHashes"
 )
 
 // APIServiceRevisionTitle - apiservicerevision template for title
@@ -142,7 +143,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	_, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
+	// TODO get revision back
+	revisionName, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -222,6 +224,10 @@ func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.revisionAction = addAPI
 	// If service is updated, identify the action based on the existing revisions and update type(minor/major)
 	if serviceBody.serviceContext.serviceAction == updateAPI {
+		if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
+			serviceBody.serviceContext.previousRevision = management.NewAPIServiceRevision(revName, c.cfg.GetEnvironmentName())
+		}
+
 		// Get revisions for the service and use the latest one as last reference
 		queryParams := map[string]string{
 			"query":  "metadata.references.id==" + serviceBody.serviceContext.serviceID,
