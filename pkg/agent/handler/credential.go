@@ -341,6 +341,17 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
+	h.processCredentialLevelSuccess(provCreds, cred)
+
+	cred.SubResources = map[string]interface{}{
+		defs.XAgentDetails: util.GetAgentDetails(cred),
+		"data":             cred.Data,
+		"policies":         cred.Policies,
+		"state":            cred.State,
+	}
+}
+
+func (h *credentials) processCredentialLevelSuccess(provCreds *provCreds, cred *management.Credential) {
 	if cred.Status.Level == prov.Success.String() {
 		if !hasAgentCredentialFinalizer(cred.Finalizers) {
 			ri, _ := cred.AsInstance()
@@ -358,13 +369,6 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		}
 	} else if cred.State.Name == "" {
 		cred.State.Name = v1.Inactive
-	}
-
-	cred.SubResources = map[string]interface{}{
-		defs.XAgentDetails: util.GetAgentDetails(cred),
-		"data":             cred.Data,
-		"policies":         cred.Policies,
-		"state":            cred.State,
 	}
 }
 

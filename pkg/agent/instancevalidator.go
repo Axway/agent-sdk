@@ -120,6 +120,10 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		}
 	}
 
+	j.validateServices()
+}
+
+func (j *instanceValidator) validateServices() {
 	logger.Trace("validating api services have at least one instance on dataplane")
 	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
 		logger := logger.WithField("serviceCacheID", key)
