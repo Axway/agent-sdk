@@ -101,7 +101,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 
 	// get the specHashes from the existing service
 	if revDetails, found := newSVCDetails[specHashes]; found {
-		if specHashes, ok := revDetails.(map[string]string); ok {
+		if specHashes, ok := revDetails.(map[string]interface{}); ok {
 			serviceBody.specHashes = specHashes
 		}
 	}
@@ -142,7 +142,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
 	serviceBody.serviceContext.serviceAction = addAPI
-	serviceBody.specHashes = map[string]string{}
+	serviceBody.specHashes = map[string]interface{}{}
 
 	// If service exists, update existing service
 	svc, err := c.getAPIServiceFromCache(serviceBody)

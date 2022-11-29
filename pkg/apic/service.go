@@ -67,6 +67,15 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 			return nil, err
 		}
 	}
+
+	serviceBody.specHashes[serviceBody.specHash] = serviceBody.serviceContext.revisionName
+	details := util.GetAgentDetails(apiSvc)
+	details[specHashes] = serviceBody.specHashes
+	util.SetAgentDetails(apiSvc, details)
+	c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details})
+	ri, _ := apiSvc.AsInstance()
+	c.caches.AddAPIService(ri)
+
 	return apiSvc, nil
 }
 

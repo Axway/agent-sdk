@@ -66,7 +66,6 @@ type serviceContext struct {
 	revisionName         string
 	revisionCount        int
 	previousRevision     *management.APIServiceRevision
-	revisionAction       actionType
 	instanceName         string
 	consumerInstanceName string
 }

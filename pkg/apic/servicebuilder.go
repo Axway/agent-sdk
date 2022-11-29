@@ -30,7 +30,6 @@ type ServiceBuilder interface {
 	SetImage(image string) ServiceBuilder
 	SetImageContentType(imageContentType string) ServiceBuilder
 	SetResourceType(resourceType string) ServiceBuilder
-	SetAltRevisionPrefix(revisionPrefix string) ServiceBuilder
 	SetSubscriptionName(subscriptionName string) ServiceBuilder
 	SetAPIUpdateSeverity(apiUpdateSeverity string) ServiceBuilder
 	SetState(state string) ServiceBuilder
@@ -253,11 +252,6 @@ func (b *serviceBodyBuilder) SetUnstructuredLabel(label string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetUnstructuredFilename(filename string) ServiceBuilder {
 	b.serviceBody.UnstructuredProps.Filename = filename
-	return b
-}
-
-func (b *serviceBodyBuilder) SetAltRevisionPrefix(revisionPrefix string) ServiceBuilder {
-	b.serviceBody.AltRevisionPrefix = revisionPrefix
 	return b
 }
 

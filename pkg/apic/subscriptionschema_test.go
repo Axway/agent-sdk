@@ -143,21 +143,3 @@ func TestGetProperty(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.Equal(t, "someproperty", p.Description)
 }
-
-func TestGetProfilePropValue(t *testing.T) {
-	svcClient, _, _ := commonSetup(t)
-	sc := svcClient.(*ServiceClient)
-	def := &management.ConsumerSubscriptionDefinition{}
-	p := sc.getProfilePropValue(def)
-	assert.Nil(t, p)
-
-	props := management.ConsumerSubscriptionDefinitionSpecSchemaProperties{
-		Key:   profileKey,
-		Value: map[string]interface{}{"key1": "value1"},
-	}
-
-	def.Spec.Schema.Properties = []management.ConsumerSubscriptionDefinitionSpecSchemaProperties{props}
-	p = sc.getProfilePropValue(def)
-	assert.NotNil(t, p)
-	assert.Equal(t, "value1", p["key1"])
-}

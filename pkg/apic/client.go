@@ -633,8 +633,8 @@ func (c *ServiceClient) deployAccessControl(acl *management.AccessControlList, m
 	return updatedACL, err
 }
 
-// ExecuteAPI - execute the api
-func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
+// executeAPI - execute the api
+func (c *ServiceClient) executeAPI(method, url string, query map[string]string, buffer []byte) (*coreapi.Response, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
@@ -648,7 +648,12 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 		Body:        buffer,
 	}
 
-	response, err := c.apiClient.Send(request)
+	return c.apiClient.Send(request)
+}
+
+// ExecuteAPI - execute the api
+func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
+	response, err := c.executeAPI(method, url, query, buffer)
 	if err != nil {
 		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
