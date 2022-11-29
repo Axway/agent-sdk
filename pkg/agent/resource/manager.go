@@ -28,6 +28,7 @@ type Manager interface {
 type executeAPIClient interface {
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*v1.ResourceInstance, error)
+	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 }
 
 type agentResourceManager struct {
@@ -37,15 +38,21 @@ type agentResourceManager struct {
 	cfg                        config.CentralConfig
 	agentResourceChangeHandler func()
 	agentDetails               map[string]interface{}
+	logger                     log.FieldLogger
 }
 
 // NewAgentResourceManager - Create a new agent resource manager
 func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClient, agentResourceChangeHandler func()) (Manager, error) {
+
+	logger := log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agentResourceManager")
 	m := &agentResourceManager{
 		cfg:                        cfg,
 		apicClient:                 apicClient,
 		agentResourceChangeHandler: agentResourceChangeHandler,
 		agentDetails:               make(map[string]interface{}),
+		logger:                     logger,
 	}
 
 	if m.getAgentResourceType() != nil {
@@ -87,7 +94,14 @@ func (a *agentResourceManager) FetchAgentResource() error {
 	var err error
 	a.agentResource, err = a.getAgentResource()
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "404") {
+			a.agentResource, err = a.createAgentResource()
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	a.onResourceChange()
@@ -184,6 +198,20 @@ func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 		agentInstance, _ = agentRes.AsInstance()
 	}
 	return agentInstance
+}
+
+// GetAgentResource - returns the agent resource
+func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, error) {
+	agentRes := a.getAgentResourceType()
+	if agentRes == nil {
+		return nil, fmt.Errorf("unknown agent type")
+	}
+	a.logger.
+		WithField("scope", agentRes.Metadata.Scope).
+		WithField("kind", agentRes.Kind).
+		WithField("name", agentRes.Name).
+		Info("creating agent resource")
+	return a.apicClient.CreateResourceInstance(agentRes)
 }
 
 // GetAgentResource - returns the agent resource
