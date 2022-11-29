@@ -27,6 +27,26 @@ const (
 	GenericService
 )
 
+var agentTypeNamesMap = map[AgentType]string{
+	DiscoveryAgent:    "discoveryagent",
+	TraceabilityAgent: "traceabilityagent",
+	GovernanceAgent:   "governanceagent",
+}
+
+var agentTypeShortNamesMap = map[AgentType]string{
+	DiscoveryAgent:    "da",
+	TraceabilityAgent: "ta",
+	GovernanceAgent:   "ga",
+}
+
+func (agentType AgentType) ToString() string {
+	return agentTypeNamesMap[agentType]
+}
+
+func (agentType AgentType) ToShortString() string {
+	return agentTypeShortNamesMap[agentType]
+}
+
 // subscription approval types
 const (
 	ManualApproval  string = "manual"
@@ -841,6 +861,9 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
 		cfg.CredentialConfig = ParseCredentialConfig(props)
+	}
+	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
+		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
 	return cfg, nil
 }
