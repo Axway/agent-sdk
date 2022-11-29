@@ -275,7 +275,7 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	if err != nil {
 		return err
 	}
-	updateEnvAgentDetails(env)
+	updateEnvAgentDetails(env, client)
 
 	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
 	if cfg.GetEnvironmentID() == "" {
@@ -295,11 +295,11 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	return nil
 }
 
-func updateEnvAgentDetails(env *management.Environment) {
+func updateEnvAgentDetails(env *management.Environment, client apic.Client) {
 	if agent.cfg != nil {
 		xAgentDetail, update := setEnvAgentDetail(env)
 		if update {
-			agent.apicClient.CreateSubResource(env.ResourceMeta, map[string]interface{}{defs.XAgentDetails: xAgentDetail})
+			client.CreateSubResource(env.ResourceMeta, map[string]interface{}{defs.XAgentDetails: xAgentDetail})
 		}
 	}
 }

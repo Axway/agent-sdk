@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -217,6 +219,79 @@ func TestAgentInitialize(t *testing.T) {
 	da = GetAgentResource()
 	assertResource(t, da, traceabilityAgentRes)
 	assert.Equal(t, 0, agentResChangeHandlerCall)
+}
+
+func TestInitEnvironment(t *testing.T) {
+	teams := []definitions.PlatformTeam{
+		{
+			ID:      "123",
+			Name:    "name",
+			Default: true,
+		},
+	}
+	environmentRes := management.NewEnvironment("v7")
+	environmentRes.Title = "v7"
+	environmentRes.Metadata.ID = "123"
+
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.RequestURI, "/auth") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			if req.Method == "GET" {
+				buf, _ := json.Marshal(environmentRes)
+				resp.Write(buf)
+			} else if req.Method == "PUT" {
+				subRes := &management.Environment{}
+				json.NewDecoder(req.Body).Decode(subRes)
+				environmentRes.ResourceMeta.SubResources = subRes.ResourceMeta.SubResources
+			}
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
+		}
+	}))
+
+	defer s.Close()
+
+	cfg := createCentralCfg(s.URL, "v7")
+	cfg.AgentType = config.GenericService
+	agent.cfg = cfg
+	initializeTokenRequester(agent.cfg)
+	apiClient := apic.New(agent.cfg, agent.tokenRequester, agent.cacheManager)
+	// Test with no agent name - config to be validate successfully as no calls made to get agent and dataplane resource
+
+	defer resetResources()
+	err := initEnvResources(agent.cfg, apiClient)
+	assert.Nil(t, err)
+	xAgentDetail := util.GetAgentDetails(environmentRes)
+	assert.Nil(t, xAgentDetail)
+
+	cfg = createCentralCfg(s.URL, "v7")
+	cfg.AgentType = config.DiscoveryAgent
+	agent.cfg = cfg
+	err = initEnvResources(agent.cfg, apiClient)
+	assert.Nil(t, err)
+	xAgentDetail = util.GetAgentDetails(environmentRes)
+	assert.NotNil(t, xAgentDetail)
+	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
+
+	cfg = createCentralCfg(s.URL, "v7")
+	cfg.AgentType = config.TraceabilityAgent
+	agent.cfg = cfg
+	err = initEnvResources(agent.cfg, apiClient)
+	assert.Nil(t, err)
+	xAgentDetail = util.GetAgentDetails(environmentRes)
+	assert.NotNil(t, xAgentDetail)
+	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
+	assert.Equal(t, "true", xAgentDetail[config.TraceabilityAgent.ToString()+"-enabled"])
 }
 
 func TestAgentConfigOverride(t *testing.T) {
