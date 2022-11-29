@@ -326,9 +326,15 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 			WithField("method", req.Method).
 			WithField("status", statusCode).
 			WithField("duration(ms)", duration.Milliseconds()).
-			WithField("url", targetURL).
-			WithField("sent", req.ContentLength).
-			WithField("received", receivedData)
+			WithField("url", targetURL)
+
+		if req.ContentLength > 0 {
+			logger = logger.WithField("sent(bytes)", req.ContentLength)
+		}
+
+		if receivedData > 0 {
+			logger = logger.WithField("received(bytes)", receivedData)
+		}
 
 		if err != nil {
 			logger.WithError(err).
