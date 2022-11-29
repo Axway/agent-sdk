@@ -5,6 +5,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -202,6 +203,18 @@ func TestAgentUpdateStatus(t *testing.T) {
 			agentName: "Test-GA",
 			resource:  createGovernanceAgentRes("111", "Test-GA", "test-dataplane", ""),
 		},
+		{
+			name:      "Create DA resource",
+			agentType: config.DiscoveryAgent,
+			agentName: "env-da",
+			resource:  nil,
+		},
+		{
+			name:      "Create TA resource",
+			agentType: config.TraceabilityAgent,
+			agentName: "env-ta",
+			resource:  nil,
+		},
 	}
 
 	for _, tc := range tests {
@@ -213,11 +226,19 @@ func TestAgentUpdateStatus(t *testing.T) {
 			var resource *v1.ResourceInstance
 			svcClient := &mock.Client{
 				GetResourceMock: func(url string) (*v1.ResourceInstance, error) {
+					if resource == nil {
+						return nil, errors.New(1111, "404 - Not found")
+					}
 					return resource, nil
 				},
 				CreateSubResourceMock: func(rm v1.ResourceMeta, subs map[string]interface{}) error {
 					resource.SubResources = subs
 					return nil
+				},
+				CreateResourceInstanceMock: func(ri v1.Interface) (*v1.ResourceInstance, error) {
+					resource, _ = ri.AsInstance()
+					tc.agentName = ri.GetName()
+					return resource, nil
 				},
 			}
 			resource = tc.resource
