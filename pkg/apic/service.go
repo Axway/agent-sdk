@@ -86,9 +86,12 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	details := util.GetAgentDetails(apiSvc)
 	details[specHashes] = serviceBody.specHashes
 	util.SetAgentDetails(apiSvc, details)
-	err = c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details})
-	if err != nil {
-		logger.WithError(err).Error("adding spec hashes in x-agent-details")
+	if err := c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
+		logger.Error("error adding spec hashes in x-agent-details, retrying")
+		// if the update failed try once more
+		if err := c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
+			logger.WithError(err).Error("could not add spec hashes in x-agent-details")
+		}
 	}
 	ri, _ := apiSvc.AsInstance()
 	c.caches.AddAPIService(ri)
