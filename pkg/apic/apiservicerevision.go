@@ -73,7 +73,7 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) manage
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// get the count of revisions
-		serviceBody.serviceContext.revisionCount = c.getRevisionCount(serviceBody.serviceContext.serviceID)
+		serviceBody.serviceContext.revisionCount = c.getRevisionCount("metadata.references.id==" + serviceBody.serviceContext.serviceID)
 	}
 
 	// check if a revision with the same hash was already published
@@ -81,7 +81,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		name := revName.(string)
 
 		// check that the revision still exists
-		if _, err := c.GetAPIRevisionByName(name); err == nil {
+		if c.getRevisionCount("name=="+name) == 1 {
 			serviceBody.serviceContext.revisionName = name
 			return nil
 		}
@@ -103,9 +103,9 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	return nil
 }
 
-func (c *ServiceClient) getRevisionCount(apiID string) int {
+func (c *ServiceClient) getRevisionCount(queryString string) int {
 	queryParams := map[string]string{
-		"query":    "metadata.references.id==" + apiID,
+		"query":    queryString,
 		"fields":   "id",
 		"page":     "1",
 		"pageSize": "1",
