@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
@@ -32,11 +33,13 @@ type SpecResourceParser struct {
 	resourceSpecType string
 	resourceSpec     []byte
 	specProcessor    SpecProcessor
+	specHash         uint64
 }
 
 // NewSpecResourceParser -
 func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
-	return SpecResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType}
+	hash, _ := util.ComputeHash(resourceSpec)
+	return SpecResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType, specHash: hash}
 }
 
 // Parse -

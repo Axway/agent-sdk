@@ -74,7 +74,7 @@ func NewSubscriptionSchema(name string) SubscriptionSchema {
 	}
 }
 
-//SetJSONDraft07SchemaVersion - set the JSON schema for the subscription definition to Draft-07
+// SetJSONDraft07SchemaVersion - set the JSON schema for the subscription definition to Draft-07
 func (ss *subscriptionSchema) SetJSONDraft07SchemaVersion() {
 	ss.SchemaVersion = "http://json-schema.org/draft-07/schema#"
 }
@@ -421,13 +421,4 @@ func (c *ServiceClient) marshalAccessRequestSubscriptionDefinition(defName strin
 	}
 
 	return json.Marshal(apiServerService)
-}
-
-func (c *ServiceClient) getProfilePropValue(subscriptionDef *management.ConsumerSubscriptionDefinition) map[string]interface{} {
-	for _, prop := range subscriptionDef.Spec.Schema.Properties {
-		if prop.Key == profileKey {
-			return prop.Value
-		}
-	}
-	return nil
 }

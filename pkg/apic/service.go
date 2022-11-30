@@ -31,39 +31,74 @@ const (
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
 func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.APIService, error) {
+	logger := c.logger.WithField("serviceName", serviceBody.NameToPush).WithField("apiID", serviceBody.RestAPIID)
+	if serviceBody.PrimaryKey != "" {
+		logger = logger.WithField("primaryKey", serviceBody.PrimaryKey)
+	}
 	// if the team is set in the config, use that team name and id for all services
 	if c.cfg.GetTeamName() != "" {
 		if teamID, found := c.getTeamFromCache(c.cfg.GetTeamName()); found {
 			serviceBody.TeamName = c.cfg.GetTeamName()
 			serviceBody.teamID = teamID
+			logger.Debugf("setting team name (%s) and team id (%s)", serviceBody.TeamName, serviceBody.teamID)
 		}
 	}
+
+	// API Service
+	logger.Trace("processing service")
 	apiSvc, err := c.processService(serviceBody)
 	if err != nil {
+		logger.WithError(err).Error("processing service")
 		return nil, err
 	}
 	// Update description title after creating APIService to include the stage name if it exists
 	c.postAPIServiceUpdate(serviceBody)
+
 	// RevisionProcessor
+	logger.Trace("processing revision")
 	err = c.processRevision(serviceBody)
 	if err != nil {
+		logger.WithError(err).Error("processing revision")
 		return nil, err
 	}
 
 	// InstanceProcessor
+	logger.Trace("processing instance")
 	err = c.processInstance(serviceBody)
 	if err != nil {
+		logger.WithError(err).Error("processing instance")
 		return nil, err
 	}
 
 	// TODO - consumer instance not needed after deprecation of unified catalog
 	if !c.cfg.IsMarketplaceSubsEnabled() {
 		// ConsumerInstanceProcessor
+		logger.Trace("processing consumer instance")
 		err = c.processConsumerInstance(serviceBody)
 		if err != nil {
+			logger.WithError(err).Error("processing consumer instance")
 			return nil, err
 		}
 	}
+
+	logger.Trace("adding spec hashes to service")
+	serviceBody.specHashes[serviceBody.specHash] = serviceBody.serviceContext.revisionName
+	details := util.GetAgentDetails(apiSvc)
+	details[specHashes] = serviceBody.specHashes
+	util.SetAgentDetails(apiSvc, details)
+	if err := c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
+		logger.Error("error adding spec hashes in x-agent-details, retrying")
+		// if the update failed try once more
+		if err := c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
+			logger.WithError(err).Error("could not add spec hashes in x-agent-details")
+		}
+	}
+	ri, _ := apiSvc.AsInstance()
+	c.caches.AddAPIService(ri)
+	if err != nil {
+		logger.WithError(err).Error("adding service to cache")
+	}
+
 	return apiSvc, nil
 }
 

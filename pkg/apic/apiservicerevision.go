@@ -20,7 +20,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -34,6 +34,7 @@ import (
 const (
 	apiSvcRevTemplate = "{{.APIServiceName}}{{if ne .Stage \"\"}} ({{.StageLabel}}: {{.Stage}}){{end}} - {{.Date:YYYY/MM/DD}} - r {{.Revision}}"
 	defaultDateFormat = "2006/01/02"
+	specHashes        = "specHashes"
 )
 
 // APIServiceRevisionTitle - apiservicerevision template for title
@@ -53,96 +54,40 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevision(
-	serviceBody *ServiceBody, name string,
-) *management.APIServiceRevision {
-	owner, _ := c.getOwnerObject(serviceBody, false)
-	rev := &management.APIServiceRevision{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.APIServiceRevisionGVK(),
-			Name:             name,
-			Title:            c.updateAPIServiceRevisionTitle(serviceBody),
-			Attributes:       util.CheckEmptyMapStringString(serviceBody.RevisionAttributes),
-			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
-					Kind: management.EnvironmentGVK().Kind,
-					Name: c.cfg.GetEnvironmentName(),
-				},
-			},
-		},
-		Spec:  buildAPIServiceRevisionSpec(serviceBody),
-		Owner: owner,
-	}
+func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) management.APIServiceRevision {
+	newRev := management.NewAPIServiceRevision("", c.cfg.GetEnvironmentName())
+	newRev.Title = c.updateAPIServiceRevisionTitle(serviceBody)
+	newRev.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
+	newRev.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	newRev.Spec = buildAPIServiceRevisionSpec(serviceBody)
+	newRev.Owner, _ = c.getOwnerObject(serviceBody, false)
 
 	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, revDetails)
-	util.SetAgentDetails(rev, agentDetails)
+	util.SetAgentDetails(newRev, agentDetails)
 
-	return rev
-}
-
-func (c *ServiceClient) updateAPIServiceRevision(
-	serviceBody *ServiceBody, revision *management.APIServiceRevision,
-) *management.APIServiceRevision {
-	revision.GroupVersionKind = management.APIServiceRevisionGVK()
-	revision.Metadata.ResourceVersion = ""
-	revision.Title = serviceBody.NameToPush
-	revision.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
-	revision.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
-	revision.Spec = buildAPIServiceRevisionSpec(serviceBody)
-	revision.Owner, _ = c.getOwnerObject(serviceBody, false)
-
-	revDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.RevisionAgentDetails)
-	details := buildAgentDetailsSubResource(serviceBody, false, revDetails)
-	util.SetAgentDetails(revision, details)
-
-	return revision
+	return *newRev
 }
 
 // processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
-	err := c.setRevisionAction(serviceBody)
-
-	if err != nil {
-		return err
+	if serviceBody.serviceContext.serviceAction == updateAPI {
+		// get the count of revisions
+		serviceBody.serviceContext.revisionCount = c.getRevisionCount(serviceBody.serviceContext.serviceID)
 	}
 
-	var httpMethod string
+	// check if a revision with the same hash was already published
+	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
+		name := revName.(string)
 
-	revisionPrefix := getRevisionPrefix(serviceBody)
-	revisionName := revisionPrefix + "." + strconv.Itoa(serviceBody.serviceContext.revisionCount)
-	revisionURL := c.cfg.GetRevisionsURL()
-	revision := serviceBody.serviceContext.previousRevision
-
-	if serviceBody.AltRevisionPrefix != "" {
-		revisionName = serviceBody.AltRevisionPrefix
+		// check that the revision still exists
+		if _, err := c.GetAPIRevisionByName(name); err == nil {
+			serviceBody.serviceContext.revisionName = name
+			return nil
+		}
 	}
 
-	if serviceBody.serviceContext.revisionAction == updateAPI && revision != nil {
-		httpMethod = http.MethodPut
-		revisionURL += "/" + revisionName
-
-		// add the environment info as it is not part of the returned data form the get revisions call
-		revision.Metadata.Scope.Kind = management.EnvironmentGVK().Kind
-		revision.Metadata.Scope.Name = c.cfg.GetEnvironmentName()
-
-		revision = c.updateAPIServiceRevision(serviceBody, revision)
-		log.Infof("Updating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
-	}
-
-	if serviceBody.serviceContext.revisionAction == addAPI {
-		httpMethod = http.MethodPost
-
-		revision = c.prepareAddAPI(serviceBody, revision, &revisionName, revisionPrefix)
-	}
-
-	buffer, err := json.Marshal(revision)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.apiServiceDeployAPI(httpMethod, revisionURL, buffer)
+	rev, err := c.CreateOrUpdateResource(c.createRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -153,29 +98,38 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		return err
 	}
 
-	err = c.processSubResources(serviceBody, revision)
-	if err != nil {
-		return err
-	}
-
-	serviceBody.serviceContext.revisionName = revisionName
+	serviceBody.serviceContext.revisionName = rev.Name
 
 	return nil
 }
 
-func (c *ServiceClient) prepareAddAPI(serviceBody *ServiceBody, revision *management.APIServiceRevision, revisionName *string, revisionPrefix string) *management.APIServiceRevision {
-	// revisionCount is the total number of revisions so far. Add 1 since the action is to create a new revision.
-	serviceBody.serviceContext.revisionCount = serviceBody.serviceContext.revisionCount + 1
-	revisionCount := serviceBody.serviceContext.revisionCount
-	if serviceBody.AltRevisionPrefix == "" {
-		*revisionName = revisionPrefix + "." + strconv.Itoa(revisionCount)
+func (c *ServiceClient) getRevisionCount(apiID string) int {
+	queryParams := map[string]string{
+		"query":    "metadata.references.id==" + apiID,
+		"fields":   "id",
+		"page":     "1",
+		"pageSize": "1",
 	}
+	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil)
+	if err != nil {
+		return 0
+	}
+	if _, found := res.Headers["X-Axway-Total-Count"]; !found {
+		return 0
+	}
+	count, err := strconv.Atoi(res.Headers["X-Axway-Total-Count"][0])
+	if err != nil {
+		return 0
+	}
+	return count
+}
 
-	newRevision := *c.buildAPIServiceRevision(serviceBody, *revisionName)
+func (c *ServiceClient) createRevision(serviceBody *ServiceBody) *management.APIServiceRevision {
+	newRevision := c.buildAPIServiceRevision(serviceBody)
 
 	if serviceBody.serviceContext.previousRevision != nil {
 		err := util.SetAgentDetailsKey(
-			revision,
+			&newRevision,
 			defs.AttrPreviousAPIServiceRevisionID,
 			serviceBody.serviceContext.previousRevision.Metadata.ID,
 		)
@@ -188,7 +142,7 @@ func (c *ServiceClient) prepareAddAPI(serviceBody *ServiceBody, revision *manage
 	return &newRevision
 }
 
-func (c *ServiceClient) processSubResources(serviceBody *ServiceBody, revision *management.APIServiceRevision) error {
+func (c *ServiceClient) processSubResources(serviceBody *ServiceBody, revision *v1.ResourceInstance) error {
 	if len(revision.SubResources) > 0 {
 		if xAgentDetail, ok := revision.SubResources[defs.XAgentDetails]; ok {
 			subResources := map[string]interface{}{
@@ -215,37 +169,6 @@ func (c *ServiceClient) GetAPIRevisions(query map[string]string, stage string) (
 	}
 
 	return revisions, nil
-}
-
-func (c *ServiceClient) setRevisionAction(serviceBody *ServiceBody) error {
-	// If service is created in the chain, then set action to create revision
-	serviceBody.serviceContext.revisionAction = addAPI
-	// If service is updated, identify the action based on the existing revisions and update type(minor/major)
-	if serviceBody.serviceContext.serviceAction == updateAPI {
-		// Get revisions for the service and use the latest one as last reference
-		queryParams := map[string]string{
-			"query":  "metadata.references.id==" + serviceBody.serviceContext.serviceID,
-			"sort":   "metadata.audit.createTimestamp,DESC",
-			"fields": "id",
-		}
-
-		revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), serviceBody.Stage)
-		if err != nil {
-			return err
-		}
-
-		if revisions != nil {
-			serviceBody.serviceContext.revisionCount = len(revisions)
-			if len(revisions) > 0 {
-				serviceBody.serviceContext.previousRevision = revisions[0]
-				if serviceBody.APIUpdateSeverity == MinorChange {
-					// For minor change use the latest revision and update existing
-					serviceBody.serviceContext.revisionAction = updateAPI
-				}
-			}
-		}
-	}
-	return nil
 }
 
 // DEPRECATED to be removed on major release - else function for dateRegEx.MatchString(apiSvcRevPattern) will no longer be needed after "${tag} is invalid"

@@ -297,6 +297,10 @@ func TestUpdateService(t *testing.T) {
 			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance subresource
 			RespCode: http.StatusOK,
 		},
+		{
+			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			RespCode: http.StatusOK,
+		},
 	})
 
 	cloneServiceBody := serviceBody
@@ -373,53 +377,6 @@ func TestUpdateService(t *testing.T) {
 func Test_PublishServiceError(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
-	// tests for updating existing revision
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice-list.json", // for call to get the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apiservice.json", // for call to update the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingservicerevisions.json", // for call to get the serviceRevision
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingserviceinstances.json", // for call to get instance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // for call to update the serviceInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/existingconsumerinstances.json", // for call to check existance of the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-	})
 	// this is a failure test
 	httpClient.SetResponses([]api.MockResponse{
 		{
@@ -433,14 +390,29 @@ func Test_PublishServiceError(t *testing.T) {
 }
 
 func Test_processRevision(t *testing.T) {
-	client, _ := GetTestServiceClient()
+	client, httpClient := GetTestServiceClient()
+
+	// tests for updating existing revision
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
+			RespCode: http.StatusOK,
+		},
+	})
 	cloneServiceBody := serviceBody
-	// Alt Revision
-	cloneServiceBody.AltRevisionPrefix = "1.1.1"
-	client.processRevision(&cloneServiceBody)
-	assert.Contains(t, cloneServiceBody.serviceContext.revisionName, "1.1.1")
 	// Normal Revision
-	cloneServiceBody.AltRevisionPrefix = ""
 	client.processRevision(&cloneServiceBody)
 	assert.NotEqual(t, "", cloneServiceBody.serviceContext.revisionName)
 }
@@ -647,6 +619,10 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
+		{
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
 	})
 
 	// Test thrift object
@@ -672,7 +648,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 
 	// Get second to last request as consumerinstance
 	var consInst management.ConsumerInstance
-	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
+	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-3].Body, &consInst)
 	assert.Nil(t, err)
 
 	// Only asset type set, label and asset type are equal
@@ -728,6 +704,10 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
+		{
+			FileName: "./testdata/apiservice.json", // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
 	})
 
 	label := "Apache Thrift"
@@ -746,8 +726,7 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 
 	// Get last request as consumerinstance
 	consInst = management.ConsumerInstance{}
-	fmt.Println(string(httpClient.Requests[len(httpClient.Requests)-2].Body))
-	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-2].Body, &consInst)
+	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-3].Body, &consInst)
 	assert.Nil(t, err)
 
 	// Only label type set, label and asset type are equal

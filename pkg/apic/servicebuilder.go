@@ -30,7 +30,6 @@ type ServiceBuilder interface {
 	SetImage(image string) ServiceBuilder
 	SetImageContentType(imageContentType string) ServiceBuilder
 	SetResourceType(resourceType string) ServiceBuilder
-	SetAltRevisionPrefix(revisionPrefix string) ServiceBuilder
 	SetSubscriptionName(subscriptionName string) ServiceBuilder
 	SetAPIUpdateSeverity(apiUpdateSeverity string) ServiceBuilder
 	SetState(state string) ServiceBuilder
@@ -256,11 +255,6 @@ func (b *serviceBodyBuilder) SetUnstructuredFilename(filename string) ServiceBui
 	return b
 }
 
-func (b *serviceBodyBuilder) SetAltRevisionPrefix(revisionPrefix string) ServiceBuilder {
-	b.serviceBody.AltRevisionPrefix = revisionPrefix
-	return b
-}
-
 func (b *serviceBodyBuilder) SetTeamName(teamName string) ServiceBuilder {
 	b.serviceBody.TeamName = teamName
 	return b
@@ -283,6 +277,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 	specProcessor := specParser.GetSpecProcessor()
 	b.serviceBody.ResourceType = specProcessor.getResourceType()
+	b.serviceBody.specHash = fmt.Sprintf("%v", specParser.specHash)
 
 	// Check if the type is unstructured to gather more info
 

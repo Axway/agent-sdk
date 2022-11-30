@@ -33,7 +33,6 @@ type ServiceBody struct {
 	ImageContentType          string
 	CreatedBy                 string
 	ResourceType              string
-	AltRevisionPrefix         string
 	SubscriptionName          string
 	APIUpdateSeverity         string
 	State                     string
@@ -54,7 +53,9 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
+	specHash                  string
 	accessRequestDefinition   *management.AccessRequestDefinition
+	specHashes                map[string]interface{} // map of hash values to revision names
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body

@@ -96,8 +96,15 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
-	sub := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
-	util.SetAgentDetails(svc, sub)
+	newSVCDetails := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
+	util.SetAgentDetails(svc, newSVCDetails)
+
+	// get the specHashes from the existing service
+	if revDetails, found := newSVCDetails[specHashes]; found {
+		if specHashes, ok := revDetails.(map[string]interface{}); ok {
+			serviceBody.specHashes = specHashes
+		}
+	}
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = management.ApiServiceSpecIcon{
@@ -135,6 +142,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
 	serviceBody.serviceContext.serviceAction = addAPI
+	serviceBody.specHashes = map[string]interface{}{}
 
 	// If service exists, update existing service
 	svc, err := c.getAPIServiceFromCache(serviceBody)
