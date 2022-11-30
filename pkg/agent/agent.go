@@ -73,8 +73,7 @@ type agentData struct {
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
-	validatingLock *atomicUint
-	publishingLock *atomicUint
+	publishingLock *sync.Mutex
 
 	// profiling
 	profileDone chan struct{}
@@ -91,8 +90,7 @@ func init() {
 		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 	agentMutex = sync.RWMutex{}
-	agent.validatingLock = &atomicUint{}
-	agent.publishingLock = &atomicUint{}
+	agent.publishingLock = &sync.Mutex{}
 }
 
 // Initialize - Initializes the agent
