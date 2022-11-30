@@ -352,12 +352,6 @@ func (c *itemCache) setSecondaryKey(thisAction cacheAction) (thisReply cacheRepl
 		return
 	}
 
-	// check that the secondary key given is not already a secondary key
-	if _, ok := c.SecKeys[secondaryKey]; ok {
-		thisReply.err = fmt.Errorf("Can't use %s as a secondary key, it is already a secondary key", secondaryKey)
-		return
-	}
-
 	item, ok := c.Items[key]
 	// Check that the key given is in the cache
 	if !ok {
