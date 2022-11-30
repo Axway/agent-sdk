@@ -60,8 +60,6 @@ func TestSetItemsCache(t *testing.T) {
 	assert.Len(t, cacheCfg.SecKeys, 1, "The length of the global secondary keys changed and was not 1")
 	err = cache.SetSecondaryKey(key, key)
 	assert.NotNil(t, err, "There was not an error when setting a secondary key with the same value as a primary key")
-	err = cache.SetSecondaryKey(key, secKey)
-	assert.NotNil(t, err, "There was not an error when setting a secondary key with an existing key")
 
 	// Set an item with a secondary key, validate that it is in the cache
 	cache = New() // Use new cache

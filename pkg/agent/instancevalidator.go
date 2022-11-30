@@ -3,7 +3,6 @@ package agent
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -32,16 +31,12 @@ func newInstanceValidator() *instanceValidator {
 // Ready -
 func (j *instanceValidator) Ready() bool {
 	status, _ := hc.GetGlobalStatus()
-	agent.validatingLock.reset()
 	return status == string(hc.OK)
 }
 
 // Status -
 func (j *instanceValidator) Status() error {
 	j.logger.Trace("status check")
-	if agent.validatingLock.value() != 0 {
-		j.logger.Trace("validator running")
-	}
 	if status, _ := hc.GetGlobalStatus(); status != string(hc.OK) {
 		err := fmt.Errorf("agent is marked as not running")
 		j.logger.WithError(err).Trace("status failed")
@@ -54,16 +49,8 @@ func (j *instanceValidator) Status() error {
 func (j *instanceValidator) Execute() error {
 	if getAPIValidator() != nil {
 		j.logger.Trace("executing")
-		if agent.validatingLock.value() != 0 {
-			j.logger.Debug("skipping as previous instanceValidator is still running, will run on next interval")
-			return nil
-		}
-		if err := agent.publishingLock.waitMaxDuration(time.Minute); err != nil {
-			j.logger.Debug("skipping as the max duration waiting for publishing processes to finish was hit, will run on next interval")
-			return nil
-		}
-		agent.validatingLock.increment()
-		defer agent.validatingLock.decrement()
+		PublishingLock()
+		defer PublishingUnlock()
 		j.validateAPIOnDataplane()
 	} else {
 		j.logger.Trace("no registered validator")
