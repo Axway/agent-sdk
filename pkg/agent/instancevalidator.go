@@ -49,8 +49,8 @@ func (j *instanceValidator) Status() error {
 func (j *instanceValidator) Execute() error {
 	if getAPIValidator() != nil {
 		j.logger.Trace("executing")
-		agent.publishingLock.Lock()
-		defer agent.publishingLock.Lock()
+		PublishingLock()
+		defer PublishingUnlock()
 		j.validateAPIOnDataplane()
 	} else {
 		j.logger.Trace("no registered validator")
