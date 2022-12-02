@@ -17,6 +17,7 @@ type ServiceBody struct {
 	APIName                   string
 	RestAPIID                 string
 	PrimaryKey                string
+	RequestDefinitionsAllowed bool
 	URL                       string
 	Stage                     string
 	StageDescriptor           string

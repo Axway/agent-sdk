@@ -16,6 +16,7 @@ const (
 type ServiceBuilder interface {
 	SetID(ID string) ServiceBuilder
 	SetPrimaryKey(key string) ServiceBuilder
+	SetRequestDefinitionsAllowed(previouslyPublished bool) ServiceBuilder
 	SetTitle(title string) ServiceBuilder
 	SetAPIName(apiName string) ServiceBuilder
 	SetURL(url string) ServiceBuilder
@@ -93,6 +94,11 @@ func (b *serviceBodyBuilder) SetID(ID string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetPrimaryKey(key string) ServiceBuilder {
 	b.serviceBody.PrimaryKey = key
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRequestDefinitionsAllowed(key bool) ServiceBuilder {
+	b.serviceBody.RequestDefinitionsAllowed = key
 	return b
 }
 
