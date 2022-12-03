@@ -236,6 +236,10 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 
 	// now get the access request definition from the instance
 	ard := management.NewAccessRequestDefinition(svcInst.Spec.AccessRequestDefinition, ar.Metadata.Scope.Name)
+	if ard.Spec.Provision == nil {
+		return nil, fmt.Errorf("no access request definitions are defined for service instance %s", svcInst.Name)
+	}
+
 	ri, err := h.client.GetResource(ard.GetSelfLink())
 	if err != nil {
 		return nil, err
