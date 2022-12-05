@@ -236,7 +236,7 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 	}
 	// verify that the service instance has an access request definition
 	if svcInst.Spec.AccessRequestDefinition == "" {
-		return nil, fmt.Errorf("failed to provision access for service instance %s. Please contact your administrator for further assistance", svcInst.Name)
+		return nil, fmt.Errorf("failed to provision access for service instance %s. Please contact your system administrator for further assistance", svcInst.Name)
 	}
 
 	// now get the access request definition from the instance
