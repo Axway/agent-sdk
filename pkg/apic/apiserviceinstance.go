@@ -50,6 +50,8 @@ func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBo
 				knownCRDs = append(knownCRDs, crd)
 			}
 		}
+	} else {
+		log.Warnf("removed existing credential request definitions for instance %s. Contact your system administrator", serviceBody.APIName)
 	}
 
 	return knownCRDs
@@ -63,6 +65,8 @@ func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
 		if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
 			return
 		}
+	} else {
+		log.Warnf("removed existing access request definitions for instance %s. Contact your system administrator", serviceBody.APIName)
 	}
 
 	serviceBody.ardName = ""
