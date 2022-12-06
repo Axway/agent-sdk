@@ -226,13 +226,15 @@ func (c *ServiceClient) getAPIServiceByPrimaryKey(primaryKey string) (*managemen
 }
 
 func (c *ServiceClient) getAPIServiceFromCache(serviceBody *ServiceBody) (*management.APIService, error) {
-	if serviceBody.PrimaryKey != "" {
-		apiService, err := c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
-		if apiService != nil && err == nil {
-			return apiService, err
-		}
+	apiService, err := c.getAPIServiceByExternalAPIID(serviceBody.RestAPIID)
+	if apiService != nil && err == nil {
+		return apiService, nil
 	}
-	return c.getAPIServiceByExternalAPIID(serviceBody.RestAPIID)
+
+	if serviceBody.PrimaryKey != "" {
+		apiService, err = c.getAPIServiceByPrimaryKey(serviceBody.PrimaryKey)
+	}
+	return apiService, err
 }
 
 // rollbackAPIService - if the process to add api/revision/instance fails, delete the api that was created
