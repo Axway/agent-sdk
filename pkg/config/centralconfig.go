@@ -752,7 +752,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAuthURL, "https://login.axway.com/auth", "Amplify Central authentication URL")
 	props.AddStringProperty(pathAuthRealm, "Broker", "Amplify Central authentication Realm")
 	props.AddStringProperty(pathAuthClientID, "", "Client ID for the service account")
-	props.AddDurationProperty(pathAuthTimeout, 10*time.Second, "Timeout waiting for AxwayID response")
+	props.AddDurationProperty(pathAuthTimeout, 10*time.Second, "Timeout waiting for AxwayID response", properties.WithLowerLimit(10*time.Second))
 	// ssl properties and command flags
 	props.AddStringSliceProperty(pathSSLNextProtos, []string{}, "List of supported application level protocols, comma separated")
 	props.AddBoolProperty(pathSSLInsecureSkipVerify, false, "Controls whether a client verifies the server's certificate chain and host name")
@@ -774,7 +774,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddIntProperty(pathGRPCPort, 0, "Port for Amplify Central gRPC connection")
 	props.AddBoolProperty(pathGRPCInsecure, false, "Controls whether an agent uses a gRPC connection with TLS")
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
-	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file")
+	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
