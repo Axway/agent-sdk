@@ -44,7 +44,7 @@ func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBo
 	// remove any crd not in the cache
 	knownCRDs := make([]string, 0)
 	// Check if request definitions are allowed. False would indicate the service is Unpublished
-	if serviceBody.RequestDefinitionsAllowed {
+	if serviceBody.requestDefinitionsAllowed {
 		for _, crd := range crds {
 			if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
 				knownCRDs = append(knownCRDs, crd)
@@ -61,7 +61,7 @@ func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
 	ard := serviceBody.ardName
 
 	// Check if request definitions are allowed. False would indicate the service is Unpublished
-	if serviceBody.RequestDefinitionsAllowed {
+	if serviceBody.requestDefinitionsAllowed {
 		if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
 			return
 		}
