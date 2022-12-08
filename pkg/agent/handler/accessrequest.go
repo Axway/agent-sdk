@@ -229,13 +229,19 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 		return nil, err
 	}
 	svcInst := management.NewAPIServiceInstance(instance.Name, instance.Metadata.Scope.Name)
+
 	err = svcInst.FromInstance(instance)
 	if err != nil {
 		return nil, err
 	}
+	// verify that the service instance has an access request definition
+	if svcInst.Spec.AccessRequestDefinition == "" {
+		return nil, fmt.Errorf("failed to provision access for service instance %s. Please contact your system administrator for further assistance", svcInst.Name)
+	}
 
 	// now get the access request definition from the instance
 	ard := management.NewAccessRequestDefinition(svcInst.Spec.AccessRequestDefinition, ar.Metadata.Scope.Name)
+
 	ri, err := h.client.GetResource(ard.GetSelfLink())
 	if err != nil {
 		return nil, err

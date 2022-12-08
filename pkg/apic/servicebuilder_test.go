@@ -50,6 +50,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetAPIName("testAPI").
 		SetID("1234").
 		SetPrimaryKey("PrimaryKey").
+		SetRequestDefinitionsAllowed(true).
 		SetStage("teststage").
 		SetURL("https://1234.execute-api.us-region.amazonaws.com/teststage").
 		SetDescription(longDescription).

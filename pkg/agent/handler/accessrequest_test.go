@@ -92,7 +92,7 @@ func TestAccessRequestHandler(t *testing.T) {
 		{
 			action:         proto.Event_CREATED,
 			inboundStatus:  prov.Pending.String(),
-			name:           "should handle an error when retrieving the accress request definition, and set a failed status",
+			name:           "should handle an error when retrieving the access request definition, and set a failed status",
 			outboundStatus: prov.Error.String(),
 			references:     accessReq.Metadata.References,
 			getARDErr:      fmt.Errorf("could not get access request definition"),

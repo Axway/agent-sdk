@@ -43,10 +43,15 @@ func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBo
 
 	// remove any crd not in the cache
 	knownCRDs := make([]string, 0)
-	for _, crd := range crds {
-		if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
-			knownCRDs = append(knownCRDs, crd)
+	// Check if request definitions are allowed. False would indicate the service is Unpublished
+	if serviceBody.requestDefinitionsAllowed {
+		for _, crd := range crds {
+			if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
+				knownCRDs = append(knownCRDs, crd)
+			}
 		}
+	} else {
+		log.Warnf("removed existing credential request definitions for instance %s. Contact your system administrator for further assistance", serviceBody.APIName)
 	}
 
 	return knownCRDs
@@ -55,8 +60,13 @@ func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBo
 func (c *ServiceClient) checkAccessRequestDefinition(serviceBody *ServiceBody) {
 	ard := serviceBody.ardName
 
-	if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
-		return
+	// Check if request definitions are allowed. False would indicate the service is Unpublished
+	if serviceBody.requestDefinitionsAllowed {
+		if def, err := c.caches.GetAccessRequestDefinitionByName(ard); err == nil && def != nil {
+			return
+		}
+	} else {
+		log.Warnf("removed existing access request definitions for instance %s. Contact your system administrator for further assistance", serviceBody.APIName)
 	}
 
 	serviceBody.ardName = ""
