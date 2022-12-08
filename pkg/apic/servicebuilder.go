@@ -98,7 +98,7 @@ func (b *serviceBodyBuilder) SetPrimaryKey(key string) ServiceBuilder {
 }
 
 func (b *serviceBodyBuilder) SetRequestDefinitionsAllowed(key bool) ServiceBuilder {
-	b.serviceBody.RequestDefinitionsAllowed = key
+	b.serviceBody.requestDefinitionsAllowed = key
 	return b
 }
 
