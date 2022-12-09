@@ -288,7 +288,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
@@ -342,7 +342,7 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
@@ -441,7 +441,7 @@ func TestRootCmdHandlers(t *testing.T) {
 	viper.AddConfigPath("./testdata")
 
 	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property")
+	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
