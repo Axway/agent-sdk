@@ -122,7 +122,11 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 		req.Headers["X-Axway-Tenant-Id"] = h.Cfg.TenantID
 		req.Headers["Content-Type"] = "application/json"
 
-		h.logger.Tracef("sending request for URL - %s, more pages - %d", req.URL, morePages)
+		msg := "sending request for URL - %s"
+		if morePages {
+			msg += ", more pages"
+		}
+		h.logger.Tracef(msg, req.URL)
 		res, err := h.Client.Send(req)
 		if err != nil {
 			return lastID, err
