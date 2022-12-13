@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"sync"
@@ -42,7 +42,7 @@ func (c *MockHTTPClient) SetResponse(filepath string, code int) {
 			c.ResponseCode = http.StatusInternalServerError
 			return
 		}
-		dat, err = ioutil.ReadAll(responseFile)
+		dat, err = io.ReadAll(responseFile)
 		if err != nil {
 			c.ResponseCode = http.StatusInternalServerError
 			return
@@ -112,7 +112,7 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 			return nil, err
 		}
 
-		dat, err = ioutil.ReadAll(responseFile)
+		dat, err = io.ReadAll(responseFile)
 		if err != nil {
 			return nil, err
 		}
