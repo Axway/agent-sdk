@@ -70,17 +70,13 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.Equal(t, centralConfig.URL+"/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
 	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
 
-	centralConfig.ReportActivityFrequency = 0
-	err = cfgValidator.ValidateCfg()
-	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
-
 	centralConfig.PollInterval = 0
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.pollInterval, please set and/or check its value", err.Error())
 	centralConfig.PollInterval = 30
 
+	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
@@ -158,6 +154,12 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
+	centralConfig.ReportActivityFrequency = time.Minute
+
+	centralConfig.APIValidationFrequency = 0
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationFrequency, please set and/or check its value", err.Error())
 
 	cleanupFiles(tmpFile.Name())
 }
