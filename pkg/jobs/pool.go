@@ -179,13 +179,13 @@ func (p *Pool) RegisterSingleRunJobWithName(newJob Job, name string) (string, er
 }
 
 // RegisterIntervalJob - Runs a job with a specific interval between each run
-func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	return p.RegisterIntervalJobWithName(newJob, interval, JobTypeInterval)
+func (p *Pool) RegisterIntervalJob(newJob Job, interval time.Duration, opts ...jobOpt) (string, error) {
+	return p.RegisterIntervalJobWithName(newJob, interval, JobTypeInterval, opts...)
 }
 
 // RegisterIntervalJobWithName - Runs a job with a specific interval between each run
-func (p *Pool) RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
-	job, err := newIntervalJob(newJob, interval, name, p.failJobChan)
+func (p *Pool) RegisterIntervalJobWithName(newJob Job, interval time.Duration, name string, opts ...jobOpt) (string, error) {
+	job, err := newIntervalJob(newJob, interval, name, p.failJobChan, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -221,13 +221,13 @@ func (p *Pool) RegisterDetachedChannelJobWithName(newJob Job, stopChan chan inte
 }
 
 // RegisterDetachedIntervalJob - Runs a job with a specific interval between each run, detached from other jobs
-func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration) (string, error) {
-	return p.RegisterDetachedIntervalJobWithName(newJob, interval, JobTypeDetachedInterval)
+func (p *Pool) RegisterDetachedIntervalJob(newJob Job, interval time.Duration, opts ...jobOpt) (string, error) {
+	return p.RegisterDetachedIntervalJobWithName(newJob, interval, JobTypeDetachedInterval, opts...)
 }
 
 // RegisterDetachedIntervalJobWithName - Runs a job with a specific interval between each run, detached from other jobs
-func (p *Pool) RegisterDetachedIntervalJobWithName(newJob Job, interval time.Duration, name string) (string, error) {
-	job, err := newDetachedIntervalJob(newJob, interval, name)
+func (p *Pool) RegisterDetachedIntervalJobWithName(newJob Job, interval time.Duration, name string, opts ...jobOpt) (string, error) {
+	job, err := newDetachedIntervalJob(newJob, interval, name, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -235,13 +235,13 @@ func (p *Pool) RegisterDetachedIntervalJobWithName(newJob Job, interval time.Dur
 }
 
 // RegisterScheduledJob - Runs a job on a specific schedule
-func (p *Pool) RegisterScheduledJob(newJob Job, schedule string) (string, error) {
-	return p.RegisterScheduledJobWithName(newJob, schedule, JobTypeScheduled)
+func (p *Pool) RegisterScheduledJob(newJob Job, schedule string, opts ...jobOpt) (string, error) {
+	return p.RegisterScheduledJobWithName(newJob, schedule, JobTypeScheduled, opts...)
 }
 
 // RegisterScheduledJobWithName - Runs a job on a specific schedule
-func (p *Pool) RegisterScheduledJobWithName(newJob Job, schedule, name string) (string, error) {
-	job, err := newScheduledJob(newJob, schedule, name, p.failJobChan)
+func (p *Pool) RegisterScheduledJobWithName(newJob Job, schedule, name string, opts ...jobOpt) (string, error) {
+	job, err := newScheduledJob(newJob, schedule, name, p.failJobChan, opts...)
 	if err != nil {
 		return "", err
 	}

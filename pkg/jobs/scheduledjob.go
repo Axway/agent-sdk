@@ -21,8 +21,8 @@ type scheduleJob struct {
 	cronLock *sync.Mutex
 }
 
-//newScheduledJob - creates a job that is ran at a specific time (@hourly,@daily,@weekly,min hour dow dom)
-func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string) (JobExecution, error) {
+// newScheduledJob - creates a job that is ran at a specific time (@hourly,@daily,@weekly,min hour dow dom)
+func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string, opts ...jobOpt) (JobExecution, error) {
 	exp, err := cronexpr.Parse(schedule)
 	if err != nil {
 		return nil, errors.Wrap(ErrRegisteringJob, err.Error()).FormatError("scheduled")
@@ -38,6 +38,10 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string)
 		&sync.Mutex{},
 	}
 
+	for _, o := range opts {
+		o(&thisJob.baseJob)
+	}
+
 	go thisJob.start()
 	return &thisJob, nil
 }
@@ -49,7 +53,7 @@ func (b *scheduleJob) getNextExecution() time.Duration {
 	return time.Until(nextTime)
 }
 
-//start - calls the Execute function from the Job definition
+// start - calls the Execute function from the Job definition
 func (b *scheduleJob) start() {
 	b.startLog()
 	b.waitForReady()
@@ -81,7 +85,7 @@ func (b *scheduleJob) start() {
 	}
 }
 
-//stop - write to the stop channel to stop the execution loop
+// stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
 	if b.getIsStopped() {
 		b.baseJob.logger.Tracef("job has already been stopped")

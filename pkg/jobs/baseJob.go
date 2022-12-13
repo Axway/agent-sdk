@@ -33,9 +33,18 @@ type baseJob struct {
 	logger           log.FieldLogger
 	isStopped        bool
 	stoppedLock      *sync.Mutex
+	timeout          time.Duration
 }
 
-//newBaseJob - creates a single run job and sets up the structure for different job types
+type jobOpt func(*baseJob)
+
+func WithJobTimeout(timeout time.Duration) jobOpt {
+	return func(b *baseJob) {
+		b.timeout = timeout
+	}
+}
+
+// newBaseJob - creates a single run job and sets up the structure for different job types
 func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution, error) {
 	thisJob := createBaseJob(newJob, failJobChan, name, JobTypeSingleRun)
 
@@ -43,7 +52,7 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 	return &thisJob, nil
 }
 
-//createBaseJob - creates a single run job and returns it
+// createBaseJob - creates a single run job and returns it
 func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
 	id := newUUID()
 	logger := log.NewFieldLogger().
@@ -87,7 +96,11 @@ func (b *baseJob) executeJob() {
 func (b *baseJob) callWithTimeout(execution func() error) error {
 	var executionError error
 	// execution time limit is set
-	if executionTimeLimit > 0 {
+	timeLimit := executionTimeLimit
+	if b.timeout > 0 {
+		timeLimit = b.timeout
+	}
+	if timeLimit > 0 {
 		// start a go routine to execute the job
 		executed := make(chan error)
 		go func() {
@@ -98,7 +111,7 @@ func (b *baseJob) callWithTimeout(execution func() error) error {
 		select {
 		case err := <-executed:
 			executionError = err
-		case <-time.After(executionTimeLimit): // execute the job with a time limit
+		case <-time.After(timeLimit): // execute the job with a time limit
 			executionError = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 		}
 	} else {
@@ -136,42 +149,42 @@ func (b *baseJob) setBackoff(backoff *backoff) {
 	b.backoff = backoff
 }
 
-//SetStatus - locks the job, execution can not take place until the Unlock func is called
+// SetStatus - locks the job, execution can not take place until the Unlock func is called
 func (b *baseJob) SetStatus(status JobStatus) {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
 	b.status = status
 }
 
-//setReadyWait - set flag to indicate the job is waiting for ready
+// setReadyWait - set flag to indicate the job is waiting for ready
 func (b *baseJob) setReadyWait(waitReady bool) {
 	b.isReadyWaitLock.Lock()
 	defer b.isReadyWaitLock.Unlock()
 	b.isReadyWait = waitReady
 }
 
-//isWaitingForReady - return true if job is waiting for ready
+// isWaitingForReady - return true if job is waiting for ready
 func (b *baseJob) isWaitingForReady() bool {
 	b.isReadyWaitLock.Lock()
 	defer b.isReadyWaitLock.Unlock()
 	return b.isReadyWait
 }
 
-//SetIsReady - set that the job is now ready
+// SetIsReady - set that the job is now ready
 func (b *baseJob) SetIsReady() {
 	b.isReadyLock.Lock()
 	defer b.isReadyLock.Unlock()
 	b.isReady = true
 }
 
-//UnsetIsReady - set that the job is now ready
+// UnsetIsReady - set that the job is now ready
 func (b *baseJob) UnsetIsReady() {
 	b.isReadyLock.Lock()
 	defer b.isReadyLock.Unlock()
 	b.isReady = false
 }
 
-//IsReady - set that the job is now ready
+// IsReady - set that the job is now ready
 func (b *baseJob) IsReady() bool {
 	b.isReadyLock.Lock()
 	defer b.isReadyLock.Unlock()
@@ -190,12 +203,12 @@ func (b *baseJob) setIsStopped(stopped bool) {
 	b.isStopped = stopped
 }
 
-//Lock - locks the job, execution can not take place until the Unlock func is called
+// Lock - locks the job, execution can not take place until the Unlock func is called
 func (b *baseJob) Lock() {
 	b.jobLock.Lock()
 }
 
-//Unlock - unlocks the job, execution can now take place
+// Unlock - unlocks the job, execution can now take place
 func (b *baseJob) Unlock() {
 	b.jobLock.Unlock()
 }
@@ -224,7 +237,7 @@ func (b *baseJob) setError(err error) {
 	b.err = err
 }
 
-//GetStatusValue - returns the job status
+// GetStatusValue - returns the job status
 func (b *baseJob) updateStatus() JobStatus {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
@@ -241,19 +254,19 @@ func (b *baseJob) updateStatus() JobStatus {
 	return b.status
 }
 
-//GetStatus - returns the job status
+// GetStatus - returns the job status
 func (b *baseJob) GetStatus() JobStatus {
 	b.statusLock.Lock()
 	defer b.statusLock.Unlock()
 	return b.status
 }
 
-//GetID - returns the ID for this job
+// GetID - returns the ID for this job
 func (b *baseJob) GetID() string {
 	return b.id
 }
 
-//GetName - returns the name for this job, returns the ID if name is blank
+// GetName - returns the name for this job, returns the ID if name is blank
 func (b *baseJob) GetName() string {
 	if b.name == "" {
 		return b.id
@@ -261,17 +274,17 @@ func (b *baseJob) GetName() string {
 	return b.name
 }
 
-//GetJob - returns the Job interface
+// GetJob - returns the Job interface
 func (b *baseJob) GetJob() JobExecution {
 	return b
 }
 
-//Ready - checks that the job is ready
+// Ready - checks that the job is ready
 func (b *baseJob) Ready() bool {
 	return b.job.Ready()
 }
 
-//waitForReady - waits for the Ready func to return true
+// waitForReady - waits for the Ready func to return true
 func (b *baseJob) waitForReady() {
 	b.logger.Debugf("waiting for job to be ready: %s", b.GetName())
 	b.setReadyWait(true)
@@ -311,7 +324,7 @@ func (b *baseJob) stopReadyIfWaiting(ready int) {
 
 }
 
-//start - waits for Ready to return true then calls the Execute function from the Job definition
+// start - waits for Ready to return true then calls the Execute function from the Job definition
 func (b *baseJob) start() {
 	b.startLog()
 	b.waitForReady()
@@ -320,7 +333,7 @@ func (b *baseJob) start() {
 	b.executeJob()
 }
 
-//stop - noop in base
+// stop - noop in base
 func (b *baseJob) stop() {
 	b.stopLog()
 }

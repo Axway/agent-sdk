@@ -14,14 +14,18 @@ type intervalJob struct {
 	intervalJobProps
 }
 
-//newIntervalJob - creates an interval run job
-func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan chan string) (JobExecution, error) {
+// newIntervalJob - creates an interval run job
+func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan chan string, opts ...jobOpt) (JobExecution, error) {
 	thisJob := intervalJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeInterval),
 		intervalJobProps{
 			interval: interval,
 			stopChan: make(chan bool, 1),
 		},
+	}
+
+	for _, o := range opts {
+		o(&thisJob.baseJob)
 	}
 
 	go thisJob.start()
@@ -40,7 +44,7 @@ func (b *intervalJob) handleExecution() {
 	b.setConsecutiveFails(0)
 }
 
-//start - calls the Execute function from the Job definition
+// start - calls the Execute function from the Job definition
 func (b *intervalJob) start() {
 	b.startLog()
 	b.waitForReady()
@@ -74,7 +78,7 @@ func (b *intervalJob) start() {
 	}
 }
 
-//stop - write to the stop channel to stop the execution loop
+// stop - write to the stop channel to stop the execution loop
 func (b *intervalJob) stop() {
 	if b.getIsStopped() {
 		b.baseJob.logger.Tracef("job has already been stopped")

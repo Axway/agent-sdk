@@ -73,7 +73,6 @@ func TestPoolCoordination(t *testing.T) {
 
 	// continue to get pool status to check that it was in a stopped state during test
 	wasStopped := false
-	stoppedThenStarted := false
 	for i := 0; i < 200; i++ {
 		if !wasStopped && testPool.GetStatus() == PoolStatusStopped.String() {
 			wasStopped = true
@@ -88,9 +87,6 @@ func TestPoolCoordination(t *testing.T) {
 			assert.GreaterOrEqual(t, cJob.getExecutions(), 1, "The channel job did not run at least once before failure")
 			cJob.clearExecutions()
 		}
-		if wasStopped && testPool.GetStatus() == PoolStatusRunning.String() {
-			stoppedThenStarted = true
-		}
 		time.Sleep(10 * time.Millisecond)
 	}
 	time.Sleep(2 * time.Second) // give enough time for scheduled job to run at least once more
@@ -104,9 +100,6 @@ func TestPoolCoordination(t *testing.T) {
 	// assert.True(t, wasStopped, "The pool status never showed as stopped")
 	// assert.True(t, stoppedThenStarted, "The pool status never restarted after it was stopped")
 	// add this dummy statement that is needed if the asserts are commented out
-	if stoppedThenStarted {
-
-	}
 	assert.True(t, failJob.getWasFailed(), "The fail job never reported as failed")
 	assert.True(t, failJob.getWasRestored(), "The fail job was not restored after failure")
 }
