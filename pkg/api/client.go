@@ -60,6 +60,7 @@ type httpClient struct {
 	timeout            time.Duration
 	dialer             util.Dialer
 	singleEntryHostMap map[string]string
+	singleURL          string
 }
 
 type configAgent struct {
@@ -95,36 +96,49 @@ func SetConfigAgent(env string, isGRPC, isDocker bool, agentName, singleURL stri
 	}
 }
 
+type ClientOpt func(*httpClient)
+
+func WithTimeout(timeout time.Duration) func(*httpClient) {
+	return func(h *httpClient) {
+		h.timeout = timeout
+	}
+}
+
+func WithSingleURL() func(*httpClient) {
+	return func(h *httpClient) {
+		h.singleURL = ""
+		if cfgAgent != nil {
+			h.singleURL = cfgAgent.singleURL
+			if h.singleURL != "" {
+				h.singleEntryHostMap = initializeSingleEntryMapping(h.singleURL, cfgAgent.singleEntryFilter)
+			}
+		}
+	}
+}
+
 // NewClient - creates a new HTTP client
-func NewClient(cfg config.TLSConfig, proxyURL string) Client {
+func NewClient(tlsCfg config.TLSConfig, proxyURL string, options ...ClientOpt) Client {
 	timeout := getTimeoutFromEnvironment()
-	return NewClientWithTimeout(cfg, proxyURL, timeout)
+	client := newClient(timeout)
+
+	for _, o := range options {
+		o(client)
+	}
+
+	client.initialize(tlsCfg, proxyURL)
+	return client
 }
 
 // NewClientWithTimeout - creates a new HTTP client, with a timeout
 func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := newClient(timeout)
-	client.initialize(tlsCfg, proxyURL, "")
-	client.logger = log.NewFieldLogger().
-		WithComponent("httpClient").
-		WithPackage("sdk.api")
-
-	return client
+	log.DeprecationWarningReplace("NewClientWithTimeout", "NewClient and WithTimeout optional func")
+	return NewClient(tlsCfg, proxyURL, WithTimeout(timeout))
 }
 
 // NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
 func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	client := newClient(timeout)
-	singleURL := ""
-	if cfgAgent != nil {
-		singleURL = cfgAgent.singleURL
-		if singleURL != "" {
-			client.singleEntryHostMap = initializeSingleEntryMapping(singleURL, cfgAgent.singleEntryFilter)
-		}
-	}
-
-	client.initialize(tlsCfg, proxyURL, singleURL)
-	return client
+	log.DeprecationWarningReplace("NewClientWithTimeout", "NewClient and WithSingleURL optional func")
+	return NewClient(tlsCfg, proxyURL, WithTimeout(timeout), WithSingleURL())
 }
 
 func newClient(timeout time.Duration) *httpClient {
@@ -161,9 +175,9 @@ func parseProxyURL(proxyURL string) *url.URL {
 	return nil
 }
 
-func (c *httpClient) initialize(tlsCfg config.TLSConfig, proxyURL, singleEntryURL string) {
+func (c *httpClient) initialize(tlsCfg config.TLSConfig, proxyURL string) {
 	c.httpClient = c.createClient(tlsCfg)
-	if singleEntryURL == "" && proxyURL == "" {
+	if c.singleURL == "" && proxyURL == "" {
 		return
 	}
 

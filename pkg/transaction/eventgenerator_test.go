@@ -33,6 +33,7 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			SubscriptionConfiguration: corecfg.NewSubscriptionConfig(),
 			UsageReporting:            corecfg.NewUsageReporting(),
 			ReportActivityFrequency:   2 * time.Minute,
+			APIValidationFrequency:    time.Hour,
 			ClientTimeout:             1 * time.Minute,
 			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
@@ -71,7 +72,8 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
 	// authCfg := cfg.Central.GetAuthConfig()
-	agent.Initialize(cfg.Central)
+	err := agent.Initialize(cfg.Central)
+	assert.Nil(t, err)
 
 	eventGenerator := NewEventGenerator()
 	dummyLogEvent := LogEvent{
