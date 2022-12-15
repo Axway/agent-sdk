@@ -25,8 +25,9 @@ var ErrInvalidSecretReference = errors.Newf(1411, "invalid secret reference - %s
 const qaEnforceDurationLowerLimit = "QA_ENFORCE_DURATION_LOWER_LIMIT"
 
 const (
-	lowerLimitName = "%s-lowerLimit"
-	upperLimitName = "%s-upperLimit"
+	lowerLimitName  = "%s-lowerLimit"
+	upperLimitName  = "%s-upperLimit"
+	qaVarNameFormat = "qa.%s"
 )
 
 // SecretPropertyResolver - interface for resolving property values with secret references
@@ -67,25 +68,33 @@ type Properties interface {
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
-type durationLimits struct {
-	lower time.Duration
-	upper time.Duration
+type durationOpts struct {
+	lower      time.Duration
+	upper      time.Duration
+	qaOverride bool
 }
 
 // DurationOpt are duration range options passed into AddDurationProperty
-type DurationOpt func(prop *durationLimits)
+type DurationOpt func(prop *durationOpts)
 
 // WithLowerLimit - lower limit of the duration range
 func WithLowerLimit(lower time.Duration) DurationOpt {
-	return func(d *durationLimits) {
+	return func(d *durationOpts) {
 		d.lower = lower
 	}
 }
 
 // WithUpperLimit - upper limit of the duration range
 func WithUpperLimit(upper time.Duration) DurationOpt {
-	return func(d *durationLimits) {
+	return func(d *durationOpts) {
 		d.upper = upper
+	}
+}
+
+// WithQAOverride - set to true to allow this setting to be overwritten with a qa env var
+func WithQAOverride() DurationOpt {
+	return func(d *durationOpts) {
+		d.qaOverride = true
 	}
 }
 
@@ -210,16 +219,24 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
 
-		limits := &durationLimits{
+		opts := &durationOpts{
 			lower: time.Second * 30,
 		}
 
 		// validate if WithLowerLimit and WithUpperLimit were called
 		for _, option := range options {
-			option(limits)
+			option(opts)
 		}
 
-		p.configureUpperAndLowerLimits(defaultVal, limits, flagName)
+		p.configureUpperAndLowerLimits(defaultVal, opts, flagName)
+
+		if opts.qaOverride {
+			qaName := fmt.Sprintf(qaVarNameFormat, name)
+			qaFlagName := p.nameToFlagName(qaName)
+			p.rootCmd.Flags().Duration(qaFlagName, -1*time.Second, "")
+			p.bindOrPanic(qaName, p.rootCmd.Flags().Lookup(qaFlagName))
+			p.rootCmd.Flags().MarkHidden(qaFlagName)
+		}
 
 		p.rootCmd.Flags().Duration(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
@@ -227,7 +244,7 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
-func (p *properties) configureUpperAndLowerLimits(defaultVal time.Duration, limits *durationLimits, flagName string) {
+func (p *properties) configureUpperAndLowerLimits(defaultVal time.Duration, limits *durationOpts, flagName string) {
 	lowerLimitFlag := fmt.Sprintf(lowerLimitName, flagName)
 	upperLimitFlag := fmt.Sprintf(upperLimitName, flagName)
 
@@ -386,6 +403,11 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 	s := p.parseStringValue(name)
 	d, _ := time.ParseDuration(s)
 
+	// check if the duration has a qa equivalent that should be used
+	if qaVal := p.getQADuration(name); qaVal > 0 {
+		return qaVal
+	}
+
 	if !isDurationLowerLimitEnforced() {
 		return d
 	}
@@ -405,6 +427,17 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 
 	p.addPropertyToFlatMap(name, s)
 	return d
+}
+
+// getQADuration - returns the qa variables duration
+func (p *properties) getQADuration(name string) time.Duration {
+	qaName := fmt.Sprintf(qaVarNameFormat, name)
+	qaVal := -1 * time.Second
+	if s := p.parseStringValue(qaName); s != "" {
+		qaVal, _ = time.ParseDuration(s)
+	}
+
+	return qaVal
 }
 
 // getDurationLimits - returns the duration limits, negative number returned for unset
