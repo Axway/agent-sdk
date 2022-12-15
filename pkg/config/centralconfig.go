@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // AgentType - Defines the type of agent
@@ -40,8 +38,6 @@ var agentTypeShortNamesMap = map[AgentType]string{
 	TraceabilityAgent: "ta",
 	GovernanceAgent:   "ga",
 }
-
-const qaValidationFrequency = "QA_CENTRAL_APIVALIDATIONFREQUENCY"
 
 func (agentType AgentType) ToString() string {
 	return agentTypeNamesMap[agentType]
@@ -485,14 +481,6 @@ func (c *CentralConfiguration) GetPollInterval() time.Duration {
 
 // GetReportActivityFrequency - Returns the interval between running periodic status updater
 func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
-	if val := os.Getenv(qaValidationFrequency); val != "" {
-		if duration, err := time.ParseDuration(val); err == nil {
-			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaValidationFrequency, val, c.ReportActivityFrequency)
-			return duration
-		} else {
-			log.Tracef("Could not use %s (%s) it is not a proper duration", qaValidationFrequency, val)
-		}
-	}
 	return c.ReportActivityFrequency
 }
 
