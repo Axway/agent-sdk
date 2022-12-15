@@ -41,7 +41,7 @@ var agentTypeShortNamesMap = map[AgentType]string{
 	GovernanceAgent:   "ga",
 }
 
-const qaValidationFrequency = "CENTRAL_APIVALIDATIONFREQUENCY"
+const qaValidationFrequency = "QA_CENTRAL_APIVALIDATIONFREQUENCY"
 
 func (agentType AgentType) ToString() string {
 	return agentTypeNamesMap[agentType]
