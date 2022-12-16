@@ -776,7 +776,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to Amplify Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
-	props.AddDurationProperty(pathAPIValidationFrequency, 1*time.Hour, "The time interval at which the agent validates API Services with the dataplane", properties.WithLowerLimit(5*time.Minute))
+	props.AddDurationProperty(pathAPIValidationFrequency, 1*time.Hour, "The time interval at which the agent validates API Services with the dataplane", properties.WithLowerLimit(5*time.Minute), properties.WithQAOverride())
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
