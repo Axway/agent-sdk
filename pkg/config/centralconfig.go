@@ -231,6 +231,9 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config.Environment = "environment"
 	config.Auth = newTestAuthConfig()
 	config.MigrationSettings = newTestMigrationConfig()
+	if agentType == TraceabilityAgent {
+		config.APICDeployment = "deployment"
+	}
 	return config
 }
 
