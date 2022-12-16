@@ -213,21 +213,16 @@ func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
 	strArr := []string{}
 
 	for key, val := range m {
-		var value string
-		v, ok := val.(*string)
-		if ok {
-			value = *v
-		} else {
-			v, ok := val.(string)
-			if ok {
-				value = v
-			}
+		value := key
+		if v, ok := val.(*string); ok && *v != "" {
+			value += "_" + *v
+		} else if v, ok := val.(string); ok && v != "" {
+			value += "_" + v
 		}
-		if value == "" {
-			strArr = append(strArr, key)
-		} else {
-			strArr = append(strArr, key+"_"+value)
+		if len(value) > 80 {
+			value = value[:77] + "..."
 		}
+		strArr = append(strArr, value)
 	}
 
 	// Add any tags from config
