@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -48,7 +49,7 @@ func TestMarketplaceMigrationForAPIKeyRevision(t *testing.T) {
 	svcRI, _ := svc.AsInstance()
 
 	mig := NewMarketplaceMigration(c, cfg, cm)
-	_, err := mig.Migrate(svcRI)
+	_, err := mig.Migrate(context.Background(), svcRI)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 2, c.updateCount)
@@ -82,7 +83,7 @@ func TestMarketplaceMigrationForOAuthRevision(t *testing.T) {
 	svcRI, _ := svc.AsInstance()
 
 	mig := NewMarketplaceMigration(c, cfg, cm)
-	_, err := mig.Migrate(svcRI)
+	_, err := mig.Migrate(context.Background(), svcRI)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 1, c.updateCount)

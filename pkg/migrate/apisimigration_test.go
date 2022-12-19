@@ -1,9 +1,9 @@
 package migrate
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 
@@ -16,18 +16,6 @@ import (
 )
 
 var defEnvName = config.NewTestCentralConfig(config.DiscoveryAgent).GetEnvironmentName()
-
-func createRevisionsResponse(serviceName string, numRevs int) []*apiv1.ResourceInstance {
-	revs := []*apiv1.ResourceInstance{}
-	for i := 1; i <= numRevs; i++ {
-		rev := management.NewAPIServiceRevision(fmt.Sprintf("%v.%v", serviceName, i), defEnvName)
-		rev.Spec.ApiService = serviceName
-
-		ri, _ := rev.AsInstance()
-		revs = append(revs, ri)
-	}
-	return revs
-}
 
 func createInstanceResponse(serviceName string, numRevs int) []*apiv1.ResourceInstance {
 	insts := []*apiv1.ResourceInstance{}
@@ -54,7 +42,6 @@ func TestAPISIMigration(t *testing.T) {
 		turnOff           bool
 		migrationComplete bool
 		setMigCompelete   bool
-		revisions         []*apiv1.ResourceInstance
 		instances         []*apiv1.ResourceInstance
 		expectedDeletes   int
 	}{
@@ -74,22 +61,20 @@ func TestAPISIMigration(t *testing.T) {
 			migrationComplete: true,
 		},
 		{
-			name:              "called with apiservice and with no revisions returns without error",
+			name:              "called with apiservice and with no instances returns without error",
 			resource:          management.NewAPIService("asdf", defEnvName),
 			migrationComplete: true,
 		},
 		{
-			name:              "called with apiservice, revisions, and instances of same stage returns without error",
+			name:              "called with apiservice and instances of same stage returns without error",
 			resource:          management.NewAPIService("apisi", defEnvName),
-			revisions:         createRevisionsResponse("apisi", 10),
 			instances:         createInstanceResponse("apisi", 10),
 			expectedDeletes:   9,
 			migrationComplete: true,
 		},
 		{
-			name:              "called with apiservice, revisions, and instances of diff stages returns without error",
+			name:              "called with apiservice and instances of diff stages returns without error",
 			resource:          management.NewAPIService("apisi", defEnvName),
-			revisions:         append(createRevisionsResponse("apisi-stage1", 5), createRevisionsResponse("apisi-stage2", 5)...),
 			instances:         append(createInstanceResponse("apisi-stage1", 5), createInstanceResponse("apisi-stage2", 5)...),
 			expectedDeletes:   8,
 			migrationComplete: true,
@@ -99,7 +84,6 @@ func TestAPISIMigration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &mockAPISIMigClient{
-				revisions: tt.revisions,
 				instances: tt.instances,
 			}
 
@@ -111,7 +95,7 @@ func TestAPISIMigration(t *testing.T) {
 			if tt.setMigCompelete {
 				util.SetAgentDetailsKey(resInst, definitions.InstanceMigration, definitions.MigrationCompleted)
 			}
-			ri, err := mig.Migrate(resInst)
+			ri, err := mig.Migrate(context.Background(), resInst)
 			if tt.expectErr {
 				assert.NotNil(t, err)
 				return
@@ -132,7 +116,6 @@ func TestAPISIMigration(t *testing.T) {
 type mockAPISIMigClient struct {
 	sync.Mutex
 	deleteCalls      int
-	revisions        []*apiv1.ResourceInstance
 	instances        []*apiv1.ResourceInstance
 	instanceReturned bool
 }
@@ -146,11 +129,9 @@ func (m *mockAPISIMigClient) GetAPIV1ResourceInstancesWithPageSize(query map[str
 	defer m.Unlock()
 	if m.instanceReturned {
 		return nil, nil
-	} else if strings.Contains(url, "instances") {
-		m.instanceReturned = true
-		return m.instances, nil
 	}
-	return m.revisions, nil
+	m.instanceReturned = true
+	return m.instances, nil
 }
 
 func (m *mockAPISIMigClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {

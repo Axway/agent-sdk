@@ -24,13 +24,6 @@ var stringLoggingOutputMap = map[string]LoggingOutput{
 	"both":   Both,
 }
 
-// loggingOutputStringMap - maps the LoggingOutput type to it's string representation
-var loggingOutputStringMap = map[LoggingOutput]string{
-	STDOUT: "stdout",
-	File:   "file",
-	Both:   "both",
-}
-
 // LoggingFormat - Defines the format of the logging output
 type LoggingFormat int
 
@@ -40,12 +33,6 @@ const (
 	// JSON - logs in JSON format with the timestamp, level, and message all being separate fields
 	JSON
 )
-
-// StringLoggingFormatMap - maps the string value representation of a formatter type to it's LoggingFormat value
-var stringLoggingFormatMap = map[string]LoggingFormat{
-	"line": Line,
-	"json": JSON,
-}
 
 // loggingFormatStringMap - maps the LoggingFormat type to it's string representation
 var loggingFormatStringMap = map[LoggingFormat]string{

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -233,8 +234,14 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) error {
 	for _, ri := range list {
 		if dc.migrator != nil {
+			ctx := context.Background()
+			ctx = context.WithValue(context.WithValue(ctx, log.Kind, ri.Kind), log.Name, ri.Name)
+
+			logger := log.NewLoggerFromContext(ctx)
+
+			logger.Trace("handle migration")
 			var err error
-			ri, err = dc.migrator.Migrate(ri)
+			ri, err = dc.migrator.Migrate(ctx, ri)
 			if err != nil {
 				dc.logger.WithError(err).Error("failed to migrate resource")
 			}
@@ -242,11 +249,9 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 
 		action := getAction(ri.Metadata.State)
 		if err := dc.handleResource(ri, action); err != nil {
-			dc.logger.
+			logger.
 				WithError(err).
-				WithField("kind", ri.Kind).
-				WithField("name", ri.Name).
-				Error("failed to handle resource")
+				Error("failed to migrate resource")
 		}
 	}
 

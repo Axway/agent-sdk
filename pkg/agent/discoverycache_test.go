@@ -206,7 +206,7 @@ type mockMigrator struct {
 	mutex  sync.Mutex
 }
 
-func (m *mockMigrator) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *mockMigrator) Migrate(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.called = true

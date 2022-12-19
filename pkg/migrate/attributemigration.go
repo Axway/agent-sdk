@@ -1,9 +1,9 @@
 package migrate
 
 import (
+	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 	"sync"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -79,7 +79,7 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 // Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
 // If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
 // that refer to the APIService will all have their attributes updated.
-func (m *AttributeMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *AttributeMigration) Migrate(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if ri.Kind != management.APIServiceGVK().Kind {
 		return ri, nil
 	}
@@ -94,7 +94,6 @@ func (m *AttributeMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.Resourc
 
 	funcs := []migrateFunc{
 		m.updateSvc,
-		m.updateRev,
 		m.updateInst,
 		m.updateCI,
 	}
@@ -147,64 +146,17 @@ func (m *AttributeMigration) updateSvc(ri *apiv1.ResourceInstance) error {
 	return m.updateRI(item.ri)
 }
 
-// updateRev gets a list of revisions for the service and updates their attributes.
-func (m *AttributeMigration) updateRev(ri *apiv1.ResourceInstance) error {
-	m.riMutex.Lock()
-	defer m.riMutex.Unlock()
-	url := m.cfg.GetRevisionsURL()
-	q := map[string]string{
-		"query":    queryFuncByMetadataID(ri.Metadata.ID),
-		"sort":     "metadata.audit.createTimestamp,DESC",
-		"page":     strconv.Itoa(1),
-		"pageSize": strconv.Itoa(1),
-		"fields":   "id",
-	}
-
-	return m.migrate(url, q)
-}
-
 // updateInst gets a list of instances for the service and updates their attributes.
 func (m *AttributeMigration) updateInst(ri *apiv1.ResourceInstance) error {
 	m.riMutex.Lock()
 	defer m.riMutex.Unlock()
-	revURL := m.cfg.GetRevisionsURL()
 
 	q := map[string]string{
-		"query":  queryFuncByMetadataName(ri.Name),
-		"fields": "name",
+		"query": queryFuncByMetadataID(ri.Metadata.ID),
 	}
-
-	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
-	if err != nil {
+	url := m.cfg.GetInstancesURL()
+	if err := m.migrate(url, q); err != nil {
 		return err
-	}
-
-	errCh := make(chan error, len(revs))
-	wg := &sync.WaitGroup{}
-
-	// query for api service instances by reference to a revision name
-	for _, rev := range revs {
-		wg.Add(1)
-
-		go func(r *apiv1.ResourceInstance) {
-			defer wg.Done()
-
-			q := map[string]string{
-				"query": queryFuncByMetadataName(r.Name),
-			}
-			url := m.cfg.GetInstancesURL()
-			err := m.migrate(url, q)
-			errCh <- err
-		}(rev)
-	}
-
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return e
-		}
 	}
 
 	return nil
@@ -216,7 +168,7 @@ func (m *AttributeMigration) updateCI(ri *apiv1.ResourceInstance) error {
 	defer m.riMutex.Unlock()
 	url := m.cfg.GetConsumerInstancesURL()
 	q := map[string]string{
-		"query": queryFuncByMetadataName(ri.Name),
+		"query": queryFuncByMetadataID(ri.Metadata.ID),
 	}
 
 	return m.migrate(url, q)
