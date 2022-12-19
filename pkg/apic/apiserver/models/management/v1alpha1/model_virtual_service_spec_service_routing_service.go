@@ -18,6 +18,9 @@ type VirtualServiceSpecServiceRoutingService struct {
 	Codec     string                                             `json:"codec"`
 	// Timeout in seconds.
 	ConnectTimeout int32 `json:"connectTimeout,omitempty"`
+	// The rate limits to be applied.
+	// GENERATE: The following code has been modified after code generation
+	RateLimits []interface{} `json:"rateLimits,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	ServerCertValidation VirtualServiceSpecServercertvalidation `json:"serverCertValidation,omitempty"`
 	// The backend credentials.

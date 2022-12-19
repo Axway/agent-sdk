@@ -35,8 +35,9 @@ func init() {
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner           `json:"owner"`
-	Spec  ApiServiceInstanceSpec `json:"spec"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApiServiceInstanceReferences `json:"references"`
+	Spec       ApiServiceInstanceSpec       `json:"spec"`
 }
 
 // NewAPIServiceInstance creates an empty *APIServiceInstance
@@ -122,6 +123,7 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -150,6 +152,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

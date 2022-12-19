@@ -14,4 +14,6 @@ type AmplifyOAuth2AuthRuleSpecAuthorizationCodeOAuthFlow struct {
 	AuthorizationUrl string `json:"authorizationUrl"`
 	TokenUrl         string `json:"tokenUrl"`
 	RefreshUrl       string `json:"refreshUrl,omitempty"`
+	// Available scopes for this OAuth flow. Contains a mapping from scope name to scope description.
+	Scopes map[string]string `json:"scopes,omitempty"`
 }

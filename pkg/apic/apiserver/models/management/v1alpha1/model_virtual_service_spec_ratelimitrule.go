@@ -9,8 +9,8 @@
 
 package management
 
-// AmplifyOAuth2AuthRuleSpecImplicitOAuthFlow struct for AmplifyOAuth2AuthRuleSpecImplicitOAuthFlow
-type AmplifyOAuth2AuthRuleSpecImplicitOAuthFlow struct {
-	AuthorizationUrl string `json:"authorizationUrl"`
-	RefreshUrl       string `json:"refreshUrl,omitempty"`
+// VirtualServiceSpecRatelimitrule The rate limit rule reference.
+type VirtualServiceSpecRatelimitrule struct {
+	// The rate limit rule name.
+	RateLimit string `json:"rateLimit"`
 }
