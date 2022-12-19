@@ -86,7 +86,7 @@ func (m *APISIMigration) cleanInstances(ctx context.Context, instances []*apiv1.
 	// sort all instances into buckets based on name, removing any index number, noting the highest
 	toKeep := map[string]instanceNameIndex{}
 	for _, inst := range instances {
-		logger := logger.WithField(instanceName, inst.Name)
+		logger := logger.WithField(string(log.APIServiceInstance), inst.Name)
 		logger.Tracef("handling instances")
 		name := inst.Name
 		result := re.FindAllStringSubmatch(name, -1)
@@ -100,7 +100,8 @@ func (m *APISIMigration) cleanInstances(ctx context.Context, instances []*apiv1.
 				return err
 			}
 		}
-		logger.WithField("service-group", group).WithField("instance-index", index).Tracef("parsed instance name")
+		logger = logger.WithField("service-group", group).WithField("instance-index", index)
+		logger.Tracef("parsed instance name")
 
 		keepIndex := -1
 		if i, ok := toKeep[group]; ok {

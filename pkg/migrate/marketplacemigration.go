@@ -16,8 +16,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const instanceName = "instance-name"
-
 // Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
 	Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
