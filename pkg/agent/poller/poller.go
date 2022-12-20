@@ -61,7 +61,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 		return
 	}
 
-	if m.sequence.GetSequence() == 0 {
+	if m.sequence.GetSequence() < 0 {
 		m.onHarvesterErr()
 		go func() {
 			m.Stop()
