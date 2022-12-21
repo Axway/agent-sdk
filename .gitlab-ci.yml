@@ -54,7 +54,6 @@ stages:
   - sonar
   - security-scans
   - security-review
-  - release
   - update-dep
 
 ############################################################
