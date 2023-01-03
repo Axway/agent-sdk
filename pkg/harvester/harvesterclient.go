@@ -23,10 +23,11 @@ const (
 	defaultEventPageSize = 100
 )
 
-type errSeqGone struct {
+// ErrSeqGone - error for purged sequence
+type ErrSeqGone struct {
 }
 
-func (e *errSeqGone) Error() string {
+func (e *ErrSeqGone) Error() string {
 	return "sequence purged"
 }
 
@@ -151,7 +152,7 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 				if err != nil {
 					return lastID, err
 				}
-				return lastID, &errSeqGone{}
+				return lastID, &ErrSeqGone{}
 			}
 		}
 
@@ -208,7 +209,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 		var err error
 		lastSequenceID, err := h.ReceiveSyncEvents(link, sequenceID, events)
 		if err != nil {
-			if _, ok := err.(*errSeqGone); ok {
+			if _, ok := err.(*ErrSeqGone); ok {
 				// Set the max sequence returned from 410 to sequence provider as processed
 				h.Cfg.SequenceProvider.SetSequence(lastSequenceID)
 				return nil
