@@ -61,7 +61,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 		return
 	}
 
-	if m.sequence.GetSequence() == 0 {
+	if m.sequence.GetSequence() < 0 {
 		m.onHarvesterErr()
 		go func() {
 			m.Stop()
@@ -101,19 +101,29 @@ func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) e
 	}
 }
 
-func (m *pollExecutor) tick(topicSelfLink string, eventChan chan *proto.Event) error {
+func (m *pollExecutor) tick(topicSelfLink string, eventChan chan *proto.Event) (ret error) {
 	sequence := m.sequence.GetSequence()
 	logger := m.logger.WithField("sequence-id", sequence)
 	logger.Debug("retrieving harvester events")
 
-	if _, err := m.harvester.ReceiveSyncEvents(topicSelfLink, sequence, eventChan); err != nil {
+	defer func() {
+		if ret == nil {
+			m.timer.Reset(m.interval)
+		}
+	}()
+
+	if lastSeqID, err := m.harvester.ReceiveSyncEvents(topicSelfLink, sequence, eventChan); err != nil {
+		if _, ok := err.(*harvester.ErrSeqGone); ok {
+			m.sequence.SetSequence(lastSeqID)
+			return
+		}
+
 		logger.WithError(err).Error("harvester returned an error when syncing events")
 		m.onHarvesterErr()
-		return err
+		ret = err
 	}
 
-	m.timer.Reset(m.interval)
-	return nil
+	return
 }
 
 func (m *pollExecutor) onHarvesterErr() {

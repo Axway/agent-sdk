@@ -1,7 +1,10 @@
 package client
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -22,14 +25,15 @@ type WatchClient struct {
 }
 
 type sequenceManager struct {
-	seqCache       cache.Cache
-	watchTopicName string
+	seqCache cache.Cache
 }
 
 func (s *sequenceManager) GetSequence() int64 {
 	cachedSeqID, err := s.seqCache.Get("watchSequenceID")
 	if err == nil {
-		if seqID, ok := cachedSeqID.(float64); ok {
+		if seqID, ok := cachedSeqID.(int64); ok {
+			return seqID
+		} else if seqID, ok := cachedSeqID.(float64); ok {
 			return int64(seqID)
 		}
 	}
@@ -38,6 +42,7 @@ func (s *sequenceManager) GetSequence() int64 {
 
 func (s *sequenceManager) SetSequence(sequenceID int64) {
 	s.seqCache.Set("watchSequenceID", sequenceID)
+	s.seqCache.Save("sample.sequence")
 }
 
 // Todo - To be updated after cache persistence story
@@ -45,11 +50,27 @@ func getSequenceManager() *sequenceManager {
 	seqCache := cache.New()
 	err := seqCache.Load("sample.sequence")
 	if err != nil {
-		seqCache.Set("watchSequenceID", int64(0))
+		seqCache.Set("watchSequenceID", int64(1))
 		seqCache.Save("sample.sequence")
 	}
 
 	return &sequenceManager{seqCache: seqCache}
+}
+
+func defaultTLSConfig() *tls.Config {
+	return &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+		},
+	}
 }
 
 // NewWatchClient creates a WatchClient
@@ -57,31 +78,45 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 	entry := logger.WithField("package", "client")
 
 	var watchOptions []wm.Option
-	watchOptions = append(watchOptions, wm.WithLogger(entry))
+	watchOptions = []wm.Option{
+		wm.WithLogger(entry),
+	}
+
 	if config.Insecure {
 		watchOptions = append(watchOptions, wm.WithTLSConfig(nil))
+	} else {
+		watchOptions = append(watchOptions, wm.WithTLSConfig(defaultTLSConfig()))
 	}
-	ta := auth.NewTokenAuth(config.Auth, config.TenantID)
 
 	ccfg := &corecfg.CentralConfiguration{
-		URL:           config.Host,
-		ClientTimeout: 15,
+		URL:           fmt.Sprintf("https://%s:%d", config.Host, config.Port),
+		ClientTimeout: 30 * time.Second,
 		ProxyURL:      "",
 		TenantID:      config.TenantID,
 		TLS:           corecfg.NewTLSConfig(),
 		GRPCCfg: corecfg.GRPCConfig{
 			Enabled:  true,
 			Insecure: config.Insecure,
+			Host:     config.Host,
+			Port:     int(config.Port),
+		},
+		Auth: &corecfg.AuthConfiguration{
+			URL:        config.Auth.URL,
+			PrivateKey: config.Auth.PrivateKey,
+			PublicKey:  config.Auth.PublicKey,
+			KeyPwd:     config.Auth.KeyPassword,
+			Realm:      "Broker",
+			ClientID:   config.Auth.ClientID,
+			Timeout:    config.Auth.Timeout,
 		},
 	}
-
+	ta := auth.NewPlatformTokenGetterWithCentralConfig(ccfg)
 	hCfg := harvester.NewConfig(ccfg, ta, getSequenceManager())
 	hClient := harvester.NewClient(hCfg)
 	watchOptions = append(watchOptions, wm.WithHarvester(hClient, getSequenceManager()))
-
 	cfg := &wm.Config{
-		Host:        config.Host,
-		Port:        config.Port,
+		Host:        ccfg.GRPCCfg.Host,
+		Port:        uint32(ccfg.GRPCCfg.Port),
 		TenantID:    config.TenantID,
 		TokenGetter: ta.GetToken,
 	}

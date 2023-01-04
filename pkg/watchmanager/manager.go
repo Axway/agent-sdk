@@ -148,7 +148,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
-	if m.options.sequence != nil && m.options.sequence.GetSequence() == 0 {
+	if m.options.sequence != nil && m.options.sequence.GetSequence() < 0 {
 		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
 		m.logger.Error(err.Error())
 		m.CloseWatch(subID)

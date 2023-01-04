@@ -23,6 +23,14 @@ const (
 	defaultEventPageSize = 100
 )
 
+// ErrSeqGone - error for purged sequence
+type ErrSeqGone struct {
+}
+
+func (e *ErrSeqGone) Error() string {
+	return "sequence purged"
+}
+
 // Harvest is an interface for retrieving harvester events
 type Harvest interface {
 	EventCatchUp(link string, events chan *proto.Event) error
@@ -132,8 +140,20 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 			return lastID, err
 		}
 
-		if res.Code != http.StatusOK {
+		if res.Code != http.StatusOK && res.Code != http.StatusGone {
 			return lastID, fmt.Errorf("expected a 200 response but received %d", res.Code)
+		}
+
+		// requested sequence is purged get the current max sequence
+		if lastID == 0 && res.Code == http.StatusGone {
+			maxSeqId, ok := res.Headers["X-Axway-Max-Sequence-Id"]
+			if ok && len(maxSeqId) > 0 {
+				lastID, err = strconv.ParseInt(maxSeqId[0], 10, 64)
+				if err != nil {
+					return lastID, err
+				}
+				return lastID, &ErrSeqGone{}
+			}
 		}
 
 		pagedEvents := make([]*resourceEntryExternalEvent, 0)
@@ -189,6 +209,11 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 		var err error
 		lastSequenceID, err := h.ReceiveSyncEvents(link, sequenceID, events)
 		if err != nil {
+			if _, ok := err.(*ErrSeqGone); ok {
+				// Set the max sequence returned from 410 to sequence provider as processed
+				h.Cfg.SequenceProvider.SetSequence(lastSequenceID)
+				return nil
+			}
 			return err
 		}
 
