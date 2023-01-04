@@ -9,9 +9,13 @@ import (
     "encoding/json"
 
     apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+    {{.res.kind}}Ctx log.ContextField = "{{ $.res.kindCamel | strings.ReplaceAll "aPI" "api" |}}"
+
     _{{.res.kind}}GVK = apiv1.GroupVersionKind{
         GroupKind: apiv1.GroupKind{
             Group: "{{.res.group}}",
@@ -36,6 +40,7 @@ func {{.res.kind}}GVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_{{.res.kind}}GVK, {{.res.kind}}Scopes[0], {{.res.kind}}ResourceName)
+    log.RegisterContextField({{.res.kind}}Ctx )
 }
 
 // {{.res.kind}} Resource

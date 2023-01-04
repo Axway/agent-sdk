@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	ResourceDefinitionVersionCtx log.ContextField = "resourceDefinitionVersion"
+
 	_ResourceDefinitionVersionGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "definitions",
@@ -30,6 +34,7 @@ func ResourceDefinitionVersionGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_ResourceDefinitionVersionGVK, ResourceDefinitionVersionScopes[0], ResourceDefinitionVersionResourceName)
+	log.RegisterContextField(ResourceDefinitionVersionCtx)
 }
 
 // ResourceDefinitionVersion Resource

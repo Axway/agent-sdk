@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	OAS3DocumentCtx log.ContextField = "oAS3Document"
+
 	_OAS3DocumentGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func OAS3DocumentGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_OAS3DocumentGVK, OAS3DocumentScopes[0], OAS3DocumentResourceName)
+	log.RegisterContextField(OAS3DocumentCtx)
 }
 
 // OAS3Document Resource

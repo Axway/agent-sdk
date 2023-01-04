@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	WebhookCtx log.ContextField = "webhook"
+
 	_WebhookGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func WebhookGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_WebhookGVK, WebhookScopes[0], WebhookResourceName)
+	log.RegisterContextField(WebhookCtx)
 }
 
 // Webhook Resource

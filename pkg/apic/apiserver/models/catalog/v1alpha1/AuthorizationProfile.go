@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	AuthorizationProfileCtx log.ContextField = "authorizationProfile"
+
 	_AuthorizationProfileGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -30,6 +34,7 @@ func AuthorizationProfileGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_AuthorizationProfileGVK, AuthorizationProfileScopes[0], AuthorizationProfileResourceName)
+	log.RegisterContextField(AuthorizationProfileCtx)
 }
 
 // AuthorizationProfile Resource

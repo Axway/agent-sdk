@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	AccessControlListCtx log.ContextField = "accessControlList"
+
 	_AccessControlListGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "definitions",
@@ -30,6 +34,7 @@ func AccessControlListGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_AccessControlListGVK, AccessControlListScopes[0], AccessControlListResourceName)
+	log.RegisterContextField(AccessControlListCtx)
 }
 
 // AccessControlList Resource

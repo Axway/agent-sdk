@@ -6,16 +6,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ctxFields string
+type ContextField string
 
 const (
-	Kind               ctxFields = "kind"
-	Name               ctxFields = "name"
-	APIService         ctxFields = "apiService"
-	APIServiceInstance ctxFields = "apiServiceInstance"
+	KindCtx ContextField = "kind"
+	NameCtx ContextField = "name"
 )
 
-var allCtxFields = []ctxFields{Kind, Name}
+var allCtxFields = map[ContextField]struct{}{KindCtx: {}, NameCtx: {}}
+
+func RegisterContextField(ctxFields ...ContextField) {
+	for _, ctxField := range ctxFields {
+		allCtxFields[ctxField] = struct{}{}
+	}
+}
 
 // NewLoggerFromContext returns a FieldLogger for standard logging, and logp logging.
 func NewLoggerFromContext(ctx context.Context) FieldLogger {
@@ -28,7 +32,7 @@ func NewLoggerFromContext(ctx context.Context) FieldLogger {
 
 // UpdateLoggerWithContext returns a FieldLogger for standard logging, and logp logging.
 func UpdateLoggerWithContext(ctx context.Context, logger FieldLogger) FieldLogger {
-	for _, field := range allCtxFields {
+	for field := range allCtxFields {
 		if v := ctx.Value(field); v != nil {
 			logger.WithField(string(field), v)
 		}

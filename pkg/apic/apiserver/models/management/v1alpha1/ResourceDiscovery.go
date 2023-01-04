@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	ResourceDiscoveryCtx log.ContextField = "resourceDiscovery"
+
 	_ResourceDiscoveryGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func ResourceDiscoveryGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_ResourceDiscoveryGVK, ResourceDiscoveryScopes[0], ResourceDiscoveryResourceName)
+	log.RegisterContextField(ResourceDiscoveryCtx)
 }
 
 // ResourceDiscovery Resource

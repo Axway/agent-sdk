@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	ProductOverviewCtx log.ContextField = "productOverview"
+
 	_ProductOverviewGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -31,6 +35,7 @@ func ProductOverviewGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_ProductOverviewGVK, ProductOverviewScopes[0], ProductOverviewResourceName)
+	log.RegisterContextField(ProductOverviewCtx)
 }
 
 // ProductOverview Resource

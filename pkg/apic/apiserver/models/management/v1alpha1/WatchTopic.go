@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	WatchTopicCtx log.ContextField = "watchTopic"
+
 	_WatchTopicGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func WatchTopicGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_WatchTopicGVK, WatchTopicScopes[0], WatchTopicResourceName)
+	log.RegisterContextField(WatchTopicCtx)
 }
 
 // WatchTopic Resource

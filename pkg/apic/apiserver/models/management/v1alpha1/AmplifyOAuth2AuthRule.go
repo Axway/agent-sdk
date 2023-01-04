@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	AmplifyOAuth2AuthRuleCtx log.ContextField = "amplifyOAuth2AuthRule"
+
 	_AmplifyOAuth2AuthRuleGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func AmplifyOAuth2AuthRuleGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_AmplifyOAuth2AuthRuleGVK, AmplifyOAuth2AuthRuleScopes[0], AmplifyOAuth2AuthRuleResourceName)
+	log.RegisterContextField(AmplifyOAuth2AuthRuleCtx)
 }
 
 // AmplifyOAuth2AuthRule Resource

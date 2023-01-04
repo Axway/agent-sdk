@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	DiscoveryAgentCtx log.ContextField = "discoveryAgent"
+
 	_DiscoveryAgentGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func DiscoveryAgentGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_DiscoveryAgentGVK, DiscoveryAgentScopes[0], DiscoveryAgentResourceName)
+	log.RegisterContextField(DiscoveryAgentCtx)
 }
 
 // DiscoveryAgent Resource

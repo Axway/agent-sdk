@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	AssetResourceCtx log.ContextField = "assetResource"
+
 	_AssetResourceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -31,6 +35,7 @@ func AssetResourceGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_AssetResourceGVK, AssetResourceScopes[0], AssetResourceResourceName)
+	log.RegisterContextField(AssetResourceCtx)
 }
 
 // AssetResource Resource

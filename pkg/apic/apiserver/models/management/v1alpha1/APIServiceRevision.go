@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	APIServiceRevisionCtx log.ContextField = "apiServiceRevision"
+
 	_APIServiceRevisionGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func APIServiceRevisionGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_APIServiceRevisionGVK, APIServiceRevisionScopes[0], APIServiceRevisionResourceName)
+	log.RegisterContextField(APIServiceRevisionCtx)
 }
 
 // APIServiceRevision Resource

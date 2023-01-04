@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	QuotaCtx log.ContextField = "quota"
+
 	_QuotaGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -30,6 +34,7 @@ func QuotaGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_QuotaGVK, QuotaScopes[0], QuotaResourceName)
+	log.RegisterContextField(QuotaCtx)
 }
 
 // Quota Resource

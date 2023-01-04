@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	CategoryCtx log.ContextField = "category"
+
 	_CategoryGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -30,6 +34,7 @@ func CategoryGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_CategoryGVK, CategoryScopes[0], CategoryResourceName)
+	log.RegisterContextField(CategoryCtx)
 }
 
 // Category Resource
