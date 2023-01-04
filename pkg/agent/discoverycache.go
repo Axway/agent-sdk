@@ -209,20 +209,26 @@ func (dc *discoveryCache) handleMarketplaceFuncs(marketplaceFuncs []discoverFunc
 
 func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilters) discoverFunc {
 	return func() error {
-		url := fmt.Sprintf("/%s/v1alpha1", filter.Group)
-		if filter.Scope != nil {
-			scopePlural, _ := apiv1.GetPluralFromKind(filter.Scope.Kind)
-			url = fmt.Sprintf("%s/%s/%s", url, scopePlural, filter.Scope.Name)
+		emptyInstance := apiv1.ResourceInstance{
+			ResourceMeta: apiv1.ResourceMeta{
+				GroupVersionKind: apiv1.GroupVersionKind{
+					GroupKind: apiv1.GroupKind{
+						Group: filter.Group,
+						Kind:  filter.Kind,
+					},
+					APIVersion: "v1alpha1",
+				},
+			},
 		}
-
-		var kindPlural, _ = apiv1.GetPluralFromKind(filter.Kind)
-		url = fmt.Sprintf("%s/%s", url, kindPlural)
+		if filter.Scope != nil {
+			emptyInstance.Metadata.Scope.Kind = filter.Scope.Kind
+			emptyInstance.Metadata.Scope.Name = filter.Scope.Name
+		}
 
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		url = dc.formatResourceURL(url)
-		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, url, apiServerPageSize)
+		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, emptyInstance.GetKindLink(), apiServerPageSize)
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}
@@ -235,7 +241,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 	for _, ri := range list {
 		if dc.migrator != nil {
 			ctx := context.Background()
-			ctx = context.WithValue(context.WithValue(ctx, log.Kind, ri.Kind), log.Name, ri.Name)
+			ctx = context.WithValue(context.WithValue(ctx, log.KindCtx, ri.Kind), log.NameCtx, ri.Name)
 
 			logger := log.NewLoggerFromContext(ctx)
 
@@ -267,10 +273,6 @@ func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action prot
 		}
 	}
 	return nil
-}
-
-func (dc *discoveryCache) formatResourceURL(s string) string {
-	return fmt.Sprintf("%s/apis%s", dc.centralURL, s)
 }
 
 func getAction(state string) proto.Event_Type {

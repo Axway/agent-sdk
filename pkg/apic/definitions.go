@@ -7,7 +7,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
@@ -65,7 +64,6 @@ type serviceContext struct {
 	serviceAction        actionType
 	revisionName         string
 	revisionCount        int
-	previousRevision     *management.APIServiceRevision
 	instanceName         string
 	consumerInstanceName string
 }

@@ -54,16 +54,20 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, UR
 }
 
 // GetAPIV1ResourceInstances - return apiv1 Resource instance with the default page size
-func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
-	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, URL, apiServerPageSize)
+func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
+	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, apiServerPageSize)
 }
 
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
-func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
 
 	resourceInstance := make([]*apiv1.ResourceInstance, 0)
+
+	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
+		url = c.createAPIServerURL(url)
+	}
 
 	for morePages {
 		query := map[string]string{
@@ -76,7 +80,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			query[key] = value
 		}
 
-		response, err := c.ExecuteAPI(coreapi.GET, URL, query, nil)
+		response, err := c.ExecuteAPI(coreapi.GET, url, query, nil)
 
 		if err != nil {
 			log.Debugf("Error while retrieving ResourceInstance: %s", err.Error())

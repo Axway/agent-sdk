@@ -86,7 +86,7 @@ func (m *APISIMigration) cleanInstances(ctx context.Context, instances []*apiv1.
 	// sort all instances into buckets based on name, removing any index number, noting the highest
 	toKeep := map[string]instanceNameIndex{}
 	for _, inst := range instances {
-		logger := logger.WithField(string(log.APIServiceInstance), inst.Name)
+		logger := logger.WithField(string(management.APIServiceInstanceCtx), inst.Name)
 		logger.Tracef("handling instances")
 		name := inst.Name
 		result := re.FindAllStringSubmatch(name, -1)
