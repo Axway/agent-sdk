@@ -209,7 +209,7 @@ func (dc *discoveryCache) handleMarketplaceFuncs(marketplaceFuncs []discoverFunc
 
 func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilters) discoverFunc {
 	return func() error {
-		emptyInstance := apiv1.ResourceInstance{
+		ri := apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: apiv1.GroupVersionKind{
 					GroupKind: apiv1.GroupKind{
@@ -221,14 +221,14 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 			},
 		}
 		if filter.Scope != nil {
-			emptyInstance.Metadata.Scope.Kind = filter.Scope.Kind
-			emptyInstance.Metadata.Scope.Name = filter.Scope.Name
+			ri.Metadata.Scope.Kind = filter.Scope.Kind
+			ri.Metadata.Scope.Name = filter.Scope.Name
 		}
 
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, emptyInstance.GetKindLink(), apiServerPageSize)
+		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, ri.GetKindLink(), apiServerPageSize)
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}
