@@ -6,7 +6,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -19,7 +18,8 @@ type migration struct {
 }
 
 // updateRI updates the resource, and the sub resource
-func (m *migration) updateRI(ri *v1.ResourceInstance) error {
+func (m *migration) updateRI(apiInterface v1.Interface) error {
+	ri, _ := apiInterface.AsInstance()
 	_, err := m.client.UpdateResourceInstance(ri)
 	if err != nil {
 		return err
@@ -54,10 +54,6 @@ func (m *migration) getAllRI(url string, q map[string]string) ([]*v1.ResourceIns
 	return resources, nil
 }
 
-func queryFuncByMetadataName(name string) string {
-	return fmt.Sprintf("metadata.references.name==%s", name)
-}
-
 func queryFuncByMetadataID(id string) string {
 	return fmt.Sprintf("metadata.references.id==%s", id)
 }
@@ -66,7 +62,7 @@ func isMigrationCompleted(h v1.Interface, migrationKey string) bool {
 	details := util.GetAgentDetails(h)
 	if len(details) > 0 {
 		completed := details[migrationKey]
-		if completed == definitions.MigrationCompleted {
+		if completed == defs.MigrationCompleted {
 			return true
 		}
 	}

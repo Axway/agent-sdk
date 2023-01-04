@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	AmplifyJWTAuthRuleCtx log.ContextField = "amplifyJWTAuthRule"
+
 	_AmplifyJWTAuthRuleGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func AmplifyJWTAuthRuleGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_AmplifyJWTAuthRuleGVK, AmplifyJWTAuthRuleScopes[0], AmplifyJWTAuthRuleResourceName)
+	log.RegisterContextField(AmplifyJWTAuthRuleCtx)
 }
 
 // AmplifyJWTAuthRule Resource

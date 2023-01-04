@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	CommandLineInterfaceCtx log.ContextField = "commandLineInterface"
+
 	_CommandLineInterfaceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "definitions",
@@ -30,6 +34,7 @@ func CommandLineInterfaceGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_CommandLineInterfaceGVK, CommandLineInterfaceScopes[0], CommandLineInterfaceResourceName)
+	log.RegisterContextField(CommandLineInterfaceCtx)
 }
 
 // CommandLineInterface Resource

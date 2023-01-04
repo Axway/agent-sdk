@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	ManagedApplicationCtx log.ContextField = "managedApplication"
+
 	_ManagedApplicationGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func ManagedApplicationGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_ManagedApplicationGVK, ManagedApplicationScopes[0], ManagedApplicationResourceName)
+	log.RegisterContextField(ManagedApplicationCtx)
 }
 
 // ManagedApplication Resource

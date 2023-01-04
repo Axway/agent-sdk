@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	APIServiceInstanceCtx log.ContextField = "apiServiceInstance"
+
 	_APIServiceInstanceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,13 +34,15 @@ func APIServiceInstanceGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_APIServiceInstanceGVK, APIServiceInstanceScopes[0], APIServiceInstanceResourceName)
+	log.RegisterContextField(APIServiceInstanceCtx)
 }
 
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner           `json:"owner"`
-	Spec  ApiServiceInstanceSpec `json:"spec"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApiServiceInstanceReferences `json:"references"`
+	Spec       ApiServiceInstanceSpec       `json:"spec"`
 }
 
 // NewAPIServiceInstance creates an empty *APIServiceInstance
@@ -122,6 +128,7 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -150,6 +157,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

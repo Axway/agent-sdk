@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	K8SResourceCtx log.ContextField = "k8SResource"
+
 	_K8SResourceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func K8SResourceGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_K8SResourceGVK, K8SResourceScopes[0], K8SResourceResourceName)
+	log.RegisterContextField(K8SResourceCtx)
 }
 
 // K8SResource Resource

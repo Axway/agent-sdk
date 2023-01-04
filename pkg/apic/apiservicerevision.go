@@ -15,12 +15,9 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -54,7 +51,7 @@ var apiSvcRevTitleDateMap = map[string]string{
 	"YYYY/MM/DD": defaultDateFormat,
 }
 
-func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) management.APIServiceRevision {
+func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *management.APIServiceRevision {
 	newRev := management.NewAPIServiceRevision("", c.cfg.GetEnvironmentName())
 	newRev.Title = c.updateAPIServiceRevisionTitle(serviceBody)
 	newRev.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
@@ -66,7 +63,7 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) manage
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, revDetails)
 	util.SetAgentDetails(newRev, agentDetails)
 
-	return *newRev
+	return newRev
 }
 
 // processRevision -
@@ -87,7 +84,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		}
 	}
 
-	rev, err := c.CreateOrUpdateResource(c.createRevision(serviceBody))
+	log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+	rev, err := c.CreateOrUpdateResource(c.buildAPIServiceRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -122,42 +120,6 @@ func (c *ServiceClient) getRevisionCount(queryString string) int {
 		return 0
 	}
 	return count
-}
-
-func (c *ServiceClient) createRevision(serviceBody *ServiceBody) *management.APIServiceRevision {
-	newRevision := c.buildAPIServiceRevision(serviceBody)
-
-	if serviceBody.serviceContext.previousRevision != nil {
-		err := util.SetAgentDetailsKey(
-			&newRevision,
-			defs.AttrPreviousAPIServiceRevisionID,
-			serviceBody.serviceContext.previousRevision.Metadata.ID,
-		)
-		if err != nil {
-			log.Errorf("failed to set previous revision id to subresource for %s. error: %s", serviceBody.APIName, err)
-		}
-	}
-
-	log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
-	return &newRevision
-}
-
-func (c *ServiceClient) processSubResources(serviceBody *ServiceBody, revision *v1.ResourceInstance) error {
-	if len(revision.SubResources) > 0 {
-		if xAgentDetail, ok := revision.SubResources[defs.XAgentDetails]; ok {
-			subResources := map[string]interface{}{
-				defs.XAgentDetails: xAgentDetail,
-			}
-			err := c.CreateSubResource(revision.ResourceMeta, subResources)
-			if err != nil {
-				_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
-				if rollbackErr != nil {
-					return errors.New(err.Error() + rollbackErr.Error())
-				}
-			}
-		}
-	}
-	return nil
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter

@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"context"
 	"testing"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -22,7 +23,7 @@ func TestArdMigration(t *testing.T) {
 		},
 	}
 	ri, _ := ard.AsInstance()
-	ri, err := mig.Migrate(ri)
+	ri, err := mig.Migrate(context.Background(), ri)
 	ard.FromInstance(ri)
 	assert.Nil(t, err)
 	scopes := mig.getScopes(ard.Spec.Schema)

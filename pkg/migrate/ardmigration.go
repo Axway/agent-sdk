@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"context"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -22,7 +24,7 @@ func NewArdMigration(client client, cfg config.CentralConfig) *ArdMigration {
 }
 
 // Migrate checks an AccessRequestDefinition for the "scopes" key in the schema, and removes it if it is found.
-func (m *ArdMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m *ArdMigration) Migrate(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if ri.Kind != management.AccessRequestDefinitionGVK().Kind {
 		return ri, nil
 	}

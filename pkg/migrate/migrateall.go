@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"context"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -22,19 +24,17 @@ func NewMigrateAll(m ...Migrator) Migrator {
 }
 
 // Migrate passes the resource instance to each migrate func
-func (m migrateAll) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (m migrateAll) Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	var err error
 
 	for _, mig := range m.migrations {
 		var e error
-		ri, e = mig.Migrate(ri)
+		ri, e = mig.Migrate(ctx, ri)
 		if e != nil {
 			err = e
-			m.logger.
-				WithError(err).
-				WithField("name", ri.Name).
-				WithField("kind", ri.Kind).
-				Error("failed to run migration for resource")
+			logger := log.NewLoggerFromContext(ctx)
+
+			logger.WithError(err).Error("failed to run migration for resource")
 		}
 	}
 

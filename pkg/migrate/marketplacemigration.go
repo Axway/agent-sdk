@@ -1,8 +1,8 @@
 package migrate
 
 import (
+	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
@@ -16,17 +16,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const (
-	serviceName  = "service-name"
-	instanceName = "instance-name"
-	revisionName = "revision-name"
-)
-
-var apiserviceName string
-
 // Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
-	Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+	Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
 }
 
 type ardCache interface {
@@ -59,12 +51,15 @@ func NewMarketplaceMigration(client client, cfg config.CentralConfig, cache ardC
 }
 
 // Migrate -
-func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
-	if ri.Kind != management.APIServiceGVK().Kind || m.InstanceAlreadyMigrated(ri) {
+func (m *MarketplaceMigration) Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	if ri.Kind != management.APIServiceGVK().Kind || isMigrationCompleted(ri, definitions.MarketplaceMigration) {
 		return ri, nil
 	}
+	ctx = context.WithValue(ctx, management.APIServiceCtx, ri.Name)
 
-	err := m.UpdateService(ri)
+	logger := log.UpdateLoggerWithContext(ctx, m.logger)
+	logger.Tracef("handling marketplace migration")
+	err := m.UpdateService(ctx, ri)
 
 	if err != nil {
 		return ri, fmt.Errorf("migration marketplace provisioning failed: %s", err)
@@ -74,99 +69,33 @@ func (m *MarketplaceMigration) Migrate(ri *apiv1.ResourceInstance) (*apiv1.Resou
 }
 
 // UpdateService - gets a list of instances for the service and updates their request definitions.
-func (m *MarketplaceMigration) UpdateService(ri *apiv1.ResourceInstance) error {
-	revURL := m.cfg.GetRevisionsURL()
+func (m *MarketplaceMigration) UpdateService(ctx context.Context, ri *apiv1.ResourceInstance) error {
+	ctx = context.WithValue(ctx, management.APIServiceCtx, ri.Name)
+	logger := log.UpdateLoggerWithContext(ctx, m.logger)
+
+	instURL := management.NewAPIServiceInstance("", m.cfg.GetEnvironmentName()).GetKindLink()
 	q := map[string]string{
-		"query":  queryFuncByMetadataName(ri.Name),
-		"sort":   "metadata.audit.createTimestamp,DESC",
-		"fields": "name,metadata",
+		"query": queryFuncByMetadataID(ri.Metadata.ID),
 	}
-
-	revs, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, revURL, 100)
+	apiSvcInsts, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, instURL, 100)
 	if err != nil {
 		return err
 	}
+	logger.WithField("instances", apiSvcInsts).Debug("handling api service instances")
 
-	apiserviceName = ri.Name
-	m.logger.
-		WithField(serviceName, apiserviceName).
-		Tracef("found %d revisions for api", len(revs))
-
-	errCh := make(chan error, len(revs))
+	errCh := make(chan error, len(apiSvcInsts))
 	wg := &sync.WaitGroup{}
+	wg.Add(len(apiSvcInsts))
 
-	// query for api service instances by reference to a revision name
-	for _, rev := range revs {
-		wg.Add(1)
-
-		go func(revision *apiv1.ResourceInstance) {
+	// handle each api service instance
+	for _, inst := range apiSvcInsts {
+		go func(instance *apiv1.ResourceInstance) {
 			defer wg.Done()
 
-			q := map[string]string{
-				"query": queryFuncByMetadataName(revision.Name),
-			}
-			url := m.cfg.GetInstancesURL()
-
-			// Passing down apiservice name (ri.Name) for logging purposes
-			// Possible future refactor to send context through to get proper resources downstream
-			err := m.updateSvcInstance(url, q, revision)
+			ctx := context.WithValue(ctx, management.APIServiceInstanceCtx, instance.Name)
+			err := m.handleSvcInstance(ctx, instance)
 			errCh <- err
-		}(rev)
-	}
-
-	wg.Wait()
-	close(errCh)
-
-	for e := range errCh {
-		if e != nil {
-			return e
-		}
-	}
-
-	return nil
-}
-
-// InstanceAlreadyMigrated - check to see if apiservice already migrated
-func (m *MarketplaceMigration) InstanceAlreadyMigrated(ri *apiv1.ResourceInstance) bool {
-
-	// get x-agent-details and determine if we need to process this apiservice for marketplace provisioning
-	if isMigrationCompleted(ri, definitions.MarketplaceMigration) {
-		return true
-	}
-
-	m.logger.
-		WithField(serviceName, ri.Name).
-		Tracef("perform marketplace provision")
-
-	return false
-}
-
-func (m *MarketplaceMigration) updateSvcInstance(
-	resourceURL string, query map[string]string, revision *apiv1.ResourceInstance) error {
-	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
-	if err != nil {
-		return err
-	}
-
-	wg := &sync.WaitGroup{}
-	errCh := make(chan error, len(resources))
-
-	if len(resources) > 0 {
-		revision, err = m.client.GetResource(revision.GetSelfLink())
-	}
-
-	for _, resource := range resources {
-		wg.Add(1)
-
-		go func(svcInstance *apiv1.ResourceInstance) {
-			defer wg.Done()
-
-			err := m.handleSvcInstance(svcInstance, revision)
-			if err != nil {
-				errCh <- err
-			}
-
-		}(resource)
+		}(inst)
 	}
 
 	wg.Wait()
@@ -249,31 +178,35 @@ func (m *MarketplaceMigration) registerAccessRequestDefinition(scopes map[string
 	return ard, nil
 }
 
-func (m *MarketplaceMigration) handleSvcInstance(
-	svcInstance *apiv1.ResourceInstance, revision *apiv1.ResourceInstance) error {
+func (m *MarketplaceMigration) handleSvcInstance(ctx context.Context, svcInstance *apiv1.ResourceInstance) error {
+	logger := log.UpdateLoggerWithContext(ctx, m.logger)
 
+	logger.Trace("handling service instance")
+	apiSvcInst := management.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
+	apiSvcInst.FromInstance(svcInstance)
+
+	revision, err := m.client.GetResource(management.NewAPIServiceRevision(apiSvcInst.Spec.ApiServiceRevision, apiSvcInst.Metadata.Scope.Name).GetSelfLink())
+	if err != nil {
+		logger.WithError(err).Error("error retrieving revision")
+		return err
+	}
 	specProcessor, err := getSpecParser(revision)
 	if err != nil {
+		logger.WithError(err).Error("error parsing revision spec")
 		return err
 	}
 
 	var i interface{} = specProcessor
 
 	if processor, ok := i.(apic.OasSpecProcessor); ok {
-		return m.processInstances(svcInstance, revision, processor)
+		return m.processInstance(ctx, apiSvcInst, revision, processor)
 	}
 
 	return nil
 }
 
-func (m *MarketplaceMigration) processInstances(svcInstance *apiv1.ResourceInstance, revision *apiv1.ResourceInstance, processor apic.OasSpecProcessor) error {
-	logger := m.logger.
-		WithField(serviceName, apiserviceName).
-		WithField(instanceName, svcInstance.Name).
-		WithField(revisionName, revision.Name)
-
-	apiSvcInst := management.NewAPIServiceInstance(svcInstance.Name, svcInstance.Metadata.Scope.Name)
-	apiSvcInst.FromInstance(svcInstance)
+func (m *MarketplaceMigration) processInstance(ctx context.Context, apiSvcInst *management.APIServiceInstance, revision *apiv1.ResourceInstance, processor apic.OasSpecProcessor) error {
+	logger := log.UpdateLoggerWithContext(ctx, m.logger)
 
 	ardRIName := apiSvcInst.Spec.AccessRequestDefinition
 
@@ -315,6 +248,7 @@ func (m *MarketplaceMigration) processInstances(svcInstance *apiv1.ResourceInsta
 	credentialRequestDefinitions := m.checkCredentialRequestDefinitions(credentialRequestPolicies)
 	if len(credentialRequestDefinitions) > 0 && !sortCompare(apiSvcInst.Spec.CredentialRequestDefinitions, credentialRequestDefinitions) {
 		logger.Debugf("adding the following credential request definitions %s to apiserviceinstance %s", credentialRequestDefinitions, apiSvcInst.Name)
+		apiSvcInst.Spec.CredentialRequestDefinitions = credentialRequestDefinitions
 		updateRequestDefinition = true
 	}
 
@@ -324,16 +258,14 @@ func (m *MarketplaceMigration) processInstances(svcInstance *apiv1.ResourceInsta
 	} else {
 		if apiSvcInst.Spec.AccessRequestDefinition == "" {
 			logger.Debugf("adding the following access request definition %s to apiserviceinstance %s", ardRIName, apiSvcInst.Name)
+			apiSvcInst.Spec.AccessRequestDefinition = ardRIName
 			updateRequestDefinition = true
 		}
 	}
 
-	// update apiserivceinstane spec with necessary request definitions
+	// update apiserivceinstance spec with necessary request definitions
 	if updateRequestDefinition {
-		inInterface := m.newInstanceSpec(apiSvcInst.Spec.Endpoint, revision.Name, ardRIName, credentialRequestDefinitions)
-		svcInstance.Spec = inInterface
-
-		err = m.updateRI(svcInstance)
+		err = m.updateRI(apiSvcInst)
 		if err != nil {
 			return err
 		}
@@ -341,25 +273,6 @@ func (m *MarketplaceMigration) processInstances(svcInstance *apiv1.ResourceInsta
 		logger.Debugf("migrated instance %s with the necessary request definitions", apiSvcInst.Name)
 	}
 	return nil
-}
-
-func (m *MarketplaceMigration) newInstanceSpec(
-	endpoints []management.ApiServiceInstanceSpecEndpoint,
-	revisionName,
-	ardRIName string,
-	credentialRequestDefinitions []string,
-) map[string]interface{} {
-	newSpec := management.ApiServiceInstanceSpec{
-		Endpoint:                     endpoints,
-		ApiServiceRevision:           revisionName,
-		CredentialRequestDefinitions: credentialRequestDefinitions,
-		AccessRequestDefinition:      ardRIName,
-	}
-	// convert to set ri.Spec
-	var inInterface map[string]interface{}
-	in, _ := json.Marshal(newSpec)
-	json.Unmarshal(in, &inInterface)
-	return inInterface
 }
 
 func sortCompare(apiSvcInstCRDs, knownCRDs []string) bool {

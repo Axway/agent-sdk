@@ -13,4 +13,6 @@ package management
 type AmplifyOAuth2AuthRuleSpecClientCredentialsFlow struct {
 	TokenUrl   string `json:"tokenUrl"`
 	RefreshUrl string `json:"refreshUrl,omitempty"`
+	// Available scopes for this OAuth flow. Contains a mapping from scope name to scope description.
+	Scopes map[string]string `json:"scopes,omitempty"`
 }

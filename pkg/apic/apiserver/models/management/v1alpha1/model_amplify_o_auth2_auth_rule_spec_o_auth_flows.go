@@ -12,8 +12,6 @@ package management
 // AmplifyOAuth2AuthRuleSpecOAuthFlows struct for AmplifyOAuth2AuthRuleSpecOAuthFlows
 type AmplifyOAuth2AuthRuleSpecOAuthFlows struct {
 	// GENERATE: The following code has been modified after code generation
-	Implicit AmplifyOAuth2AuthRuleSpecImplicitOAuthFlow `json:"implicit,omitempty"`
-	// GENERATE: The following code has been modified after code generation
 	Password AmplifyOAuth2AuthRuleSpecPasswordOAuthFlow `json:"password,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	ClientCredentials AmplifyOAuth2AuthRuleSpecClientCredentialsFlow `json:"clientCredentials,omitempty"`

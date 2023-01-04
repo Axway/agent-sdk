@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	DocumentCtx log.ContextField = "document"
+
 	_DocumentGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -31,6 +35,7 @@ func DocumentGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_DocumentGVK, DocumentScopes[0], DocumentResourceName)
+	log.RegisterContextField(DocumentCtx)
 }
 
 // Document Resource

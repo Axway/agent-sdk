@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -115,7 +116,7 @@ func TestMigrate(t *testing.T) {
 	MatchAttr("majorHash", "minorHash")
 	MatchAttrPattern("az-")
 
-	svc, err := am.Migrate(ri)
+	svc, err := am.Migrate(context.Background(), ri)
 	assert.Nil(t, err)
 	assert.NotNil(t, util.GetAgentDetails(svc))
 }

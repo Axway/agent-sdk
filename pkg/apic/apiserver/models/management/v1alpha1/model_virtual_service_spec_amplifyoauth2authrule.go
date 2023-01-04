@@ -15,4 +15,6 @@ type VirtualServiceSpecAmplifyoauth2authrule struct {
 	Name string `json:"name"`
 	// Parameter not required meaning auth credentials are not forwarded to the backend by default. If set to true, auth credentials are forwarded.
 	ForwardAuthCredentials bool `json:"forwardAuthCredentials,omitempty"`
+	// If specified, scope list must be a subset of the scopes defined in the referenced OAuth Rule.
+	Scopes []string `json:"scopes,omitempty"`
 }

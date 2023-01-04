@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	SubscriptionCtx log.ContextField = "subscription"
+
 	_SubscriptionGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
@@ -30,6 +34,7 @@ func SubscriptionGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_SubscriptionGVK, SubscriptionScopes[0], SubscriptionResourceName)
+	log.RegisterContextField(SubscriptionCtx)
 }
 
 // Subscription Resource

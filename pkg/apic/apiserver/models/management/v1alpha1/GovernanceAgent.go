@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	GovernanceAgentCtx log.ContextField = "governanceAgent"
+
 	_GovernanceAgentGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func GovernanceAgentGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_GovernanceAgentGVK, GovernanceAgentScopes[0], GovernanceAgentResourceName)
+	log.RegisterContextField(GovernanceAgentCtx)
 }
 
 // GovernanceAgent Resource

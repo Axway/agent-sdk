@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"context"
+
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -88,7 +90,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
-		mig.UpdateService(svc)
+		mig.UpdateService(context.Background(), svc)
 
 		// Mark marketplace migration completed here in provisioning
 		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)

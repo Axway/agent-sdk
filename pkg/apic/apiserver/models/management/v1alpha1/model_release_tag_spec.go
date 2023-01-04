@@ -12,6 +12,7 @@ package management
 // ReleaseTagSpec  (management.v1alpha1.ReleaseTag)
 type ReleaseTagSpec struct {
 	// Description of the Release Tag.
-	Description string `json:"description,omitempty"`
-	ReleaseType string `json:"releaseType"`
+	Description      string                         `json:"description,omitempty"`
+	ReleaseType      string                         `json:"releaseType"`
+	PreviousReleases ReleaseTagSpecPreviousReleases `json:"previousReleases,omitempty"`
 }

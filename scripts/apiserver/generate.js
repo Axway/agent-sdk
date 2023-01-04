@@ -261,6 +261,7 @@ const createGomplateResource = (resource) => {
 	return {
 		group: resource["x-axway-group"],
 		kind: resource["x-axway-kind"],
+		kindCamel: resource["x-axway-kind"][0].toLowerCase() + resource["x-axway-kind"].slice(1),
 		version: resource["x-axway-version"],
 		scoped: resource["x-axway-scoped"],
 		scope: scopes ? scopes[0] : null, // temporarily pass the first scope in until the template can handle multiple scopes.

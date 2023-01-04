@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	SecretCtx log.ContextField = "secret"
+
 	_SecretGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func SecretGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_SecretGVK, SecretScopes[0], SecretResourceName)
+	log.RegisterContextField(SecretCtx)
 }
 
 // Secret Resource

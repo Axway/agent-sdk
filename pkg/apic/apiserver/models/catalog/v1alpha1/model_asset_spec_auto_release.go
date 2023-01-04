@@ -11,5 +11,6 @@ package catalog
 
 // AssetSpecAutoRelease Defines if an asset should create releases everytime there is an update to the resources. (catalog.v1alpha1.Asset)
 type AssetSpecAutoRelease struct {
-	ReleaseType string `json:"releaseType"`
+	ReleaseType      string                               `json:"releaseType"`
+	PreviousReleases AssetSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
 }

@@ -51,6 +51,7 @@ type Set struct {
 	AmplifyJWTAuthRuleManagementV1alpha1             *management_v1alpha1.UnscopedAmplifyJWTAuthRuleClient
 	AmplifyOAuth2AuthRuleManagementV1alpha1          *management_v1alpha1.UnscopedAmplifyOAuth2AuthRuleClient
 	APIKeyAuthRuleManagementV1alpha1                 *management_v1alpha1.UnscopedAPIKeyAuthRuleClient
+	RateLimitRuleManagementV1alpha1                  *management_v1alpha1.UnscopedRateLimitRuleClient
 	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
 	ExternalSecretManagementV1alpha1                 *management_v1alpha1.UnscopedExternalSecretClient
 	VirtualServiceManagementV1alpha1                 *management_v1alpha1.UnscopedVirtualServiceClient
@@ -72,6 +73,7 @@ type Set struct {
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
+	ConsumerProductVisibilityCatalogV1alpha1         *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
 	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
@@ -255,6 +257,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APIKeyAuthRule: %s", err))
 	}
+	s.RateLimitRuleManagementV1alpha1, err = management_v1alpha1.NewRateLimitRuleClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.RateLimitRule: %s", err))
+	}
 	s.AssetMappingManagementV1alpha1, err = management_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AssetMapping: %s", err))
@@ -338,6 +344,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewProductVisibilityClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductVisibility: %s", err))
+	}
+	s.ConsumerProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewConsumerProductVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ConsumerProductVisibility: %s", err))
 	}
 	s.SupportContactCatalogV1alpha1, err = catalog_v1alpha1.NewSupportContactClient(b)
 	if err != nil {

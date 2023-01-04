@@ -14,6 +14,6 @@ type ExternalSecretSpecKubernetes struct {
 	Provider string `json:"provider"`
 	// Name of K8s Secret.
 	Name string `json:"name"`
-	// Namespace which contains the K8s Secret.
-	Namespace string `json:"namespace"`
+	// Namespace which contains the K8s Secret.  If none is provided, the secret will be sourced from the namespace into which Amplify Gateway is installed.
+	Namespace string `json:"namespace,omitempty"`
 }

@@ -160,7 +160,7 @@ func Test_buildAPIServiceRevision(t *testing.T) {
 	assert.Equal(t, Unstructured, revision.Spec.Definition.Type)
 	assert.Equal(t, body.serviceContext.serviceName, revision.Spec.ApiService)
 
-	sub := util.GetAgentDetails(&revision)
+	sub := util.GetAgentDetails(revision)
 	assert.Equal(t, body.Stage, sub[defs.AttrExternalAPIStage])
 	assert.Equal(t, body.PrimaryKey, sub[defs.AttrExternalAPIPrimaryKey])
 	assert.Equal(t, body.RestAPIID, sub[defs.AttrExternalAPIID])

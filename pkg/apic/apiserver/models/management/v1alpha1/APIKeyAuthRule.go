@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	APIKeyAuthRuleCtx log.ContextField = "apiKeyAuthRule"
+
 	_APIKeyAuthRuleGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func APIKeyAuthRuleGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_APIKeyAuthRuleGVK, APIKeyAuthRuleScopes[0], APIKeyAuthRuleResourceName)
+	log.RegisterContextField(APIKeyAuthRuleCtx)
 }
 
 // APIKeyAuthRule Resource

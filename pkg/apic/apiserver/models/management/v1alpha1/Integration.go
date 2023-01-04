@@ -8,9 +8,13 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	IntegrationCtx log.ContextField = "integration"
+
 	_IntegrationGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -30,6 +34,7 @@ func IntegrationGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_IntegrationGVK, IntegrationScopes[0], IntegrationResourceName)
+	log.RegisterContextField(IntegrationCtx)
 }
 
 // Integration Resource

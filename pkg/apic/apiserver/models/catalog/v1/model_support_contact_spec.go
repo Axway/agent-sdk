@@ -14,5 +14,7 @@ type SupportContactSpec struct {
 	// Email address of the Support Contact.
 	Email string `json:"email"`
 	// String of the E.164 format of the phone number, e.g. +11234567899
-	PhoneNumber string `json:"phoneNumber,omitempty"`
+	PhoneNumber         string                                `json:"phoneNumber,omitempty"`
+	OfficeHours         SupportContactSpecOfficeHours         `json:"officeHours,omitempty"`
+	AlternativeContacts SupportContactSpecAlternativeContacts `json:"alternativeContacts,omitempty"`
 }

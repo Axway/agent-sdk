@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var (
+	VirtualServiceCtx log.ContextField = "virtualService"
+
 	_VirtualServiceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
@@ -31,6 +35,7 @@ func VirtualServiceGVK() apiv1.GroupVersionKind {
 
 func init() {
 	apiv1.RegisterGVK(_VirtualServiceGVK, VirtualServiceScopes[0], VirtualServiceResourceName)
+	log.RegisterContextField(VirtualServiceCtx)
 }
 
 // VirtualService Resource
