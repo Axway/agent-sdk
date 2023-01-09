@@ -2,7 +2,9 @@ package apic
 
 import (
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -27,6 +29,7 @@ const (
 
 const (
 	apiServerPageSize = 20
+	tenMB             = 10485760
 )
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
@@ -42,6 +45,13 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 			serviceBody.teamID = teamID
 			logger.Debugf("setting team name (%s) and team id (%s)", serviceBody.TeamName, serviceBody.teamID)
 		}
+	}
+
+	// there is a current envoy restriction with the payload size (10mb). Quick check on the size
+	if binary.Size(serviceBody.SpecDefinition) >= tenMB {
+		// if greater than 10mb, return
+		logErr := fmt.Sprintf("service %s carries a payload greater than 10mb. Service not created.", serviceBody.APIName)
+		return nil, errors.New(logErr)
 	}
 
 	// API Service
