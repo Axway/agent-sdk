@@ -146,9 +146,12 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return events, nil
 	}
 
-	err := e.processTxnSummary(summaryEvent)
-	if err != nil {
-		return nil, err
+	// Check to see if marketplace provisioning/subs is enabled
+	if agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+		err := e.processTxnSummary(summaryEvent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
