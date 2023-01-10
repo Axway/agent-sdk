@@ -1,5 +1,17 @@
-# this for notifications for pull requests
-* @Axway/Agent-SDK
+# Order is important; the last matching pattern takes the most precedence.
 
-#.csr-profile.json requires SPOC approval for any modifications
-.csr-profile.json @Axway/Agent-SDK
+* @jcollins @dfeldick @sbolosan @vchauhan @nviswanathan
+
+[CSR]
+ # .csr-profile.json requires SPOC approval for any modifications
+.csr-profile.json @scurity/amplify_spocs @dfeldick @jcollins @vchauhan
+renovate.json @dfeldick
+whitesource.config @dfeldick
+
+[CICD]
+# cicd-related files
+.gitlab-ci.yml @dfeldick @jcollins @vchauhan
+Makefile @dfeldick @jcollins @vchauhan
+sonar.sh @dfeldick @jcollins @vchauhan
+build/scripts/ @dfeldick @jcollins @vchauhan
+.github/ @dfeldick @jcollins @vchauhan
