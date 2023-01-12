@@ -1,17 +1,17 @@
 # Order is important; the last matching pattern takes the most precedence.
 
-* @jcollins @dfeldick @sbolosan @vchauhan @nviswanathan
+* @jcollins-axway @dfeldick @sbolosan @vivekschauhan @neha-viswanathan
 
-[CSR]
+#[CSR]
  # .csr-profile.json requires SPOC approval for any modifications
-.csr-profile.json @scurity/amplify_spocs @dfeldick @jcollins @vchauhan
+.csr-profile.json @dfeldick @jcollins-axway @vivekschauhan
 renovate.json @dfeldick
 whitesource.config @dfeldick
 
-[CICD]
+#[CICD]
 # cicd-related files
-.gitlab-ci.yml @dfeldick @jcollins @vchauhan
-Makefile @dfeldick @jcollins @vchauhan
-sonar.sh @dfeldick @jcollins @vchauhan
-build/scripts/ @dfeldick @jcollins @vchauhan
-.github/ @dfeldick @jcollins @vchauhan
+.gitlab-ci.yml @dfeldick @jcollins-axway @vivekschauhan
+Makefile @dfeldick @jcollins-axway @vivekschauhan
+sonar.sh @dfeldick @jcollins-axway @vivekschauhan
+build/scripts/ @dfeldick @jcollins-axway @vivekschauhan
+.github/ @dfeldick @jcollins-axway @vivekschauhan
