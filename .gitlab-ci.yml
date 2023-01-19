@@ -106,6 +106,12 @@ fetch-iriusrisk:
 
 twistlock:
   extends: .only-never
+  only:
+    refs:
+      - never
+  before_script:
+    - ""
+  dependencies:
 
 twistlock:on-schedule:
   extends: .only-never
