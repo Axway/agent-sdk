@@ -26,8 +26,8 @@ require (
 	github.com/subosito/gotenv v1.4.0
 	github.com/tidwall/gjson v1.14.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	golang.org/x/net v0.1.0
-	golang.org/x/text v0.4.0
+	golang.org/x/net v0.5.0
+	golang.org/x/text v0.6.0
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/h2non/gock.v1 v1.1.2
@@ -90,7 +90,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/genproto v0.0.0-20220714211235-042d03aeabc9 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
