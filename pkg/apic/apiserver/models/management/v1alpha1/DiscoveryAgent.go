@@ -40,9 +40,10 @@ func init() {
 // DiscoveryAgent Resource
 type DiscoveryAgent struct {
 	apiv1.ResourceMeta
-	Owner  *apiv1.Owner         `json:"owner"`
-	Spec   DiscoveryAgentSpec   `json:"spec"`
-	Status DiscoveryAgentStatus `json:"status"`
+	Dataplane DiscoveryAgentDataplane `json:"dataplane"`
+	Owner     *apiv1.Owner            `json:"owner"`
+	Spec      DiscoveryAgentSpec      `json:"spec"`
+	Status    DiscoveryAgentStatus    `json:"status"`
 }
 
 // NewDiscoveryAgent creates an empty *DiscoveryAgent
@@ -127,6 +128,7 @@ func (res *DiscoveryAgent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -157,6 +159,20 @@ func (res *DiscoveryAgent) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Dataplane
+	if v, ok := aux.SubResources["dataplane"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "dataplane")
+		err = json.Unmarshal(sr, &res.Dataplane)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status

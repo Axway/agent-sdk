@@ -17,6 +17,7 @@ import (
 type Set struct {
 	WatchTopicManagementV1alpha1                     *management_v1alpha1.WatchTopicClient
 	DiscoveryAgentManagementV1alpha1                 *management_v1alpha1.UnscopedDiscoveryAgentClient
+	DataplaneManagementV1alpha1                      *management_v1alpha1.UnscopedDataplaneClient
 	TraceabilityAgentManagementV1alpha1              *management_v1alpha1.UnscopedTraceabilityAgentClient
 	GovernanceAgentManagementV1alpha1                *management_v1alpha1.UnscopedGovernanceAgentClient
 	EnvironmentManagementV1alpha1                    *management_v1alpha1.EnvironmentClient
@@ -120,6 +121,10 @@ func New(b cAPIV1.Base) *Set {
 	s.DiscoveryAgentManagementV1alpha1, err = management_v1alpha1.NewDiscoveryAgentClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.DiscoveryAgent: %s", err))
+	}
+	s.DataplaneManagementV1alpha1, err = management_v1alpha1.NewDataplaneClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Dataplane: %s", err))
 	}
 	s.TraceabilityAgentManagementV1alpha1, err = management_v1alpha1.NewTraceabilityAgentClient(b)
 	if err != nil {

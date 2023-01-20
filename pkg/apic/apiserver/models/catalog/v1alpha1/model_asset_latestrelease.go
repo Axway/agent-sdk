@@ -9,9 +9,8 @@
 
 package catalog
 
-// QuotaSpecLimitTypeStrict struct for QuotaSpecLimitTypeStrict
-type QuotaSpecLimitTypeStrict struct {
-	Type string `json:"type"`
-	// The limit of the unit that is provided.
-	Value int32 `json:"value"`
+// AssetLatestrelease Provides newest non-archived release and version. Will be unassigned if no releases exist. (catalog.v1alpha1.Asset)
+type AssetLatestrelease struct {
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
 }

@@ -31,4 +31,6 @@ type DiscoveryAgentStatus struct {
 	LastActivityTime time.Time `json:"lastActivityTime,omitempty"`
 	// Version name for the SDK revision.
 	SdkVersion string `json:"sdkVersion,omitempty"`
+	// Use for public key
+	PublicKey string `json:"publicKey,omitempty"`
 }

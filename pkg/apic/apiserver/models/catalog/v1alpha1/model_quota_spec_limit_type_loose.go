@@ -13,7 +13,6 @@ package catalog
 type QuotaSpecLimitTypeLoose struct {
 	Type string `json:"type"`
 	// The limit of the unit that is provided.
-	// GENERATE: The following code has been modified after code generation
-	Value    float64                         `json:"value"`
+	Value    int32                           `json:"value"`
 	Overages QuotaSpecLimitTypeLooseOverages `json:"overages"`
 }
