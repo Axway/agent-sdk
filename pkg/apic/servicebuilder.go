@@ -83,6 +83,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			ServiceAgentDetails:       make(map[string]interface{}),
 			InstanceAgentDetails:      make(map[string]interface{}),
 			RevisionAgentDetails:      make(map[string]interface{}),
+			requestDefinitionsAllowed: true,
 		},
 	}
 }
