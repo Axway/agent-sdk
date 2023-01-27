@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package amplify.agent.correlation;
+
+import "google/protobuf/any.proto";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "pkg/amplify/agent/correlation";
+
+message Request {
+  string method = 1;
+  string protocol = 2;
+  string protocol_version = 3;
+  string authority = 4;
+  uint32 port = 5;
+  string path = 6;
+  string user_agent = 7;
+  string referer = 8;
+  string forwarded_for = 9;
+  map<string, string> request_headers = 10;
+}
+
+message Response {
+  uint32 response_code = 1;
+  map<string, string> response_headers = 2;
+  map<string, string> response_trailers = 3;
+}
+
+message TransactionContext {
+  string transaction_id = 1;
+
+  string originAddress = 2;
+  string originAlias = 3;
+  string destinationAddress = 4;
+  string destinationAlias = 5;
+  string routeName = 6;
+
+  map<string, google.protobuf.Any> metadata = 7;
+
+  Request request = 8;
+  Response response = 9;
+  google.protobuf.Timestamp start_time = 10;
+}
+
+message ResourceContext {
+   string api_id = 1;
+   string consumer_id = 2;
+}
+
+service CorrelationService {
+  rpc GetResourceContext(TransactionContext) returns(ResourceContext) {}
+}  
