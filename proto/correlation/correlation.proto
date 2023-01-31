@@ -15,10 +15,11 @@ message Request {
   string authority = 4;
   uint32 port = 5;
   string path = 6;
-  string user_agent = 7;
-  string referer = 8;
-  string forwarded_for = 9;
-  map<string, string> headers = 10;
+  string original_path = 7;
+  string user_agent = 8;
+  string referer = 9;
+  string forwarded_for = 10;
+  map<string, string> headers = 11;
 }
 
 message Response {
