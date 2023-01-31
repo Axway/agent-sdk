@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package amplify.agent.correlation;
 
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 
 import "google/protobuf/timestamp.proto";
 
@@ -18,13 +18,12 @@ message Request {
   string user_agent = 7;
   string referer = 8;
   string forwarded_for = 9;
-  map<string, string> request_headers = 10;
+  map<string, string> headers = 10;
 }
 
 message Response {
   uint32 response_code = 1;
-  map<string, string> response_headers = 2;
-  map<string, string> response_trailers = 3;
+  map<string, string> headers = 2;
 }
 
 message TransactionContext {
@@ -35,8 +34,7 @@ message TransactionContext {
   string destinationAddress = 4;
   string destinationAlias = 5;
   string routeName = 6;
-
-  map<string, google.protobuf.Any> metadata = 7;
+  map<string, google.protobuf.Value> metadata = 7;
 
   Request request = 8;
   Response response = 9;
