@@ -22,22 +22,34 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request - represents the API request properties
 type Request struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Method          string            `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
-	Protocol        string            `protobuf:"bytes,2,opt,name=protocol,proto3" json:"protocol,omitempty"`
-	ProtocolVersion string            `protobuf:"bytes,3,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
-	Authority       string            `protobuf:"bytes,4,opt,name=authority,proto3" json:"authority,omitempty"`
-	Port            uint32            `protobuf:"varint,5,opt,name=port,proto3" json:"port,omitempty"`
-	Path            string            `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty"`
-	OriginalPath    string            `protobuf:"bytes,7,opt,name=original_path,json=originalPath,proto3" json:"original_path,omitempty"`
-	UserAgent       string            `protobuf:"bytes,8,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
-	Referer         string            `protobuf:"bytes,9,opt,name=referer,proto3" json:"referer,omitempty"`
-	ForwardedFor    string            `protobuf:"bytes,10,opt,name=forwarded_for,json=forwardedFor,proto3" json:"forwarded_for,omitempty"`
-	Headers         map[string]string `protobuf:"bytes,11,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// HTTP request method
+	Method string `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
+	// The request protocol scheme
+	Protocol string `protobuf:"bytes,2,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	// The request protocol scheme version
+	ProtocolVersion string `protobuf:"bytes,3,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	// The value of Authority/Host request header
+	Authority string `protobuf:"bytes,4,opt,name=authority,proto3" json:"authority,omitempty"`
+	// The port of incoming request
+	Port uint32 `protobuf:"varint,5,opt,name=port,proto3" json:"port,omitempty"`
+	// The request URI
+	Path string `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty"`
+	// The request URI as received by dataplane gateway
+	OriginalPath string `protobuf:"bytes,7,opt,name=original_path,json=originalPath,proto3" json:"original_path,omitempty"`
+	// The value of User-Agent request header
+	UserAgent string `protobuf:"bytes,8,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	// The value of Referer request header
+	Referer string `protobuf:"bytes,9,opt,name=referer,proto3" json:"referer,omitempty"`
+	// The value of X-Forwarded-For request header
+	ForwardedFor string `protobuf:"bytes,10,opt,name=forwarded_for,json=forwardedFor,proto3" json:"forwarded_for,omitempty"`
+	// The map of request headers
+	Headers map[string]string `protobuf:"bytes,11,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Request) Reset() {
@@ -149,13 +161,16 @@ func (x *Request) GetHeaders() map[string]string {
 	return nil
 }
 
+// Response - represents the API response properties
 type Response struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ResponseCode uint32            `protobuf:"varint,1,opt,name=response_code,json=responseCode,proto3" json:"response_code,omitempty"`
-	Headers      map[string]string `protobuf:"bytes,2,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// The HTTP response code
+	ResponseCode uint32 `protobuf:"varint,1,opt,name=response_code,json=responseCode,proto3" json:"response_code,omitempty"`
+	// The map of response headers
+	Headers map[string]string `protobuf:"bytes,2,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Response) Reset() {
@@ -204,21 +219,33 @@ func (x *Response) GetHeaders() map[string]string {
 	return nil
 }
 
+// TransactionContext - represents the API traffic transaction context
 type TransactionContext struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TransactionId      string                     `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	OriginAddress      string                     `protobuf:"bytes,2,opt,name=originAddress,proto3" json:"originAddress,omitempty"`
-	OriginAlias        string                     `protobuf:"bytes,3,opt,name=originAlias,proto3" json:"originAlias,omitempty"`
-	DestinationAddress string                     `protobuf:"bytes,4,opt,name=destinationAddress,proto3" json:"destinationAddress,omitempty"`
-	DestinationAlias   string                     `protobuf:"bytes,5,opt,name=destinationAlias,proto3" json:"destinationAlias,omitempty"`
-	RouteName          string                     `protobuf:"bytes,6,opt,name=routeName,proto3" json:"routeName,omitempty"`
-	Metadata           map[string]*structpb.Value `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Request            *Request                   `protobuf:"bytes,8,opt,name=request,proto3" json:"request,omitempty"`
-	Response           *Response                  `protobuf:"bytes,9,opt,name=response,proto3" json:"response,omitempty"`
-	StartTime          *timestamppb.Timestamp     `protobuf:"bytes,10,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// The request/transaction identifier
+	TransactionId string `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	// The source address on which the request from the user was received
+	OriginAddress string `protobuf:"bytes,2,opt,name=originAddress,proto3" json:"originAddress,omitempty"`
+	// The alias name for the source address
+	OriginAlias string `protobuf:"bytes,3,opt,name=originAlias,proto3" json:"originAlias,omitempty"`
+	// The destination address on which the request from the user was received
+	DestinationAddress string `protobuf:"bytes,4,opt,name=destinationAddress,proto3" json:"destinationAddress,omitempty"`
+	// The alias name for the destination address
+	DestinationAlias string `protobuf:"bytes,5,opt,name=destinationAlias,proto3" json:"destinationAlias,omitempty"`
+	// The name of the routing rule defined for dataplane gateway
+	RouteName string `protobuf:"bytes,6,opt,name=routeName,proto3" json:"routeName,omitempty"`
+	// The map of additional metadata associated to the traffic
+	// for specific dataplane gateway
+	Metadata map[string]*structpb.Value `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// The response properties associated with the API transaction
+	Request *Request `protobuf:"bytes,8,opt,name=request,proto3" json:"request,omitempty"`
+	// The response properties associated with the API transaction
+	Response *Response `protobuf:"bytes,9,opt,name=response,proto3" json:"response,omitempty"`
+	// The time request was received by the dataplane gateway
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 }
 
 func (x *TransactionContext) Reset() {
@@ -323,13 +350,21 @@ func (x *TransactionContext) GetStartTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// ResourceContext - holds the properties that correlates the transaction with
+// Amplify API resources.
 type ResourceContext struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ApiId      string `protobuf:"bytes,1,opt,name=api_id,json=apiId,proto3" json:"api_id,omitempty"`
-	Stage      string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// The dataplane gateway specific identifier used for correlating
+	// the API service resource
+	ApiId string `protobuf:"bytes,1,opt,name=api_id,json=apiId,proto3" json:"api_id,omitempty"`
+	// The dataplane gateway specific deployment stage name used for
+	// correlating the API service resource
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// The dataplane gateway specific identifier used for correlating
+	// the Amplify marketplace subscription/application
 	ConsumerId string `protobuf:"bytes,3,opt,name=consumer_id,json=consumerId,proto3" json:"consumer_id,omitempty"`
 }
 
