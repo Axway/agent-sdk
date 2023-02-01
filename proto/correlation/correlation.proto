@@ -44,7 +44,8 @@ message TransactionContext {
 
 message ResourceContext {
    string api_id = 1;
-   string consumer_id = 2;
+   string stage = 2;
+   string consumer_id = 3;
 }
 
 service CorrelationService {
