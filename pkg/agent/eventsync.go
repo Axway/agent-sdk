@@ -118,7 +118,10 @@ func (es *EventSync) initCache() error {
 	}
 	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
 	// when the poll/stream client is ready
-	es.sequence.SetSequence(seqID - 1)
+	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
+	if seqID > 0 {
+		es.sequence.SetSequence(seqID - 1)
+	}
 	err = es.discoveryCache.execute()
 	if err != nil {
 		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
