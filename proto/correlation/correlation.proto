@@ -107,9 +107,13 @@ message ResourceContext {
   // correlating the API service resource  
   string stage = 2;
 
+  // The dataplane gateway specific version identifier used for
+  // correlating the API service resource  
+  string version = 3;
+
   // The dataplane gateway specific identifier used for correlating
   // the Amplify marketplace subscription/application
-  string consumer_id = 3;
+  string consumer_id = 4;
 }
 
 // Correlation service returns the resource context related to API transaction
