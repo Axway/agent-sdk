@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -50,8 +49,9 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	// there is a current envoy restriction with the payload size (10mb). Quick check on the size
 	if binary.Size(serviceBody.SpecDefinition) >= tenMB {
 		// if greater than 10mb, return
-		log.Error("error processing service")
-		return nil, errors.New(fmt.Sprintf("service %s carries a payload greater than 10mb. Service not created.", serviceBody.APIName))
+		err := fmt.Errorf("service %s carries a payload greater than 10mb. Service not created.", serviceBody.APIName)
+		logger.WithError(err).Error("error processing service")
+		return nil, err
 	}
 
 	// API Service
