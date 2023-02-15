@@ -30,6 +30,7 @@ func buildAPIServiceInstanceMarketplaceSpec(
 	endpoints []management.ApiServiceInstanceSpecEndpoint,
 	knownCRDs []string,
 ) management.ApiServiceInstanceSpec {
+	log.Debug("build api service instance marketplace spec")
 	return management.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endpoints,
@@ -122,6 +123,9 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
+
+	c.logger.Debugf("updateAPIService %s", instance.Metadata.ResourceVersion)
+
 	if c.cfg.IsMarketplaceSubsEnabled() {
 		c.checkAccessRequestDefinition(serviceBody)
 		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
@@ -144,15 +148,21 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	// creating new instance
 	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
 
+	c.logger.Debugf("service action - %s", serviceBody.serviceContext.serviceAction)
+
 	if serviceBody.serviceContext.serviceAction == updateAPI {
+		c.logger.Debug("updateAPI")
 		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
 		if err != nil {
 			return err
 		}
 
 		if prevInst != nil {
+			c.logger.Debug("prevInst not nil")
 			// updating existing instance
 			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
+		} else {
+			c.logger.Debug("prevInst is nil")
 		}
 	}
 
