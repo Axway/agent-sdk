@@ -135,9 +135,10 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		}
 
 		_, err := agent.apicClient.PublishService(&serviceBody)
-		if err == nil {
-			log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
+		if err != nil {
+			return err
 		}
+		log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 	}
 	return nil
 }
