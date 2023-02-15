@@ -148,8 +148,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	// creating new instance
 	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
 
-	c.logger.Debugf("service action - %s", serviceBody.serviceContext.serviceAction)
-
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		c.logger.Debug("updateAPI")
 		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
@@ -216,10 +214,13 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 
 func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	// start from latest revision, find first instance
+	revPrefix := getRevisionPrefix(serviceBody)
+	c.logger.Debugf("revision prefix - %s", revPrefix)
+
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
 		// TODO: change to id
 		queryParams := map[string]string{
-			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
+			"query": "metadata.references.id==" + revPrefix + "." + strconv.Itoa(i),
 		}
 
 		instances, err := c.GetAPIServiceInstances(queryParams, url)
@@ -230,6 +231,7 @@ func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*
 		if len(instances) > 0 {
 			return instances[0], nil
 		}
+		c.logger.Debug("no instances were returned")
 	}
 	return nil, nil
 }
