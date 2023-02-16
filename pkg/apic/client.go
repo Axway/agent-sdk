@@ -832,6 +832,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		existingRI.Spec = data.Spec
 		existingRI.SubResources = data.SubResources
 		existingRI.Title = data.Title
+		existingRI.Metadata.ResourceVersion = ""
 
 		// set the data and subresources to be pushed
 		data = existingRI

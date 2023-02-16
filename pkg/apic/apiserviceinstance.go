@@ -218,9 +218,8 @@ func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*
 	c.logger.Debugf("revision prefix - %s", revPrefix)
 
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
-		// TODO: change to id
 		queryParams := map[string]string{
-			"query": "metadata.references.id==" + revPrefix + "." + strconv.Itoa(i),
+			"query": "metadata.references.name==" + revPrefix + "." + strconv.Itoa(i),
 		}
 
 		instances, err := c.GetAPIServiceInstances(queryParams, url)
