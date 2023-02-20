@@ -122,7 +122,6 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
-
 	if c.cfg.IsMarketplaceSubsEnabled() {
 		c.checkAccessRequestDefinition(serviceBody)
 		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
@@ -207,7 +206,6 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 
 func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	// start from latest revision, find first instance
-
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
 		queryParams := map[string]string{
 			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
