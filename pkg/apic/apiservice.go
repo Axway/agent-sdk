@@ -99,8 +99,6 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	newSVCDetails := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
 	util.SetAgentDetails(svc, newSVCDetails)
 
-	c.logger.Debugf("updateAPIService %s", svc.Metadata.ResourceVersion)
-
 	// get the specHashes from the existing service
 	if revDetails, found := newSVCDetails[specHashes]; found {
 		if specHashes, ok := revDetails.(map[string]interface{}); ok {

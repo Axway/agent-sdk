@@ -149,18 +149,14 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		c.logger.Debug("updateAPI")
 		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
 		if err != nil {
 			return err
 		}
 
 		if prevInst != nil {
-			c.logger.Debug("prevInst not nil")
 			// updating existing instance
 			instance = c.updateAPIServiceInstance(serviceBody, prevInst, endpoints)
-		} else {
-			c.logger.Debug("prevInst is nil")
 		}
 	}
 

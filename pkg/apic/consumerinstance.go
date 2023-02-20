@@ -166,9 +166,6 @@ func (c *ServiceClient) updateConsumerInstance(serviceBody *ServiceBody, ci *man
 	ci.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
 	ci.Owner, _ = c.getOwnerObject(serviceBody, false)
 	ci.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
-
-	c.logger.Debugf("updateConsumerInstance %s", ci.Metadata.ResourceVersion)
-
 	ciDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	agentDetails := buildAgentDetailsSubResource(serviceBody, false, ciDetails)
 	util.SetAgentDetails(ci, agentDetails)
