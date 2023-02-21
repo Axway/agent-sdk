@@ -10,7 +10,7 @@ import (
 func TestNewQuotaFromAccessRequest(t *testing.T) {
 	tests := []struct {
 		name           string
-		limit          int64
+		limit          int32
 		intervalString string
 		interval       QuotaInterval
 		wantNil        bool
@@ -37,7 +37,7 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 			ar := management.NewAccessRequest("name", "environment")
 			if tt.intervalString != "" {
 				ar.Spec.Quota = &management.AccessRequestSpecQuota{
-					Limit:    float64(tt.limit),
+					Limit:    tt.limit,
 					Interval: tt.intervalString,
 				}
 			}
