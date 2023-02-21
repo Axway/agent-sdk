@@ -13,61 +13,62 @@ import (
 )
 
 var (
-	DataplaneCtx log.ContextField = "dataplane"
+	DataplaneSecretCtx log.ContextField = "dataplaneSecret"
 
-	_DataplaneGVK = apiv1.GroupVersionKind{
+	_DataplaneSecretGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "Dataplane",
+			Kind:  "DataplaneSecret",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	DataplaneScopes = []string{"Environment"}
+	DataplaneSecretScopes = []string{"Environment"}
 )
 
-const DataplaneResourceName = "dataplanes"
+const DataplaneSecretResourceName = "dataplanesecrets"
 
-func DataplaneGVK() apiv1.GroupVersionKind {
-	return _DataplaneGVK
+func DataplaneSecretGVK() apiv1.GroupVersionKind {
+	return _DataplaneSecretGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_DataplaneGVK, DataplaneScopes[0], DataplaneResourceName)
-	log.RegisterContextField(DataplaneCtx)
+	apiv1.RegisterGVK(_DataplaneSecretGVK, DataplaneSecretScopes[0], DataplaneSecretResourceName)
+	log.RegisterContextField(DataplaneSecretCtx)
 }
 
-// Dataplane Resource
-type Dataplane struct {
+// DataplaneSecret Resource
+type DataplaneSecret struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner  `json:"owner"`
-	Spec  DataplaneSpec `json:"spec"`
+	Owner *apiv1.Owner         `json:"owner"`
+	Spec  DataplaneSecretSpec  `json:"spec"`
+	State DataplaneSecretState `json:"state"`
 }
 
-// NewDataplane creates an empty *Dataplane
-func NewDataplane(name, scopeName string) *Dataplane {
-	return &Dataplane{
+// NewDataplaneSecret creates an empty *DataplaneSecret
+func NewDataplaneSecret(name, scopeName string) *DataplaneSecret {
+	return &DataplaneSecret{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _DataplaneGVK,
+			GroupVersionKind: _DataplaneSecretGVK,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: DataplaneScopes[0],
+					Kind: DataplaneSecretScopes[0],
 				},
 			},
 		},
 	}
 }
 
-// DataplaneFromInstanceArray converts a []*ResourceInstance to a []*Dataplane
-func DataplaneFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Dataplane, error) {
-	newArray := make([]*Dataplane, 0)
+// DataplaneSecretFromInstanceArray converts a []*ResourceInstance to a []*DataplaneSecret
+func DataplaneSecretFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*DataplaneSecret, error) {
+	newArray := make([]*DataplaneSecret, 0)
 	for _, item := range fromArray {
-		res := &Dataplane{}
+		res := &DataplaneSecret{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Dataplane, 0), err
+			return make([]*DataplaneSecret, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -75,10 +76,10 @@ func DataplaneFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Datapla
 	return newArray, nil
 }
 
-// AsInstance converts a Dataplane to a ResourceInstance
-func (res *Dataplane) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a DataplaneSecret to a ResourceInstance
+func (res *DataplaneSecret) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = DataplaneGVK()
+	meta.GroupVersionKind = DataplaneSecretGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -95,8 +96,8 @@ func (res *Dataplane) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a Dataplane
-func (res *Dataplane) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a DataplaneSecret
+func (res *DataplaneSecret) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -114,7 +115,7 @@ func (res *Dataplane) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *Dataplane) MarshalJSON() ([]byte, error) {
+func (res *DataplaneSecret) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -128,12 +129,13 @@ func (res *Dataplane) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
+	out["state"] = res.State
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *Dataplane) UnmarshalJSON(data []byte) error {
+func (res *DataplaneSecret) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -157,10 +159,24 @@ func (res *Dataplane) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // PluralName returns the plural name of the resource
-func (res *Dataplane) PluralName() string {
-	return DataplaneResourceName
+func (res *DataplaneSecret) PluralName() string {
+	return DataplaneSecretResourceName
 }

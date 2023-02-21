@@ -16,4 +16,6 @@ type AssetRequestSpec struct {
 	AssetResource string                 `json:"assetResource"`
 	// reference to the Subscription to be used to access the Asset Resource.
 	Subscription string `json:"subscription,omitempty"`
+	// The AssetRequest from which this resource is being migrated from. Reference must be in the same Application.
+	AssetRequest string `json:"assetRequest,omitempty"`
 }

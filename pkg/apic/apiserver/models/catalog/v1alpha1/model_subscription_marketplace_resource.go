@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionMarketplaceResource The Marketplace Application resource details. (catalog.v1alpha1.Subscription)
+// SubscriptionMarketplaceResource The Marketplace Subscription resource details. (catalog.v1alpha1.Subscription)
 type SubscriptionMarketplaceResource struct {
 	Metadata SubscriptionMarketplaceResourceMetadata `json:"metadata"`
 	Owner    SubscriptionMarketplaceResourceOwner    `json:"owner,omitempty"`

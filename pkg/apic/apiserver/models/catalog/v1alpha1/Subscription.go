@@ -43,7 +43,9 @@ type Subscription struct {
 	Approval    SubscriptionApproval    `json:"approval"`
 	Marketplace SubscriptionMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner            `json:"owner"`
+	References  SubscriptionReferences  `json:"references"`
 	Spec        SubscriptionSpec        `json:"spec"`
+	State       SubscriptionState       `json:"state"`
 	// Status      SubscriptionStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
@@ -127,7 +129,9 @@ func (res *Subscription) MarshalJSON() ([]byte, error) {
 	out["approval"] = res.Approval
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["state"] = res.State
 	out["status"] = res.Status
 
 	return json.Marshal(out)
@@ -181,6 +185,34 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "marketplace")
 		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}
