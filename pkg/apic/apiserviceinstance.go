@@ -207,7 +207,6 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	// start from latest revision, find first instance
 	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
-		// TODO: change to id
 		queryParams := map[string]string{
 			"query": "metadata.references.name==" + getRevisionPrefix(serviceBody) + "." + strconv.Itoa(i),
 		}
@@ -220,6 +219,7 @@ func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*
 		if len(instances) > 0 {
 			return instances[0], nil
 		}
+		c.logger.Debug("no instances were returned")
 	}
 	return nil, nil
 }
