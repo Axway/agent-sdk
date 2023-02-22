@@ -107,6 +107,7 @@ func (b *LoggerConfig) Format(format string) *LoggerConfig {
 				FullTimestamp:    true,
 				PadLevelText:     true,
 				QuoteEmptyFields: true,
+				DisableColors:    true,
 				FieldMap: logrus.FieldMap{
 					logrus.FieldKeyMsg: "message",
 				},
