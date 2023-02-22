@@ -50,7 +50,7 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 
 			assert.Equal(t, quota.GetIntervalString(), tt.intervalString)
 			assert.Equal(t, quota.GetInterval(), tt.interval)
-			assert.Equal(t, quota.GetLimit(), tt.limit)
+			assert.Equal(t, quota.GetLimit(), int64(tt.limit))
 		})
 	}
 }
