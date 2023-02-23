@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionMarketplaceResourceOwner Owner of the Application. (catalog.v1alpha1.Subscription)
+// SubscriptionMarketplaceResourceOwner Owner of the Subscription. (catalog.v1alpha1.Subscription)
 type SubscriptionMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`

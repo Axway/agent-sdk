@@ -18,6 +18,7 @@ type Set struct {
 	WatchTopicManagementV1alpha1                     *management_v1alpha1.WatchTopicClient
 	DiscoveryAgentManagementV1alpha1                 *management_v1alpha1.UnscopedDiscoveryAgentClient
 	DataplaneManagementV1alpha1                      *management_v1alpha1.UnscopedDataplaneClient
+	DataplaneSecretManagementV1alpha1                *management_v1alpha1.UnscopedDataplaneSecretClient
 	TraceabilityAgentManagementV1alpha1              *management_v1alpha1.UnscopedTraceabilityAgentClient
 	GovernanceAgentManagementV1alpha1                *management_v1alpha1.UnscopedGovernanceAgentClient
 	EnvironmentManagementV1alpha1                    *management_v1alpha1.EnvironmentClient
@@ -71,6 +72,7 @@ type Set struct {
 	ApplicationCatalogV1alpha1                       *catalog_v1alpha1.ApplicationClient
 	CredentialCatalogV1alpha1                        *catalog_v1alpha1.UnscopedCredentialClient
 	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
+	SubscriptionJobCatalogV1alpha1                   *catalog_v1alpha1.UnscopedSubscriptionJobClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
@@ -80,6 +82,7 @@ type Set struct {
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
 	ProductPlanCatalogV1alpha1                       *catalog_v1alpha1.ProductPlanClient
+	ProductPlanJobCatalogV1alpha1                    *catalog_v1alpha1.UnscopedProductPlanJobClient
 	QuotaCatalogV1alpha1                             *catalog_v1alpha1.UnscopedQuotaClient
 	AssetMappingCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetMappingClient
 	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
@@ -125,6 +128,10 @@ func New(b cAPIV1.Base) *Set {
 	s.DataplaneManagementV1alpha1, err = management_v1alpha1.NewDataplaneClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Dataplane: %s", err))
+	}
+	s.DataplaneSecretManagementV1alpha1, err = management_v1alpha1.NewDataplaneSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.DataplaneSecret: %s", err))
 	}
 	s.TraceabilityAgentManagementV1alpha1, err = management_v1alpha1.NewTraceabilityAgentClient(b)
 	if err != nil {
@@ -338,6 +345,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Subscription: %s", err))
 	}
+	s.SubscriptionJobCatalogV1alpha1, err = catalog_v1alpha1.NewSubscriptionJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionJob: %s", err))
+	}
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Marketplace: %s", err))
@@ -373,6 +384,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductPlanCatalogV1alpha1, err = catalog_v1alpha1.NewProductPlanClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlan: %s", err))
+	}
+	s.ProductPlanJobCatalogV1alpha1, err = catalog_v1alpha1.NewProductPlanJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlanJob: %s", err))
 	}
 	s.QuotaCatalogV1alpha1, err = catalog_v1alpha1.NewQuotaClient(b)
 	if err != nil {
