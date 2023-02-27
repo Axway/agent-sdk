@@ -12,8 +12,6 @@ package management
 // DataplaneSpec  (management.v1alpha1.Dataplane)
 type DataplaneSpec struct {
 	// The dataplane type that this agent connects to
-	Type string `json:"type"`
-	// JSON Schema draft \\#7 for describing the access data required for communicating with dataplane. (management.v1alpha1.Dataplane)
-	AccessDataSchema map[string]interface{} `json:"accessDataSchema,omitempty"`
-	Security         DataplaneSpecSecurity  `json:"security,omitempty"`
+	Type     string                `json:"type"`
+	Security DataplaneSpecSecurity `json:"security,omitempty"`
 }
