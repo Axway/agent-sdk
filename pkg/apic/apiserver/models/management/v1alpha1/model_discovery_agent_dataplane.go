@@ -9,7 +9,7 @@
 
 package management
 
-// DiscoveryAgentDataplane struct for DiscoveryAgentDataplane
+// DiscoveryAgentDataplane  (management.v1alpha1.DiscoveryAgent)
 type DiscoveryAgentDataplane struct {
 	Name string `json:"name,omitempty"`
 	// Defines the interval that the dataplane will be accessed (30m = 30 minutes, 5h = 5 hours, 2d = 2 days). 30m minimum.
