@@ -9,19 +9,11 @@
 
 package management
 
-import (
-	// GENERATE: The following code has been modified after code generation
-	//
-	//	"time"
-	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-)
-
 // DiscoveryAgentDataplane  (management.v1alpha1.DiscoveryAgent)
 type DiscoveryAgentDataplane struct {
 	Name string `json:"name,omitempty"`
-	// Defines interval
-	Schedule string `json:"schedule,omitempty"`
+	// Defines the interval that the dataplane will be accessed (30m = 30 minutes, 5h = 5 hours, 2d = 2 days). 30m minimum.
+	Frequency string `json:"frequency,omitempty"`
 	// Configures queued discovery. Defaults to false
-	QueueDiscovery bool      `json:"queueDiscovery,omitempty"`
-	LastRun        time.Time `json:"lastRun,omitempty"`
+	QueueDiscovery bool `json:"queueDiscovery,omitempty"`
 }
