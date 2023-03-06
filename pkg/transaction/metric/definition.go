@@ -55,6 +55,7 @@ type APIDetails struct {
 	TeamID             string `json:"teamId,omitempty"`
 	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
 	Stage              string `json:"-"`
+	Version            string `json:"-"`
 }
 
 // APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode

@@ -23,7 +23,7 @@ const (
 )
 
 // GetAccessRequest -
-func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage string) *management.AccessRequest {
+func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage, version string) *management.AccessRequest {
 	if managedApp == nil {
 		return nil
 	}
@@ -31,7 +31,7 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	// Lookup Access Request
 	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
 	accessReq := &management.AccessRequest{}
-	ri := cacheManager.GetAccessRequestByAppAndAPI(managedApp.Name, apiID, stage)
+	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
 	accessReq.FromInstance(ri)
 	return accessReq
 }

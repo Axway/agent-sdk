@@ -34,10 +34,15 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 }
 
 func createAPIServiceInstance(id, apiID, stage string) *v1.ResourceInstance {
+	return createAPIServiceInstanceWithVersion(id, apiID, stage, "")
+}
+
+func createAPIServiceInstanceWithVersion(id, apiID, stage, version string) *v1.ResourceInstance {
 	sub := map[string]interface{}{
 		defs.AttrExternalAPIID:         apiID,
 		defs.AttrExternalAPIStage:      stage,
 		defs.AttrExternalAPIPrimaryKey: fmt.Sprintf("%s-%s", apiID, stage),
+		defs.AttrExternalAPIVersion:    version,
 	}
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
