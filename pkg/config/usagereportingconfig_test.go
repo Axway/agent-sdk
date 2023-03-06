@@ -46,7 +46,7 @@ var defaultExpected = expected{
 	offline:            false,
 	schedule:           "@hourly",
 	reportSchedule:     "@monthly",
-	granularity:        900000,
+	granularity:        int((15 * time.Minute).Milliseconds()),
 	qaVars:             false,
 }
 
@@ -96,6 +96,7 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	os.Setenv(oldUsageReportingIntervalEnvVar, "30m")
 	expected = defaultExpected
 	expected.interval = 30 * time.Minute
+	expected.granularity = int((30 * time.Minute).Milliseconds())
 
 	cfg = ParseUsageReportingConfig(props)
 	assert.NotNil(t, cfg)

@@ -56,9 +56,9 @@ type collector struct {
 	metricMap        map[string]map[string]map[string]map[string]*APIMetric
 	publishItemQueue []publishQueueItem
 	jobID            string
-	publisher        publisher
+	publisher        *metricPublisher
 	storage          storageCache
-	reports          offlineReportCache
+	reports          *cacheReport
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
 }
@@ -143,7 +143,7 @@ func createMetricCollector() Collector {
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
 	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
-	metricCollector.reports = newOfflineReportCache()
+	metricCollector.reports = newReportCache()
 	metricCollector.publisher = newMetricPublisher(metricCollector.storage, metricCollector.reports)
 
 	if util.IsNotTest() {
@@ -169,7 +169,7 @@ func (c *collector) Status() error {
 // Ready - indicates that the collector job is ready to process
 func (c *collector) Ready() bool {
 	// Wait until any existing offline reports are saved
-	if c.usageConfig.IsOfflineMode() && !c.reports.isReady() {
+	if c.usageConfig.IsOfflineMode() && !c.publisher.isReady() {
 		return false
 	}
 	return agent.GetCentralConfig().GetEnvironmentID() != ""
@@ -587,10 +587,9 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 			Infof("creating volume event")
 	}
 
-	granularity := int(c.usageEndTime.Sub(c.usageStartTime).Milliseconds())
+	granularity := c.usageConfig.GetReportGranularity()
 	reportTime := c.usageStartTime.Format(ISO8601)
 	if c.usageConfig.IsOfflineMode() {
-		granularity = c.usageConfig.GetReportGranularity()
 		reportTime = c.usageEndTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
