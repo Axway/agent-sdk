@@ -32,6 +32,9 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
 	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
+	if ri == nil {
+		return nil
+	}
 	accessReq.FromInstance(ri)
 	return accessReq
 }
