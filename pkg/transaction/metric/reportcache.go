@@ -1,9 +1,13 @@
 package metric
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
@@ -13,6 +17,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -30,7 +35,6 @@ type cacheReport struct {
 	reportCacheLock         sync.Mutex
 	isInitialized           bool
 	offlineReportDateFormat string
-	offline                 bool
 }
 
 func newReportCache() *cacheReport {
@@ -39,7 +43,6 @@ func newReportCache() *cacheReport {
 		reportCacheLock:         sync.Mutex{},
 		reportCache:             cache.New(),
 		isInitialized:           false,
-		offline:                 agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
 		offlineReportDateFormat: offlineReportDateFormat,
 	}
 	if agent.GetCentralConfig().GetUsageReportingConfig().UsingQAVars() {
@@ -144,4 +147,89 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 		curDate = curDate.Add(reportDuration)
 	}
 	return savedEvents
+}
+
+// addReport - adds a new report to the cache
+func (c *cacheReport) addReport(event LighthouseUsageEvent) error {
+	// Open and load the existing usage file
+	savedEvents := c.loadEvents()
+
+	for key, report := range event.Report {
+		savedEvents.Report[key] = report
+	}
+	// Put all reports into the new event
+	event.Report = savedEvents.Report
+
+	// Update the cache
+	c.updateEvents(event)
+
+	return nil
+}
+
+// saveReport - creates a new file with the latest cached events then clears all reports from the cache, lock outside of this
+func (c *cacheReport) saveReport() error {
+	savedEvents := c.getEvents()
+
+	// no reports yet, skip creating the event
+	if len(savedEvents.Report) == 0 {
+		return nil
+	}
+	savedEvents = c.validateReport(savedEvents)
+
+	// create the path to save the file
+	outputFilePath := ""
+	i := 0
+	fileExists := true
+	for fileExists {
+		outputFilePath = c.generateReportPath(savedEvents.Timestamp, i)
+		_, err := os.Stat(outputFilePath)
+		i++
+		fileExists = !os.IsNotExist(err)
+	}
+
+	// create the new file to save the events
+	file, err := os.Create(filepath.Clean(outputFilePath))
+	if err != nil {
+		return err
+	}
+
+	// marshal the event into json bytes
+	cacheBytes, err := json.Marshal(savedEvents)
+	if err != nil {
+		file.Close()
+		return err
+	}
+
+	// save the bytes and close the file
+	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
+	file.Close()
+	if err != nil {
+		return err
+	}
+
+	// clear out all reports
+	savedEvents.Report = make(map[string]LighthouseUsageReport)
+	c.setEvents(savedEvents)
+	return nil
+}
+
+// sendReport - creates a new report with the latest cached events then clears all reports from the cache, lock outside of this
+func (c *cacheReport) sendReport(publishFunc func(event LighthouseUsageEvent) error) error {
+	c.reportCacheLock.Lock()
+	defer c.reportCacheLock.Unlock()
+	savedEvents := c.getEvents()
+
+	// no reports yet, skip creating the event
+	if len(savedEvents.Report) == 0 {
+		return nil
+	}
+	savedEvents = c.validateReport(savedEvents)
+	if err := publishFunc(savedEvents); err != nil {
+		log.Error("could not publish usage, will send at next scheduled publishing")
+		return nil
+	}
+
+	savedEvents.Report = make(map[string]LighthouseUsageReport)
+	c.setEvents(savedEvents)
+	return nil
 }
