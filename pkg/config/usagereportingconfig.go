@@ -26,6 +26,7 @@ const (
 	// QA EnvVars
 	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
 	qaUsageReportingOfflineScheduleEnvVar = "QA_CENTRAL_USAGEREPORTING_OFFLINEREPORTSCHEDULE"
+	qaUsageReportingUsageScheduleEnvVar   = "QA_CENTRAL_USAGEREPORTING_USAGESCHEDULE"
 
 	// Config paths
 	pathUsageReportingURL           = "central.usagereporting.url"
@@ -152,16 +153,46 @@ func (u *UsageReportingConfiguration) Validate() {
 	if eventAgg < 60*time.Second {
 		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingInterval))
 	}
-	// validate usage schedule
-	if _, err := cronexpr.Parse(u.UsageSchedule); err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
-	}
 
 	u.validatePublish()       // DEPRECATE
 	u.validatePublishMetric() // DEPRECATE
 
-	if u.Offline {
+	if !u.Offline {
+		u.validateUsageSchedule()
+	} else {
 		u.validateOffline()
+	}
+}
+
+func (u *UsageReportingConfiguration) validateUsageSchedule() {
+	// check fi the qa env var is set
+	if val := os.Getenv(qaUsageReportingUsageScheduleEnvVar); val != "" {
+		if _, err := cronexpr.Parse(val); err != nil {
+			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingUsageScheduleEnvVar, val)
+		} else {
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingUsageScheduleEnvVar, val, u.UsageSchedule)
+			u.UsageSchedule = val
+			u.qaVars = true
+		}
+		return
+	}
+
+	// Check the cron expressions
+	cron, err := cronexpr.Parse(u.UsageSchedule)
+	if err != nil {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+	}
+	checks := 5
+	nextRuns := cron.NextN(time.Now(), uint(checks))
+	if len(nextRuns) != checks {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+	}
+	for i := 1; i < checks-1; i++ {
+		delta := nextRuns[i].Sub(nextRuns[i-1])
+		if delta < (time.Minute * 15) {
+			log.Tracef("%s must be at least 15 minutes apart", pathUsageReportingUsageSchedule)
+			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+		}
 	}
 }
 
