@@ -46,7 +46,7 @@ var defaultExpected = expected{
 	offline:            false,
 	schedule:           "@hourly",
 	reportSchedule:     "@monthly",
-	granularity:        900000,
+	granularity:        int((15 * time.Minute).Milliseconds()),
 	qaVars:             false,
 }
 
@@ -96,6 +96,7 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	os.Setenv(oldUsageReportingIntervalEnvVar, "30m")
 	expected = defaultExpected
 	expected.interval = 30 * time.Minute
+	expected.granularity = int((30 * time.Minute).Milliseconds())
 
 	cfg = ParseUsageReportingConfig(props)
 	assert.NotNil(t, cfg)
@@ -188,6 +189,22 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	assert.NotNil(t, err)
 	cfg.(*UsageReportingConfiguration).Interval = currentInterval
 
+	// invalid UsageSchedule
+	currentUsageSchedule := cfg.GetUsageSchedule()
+	cfg.(*UsageReportingConfiguration).UsageSchedule = "*/1511 * * * *"
+	err = validateUsageReporting(cfg)
+	assert.NotNil(t, err)
+	cfg.(*UsageReportingConfiguration).UsageSchedule = "0,15,30,45,55 * * * *"
+	err = validateUsageReporting(cfg)
+	assert.NotNil(t, err)
+	cfg.(*UsageReportingConfiguration).UsageSchedule = currentUsageSchedule
+
+	// QA UsageSchedule override
+	os.Setenv(qaUsageReportingUsageScheduleEnvVar, "*/1 * * * *")
+	cfg.(*UsageReportingConfiguration).UsageSchedule = "*/1 * * * *"
+	err = validateUsageReporting(cfg)
+	assert.Nil(t, err)
+
 	// offline settings, valid
 	cfg.(*UsageReportingConfiguration).Offline = true
 	err = validateUsageReporting(cfg)
@@ -195,7 +212,7 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 
 	// invalid Schedule
 	currentSchedule := cfg.GetSchedule()
-	cfg.(*UsageReportingConfiguration).Schedule = "*/15 * * * *"
+	cfg.(*UsageReportingConfiguration).Schedule = "*/1511 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.NotNil(t, err)
 	cfg.(*UsageReportingConfiguration).Schedule = currentSchedule

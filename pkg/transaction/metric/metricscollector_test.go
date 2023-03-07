@@ -3,7 +3,7 @@ package metric
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -72,9 +72,10 @@ func (s *testHTTPServer) startServer() {
 					if err != nil {
 						return
 					}
-					body, _ := ioutil.ReadAll(file)
+					body, _ := io.ReadAll(file)
 					var usageEvent LighthouseUsageEvent
 					json.Unmarshal(body, &usageEvent)
+					fmt.Printf("\n\n %+v \n\n", usageEvent)
 					for _, report := range usageEvent.Report {
 						for usageType, usage := range report.Usage {
 							if strings.Index(usageType, "Transactions") > 0 {
@@ -104,9 +105,9 @@ func (s *testHTTPServer) resetConfig() {
 }
 
 func (s *testHTTPServer) resetOffline(myCollector Collector) {
-	events, _ := myCollector.(*collector).reports.loadOfflineEvents()
+	events := myCollector.(*collector).reports.loadEvents()
 	events.Report = make(map[string]LighthouseUsageReport)
-	myCollector.(*collector).reports.updateOfflineEvents(events)
+	myCollector.(*collector).reports.updateEvents(events)
 	s.resetConfig()
 }
 
@@ -293,8 +294,8 @@ func TestMetricCollector(t *testing.T) {
 			name:                      "WithLighthouseWithFailure",
 			loopCount:                 3,
 			retryBatchCount:           0,
-			apiTransactionCount:       []int{5, 10, 2},
-			failUsageEventOnServer:    []bool{false, true, false},
+			apiTransactionCount:       []int{5, 10, 12},
+			failUsageEventOnServer:    []bool{false, true, false, false},
 			expectedLHEvents:          []int{1, 1, 2},
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
@@ -336,6 +337,7 @@ func TestMetricCollector(t *testing.T) {
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
+				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
 						APIDetails: APIDetails{"111", "111", 1, teamID, "", ""},
@@ -352,6 +354,7 @@ func TestMetricCollector(t *testing.T) {
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 
 				metricCollector.Execute()
+				metricCollector.publisher.Execute()
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
 				assert.Equal(t, test.expectedTransactionVolume[l], s.transactionVolume)
@@ -398,6 +401,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 5, 10, "")
 			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "200", 10, 10, "")
 			metricCollector.Execute()
+			metricCollector.publisher.Execute()
 			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", ""}, "401", 15, 10, "")
 			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 20, 10, "")
 			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 10, 10, "")
@@ -423,6 +427,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", ""}, "200", 10, 10, "")
 
 			metricCollector.Execute()
+			metricCollector.publisher.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
 			assert.Equal(t, 1, s.lighthouseEventCount)
 			assert.Equal(t, 8, s.transactionCount)
@@ -527,7 +532,9 @@ func TestOfflineMetricCollector(t *testing.T) {
 
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
-			reportGenerator := metricCollector.reports.(*cacheOfflineReport)
+
+			reportGenerator := metricCollector.reports
+			publisher := metricCollector.publisher
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
 					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123", "", ""}, "200", 10, 10, "")
@@ -537,11 +544,11 @@ func TestOfflineMetricCollector(t *testing.T) {
 			}
 
 			// Get the usage reports from the cache and validate
-			events, _ := myCollector.(*collector).reports.loadOfflineEvents()
+			events := myCollector.(*collector).reports.loadEvents()
 			validateEvents(events)
 
 			// generate the report file
-			reportGenerator.Execute()
+			publisher.Execute()
 
 			expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), testNum-1)
 			if test.loopCount == 0 {
@@ -553,7 +560,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 
 			// validate the file exists and open it
 			assert.FileExists(t, expectedFile)
-			data, err := ioutil.ReadFile(expectedFile)
+			data, err := os.ReadFile(expectedFile)
 			assert.Nil(t, err)
 
 			// unmarshall it

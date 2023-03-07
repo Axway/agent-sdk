@@ -14,57 +14,39 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
-
-// publisher - interface for metric publisher
-type publisher interface {
-	publishEvent(event interface{}) error
-}
 
 type metricPublisher struct {
 	apiClient api.Client
 	storage   storageCache
-	report    offlineReportCache
+	report    *cacheReport
+	jobID     string
+	ready     bool
+	offline   bool
 }
 
-func (pj *metricPublisher) publishEvent(event interface{}) error {
+func (c *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
-		if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
-			return pj.publishToCache(lighthouseUsageEvent)
-		}
-		return pj.publishToLighthouse(lighthouseUsageEvent)
+		return c.publishToCache(lighthouseUsageEvent)
 	}
 	log.Error("event was not a lighthouse event")
 	return nil
 }
 
-func (pj *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
-	// Open and load the existing usage file
-	savedEvents, loaded := pj.report.loadOfflineEvents()
-
-	if loaded {
-		// Add the reports from the latest event to the saved events
-		for key, report := range event.Report {
-			savedEvents.Report[key] = report
-		}
-		// Put all reports into the new event
-		event.Report = savedEvents.Report
-	}
-
-	// Update the cache
-	pj.report.updateOfflineEvents(event)
-
-	return nil
+func (c *metricPublisher) publishToCache(event LighthouseUsageEvent) error {
+	return c.report.addReport(event)
 }
 
-func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error {
+func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error {
 	token, err := agent.GetCentralAuthToken()
 	if err != nil {
 		return err
 	}
 
-	b, contentType, err := pj.createMultipartFormData(event)
+	b, contentType, err := c.createMultipartFormData(event)
 	if err != nil {
 		return err
 	}
@@ -81,7 +63,7 @@ func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error
 		Body:    b.Bytes(),
 	}
 	log.Debugf("Payload for Usage event : %s\n", b.String())
-	response, err := pj.apiClient.Send(request)
+	response, err := c.apiClient.Send(request)
 	if err != nil {
 		return err
 	}
@@ -92,14 +74,14 @@ func (pj *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error
 	return nil
 }
 
-func (pj *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (b bytes.Buffer, contentType string, err error) {
+func (c *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (b bytes.Buffer, contentType string, err error) {
 	buffer, _ := json.Marshal(event)
 	w := multipart.NewWriter(&b)
 	defer w.Close()
 	w.WriteField("organizationId", event.OrgGUID)
 
 	var fw io.Writer
-	if fw, err = pj.createFilePart(w, uuid.New().String()+".json"); err != nil {
+	if fw, err = c.createFilePart(w, uuid.New().String()+".json"); err != nil {
 		return
 	}
 	if _, err = io.Copy(fw, bytes.NewReader(buffer)); err != nil {
@@ -111,7 +93,7 @@ func (pj *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (
 }
 
 // createFilePart - adds the file part to the request
-func (pj *metricPublisher) createFilePart(w *multipart.Writer, filename string) (io.Writer, error) {
+func (c *metricPublisher) createFilePart(w *multipart.Writer, filename string) (io.Writer, error) {
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, filename))
 	h.Set("Content-Type", "application/json")
@@ -119,13 +101,70 @@ func (pj *metricPublisher) createFilePart(w *multipart.Writer, filename string) 
 }
 
 // newMetricPublisher - Creates publisher job
-func newMetricPublisher(storage storageCache, report offlineReportCache) publisher {
+func newMetricPublisher(storage storageCache, report *cacheReport) *metricPublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &metricPublisher{
 		apiClient: api.NewSingleEntryClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(), centralCfg.GetClientTimeout()),
 		storage:   storage,
 		report:    report,
+		offline:   agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
 	}
 
+	publisher.registerReportJob()
 	return publisher
+}
+
+func (c *metricPublisher) isReady() bool {
+	return c.ready
+}
+
+func (c *metricPublisher) registerReportJob() {
+	if !util.IsNotTest() {
+		return // skip setting up the job in test
+	}
+
+	schedule := agent.GetCentralConfig().GetUsageReportingConfig().GetUsageSchedule()
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		schedule = agent.GetCentralConfig().GetUsageReportingConfig().GetReportSchedule()
+	}
+
+	// start the job according to the cron schedule
+	var err error
+	c.jobID, err = jobs.RegisterScheduledJobWithName(c, schedule, "Usage Reporting")
+	if err != nil {
+		log.Errorf("could not register usage report creation job: %s", err.Error())
+	}
+}
+
+// Status - returns an error if the status of the offline report job is in error
+func (c *metricPublisher) Status() error {
+	return nil
+}
+
+// Ready - indicates that the offline report job is ready to process
+//
+//	additionally runs the initial report gen if the last trigger would
+//	have ran but the agent was down
+func (c *metricPublisher) Ready() bool {
+	if agent.GetCentralConfig().GetEnvironmentID() == "" {
+		return false
+	}
+
+	defer func() {
+		c.ready = true
+	}() // once any existing reports are saved off this isReady
+
+	err := c.Execute()
+	if err != nil {
+		log.Errorf("error hit generating report, report still in cache: %s", err.Error())
+	}
+	return true
+}
+
+// Execute - process the offline report generation
+func (c *metricPublisher) Execute() error {
+	if c.offline {
+		return c.report.saveReport()
+	}
+	return c.report.sendReport(c.publishToLighthouse)
 }
