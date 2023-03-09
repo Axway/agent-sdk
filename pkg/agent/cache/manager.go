@@ -108,6 +108,7 @@ type Manager interface {
 	GetAccessRequestCacheKeys() []string
 	AddAccessRequest(resource *v1.ResourceInstance)
 	GetAccessRequestByAppAndAPI(managedAppName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance
+	GetAccessRequestByAppAndAPIStageVersion(managedAppName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance
 	GetAccessRequest(id string) *v1.ResourceInstance
 	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error

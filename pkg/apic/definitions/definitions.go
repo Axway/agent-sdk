@@ -30,6 +30,7 @@ const (
 	AttrExternalAPIPrimaryKey        = "externalAPIPrimaryKey"
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"
+	AttrExternalAPIVersion           = "externalAPIVersion"
 	AttrCreatedBy                    = "createdBy"
 	AttrSpecHash                     = "specHash"
 	Spec                             = "spec"

@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package amplify.agent.correlation;
+
+import "google/protobuf/struct.proto";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "pkg/amplify/agent/correlation";
+
+// [#protodoc-title: Amplify Agent Correlation service ]
+// Amplify Correlation service is used by the Amplify Agent to correlate the
+// API traffic with the Amplify API resources.
+
+
+// Request - represents the API request properties
+message Request {
+
+  // HTTP request method
+  string method = 1;
+
+  // The request protocol scheme 
+  string protocol = 2;
+
+  // The request protocol scheme version
+  string protocol_version = 3;
+
+  // The value of Authority/Host request header
+  string authority = 4;
+
+  // The port of incoming request
+  uint32 port = 5;
+
+  // The request URI
+  string path = 6;
+
+  // The request URI as received by dataplane gateway
+  string original_path = 7;
+
+  // The value of User-Agent request header 
+  string user_agent = 8;
+
+  // The value of Referer request header
+  string referer = 9;
+
+  // The value of X-Forwarded-For request header
+  string forwarded_for = 10;
+
+  // The map of request headers
+  map<string, string> headers = 11;
+}
+
+// Response - represents the API response properties
+message Response {
+
+  // The HTTP response code
+  uint32 response_code = 1;
+
+  // The map of response headers
+  map<string, string> headers = 2;
+}
+
+// TransactionContext - represents the API traffic transaction context
+message TransactionContext {
+
+  // The request/transaction identifier
+  string transaction_id = 1;
+
+  // The source address on which the request from the user was received
+  string originAddress = 2;
+
+  // The alias name for the source address
+  string originAlias = 3;
+
+  // The destination address on which the request from the user was received
+  string destinationAddress = 4;
+
+  // The alias name for the destination address
+  string destinationAlias = 5;
+
+  // The name of the routing rule defined for dataplane gateway 
+  string routeName = 6;
+
+  // The map of additional metadata associated to the traffic
+  // for specific dataplane gateway   
+  map<string, google.protobuf.Value> metadata = 7;
+
+  // The response properties associated with the API transaction
+  Request request = 8;
+
+  // The response properties associated with the API transaction
+  Response response = 9;
+
+  // The time request was received by the dataplane gateway 
+  google.protobuf.Timestamp start_time = 10;
+}
+
+// ResourceContext - holds the properties that correlates the transaction with 
+// Amplify API resources.
+message ResourceContext {
+
+  // The dataplane gateway specific identifier used for correlating 
+  // the API service resource  
+  string api_id = 1;
+
+  // The dataplane gateway specific deployment stage name used for
+  // correlating the API service resource  
+  string stage = 2;
+
+  // The dataplane gateway specific version identifier used for
+  // correlating the API service resource  
+  string version = 3;
+
+  // The dataplane gateway specific identifier used for correlating
+  // the Amplify marketplace subscription/application
+  string consumer_id = 4;
+}
+
+// Correlation service returns the resource context related to API transaction
+service CorrelationService {
+  rpc GetResourceContext(TransactionContext) returns(ResourceContext) {}
+}  

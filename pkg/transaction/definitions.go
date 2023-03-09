@@ -102,9 +102,10 @@ type Proxy struct {
 	Revision int    `json:"revision,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Stage    string `json:"-"`
+	Version  string `json:"-"`
 }
 
-//Runtime - Represents the runtime group details if applicable in summary event
+// Runtime - Represents the runtime group details if applicable in summary event
 type Runtime struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`

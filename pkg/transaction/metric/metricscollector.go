@@ -330,7 +330,7 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 		Trace("managed application info")
 
 	// get the access request
-	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, detail.APIDetails.ID, detail.APIDetails.Stage)
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, detail.APIDetails.ID, detail.APIDetails.Stage, detail.APIDetails.Version)
 	if accessRequest == nil {
 		c.logger.
 			Debug("could not get access request, return empty API metrics")

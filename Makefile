@@ -10,7 +10,7 @@ GO_PKG_LIST := $(shell go list ./... | grep -v /mock | grep -v ./pkg/apic/apiser
 
 export GOFLAGS := -mod=mod
 
-PROTO_OUT_PATH := $(shell go env GOPATH)/src
+PROTO_OUT_PATH := ${WORKSPACE}
 
 all : clean
 
@@ -53,7 +53,11 @@ PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
 
 %.pb.go : %.proto
 	@echo $<
-	@protoc  --proto_path=$(WORKSPACE)/proto --go-grpc_out=${PROTO_OUT_PATH} --go_out=${PROTO_OUT_PATH} $<
+	@docker run --rm -u $(shell id -u) \
+	  -v${WORKSPACE}:${WORKSPACE} \
+	  -w${WORKSPACE} rvolosatovs/protoc:latest \
+	  --proto_path=${WORKSPACE}/proto --go_out=${PROTO_OUT_PATH} --go-grpc_out=${PROTO_OUT_PATH} \
+	  $<
 
 # generate protobufs
 protoc: $(PROTOTARGETS)

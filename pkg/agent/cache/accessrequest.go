@@ -12,6 +12,10 @@ import (
 
 func formatAppForeignKey(appName string) string { return fmt.Sprintf("ManagedApplication:%v", appName) }
 
+func arSecondaryKey(appName, apiID, apiStage, apiVersion string) string {
+	return fmt.Sprintf("%s:%s:%s:%s", appName, apiID, apiStage, apiVersion)
+}
+
 // AccessRequest cache related methods
 func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	c.ApplyResourceReadLock()
@@ -39,20 +43,28 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	instance, _ := c.GetAPIServiceInstanceByID(instID)
 	apiID := ""
 	apiStage := ""
+	apiVersion := ""
 	if instance != nil {
 		apiID, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		apiStage, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
+		apiVersion, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIVersion)
 	}
 
-	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, appName+":"+apiID+":"+apiStage, ri)
+	secKey := arSecondaryKey(appName, apiID, apiStage, apiVersion)
+	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
 	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formatAppForeignKey(appName))
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
+	return c.GetAccessRequestByAppAndAPIStageVersion(appName, remoteAPIID, remoteAPIStage, "")
+}
+
+func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(appName + ":" + remoteAPIID + ":" + remoteAPIStage)
+	secKey := arSecondaryKey(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion)
+	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
 			return ri

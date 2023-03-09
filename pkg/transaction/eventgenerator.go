@@ -83,6 +83,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 			Name:     summaryEvent.TransactionSummary.Proxy.Name,
 			Revision: summaryEvent.TransactionSummary.Proxy.Revision,
 			Stage:    summaryEvent.TransactionSummary.Proxy.Stage,
+			Version:  summaryEvent.TransactionSummary.Proxy.Version,
 		}
 
 		if summaryEvent.TransactionSummary.Team != nil {
@@ -257,6 +258,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	appName := unknown
 	apiID := summaryEvent.TransactionSummary.Proxy.ID
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
+	version := summaryEvent.TransactionSummary.Proxy.Version
 	e.logger.
 		WithField("api-id", apiID).
 		WithField("stage", stage).
@@ -283,7 +285,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 		Trace("managed application info")
 
 	// get the access request
-	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage)
+	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, apiID, stage, version)
 	if accessRequest == nil {
 		e.logger.
 			Warn("could not get access request, no consumer information attached")
