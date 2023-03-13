@@ -155,8 +155,6 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			var cm cachedMetric
 			json.Unmarshal(buffer, &cm)
 
-			storageCache.Set(cacheKey, cm)
-
 			var metric *APIMetric
 			for _, duration := range cm.Values {
 				metricDetail := Detail{
@@ -167,6 +165,14 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				}
 				metric = c.collector.updateMetric(metricDetail)
 			}
+
+			newKey := c.getKey(metric)
+			if newKey != cacheKey {
+				c.storageLock.Lock()
+				storageCache.Delete(cacheKey)
+				c.storageLock.Unlock()
+			}
+			storageCache.Set(newKey, cm)
 			if metric != nil {
 				metric.StartTime = cm.StartTime
 			}
@@ -196,7 +202,7 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetr
 		StartTime:     metric.StartTime,
 	}
 
-	c.storage.Set(metricKeyPrefix+c.getKey(metric), cachedMetric)
+	c.storage.Set(c.getKey(metric), cachedMetric)
 }
 
 func (c *cacheStorage) removeMetric(metric *APIMetric) {
@@ -206,11 +212,12 @@ func (c *cacheStorage) removeMetric(metric *APIMetric) {
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Delete(metricKeyPrefix + c.getKey(metric))
+	c.storage.Delete(c.getKey(metric))
 }
 
 func (c *cacheStorage) getKey(metric *APIMetric) string {
-	return metric.Subscription.ID + "." +
+	return metricKeyPrefix +
+		metric.Subscription.ID + "." +
 		metric.App.ID + "." +
 		metric.API.ID + "." +
 		metric.StatusCode
