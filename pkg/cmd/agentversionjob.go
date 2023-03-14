@@ -102,7 +102,9 @@ func NewAgentVersionCheckJob(cfg config.CentralConfig) (*AgentVersionCheckJob, e
 	}
 
 	return &AgentVersionCheckJob{
-		apiClient:    coreapi.NewSingleEntryClient(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout()),
+		apiClient: coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
+			coreapi.WithTimeout(cfg.GetClientTimeout()),
+			coreapi.WithSingleURL()),
 		buildVersion: buildVersion,
 		requestBytes: requestBytes,
 		headers: map[string]string{

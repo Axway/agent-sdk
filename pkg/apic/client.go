@@ -174,7 +174,8 @@ func (c *ServiceClient) GetOrCreateCategory(title string) string {
 // initClient - config change handler
 func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
-	c.apiClient = coreapi.NewSingleEntryClient(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
+	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
+		coreapi.WithTimeout(cfg.GetClientTimeout()), coreapi.WithSingleURL())
 	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
 	err := c.setTeamCache()
@@ -205,7 +206,8 @@ func (c *ServiceClient) SetTokenGetter(tokenRequester auth.PlatformTokenGetter) 
 // SetConfig - sets the config and apiClient
 func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
-	c.apiClient = coreapi.NewSingleEntryClient(cfg.GetTLSConfig(), cfg.GetProxyURL(), cfg.GetClientTimeout())
+	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
+		coreapi.WithTimeout(cfg.GetClientTimeout()), coreapi.WithSingleURL())
 }
 
 // mapToTagsArray -
@@ -560,11 +562,7 @@ func (c *ServiceClient) GetAccessControlList(name string) (*management.AccessCon
 
 // UpdateAccessControlList - removes existing then creates new AccessControlList
 func (c *ServiceClient) UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error) {
-	// first delete the existing access control list
-	if _, err := c.deployAccessControl(acl, http.MethodDelete); err != nil {
-		return nil, err
-	}
-	return c.deployAccessControl(acl, http.MethodPost)
+	return c.deployAccessControl(acl, http.MethodPut)
 }
 
 // CreateAccessControlList -

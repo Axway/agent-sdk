@@ -240,5 +240,6 @@ func newSingleEntryClient(cfg *Config) api.Client {
 		clientTimeout = util.DefaultKeepAliveTimeout
 	}
 
-	return api.NewSingleEntryClient(tlsCfg, cfg.ProxyURL, clientTimeout)
+	return api.NewClient(tlsCfg, cfg.ProxyURL,
+		api.WithTimeout(clientTimeout), api.WithSingleURL())
 }

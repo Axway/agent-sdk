@@ -152,10 +152,11 @@ func (ptp *platformTokenGetter) initAxwayIDPClient() error {
 		return err
 	}
 
-	apiClient := api.NewSingleEntryClient(
+	apiClient := api.NewClient(
 		ptp.cfg.GetTLSConfig(),
 		ptp.cfg.GetProxyURL(),
-		ptp.cfg.GetAuthConfig().GetTimeout())
+		api.WithTimeout(ptp.cfg.GetAuthConfig().GetTimeout()),
+		api.WithSingleURL())
 
 	ptp.axwayIDClient, err = oauth.NewAuthClient(ptp.cfg.GetAuthConfig().GetTokenURL(), apiClient,
 		oauth.WithServerName("AxwayId"),
