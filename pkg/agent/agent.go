@@ -210,10 +210,6 @@ func handleInitialization() error {
 	}
 
 	if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-		if agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
-			StartAgentStatusUpdate()
-		}
-
 		// if credentials can expire and need to be deprovisioned then start the credential checker
 		if agent.cfg.GetCredentialConfig() != nil &&
 			agent.cfg.GetCredentialConfig().GetExpirationDays() > 0 &&
@@ -227,11 +223,6 @@ func handleInitialization() error {
 		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 		if err != nil {
 			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
-		}
-
-		// Set agent running
-		if agent.agentResourceManager != nil && agent.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
-			UpdateStatusWithPrevious(AgentRunning, "", "")
 		}
 	}
 

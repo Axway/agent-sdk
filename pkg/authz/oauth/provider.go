@@ -52,7 +52,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		WithComponent("provider").
 		WithPackage("sdk.agent.authz.oauth")
 
-	apiClient := coreapi.NewClientWithTimeout(tlsCfg, proxyURL, clientTimeout)
+	apiClient := coreapi.NewClient(tlsCfg, proxyURL, coreapi.WithTimeout(clientTimeout))
 	var idpType typedIDP
 	switch idp.GetIDPType() {
 	case TypeOkta:

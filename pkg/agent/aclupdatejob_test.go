@@ -126,8 +126,8 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 				if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+test.envName+"/accesscontrollists") {
 					aclReturn, _ := io.ReadAll(req.Body)
 					switch {
-					case req.Method == http.MethodDelete:
-						resp.WriteHeader(http.StatusNoContent)
+					case req.Method == http.MethodPut:
+						fallthrough
 					case req.Method == http.MethodPost:
 						resp.WriteHeader(http.StatusCreated)
 						resp.Write(aclReturn)

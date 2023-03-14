@@ -8,6 +8,8 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -16,8 +18,7 @@ const envACLFormat = "%s-agent-acl"
 // aclUpdateHandler - job that handles updates to the ACL in the environment
 type aclUpdateJob struct {
 	jobs.Job
-	lastTeamIDs []string
-	logger      log.FieldLogger
+	logger log.FieldLogger
 }
 
 func newACLUpdateJob() *aclUpdateJob {
@@ -31,44 +32,73 @@ func newACLUpdateJob() *aclUpdateJob {
 }
 
 func (j *aclUpdateJob) Ready() bool {
-	return true
+	status, _ := hc.GetGlobalStatus()
+	return status == string(hc.OK)
 }
 
 func (j *aclUpdateJob) Status() error {
+	if status, _ := hc.GetGlobalStatus(); status != string(hc.OK) {
+		err := fmt.Errorf("agent is marked as not running")
+		j.logger.WithError(err).Trace("status failed")
+		return err
+	}
 	return nil
 }
 
+func (j *aclUpdateJob) getACLTeamIDs(ri *v1.ResourceInstance) []string {
+	teamIDs := make([]string, 0)
+	acl, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, agent.cfg.GetEnvironmentName())
+	err := acl.FromInstance(ri)
+	if err != nil {
+		return teamIDs
+	}
+	for _, subject := range acl.Spec.Subjects {
+		if subject.Type == v1.TeamOwner {
+			teamIDs = append(teamIDs, subject.ID)
+		}
+	}
+	teamIDs = util.RemoveDuplicateValuesFromStringSlice(teamIDs)
+	sort.Strings(teamIDs)
+	return teamIDs
+}
+
 func (j *aclUpdateJob) Execute() error {
-	if agent.cacheManager.GetAccessControlList() == nil {
-		j.getACLsFromServer()
+	currentACL := agent.cacheManager.GetAccessControlList()
+	if currentACL == nil {
+		currentACL = j.getACLsFromServer()
 	}
 
+	currentTeamIDs := j.getACLTeamIDs(currentACL)
 	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
+	if len(newTeamIDs) == 0 {
+		return nil
+	}
+
 	sort.Strings(newTeamIDs)
-	if j.lastTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(j.lastTeamIDs, "") {
+	if currentTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(currentTeamIDs, "") {
 		return nil
 	}
 	if err := j.updateACL(newTeamIDs); err != nil {
 		return fmt.Errorf("acl update job failed: %s", err)
 	}
-	j.lastTeamIDs = sort.StringSlice(newTeamIDs)
 	return nil
 }
 
-func (j aclUpdateJob) getACLsFromServer() {
+func (j aclUpdateJob) getACLsFromServer() *v1.ResourceInstance {
 	emptyACL, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, agent.cfg.GetEnvironmentName())
 	acls, err := agent.apicClient.GetResources(emptyACL)
 	if err != nil {
-		return
+		return nil
 	}
 
 	for _, acl := range acls {
 		ri, _ := acl.AsInstance()
 		if ri.Name == j.getACLName() {
 			agent.cacheManager.SetAccessControlList(ri)
-			return
+			return ri
 		}
 	}
+	return nil
 }
 
 func (j *aclUpdateJob) getACLName() string {

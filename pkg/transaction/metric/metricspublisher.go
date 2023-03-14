@@ -104,10 +104,12 @@ func (c *metricPublisher) createFilePart(w *multipart.Writer, filename string) (
 func newMetricPublisher(storage storageCache, report *cacheReport) *metricPublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &metricPublisher{
-		apiClient: api.NewSingleEntryClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(), centralCfg.GetClientTimeout()),
-		storage:   storage,
-		report:    report,
-		offline:   agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
+		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
+			api.WithTimeout(centralCfg.GetClientTimeout()),
+			api.WithSingleURL()),
+		storage: storage,
+		report:  report,
+		offline: agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
 	}
 
 	publisher.registerReportJob()

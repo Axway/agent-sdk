@@ -137,7 +137,7 @@ func NewClientWithTimeout(tlsCfg config.TLSConfig, proxyURL string, timeout time
 
 // NewSingleEntryClient - creates a new HTTP client for single entry point with a timeout
 func NewSingleEntryClient(tlsCfg config.TLSConfig, proxyURL string, timeout time.Duration) Client {
-	log.DeprecationWarningReplace("NewClientWithTimeout", "NewClient and WithSingleURL optional func")
+	log.DeprecationWarningReplace("NewSingleEntryClient", "NewClient and WithSingleURL optional func")
 	return NewClient(tlsCfg, proxyURL, WithTimeout(timeout), WithSingleURL())
 }
 

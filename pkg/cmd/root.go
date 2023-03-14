@@ -376,6 +376,10 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 
 			c.healthCheckTicker()
 
+			if util.IsNotTest() && c.agentFeaturesCfg.AgentStatusUpdatesEnabled() {
+				agent.StartAgentStatusUpdate()
+			}
+
 			err = c.commandHandler()
 			if err != nil {
 				log.Error(err.Error())
