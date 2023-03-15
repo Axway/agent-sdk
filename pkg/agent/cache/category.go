@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -13,7 +14,20 @@ import (
 func (c *cacheManager) AddCategory(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
-	c.categoryMap.SetWithSecondaryKey(resource.Name, fmt.Sprintf("title-%s", resource.Title), resource)
+	// get any existing categories with the same title, the oldest one should win the secondary key
+	if cachedCategory := c.GetCategoryWithTitle(resource.Title); cachedCategory != nil {
+		if time.Time(cachedCategory.Metadata.Audit.CreateTimestamp).Before(time.Time(resource.Metadata.Audit.CreateTimestamp)) {
+			// add without the title to the cache
+			c.categoryMap.Set(resource.Name, resource)
+			return
+		}
+		// remove the current secondary key owner
+		c.ApplyResourceReadLock()
+		defer c.ReleaseResourceReadLock()
+		c.categoryMap.DeleteSecondaryKey(formatTitle(resource.Title))
+	}
+
+	c.categoryMap.SetWithSecondaryKey(resource.Name, formatTitle(resource.Title), resource)
 }
 
 // GetCategoryCache - returns the Category cache
@@ -49,7 +63,7 @@ func (c *cacheManager) GetCategoryWithTitle(title string) *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	category, _ := c.categoryMap.GetBySecondaryKey(fmt.Sprintf("title-%s", title))
+	category, _ := c.categoryMap.GetBySecondaryKey(formatTitle(title))
 	if category != nil {
 		ri, ok := category.(*v1.ResourceInstance)
 		if ok {
@@ -64,4 +78,8 @@ func (c *cacheManager) DeleteCategory(name string) error {
 	defer c.setCacheUpdated(true)
 
 	return c.categoryMap.Delete(name)
+}
+
+func formatTitle(title string) string {
+	return fmt.Sprintf("title-%s", title)
 }
