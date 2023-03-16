@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -60,6 +61,11 @@ func createAPIServiceInstanceWithVersion(id, apiID, stage, version string) *v1.R
 func createCategory(name, title string) *v1.ResourceInstance {
 	return &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{
+				Audit: v1.AuditMetadata{
+					CreateTimestamp: v1.Time(time.Now()),
+				},
+			},
 			Name:  name,
 			Title: title,
 		},
@@ -210,6 +216,7 @@ func TestCategoryCache(t *testing.T) {
 	assert.Equal(t, []string{}, m.GetCategoryKeys())
 
 	category1 := createCategory("c1", "category 1")
+	category1a := createCategory("c1-1", "category 1")
 	category2 := createCategory("c2", "category 2")
 
 	m.AddCategory(category1)
@@ -217,13 +224,25 @@ func TestCategoryCache(t *testing.T) {
 	m.AddCategory(category2)
 	assert.ElementsMatch(t, []string{"c1", "c2"}, m.GetCategoryKeys())
 
-	cachedCategory := m.GetCategory("c1")
+	// validate logic for secondary key winner is oldest created category
+	category1a.Metadata.Audit.CreateTimestamp = v1.Time(time.Now().Add(time.Hour))
+	m.AddCategory(category1a)
+	cachedCategory := m.GetCategoryWithTitle("category 1")
+	assert.Equal(t, "c1", cachedCategory.Name, "Expected the older category to be returned by GetCategoryWithTitle")
+	category1a.Metadata.Audit.CreateTimestamp = v1.Time(time.Now().Add(-time.Hour))
+	m.AddCategory(category1a)
+	cachedCategory = m.GetCategoryWithTitle("category 1")
+	assert.Equal(t, "c1-1", cachedCategory.Name, "Expected the older category to be returned by GetCategoryWithTitle")
+
+	cachedCategory = m.GetCategory("c1")
 	assert.Equal(t, category1, cachedCategory)
 
 	cachedCategory = m.GetCategoryWithTitle("category 2")
 	assert.Equal(t, category2, cachedCategory)
 
 	err := m.DeleteCategory("c1")
+	assert.Nil(t, err)
+	err = m.DeleteCategory("c1-1")
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, []string{"c2"}, m.GetCategoryKeys())
 
