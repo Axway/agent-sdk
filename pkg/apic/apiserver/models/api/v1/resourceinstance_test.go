@@ -2,7 +2,7 @@ package v1
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -50,6 +50,7 @@ func TestResourceInstanceMarshalJSON(t *testing.T) {
 	r2 := &ResourceInstance{}
 
 	err = json.Unmarshal(bts, r2)
+	assert.Nil(t, err)
 	assert.Equal(t, json.RawMessage(bts), r2.GetRawResource())
 	assert.Equal(t, r1.Spec, r2.Spec)
 	assert.Equal(t, r1.Owner, r2.Owner)
@@ -134,7 +135,7 @@ func TestResourceInstance_UnmarshalMarshallJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			inputFile, _ := os.Open(tt.testFile)
-			inputData, _ := ioutil.ReadAll(inputFile)
+			inputData, _ := io.ReadAll(inputFile)
 
 			// unmarshal the json to an object
 			ri := &ResourceInstance{}
@@ -158,7 +159,7 @@ func TestResourceInstance_UnmarshalMarshallJSON(t *testing.T) {
 
 			// unmarshal expected to map[string]interface{}
 			expectedFile, _ := os.Open(tt.outFile)
-			expectedBytes, _ := ioutil.ReadAll(expectedFile)
+			expectedBytes, _ := io.ReadAll(expectedFile)
 			expectedData := map[string]interface{}{}
 			json.Unmarshal(expectedBytes, &expectedData)
 

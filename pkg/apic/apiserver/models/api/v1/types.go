@@ -49,8 +49,12 @@ type Reference struct {
 	Kind string `json:"kind,omitempty"`
 	// The name of the resource that it is referring to.
 	Name string `json:"name,omitempty"`
+	// The kind of the scope of the resource that it is referring to.
+	ScopeKind string `json:"scopeKind,omitempty"`
 	// The name of the scope of the resource that it is referring to.
-	Scope string `json:"scope,omitempty"`
+	ScopeName string `json:"scopeName,omitempty"`
+	// The URL to access the resource that it is referring to.
+	SelfLink string `json:"selfLink,omitempty"`
 	// Defines the type of the reference: * soft - spec property that has this reference will get nulled out if the referenced resource gets removed. * hard - dictates that the current resource will get removed when the referenced resource gets removed.
 	Type string `json:"type,omitempty"`
 }
