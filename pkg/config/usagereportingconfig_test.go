@@ -38,7 +38,6 @@ type expected struct {
 }
 
 var defaultExpected = expected{
-	url:                "https://lighthouse.admin.axway.com",
 	publish:            true,
 	metric:             true,
 	subscriptionMetric: false,
@@ -153,13 +152,6 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 
 	validateconfig(t, defaultExpected, cfg)
 
-	// invalid URL
-	currentURL := cfg.GetURL()
-	cfg.(*UsageReportingConfiguration).URL = "notAURL"
-	err = validateUsageReporting(cfg)
-	assert.NotNil(t, err)
-	cfg.(*UsageReportingConfiguration).URL = currentURL
-
 	// invalid Interval
 	currentInterval := cfg.GetInterval()
 	cfg.(*UsageReportingConfiguration).Interval = time.Millisecond
@@ -210,6 +202,8 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 
 func TestNewUsageReporting(t *testing.T) {
 	cfg := NewUsageReporting("https://platform.axway.com")
+	expected := defaultExpected
+	expected.url = "https://platform.axway.com"
 	assert.NotNil(t, cfg)
-	validateconfig(t, defaultExpected, cfg)
+	validateconfig(t, expected, cfg)
 }
