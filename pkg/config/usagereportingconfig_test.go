@@ -70,37 +70,15 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	props := properties.NewProperties(rootCmd)
 	AddUsageReportingProperties(props)
 
-	// Test URL old env vars
-	os.Setenv(oldUsageReportingURLEnvVar, "http://lighthouse-old.com")
+	// Test Interval old env vars
+	os.Setenv(oldUsageReportingIntervalEnvVar, "30m")
 	expected := defaultExpected
-	expected.url = "http://lighthouse-old.com"
+	expected.interval = 30 * time.Minute
+	expected.granularity = int((30 * time.Minute).Milliseconds())
 
 	cfg := ParseUsageReportingConfig(props)
 	assert.NotNil(t, cfg)
 	err := validateUsageReporting(cfg)
-	assert.Nil(t, err)
-
-	validateconfig(t, expected, cfg)
-
-	// Test URL new env vars
-	os.Setenv(newUsageReportingURLEnvVar, defaultExpected.url)
-
-	expected = defaultExpected
-	cfg = ParseUsageReportingConfig(props)
-	assert.NotNil(t, cfg)
-	err = validateUsageReporting(cfg)
-	assert.Nil(t, err)
-	validateconfig(t, expected, cfg)
-
-	// Test Interval old env vars
-	os.Setenv(oldUsageReportingIntervalEnvVar, "30m")
-	expected = defaultExpected
-	expected.interval = 30 * time.Minute
-	expected.granularity = int((30 * time.Minute).Milliseconds())
-
-	cfg = ParseUsageReportingConfig(props)
-	assert.NotNil(t, cfg)
-	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
 	validateconfig(t, expected, cfg)
 
@@ -231,7 +209,7 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 }
 
 func TestNewUsageReporting(t *testing.T) {
-	cfg := NewUsageReporting()
+	cfg := NewUsageReporting("https://platform.axway.com")
 	assert.NotNil(t, cfg)
 	validateconfig(t, defaultExpected, cfg)
 }
