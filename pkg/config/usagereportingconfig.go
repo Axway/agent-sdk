@@ -1,9 +1,9 @@
 package config
 
 import (
-	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -14,11 +14,9 @@ import (
 
 const (
 	// DEPRECATE remove old and new env vars as well as checks below
-	oldUsageReportingURLEnvVar           = "CENTRAL_LIGHTHOUSEURL"
 	oldUsageReportingPublishEnvVar       = "CENTRAL_PUBLISHUSAGE"
 	oldUsageReportingPublishMetricEnvVar = "CENTRAL_PUBLISHMETRIC"
 	oldUsageReportingIntervalEnvVar      = "CENTRAL_EVENTAGGREGATIONINTERVAL"
-	newUsageReportingURLEnvVar           = "CENTRAL_USAGEREPORTING_URL"
 	newUsageReportingPublishEnvVar       = "CENTRAL_USAGEREPORTING_PUBLISH"
 	newUsageReportingPublishMetricEnvVar = "CENTRAL_USAGEREPORTING_PUBLISHMETRIC"
 	newUsageReportingIntervalEnvVar      = "CENTRAL_USAGEREPORTING_INTERVAL"
@@ -29,7 +27,6 @@ const (
 	qaUsageReportingUsageScheduleEnvVar   = "QA_CENTRAL_USAGEREPORTING_USAGESCHEDULE"
 
 	// Config paths
-	pathUsageReportingURL           = "central.usagereporting.url"
 	pathUsageReportingPublish       = "central.usagereporting.publish"
 	pathUsageReportingPublishMetric = "central.usagereporting.publishMetric"
 	pathUsageReportingUsageSchedule = "central.usagereporting.usageSchedule"
@@ -56,23 +53,23 @@ type UsageReportingConfig interface {
 // UsageReportingConfiguration - structure to hold all usage reporting settings
 type UsageReportingConfiguration struct {
 	UsageReportingConfig
-	URL               string        `config:"url"`
 	Publish           bool          `config:"publish"`
 	PublishMetric     bool          `config:"publishMetric"`
 	Interval          time.Duration `config:"interval"`
 	UsageSchedule     string        `config:"usageSchedule"`
 	Offline           bool          `config:"offline"`
 	Schedule          string        `config:"offlineSchedule"`
+	URL               string
 	reportSchedule    string
 	reportGranularity int
 	qaVars            bool
 }
 
 // NewUsageReporting - Creates the default usage reporting config
-func NewUsageReporting() UsageReportingConfig {
+func NewUsageReporting(platformURL string) UsageReportingConfig {
 	defaultInterval := 15 * time.Minute
 	return &UsageReportingConfiguration{
-		URL:            "https://lighthouse.admin.axway.com",
+		URL:            platformURL,
 		Publish:        true,
 		PublishMetric:  true,
 		Interval:       defaultInterval,
@@ -81,18 +78,6 @@ func NewUsageReporting() UsageReportingConfig {
 		Schedule:       "@hourly",
 		reportSchedule: "@monthly",
 		qaVars:         false,
-	}
-}
-
-func (u *UsageReportingConfiguration) validateURL() {
-	if val := os.Getenv(newUsageReportingURLEnvVar); val != "" {
-		return // this env var is set use what has been parsed
-	}
-
-	// check if the old env var had a value
-	if val := os.Getenv(oldUsageReportingURLEnvVar); val != "" {
-		log.DeprecationWarningReplace(oldUsageReportingURLEnvVar, newUsageReportingURLEnvVar)
-		u.URL = val
 	}
 }
 
@@ -141,13 +126,6 @@ func (u *UsageReportingConfiguration) validatePublishMetric() {
 
 // Validate -
 func (u *UsageReportingConfiguration) Validate() {
-	u.validateURL() // DEPRECATE
-	if u.URL != "" {
-		if _, err := url.ParseRequestURI(u.URL); err != nil {
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingURL))
-		}
-	}
-
 	u.validateInterval() // DEPRECATE
 	eventAgg := u.Interval
 	if eventAgg < 60*time.Second {
@@ -294,7 +272,6 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 
 // AddUsageReportingProperties - Adds the command properties needed for Uage Reporting Settings
 func AddUsageReportingProperties(props properties.Properties) {
-	props.AddStringProperty(pathUsageReportingURL, "https://lighthouse.admin.axway.com", "The URL to publish usage events to in the Amplify platform. Default https://lighthouse.admin.axway.com")
 	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
 	props.AddBoolProperty(pathUsageReportingPublishMetric, true, "Indicates if the agent can publish metric events to Amplify platform. Default to true")
 	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric events will be generated")
@@ -306,10 +283,10 @@ func AddUsageReportingProperties(props properties.Properties) {
 // ParseUsageReportingConfig - Parses the Usage Reporting Config values from the command line
 func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig {
 	// Start with the default config
-	cfg := NewUsageReporting().(*UsageReportingConfiguration)
+	platformURL := strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
+	cfg := NewUsageReporting(platformURL).(*UsageReportingConfiguration)
 
 	// update the config
-	cfg.URL = props.StringPropertyValue(pathUsageReportingURL)
 	cfg.Publish = props.BoolPropertyValue(pathUsageReportingPublish)
 	cfg.PublishMetric = props.BoolPropertyValue(pathUsageReportingPublishMetric)
 	cfg.Interval = props.DurationPropertyValue(pathUsageReportingInterval)

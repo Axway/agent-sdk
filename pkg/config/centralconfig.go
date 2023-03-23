@@ -13,6 +13,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
+const urlCutSet = " /"
+
 // AgentType - Defines the type of agent
 type AgentType int
 
@@ -200,6 +202,7 @@ type GRPCConfig struct {
 
 // NewCentralConfig - Creates the default central config
 func NewCentralConfig(agentType AgentType) CentralConfig {
+	platformURL := "https://platform.axway.com"
 	return &CentralConfiguration{
 		AgentType:                 agentType,
 		TeamName:                  "",
@@ -208,13 +211,13 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		TLS:                       NewTLSConfig(),
 		PollInterval:              60 * time.Second,
 		ClientTimeout:             60 * time.Second,
-		PlatformURL:               "https://platform.axway.com",
+		PlatformURL:               platformURL,
 		SingleURL:                 "",
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
 		APIValidationFrequency:    1 * time.Hour,
-		UsageReporting:            NewUsageReporting(),
+		UsageReporting:            NewUsageReporting(platformURL),
 		JobExecutionTimeout:       5 * time.Minute,
 		CacheStorageInterval:      10 * time.Second,
 		GRPCCfg:                   GRPCConfig{},
@@ -228,6 +231,7 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config := NewCentralConfig(agentType).(*CentralConfiguration)
 	config.TenantID = "1234567890"
 	config.URL = "https://central.com"
+	config.PlatformURL = "https://platform.axway.com"
 	config.Environment = "environment"
 	config.Auth = newTestAuthConfig()
 	config.MigrationSettings = newTestMigrationConfig()
@@ -517,7 +521,7 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	// Some paths in DA are checking usage reporting .  So return an empty usage reporting config if nil
 	// Find All References to see DA scenarios checking for this config
 	if c.UsageReporting == nil {
-		return NewUsageReporting()
+		return NewUsageReporting(c.PlatformURL)
 	}
 	return c.UsageReporting
 }
@@ -836,7 +840,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
-			URL:        props.StringPropertyValue(pathAuthURL),
+			URL:        strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
 			Realm:      props.StringPropertyValue(pathAuthRealm),
 			ClientID:   props.StringPropertyValue(pathAuthClientID),
 			PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
@@ -861,9 +865,9 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
-	cfg.URL = props.StringPropertyValue(pathURL)
-	cfg.SingleURL = props.StringPropertyValue(pathSingleURL)
-	cfg.PlatformURL = props.StringPropertyValue(pathPlatformURL)
+	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
+	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
+	cfg.PlatformURL = strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 	if supportsTraceability(agentType) {

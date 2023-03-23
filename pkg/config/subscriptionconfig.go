@@ -122,7 +122,7 @@ const (
 	pathSubscriptionsNotificationsSMTPUnsubscribeFailedBody    = "central.subscriptions.notifications.smtp.unsubscribeFailed.body"
 )
 
-//EmailTemplate -
+// EmailTemplate -
 type EmailTemplate struct {
 	Subject string `config:"subject"`
 	Body    string `config:"body"`
@@ -180,14 +180,14 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 			SubscriptionApprovalWebhook: &WebhookConfiguration{
-				URL:     props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL),
+				URL:     strings.TrimRight(props.StringPropertyValue(pathSubscriptionsApprovalWebhookURL), urlCutSet),
 				Headers: props.StringPropertyValue(pathSubscriptionsApprovalWebhookHeaders),
 				Secret:  props.StringPropertyValue(pathSubscriptionsApprovalWebhookSecret),
 			},
 		},
 		Notifications: &NotificationConfig{
 			Webhook: &WebhookConfiguration{
-				URL:     props.StringPropertyValue(pathSubscriptionsNotificationsWebhookURL),
+				URL:     strings.TrimRight(props.StringPropertyValue(pathSubscriptionsNotificationsWebhookURL), urlCutSet),
 				Headers: props.StringPropertyValue(pathSubscriptionsNotificationsWebhookHeaders),
 			},
 			SMTP: &smtp{

@@ -58,7 +58,7 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 
 	request := api.Request{
 		Method:  api.POST,
-		URL:     agent.GetCentralConfig().GetUsageReportingConfig().GetURL() + "/api/v1/usage/automatic",
+		URL:     agent.GetCentralConfig().GetUsageReportingConfig().GetURL() + "/api/v1/usage",
 		Headers: headers,
 		Body:    b.Bytes(),
 	}
