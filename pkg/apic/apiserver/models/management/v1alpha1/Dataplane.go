@@ -40,9 +40,10 @@ func init() {
 // Dataplane Resource
 type Dataplane struct {
 	apiv1.ResourceMeta
-	Owner        *apiv1.Owner  `json:"owner"`
-	Secretschema interface{}   `json:"secretschema"`
-	Spec         DataplaneSpec `json:"spec"`
+	Owner        *apiv1.Owner      `json:"owner"`
+	Secretschema interface{}       `json:"secretschema"`
+	Security     DataplaneSecurity `json:"security"`
+	Spec         DataplaneSpec     `json:"spec"`
 }
 
 // NewDataplane creates an empty *Dataplane
@@ -129,6 +130,7 @@ func (res *Dataplane) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["secretschema"] = res.Secretschema
+	out["security"] = res.Security
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -168,6 +170,20 @@ func (res *Dataplane) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "secretschema")
 		err = json.Unmarshal(sr, &res.Secretschema)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Security
+	if v, ok := aux.SubResources["security"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "security")
+		err = json.Unmarshal(sr, &res.Security)
 		if err != nil {
 			return err
 		}

@@ -20,7 +20,6 @@ type Set struct {
 	DataplaneManagementV1alpha1                      *management_v1alpha1.UnscopedDataplaneClient
 	DataplaneSecretManagementV1alpha1                *management_v1alpha1.UnscopedDataplaneSecretClient
 	TraceabilityAgentManagementV1alpha1              *management_v1alpha1.UnscopedTraceabilityAgentClient
-	GovernanceAgentManagementV1alpha1                *management_v1alpha1.UnscopedGovernanceAgentClient
 	EnvironmentManagementV1alpha1                    *management_v1alpha1.EnvironmentClient
 	APIServiceManagementV1alpha1                     *management_v1alpha1.UnscopedAPIServiceClient
 	APIServiceRevisionManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceRevisionClient
@@ -41,26 +40,10 @@ type Set struct {
 	AssetMappingTemplateManagementV1alpha1           *management_v1alpha1.UnscopedAssetMappingTemplateClient
 	AccessRequestDefinitionManagementV1alpha1        *management_v1alpha1.UnscopedAccessRequestDefinitionClient
 	AccessRequestManagementV1alpha1                  *management_v1alpha1.UnscopedAccessRequestClient
-	DeploymentManagementV1alpha1                     *management_v1alpha1.UnscopedDeploymentClient
-	AmplifyConfigManagementV1alpha1                  *management_v1alpha1.UnscopedAmplifyConfigClient
-	AmplifyRuntimeConfigManagementV1alpha1           *management_v1alpha1.UnscopedAmplifyRuntimeConfigClient
-	VirtualHostManagementV1alpha1                    *management_v1alpha1.UnscopedVirtualHostClient
 	ManagedApplicationManagementV1alpha1             *management_v1alpha1.UnscopedManagedApplicationClient
 	CredentialManagementV1alpha1                     *management_v1alpha1.UnscopedCredentialClient
-	VirtualAPIManagementV1alpha1                     *management_v1alpha1.VirtualAPIClient
-	VirtualAPIReleaseManagementV1alpha1              *management_v1alpha1.VirtualAPIReleaseClient
-	CorsRuleManagementV1alpha1                       *management_v1alpha1.UnscopedCorsRuleClient
-	AmplifyJWTAuthRuleManagementV1alpha1             *management_v1alpha1.UnscopedAmplifyJWTAuthRuleClient
-	AmplifyOAuth2AuthRuleManagementV1alpha1          *management_v1alpha1.UnscopedAmplifyOAuth2AuthRuleClient
-	APIKeyAuthRuleManagementV1alpha1                 *management_v1alpha1.UnscopedAPIKeyAuthRuleClient
-	RateLimitRuleManagementV1alpha1                  *management_v1alpha1.UnscopedRateLimitRuleClient
 	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
-	ExternalSecretManagementV1alpha1                 *management_v1alpha1.UnscopedExternalSecretClient
-	VirtualServiceManagementV1alpha1                 *management_v1alpha1.UnscopedVirtualServiceClient
-	OAS3DocumentManagementV1alpha1                   *management_v1alpha1.UnscopedOAS3DocumentClient
-	GraphQLDocumentManagementV1alpha1                *management_v1alpha1.UnscopedGraphQLDocumentClient
 	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
-	ReleaseTagManagementV1alpha1                     *management_v1alpha1.UnscopedReleaseTagClient
 	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
 	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
 	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
@@ -77,6 +60,7 @@ type Set struct {
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
 	ConsumerProductVisibilityCatalogV1alpha1         *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
+	CategoryVisibilityCatalogV1alpha1                *catalog_v1alpha1.UnscopedCategoryVisibilityClient
 	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
@@ -98,6 +82,7 @@ type Set struct {
 	AccessControlListCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                                *catalog_v1.CategoryClient
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
+	CategoryVisibilityCatalogV1                      *catalog_v1.UnscopedCategoryVisibilityClient
 	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
@@ -136,10 +121,6 @@ func New(b cAPIV1.Base) *Set {
 	s.TraceabilityAgentManagementV1alpha1, err = management_v1alpha1.NewTraceabilityAgentClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.TraceabilityAgent: %s", err))
-	}
-	s.GovernanceAgentManagementV1alpha1, err = management_v1alpha1.NewGovernanceAgentClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.GovernanceAgent: %s", err))
 	}
 	s.EnvironmentManagementV1alpha1, err = management_v1alpha1.NewEnvironmentClient(b)
 	if err != nil {
@@ -221,22 +202,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AccessRequest: %s", err))
 	}
-	s.DeploymentManagementV1alpha1, err = management_v1alpha1.NewDeploymentClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Deployment: %s", err))
-	}
-	s.AmplifyConfigManagementV1alpha1, err = management_v1alpha1.NewAmplifyConfigClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyConfig: %s", err))
-	}
-	s.AmplifyRuntimeConfigManagementV1alpha1, err = management_v1alpha1.NewAmplifyRuntimeConfigClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyRuntimeConfig: %s", err))
-	}
-	s.VirtualHostManagementV1alpha1, err = management_v1alpha1.NewVirtualHostClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualHost: %s", err))
-	}
 	s.ManagedApplicationManagementV1alpha1, err = management_v1alpha1.NewManagedApplicationClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ManagedApplication: %s", err))
@@ -245,61 +210,13 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Credential: %s", err))
 	}
-	s.VirtualAPIManagementV1alpha1, err = management_v1alpha1.NewVirtualAPIClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualAPI: %s", err))
-	}
-	s.VirtualAPIReleaseManagementV1alpha1, err = management_v1alpha1.NewVirtualAPIReleaseClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualAPIRelease: %s", err))
-	}
-	s.CorsRuleManagementV1alpha1, err = management_v1alpha1.NewCorsRuleClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.CorsRule: %s", err))
-	}
-	s.AmplifyJWTAuthRuleManagementV1alpha1, err = management_v1alpha1.NewAmplifyJWTAuthRuleClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyJWTAuthRule: %s", err))
-	}
-	s.AmplifyOAuth2AuthRuleManagementV1alpha1, err = management_v1alpha1.NewAmplifyOAuth2AuthRuleClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AmplifyOAuth2AuthRule: %s", err))
-	}
-	s.APIKeyAuthRuleManagementV1alpha1, err = management_v1alpha1.NewAPIKeyAuthRuleClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APIKeyAuthRule: %s", err))
-	}
-	s.RateLimitRuleManagementV1alpha1, err = management_v1alpha1.NewRateLimitRuleClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.RateLimitRule: %s", err))
-	}
 	s.AssetMappingManagementV1alpha1, err = management_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AssetMapping: %s", err))
 	}
-	s.ExternalSecretManagementV1alpha1, err = management_v1alpha1.NewExternalSecretClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ExternalSecret: %s", err))
-	}
-	s.VirtualServiceManagementV1alpha1, err = management_v1alpha1.NewVirtualServiceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.VirtualService: %s", err))
-	}
-	s.OAS3DocumentManagementV1alpha1, err = management_v1alpha1.NewOAS3DocumentClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.OAS3Document: %s", err))
-	}
-	s.GraphQLDocumentManagementV1alpha1, err = management_v1alpha1.NewGraphQLDocumentClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.GraphQLDocument: %s", err))
-	}
 	s.WebhookManagementV1alpha1, err = management_v1alpha1.NewWebhookClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Webhook: %s", err))
-	}
-	s.ReleaseTagManagementV1alpha1, err = management_v1alpha1.NewReleaseTagClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ReleaseTag: %s", err))
 	}
 	s.CredentialRequestDefinitionManagementV1alpha1, err = management_v1alpha1.NewCredentialRequestDefinitionClient(b)
 	if err != nil {
@@ -364,6 +281,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ConsumerProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewConsumerProductVisibilityClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ConsumerProductVisibility: %s", err))
+	}
+	s.CategoryVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewCategoryVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.CategoryVisibility: %s", err))
 	}
 	s.SupportContactCatalogV1alpha1, err = catalog_v1alpha1.NewSupportContactClient(b)
 	if err != nil {
@@ -448,6 +369,10 @@ func New(b cAPIV1.Base) *Set {
 	s.MarketplaceCatalogV1, err = catalog_v1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Marketplace: %s", err))
+	}
+	s.CategoryVisibilityCatalogV1, err = catalog_v1.NewCategoryVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.CategoryVisibility: %s", err))
 	}
 	s.SupportContactCatalogV1, err = catalog_v1.NewSupportContactClient(b)
 	if err != nil {
