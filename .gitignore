@@ -34,7 +34,6 @@ coverage.html
 cache_save_file.json
 pkg/config/path
 
-openapitools.json
 main-resources.json
 sub-resources.json
 vendor
