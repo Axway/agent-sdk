@@ -103,10 +103,6 @@ func Test_parseWatchTopic(t *testing.T) {
 			wt, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", management.TraceabilityAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
 			assert.NotNil(t, wt)
-
-			wt, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", management.GovernanceAgentGVK().GroupKind, features))
-			assert.Nil(t, err)
-			assert.NotNil(t, wt)
 		})
 	}
 }

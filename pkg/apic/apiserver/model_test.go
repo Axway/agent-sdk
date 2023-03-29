@@ -298,68 +298,6 @@ func TestAPIServiceFromInstance(t *testing.T) {
 	assert.Equal(t, svc1, svc2)
 }
 
-// should unmarshal a populated governance agent into an empty governance agent.
-// Unmarshalling should handle the pre-defined sub resources and any dynamic sub resources.
-func TestGovernanceAgentResource(t *testing.T) {
-	gov1 := &m.GovernanceAgent{
-		ResourceMeta: v1.ResourceMeta{
-			GroupVersionKind: v1.GroupVersionKind{
-				GroupKind: v1.GroupKind{
-					Group: "management",
-					Kind:  "GovernanceAgent",
-				},
-				APIVersion: "v1alpha1",
-			},
-			Name:  "name",
-			Title: "title",
-			Metadata: v1.Metadata{
-				ID: "123",
-			},
-		},
-		Agentconfigstatus: m.GovernanceAgentAgentconfigstatus{
-			ResourceVersion: "321",
-			ErrorMessage:    "msg",
-			ConfigState:     "state",
-		},
-		Spec: m.GovernanceAgentSpec{
-			DataplaneType: "aws",
-			Config: map[string]interface{}{
-				"abc": "123",
-			},
-		},
-		Status: m.GovernanceAgentStatus{
-			Version:    "v1",
-			SdkVersion: "1.0.0",
-		},
-	}
-	gov1.SetSubResource("x-agent-details", map[string]interface{}{
-		"abc": "1223",
-	})
-	bts, err := json.Marshal(gov1)
-	assert.Nil(t, err)
-	assert.NotNil(t, bts)
-
-	gov2 := &m.GovernanceAgent{}
-
-	err = json.Unmarshal(bts, gov2)
-	assert.Nil(t, err)
-
-	// expect that the sub resources defined on the gov1 resource are contained in the SubResource map
-	assert.Contains(t, gov2.SubResources, "x-agent-details")
-	// SubResources should not contain any field already defined on the resource
-	assert.NotContains(t, gov2.SubResources, "status")
-	assert.NotContains(t, gov2.SubResources, "agentconfigstatus")
-
-	// expect that the two resources contain the same data when marshalled into bytes
-	ri1, err := gov1.AsInstance()
-	assert.Nil(t, err)
-
-	ri2, err := gov2.AsInstance()
-	assert.Nil(t, err)
-
-	assert.Equal(t, ri1.GetRawResource(), ri2.GetRawResource())
-}
-
 // getTimestamp - Returns current timestamp formatted for API Server
 func getTimestamp() v1.Time {
 	activityTime := time.Now()
