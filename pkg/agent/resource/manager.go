@@ -190,8 +190,6 @@ func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 		agentRes = management.NewDiscoveryAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
 	case config.TraceabilityAgent:
 		agentRes = management.NewTraceabilityAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
-	case config.GovernanceAgent:
-		agentRes = management.NewGovernanceAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
 	}
 	var agentInstance *v1.ResourceInstance
 	if agentRes != nil {
@@ -235,8 +233,6 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	case management.TraceabilityAgentGVK().Kind:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
-	case management.GovernanceAgentGVK().Kind:
-		mergeGovernanceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
 	}

@@ -12,7 +12,6 @@ package management
 // AccessRequestSpecQuota Quota information for accessing the api. (management.v1alpha1.AccessRequest)
 type AccessRequestSpecQuota struct {
 	// The limit of the allowed quota for the access request.
-	// GENERATE: The following code has been modified after code generation
-	Limit    float64 `json:"limit"`
-	Interval string  `json:"interval"`
+	Limit    int32  `json:"limit"`
+	Interval string `json:"interval"`
 }

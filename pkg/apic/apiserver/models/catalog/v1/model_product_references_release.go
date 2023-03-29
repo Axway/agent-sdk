@@ -17,4 +17,6 @@ type ProductReferencesRelease struct {
 	Version string `json:"version,omitempty"`
 	// The AssetRelease state.
 	State string `json:"state,omitempty"`
+	// APIService references belonging to referenced AssetReleases.
+	ApiServices []string `json:"apiServices,omitempty"`
 }

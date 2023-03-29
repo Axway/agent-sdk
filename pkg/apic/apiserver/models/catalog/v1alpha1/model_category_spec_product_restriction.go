@@ -12,5 +12,5 @@ package catalog
 // CategorySpecProductRestriction struct for CategorySpecProductRestriction
 type CategorySpecProductRestriction struct {
 	Type        string                                    `json:"type"`
-	Marketplace CategorySpecProductRestrictionMarketplace `json:"marketplace"`
+	Marketplace CategorySpecProductRestrictionMarketplace `json:"marketplace,omitempty"`
 }

@@ -19,8 +19,6 @@ if [ -z "${PORT}" ]; then export PORT=443; fi
 export GO_POST_PROCESS_FILE="`command -v gofmt` -w"
 export GO111MODULE=on
 
-openapi-generator-cli version-manager set 4.3.1
-
 if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
   # update all go imports
   goimports -w=true ${OUTDIR}
@@ -52,5 +50,3 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
 else
   echo "FAILED: generating resources"
 fi
-
-rm ./openapitools.json

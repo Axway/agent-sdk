@@ -9,10 +9,10 @@
 
 package catalog
 
-// CategorySpecProductRestrictionMarketplace Defines category's marketplace properties.
+// CategorySpecProductRestrictionMarketplace Defines properties to be applied to all marketplaces.
 type CategorySpecProductRestrictionMarketplace struct {
-	// Defines if the Category is featured in the marketplace.
-	Featured bool `json:"featured"`
+	// Property not used anymore. CategoryVisibility resource to be used to control the featured property of the Category in a specific Marketplace.
+	Featured bool `json:"featured,omitempty"`
 	// Defines if the Category is visible in the marketplace.
 	Visible bool `json:"visible"`
 }

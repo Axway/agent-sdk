@@ -103,10 +103,6 @@ func Test_parseWatchTopic(t *testing.T) {
 			wt, err = parseWatchTopicTemplate(NewTraceWatchTopic("name", "scope", management.TraceabilityAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
 			assert.NotNil(t, wt)
-
-			wt, err = parseWatchTopicTemplate(NewGovernanceAgentWatchTopic("name", "scope", management.GovernanceAgentGVK().GroupKind, features))
-			assert.Nil(t, err)
-			assert.NotNil(t, wt)
 		})
 	}
 }
@@ -149,20 +145,6 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 		{
 			name:      "should create a watch topic for a discovery agent if it does not exist",
 			agentType: config.DiscoveryAgent,
-			hasErr:    false,
-			client: &mockAPIClient{
-				getErr: fmt.Errorf("not found"),
-				ri: &apiv1.ResourceInstance{
-					ResourceMeta: apiv1.ResourceMeta{
-						Name: "wt-name",
-					},
-				},
-			},
-			filterList: []config.ResourceFilter{},
-		},
-		{
-			name:      "should create a watch topic for a governance agent if it does not exist",
-			agentType: config.GovernanceAgent,
 			hasErr:    false,
 			client: &mockAPIClient{
 				getErr: fmt.Errorf("not found"),

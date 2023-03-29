@@ -24,7 +24,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"Environment", "Integration", "K8SCluster", "Mesh", "VirtualAPI", "VirtualAPIRelease", "WatchTopic"}
+	AccessControlListScopes = []string{"Environment", "Integration", "K8SCluster", "Mesh", "WatchTopic"}
 )
 
 const AccessControlListResourceName = "accesscontrollists"

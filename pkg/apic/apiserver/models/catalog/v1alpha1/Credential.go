@@ -41,6 +41,7 @@ func init() {
 type Credential struct {
 	apiv1.ResourceMeta
 	Data        interface{}           `json:"data"`
+	Expiration  CredentialExpiration  `json:"expiration"`
 	Marketplace CredentialMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner          `json:"owner"`
 	Policies    CredentialPolicies    `json:"policies"`
@@ -134,6 +135,7 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 	}
 
 	out["data"] = res.Data
+	out["expiration"] = res.Expiration
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["policies"] = res.Policies
@@ -179,6 +181,20 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "data")
 		err = json.Unmarshal(sr, &res.Data)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Expiration
+	if v, ok := aux.SubResources["expiration"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "expiration")
+		err = json.Unmarshal(sr, &res.Expiration)
 		if err != nil {
 			return err
 		}

@@ -13,4 +13,6 @@ package catalog
 type ProductReferences struct {
 	// Computed latest AssetReleases for each Asset reference in the Product.
 	Assets []ProductReferencesAssets `json:"assets,omitempty"`
+	// The marketplaces this product has been published to.
+	Marketplaces []ProductReferencesMarketplaces `json:"marketplaces,omitempty"`
 }

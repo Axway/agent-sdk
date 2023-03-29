@@ -52,25 +52,6 @@ func createTraceabilityAgentRes(id, name, dataplane, team string) *v1.ResourceIn
 	return instance
 }
 
-func createGovernanceAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
-	res := &management.GovernanceAgent{
-		ResourceMeta: v1.ResourceMeta{
-			Name: name,
-			Metadata: v1.Metadata{
-				ID: id,
-			},
-		},
-		Spec: management.GovernanceAgentSpec{
-			DataplaneType: dataplane,
-			Config: map[string]interface{}{
-				"team": team,
-			},
-		},
-	}
-	instance, _ := res.AsInstance()
-	return instance
-}
-
 func TestNewManager(t *testing.T) {
 	cfg := &config.CentralConfiguration{}
 	m, err := NewAgentResourceManager(cfg, nil, nil)
@@ -123,13 +104,6 @@ func TestAgentConfigOverride(t *testing.T) {
 			agentName:       "Test-TA",
 			resource:        createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", ""),
 			updatedResource: createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", "TestTeam"),
-		},
-		{
-			name:            "GovernanceAgent override",
-			agentType:       config.GovernanceAgent,
-			agentName:       "Test-GA",
-			resource:        createGovernanceAgentRes("111", "Test-GA", "test-dataplane", ""),
-			updatedResource: createGovernanceAgentRes("111", "Test-GA", "test-dataplane", "TestTeam"),
 		},
 	}
 
@@ -196,12 +170,6 @@ func TestAgentUpdateStatus(t *testing.T) {
 			agentType: config.TraceabilityAgent,
 			agentName: "Test-TA",
 			resource:  createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", ""),
-		},
-		{
-			name:      "GovernanceAgent override",
-			agentType: config.GovernanceAgent,
-			agentName: "Test-GA",
-			resource:  createGovernanceAgentRes("111", "Test-GA", "test-dataplane", ""),
 		},
 		{
 			name:      "Create DA resource",

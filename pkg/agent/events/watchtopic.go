@@ -71,9 +71,6 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 	case config.TraceabilityAgent:
 		agentResourceGroupKind = management.TraceabilityAgentGVK().GroupKind
 		tmplValuesFunc = NewTraceWatchTopic
-	case config.GovernanceAgent:
-		agentResourceGroupKind = management.GovernanceAgentGVK().GroupKind
-		tmplValuesFunc = NewGovernanceAgentWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
 	}
@@ -290,7 +287,6 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: management.AmplifyRuntimeConfigGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{

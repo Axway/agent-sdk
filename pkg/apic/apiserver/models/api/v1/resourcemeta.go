@@ -196,10 +196,8 @@ func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	rawSubs := map[string]interface{}{}
 	subResources := rm.SubResources
 
-	if subResources != nil {
-		for key, value := range subResources {
-			rawSubs[key] = value
-		}
+	for key, value := range subResources {
+		rawSubs[key] = value
 	}
 
 	// create an alias for *ResourceMeta to avoid a circular reference while marshalling.
