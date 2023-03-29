@@ -157,20 +157,6 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			filterList: []config.ResourceFilter{},
 		},
 		{
-			name:      "should create a watch topic for a governance agent if it does not exist",
-			agentType: config.GovernanceAgent,
-			hasErr:    false,
-			client: &mockAPIClient{
-				getErr: fmt.Errorf("not found"),
-				ri: &apiv1.ResourceInstance{
-					ResourceMeta: apiv1.ResourceMeta{
-						Name: "wt-name",
-					},
-				},
-			},
-			filterList: []config.ResourceFilter{},
-		},
-		{
 			name:      "should create a watch topic for a trace agent with custom filter if it does not exist",
 			agentType: config.TraceabilityAgent,
 			hasErr:    false,
