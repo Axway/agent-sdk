@@ -39,7 +39,6 @@ include:
   - project: "scurity/gitlabci"
     ref: master
     file:
-      - "/.gitlab-ci-prepcsr.yml"
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
