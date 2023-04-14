@@ -815,8 +815,8 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		existingRI, err = c.caches.GetAPIServiceInstanceByName(data.Name)
 	}
 
-	updateRI := false
-	updateAgentDetails := false
+	updateRI := true
+	updateAgentDetails := true
 
 	if err == nil && existingRI != nil {
 		url = c.createAPIServerURL(data.GetSelfLink())
@@ -825,15 +825,15 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		// check if either hash or title has changed and mark for update
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
-		if oldHash != newHash || existingRI.Title != data.Title {
-			updateRI = true
+		if oldHash == newHash && existingRI.Title == data.Title {
+			updateRI = false
 		}
 
 		// check if x-agent-details have changed and mark for update
 		oldAgentDetails := util.GetAgentDetails(existingRI)
 		newAgentDetails := util.GetAgentDetails(data)
 		if util.MapsEqual(oldAgentDetails, newAgentDetails) {
-			updateAgentDetails = true
+			updateAgentDetails = false
 		}
 
 		if !updateRI && !updateAgentDetails {
