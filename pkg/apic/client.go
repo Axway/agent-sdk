@@ -826,6 +826,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
 		if oldHash == newHash && existingRI.Title == data.Title {
+			log.Debug("no updates to the hash or to the title")
 			updateRI = false
 		}
 
@@ -833,6 +834,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		oldAgentDetails := util.GetAgentDetails(existingRI)
 		newAgentDetails := util.GetAgentDetails(data)
 		if util.MapsEqual(oldAgentDetails, newAgentDetails) {
+			log.Debug("no updates to the x-agent-details")
 			updateAgentDetails = false
 		}
 
