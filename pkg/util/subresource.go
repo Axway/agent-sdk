@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"reflect"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 )
@@ -132,4 +133,27 @@ func convert(subResName string, item interface{}) (map[string]interface{}, error
 			item,
 		)
 	}
+}
+
+func MapsEqual(m1, m2 map[string]interface{}) bool {
+	// Check if the maps have the same number of keys
+	if len(m1) != len(m2) {
+		return false
+	}
+
+	// Check if each key in m1 exists in m2 and has the same value
+	for k, v1 := range m1 {
+		if v2, ok := m2[k]; !ok || !reflect.DeepEqual(v1, v2) {
+			return false
+		}
+	}
+
+	// Check if each key in m2 exists in m1 (to ensure both maps have the same keys)
+	for k := range m2 {
+		if _, ok := m1[k]; !ok {
+			return false
+		}
+	}
+
+	return true
 }
