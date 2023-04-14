@@ -871,14 +871,14 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			return nil, err
 		}
 	}
-	if updateAgentDetails {
-		if data := util.GetAgentDetails(data); data != nil {
-			// only send in the agent details here, that is all the agent needs to update for anything here
-			newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
-			if err != nil {
-				return nil, err
-			}
+
+	if data := util.GetAgentDetails(data); data != nil && updateAgentDetails {
+		// only send in the agent details here, that is all the agent needs to update for anything here
+		newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+		if err != nil {
+			return nil, err
 		}
+
 	}
 	return newRI, err
 }
