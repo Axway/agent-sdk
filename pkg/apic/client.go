@@ -838,6 +838,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			updateAgentDetails = false
 		}
 
+		// if no changes altogether, return without update
 		if !updateRI && !updateAgentDetails {
 			log.Trace("no updates made to the resource instance or to the x-agent-details.")
 			return existingRI, nil
