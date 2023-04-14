@@ -815,14 +815,29 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		existingRI, err = c.caches.GetAPIServiceInstanceByName(data.Name)
 	}
 
+	updateRI := false
+	updateAgentDetails := false
+
 	if err == nil && existingRI != nil {
 		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
-		// do not perform any actions if hash is the same
+		// check if either hash or title has changed and mark for update
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
-		if oldHash == newHash && existingRI.Title == data.Title {
+		if oldHash != newHash || existingRI.Title != data.Title {
+			updateRI = true
+		}
+
+		// check if x-agent-details have changed and mark for update
+		oldAgentDetails := util.GetAgentDetails(existingRI)
+		newAgentDetails := util.GetAgentDetails(data)
+		if util.MapsEqual(oldAgentDetails, newAgentDetails) {
+			updateAgentDetails = true
+		}
+
+		if !updateRI && !updateAgentDetails {
+			log.Trace("no updates made to the resource instance or to the x-agent-details.")
 			return existingRI, nil
 		}
 
@@ -836,30 +851,32 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		data = existingRI
 	}
 
-	reqBytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := c.ExecuteAPI(method, url, nil, reqBytes)
-	if err != nil {
-		return nil, err
-	}
-
 	newRI := &apiv1.ResourceInstance{}
-	err = json.Unmarshal(response, newRI)
-	if err != nil {
-		return nil, err
-	}
+	if updateRI {
+		reqBytes, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
 
-	if data := util.GetAgentDetails(data); data != nil {
-		// only send in the agent details here, that is all the agent needs to update for anything here
-		newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+		response, err := c.ExecuteAPI(method, url, nil, reqBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(response, newRI)
 		if err != nil {
 			return nil, err
 		}
 	}
-
+	if updateAgentDetails {
+		if data := util.GetAgentDetails(data); data != nil {
+			// only send in the agent details here, that is all the agent needs to update for anything here
+			newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return newRI, err
 }
 
