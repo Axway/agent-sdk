@@ -10,7 +10,7 @@ sonar-scanner -X \
     -Dsonar.projectBaseDir=${WORKSPACE} \
     -Dsonar.sources=. \
     -Dsonar.tests=. \
-	-Dsonar.exclusions=**/mock/**,**/testdata/**,**/apiserver/clients/**,**/apiserver/models/**,**/api/v1/**,**/mock*.go,**/*.json,**/definitions.go,**/errors.go,**/error.go,**/proto/**,**/samples/** \
+	-Dsonar.exclusions=**/mock/**,**/testdata/**,**/apiserver/clients/**,**/apiserver/models/**,**/api/v1/**,**/mock*.go,**/*.json,**/definitions.go,**/errors.go,**/error.go,**/proto/**,**/samples/**,**/*.pb.go \
     -Dsonar.test.inclusions=**/*test*.go \
     -Dsonar.go.tests.reportPaths=goreport.json \
     -Dsonar.go.coverage.reportPaths=gocoverage.out \
