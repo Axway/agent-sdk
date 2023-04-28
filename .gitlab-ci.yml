@@ -55,17 +55,6 @@ stages:
   - update-dep
 
 ############################################################
-# Section for restrictions. This is different than from
-# restrictions.yml because the branch is "main", not "master"
-############################################################
-.only-main: &only-main
-  only:
-    - main
-  except:
-    - triggers
-    - schedules
-
-############################################################
 # Section for triggering agent updates
 ############################################################
 .trigger-downstream-agent:
@@ -75,7 +64,7 @@ stages:
     - apk update && apk add curl ca-certificates
     - echo "triggering downstream agent with SDK_SHA = ${CI_COMMIT_SHA}"
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
-  <<: *only-main
+  <<: *only-default-branch
   except:
     refs:
       - schedules
