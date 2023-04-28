@@ -64,7 +64,7 @@ stages:
     - apk update && apk add curl ca-certificates
     - echo "triggering downstream agent with SDK_SHA = ${CI_COMMIT_SHA}"
     - curl --request POST --form "token=${CI_JOB_TOKEN}" --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
-  <<: *only-default-branch
+  extends: .only-default-branch
   except:
     refs:
       - schedules
