@@ -69,7 +69,6 @@ stages:
     refs:
       - schedules
 
-
 trigger-aws-apigw-discovery-agent:
   before_script:
     - export PROJECT_ID=${AWS_DISCOVERY_PROJECT_ID}
