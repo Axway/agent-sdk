@@ -22,8 +22,10 @@ type EventBatch struct {
 // AddEvent - adds an event to the batch
 func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) {
 	b.events = append(b.events, event)
-	eventID := event.Content.Meta[metricKey].(string)
-	b.histograms[eventID] = histogram
+	if event.Content.Meta != nil {
+		eventID := event.Content.Meta[metricKey].(string)
+		b.histograms[eventID] = histogram
+	}
 }
 
 // Publish - connects to the traceability clients and sends this batch of events
@@ -55,7 +57,9 @@ func (b *EventBatch) publish() error {
 // make sure batch does not lock multiple times
 func (b *EventBatch) batchLock() {
 	if !b.haveBatchLock {
-		b.collector.batchLock.Lock()
+		if b.collector != nil {
+			b.collector.batchLock.Lock()
+		}
 		b.haveBatchLock = true
 	}
 }
@@ -63,7 +67,9 @@ func (b *EventBatch) batchLock() {
 // make sure batch does not unlock multiple times
 func (b *EventBatch) batchUnlock() {
 	if b.haveBatchLock {
-		b.collector.batchLock.Unlock()
+		if b.collector != nil {
+			b.collector.batchLock.Unlock()
+		}
 		b.haveBatchLock = false
 	}
 }
@@ -75,6 +81,11 @@ func (b *EventBatch) Events() []beatPub.Event {
 
 // ACK - all events have been acked, cleanup the counters
 func (b *EventBatch) ACK() {
+	defer b.batchUnlock()
+	if b.collector == nil {
+		return
+	}
+
 	for _, event := range b.events {
 		if data, found := event.Content.Fields[messageKey]; found {
 			v4Bytes := data.(string)
@@ -100,7 +111,6 @@ func (b *EventBatch) ACK() {
 		}
 	}
 	b.collector.metricStartTime = b.collector.metricEndTime
-	b.batchUnlock()
 }
 
 // Drop - drop the entire batch
