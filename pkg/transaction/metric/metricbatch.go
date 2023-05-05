@@ -131,23 +131,27 @@ func (b *EventBatch) Cancelled() {
 func (b *EventBatch) retryEvents(events []beatPub.Event) {
 	retryEvents := make([]beatPub.Event, 0)
 	for _, event := range b.events {
-		if _, found := event.Content.Meta[metricRetries]; !found {
-			event.Content.Meta[metricRetries] = 0
-		}
-		count := event.Content.Meta[metricRetries].(int)
-		newCount := count + 1
-		if newCount <= 3 {
-			event.Content.Meta[metricRetries] = newCount
-			retryEvents = append(retryEvents, event)
-		}
+		if event.Content.Meta != nil {
+			if _, found := event.Content.Meta[metricRetries]; !found {
+				event.Content.Meta[metricRetries] = 0
+			}
+			count := event.Content.Meta[metricRetries].(int)
+			newCount := count + 1
+			if newCount <= 3 {
+				event.Content.Meta[metricRetries] = newCount
+				retryEvents = append(retryEvents, event)
+			}
 
-		// let the metric batch handle its own retries
-		if _, found := event.Content.Meta[retries]; found {
-			event.Content.Meta[retries] = 0
+			// let the metric batch handle its own retries
+			if _, found := event.Content.Meta[retries]; found {
+				event.Content.Meta[retries] = 0
+			}
 		}
 	}
-	b.events = retryEvents
-	b.publish()
+	if len(retryEvents) != 0 {
+		b.events = retryEvents
+		b.publish()
+	}
 }
 
 // RetryEvents - certain events sent to retry
