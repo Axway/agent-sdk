@@ -29,20 +29,20 @@ variables:
 ############################################################
 include:
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $SCURITY_LATEST
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
-    ref: master
+    ref: $SCURITY_LATEST
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $SCURITY_LATEST
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/csrjobs.yml"
@@ -86,35 +86,38 @@ trigger-azure-discovery-agent:
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events
 whitesource:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: on_success
 
 fetch-fortify:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: on_success
 
 run-csr:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: on_success
 
 # overridden from csrjobs.yml to effectively not see these jobs ever
 fetch-iriusrisk:
-  extends: .only-never
+  rules:
+    - when: never
+  script:
+    - ""
 
 twistlock:
-  extends: .only-never
-  only:
-    refs:
-      - never
+  rules:
+    - when: never
   before_script:
+    - ""
+  script:
     - ""
   dependencies:
 
 twistlock:on-schedule:
-  extends: .only-never
-
-twistlock-master:
-  extends: .only-never
+  rules:
+    - when: never
+  script:
+    - ""
