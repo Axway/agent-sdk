@@ -11,6 +11,7 @@ import (
 	catalog_v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1"
 	catalog_v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1"
 	definitions_v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/definitions/v1alpha1"
+	management_v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1"
 	management_v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1"
 )
 
@@ -24,6 +25,8 @@ type Set struct {
 	APIServiceManagementV1alpha1                     *management_v1alpha1.UnscopedAPIServiceClient
 	APIServiceRevisionManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceRevisionClient
 	APIServiceInstanceManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceInstanceClient
+	APISpecLintingJobManagementV1alpha1              *management_v1alpha1.UnscopedAPISpecLintingJobClient
+	APISpecLintingRulesetManagementV1alpha1          *management_v1alpha1.APISpecLintingRulesetClient
 	ConsumerInstanceManagementV1alpha1               *management_v1alpha1.UnscopedConsumerInstanceClient
 	ConsumerSubscriptionDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedConsumerSubscriptionDefinitionClient
 	IntegrationManagementV1alpha1                    *management_v1alpha1.IntegrationClient
@@ -47,6 +50,8 @@ type Set struct {
 	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
 	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
 	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
+	APISpecLintingJobManagementV1                    *management_v1.UnscopedAPISpecLintingJobClient
+	APISpecLintingRulesetManagementV1                *management_v1.APISpecLintingRulesetClient
 	StageCatalogV1alpha1                             *catalog_v1alpha1.StageClient
 	AssetCatalogV1alpha1                             *catalog_v1alpha1.AssetClient
 	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
@@ -137,6 +142,14 @@ func New(b cAPIV1.Base) *Set {
 	s.APIServiceInstanceManagementV1alpha1, err = management_v1alpha1.NewAPIServiceInstanceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APIServiceInstance: %s", err))
+	}
+	s.APISpecLintingJobManagementV1alpha1, err = management_v1alpha1.NewAPISpecLintingJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpecLintingJob: %s", err))
+	}
+	s.APISpecLintingRulesetManagementV1alpha1, err = management_v1alpha1.NewAPISpecLintingRulesetClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpecLintingRuleset: %s", err))
 	}
 	s.ConsumerInstanceManagementV1alpha1, err = management_v1alpha1.NewConsumerInstanceClient(b)
 	if err != nil {
@@ -229,6 +242,14 @@ func New(b cAPIV1.Base) *Set {
 	s.AccessControlListManagementV1alpha1, err = management_v1alpha1.NewAccessControlListClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AccessControlList: %s", err))
+	}
+	s.APISpecLintingJobManagementV1, err = management_v1.NewAPISpecLintingJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.APISpecLintingJob: %s", err))
+	}
+	s.APISpecLintingRulesetManagementV1, err = management_v1.NewAPISpecLintingRulesetClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.APISpecLintingRuleset: %s", err))
 	}
 	s.StageCatalogV1alpha1, err = catalog_v1alpha1.NewStageClient(b)
 	if err != nil {

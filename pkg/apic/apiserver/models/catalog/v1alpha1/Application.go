@@ -43,6 +43,7 @@ type Application struct {
 	Marketplace ApplicationMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner           `json:"owner"`
 	Spec        ApplicationSpec        `json:"spec"`
+	State       ApplicationState       `json:"state"`
 }
 
 // NewApplication creates an empty *Application
@@ -124,6 +125,7 @@ func (res *Application) MarshalJSON() ([]byte, error) {
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
+	out["state"] = res.State
 
 	return json.Marshal(out)
 }
@@ -162,6 +164,20 @@ func (res *Application) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "marketplace")
 		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}
