@@ -87,17 +87,23 @@ trigger-azure-discovery-agent:
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
 whitesource:
   rules:
-    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
       when: on_success
 
 fetch-fortify:
   rules:
-    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
       when: on_success
 
 run-csr:
   rules:
-    - if: $CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
       when: on_success
 
 # overridden from csrjobs.yml to not run these jobs ever
