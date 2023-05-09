@@ -22,10 +22,8 @@ type EventBatch struct {
 // AddEvent - adds an event to the batch
 func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) {
 	b.events = append(b.events, event)
-	if event.Content.Meta != nil {
-		eventID := event.Content.Meta[metricKey].(string)
-		b.histograms[eventID] = histogram
-	}
+	eventID := event.Content.Meta[metricKey].(string)
+	b.histograms[eventID] = histogram
 }
 
 // Publish - connects to the traceability clients and sends this batch of events
@@ -57,9 +55,7 @@ func (b *EventBatch) publish() error {
 // make sure batch does not lock multiple times
 func (b *EventBatch) batchLock() {
 	if !b.haveBatchLock {
-		if b.collector != nil {
-			b.collector.batchLock.Lock()
-		}
+		b.collector.batchLock.Lock()
 		b.haveBatchLock = true
 	}
 }
@@ -67,9 +63,7 @@ func (b *EventBatch) batchLock() {
 // make sure batch does not unlock multiple times
 func (b *EventBatch) batchUnlock() {
 	if b.haveBatchLock {
-		if b.collector != nil {
-			b.collector.batchLock.Unlock()
-		}
+		b.collector.batchLock.Unlock()
 		b.haveBatchLock = false
 	}
 }
@@ -81,11 +75,6 @@ func (b *EventBatch) Events() []beatPub.Event {
 
 // ACK - all events have been acked, cleanup the counters
 func (b *EventBatch) ACK() {
-	defer b.batchUnlock()
-	if b.collector == nil {
-		return
-	}
-
 	for _, event := range b.events {
 		if data, found := event.Content.Fields[messageKey]; found {
 			v4Bytes := data.(string)
@@ -111,6 +100,7 @@ func (b *EventBatch) ACK() {
 		}
 	}
 	b.collector.metricStartTime = b.collector.metricEndTime
+	b.batchUnlock()
 }
 
 // Drop - drop the entire batch
@@ -131,27 +121,23 @@ func (b *EventBatch) Cancelled() {
 func (b *EventBatch) retryEvents(events []beatPub.Event) {
 	retryEvents := make([]beatPub.Event, 0)
 	for _, event := range b.events {
-		if event.Content.Meta != nil {
-			if _, found := event.Content.Meta[metricRetries]; !found {
-				event.Content.Meta[metricRetries] = 0
-			}
-			count := event.Content.Meta[metricRetries].(int)
-			newCount := count + 1
-			if newCount <= 3 {
-				event.Content.Meta[metricRetries] = newCount
-				retryEvents = append(retryEvents, event)
-			}
+		if _, found := event.Content.Meta[metricRetries]; !found {
+			event.Content.Meta[metricRetries] = 0
+		}
+		count := event.Content.Meta[metricRetries].(int)
+		newCount := count + 1
+		if newCount <= 3 {
+			event.Content.Meta[metricRetries] = newCount
+			retryEvents = append(retryEvents, event)
+		}
 
-			// let the metric batch handle its own retries
-			if _, found := event.Content.Meta[retries]; found {
-				event.Content.Meta[retries] = 0
-			}
+		// let the metric batch handle its own retries
+		if _, found := event.Content.Meta[retries]; found {
+			event.Content.Meta[retries] = 0
 		}
 	}
-	if len(retryEvents) != 0 {
-		b.events = retryEvents
-		b.publish()
-	}
+	b.events = retryEvents
+	b.publish()
 }
 
 // RetryEvents - certain events sent to retry
