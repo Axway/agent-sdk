@@ -125,9 +125,9 @@ func (client *HTTPClient) Close() error {
 }
 
 // Publish sends events to the clients sink.
-func (client *HTTPClient) Publish(ctx context.Context, batch publisher.Batch) error {
+func (client *HTTPClient) Publish(_ context.Context, batch publisher.Batch) error {
 	events := batch.Events()
-	rest, err := client.publishEvents(ctx, events)
+	rest, err := client.publishEvents(events)
 	if len(rest) == 0 {
 		batch.ACK()
 	} else {
@@ -157,7 +157,7 @@ func (client *HTTPClient) Clone() *HTTPClient {
 }
 
 // publishEvents - posts all events to the http endpoint.
-func (client *HTTPClient) publishEvents(ctx context.Context, data []publisher.Event) ([]publisher.Event, error) {
+func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Event, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -188,7 +188,7 @@ func (client *HTTPClient) publishEvents(ctx context.Context, data []publisher.Ev
 			}
 		}
 	}
-	status, _, err := client.request(ctx, events, client.headers, timeStamp)
+	status, _, err := client.request(events, client.headers, timeStamp)
 	if err != nil && err == ErrJSONEncodeFailed {
 		client.logger.WithError(err).Debug("failed to publish event")
 		return nil, nil
@@ -206,7 +206,7 @@ func (client *HTTPClient) publishEvents(ctx context.Context, data []publisher.Ev
 	return nil, nil
 }
 
-func (conn *Connection) request(ctx context.Context, body interface{}, headers map[string]string, eventTime time.Time) (int, []byte, error) {
+func (conn *Connection) request(body interface{}, headers map[string]string, eventTime time.Time) (int, []byte, error) {
 	urlStr := conn.URL
 	if strings.HasSuffix(urlStr, "/") {
 		urlStr = strings.TrimSuffix(urlStr, "/")
@@ -215,10 +215,10 @@ func (conn *Connection) request(ctx context.Context, body interface{}, headers m
 	if err := conn.encoder.Marshal(body); err != nil {
 		return 0, nil, ErrJSONEncodeFailed
 	}
-	return conn.execRequest(ctx, urlStr, conn.encoder.Reader(), headers, eventTime)
+	return conn.execRequest(urlStr, conn.encoder.Reader(), headers, eventTime)
 }
 
-func (conn *Connection) execRequest(ctx context.Context, url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
+func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
 	req, err := http.NewRequest("POST", url, body)
 	if log.IsHTTPLogTraceEnabled() {
 		req = log.NewRequestWithTraceContext(uuid.New().String(), req)
@@ -228,7 +228,7 @@ func (conn *Connection) execRequest(ctx context.Context, url string, body io.Rea
 		return 0, nil, err
 	}
 
-	err = conn.addHeaders(ctx, &req.Header, body, eventTime)
+	err = conn.addHeaders(&req.Header, body, eventTime)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -236,55 +236,15 @@ func (conn *Connection) execRequest(ctx context.Context, url string, body io.Rea
 	return conn.execHTTPRequest(req, headers)
 }
 
-func getStringValueFromCtx(ctx context.Context, key string) string {
-	ctxVal := ctx.Value(key)
-	str, ok := ctxVal.(string)
-	if !ok {
-		return ""
+func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTime time.Time) error {
+	token, err := agent.GetCentralAuthToken()
+	if err != nil {
+		return err
 	}
-	return str
-}
 
-func getBoolValueFromCtx(ctx context.Context, key string) bool {
-	ctxVal := ctx.Value(key)
-	bVal, ok := ctxVal.(bool)
-	if !ok {
-		return false
-	}
-	return bVal
-}
-
-func getUserAgent(ctx context.Context) string {
-	userAgent := getStringValueFromCtx(ctx, "userAgent")
-	if userAgent == "" && config.AgentTypeName != "" && config.AgentVersion != "" {
-		userAgent = config.AgentTypeName + "/" + config.AgentVersion
-	}
-	return userAgent
-}
-
-func getOrgID(ctx context.Context) string {
-	orgID := getStringValueFromCtx(ctx, "tenantID")
-	if orgID == "" {
-		orgID = agent.GetCentralConfig().GetTenantID()
-	}
-	return orgID
-}
-
-func skipAuthHeader(ctx context.Context) bool {
-	return getBoolValueFromCtx(ctx, "skipAuthHeader")
-}
-
-func (conn *Connection) addHeaders(ctx context.Context, header *http.Header, body io.Reader, eventTime time.Time) error {
-	if !skipAuthHeader(ctx) {
-		token, err := agent.GetCentralAuthToken()
-		if err != nil {
-			return err
-		}
-
-		header.Add("Authorization", "Bearer "+token)
-	}
-	header.Add("Capture-Org-ID", getOrgID(ctx))
-	header.Add("User-Agent", getUserAgent(ctx))
+	header.Add("Authorization", "Bearer "+token)
+	header.Add("Capture-Org-ID", agent.GetCentralConfig().GetTenantID())
+	header.Add("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
 	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().Unix(), 10))
 
 	if body != nil {
