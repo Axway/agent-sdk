@@ -29,20 +29,20 @@ variables:
 ############################################################
 include:
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $BEANO_CICD_LATEST
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
-    ref: master
+    ref: $SCURITY_V2
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
-    ref: master
+    ref: $BEANO_CICD_LATEST
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/csrjobs.yml"
@@ -84,37 +84,35 @@ trigger-azure-discovery-agent:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
 
-# overridden from csrjobs.yml because mirror repos like this one don't get merge events
+# overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
 whitesource:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
+      when: on_success
 
 fetch-fortify:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
+      when: on_success
 
 run-csr:
-  only:
-    refs:
-      - /^APIGOV-.*$/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
+      when: on_success
 
-# overridden from csrjobs.yml to effectively not see these jobs ever
+# overridden from csrjobs.yml to not run these jobs ever
 fetch-iriusrisk:
-  extends: .only-never
+  extends: .only-never-rule
 
 twistlock:
-  extends: .only-never
-  only:
-    refs:
-      - never
-  before_script:
-    - ""
+  extends: .only-never-rule
   dependencies:
 
 twistlock:on-schedule:
-  extends: .only-never
-
-twistlock-master:
-  extends: .only-never
+  extends: .only-never-rule
