@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -42,25 +41,13 @@ func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogr
 
 // CreateEvent - creates the beat event to add to the batch
 func (c *CondorMetricEvent) CreateEvent() (beatPub.Event, error) {
-	return c.CreateEventWithContext(context.Background())
-}
-
-// CreateEvent - creates the beat event to add to the batch
-func (c *CondorMetricEvent) CreateEventWithContext(ctx context.Context) (beatPub.Event, error) {
-	if !skipAuthTokenField(ctx) {
-		// Get the event token
-		token, err := agent.GetCentralAuthToken()
-		if err != nil {
-			return beatPub.Event{}, err
-		}
-		c.Fields["token"] = token
+	// Get the event token
+	token, err := agent.GetCentralAuthToken()
+	if err != nil {
+		return beatPub.Event{}, err
 	}
-
-	flowName := getStringValueFromCtx(ctx, "flowName")
-	if flowName == "" {
-		flowName = metricFlow
-	}
-	c.Fields[traceability.FlowHeader] = flowName
+	c.Fields["token"] = token
+	c.Fields[traceability.FlowHeader] = metricFlow
 
 	// convert the CondorMetricEvent to json then to map[string]interface{}
 	cmeJSON, err := json.Marshal(c)
@@ -87,26 +74,4 @@ func (c *CondorMetricEvent) CreateEventWithContext(ctx context.Context) (beatPub
 	}
 	log.Tracef("Created Metric Event: %+v", beatEnv)
 	return beatEnv, nil
-}
-
-func getStringValueFromCtx(ctx context.Context, key string) string {
-	ctxVal := ctx.Value(key)
-	str, ok := ctxVal.(string)
-	if !ok {
-		return ""
-	}
-	return str
-}
-
-func getBoolValueFromCtx(ctx context.Context, key string) bool {
-	ctxVal := ctx.Value(key)
-	bVal, ok := ctxVal.(bool)
-	if !ok {
-		return false
-	}
-	return bVal
-}
-
-func skipAuthTokenField(ctx context.Context) bool {
-	return getBoolValueFromCtx(ctx, "skipAuthHeader")
 }
