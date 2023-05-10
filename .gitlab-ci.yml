@@ -87,32 +87,25 @@ trigger-azure-discovery-agent:
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
 whitesource:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
-      when: on_success
+    - !reference [.mirror-branch-csr-rules, rules]
 
 fetch-fortify:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
-      when: on_success
+    - !reference [.mirror-branch-csr-rules, rules]
 
 run-csr:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RUN_CSR_ON_DEFAULT_BRANCH == "true")
-      when: on_success
+    - !reference [.mirror-branch-csr-rules, rules]
 
 # overridden from csrjobs.yml to not run these jobs ever
 fetch-iriusrisk:
   extends: .only-never-rule
 
+fetch-iriusrisk:on-schedule:
+  extends: .only-never-rule
+
 twistlock:
   extends: .only-never-rule
-  dependencies:
 
 twistlock:on-schedule:
   extends: .only-never-rule
