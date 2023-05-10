@@ -99,17 +99,13 @@ run-csr:
 
 # overridden from csrjobs.yml to not run these jobs ever
 fetch-iriusrisk:
-  rules:
-    - !reference [.only-never-rule, rules]
+  extends: .only-never-rule
 
 fetch-iriusrisk:on-schedule:
-  rules:
-    - !reference [.only-never-rule, rules]
+  extends: .only-never-rule
 
 twistlock:
-  rules:
-    - !reference [.only-never-rule, rules]
+  extends: .only-never-rule
 
 twistlock:on-schedule:
-  rules:
-    - !reference [.only-never-rule, rules]
+  extends: .only-never-rule
