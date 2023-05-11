@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +18,9 @@ const urlCutSet = " /"
 
 // AgentType - Defines the type of agent
 type AgentType int
+
+// QA EnvVars
+const qaAPIValidationFrequency = "QA_CENTRAL_APIVALIDATIONFREQUENCY"
 
 const (
 	// DiscoveryAgent - Type definition for discovery agent
@@ -703,8 +707,9 @@ func (c *CentralConfiguration) validateConfig() {
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
-	if c.GetAPIValidationFrequency() <= 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationFrequency))
+	if qaOverride := os.Getenv(qaAPIValidationFrequency); c.GetAPIValidationFrequency() < 0 ||
+		(c.GetAPIValidationFrequency() > 0 && c.GetAPIValidationFrequency() < 5*time.Minute && qaOverride == "") {
+		exception.Throw(fmt.Errorf("%s. %s", ErrBadConfig.FormatError(pathAPIValidationFrequency), "Value must be greater than 5m"))
 	}
 	if c.GetClientTimeout() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
@@ -783,7 +788,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to Amplify Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
-	props.AddDurationProperty(pathAPIValidationFrequency, 1*time.Hour, "The time interval at which the agent validates API Services with the dataplane", properties.WithLowerLimit(5*time.Minute), properties.WithQAOverride())
+	props.AddDurationProperty(pathAPIValidationFrequency, 1*time.Hour, "The time interval at which the agent validates API Services with the dataplane", properties.WithQAOverride())
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")

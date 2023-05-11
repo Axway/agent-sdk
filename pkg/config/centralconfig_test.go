@@ -158,8 +158,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 
 	centralConfig.APIValidationFrequency = 0
 	err = cfgValidator.ValidateCfg()
-	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationFrequency, please set and/or check its value", err.Error())
+	assert.Nil(t, err)
 
 	cleanupFiles(tmpFile.Name())
 }
