@@ -3,7 +3,9 @@ package config
 // SubscriptionConfig - Interface to get subscription config
 type CredentialConfig interface {
 	ShouldDeprovisionExpired() bool
+	SetShouldDeprovisionExpired(deprovisionExpired bool)
 	GetExpirationDays() int
+	SetExpirationDays(expirationDays int)
 }
 
 // NotificationConfig -
@@ -25,9 +27,19 @@ func (s *CredentialConfiguration) ShouldDeprovisionExpired() bool {
 	return s.DeprovisionOnExpire
 }
 
+// Set ExpireAction -
+func (s *CredentialConfiguration) SetShouldDeprovisionExpired(deprovisionExpired bool) {
+	s.DeprovisionOnExpire = deprovisionExpired
+}
+
 // GetTimeToLive -
 func (s *CredentialConfiguration) GetExpirationDays() int {
 	return s.ExpirationDays
+}
+
+// Set GetTimeToLive -
+func (s *CredentialConfiguration) SetExpirationDays(expirationDays int) {
+	s.ExpirationDays = expirationDays
 }
 
 // ValidateCfg - Validates the config, implementing IConfigInterface

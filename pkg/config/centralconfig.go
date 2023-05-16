@@ -880,6 +880,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
+		cfg.CredentialConfig = newCredentialConfig()
 	}
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
