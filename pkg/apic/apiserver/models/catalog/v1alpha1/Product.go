@@ -40,12 +40,13 @@ func init() {
 // Product Resource
 type Product struct {
 	apiv1.ResourceMeta
-	Icon       interface{}       `json:"icon"`
-	Owner      *apiv1.Owner      `json:"owner"`
-	References ProductReferences `json:"references"`
-	Spec       ProductSpec       `json:"spec"`
-	State      ProductState      `json:"state"`
-	// Status     ProductStatus     `json:"status"`
+	Icon          interface{}          `json:"icon"`
+	Latestrelease ProductLatestrelease `json:"latestrelease"`
+	Owner         *apiv1.Owner         `json:"owner"`
+	References    ProductReferences    `json:"references"`
+	Spec          ProductSpec          `json:"spec"`
+	State         ProductState         `json:"state"`
+	// Status        ProductStatus        `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -126,6 +127,7 @@ func (res *Product) MarshalJSON() ([]byte, error) {
 	}
 
 	out["icon"] = res.Icon
+	out["latestrelease"] = res.Latestrelease
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -169,6 +171,20 @@ func (res *Product) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "icon")
 		err = json.Unmarshal(sr, &res.Icon)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Latestrelease
+	if v, ok := aux.SubResources["latestrelease"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "latestrelease")
+		err = json.Unmarshal(sr, &res.Latestrelease)
 		if err != nil {
 			return err
 		}

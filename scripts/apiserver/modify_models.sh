@@ -160,7 +160,7 @@ done
 # Update the following STATES to include the type infront of the constant
 ######################
 MODELS=`find ${OUTDIR}/models -type f -name "model_*_state.go"`
-STATES="DRAFT ACTIVE DEPRECATED ARCHIVED"
+STATES="DRAFT ACTIVE DEPRECATED ARCHIVED ARCHIVING"
 
 for file in ${MODELS}; do
     stateType=`grep "List of" ${file} | awk '{print $4}'`

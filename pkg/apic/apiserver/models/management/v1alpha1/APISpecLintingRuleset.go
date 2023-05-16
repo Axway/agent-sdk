@@ -13,56 +13,56 @@ import (
 )
 
 var (
-	EnvironmentCtx log.ContextField = "environment"
+	APISpecLintingRulesetCtx log.ContextField = "apiSpecLintingRuleset"
 
-	_EnvironmentGVK = apiv1.GroupVersionKind{
+	_APISpecLintingRulesetGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "Environment",
+			Kind:  "APISpecLintingRuleset",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	EnvironmentScopes = []string{""}
+	APISpecLintingRulesetScopes = []string{""}
 )
 
-const EnvironmentResourceName = "environments"
+const APISpecLintingRulesetResourceName = "apispeclintingrulesets"
 
-func EnvironmentGVK() apiv1.GroupVersionKind {
-	return _EnvironmentGVK
+func APISpecLintingRulesetGVK() apiv1.GroupVersionKind {
+	return _APISpecLintingRulesetGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_EnvironmentGVK, EnvironmentScopes[0], EnvironmentResourceName)
-	log.RegisterContextField(EnvironmentCtx)
+	apiv1.RegisterGVK(_APISpecLintingRulesetGVK, APISpecLintingRulesetScopes[0], APISpecLintingRulesetResourceName)
+	log.RegisterContextField(APISpecLintingRulesetCtx)
 }
 
-// Environment Resource
-type Environment struct {
+// APISpecLintingRuleset Resource
+type APISpecLintingRuleset struct {
 	apiv1.ResourceMeta
-	Owner    *apiv1.Owner        `json:"owner"`
-	Policies EnvironmentPolicies `json:"policies"`
-	Spec     EnvironmentSpec     `json:"spec"`
+	Owner    *apiv1.Owner              `json:"owner"`
+	Revision interface{}               `json:"revision"`
+	Spec     ApiSpecLintingRulesetSpec `json:"spec"`
 }
 
-// NewEnvironment creates an empty *Environment
-func NewEnvironment(name string) *Environment {
-	return &Environment{
+// NewAPISpecLintingRuleset creates an empty *APISpecLintingRuleset
+func NewAPISpecLintingRuleset(name string) *APISpecLintingRuleset {
+	return &APISpecLintingRuleset{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _EnvironmentGVK,
+			GroupVersionKind: _APISpecLintingRulesetGVK,
 		},
 	}
 }
 
-// EnvironmentFromInstanceArray converts a []*ResourceInstance to a []*Environment
-func EnvironmentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Environment, error) {
-	newArray := make([]*Environment, 0)
+// APISpecLintingRulesetFromInstanceArray converts a []*ResourceInstance to a []*APISpecLintingRuleset
+func APISpecLintingRulesetFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*APISpecLintingRuleset, error) {
+	newArray := make([]*APISpecLintingRuleset, 0)
 	for _, item := range fromArray {
-		res := &Environment{}
+		res := &APISpecLintingRuleset{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Environment, 0), err
+			return make([]*APISpecLintingRuleset, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -70,10 +70,10 @@ func EnvironmentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Envir
 	return newArray, nil
 }
 
-// AsInstance converts a Environment to a ResourceInstance
-func (res *Environment) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a APISpecLintingRuleset to a ResourceInstance
+func (res *APISpecLintingRuleset) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = EnvironmentGVK()
+	meta.GroupVersionKind = APISpecLintingRulesetGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -90,8 +90,8 @@ func (res *Environment) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a Environment
-func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a APISpecLintingRuleset
+func (res *APISpecLintingRuleset) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -109,7 +109,7 @@ func (res *Environment) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *Environment) MarshalJSON() ([]byte, error) {
+func (res *APISpecLintingRuleset) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -122,14 +122,14 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
-	out["policies"] = res.Policies
+	out["revision"] = res.Revision
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *Environment) UnmarshalJSON(data []byte) error {
+func (res *APISpecLintingRuleset) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -153,15 +153,15 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource Policies
-	if v, ok := aux.SubResources["policies"]; ok {
+	// marshalling subresource Revision
+	if v, ok := aux.SubResources["revision"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "policies")
-		err = json.Unmarshal(sr, &res.Policies)
+		delete(aux.SubResources, "revision")
+		err = json.Unmarshal(sr, &res.Revision)
 		if err != nil {
 			return err
 		}
@@ -171,6 +171,6 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *Environment) PluralName() string {
-	return EnvironmentResourceName
+func (res *APISpecLintingRuleset) PluralName() string {
+	return APISpecLintingRulesetResourceName
 }

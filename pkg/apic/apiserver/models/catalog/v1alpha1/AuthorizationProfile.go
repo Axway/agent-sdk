@@ -41,6 +41,7 @@ func init() {
 type AuthorizationProfile struct {
 	apiv1.ResourceMeta
 	Owner      *apiv1.Owner                   `json:"owner"`
+	Policies   AuthorizationProfilePolicies   `json:"policies"`
 	References AuthorizationProfileReferences `json:"references"`
 	Spec       AuthorizationProfileSpec       `json:"spec"`
 }
@@ -122,6 +123,7 @@ func (res *AuthorizationProfile) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["policies"] = res.Policies
 	out["references"] = res.References
 	out["spec"] = res.Spec
 
@@ -151,6 +153,20 @@ func (res *AuthorizationProfile) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Policies
+	if v, ok := aux.SubResources["policies"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "policies")
+		err = json.Unmarshal(sr, &res.Policies)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References
