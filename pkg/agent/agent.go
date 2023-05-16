@@ -273,8 +273,10 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	}
 
 	// Set up credential config from environment resource policies
-	cfg.GetCredentialConfig().SetDeprovisionExpired(false)
-	cfg.GetCredentialConfig().SetExpirationDays(0)
+	credentialCfg := &config.CredentialConfiguration{
+		ExpirationDays:      0,
+		DeprovisionOnExpire: false,
+	}
 
 	if cfg.GetTeamID() == "" {
 		team, err := client.GetCentralTeamByName(cfg.GetTeamName())
