@@ -16,5 +16,6 @@ type ApplicationState string
 const (
 	// GENERATE: The following code has been modified after code generation
 	ApplicationStateARCHIVED ApplicationState = "archived"
-	ARCHIVING                ApplicationState = "archiving"
+	// GENERATE: The following code has been modified after code generation
+	ApplicationStateARCHIVING ApplicationState = "archiving"
 )

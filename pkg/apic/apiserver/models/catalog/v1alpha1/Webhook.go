@@ -26,7 +26,9 @@ var (
 	WebhookScopes = []string{"AuthorizationProfile"}
 )
 
-const WebhookResourceName = "webhooks"
+const (
+	WebhookResourceName = "webhooks"
+)
 
 func WebhookGVK() apiv1.GroupVersionKind {
 	return _WebhookGVK

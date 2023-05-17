@@ -26,7 +26,11 @@ var (
 	CredentialRequestDefinitionScopes = []string{"Environment"}
 )
 
-const CredentialRequestDefinitionResourceName = "credentialrequestdefinitions"
+const (
+	CredentialRequestDefinitionResourceName              = "credentialrequestdefinitions"
+	CredentialRequestDefinitionReferencesSubResourceName = "references"
+	CredentialRequestDefinitionWebhooksSubResourceName   = "webhooks"
+)
 
 func CredentialRequestDefinitionGVK() apiv1.GroupVersionKind {
 	return _CredentialRequestDefinitionGVK

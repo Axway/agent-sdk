@@ -27,7 +27,9 @@ var (
 	ResourceScopes = []string{"Product", "ProductRelease"}
 )
 
-const ResourceResourceName = "resources"
+const (
+	ResourceResourceName = "resources"
+)
 
 func ResourceGVK() apiv1.GroupVersionKind {
 	return _ResourceGVK

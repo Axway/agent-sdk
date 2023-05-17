@@ -26,7 +26,10 @@ var (
 	AssetMappingScopes = []string{"Environment"}
 )
 
-const AssetMappingResourceName = "assetmappings"
+const (
+	AssetMappingResourceName          = "assetmappings"
+	AssetMappingStatusSubResourceName = "status"
+)
 
 func AssetMappingGVK() apiv1.GroupVersionKind {
 	return _AssetMappingGVK

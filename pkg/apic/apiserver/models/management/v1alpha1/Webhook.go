@@ -27,7 +27,9 @@ var (
 	WebhookScopes = []string{"Environment", "Integration"}
 )
 
-const WebhookResourceName = "webhooks"
+const (
+	WebhookResourceName = "webhooks"
+)
 
 func WebhookGVK() apiv1.GroupVersionKind {
 	return _WebhookGVK

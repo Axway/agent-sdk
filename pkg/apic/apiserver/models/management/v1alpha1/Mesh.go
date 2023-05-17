@@ -26,7 +26,9 @@ var (
 	MeshScopes = []string{""}
 )
 
-const MeshResourceName = "meshes"
+const (
+	MeshResourceName = "meshes"
+)
 
 func MeshGVK() apiv1.GroupVersionKind {
 	return _MeshGVK

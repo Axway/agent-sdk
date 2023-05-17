@@ -26,7 +26,9 @@ var (
 	MeshDiscoveryScopes = []string{"Mesh"}
 )
 
-const MeshDiscoveryResourceName = "meshdiscoveries"
+const (
+	MeshDiscoveryResourceName = "meshdiscoveries"
+)
 
 func MeshDiscoveryGVK() apiv1.GroupVersionKind {
 	return _MeshDiscoveryGVK

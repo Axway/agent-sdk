@@ -26,7 +26,10 @@ var (
 	CategoryScopes = []string{""}
 )
 
-const CategoryResourceName = "categories"
+const (
+	CategoryResourceName        = "categories"
+	CategoryIconSubResourceName = "icon"
+)
 
 func CategoryGVK() apiv1.GroupVersionKind {
 	return _CategoryGVK

@@ -26,7 +26,10 @@ var (
 	AccessRequestDefinitionScopes = []string{"Environment"}
 )
 
-const AccessRequestDefinitionResourceName = "accessrequestdefinitions"
+const (
+	AccessRequestDefinitionResourceName            = "accessrequestdefinitions"
+	AccessRequestDefinitionWebhooksSubResourceName = "webhooks"
+)
 
 func AccessRequestDefinitionGVK() apiv1.GroupVersionKind {
 	return _AccessRequestDefinitionGVK

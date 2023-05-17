@@ -26,7 +26,12 @@ var (
 	ProductPlanScopes = []string{""}
 )
 
-const ProductPlanResourceName = "productplans"
+const (
+	ProductPlanResourceName              = "productplans"
+	ProductPlanReferencesSubResourceName = "references"
+	ProductPlanStateSubResourceName      = "state"
+	ProductPlanStatusSubResourceName     = "status"
+)
 
 func ProductPlanGVK() apiv1.GroupVersionKind {
 	return _ProductPlanGVK

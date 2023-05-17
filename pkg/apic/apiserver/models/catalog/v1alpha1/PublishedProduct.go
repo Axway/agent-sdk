@@ -26,7 +26,10 @@ var (
 	PublishedProductScopes = []string{"Marketplace"}
 )
 
-const PublishedProductResourceName = "publishedproducts"
+const (
+	PublishedProductResourceName              = "publishedproducts"
+	PublishedProductReferencesSubResourceName = "references"
+)
 
 func PublishedProductGVK() apiv1.GroupVersionKind {
 	return _PublishedProductGVK

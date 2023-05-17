@@ -27,7 +27,9 @@ var (
 	AccessControlListScopes = []string{"APISpecLintingRuleset", "Environment", "Integration", "K8SCluster", "Mesh", "WatchTopic"}
 )
 
-const AccessControlListResourceName = "accesscontrollists"
+const (
+	AccessControlListResourceName = "accesscontrollists"
+)
 
 func AccessControlListGVK() apiv1.GroupVersionKind {
 	return _AccessControlListGVK

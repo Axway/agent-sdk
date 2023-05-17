@@ -26,7 +26,11 @@ var (
 	ApplicationScopes = []string{""}
 )
 
-const ApplicationResourceName = "applications"
+const (
+	ApplicationResourceName               = "applications"
+	ApplicationMarketplaceSubResourceName = "marketplace"
+	ApplicationStateSubResourceName       = "state"
+)
 
 func ApplicationGVK() apiv1.GroupVersionKind {
 	return _ApplicationGVK

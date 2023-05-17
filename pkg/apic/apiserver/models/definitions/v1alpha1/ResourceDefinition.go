@@ -26,7 +26,9 @@ var (
 	ResourceDefinitionScopes = []string{"ResourceGroup"}
 )
 
-const ResourceDefinitionResourceName = "resources"
+const (
+	ResourceDefinitionResourceName = "resources"
+)
 
 func ResourceDefinitionGVK() apiv1.GroupVersionKind {
 	return _ResourceDefinitionGVK

@@ -26,7 +26,14 @@ var (
 	AssetRequestScopes = []string{"Application"}
 )
 
-const AssetRequestResourceName = "assetrequests"
+const (
+	AssetRequestResourceName               = "assetrequests"
+	AssetRequestApprovalSubResourceName    = "approval"
+	AssetRequestDataSubResourceName        = "data"
+	AssetRequestMarketplaceSubResourceName = "marketplace"
+	AssetRequestReferencesSubResourceName  = "references"
+	AssetRequestStatusSubResourceName      = "status"
+)
 
 func AssetRequestGVK() apiv1.GroupVersionKind {
 	return _AssetRequestGVK

@@ -26,7 +26,10 @@ var (
 	SubscriptionJobScopes = []string{"Subscription"}
 )
 
-const SubscriptionJobResourceName = "subscriptionjobs"
+const (
+	SubscriptionJobResourceName          = "subscriptionjobs"
+	SubscriptionJobStatusSubResourceName = "status"
+)
 
 func SubscriptionJobGVK() apiv1.GroupVersionKind {
 	return _SubscriptionJobGVK

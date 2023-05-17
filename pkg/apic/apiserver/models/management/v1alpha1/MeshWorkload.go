@@ -26,7 +26,9 @@ var (
 	MeshWorkloadScopes = []string{"Mesh"}
 )
 
-const MeshWorkloadResourceName = "meshworkloads"
+const (
+	MeshWorkloadResourceName = "meshworkloads"
+)
 
 func MeshWorkloadGVK() apiv1.GroupVersionKind {
 	return _MeshWorkloadGVK

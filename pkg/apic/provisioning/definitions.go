@@ -121,3 +121,28 @@ type Provisioning interface {
 	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
 	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
 }
+
+// ExpiredCredentialAction - the action to take on an expired credential
+type ExpiredCredentialAction int
+
+const (
+	// DeprovisionExpiredCredential - deprovision expired credentials
+	DeprovisionExpiredCredential ExpiredCredentialAction = iota + 1
+)
+
+// String returns the string value of the RequestType enum
+func (c ExpiredCredentialAction) String() string {
+	return map[ExpiredCredentialAction]string{
+		DeprovisionExpiredCredential: "deprovision",
+	}[c]
+}
+
+// String returns the string value of the RequestType enum
+func ExpiredCredentialActionFromString(action string) ExpiredCredentialAction {
+	if val, ok := map[string]ExpiredCredentialAction{
+		"deprovision": DeprovisionExpiredCredential,
+	}[action]; ok {
+		return val
+	}
+	return 0
+}

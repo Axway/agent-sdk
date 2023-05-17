@@ -26,7 +26,14 @@ var (
 	CredentialScopes = []string{"Environment"}
 )
 
-const CredentialResourceName = "credentials"
+const (
+	CredentialResourceName              = "credentials"
+	CredentialDataSubResourceName       = "data"
+	CredentialPoliciesSubResourceName   = "policies"
+	CredentialReferencesSubResourceName = "references"
+	CredentialStateSubResourceName      = "state"
+	CredentialStatusSubResourceName     = "status"
+)
 
 func CredentialGVK() apiv1.GroupVersionKind {
 	return _CredentialGVK

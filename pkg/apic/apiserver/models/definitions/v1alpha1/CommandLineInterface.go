@@ -26,7 +26,9 @@ var (
 	CommandLineInterfaceScopes = []string{"ResourceGroup"}
 )
 
-const CommandLineInterfaceResourceName = "commandlines"
+const (
+	CommandLineInterfaceResourceName = "commandlines"
+)
 
 func CommandLineInterfaceGVK() apiv1.GroupVersionKind {
 	return _CommandLineInterfaceGVK

@@ -26,7 +26,9 @@ var (
 	ResourceHookScopes = []string{"Integration"}
 )
 
-const ResourceHookResourceName = "resourcehooks"
+const (
+	ResourceHookResourceName = "resourcehooks"
+)
 
 func ResourceHookGVK() apiv1.GroupVersionKind {
 	return _ResourceHookGVK

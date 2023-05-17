@@ -26,7 +26,9 @@ var (
 	CategoryVisibilityScopes = []string{"Marketplace"}
 )
 
-const CategoryVisibilityResourceName = "categoryvisibility"
+const (
+	CategoryVisibilityResourceName = "categoryvisibility"
+)
 
 func CategoryVisibilityGVK() apiv1.GroupVersionKind {
 	return _CategoryVisibilityGVK

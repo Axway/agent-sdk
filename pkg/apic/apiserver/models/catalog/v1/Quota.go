@@ -26,7 +26,10 @@ var (
 	QuotaScopes = []string{"ProductPlan"}
 )
 
-const QuotaResourceName = "quotas"
+const (
+	QuotaResourceName          = "quotas"
+	QuotaStatusSubResourceName = "status"
+)
 
 func QuotaGVK() apiv1.GroupVersionKind {
 	return _QuotaGVK
