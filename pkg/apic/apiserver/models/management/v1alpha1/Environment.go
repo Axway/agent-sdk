@@ -26,7 +26,11 @@ var (
 	EnvironmentScopes = []string{""}
 )
 
-const EnvironmentResourceName = "environments"
+const (
+	EnvironmentResourceName                   = "environments"
+	EnvironmentCompliancetasksSubResourceName = "compliancetasks"
+	EnvironmentPoliciesSubResourceName        = "policies"
+)
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
 	return _EnvironmentGVK

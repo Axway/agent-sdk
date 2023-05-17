@@ -26,7 +26,15 @@ var (
 	SubscriptionScopes = []string{""}
 )
 
-const SubscriptionResourceName = "subscriptions"
+const (
+	SubscriptionResourceName               = "subscriptions"
+	SubscriptionApprovalSubResourceName    = "approval"
+	SubscriptionBillingSubResourceName     = "billing"
+	SubscriptionMarketplaceSubResourceName = "marketplace"
+	SubscriptionReferencesSubResourceName  = "references"
+	SubscriptionStateSubResourceName       = "state"
+	SubscriptionStatusSubResourceName      = "status"
+)
 
 func SubscriptionGVK() apiv1.GroupVersionKind {
 	return _SubscriptionGVK

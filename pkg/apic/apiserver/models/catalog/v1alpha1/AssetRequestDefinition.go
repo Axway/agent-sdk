@@ -26,7 +26,10 @@ var (
 	AssetRequestDefinitionScopes = []string{"AuthorizationProfile"}
 )
 
-const AssetRequestDefinitionResourceName = "assetrequestdefinitions"
+const (
+	AssetRequestDefinitionResourceName                 = "assetrequestdefinitions"
+	AssetRequestDefinitionAuthorizationSubResourceName = "authorization"
+)
 
 func AssetRequestDefinitionGVK() apiv1.GroupVersionKind {
 	return _AssetRequestDefinitionGVK

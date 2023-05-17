@@ -26,7 +26,9 @@ var (
 	APISpecScopes = []string{"K8SCluster"}
 )
 
-const APISpecResourceName = "apispecs"
+const (
+	APISpecResourceName = "apispecs"
+)
 
 func APISpecGVK() apiv1.GroupVersionKind {
 	return _APISpecGVK

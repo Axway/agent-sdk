@@ -26,7 +26,9 @@ var (
 	IntegrationScopes = []string{""}
 )
 
-const IntegrationResourceName = "integrations"
+const (
+	IntegrationResourceName = "integrations"
+)
 
 func IntegrationGVK() apiv1.GroupVersionKind {
 	return _IntegrationGVK

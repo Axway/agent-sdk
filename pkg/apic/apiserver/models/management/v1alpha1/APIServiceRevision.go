@@ -26,7 +26,10 @@ var (
 	APIServiceRevisionScopes = []string{"Environment"}
 )
 
-const APIServiceRevisionResourceName = "apiservicerevisions"
+const (
+	APIServiceRevisionResourceName              = "apiservicerevisions"
+	ApiServiceRevisionComplianceSubResourceName = "compliance"
+)
 
 func APIServiceRevisionGVK() apiv1.GroupVersionKind {
 	return _APIServiceRevisionGVK

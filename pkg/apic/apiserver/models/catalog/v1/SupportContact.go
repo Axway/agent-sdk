@@ -26,7 +26,9 @@ var (
 	SupportContactScopes = []string{""}
 )
 
-const SupportContactResourceName = "supportcontacts"
+const (
+	SupportContactResourceName = "supportcontacts"
+)
 
 func SupportContactGVK() apiv1.GroupVersionKind {
 	return _SupportContactGVK

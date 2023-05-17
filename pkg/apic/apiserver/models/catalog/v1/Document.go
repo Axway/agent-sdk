@@ -27,7 +27,10 @@ var (
 	DocumentScopes = []string{"Product", "ProductRelease"}
 )
 
-const DocumentResourceName = "documents"
+const (
+	DocumentResourceName          = "documents"
+	DocumentStatusSubResourceName = "status"
+)
 
 func DocumentGVK() apiv1.GroupVersionKind {
 	return _DocumentGVK

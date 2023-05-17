@@ -27,7 +27,9 @@ var (
 	ProductOverviewScopes = []string{"Product", "ProductRelease"}
 )
 
-const ProductOverviewResourceName = "productoverviews"
+const (
+	ProductOverviewResourceName = "productoverviews"
+)
 
 func ProductOverviewGVK() apiv1.GroupVersionKind {
 	return _ProductOverviewGVK

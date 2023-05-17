@@ -26,7 +26,11 @@ var (
 	APISpecLintingJobScopes = []string{"Environment"}
 )
 
-const APISpecLintingJobResourceName = "apispeclintingjobs"
+const (
+	APISpecLintingJobResourceName          = "apispeclintingjobs"
+	ApiSpecLintingJobResultSubResourceName = "result"
+	ApiSpecLintingJobStateSubResourceName  = "state"
+)
 
 func APISpecLintingJobGVK() apiv1.GroupVersionKind {
 	return _APISpecLintingJobGVK

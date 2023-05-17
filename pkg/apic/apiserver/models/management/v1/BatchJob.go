@@ -26,7 +26,10 @@ var (
 	BatchJobScopes = []string{"Environment"}
 )
 
-const BatchJobResourceName = "batchjobs"
+const (
+	BatchJobResourceName            = "batchjobs"
+	BatchJobProgressSubResourceName = "progress"
+)
 
 func BatchJobGVK() apiv1.GroupVersionKind {
 	return _BatchJobGVK

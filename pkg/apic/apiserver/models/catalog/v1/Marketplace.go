@@ -26,7 +26,10 @@ var (
 	MarketplaceScopes = []string{""}
 )
 
-const MarketplaceResourceName = "marketplaces"
+const (
+	MarketplaceResourceName           = "marketplaces"
+	MarketplaceBillingSubResourceName = "billing"
+)
 
 func MarketplaceGVK() apiv1.GroupVersionKind {
 	return _MarketplaceGVK

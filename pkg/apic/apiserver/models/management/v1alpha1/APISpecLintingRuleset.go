@@ -26,7 +26,9 @@ var (
 	APISpecLintingRulesetScopes = []string{""}
 )
 
-const APISpecLintingRulesetResourceName = "apispeclintingrulesets"
+const (
+	APISpecLintingRulesetResourceName = "apispeclintingrulesets"
+)
 
 func APISpecLintingRulesetGVK() apiv1.GroupVersionKind {
 	return _APISpecLintingRulesetGVK

@@ -26,7 +26,9 @@ var (
 	ProductPlanUnitScopes = []string{""}
 )
 
-const ProductPlanUnitResourceName = "productplanunits"
+const (
+	ProductPlanUnitResourceName = "productplanunits"
+)
 
 func ProductPlanUnitGVK() apiv1.GroupVersionKind {
 	return _ProductPlanUnitGVK

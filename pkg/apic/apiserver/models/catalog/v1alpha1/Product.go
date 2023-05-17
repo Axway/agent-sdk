@@ -26,7 +26,13 @@ var (
 	ProductScopes = []string{""}
 )
 
-const ProductResourceName = "products"
+const (
+	ProductResourceName                 = "products"
+	ProductLatestreleaseSubResourceName = "latestrelease"
+	ProductReferencesSubResourceName    = "references"
+	ProductStateSubResourceName         = "state"
+	ProductStatusSubResourceName        = "status"
+)
 
 func ProductGVK() apiv1.GroupVersionKind {
 	return _ProductGVK

@@ -26,7 +26,11 @@ var (
 	DiscoveryAgentScopes = []string{"Environment"}
 )
 
-const DiscoveryAgentResourceName = "discoveryagents"
+const (
+	DiscoveryAgentResourceName             = "discoveryagents"
+	DiscoveryAgentDataplaneSubResourceName = "dataplane"
+	DiscoveryAgentStatusSubResourceName    = "status"
+)
 
 func DiscoveryAgentGVK() apiv1.GroupVersionKind {
 	return _DiscoveryAgentGVK

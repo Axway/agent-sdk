@@ -26,7 +26,9 @@ var (
 	WatchTopicScopes = []string{""}
 )
 
-const WatchTopicResourceName = "watchtopics"
+const (
+	WatchTopicResourceName = "watchtopics"
+)
 
 func WatchTopicGVK() apiv1.GroupVersionKind {
 	return _WatchTopicGVK

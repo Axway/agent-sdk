@@ -26,7 +26,9 @@ var (
 	AssetMappingTemplateScopes = []string{"Environment"}
 )
 
-const AssetMappingTemplateResourceName = "assetmappingtemplates"
+const (
+	AssetMappingTemplateResourceName = "assetmappingtemplates"
+)
 
 func AssetMappingTemplateGVK() apiv1.GroupVersionKind {
 	return _AssetMappingTemplateGVK
