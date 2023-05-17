@@ -48,10 +48,12 @@ type Set struct {
 	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
 	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
 	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
+	BatchJobManagementV1alpha1                       *management_v1alpha1.UnscopedBatchJobClient
 	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
 	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
 	APISpecLintingJobManagementV1                    *management_v1.UnscopedAPISpecLintingJobClient
 	APISpecLintingRulesetManagementV1                *management_v1.APISpecLintingRulesetClient
+	BatchJobManagementV1                             *management_v1.UnscopedBatchJobClient
 	StageCatalogV1alpha1                             *catalog_v1alpha1.StageClient
 	AssetCatalogV1alpha1                             *catalog_v1alpha1.AssetClient
 	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
@@ -61,6 +63,7 @@ type Set struct {
 	CredentialCatalogV1alpha1                        *catalog_v1alpha1.UnscopedCredentialClient
 	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
 	SubscriptionJobCatalogV1alpha1                   *catalog_v1alpha1.UnscopedSubscriptionJobClient
+	SubscriptionInvoiceCatalogV1alpha1               *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
@@ -235,6 +238,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.CredentialRequestDefinition: %s", err))
 	}
+	s.BatchJobManagementV1alpha1, err = management_v1alpha1.NewBatchJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.BatchJob: %s", err))
+	}
 	s.SecretManagementV1alpha1, err = management_v1alpha1.NewSecretClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Secret: %s", err))
@@ -250,6 +257,10 @@ func New(b cAPIV1.Base) *Set {
 	s.APISpecLintingRulesetManagementV1, err = management_v1.NewAPISpecLintingRulesetClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.APISpecLintingRuleset: %s", err))
+	}
+	s.BatchJobManagementV1, err = management_v1.NewBatchJobClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.BatchJob: %s", err))
 	}
 	s.StageCatalogV1alpha1, err = catalog_v1alpha1.NewStageClient(b)
 	if err != nil {
@@ -286,6 +297,10 @@ func New(b cAPIV1.Base) *Set {
 	s.SubscriptionJobCatalogV1alpha1, err = catalog_v1alpha1.NewSubscriptionJobClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionJob: %s", err))
+	}
+	s.SubscriptionInvoiceCatalogV1alpha1, err = catalog_v1alpha1.NewSubscriptionInvoiceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionInvoice: %s", err))
 	}
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {

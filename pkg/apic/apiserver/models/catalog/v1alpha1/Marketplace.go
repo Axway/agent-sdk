@@ -40,8 +40,9 @@ func init() {
 // Marketplace Resource
 type Marketplace struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner    `json:"owner"`
-	Spec  MarketplaceSpec `json:"spec"`
+	Billing MarketplaceBilling `json:"billing"`
+	Owner   *apiv1.Owner       `json:"owner"`
+	Spec    MarketplaceSpec    `json:"spec"`
 }
 
 // NewMarketplace creates an empty *Marketplace
@@ -120,6 +121,7 @@ func (res *Marketplace) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["billing"] = res.Billing
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -149,6 +151,20 @@ func (res *Marketplace) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Billing
+	if v, ok := aux.SubResources["billing"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "billing")
+		err = json.Unmarshal(sr, &res.Billing)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
