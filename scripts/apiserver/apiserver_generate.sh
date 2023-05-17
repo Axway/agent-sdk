@@ -29,6 +29,9 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
   # copy over the fake example test file
   cp ./fake_example_test.tmpl ${OUTDIR}/clients/management/v1alpha1/fake_example_test.go
 
+  # replace the discovery agent config file
+  cp ./model_discovery_agent_spec_config.tmpl ${OUTDIR}/models/management/v1alpha1/model_discovery_agent_spec_config.go
+
   # replace the access control model files
   cp ./model_access_control_list_spec-catalog.tmpl ${OUTDIR}/models/catalog/v1alpha1/model_access_control_list_spec.go
   cp ./model_access_control_list_spec-definitions.tmpl ${OUTDIR}/models/definitions/v1alpha1/model_access_control_list_spec.go
