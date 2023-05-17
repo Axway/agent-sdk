@@ -29,6 +29,7 @@ var (
 const (
 	CredentialRequestDefinitionResourceName              = "credentialrequestdefinitions"
 	CredentialRequestDefinitionReferencesSubResourceName = "references"
+	CredentialRequestDefinitionWebhooksSubResourceName   = "webhooks"
 )
 
 func CredentialRequestDefinitionGVK() apiv1.GroupVersionKind {

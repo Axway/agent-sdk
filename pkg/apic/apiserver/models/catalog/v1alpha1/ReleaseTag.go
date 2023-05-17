@@ -29,6 +29,7 @@ var (
 
 const (
 	ReleaseTagResourceName          = "releasetags"
+	ReleaseTagStateSubResourceName  = "state"
 	ReleaseTagStatusSubResourceName = "status"
 )
 

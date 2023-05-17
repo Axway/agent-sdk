@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	APISpecLintingRulesetResourceName = "apispeclintingrulesets"
+	APISpecLintingRulesetResourceName            = "apispeclintingrulesets"
+	ApiSpecLintingRulesetRevisionSubResourceName = "revision"
 )
 
 func APISpecLintingRulesetGVK() apiv1.GroupVersionKind {

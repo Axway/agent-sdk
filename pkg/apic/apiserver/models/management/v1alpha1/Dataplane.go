@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	DataplaneResourceName            = "dataplanes"
-	DataplaneSecuritySubResourceName = "security"
+	DataplaneResourceName                = "dataplanes"
+	DataplaneSecretschemaSubResourceName = "secretschema"
+	DataplaneSecuritySubResourceName     = "security"
 )
 
 func DataplaneGVK() apiv1.GroupVersionKind {

@@ -29,6 +29,7 @@ var (
 const (
 	AssetRequestResourceName               = "assetrequests"
 	AssetRequestApprovalSubResourceName    = "approval"
+	AssetRequestDataSubResourceName        = "data"
 	AssetRequestMarketplaceSubResourceName = "marketplace"
 	AssetRequestReferencesSubResourceName  = "references"
 	AssetRequestStatusSubResourceName      = "status"

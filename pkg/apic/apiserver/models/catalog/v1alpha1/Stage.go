@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	StageResourceName = "stages"
+	StageResourceName        = "stages"
+	StageIconSubResourceName = "icon"
 )
 
 func StageGVK() apiv1.GroupVersionKind {

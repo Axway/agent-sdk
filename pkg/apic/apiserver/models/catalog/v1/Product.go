@@ -28,6 +28,7 @@ var (
 
 const (
 	ProductResourceName                 = "products"
+	ProductIconSubResourceName          = "icon"
 	ProductLatestreleaseSubResourceName = "latestrelease"
 	ProductReferencesSubResourceName    = "references"
 	ProductStateSubResourceName         = "state"

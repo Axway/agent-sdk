@@ -28,6 +28,7 @@ var (
 
 const (
 	ProductReleaseResourceName          = "productreleases"
+	ProductReleaseIconSubResourceName   = "icon"
 	ProductReleaseStatusSubResourceName = "status"
 )
 

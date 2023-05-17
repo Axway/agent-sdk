@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	CategoryResourceName = "categories"
+	CategoryResourceName        = "categories"
+	CategoryIconSubResourceName = "icon"
 )
 
 func CategoryGVK() apiv1.GroupVersionKind {

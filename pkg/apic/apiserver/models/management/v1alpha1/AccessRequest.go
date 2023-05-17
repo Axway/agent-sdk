@@ -27,8 +27,10 @@ var (
 )
 
 const (
-	AccessRequestResourceName          = "accessrequests"
-	AccessRequestStatusSubResourceName = "status"
+	AccessRequestResourceName              = "accessrequests"
+	AccessRequestDataSubResourceName       = "data"
+	AccessRequestReferencesSubResourceName = "references"
+	AccessRequestStatusSubResourceName     = "status"
 )
 
 func AccessRequestGVK() apiv1.GroupVersionKind {

@@ -27,9 +27,10 @@ var (
 )
 
 const (
-	APISpecLintingJobResourceName          = "apispeclintingjobs"
-	ApiSpecLintingJobResultSubResourceName = "result"
-	ApiSpecLintingJobStateSubResourceName  = "state"
+	APISpecLintingJobResourceName            = "apispeclintingjobs"
+	ApiSpecLintingJobArchivedSubResourceName = "archived"
+	ApiSpecLintingJobResultSubResourceName   = "result"
+	ApiSpecLintingJobStateSubResourceName    = "state"
 )
 
 func APISpecLintingJobGVK() apiv1.GroupVersionKind {

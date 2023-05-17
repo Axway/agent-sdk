@@ -29,6 +29,7 @@ var (
 
 const (
 	DocumentResourceName          = "documents"
+	DocumentIconSubResourceName   = "icon"
 	DocumentStatusSubResourceName = "status"
 )
 

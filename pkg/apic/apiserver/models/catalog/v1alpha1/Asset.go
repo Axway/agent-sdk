@@ -29,7 +29,9 @@ var (
 const (
 	AssetResourceName                 = "assets"
 	AssetAccessSubResourceName        = "access"
+	AssetIconSubResourceName          = "icon"
 	AssetLatestreleaseSubResourceName = "latestrelease"
+	AssetReferencesSubResourceName    = "references"
 	AssetStateSubResourceName         = "state"
 	AssetStatusSubResourceName        = "status"
 )

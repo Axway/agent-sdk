@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	AccessRequestDefinitionResourceName = "accessrequestdefinitions"
+	AccessRequestDefinitionResourceName            = "accessrequestdefinitions"
+	AccessRequestDefinitionWebhooksSubResourceName = "webhooks"
 )
 
 func AccessRequestDefinitionGVK() apiv1.GroupVersionKind {

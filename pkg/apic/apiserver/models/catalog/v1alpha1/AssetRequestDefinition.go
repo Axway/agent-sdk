@@ -29,6 +29,8 @@ var (
 const (
 	AssetRequestDefinitionResourceName                 = "assetrequestdefinitions"
 	AssetRequestDefinitionAuthorizationSubResourceName = "authorization"
+	AssetRequestDefinitionReferencesSubResourceName    = "references"
+	AssetRequestDefinitionWebhooksSubResourceName      = "webhooks"
 )
 
 func AssetRequestDefinitionGVK() apiv1.GroupVersionKind {

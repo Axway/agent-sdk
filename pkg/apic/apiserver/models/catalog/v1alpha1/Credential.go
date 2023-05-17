@@ -28,6 +28,7 @@ var (
 
 const (
 	CredentialResourceName               = "credentials"
+	CredentialDataSubResourceName        = "data"
 	CredentialExpirationSubResourceName  = "expiration"
 	CredentialMarketplaceSubResourceName = "marketplace"
 	CredentialPoliciesSubResourceName    = "policies"
