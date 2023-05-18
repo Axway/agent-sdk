@@ -26,7 +26,11 @@ var (
 	ConsumerInstanceScopes = []string{"Environment"}
 )
 
-const ConsumerInstanceResourceName = "consumerinstances"
+const (
+	ConsumerInstanceResourceName              = "consumerinstances"
+	ConsumerInstanceReferencesSubResourceName = "references"
+	ConsumerInstanceStatusSubResourceName     = "status"
+)
 
 func ConsumerInstanceGVK() apiv1.GroupVersionKind {
 	return _ConsumerInstanceGVK

@@ -26,7 +26,9 @@ var (
 	AccessControlListScopes = []string{"ResourceGroup"}
 )
 
-const AccessControlListResourceName = "accesscontrollists"
+const (
+	AccessControlListResourceName = "accesscontrollists"
+)
 
 func AccessControlListGVK() apiv1.GroupVersionKind {
 	return _AccessControlListGVK

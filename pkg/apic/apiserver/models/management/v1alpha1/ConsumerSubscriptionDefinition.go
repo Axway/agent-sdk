@@ -26,7 +26,9 @@ var (
 	ConsumerSubscriptionDefinitionScopes = []string{"Environment"}
 )
 
-const ConsumerSubscriptionDefinitionResourceName = "consumersubscriptiondefs"
+const (
+	ConsumerSubscriptionDefinitionResourceName = "consumersubscriptiondefs"
+)
 
 func ConsumerSubscriptionDefinitionGVK() apiv1.GroupVersionKind {
 	return _ConsumerSubscriptionDefinitionGVK

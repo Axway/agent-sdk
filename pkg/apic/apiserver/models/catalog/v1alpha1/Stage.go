@@ -26,7 +26,10 @@ var (
 	StageScopes = []string{""}
 )
 
-const StageResourceName = "stages"
+const (
+	StageResourceName        = "stages"
+	StageIconSubResourceName = "icon"
+)
 
 func StageGVK() apiv1.GroupVersionKind {
 	return _StageGVK

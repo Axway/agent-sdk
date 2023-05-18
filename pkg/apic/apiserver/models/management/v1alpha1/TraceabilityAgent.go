@@ -26,7 +26,10 @@ var (
 	TraceabilityAgentScopes = []string{"Environment"}
 )
 
-const TraceabilityAgentResourceName = "traceabilityagents"
+const (
+	TraceabilityAgentResourceName          = "traceabilityagents"
+	TraceabilityAgentStatusSubResourceName = "status"
+)
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
 	return _TraceabilityAgentGVK

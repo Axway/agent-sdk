@@ -26,7 +26,15 @@ var (
 	SubscriptionScopes = []string{""}
 )
 
-const SubscriptionResourceName = "subscriptions"
+const (
+	SubscriptionResourceName               = "subscriptions"
+	SubscriptionApprovalSubResourceName    = "approval"
+	SubscriptionBillingSubResourceName     = "billing"
+	SubscriptionMarketplaceSubResourceName = "marketplace"
+	SubscriptionReferencesSubResourceName  = "references"
+	SubscriptionStateSubResourceName       = "state"
+	SubscriptionStatusSubResourceName      = "status"
+)
 
 func SubscriptionGVK() apiv1.GroupVersionKind {
 	return _SubscriptionGVK
@@ -41,6 +49,7 @@ func init() {
 type Subscription struct {
 	apiv1.ResourceMeta
 	Approval    SubscriptionApproval    `json:"approval"`
+	Billing     SubscriptionBilling     `json:"billing"`
 	Marketplace SubscriptionMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner            `json:"owner"`
 	References  SubscriptionReferences  `json:"references"`
@@ -127,6 +136,7 @@ func (res *Subscription) MarshalJSON() ([]byte, error) {
 	}
 
 	out["approval"] = res.Approval
+	out["billing"] = res.Billing
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -171,6 +181,20 @@ func (res *Subscription) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "approval")
 		err = json.Unmarshal(sr, &res.Approval)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Billing
+	if v, ok := aux.SubResources["billing"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "billing")
+		err = json.Unmarshal(sr, &res.Billing)
 		if err != nil {
 			return err
 		}

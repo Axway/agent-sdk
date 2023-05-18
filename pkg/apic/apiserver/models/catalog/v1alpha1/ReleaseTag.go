@@ -27,7 +27,11 @@ var (
 	ReleaseTagScopes = []string{"Asset", "Product"}
 )
 
-const ReleaseTagResourceName = "releasetags"
+const (
+	ReleaseTagResourceName          = "releasetags"
+	ReleaseTagStateSubResourceName  = "state"
+	ReleaseTagStatusSubResourceName = "status"
+)
 
 func ReleaseTagGVK() apiv1.GroupVersionKind {
 	return _ReleaseTagGVK

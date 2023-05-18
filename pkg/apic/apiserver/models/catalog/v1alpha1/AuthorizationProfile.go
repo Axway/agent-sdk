@@ -26,7 +26,11 @@ var (
 	AuthorizationProfileScopes = []string{""}
 )
 
-const AuthorizationProfileResourceName = "authprofiles"
+const (
+	AuthorizationProfileResourceName              = "authprofiles"
+	AuthorizationProfilePoliciesSubResourceName   = "policies"
+	AuthorizationProfileReferencesSubResourceName = "references"
+)
 
 func AuthorizationProfileGVK() apiv1.GroupVersionKind {
 	return _AuthorizationProfileGVK

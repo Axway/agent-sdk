@@ -26,7 +26,9 @@ var (
 	SpecDiscoveryScopes = []string{"K8SCluster"}
 )
 
-const SpecDiscoveryResourceName = "specdiscoveries"
+const (
+	SpecDiscoveryResourceName = "specdiscoveries"
+)
 
 func SpecDiscoveryGVK() apiv1.GroupVersionKind {
 	return _SpecDiscoveryGVK

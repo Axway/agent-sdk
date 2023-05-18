@@ -26,7 +26,12 @@ var (
 	ManagedApplicationScopes = []string{"Environment"}
 )
 
-const ManagedApplicationResourceName = "managedapplications"
+const (
+	ManagedApplicationResourceName               = "managedapplications"
+	ManagedApplicationMarketplaceSubResourceName = "marketplace"
+	ManagedApplicationReferencesSubResourceName  = "references"
+	ManagedApplicationStatusSubResourceName      = "status"
+)
 
 func ManagedApplicationGVK() apiv1.GroupVersionKind {
 	return _ManagedApplicationGVK

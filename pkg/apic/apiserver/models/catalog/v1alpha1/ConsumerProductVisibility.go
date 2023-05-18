@@ -26,7 +26,9 @@ var (
 	ConsumerProductVisibilityScopes = []string{"Marketplace"}
 )
 
-const ConsumerProductVisibilityResourceName = "consumerproductvisibility"
+const (
+	ConsumerProductVisibilityResourceName = "consumerproductvisibility"
+)
 
 func ConsumerProductVisibilityGVK() apiv1.GroupVersionKind {
 	return _ConsumerProductVisibilityGVK

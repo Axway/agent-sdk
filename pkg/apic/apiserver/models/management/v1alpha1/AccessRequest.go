@@ -26,7 +26,12 @@ var (
 	AccessRequestScopes = []string{"Environment"}
 )
 
-const AccessRequestResourceName = "accessrequests"
+const (
+	AccessRequestResourceName              = "accessrequests"
+	AccessRequestDataSubResourceName       = "data"
+	AccessRequestReferencesSubResourceName = "references"
+	AccessRequestStatusSubResourceName     = "status"
+)
 
 func AccessRequestGVK() apiv1.GroupVersionKind {
 	return _AccessRequestGVK

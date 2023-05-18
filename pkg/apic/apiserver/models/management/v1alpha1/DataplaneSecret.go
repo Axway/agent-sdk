@@ -26,7 +26,11 @@ var (
 	DataplaneSecretScopes = []string{"Environment"}
 )
 
-const DataplaneSecretResourceName = "dataplanesecrets"
+const (
+	DataplaneSecretResourceName          = "dataplanesecrets"
+	DataplaneSecretStateSubResourceName  = "state"
+	DataplaneSecretStatusSubResourceName = "status"
+)
 
 func DataplaneSecretGVK() apiv1.GroupVersionKind {
 	return _DataplaneSecretGVK

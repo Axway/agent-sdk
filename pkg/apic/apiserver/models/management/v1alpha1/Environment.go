@@ -26,7 +26,11 @@ var (
 	EnvironmentScopes = []string{""}
 )
 
-const EnvironmentResourceName = "environments"
+const (
+	EnvironmentResourceName                   = "environments"
+	EnvironmentCompliancetasksSubResourceName = "compliancetasks"
+	EnvironmentPoliciesSubResourceName        = "policies"
+)
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
 	return _EnvironmentGVK
@@ -40,9 +44,10 @@ func init() {
 // Environment Resource
 type Environment struct {
 	apiv1.ResourceMeta
-	Owner    *apiv1.Owner        `json:"owner"`
-	Policies EnvironmentPolicies `json:"policies"`
-	Spec     EnvironmentSpec     `json:"spec"`
+	Compliancetasks EnvironmentCompliancetasks `json:"compliancetasks"`
+	Owner           *apiv1.Owner               `json:"owner"`
+	Policies        EnvironmentPolicies        `json:"policies"`
+	Spec            EnvironmentSpec            `json:"spec"`
 }
 
 // NewEnvironment creates an empty *Environment
@@ -121,6 +126,7 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["compliancetasks"] = res.Compliancetasks
 	out["owner"] = res.Owner
 	out["policies"] = res.Policies
 	out["spec"] = res.Spec
@@ -151,6 +157,20 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Compliancetasks
+	if v, ok := aux.SubResources["compliancetasks"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "compliancetasks")
+		err = json.Unmarshal(sr, &res.Compliancetasks)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Policies

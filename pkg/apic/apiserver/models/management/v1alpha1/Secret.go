@@ -27,7 +27,9 @@ var (
 	SecretScopes = []string{"Environment", "Integration"}
 )
 
-const SecretResourceName = "secrets"
+const (
+	SecretResourceName = "secrets"
+)
 
 func SecretGVK() apiv1.GroupVersionKind {
 	return _SecretGVK

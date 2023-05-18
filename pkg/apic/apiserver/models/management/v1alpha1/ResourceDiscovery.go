@@ -26,7 +26,9 @@ var (
 	ResourceDiscoveryScopes = []string{"K8SCluster"}
 )
 
-const ResourceDiscoveryResourceName = "resourcediscoveries"
+const (
+	ResourceDiscoveryResourceName = "resourcediscoveries"
+)
 
 func ResourceDiscoveryGVK() apiv1.GroupVersionKind {
 	return _ResourceDiscoveryGVK

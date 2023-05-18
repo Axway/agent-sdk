@@ -26,7 +26,9 @@ var (
 	K8SClusterScopes = []string{""}
 )
 
-const K8SClusterResourceName = "k8sclusters"
+const (
+	K8SClusterResourceName = "k8sclusters"
+)
 
 func K8SClusterGVK() apiv1.GroupVersionKind {
 	return _K8SClusterGVK
