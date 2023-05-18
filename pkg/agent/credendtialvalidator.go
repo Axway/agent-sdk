@@ -57,6 +57,11 @@ func (j *credentialValidator) Status() error {
 func (j *credentialValidator) Execute() error {
 	j.logger.Debug("validating credentials for expiration")
 
+	if agent.cfg.GetCredentialConfig() == nil ||
+		!agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
+		return nil
+	}
+
 	// Get all of the credentials from the cache
 	credKeys := j.cacheManager.GetWatchResourceCacheKeys(management.CredentialGVK().Group, management.CredentialGVK().Kind)
 

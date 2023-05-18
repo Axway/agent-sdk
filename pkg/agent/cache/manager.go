@@ -121,9 +121,6 @@ type Manager interface {
 	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
 	DeleteWatchResource(group, kind, id string) error
 
-	// Environment cache related methods
-	AddEnvironment(resource *v1.ResourceInstance)
-
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -135,7 +132,6 @@ type cacheManager struct {
 	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	categoryMap             cache.Cache
-	environmentMap          cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache

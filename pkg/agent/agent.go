@@ -211,11 +211,8 @@ func handleInitialization() error {
 
 	if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 		// if credentials can expire and need to be deprovisioned then start the credential checker
-		if agent.cfg.GetCredentialConfig() != nil &&
-			agent.cfg.GetCredentialConfig().GetExpirationDays() > 0 &&
-			agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
-			registerCredentialChecker()
-		}
+
+		registerCredentialChecker()
 
 		registerExternalIDPs()
 		startTeamACLCache()
@@ -273,12 +270,7 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	}
 
 	// Set up credential config from environment resource policies
-	shouldDeprovisionExpired := false
-	if env.Policies.Credentials.Expiry.Action == "deprovision" {
-		shouldDeprovisionExpired = true
-	}
-
-	cfg.GetCredentialConfig().SetShouldDeprovisionExpired(shouldDeprovisionExpired)
+	cfg.GetCredentialConfig().SetShouldDeprovisionExpired(env.Policies.Credentials.Expiry.Action == "deprovision")
 	cfg.GetCredentialConfig().SetExpirationDays(int(env.Policies.Credentials.Expiry.Period))
 
 	if cfg.GetTeamID() == "" {
@@ -588,7 +580,7 @@ func newHandlers() []handler.Handler {
 			handler.NewCategoryHandler(agent.cacheManager),
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
-			handler.NewEnvironmentHandler(agent.cacheManager),
+			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
 		)
 	}
 
