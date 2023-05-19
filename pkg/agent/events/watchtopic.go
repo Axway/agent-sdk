@@ -297,7 +297,6 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
 			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 		}...)
 	}
 	return WatchTopicValues{
