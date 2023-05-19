@@ -265,14 +265,14 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 // NewTraceWatchTopic creates a WatchTopic template string
 func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
-		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		}...)
 	}
 	return WatchTopicValues{
