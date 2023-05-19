@@ -9,7 +9,7 @@
       {
         "group": "{{.Group}}",
         "kind": "{{.Kind}}",
-        "name": "*",
+        "name": {{if ne .Name ""}}"{{.Name}}"{{else}}"*"{{end}},
       {{if ne .ScopeName ""}}"scope": {
         "kind": "{{if .ScopeKind}}{{.ScopeKind}}{{else}}Environment{{end}}",
         "name": "{{.ScopeName}}"

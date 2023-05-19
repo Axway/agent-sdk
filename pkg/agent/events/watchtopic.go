@@ -223,6 +223,7 @@ type kindValues struct {
 	EventTypes []string
 	ScopeKind  string // blank defaults to Environment in template
 	ScopeName  string // blank generates no scope in template
+	Name       string
 }
 
 // WatchTopicValues values to populate the watch topic template
@@ -250,6 +251,7 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
 			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 		}...)
 	}
 	return WatchTopicValues{

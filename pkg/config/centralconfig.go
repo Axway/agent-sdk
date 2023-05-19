@@ -805,7 +805,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		AddSubscriptionConfigProperties(props)
 		AddMigrationConfigProperties(props)
-		AddCredentialConfigProperties(props)
 	}
 }
 
@@ -881,7 +880,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		subscriptionConfig := ParseSubscriptionConfig(props)
 		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
-		cfg.CredentialConfig = ParseCredentialConfig(props)
+		cfg.CredentialConfig = newCredentialConfig()
 	}
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
