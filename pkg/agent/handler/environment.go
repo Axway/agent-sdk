@@ -31,7 +31,7 @@ func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 	// verify that action is subresource updated and meta subsresource is environment policy
 	action := GetActionFromContext(ctx)
-	if action != proto.Event_SUBRESOURCEUPDATED && meta.Subresource != management.EnvironmentPoliciesSubResourceName {
+	if action != proto.Event_SUBRESOURCEUPDATED || meta.Subresource != management.EnvironmentPoliciesSubResourceName {
 		return nil
 	}
 
