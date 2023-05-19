@@ -238,19 +238,19 @@ type WatchTopicValues struct {
 // Using a template instead of unmarshalling into a struct to avoid sending a request with empty fields
 func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
-		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
+		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
 		{GroupKind: catalog.CategoryGVK().GroupKind, EventTypes: all},
-		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: management.AccessControlListGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.AccessControlListGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 	}
 	if features.IsMarketplaceSubsEnabled() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 			{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 		}...)
 	}

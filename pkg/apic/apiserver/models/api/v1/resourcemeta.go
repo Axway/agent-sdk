@@ -104,9 +104,14 @@ func (rm *ResourceMeta) GetKindLink() string {
 
 	plural, _ := GetPluralFromKind(rm.Kind)
 
-	scope, ok := GetScope(rm.GetGroupVersionKind().GroupKind)
-	if ok && scope != "" {
-		scopePlural, _ := GetPluralFromKind(scope)
+	if rm.Metadata.Scope.Kind == "" {
+		scope, ok := GetScope(rm.GetGroupVersionKind().GroupKind)
+		if ok && scope != "" {
+			scopePlural, _ := GetPluralFromKind(scope)
+			pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
+		}
+	} else {
+		scopePlural, _ := GetPluralFromKind(rm.Metadata.Scope.Kind)
 		pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
 	}
 
