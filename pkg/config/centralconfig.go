@@ -869,6 +869,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.PlatformURL = strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
+	cfg.CredentialConfig = newCredentialConfig()
 	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.UsageReporting = usageReporting
