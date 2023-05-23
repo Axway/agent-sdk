@@ -9,6 +9,9 @@
 
 package management
 
+// GENERATE: The following code has been modified after code generation
+import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
 // TraceabilityAgentSpecConfig Represents the traceability agent config (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfig struct {
 	// Configures the agent to include request and response headers in captured traffic. Defaults to true

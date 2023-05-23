@@ -20,6 +20,68 @@ if [[ "$OS" == "Darwin" ]] ; then
     }
 fi
 
+
+######################
+# For model_consumer_instance_spec_subscription.go, we want to remove 'omitempty' from AutoSubscribe
+######################
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
+# add in the new line we want
+$SED -i "/AutoSubscribe/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
+
+
+######################
+# For model_consumer_instance_spec.go, we want to turn 	"Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`" into
+# "Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`"
+######################
+SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
+REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec.go
+# add in the new line we want
+$SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
+
+
+######################
+# For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
+# "Scope *WatchTopicSpecScope `json:"scope,omitempty"`"
+######################
+SEARCH="\s*Scope\s*WatchTopicSpecScope.*"
+REPLACE="Scope *WatchTopicSpecScope \`json:\"scope,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# add in the new line we want
+$SED -i "/WatchTopicSpecScope/a ${REPLACE}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
+
+
+######################
+# For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into
+# "References []AccessRequestReferences `json:"references"`"
+######################
+SEARCH="\s*References\s*interface{}.*"
+REPLACE="References []interface{} \`json:\"references\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/AccessRequest.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/AccessRequest.go
+# add in the new line we want
+$SED -i "/References\s/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
+# reformat the code
+go fmt ${MODEL_PATH}/AccessRequest.go
+
+
 ######################
 # Update the Status subresource in generated model to use v1.ResourceStatus
 ######################
@@ -51,63 +113,6 @@ for file in ${MODELS}; do
     fi
 done
 
-######################
-# For model_consumer_instance_spec_subscription.go, we want to remove 'omitempty' from AutoSubscribe
-######################
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# add in the new line we want
-$SED -i "/AutoSubscribe/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# reformat the code
-go fmt ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-
-
-######################
-# For model_consumer_instance_spec.go, we want to turn 	"Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`" into
-# "Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`"
-######################
-SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
-REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec.go
-# add in the new line we want
-$SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec.go
-# reformat the code
-go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
-
-######################
-# For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
-# "Scope *WatchTopicSpecScope `json:"scope,omitempty"`"
-######################
-SEARCH="\s*Scope\s*WatchTopicSpecScope.*"
-REPLACE="Scope *WatchTopicSpecScope \`json:\"scope,omitempty\"\`"
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_watch_topic_spec_filters.go
-# add in the new line we want
-$SED -i "/WatchTopicSpecScope/a ${REPLACE}" ${MODEL_PATH}/model_watch_topic_spec_filters.go
-# reformat the code
-go fmt ${MODEL_PATH}/model_watch_topic_spec_filters.go
-
-######################
-# For AccessRequest.go, we want to turn 	"References AccessRequestReferences `json:"references"`" into
-# "References []AccessRequestReferences `json:"references"`"
-######################
-SEARCH="\s*References\s*interface{}.*"
-REPLACE="References []interface{} \`json:\"references\"\`"
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/AccessRequest.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/AccessRequest.go
-# add in the new line we want
-$SED -i "/References\s/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
-# reformat the code
-go fmt ${MODEL_PATH}/AccessRequest.go
 
 ######################
 # Update the following STATES to include the type infront of the constant
@@ -126,6 +131,7 @@ for file in ${MODELS}; do
         fi
     done
 done
+
 
 ######################
 # Update the following REQUEST states to include the type infront of the constant
@@ -146,6 +152,7 @@ done
 #         fi
 #     done
 # done
+
 
 ######################
 # Update any OneOf types to be interface{}
@@ -213,6 +220,8 @@ CV1_REPLACE=""
 ######################
 OWNER_SEARCH="Owner.*\`json:\"owner,omitempty\"\`"
 OWNER_REPLACE="Owner *apiv1.Owner \`json:\"owner,omitempty\"\`"
+OWNER_IMPORT="import apiv1 \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""
+PACKAGE_SEARCH="^package.*$"
 
 for file in ${MODELS}; do
     if grep -e ${TIME_SEARCH} ${file} >> /dev/null; then
@@ -246,6 +255,9 @@ for file in ${MODELS}; do
         $SED -i -e "/${OWNER_SEARCH}/i ${COMMENT}" ${file}
         # remove the prefix
         $SED -i -e "s/${OWNER_SEARCH}/${OWNER_REPLACE}/g" ${file}
+
+        ## add a comment before and import the package
+        $SED -i -e "/${PACKAGE_SEARCH}/a ${COMMENT}\n${OWNER_IMPORT}" ${file}
     fi
     # reformat the code
     go fmt ${file}
