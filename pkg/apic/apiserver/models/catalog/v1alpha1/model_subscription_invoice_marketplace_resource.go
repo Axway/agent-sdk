@@ -11,5 +11,6 @@ package catalog
 
 // SubscriptionInvoiceMarketplaceResource The Marketplace Subscription Invoice resource details. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceMarketplaceResource struct {
-	Owner SubscriptionInvoiceMarketplaceResourceOwner `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

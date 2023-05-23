@@ -12,5 +12,6 @@ package catalog
 // AssetRequestMarketplaceResource The Marketplace Access Request resource details. (catalog.v1alpha1.AssetRequest)
 type AssetRequestMarketplaceResource struct {
 	Metadata AssetRequestMarketplaceResourceMetadata `json:"metadata"`
-	Owner    AssetRequestMarketplaceResourceOwner    `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

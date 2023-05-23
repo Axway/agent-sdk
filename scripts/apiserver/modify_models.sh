@@ -21,6 +21,37 @@ if [[ "$OS" == "Darwin" ]] ; then
 fi
 
 ######################
+# Update the Status subresource in generated model to use v1.ResourceStatus
+######################
+MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
+    ! -name 'model_*.go' \
+    ! -name 'AmplifyRuntimeConfig.go' \
+    ! -name 'AssetMapping.go' \
+    ! -name 'ConsumerInstance.go' \
+    ! -name 'DiscoveryAgent.go' \
+    ! -name 'GovernanceAgent.go' \
+    ! -name 'TraceabilityAgent.go'`
+
+SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
+REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
+SEARCH_UNMARSHAL="\s*err\s=\sjson\.Unmarshal(sr,\s\&res.Status)$"
+REPLACE_UNMARSHAL="res.Status = &apiv1.ResourceStatus{}\nerr = json.Unmarshal(sr, res.Status)"
+for file in ${MODELS}; do
+    if grep -e ${SEARCH} ${file} >> /dev/null; then
+        # comment out the line we're changing
+        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
+        # Update the unmarshal call
+        $SED -i -e "s/${SEARCH_UNMARSHAL}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${SEARCH_UNMARSHAL}/a ${REPLACE_UNMARSHAL}" ${file}
+        # reformat the code
+        go fmt ${file}
+    fi
+done
+
+######################
 # For model_consumer_instance_spec_subscription.go, we want to remove 'omitempty' from AutoSubscribe
 ######################
 # add a comment to the code
@@ -78,89 +109,11 @@ $SED -i "/References\s/a ${REPLACE}" ${MODEL_PATH}/AccessRequest.go
 # reformat the code
 go fmt ${MODEL_PATH}/AccessRequest.go
 
-
-######################
-# Update any time imports in the models, we want to turn "time" into
-# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
-
-SEARCH="\s*\"time\"$"
-REPLACE="time \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""
-for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # add a comment to the code
-        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
-        # comment out the line we're changing
-        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
-        # add in the new line we want
-        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
-        # reformat the code
-        go fmt ${file}
-    fi
-done
-
-
-######################
-# Update any OneOf types to be interface{}
-######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
-
-SEARCH="OneOf.*\s"
-REPLACE="interface{} "
-for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # add a comment to the code
-        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
-        # replace the Oneof type
-        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-        # reformat the code
-        go fmt ${file}
-    fi
-done
-
-######################
-# Remove the ManagementV1alpha1 prefix from the resources generated
-######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
-
-SEARCH="ManagementV1alpha1"
-REPLACE=""
-for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # add a comment to the code
-        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
-        # remove the prefix
-        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-        # reformat the code
-        go fmt ${file}
-    fi
-done
-
-######################
-# Remove the CatalogV1alpha1 prefix from the resources generated
-######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
-
-SEARCH="CatalogV1alpha1"
-REPLACE=""
-for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # add a comment to the code
-        $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
-        # remove the prefix
-        $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-
-        # reformat the code
-        go fmt ${file}
-    fi
-done
-
 ######################
 # Update the following STATES to include the type infront of the constant
 ######################
-MODELS=`find ${OUTDIR}/models -type f -name "model_*_state.go"`
 STATES="DRAFT ACTIVE DEPRECATED ARCHIVED ARCHIVING"
+MODELS=`find ${OUTDIR}/models -type f -name "model_*_state.go"`
 
 for file in ${MODELS}; do
     stateType=`grep "List of" ${file} | awk '{print $4}'`
@@ -170,42 +123,8 @@ for file in ${MODELS}; do
             $SED -i -e "/${state}/i ${COMMENT}" ${file}
             # replace the state
             $SED -i -e "s/${state}/${stateType}${state}/g" ${file}
-            # reformat the code
-            go fmt ${file}
         fi
     done
-done
-
-
-######################
-# Update the Status subresource in generated model to use v1.ResourceStatus
-######################
-MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
-    ! -name 'model_*.go' \
-    ! -name 'AmplifyRuntimeConfig.go' \
-    ! -name 'AssetMapping.go' \
-    ! -name 'ConsumerInstance.go' \
-    ! -name 'DiscoveryAgent.go' \
-    ! -name 'GovernanceAgent.go' \
-    ! -name 'TraceabilityAgent.go'`
-
-SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
-REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
-SEARCH_UNMARSHAL="\s*err\s=\sjson\.Unmarshal(sr,\s\&res.Status)$"
-REPLACE_UNMARSHAL="res.Status = &apiv1.ResourceStatus{}\nerr = json.Unmarshal(sr, res.Status)"
-for file in ${MODELS}; do
-    if grep -e ${SEARCH} ${file} >> /dev/null; then
-        # comment out the line we're changing
-        $SED -i -e "s/${SEARCH}/\/\/ &/" ${file}
-        # add in the new line we want
-        $SED -i "/\/\/${SEARCH}/a ${REPLACE}" ${file}
-        # Update the unmarshal call
-        $SED -i -e "s/${SEARCH_UNMARSHAL}/\/\/ &/" ${file}
-        # add in the new line we want
-        $SED -i "/\/\/${SEARCH_UNMARSHAL}/a ${REPLACE_UNMARSHAL}" ${file}
-        # reformat the code
-        go fmt ${file}
-    fi
 done
 
 ######################
@@ -241,8 +160,6 @@ for file in ${MODELS}; do
         $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
         # replace the float32 type
         $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-        # reformat the code
-        go fmt ${file}
     fi
 done
 
@@ -260,7 +177,76 @@ for file in ${MODELS}; do
         $SED -i -e "/${SEARCH}/i ${COMMENT}" ${file}
         # replace the float32 type
         $SED -i -e "s/${SEARCH}/${REPLACE}/g" ${file}
-        # reformat the code
-        go fmt ${file}
     fi
+done
+
+
+MODELS=`find ${OUTDIR}/models -type f -name "model_*.go"`
+
+######################
+# Update any time imports in the models, we want to turn "time" into
+# time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+######################
+TIME_SEARCH="\s*\"time\"$"
+TIME_REPLACE="time \"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1\""
+
+######################
+# Update any OneOf types to be interface{}
+######################
+ONEOF_SEARCH="OneOf.*\s"
+ONEOF_REPLACE="interface{} "
+
+######################
+# Remove the ManagementV1alpha1 prefix from the resources generated
+######################
+MV1_SEARCH="ManagementV1alpha1"
+MV1_REPLACE=""
+
+######################
+# Remove the CatalogV1alpha1 prefix from the resources generated
+######################
+CV1_SEARCH="CatalogV1alpha1"
+CV1_REPLACE=""
+
+######################
+# Replace and specifc Owner objects with the shared Owner structure
+######################
+OWNER_SEARCH="Owner.*\`json:\"owner,omitempty\"\`"
+OWNER_REPLACE="Owner *apiv1.Owner \`json:\"owner,omitempty\"\`"
+
+for file in ${MODELS}; do
+    if grep -e ${TIME_SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${TIME_SEARCH}/i ${COMMENT}" ${file}
+        # comment out the line we're changing
+        $SED -i -e "s/${TIME_SEARCH}/\/\/ &/" ${file}
+        # add in the new line we want
+        $SED -i "/\/\/${TIME_SEARCH}/a ${TIME_REPLACE}" ${file}
+    fi
+    if grep -e ${ONEOF_SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${ONEOF_SEARCH}/i ${COMMENT}" ${file}
+        # replace the Oneof type
+        $SED -i -e "s/${ONEOF_SEARCH}/${ONEOF_REPLACE}/g" ${file}
+    fi
+    if grep -e ${MV1_SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${MV1_SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${MV1_SEARCH}/${MV1_REPLACE}/g" ${file}
+    fi
+    if grep -e ${CV1_SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${CV1_SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${CV1_SEARCH}/${CV1_REPLACE}/g" ${file}
+    fi
+    if grep -e ${OWNER_SEARCH} ${file} >> /dev/null; then
+        # add a comment to the code
+        $SED -i -e "/${OWNER_SEARCH}/i ${COMMENT}" ${file}
+        # remove the prefix
+        $SED -i -e "s/${OWNER_SEARCH}/${OWNER_REPLACE}/g" ${file}
+    fi
+    # reformat the code
+    go fmt ${file}
 done

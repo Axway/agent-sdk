@@ -12,5 +12,6 @@ package catalog
 // SubscriptionMarketplaceResource The Marketplace Subscription resource details. (catalog.v1alpha1.Subscription)
 type SubscriptionMarketplaceResource struct {
 	Metadata SubscriptionMarketplaceResourceMetadata `json:"metadata"`
-	Owner    SubscriptionMarketplaceResourceOwner    `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

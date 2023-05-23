@@ -12,5 +12,6 @@ package catalog
 // CredentialMarketplaceResource The Marketplace Credential resource details. (catalog.v1alpha1.Credential)
 type CredentialMarketplaceResource struct {
 	Metadata CredentialMarketplaceResourceMetadata `json:"metadata"`
-	Owner    CredentialMarketplaceResourceOwner    `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

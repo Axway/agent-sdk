@@ -12,5 +12,6 @@ package management
 // ManagedApplicationMarketplaceResource The Marketplace Application resource details. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplaceResource struct {
 	Metadata ManagedApplicationMarketplaceResourceMetadata `json:"metadata"`
-	Owner    ManagedApplicationMarketplaceResourceOwner    `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }
