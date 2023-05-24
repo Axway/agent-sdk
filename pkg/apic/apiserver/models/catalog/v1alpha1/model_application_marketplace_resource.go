@@ -9,8 +9,12 @@
 
 package catalog
 
+// GENERATE: The following code has been modified after code generation
+import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
 // ApplicationMarketplaceResource The Marketplace Application resource details. (catalog.v1alpha1.Application)
 type ApplicationMarketplaceResource struct {
 	Metadata ApplicationMarketplaceResourceMetadata `json:"metadata"`
-	Owner    ApplicationMarketplaceResourceOwner    `json:"owner,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }
