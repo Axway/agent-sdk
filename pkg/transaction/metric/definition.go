@@ -100,10 +100,15 @@ type cachedMetric struct {
 	StartTime     time.Time            `json:"startTime"`
 }
 
-// V4EventDistribution - represents V7 distribution
+// V4EventDistribution - represents V4 distribution
 type V4EventDistribution struct {
 	Environment string `json:"environment"`
 	Version     string `json:"version"`
+}
+
+// V4Session - represents V4 session
+type V4Session struct {
+	ID string `json:"id"`
 }
 
 // V4Data - Interface for representing the metric data
@@ -117,10 +122,11 @@ type V4Event struct {
 	ID           string               `json:"id"`
 	Timestamp    int64                `json:"timestamp"`
 	Event        string               `json:"event"`
-	App          string               `json:"app"` // ORG GUID
+	App          string               `json:"app,omitempty"` // ORG GUID
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
 	Data         V4Data               `json:"data"`
+	Session      *V4Session           `json:"session,omitempty"`
 }
 
 // LighthouseUsageReport -Lighthouse Usage report

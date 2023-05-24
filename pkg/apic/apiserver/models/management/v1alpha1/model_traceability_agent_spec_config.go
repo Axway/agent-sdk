@@ -9,12 +9,15 @@
 
 package management
 
+// GENERATE: The following code has been modified after code generation
+import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+
 // TraceabilityAgentSpecConfig Represents the traceability agent config (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfig struct {
-	// Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
-	OwningTeam string `json:"owningTeam,omitempty"`
 	// Configures the agent to include request and response headers in captured traffic. Defaults to true
-	ProcessHeaders bool `json:"processHeaders,omitempty"`
-	// List of header names that will not be included in the captured traffic by the agent
-	ExcludeHeaders []string `json:"excludeHeaders,omitempty"`
+	ProcessHeaders bool                                 `json:"processHeaders,omitempty"`
+	Redaction      TraceabilityAgentSpecConfigRedaction `json:"redaction,omitempty"`
+	Sampling       TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

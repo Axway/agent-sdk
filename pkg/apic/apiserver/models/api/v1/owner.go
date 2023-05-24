@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+type Organization struct {
+	ID string `json:"id"`
+}
+
 // OwnerType -
 type OwnerType uint
 
@@ -22,8 +26,9 @@ var ownerTypeFromString = map[string]OwnerType{
 
 // Owner is the owner of a resource
 type Owner struct {
-	Type OwnerType `json:"type,omitempty"`
-	ID   string    `json:"id"`
+	Type         OwnerType    `json:"type,omitempty"`
+	ID           string       `json:"id"`
+	Organization Organization `json:"organization,omitempty"`
 }
 
 // SetType sets the type of the owner

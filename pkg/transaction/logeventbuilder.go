@@ -318,6 +318,9 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionEventBuilder) validateLogEvent() error {
+	if agent.GetCentralConfig() == nil {
+		return nil
+	}
 	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil
@@ -566,6 +569,10 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 }
 
 func (b *transactionSummaryBuilder) validateLogEvent() error {
+	if agent.GetCentralConfig() == nil {
+		return nil
+	}
+
 	if util.IsNotTest() && agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// Do not need this information in offline mode
 		return nil

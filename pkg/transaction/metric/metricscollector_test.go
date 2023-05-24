@@ -153,9 +153,9 @@ func createManagedApplication(id, name, consumerOrgID string) *apiv1.ResourceIns
 			"marketplace": management.ManagedApplicationMarketplace{
 				Name: name,
 				Resource: management.ManagedApplicationMarketplaceResource{
-					Owner: management.ManagedApplicationMarketplaceResourceOwner{
-						Organization: management.ManagedApplicationMarketplaceResourceOwnerOrganization{
-							Id: consumerOrgID,
+					Owner: &apiv1.Owner{
+						Organization: apiv1.Organization{
+							ID: consumerOrgID,
 						},
 					},
 				},

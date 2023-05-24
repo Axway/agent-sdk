@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
+func createDiscoveryAgentRes(id, name, dataplane, teamID string) *v1.ResourceInstance {
 	res := &management.DiscoveryAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
@@ -25,7 +25,10 @@ func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInsta
 		Spec: management.DiscoveryAgentSpec{
 			DataplaneType: dataplane,
 			Config: management.DiscoveryAgentSpecConfig{
-				OwningTeam: team,
+				Owner: &v1.Owner{
+					Type: v1.TeamOwner,
+					ID:   teamID,
+				},
 			},
 		},
 	}
@@ -33,7 +36,7 @@ func createDiscoveryAgentRes(id, name, dataplane, team string) *v1.ResourceInsta
 	return instance
 }
 
-func createTraceabilityAgentRes(id, name, dataplane, team string) *v1.ResourceInstance {
+func createTraceabilityAgentRes(id, name, dataplane, teamID string) *v1.ResourceInstance {
 	res := &management.TraceabilityAgent{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
@@ -44,7 +47,10 @@ func createTraceabilityAgentRes(id, name, dataplane, team string) *v1.ResourceIn
 		Spec: management.TraceabilityAgentSpec{
 			DataplaneType: dataplane,
 			Config: management.TraceabilityAgentSpecConfig{
-				OwningTeam: team,
+				Owner: &v1.Owner{
+					Type: v1.TeamOwner,
+					ID:   teamID,
+				},
 			},
 		},
 	}

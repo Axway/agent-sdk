@@ -796,7 +796,10 @@ func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
 	app := &management.ManagedApplication{}
 	app.FromInstance(ri)
 
-	return app.Marketplace.Resource.Owner.Organization.Id
+	if app.Marketplace.Resource.Owner != nil {
+		return app.Marketplace.Resource.Owner.Organization.ID
+	}
+	return ""
 }
 
 func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, string) {
