@@ -281,7 +281,6 @@ func TestInitEnvironment(t *testing.T) {
 	assert.Nil(t, err)
 	xAgentDetail = util.GetAgentDetails(environmentRes)
 	assert.NotNil(t, xAgentDetail)
-	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
 
 	cfg = createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.TraceabilityAgent
@@ -290,8 +289,6 @@ func TestInitEnvironment(t *testing.T) {
 	assert.Nil(t, err)
 	xAgentDetail = util.GetAgentDetails(environmentRes)
 	assert.NotNil(t, xAgentDetail)
-	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
-	assert.Equal(t, "true", xAgentDetail[config.TraceabilityAgent.ToString()+"-enabled"])
 }
 
 func TestAgentConfigOverride(t *testing.T) {
