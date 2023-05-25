@@ -166,7 +166,7 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	assert.NotNil(t, err)
 	cfg.(*UsageReportingConfiguration).UsageSchedule = "0,15,30,45,55 * * * *"
 	err = validateUsageReporting(cfg)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 	cfg.(*UsageReportingConfiguration).UsageSchedule = currentUsageSchedule
 
 	// QA UsageSchedule override
