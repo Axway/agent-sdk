@@ -180,8 +180,15 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 		h.onError(ctx, cred, err)
 		return
 	}
+	app, err := h.getManagedApp(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting managed app")
+		h.onError(ctx, cred, err)
+		return
+	}
 
-	provCreds, err := h.newProvCreds(cred, map[string]interface{}{}, provData, 0, crd)
+	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), provData, 0, crd)
+
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
