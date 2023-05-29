@@ -652,7 +652,7 @@ func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, 
 	}
 
 	switch {
-	case response.Code == http.StatusNoContent && method == http.MethodDelete:
+	case (response.Code == http.StatusNoContent || response.Code == http.StatusAccepted) && method == http.MethodDelete:
 		return nil, nil
 	case response.Code == http.StatusOK:
 		fallthrough
