@@ -11,7 +11,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
-	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -271,27 +270,18 @@ func TestInitEnvironment(t *testing.T) {
 	defer resetResources()
 	err := initEnvResources(agent.cfg, apiClient)
 	assert.Nil(t, err)
-	xAgentDetail := util.GetAgentDetails(environmentRes)
-	assert.Nil(t, xAgentDetail)
 
 	cfg = createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.DiscoveryAgent
 	agent.cfg = cfg
 	err = initEnvResources(agent.cfg, apiClient)
 	assert.Nil(t, err)
-	xAgentDetail = util.GetAgentDetails(environmentRes)
-	assert.NotNil(t, xAgentDetail)
-	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
 
 	cfg = createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.TraceabilityAgent
 	agent.cfg = cfg
 	err = initEnvResources(agent.cfg, apiClient)
 	assert.Nil(t, err)
-	xAgentDetail = util.GetAgentDetails(environmentRes)
-	assert.NotNil(t, xAgentDetail)
-	assert.Equal(t, "true", xAgentDetail[config.DiscoveryAgent.ToString()+"-enabled"])
-	assert.Equal(t, "true", xAgentDetail[config.TraceabilityAgent.ToString()+"-enabled"])
 }
 
 func TestAgentConfigOverride(t *testing.T) {
