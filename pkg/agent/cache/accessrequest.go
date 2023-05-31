@@ -51,8 +51,26 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	}
 
 	secKey := arSecondaryKey(appName, apiID, apiStage, apiVersion)
+	formattedAppForeignKey := formatAppForeignKey(appName)
+
+	c.logger.
+		WithField("instID", instID).
+		WithField("apiID", apiID).
+		WithField("apiStage", apiStage).
+		WithField("apiVersion", apiVersion).
+		WithField("formattedAppForeignKey", formattedAppForeignKey).
+		WithField("metadataID", ar.Metadata.ID).
+		WithField("secKey", secKey).
+		Trace("add access request and set secondary key")
+
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
-	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formatAppForeignKey(appName))
+	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey)
+
+	accessRequestMapKeys := c.accessRequestMap.GetKeys()
+	for _, key := range accessRequestMapKeys {
+		c.logger.Tracef("access request - current secondary key %s", key)
+	}
+
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
@@ -75,10 +93,10 @@ func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAP
 
 	accessRequestMapKeys := c.accessRequestMap.GetKeys()
 	if len(accessRequestMapKeys) == 0 {
-		c.logger.Trace("there are no secondary kesy")
+		c.logger.Trace("there are no secondary keys")
 	} else {
 		for _, key := range accessRequestMapKeys {
-			c.logger.Tracef("current secondary key %s", key)
+			c.logger.Tracef("access rquest by app, API stage, and version - current secondary key %s", key)
 		}
 	}
 
