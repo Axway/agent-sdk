@@ -60,10 +60,28 @@ func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteA
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance {
+	c.logger.
+		WithField("appName", appName).
+		WithField("remoteAPIID", remoteAPIID).
+		WithField("remoteAPIStage", remoteAPIStage).
+		WithField("remoteAPIVersion", remoteAPIVersion).
+		Trace("get access request by app, API stage, and version")
+
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	secKey := arSecondaryKey(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion)
+	c.logger.Tracef("secondary key - %s", secKey)
+
+	accessRequestMapKeys := c.accessRequestMap.GetKeys()
+	if len(accessRequestMapKeys) == 0 {
+		c.logger.Trace("there are no secondary kesy")
+	} else {
+		for _, key := range accessRequestMapKeys {
+			c.logger.Tracef("current secondary key %s", key)
+		}
+	}
+
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
