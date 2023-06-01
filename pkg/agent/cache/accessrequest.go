@@ -66,11 +66,6 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
 	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey)
 
-	accessRequestMapKeys := c.accessRequestMap.GetKeys()
-	for _, key := range accessRequestMapKeys {
-		c.logger.Tracef("access request - current secondary key %s", key)
-	}
-
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
@@ -89,16 +84,6 @@ func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAP
 	defer c.ReleaseResourceReadLock()
 
 	secKey := arSecondaryKey(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion)
-	c.logger.Tracef("secondary key - %s", secKey)
-
-	accessRequestMapKeys := c.accessRequestMap.GetKeys()
-	if len(accessRequestMapKeys) == 0 {
-		c.logger.Trace("there are no secondary keys")
-	} else {
-		for _, key := range accessRequestMapKeys {
-			c.logger.Tracef("access rquest by app, API stage, and version - current secondary key %s", key)
-		}
-	}
 
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
