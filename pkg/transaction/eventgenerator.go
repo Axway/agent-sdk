@@ -149,6 +149,12 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 
 	// Check to see if marketplace provisioning/subs is enabled
 	if agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+		if summaryEvent.TransactionSummary.Proxy != nil {
+			e.logger.Tracef("CreateEvents stage - %s", summaryEvent.TransactionSummary.Proxy.Stage)
+		} else {
+			e.logger.Trace("CreateEvents transaction summary proxy is nil")
+		}
+
 		err := e.processTxnSummary(summaryEvent)
 		if err != nil {
 			return nil, err
@@ -240,6 +246,8 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 		e.logger.Debug("proxy information is not available, no consumer information attached")
 		return nil
 	}
+
+	e.logger.Tracef("updateTxnSummaryByAccessRequest stage - %s", summaryEvent.TransactionSummary.Proxy.Stage)
 
 	// Go get the access request and managed app
 	accessRequest, managedApp := e.getAccessRequest(cacheManager, summaryEvent)
