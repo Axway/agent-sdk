@@ -51,8 +51,21 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	}
 
 	secKey := arSecondaryKey(appName, apiID, apiStage, apiVersion)
+	formattedAppForeignKey := formatAppForeignKey(appName)
+
+	c.logger.
+		WithField("instID", instID).
+		WithField("apiID", apiID).
+		WithField("apiStage", apiStage).
+		WithField("apiVersion", apiVersion).
+		WithField("formattedAppForeignKey", formattedAppForeignKey).
+		WithField("metadataID", ar.Metadata.ID).
+		WithField("secKey", secKey).
+		Trace("add access request and set secondary key")
+
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
-	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formatAppForeignKey(appName))
+	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey)
+
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteAPIStage string) *v1.ResourceInstance {
@@ -60,10 +73,18 @@ func (c *cacheManager) GetAccessRequestByAppAndAPI(appName, remoteAPIID, remoteA
 }
 
 func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance {
+	c.logger.
+		WithField("appName", appName).
+		WithField("remoteAPIID", remoteAPIID).
+		WithField("remoteAPIStage", remoteAPIStage).
+		WithField("remoteAPIVersion", remoteAPIVersion).
+		Trace("get access request by app, API stage, and version")
+
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	secKey := arSecondaryKey(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion)
+
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
