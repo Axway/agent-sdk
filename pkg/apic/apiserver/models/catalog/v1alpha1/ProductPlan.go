@@ -45,10 +45,10 @@ func init() {
 // ProductPlan Resource
 type ProductPlan struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner          `json:"owner"`
-	References ProductPlanReferences `json:"references"`
-	Spec       ProductPlanSpec       `json:"spec"`
-	State      ProductPlanState      `json:"state"`
+	Owner      *apiv1.Owner           `json:"owner"`
+	References *ProductPlanReferences `json:"references,omitempty"`
+	Spec       ProductPlanSpec        `json:"spec"`
+	State      ProductPlanState       `json:"state"`
 	// Status     ProductPlanStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
