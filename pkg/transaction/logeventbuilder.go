@@ -484,7 +484,7 @@ func (b *transactionSummaryBuilder) SetProxy(proxyID, proxyName string, proxyRev
 }
 
 func (b *transactionSummaryBuilder) SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder {
-	return b.SetProxyWithStageVersion(proxyID, proxyName, "", "", proxyRevision)
+	return b.SetProxyWithStageVersion(proxyID, proxyName, proxyStage, "", proxyRevision)
 }
 
 func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName, proxyStage, proxyVersion string, proxyRevision int) SummaryBuilder {
