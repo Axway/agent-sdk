@@ -12,6 +12,6 @@ package management
 // DataplaneSpecAws The configuration common to all AWS agents that use this dataplane
 type DataplaneSpecAws struct {
 	Type string `json:"type"`
-	// The name of the cloud watch log that AWS API Gateway will be configured to send API Access data to
-	AccessLogName string `json:"accessLogName,omitempty"`
+	// The ARN of the cloud watch log resource that AWS API Gateway will be configured to send API Access data to
+	AccessLogARN string `json:"accessLogARN,omitempty"`
 }
