@@ -81,6 +81,11 @@ type usageEventQueueItem struct {
 }
 
 func init() {
+	skip := os.Getenv("SKIP_METRIC_INIT")
+	if strings.ToLower(skip) == "true" {
+		return
+	}
+
 	go func() {
 		// Wait for the datadir to be set and exist
 		dataDir := ""
