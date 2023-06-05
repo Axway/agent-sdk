@@ -9,10 +9,9 @@
 
 package management
 
-// DataplaneSpec  (management.v1alpha1.Dataplane)
-type DataplaneSpec struct {
-	// The dataplane type that this agent connects to
+// DataplaneSpecAws The configuration common to all AWS agents that use this dataplane
+type DataplaneSpecAws struct {
 	Type string `json:"type"`
-	// GENERATE: The following code has been modified after code generation
-	Config interface{} `json:"config,omitempty"`
+	// The ARN of the cloud watch log resource that AWS API Gateway will be configured to send API Access data to
+	AccessLogARN string `json:"accessLogARN,omitempty"`
 }
