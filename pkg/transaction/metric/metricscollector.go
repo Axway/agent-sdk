@@ -35,7 +35,14 @@ const (
 	metric         = "metric"
 )
 
-var ExitMetricInit = false
+var exitMetricInit = false
+var exitMutex = &sync.RWMutex{}
+
+func ExitMetricInit() {
+	exitMutex.Lock()
+	defer exitMutex.Unlock()
+	exitMetricInit = true
+}
 
 // Collector - interface for collecting metrics
 type Collector interface {
@@ -83,16 +90,18 @@ type usageEventQueueItem struct {
 }
 
 func init() {
-
 	go func() {
 		// Wait for the datadir to be set and exist
 		dataDir := ""
 		_, err := os.Stat(dataDir)
 		for dataDir == "" || os.IsNotExist(err) {
 			time.Sleep(time.Millisecond * 50)
-			if ExitMetricInit {
+			exitMutex.RLock()
+			if exitMetricInit {
+				exitMutex.RUnlock()
 				return
 			}
+			exitMutex.RUnlock()
 
 			dataDir = traceability.GetDataDirPath()
 			_, err = os.Stat(dataDir)
