@@ -35,6 +35,8 @@ const (
 	metric         = "metric"
 )
 
+var ExitMetricInit = false
+
 // Collector - interface for collecting metrics
 type Collector interface {
 	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
@@ -81,16 +83,17 @@ type usageEventQueueItem struct {
 }
 
 func init() {
-	skip := os.Getenv("SKIP_METRIC_INIT")
-	if strings.ToLower(skip) == "true" {
-		return
-	}
 
 	go func() {
 		// Wait for the datadir to be set and exist
 		dataDir := ""
 		_, err := os.Stat(dataDir)
 		for dataDir == "" || os.IsNotExist(err) {
+			time.Sleep(time.Millisecond * 50)
+			if ExitMetricInit {
+				return
+			}
+
 			dataDir = traceability.GetDataDirPath()
 			_, err = os.Stat(dataDir)
 		}
