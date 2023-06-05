@@ -35,6 +35,15 @@ const (
 	metric         = "metric"
 )
 
+var exitMetricInit = false
+var exitMutex = &sync.RWMutex{}
+
+func ExitMetricInit() {
+	exitMutex.Lock()
+	defer exitMutex.Unlock()
+	exitMetricInit = true
+}
+
 // Collector - interface for collecting metrics
 type Collector interface {
 	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
@@ -86,6 +95,14 @@ func init() {
 		dataDir := ""
 		_, err := os.Stat(dataDir)
 		for dataDir == "" || os.IsNotExist(err) {
+			time.Sleep(time.Millisecond * 50)
+			exitMutex.RLock()
+			if exitMetricInit {
+				exitMutex.RUnlock()
+				return
+			}
+			exitMutex.RUnlock()
+
 			dataDir = traceability.GetDataDirPath()
 			_, err = os.Stat(dataDir)
 		}
