@@ -47,18 +47,6 @@ type ObservationDetails struct {
 	End   int64 `json:"end,omitempty"`
 }
 
-// APIDetails - Holds the api details
-// DEPRECATED
-type APIDetails struct {
-	ID                 string `json:"id"`
-	Name               string `json:"name"`
-	Revision           int    `json:"revision,omitempty"`
-	TeamID             string `json:"teamId,omitempty"`
-	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
-	Stage              string `json:"-"`
-	Version            string `json:"-"`
-}
-
 // APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
 	Subscription  models.Subscription  `json:"subscription"`
@@ -146,21 +134,6 @@ type LighthouseUsageEvent struct {
 	SchemaID    string                           `json:"schemaId"`
 	Report      map[string]LighthouseUsageReport `json:"report"`
 	Meta        map[string]interface{}           `json:"meta"`
-}
-
-// AppDetails - struct for app details to report
-// DEPRECATED
-type AppDetails struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
-}
-
-// SubscriptionDetails - struct for subscription metric detail
-// DEPRECATED
-type SubscriptionDetails struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }
 
 // Data - struct for data to report as API Metrics
