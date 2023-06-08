@@ -27,11 +27,11 @@ const (
 // Detail - holds the details for computing metrics
 // for API and consumer subscriptions
 type Detail struct {
-	APIDetails APIDetails
+	APIDetails models.APIDetails
 	StatusCode string
 	Duration   int64
 	Bytes      int64
-	AppDetails AppDetails
+	AppDetails models.AppDetails
 }
 
 // ResponseMetrics - Holds metrics API response
@@ -48,6 +48,7 @@ type ObservationDetails struct {
 }
 
 // APIDetails - Holds the api details
+// DEPRECATED
 type APIDetails struct {
 	ID                 string `json:"id"`
 	Name               string `json:"name"`
@@ -60,10 +61,10 @@ type APIDetails struct {
 
 // APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
 type APIMetric struct {
-	Subscription  SubscriptionDetails  `json:"subscription"`
-	App           AppDetails           `json:"application"`
+	Subscription  models.Subscription  `json:"subscription"`
+	App           models.AppDetails    `json:"application"`
 	Product       models.Product       `json:"product,omitempty"`
-	API           APIDetails           `json:"api"`
+	API           models.APIDetails    `json:"api"`
 	AssetResource models.AssetResource `json:"assetResource,omitempty"`
 	ProductPlan   models.ProductPlan   `json:"productPlan,omitempty"`
 	Quota         models.Quota         `json:"quota,omitempty"`
@@ -87,10 +88,10 @@ func (a *APIMetric) GetType() string {
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	Subscription  SubscriptionDetails  `json:"subscription,omitempty"`
-	App           AppDetails           `json:"app,omitempty"`
+	Subscription  models.Subscription  `json:"subscription,omitempty"`
+	App           models.AppDetails    `json:"app,omitempty"`
 	Product       models.Product       `json:"product,omitempty"`
-	API           APIDetails           `json:"api"`
+	API           models.APIDetails    `json:"api"`
 	AssetResource models.AssetResource `json:"assetResource,omitempty"`
 	ProductPlan   models.ProductPlan   `json:"productPlan,omitempty"`
 	Quota         models.Quota         `json:"quota,omitempty"`
@@ -148,6 +149,7 @@ type LighthouseUsageEvent struct {
 }
 
 // AppDetails - struct for app details to report
+// DEPRECATED
 type AppDetails struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
@@ -155,6 +157,7 @@ type AppDetails struct {
 }
 
 // SubscriptionDetails - struct for subscription metric detail
+// DEPRECATED
 type SubscriptionDetails struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -162,18 +165,18 @@ type SubscriptionDetails struct {
 
 // Data - struct for data to report as API Metrics
 type Data struct {
-	APIDetails APIDetails
+	APIDetails models.APIDetails
 	StatusCode string
 	Duration   int64
 	UsageBytes int64
-	AppDetails AppDetails
+	AppDetails models.AppDetails
 	TeamName   string
 }
 
 // AppUsage - struct to hold metric specific for app usage
 type AppUsage struct {
-	App   AppDetails `json:"app"`
-	Count int64      `json:"count"`
+	App   models.AppDetails `json:"app"`
+	Count int64             `json:"count"`
 }
 
 // ISO8601 - time format

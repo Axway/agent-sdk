@@ -78,7 +78,7 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 	if e.shouldUseTrafficForAggregation {
-		apiDetails := metric.APIDetails{
+		apiDetails := models.APIDetails{
 			ID:       summaryEvent.TransactionSummary.Proxy.ID,
 			Name:     summaryEvent.TransactionSummary.Proxy.Name,
 			Revision: summaryEvent.TransactionSummary.Proxy.Revision,
@@ -92,7 +92,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 
 		statusCode := summaryEvent.TransactionSummary.StatusDetail
 		duration := summaryEvent.TransactionSummary.Duration
-		appDetails := metric.AppDetails{}
+		appDetails := models.AppDetails{}
 		if summaryEvent.TransactionSummary.Application != nil {
 			appDetails.Name = summaryEvent.TransactionSummary.Application.Name
 			appDetails.ID = strings.TrimLeft(summaryEvent.TransactionSummary.Application.ID, SummaryEventApplicationIDPrefix)
