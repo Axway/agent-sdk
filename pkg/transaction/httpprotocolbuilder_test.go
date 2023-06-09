@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqLen, resLen int) (TransportProtocol, error) {
+func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqLen, resLen int, redactionConfig redaction.Redactions) (TransportProtocol, error) {
 	redaction.SetupGlobalRedaction(redaction.Config{})
 	return NewHTTPProtocolBuilder().
 		SetURI(uri).
@@ -27,12 +27,38 @@ func createHTTPProtocol(uri, method, reqHeaders, resHeaders string, status, reqL
 			`{"indexedresponse": "value", "x-indexedresponse": "random", "x-indexed": "test"}`).
 		SetPayload("requestPayload", "responsePayload").
 		SetWAFStatus(1).
+		SetRedactionConfig(redactionConfig).
 		Build()
 }
 
 func TestHTTPProtocolBuilder(t *testing.T) {
+	config := redaction.Config{
+		Path: redaction.Path{
+			Allowed: []redaction.Show{},
+		},
+		Args: redaction.Filter{
+			Allowed:  []redaction.Show{},
+			Sanitize: []redaction.Sanitize{},
+		},
+		RequestHeaders: redaction.Filter{
+			Allowed:  []redaction.Show{},
+			Sanitize: []redaction.Sanitize{},
+		},
+		ResponseHeaders: redaction.Filter{
+			Allowed:  []redaction.Show{},
+			Sanitize: []redaction.Sanitize{},
+		},
+		MaskingCharacters: "{*}",
+		JMSProperties: redaction.Filter{
+			Allowed:  []redaction.Show{},
+			Sanitize: []redaction.Sanitize{},
+		},
+	}
+
+	redactionConfig, _ := config.SetupRedactions()
+
 	httpProtocol, err := createHTTPProtocol("/testuri", "GET", `{"request": "value", "x-amplify-something": "random", "x-amplify-somethingelse": "else"}`,
-		`{"response": "value", "x-response": "random", "x-value": "test"}`, 200, 10, 10)
+		`{"response": "value", "x-response": "random", "x-value": "test"}`, 200, 10, 10, redactionConfig)
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
 
@@ -136,6 +162,16 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 		SetStatus(200, "OK").
 		AddIndexedRequestHeader("key", "one").
 		AddIndexedResponseHeader("key", "two").
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+
+	httpProtocol, err = httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		SetRedactionConfig(redactionConfig).
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
