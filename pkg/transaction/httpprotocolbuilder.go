@@ -74,7 +74,6 @@ func (b *httpProtocolBuilder) SetURI(uri string) HTTPProtocolBuilder {
 		return b
 	}
 	b.httpProtocol.uriRaw = uri
-	b.httpProtocol.URI, b.err = redaction.URIRedaction(uri)
 	return b
 }
 
@@ -349,14 +348,32 @@ func (b *httpProtocolBuilder) SetRedactionConfig(config redaction.Redactions) HT
 }
 
 func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
-	// Complete the redactions
-	b.queryArgsRedaction()
-	b.headersRedaction()
-	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
-
 	if b.err != nil {
 		return nil, b.err
 	}
+	// Complete the redactions
+	b.queryArgsRedaction()
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.headersRedaction()
+	if b.err != nil {
+		return nil, b.err
+	}
+	//set redacted URI
+	if b.httpProtocol.uriRaw == "" {
+		return nil, errors.New("Raw Uri property not set in HTTP protocol details")
+	}
+	if b.redactionConfig == nil {
+		b.httpProtocol.URI, b.err = redaction.URIRedaction(b.httpProtocol.uriRaw)
+	} else {
+		b.httpProtocol.URI, b.err = b.redactionConfig.URIRedaction(b.httpProtocol.uriRaw)
+	}
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
 
 	if b.httpProtocol.RequestHeaders == "" || b.httpProtocol.ResponseHeaders == "" {
 		return nil, errors.New("request or Response Headers not set in HTTP protocol details")

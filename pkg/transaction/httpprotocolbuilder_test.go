@@ -67,7 +67,7 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 	httpProtocol, err = httpProtocolBuilder.Build()
 	assert.Nil(t, httpProtocol)
 	assert.NotNil(t, err)
-	assert.Equal(t, "uri property not set in HTTP protocol details", err.Error())
+	assert.Equal(t, "Raw Uri property not set in HTTP protocol details", err.Error())
 
 	httpProtocol, err = httpProtocolBuilder.
 		SetURI("/test").
@@ -171,8 +171,80 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 		SetMethod("GET").
 		SetHost("host").
 		SetStatus(200, "OK").
+		SetArgsMap(map[string][]string{"test": {"one", "two"}}).
 		SetRedactionConfig(redactionConfig).
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, httpProtocol)
+}
+
+type redactionTest struct {
+	uriRedactionCalled             bool
+	pathRedactionCalled            bool
+	queryArgsRedactionCalled       bool
+	queryArgsRedactionStringCalled bool
+	requestHeadersRedactionCalled  bool
+	responseHeadersRedactionCalled bool
+	jmsPropertiesRedactionCalled   bool
+}
+
+func (r *redactionTest) URIRedaction(uri string) (string, error) {
+	r.uriRedactionCalled = true
+	return "test", nil
+}
+
+func (r *redactionTest) PathRedaction(path string) string {
+	r.pathRedactionCalled = true
+	return "test"
+}
+
+func (r *redactionTest) QueryArgsRedaction(queryArgs map[string][]string) (map[string][]string, error) {
+	r.queryArgsRedactionCalled = true
+	return queryArgs, nil
+}
+
+func (r *redactionTest) QueryArgsRedactionString(queryArgs string) (string, error) {
+	r.queryArgsRedactionStringCalled = true
+	return queryArgs, nil
+}
+
+func (r *redactionTest) RequestHeadersRedaction(requestHeaders map[string]string) (map[string]string, error) {
+	r.requestHeadersRedactionCalled = true
+	return requestHeaders, nil
+}
+
+func (r *redactionTest) ResponseHeadersRedaction(responseHeaders map[string]string) (map[string]string, error) {
+	r.responseHeadersRedactionCalled = true
+	return responseHeaders, nil
+}
+
+func (r *redactionTest) JMSPropertiesRedaction(jmsProperties map[string]string) (map[string]string, error) {
+	r.jmsPropertiesRedactionCalled = true
+	return jmsProperties, nil
+}
+func TestRedactionOverride(t *testing.T) {
+
+	redactionConfig := &redactionTest{}
+
+	httpProtocolBuilder := NewHTTPProtocolBuilder()
+
+	httpProtocol, err := httpProtocolBuilder.
+		SetURI("/test").
+		SetMethod("GET").
+		SetHost("host").
+		SetStatus(200, "OK").
+		SetArgsMap(map[string][]string{"test": {"one", "two"}}).
+		AddRequestHeader("key", "one").
+		AddResponseHeader("key", "two").
+		SetRedactionConfig(redactionConfig).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, httpProtocol)
+	assert.True(t, redactionConfig.uriRedactionCalled)
+	assert.False(t, redactionConfig.pathRedactionCalled)
+	assert.True(t, redactionConfig.queryArgsRedactionCalled)
+	assert.False(t, redactionConfig.queryArgsRedactionStringCalled)
+	assert.True(t, redactionConfig.requestHeadersRedactionCalled)
+	assert.True(t, redactionConfig.responseHeadersRedactionCalled)
+	assert.False(t, redactionConfig.jmsPropertiesRedactionCalled)
 }
