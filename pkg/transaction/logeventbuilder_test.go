@@ -91,7 +91,7 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "unsupported protocol type", err.Error())
 
-	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10)
+	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10, nil)
 	logEvent, err = NewTransactionEventBuilder().
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
