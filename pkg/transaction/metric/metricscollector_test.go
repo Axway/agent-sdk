@@ -18,7 +18,29 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	apiDetails1 = models.APIDetails{
+		ID:                 "111",
+		Name:               "111",
+		Revision:           1,
+		TeamID:             teamID,
+		APIServiceInstance: "",
+		Stage:              "",
+		Version:            "",
+	}
+	apiDetails2 = models.APIDetails{
+		ID:                 "111",
+		Name:               "111",
+		Revision:           1,
+		TeamID:             teamID,
+		APIServiceInstance: "",
+		Stage:              "",
+		Version:            "",
+	}
 )
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
@@ -340,11 +362,11 @@ func TestMetricCollector(t *testing.T) {
 				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
-						APIDetails: APIDetails{"111", "111", 1, teamID, "", "", ""},
+						APIDetails: apiDetails1,
 						StatusCode: "200",
 						Duration:   10,
 						Bytes:      10,
-						AppDetails: AppDetails{
+						AppDetails: models.AppDetails{
 							ID:   "111",
 							Name: test.appName,
 						},
@@ -398,13 +420,13 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
+			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 			metricCollector.Execute()
 			metricCollector.publisher.Execute()
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", "", ""}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", "", ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(apiDetails1, "401", 15, 10, "")
+			metricCollector.AddMetric(apiDetails2, "200", 20, 10, "")
+			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
 
 			// No event generation/publish, store the cache
 			metricCollector.storage.save()
@@ -420,11 +442,11 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "200", 5, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "200", 10, 10, "")
-			metricCollector.AddMetric(APIDetails{"111", "111", 1, teamID, "", "", ""}, "401", 15, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", "", ""}, "200", 20, 10, "")
-			metricCollector.AddMetric(APIDetails{"222", "222", 1, teamID, "", "", ""}, "200", 10, 10, "")
+			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
+			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
+			metricCollector.AddMetric(apiDetails1, "401", 15, 10, "")
+			metricCollector.AddMetric(apiDetails2, "200", 20, 10, "")
+			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
 
 			metricCollector.Execute()
 			metricCollector.publisher.Execute()
@@ -537,7 +559,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			publisher := metricCollector.publisher
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(APIDetails{"111", "111", 1, "team123", "", "", ""}, "200", 10, 10, "")
+					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 				}
 				metricCollector.Execute()
 				testLoops++
