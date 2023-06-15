@@ -200,10 +200,8 @@ func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
 	}
 	switch parsedURL.Scheme {
 	case http, https, "":
-		parsedURL.Path, err = PathRedaction(parsedURL.Path)
-		if err != nil {
-			return "", err
-		}
+		parsedURL.Path = r.PathRedaction(parsedURL.Path)
+
 		parsedURL.RawQuery, err = r.QueryArgsRedactionString(parsedURL.RawQuery)
 		if err != nil {
 			return "", err

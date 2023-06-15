@@ -40,8 +40,8 @@ type EventBuilder interface {
 	SetEnvironmentID(environmentID string) EventBuilder
 	SetTenantID(tenantID string) EventBuilder
 	SetTrcbltPartitionID(trcbltPartitionID string) EventBuilder
-	SetTargetPath(targetPath string) EventBuilder
-	SetResourcePath(resourcePath string) EventBuilder
+	SetUnRedactedTargetPath(targetPath string) EventBuilder
+	SetUnRedactedResourcePath(resourcePath string) EventBuilder
 
 	SetID(id string) EventBuilder
 	SetParentID(parentID string) EventBuilder
@@ -51,6 +51,7 @@ type EventBuilder interface {
 	SetDirection(direction string) EventBuilder
 	SetStatus(status TxEventStatus) EventBuilder
 	SetProtocolDetail(protocolDetail interface{}) EventBuilder
+	SetRedactionConfig(config redaction.Redactions) EventBuilder
 
 	Build() (*LogEvent, error)
 }
@@ -63,6 +64,7 @@ type transactionEventBuilder struct {
 	cfgEnvironmentName string
 	cfgEnvironmentID   string
 	logEvent           *LogEvent
+	redactionConfig    redaction.Redactions
 }
 
 // SummaryBuilder - Interface to build the log event of type transaction summary
@@ -74,8 +76,8 @@ type SummaryBuilder interface {
 	SetEnvironmentID(environmentID string) SummaryBuilder
 	SetTenantID(tenantID string) SummaryBuilder
 	SetTrcbltPartitionID(trcbltPartitionID string) SummaryBuilder
-	SetTargetPath(targetPath string) SummaryBuilder
-	SetResourcePath(resourcePath string) SummaryBuilder
+	SetUnRedactedTargetPath(targetPath string) SummaryBuilder
+	SetUnRedactedResourcePath(resourcePath string) SummaryBuilder
 
 	SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder
 	SetDuration(duration int) SummaryBuilder
@@ -88,6 +90,7 @@ type SummaryBuilder interface {
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
 	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
+	SetRedactionConfig(config redaction.Redactions) SummaryBuilder
 	Build() (*LogEvent, error)
 }
 
@@ -99,6 +102,7 @@ type transactionSummaryBuilder struct {
 	cfgEnvironmentName string
 	cfgEnvironmentID   string
 	logEvent           *LogEvent
+	redactionConfig    redaction.Redactions
 }
 
 // NewTransactionEventBuilder - Creates a new log event builder
@@ -207,19 +211,19 @@ func (b *transactionEventBuilder) SetTrcbltPartitionID(trcbltPartitionID string)
 	return b
 }
 
-func (b *transactionEventBuilder) SetTargetPath(targetPath string) EventBuilder {
+func (b *transactionEventBuilder) SetUnRedactedTargetPath(targetPath string) EventBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TargetPath, b.err = redaction.URIRedaction(targetPath)
+	b.logEvent.UnRedactedTargetPath = targetPath
 	return b
 }
 
-func (b *transactionEventBuilder) SetResourcePath(resourcePath string) EventBuilder {
+func (b *transactionEventBuilder) SetUnRedactedResourcePath(resourcePath string) EventBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.ResourcePath, b.err = redaction.URIRedaction(resourcePath)
+	b.logEvent.UnRedactedResourcePath = resourcePath
 	return b
 }
 
@@ -300,7 +304,41 @@ func (b *transactionEventBuilder) SetProtocolDetail(protocolDetail interface{}) 
 	return b
 }
 
+func (b *transactionEventBuilder) SetRedactionConfig(config redaction.Redactions) EventBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.redactionConfig = config
+	return b
+}
+
 func (b *transactionEventBuilder) Build() (*LogEvent, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	// Set Target Path
+	if b.logEvent.UnRedactedTargetPath == "" {
+		return nil, errors.New("unredacted target path property not set in the LogEvent details")
+	}
+	if b.redactionConfig == nil {
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedTargetPath)
+	} else {
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedTargetPath)
+	}
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	//Set Resource Path
+	if b.logEvent.UnRedactedResourcePath == "" {
+		return nil, errors.New("unredacted resource path property not set in the LogEvent details")
+	}
+	if b.redactionConfig == nil {
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedResourcePath)
+	} else {
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedResourcePath)
+	}
 	if b.err != nil {
 		return nil, b.err
 	}
@@ -408,19 +446,19 @@ func (b *transactionSummaryBuilder) SetTrcbltPartitionID(trcbltPartitionID strin
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetTargetPath(targetPath string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetUnRedactedTargetPath(targetPath string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.TargetPath, b.err = redaction.URIRedaction(targetPath)
+	b.logEvent.UnRedactedTargetPath = targetPath
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetResourcePath(resourcePath string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetUnRedactedResourcePath(resourcePath string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.ResourcePath, b.err = redaction.URIRedaction(resourcePath)
+	b.logEvent.UnRedactedResourcePath = resourcePath
 	return b
 }
 
@@ -522,16 +560,13 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	if b.err != nil {
 		return b
 	}
-	redactedPath, err := redaction.URIRedaction(path)
-	if err != nil {
-		b.err = err
-		return b
-	}
+	unRedactedPath := path
+
 	b.logEvent.TransactionSummary.EntryPoint = &EntryPoint{
-		Type:   entryPointType,
-		Method: method,
-		Path:   redactedPath,
-		Host:   host,
+		Type:           entryPointType,
+		Method:         method,
+		UnRedactedPath: unRedactedPath,
+		Host:           host,
 	}
 	return b
 }
@@ -546,7 +581,57 @@ func (b *transactionSummaryBuilder) SetIsInMetricEvent(isInMetricEvent bool) Sum
 	return b
 }
 
+func (b *transactionSummaryBuilder) SetRedactionConfig(config redaction.Redactions) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.redactionConfig = config
+	return b
+}
+
 func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	// Set Target Path
+	if b.logEvent.UnRedactedTargetPath == "" {
+		return nil, errors.New("unredacted target path property not set in the LogEvent details")
+	}
+	if b.redactionConfig == nil {
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedTargetPath)
+	} else {
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedTargetPath)
+	}
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	//Set Resource Path
+	if b.logEvent.UnRedactedResourcePath == "" {
+		return nil, errors.New("unredacted resource path property not set in the LogEvent details")
+	}
+	if b.redactionConfig == nil {
+		b.logEvent.ResourcePath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedResourcePath)
+	} else {
+		b.logEvent.ResourcePath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedResourcePath)
+	}
+	if b.err != nil {
+		return nil, b.err
+	}
+
+	// Set redacted path in EntryPoint
+	if b.logEvent.TransactionSummary.EntryPoint == nil {
+		return nil, errors.New("transaction entry point details are not set in transaction summary event")
+	}
+	if b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath == "" {
+		return nil, errors.New("EntryPoint unredacted path property not set in the LogEvent Transaction Summary details")
+	}
+	if b.redactionConfig == nil {
+		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = redaction.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath)
+	} else {
+		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = b.redactionConfig.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath)
+	}
 	if b.err != nil {
 		return nil, b.err
 	}
@@ -588,10 +673,6 @@ func (b *transactionSummaryBuilder) validateLogEvent() error {
 
 	if b.logEvent.TransactionSummary.Status == "" {
 		return errors.New("status property not set in transaction summary event")
-	}
-
-	if b.logEvent.TransactionSummary.EntryPoint == nil {
-		return errors.New("transaction entry point details are not set in transaction summary event")
 	}
 
 	if b.logEvent.TransactionSummary.Product != nil && b.logEvent.TransactionSummary.Product.ID == "" {
