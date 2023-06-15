@@ -64,8 +64,8 @@ type LogEvent struct {
 	ResourcePath           string   `json:"resourcePath,omitempty"`
 	TransactionEvent       *Event   `json:"transactionEvent,omitempty"`
 	TransactionSummary     *Summary `json:"transactionSummary,omitempty"`
-	UnRedactedTargetPath   string
-	UnRedactedResourcePath string
+	UnRedactedTargetPath   string   `json:"-"`
+	UnRedactedResourcePath string   `json:"-"`
 }
 
 // Summary - Represent the transaction summary event
@@ -119,7 +119,7 @@ type EntryPoint struct {
 	Method         string `json:"method,omitempty"`
 	Path           string `json:"path,omitempty"`
 	Host           string `json:"host,omitempty"`
-	UnRedactedPath string
+	UnRedactedPath string `json:"-"`
 }
 
 // TransportProtocol - Interface for transport protocol detail
