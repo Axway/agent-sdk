@@ -554,13 +554,13 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	if b.err != nil {
 		return b
 	}
-	unRedactedPath := path
+	redactedPath := path
 
 	b.logEvent.TransactionSummary.EntryPoint = &EntryPoint{
-		Type:           entryPointType,
-		Method:         method,
-		UnRedactedPath: unRedactedPath,
-		Host:           host,
+		Type:   entryPointType,
+		Method: method,
+		Path:   redactedPath,
+		Host:   host,
 	}
 	return b
 }
@@ -612,13 +612,10 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 	if b.logEvent.TransactionSummary.EntryPoint == nil {
 		return nil, errors.New("transaction entry point details are not set in transaction summary event")
 	}
-	if b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath == "" {
-		return nil, errors.New("EntryPoint unredacted path property not set in the LogEvent Transaction Summary details")
-	}
 	if b.redactionConfig == nil {
-		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = redaction.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath)
+		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = redaction.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.Path)
 	} else {
-		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = b.redactionConfig.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.UnRedactedPath)
+		b.logEvent.TransactionSummary.EntryPoint.Path, b.err = b.redactionConfig.URIRedaction(b.logEvent.TransactionSummary.EntryPoint.Path)
 	}
 	if b.err != nil {
 		return nil, b.err

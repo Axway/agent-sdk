@@ -113,11 +113,10 @@ type Runtime struct {
 
 // EntryPoint - represents the entry point details for API in summary event
 type EntryPoint struct {
-	Type           string `json:"type,omitempty"`
-	Method         string `json:"method,omitempty"`
-	Path           string `json:"path,omitempty"`
-	Host           string `json:"host,omitempty"`
-	UnRedactedPath string `json:"-"`
+	Type   string `json:"type,omitempty"`
+	Method string `json:"method,omitempty"`
+	Path   string `json:"path,omitempty"`
+	Host   string `json:"host,omitempty"`
 }
 
 // TransportProtocol - Interface for transport protocol detail

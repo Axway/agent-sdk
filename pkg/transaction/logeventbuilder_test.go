@@ -314,17 +314,6 @@ func TestSummaryBuilder(t *testing.T) {
 		SetRedactionConfig(redactionConfig).
 		SetTargetPath("/targetPath").
 		SetResourcePath("/resourcePath").
-		SetEntryPoint("http", "GET", "", "somehost.com").
-		SetDuration(10).
-		Build()
-	assert.Nil(t, logEvent)
-	assert.NotNil(t, err)
-	assert.Equal(t, "EntryPoint unredacted path property not set in the LogEvent Transaction Summary details", err.Error())
-
-	logEvent, err = NewTransactionSummaryBuilder().
-		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetDuration(10).
 		Build()
