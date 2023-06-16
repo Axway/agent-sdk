@@ -50,22 +50,20 @@ const (
 
 // LogEvent - Log event to be sent to Condor
 type LogEvent struct {
-	Version                string   `json:"version"`
-	Stamp                  int64    `json:"timestamp"`
-	TransactionID          string   `json:"transactionId"`
-	Environment            string   `json:"environment,omitempty"`
-	APICDeployment         string   `json:"apicDeployment,omitempty"`
-	EnvironmentName        string   `json:"environmentName,omitempty"`
-	EnvironmentID          string   `json:"environmentId"`
-	TenantID               string   `json:"tenantId"`
-	TrcbltPartitionID      string   `json:"trcbltPartitionId"`
-	Type                   string   `json:"type"`
-	TargetPath             string   `json:"targetPath,omitempty"`
-	ResourcePath           string   `json:"resourcePath,omitempty"`
-	TransactionEvent       *Event   `json:"transactionEvent,omitempty"`
-	TransactionSummary     *Summary `json:"transactionSummary,omitempty"`
-	UnRedactedTargetPath   string   `json:"-"`
-	UnRedactedResourcePath string   `json:"-"`
+	Version            string   `json:"version"`
+	Stamp              int64    `json:"timestamp"`
+	TransactionID      string   `json:"transactionId"`
+	Environment        string   `json:"environment,omitempty"`
+	APICDeployment     string   `json:"apicDeployment,omitempty"`
+	EnvironmentName    string   `json:"environmentName,omitempty"`
+	EnvironmentID      string   `json:"environmentId"`
+	TenantID           string   `json:"tenantId"`
+	TrcbltPartitionID  string   `json:"trcbltPartitionId"`
+	Type               string   `json:"type"`
+	TargetPath         string   `json:"targetPath,omitempty"`
+	ResourcePath       string   `json:"resourcePath,omitempty"`
+	TransactionEvent   *Event   `json:"transactionEvent,omitempty"`
+	TransactionSummary *Summary `json:"transactionSummary,omitempty"`
 }
 
 // Summary - Represent the transaction summary event

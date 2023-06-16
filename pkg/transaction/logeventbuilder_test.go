@@ -49,29 +49,16 @@ func TestTransactionEventBuilder(t *testing.T) {
 	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10, redactionConfig)
 
 	logEvent, err := NewTransactionEventBuilder().
-		Build()
-	assert.Nil(t, logEvent)
-	assert.NotNil(t, err)
-	assert.Equal(t, "unredacted target path property not set in the LogEvent details", err.Error())
-
-	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		Build()
-	assert.Nil(t, logEvent)
-	assert.NotNil(t, err)
-	assert.Equal(t, "unredacted resource path property not set in the LogEvent details", err.Error())
-
-	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
 	assert.Equal(t, "id property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -81,8 +68,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "direction property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -93,8 +80,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "status property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -106,8 +93,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "invalid transaction event status", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -123,8 +110,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "protocol details not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -142,8 +129,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "unsupported protocol type", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -160,8 +147,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Nil(t, err)
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -200,8 +187,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.True(t, ok)
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -264,8 +251,8 @@ func TestSummaryBuilder(t *testing.T) {
 	logEvent, err := NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
 		SetTransactionID("11111").
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).
@@ -315,23 +302,8 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		Build()
-	assert.Nil(t, logEvent)
-	assert.NotNil(t, err)
-	assert.Equal(t, "unredacted target path property not set in the LogEvent details", err.Error())
-
-	logEvent, err = NewTransactionSummaryBuilder().
-		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		Build()
-	assert.Nil(t, logEvent)
-	assert.NotNil(t, err)
-	assert.Equal(t, "unredacted resource path property not set in the LogEvent details", err.Error())
-
-	logEvent, err = NewTransactionSummaryBuilder().
-		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetDuration(10).
 		Build()
 	assert.Nil(t, logEvent)
@@ -340,8 +312,8 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "", "somehost.com").
 		SetDuration(10).
 		Build()
@@ -351,8 +323,8 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetDuration(10).
 		Build()
@@ -362,8 +334,8 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetDuration(10).
 		SetStatus("Pass", "200").
@@ -375,8 +347,8 @@ func TestSummaryBuilder(t *testing.T) {
 	// Test with explicitly setting properties that are set thru agent config by default
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
@@ -437,8 +409,8 @@ func TestLogRedactionOverride(t *testing.T) {
 	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10, redactionConfig)
 
 	logEvent, err := NewTransactionEventBuilder().
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -465,8 +437,8 @@ func TestLogRedactionOverride(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetUnRedactedTargetPath("/targetPath").
-		SetUnRedactedResourcePath("/resourcePath").
+		SetTargetPath("/targetPath").
+		SetResourcePath("/resourcePath").
 		SetEntryPoint("http", "GET", "/test", "somehost.com").
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").

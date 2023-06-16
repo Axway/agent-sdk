@@ -40,8 +40,8 @@ type EventBuilder interface {
 	SetEnvironmentID(environmentID string) EventBuilder
 	SetTenantID(tenantID string) EventBuilder
 	SetTrcbltPartitionID(trcbltPartitionID string) EventBuilder
-	SetUnRedactedTargetPath(targetPath string) EventBuilder
-	SetUnRedactedResourcePath(resourcePath string) EventBuilder
+	SetTargetPath(targetPath string) EventBuilder
+	SetResourcePath(resourcePath string) EventBuilder
 
 	SetID(id string) EventBuilder
 	SetParentID(parentID string) EventBuilder
@@ -76,8 +76,8 @@ type SummaryBuilder interface {
 	SetEnvironmentID(environmentID string) SummaryBuilder
 	SetTenantID(tenantID string) SummaryBuilder
 	SetTrcbltPartitionID(trcbltPartitionID string) SummaryBuilder
-	SetUnRedactedTargetPath(targetPath string) SummaryBuilder
-	SetUnRedactedResourcePath(resourcePath string) SummaryBuilder
+	SetTargetPath(targetPath string) SummaryBuilder
+	SetResourcePath(resourcePath string) SummaryBuilder
 
 	SetStatus(status TxSummaryStatus, statusDetail string) SummaryBuilder
 	SetDuration(duration int) SummaryBuilder
@@ -211,19 +211,19 @@ func (b *transactionEventBuilder) SetTrcbltPartitionID(trcbltPartitionID string)
 	return b
 }
 
-func (b *transactionEventBuilder) SetUnRedactedTargetPath(targetPath string) EventBuilder {
+func (b *transactionEventBuilder) SetTargetPath(targetPath string) EventBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.UnRedactedTargetPath = targetPath
+	b.logEvent.TargetPath = targetPath
 	return b
 }
 
-func (b *transactionEventBuilder) SetUnRedactedResourcePath(resourcePath string) EventBuilder {
+func (b *transactionEventBuilder) SetResourcePath(resourcePath string) EventBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.UnRedactedResourcePath = resourcePath
+	b.logEvent.ResourcePath = resourcePath
 	return b
 }
 
@@ -318,26 +318,20 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 	}
 
 	// Set Target Path
-	if b.logEvent.UnRedactedTargetPath == "" {
-		return nil, errors.New("unredacted target path property not set in the LogEvent details")
-	}
 	if b.redactionConfig == nil {
-		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedTargetPath)
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.TargetPath)
 	} else {
-		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedTargetPath)
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.TargetPath)
 	}
 	if b.err != nil {
 		return nil, b.err
 	}
 
 	//Set Resource Path
-	if b.logEvent.UnRedactedResourcePath == "" {
-		return nil, errors.New("unredacted resource path property not set in the LogEvent details")
-	}
 	if b.redactionConfig == nil {
-		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedResourcePath)
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.ResourcePath)
 	} else {
-		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedResourcePath)
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.ResourcePath)
 	}
 	if b.err != nil {
 		return nil, b.err
@@ -446,19 +440,19 @@ func (b *transactionSummaryBuilder) SetTrcbltPartitionID(trcbltPartitionID strin
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetUnRedactedTargetPath(targetPath string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetTargetPath(targetPath string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.UnRedactedTargetPath = targetPath
+	b.logEvent.TargetPath = targetPath
 	return b
 }
 
-func (b *transactionSummaryBuilder) SetUnRedactedResourcePath(resourcePath string) SummaryBuilder {
+func (b *transactionSummaryBuilder) SetResourcePath(resourcePath string) SummaryBuilder {
 	if b.err != nil {
 		return b
 	}
-	b.logEvent.UnRedactedResourcePath = resourcePath
+	b.logEvent.ResourcePath = resourcePath
 	return b
 }
 
@@ -595,26 +589,20 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 	}
 
 	// Set Target Path
-	if b.logEvent.UnRedactedTargetPath == "" {
-		return nil, errors.New("unredacted target path property not set in the LogEvent details")
-	}
 	if b.redactionConfig == nil {
-		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedTargetPath)
+		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.TargetPath)
 	} else {
-		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedTargetPath)
+		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.TargetPath)
 	}
 	if b.err != nil {
 		return nil, b.err
 	}
 
 	//Set Resource Path
-	if b.logEvent.UnRedactedResourcePath == "" {
-		return nil, errors.New("unredacted resource path property not set in the LogEvent details")
-	}
 	if b.redactionConfig == nil {
-		b.logEvent.ResourcePath, b.err = redaction.URIRedaction(b.logEvent.UnRedactedResourcePath)
+		b.logEvent.ResourcePath, b.err = redaction.URIRedaction(b.logEvent.ResourcePath)
 	} else {
-		b.logEvent.ResourcePath, b.err = b.redactionConfig.URIRedaction(b.logEvent.UnRedactedResourcePath)
+		b.logEvent.ResourcePath, b.err = b.redactionConfig.URIRedaction(b.logEvent.ResourcePath)
 	}
 	if b.err != nil {
 		return nil, b.err
