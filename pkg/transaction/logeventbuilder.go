@@ -319,22 +319,16 @@ func (b *transactionEventBuilder) Build() (*LogEvent, error) {
 
 	// Set Target Path
 	if b.redactionConfig == nil {
-		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.TargetPath)
+		b.logEvent.TargetPath, _ = redaction.URIRedaction(b.logEvent.TargetPath)
 	} else {
-		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.TargetPath)
-	}
-	if b.err != nil {
-		return nil, b.err
+		b.logEvent.TargetPath, _ = b.redactionConfig.URIRedaction(b.logEvent.TargetPath)
 	}
 
 	//Set Resource Path
 	if b.redactionConfig == nil {
-		b.logEvent.TargetPath, b.err = redaction.URIRedaction(b.logEvent.ResourcePath)
+		b.logEvent.ResourcePath, _ = redaction.URIRedaction(b.logEvent.ResourcePath)
 	} else {
-		b.logEvent.TargetPath, b.err = b.redactionConfig.URIRedaction(b.logEvent.ResourcePath)
-	}
-	if b.err != nil {
-		return nil, b.err
+		b.logEvent.ResourcePath, _ = b.redactionConfig.URIRedaction(b.logEvent.ResourcePath)
 	}
 
 	if b.logEvent.TrcbltPartitionID == "" {
@@ -554,12 +548,11 @@ func (b *transactionSummaryBuilder) SetEntryPoint(entryPointType, method, path, 
 	if b.err != nil {
 		return b
 	}
-	redactedPath := path
 
 	b.logEvent.TransactionSummary.EntryPoint = &EntryPoint{
 		Type:   entryPointType,
 		Method: method,
-		Path:   redactedPath,
+		Path:   path,
 		Host:   host,
 	}
 	return b

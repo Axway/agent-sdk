@@ -365,12 +365,9 @@ func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
 		return nil, errors.New("Raw Uri property not set in HTTP protocol details")
 	}
 	if b.redactionConfig == nil {
-		b.httpProtocol.URI, b.err = redaction.URIRedaction(b.httpProtocol.uriRaw)
+		b.httpProtocol.URI, _ = redaction.URIRedaction(b.httpProtocol.uriRaw)
 	} else {
-		b.httpProtocol.URI, b.err = b.redactionConfig.URIRedaction(b.httpProtocol.uriRaw)
-	}
-	if b.err != nil {
-		return nil, b.err
+		b.httpProtocol.URI, _ = b.redactionConfig.URIRedaction(b.httpProtocol.uriRaw)
 	}
 
 	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
