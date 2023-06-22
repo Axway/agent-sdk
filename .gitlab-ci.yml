@@ -14,6 +14,8 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
+  FORTIFY_INCLUDE: "**/*.go"
+  FORTIFY_EXCLUDE: "**/*_test.go"
 
   # Whitesource
   WS_PROJECT_ID: "APIC_Agents_SDK"
@@ -42,7 +44,7 @@ include:
       - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_LATEST
+    ref: APIGOV-25316
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/csrjobs.yml"
@@ -50,6 +52,7 @@ include:
 stages:
   - test
   - sonar
+  - security-pre-scans
   - security-scans
   - security-review
   - update-dep
@@ -86,6 +89,10 @@ trigger-azure-discovery-agent:
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
 whitesource:
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
+
+fortify:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
 
