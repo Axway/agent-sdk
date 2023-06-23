@@ -89,7 +89,7 @@ whitesource:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
 
-fetch-fortify:
+fortify:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
 
