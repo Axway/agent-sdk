@@ -161,6 +161,7 @@ func NewServer(httpprof bool) *Server {
 	}
 	return globalHealthChecker.statusServer
 }
+
 func (s *Server) registerHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
 	s.router.HandleFunc(path, handler)
 }
