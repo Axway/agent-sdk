@@ -158,7 +158,7 @@ func TestHTTPRequests(t *testing.T) {
 	// Register healthchecks
 	RegisterHealthcheck("hc1", "hc1", hcFunc)
 	RegisterHealthcheck("hc2", "hc2", hcFunc)
-
+	RunChecks()
 	var server *httptest.Server
 
 	// http Client
@@ -194,6 +194,7 @@ func TestHTTPRequests(t *testing.T) {
 
 	// Marshall the body to the healthChecker struct
 	var result healthChecker
+	RunChecks()
 	resp := getRequest("/status", &result, false)
 
 	// assert response values
@@ -207,6 +208,7 @@ func TestHTTPRequests(t *testing.T) {
 	hcValues["hc2"] = true
 
 	// Execute another request
+	RunChecks()
 	resp = getRequest("/status", &result, false)
 
 	// assert response values
@@ -238,6 +240,7 @@ func TestHTTPRequests(t *testing.T) {
 
 	// Set hc1 to fail
 	hcValues["hc1"] = false
+	RunChecks()
 	resp = getRequest("/status/hc1", &checkRes, false)
 
 	// assert response values
@@ -246,6 +249,7 @@ func TestHTTPRequests(t *testing.T) {
 
 	// Set hc1 to fail
 	hcValues["hc1"] = true
+	RunChecks()
 	resp = getRequest("/status/hc1", &checkRes, false)
 
 	// assert response values
