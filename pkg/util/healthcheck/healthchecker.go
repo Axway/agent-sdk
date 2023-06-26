@@ -69,8 +69,10 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 	}
 
 	globalHealthChecker.Checks[endpoint] = newChecker
-
-	http.HandleFunc(fmt.Sprintf("/status/%s", endpoint), checkHandler)
+	statusServer := globalHealthChecker.statusServer
+	if statusServer != nil {
+		statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), checkHandler)
+	}
 
 	if util.IsNotTest() {
 		newChecker.executeCheck()
@@ -153,16 +155,24 @@ type Server struct {
 }
 
 func NewServer(httpprof bool) *Server {
-	return &Server{
+	globalHealthChecker.statusServer = &Server{
 		router:   http.NewServeMux(),
 		httpprof: httpprof,
 	}
+	return globalHealthChecker.statusServer
+}
+
+func (s *Server) registerHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
+	s.router.HandleFunc(path, handler)
 }
 
 // HandleRequests - starts the http server
 func (s *Server) HandleRequests() {
 	if !globalHealthChecker.registered {
-		s.router.HandleFunc("/status", statusHandler)
+		s.registerHandler("/status", statusHandler)
+		for _, statusChecks := range globalHealthChecker.Checks {
+			s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), checkHandler)
+		}
 		globalHealthChecker.registered = true
 	}
 
@@ -241,9 +251,6 @@ func GetHealthcheckOutput(url string) (string, error) {
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	// Run the checks to get the latest results
-	RunChecks()
-
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	// Return the data
@@ -280,8 +287,6 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	thisCheck.executeCheck()
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// If check failed change return code to 500

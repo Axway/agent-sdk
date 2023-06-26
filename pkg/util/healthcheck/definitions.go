@@ -15,6 +15,7 @@ type healthChecker struct {
 	StatusDetail string                  `json:"-"`
 	Checks       map[string]*statusCheck `json:"statusChecks"`
 	registered   bool
+	statusServer *Server `json:"-"`
 }
 
 // Status - the status of this healthcheck
