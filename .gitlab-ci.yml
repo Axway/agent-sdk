@@ -14,6 +14,8 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
+  FORTIFY_INCLUDE: "**/*.go"
+  FORTIFY_EXCLUDE: "**/*_test.go"
 
   # Whitesource
   WS_PROJECT_ID: "APIC_Agents_SDK"
@@ -88,6 +90,10 @@ trigger-azure-discovery-agent:
 whitesource:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
+
+fortify:
+  rules:
+    - !reference [.mirror-default-branch-csr-rules, rules]
 
 fetch-fortify:
   rules:
