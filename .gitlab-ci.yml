@@ -38,8 +38,7 @@ include:
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
-    # ref: $SCURITY_V2
-    ref: APIGOV-25316
+    ref: $SCURITY_V2
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
@@ -94,7 +93,7 @@ whitesource:
 
 fortify:
   rules:
-    - !reference [.mirror-branch-csr-rules, rules]
+    - !reference [.mirror-default-branch-csr-rules, rules]
 
 fetch-fortify:
   rules:
