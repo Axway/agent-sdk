@@ -247,6 +247,9 @@ func GetHealthcheckOutput(url string) (string, error) {
 		return "", fmt.Errorf("error formatting the Status Check into Indented JSON")
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return string(output), fmt.Errorf("healthcheck failed %s", resp.Status)
+	}
 	return string(output), nil
 }
 
