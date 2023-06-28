@@ -205,7 +205,7 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 func handleInitialization() error {
 	setupSignalProcessor()
 	// only do the periodic health check stuff if NOT in unit tests and running binary agents
-	if util.IsNotTest() && !isRunningInDockerContainer() {
+	if util.IsNotTest() {
 		hc.StartPeriodicHealthCheck()
 	}
 

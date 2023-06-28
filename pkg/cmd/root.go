@@ -240,11 +240,14 @@ func (c *agentRootCommand) checkStatusFlag() {
 			Path:   "status",
 		}
 		statusOut, err := hc.GetHealthcheckOutput(urlObj.String())
+		if statusOut != "" {
+			fmt.Println(statusOut)
+		}
+
 		if err != nil {
 			fmt.Println("Error in getting status : " + err.Error())
 			os.Exit(1)
 		}
-		fmt.Println(statusOut)
 		os.Exit(0)
 	}
 }
