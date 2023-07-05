@@ -9,7 +9,7 @@
 
 package catalog
 
-// SupportContactSpecAlternativeContactsUrls  (catalog.v1alpha1.SupportContact)
+// SupportContactSpecAlternativeContactsUrls struct for SupportContactSpecAlternativeContactsUrls
 type SupportContactSpecAlternativeContactsUrls struct {
 	// URL hosting service name. Examples: msteams, slack
 	Type string `json:"type,omitempty"`

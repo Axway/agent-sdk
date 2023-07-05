@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceBilling  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceBilling struct for SubscriptionInvoiceBilling
 type SubscriptionInvoiceBilling struct {
 	// GENERATE: The following code has been modified after code generation
 	Payment interface{} `json:"payment,omitempty"`

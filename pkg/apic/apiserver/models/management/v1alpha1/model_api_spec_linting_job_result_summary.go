@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingJobResultSummary Summary of the linting results. (management.v1alpha1.APISpecLintingJob)
+// ApiSpecLintingJobResultSummary Summary of the linting results.
 type ApiSpecLintingJobResultSummary struct {
 	// The total number of errors in the linting result.
 	ErrorCount int32 `json:"errorCount,omitempty"`

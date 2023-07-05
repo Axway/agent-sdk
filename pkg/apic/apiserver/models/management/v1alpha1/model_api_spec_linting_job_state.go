@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ApiSpecLintingJobState  (management.v1alpha1.APISpecLintingJob)
+// ApiSpecLintingJobState struct for ApiSpecLintingJobState
 type ApiSpecLintingJobState struct {
 	// The current state, indicating progress towards consistency.
 	Name string `json:"name"`

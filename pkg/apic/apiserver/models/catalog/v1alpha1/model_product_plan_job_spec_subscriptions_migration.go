@@ -16,4 +16,6 @@ type ProductPlanJobSpecSubscriptionsMigration struct {
 	ProductPlan string `json:"productPlan"`
 	// Description on why the subscriptions was migrated.
 	Reason string `json:"reason,omitempty"`
+	// Filter the subscriptions that are wanted to be migrated.
+	Filters []ProductPlanJobSpecSubscriptionsMigrationFilters `json:"filters,omitempty"`
 }

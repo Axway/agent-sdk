@@ -9,7 +9,7 @@
 
 package catalog
 
-// ResourceSpec  (catalog.v1alpha1.Resource)
+// ResourceSpec struct for ResourceSpec
 type ResourceSpec struct {
 	// The type of the resource, example: pdf
 	FileType string `json:"fileType"`

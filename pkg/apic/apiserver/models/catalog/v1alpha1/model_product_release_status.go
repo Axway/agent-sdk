@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReleaseStatus  (catalog.v1alpha1.ProductRelease)
+// ProductReleaseStatus struct for ProductReleaseStatus
 type ProductReleaseStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level,omitempty"`

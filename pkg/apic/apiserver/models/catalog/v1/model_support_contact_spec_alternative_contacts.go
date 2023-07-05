@@ -9,7 +9,7 @@
 
 package catalog
 
-// SupportContactSpecAlternativeContacts  (catalog.v1.SupportContact)
+// SupportContactSpecAlternativeContacts struct for SupportContactSpecAlternativeContacts
 type SupportContactSpecAlternativeContacts struct {
 	// Alternative contact URLs.
 	Urls []SupportContactSpecAlternativeContactsUrls `json:"urls,omitempty"`

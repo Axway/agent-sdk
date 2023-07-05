@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestReferences  (catalog.v1alpha1.AssetRequest)
+// AssetRequestReferences struct for AssetRequestReferences
 type AssetRequestReferences struct {
 	AssetRequestDefinition string `json:"assetRequestDefinition,omitempty"`
 	// Reference to Release that got created from this asset request.

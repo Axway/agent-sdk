@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecReferences  (definitions.v1alpha1.ResourceDefinition)
+// ResourceDefinitionSpecReferences struct for ResourceDefinitionSpecReferences
 type ResourceDefinitionSpecReferences struct {
 	// A list of resources that the current resources has references to.
 	ToResources []ResourceDefinitionSpecReferencesToResources `json:"toResources,omitempty"`

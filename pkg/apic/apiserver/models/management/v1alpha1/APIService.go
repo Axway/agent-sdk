@@ -27,9 +27,10 @@ var (
 )
 
 const (
-	APIServiceResourceName           = "apiservices"
-	ApiServiceDetailsSubResourceName = "details"
-	ApiServiceStatusSubResourceName  = "status"
+	APIServiceResourceName              = "apiservices"
+	ApiServiceComplianceSubResourceName = "compliance"
+	ApiServiceDetailsSubResourceName    = "details"
+	ApiServiceStatusSubResourceName     = "status"
 )
 
 func APIServiceGVK() apiv1.GroupVersionKind {
@@ -44,10 +45,11 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	Details ApiServiceDetails `json:"details"`
-	Owner   *apiv1.Owner      `json:"owner"`
-	Spec    ApiServiceSpec    `json:"spec"`
-	// Status  ApiServiceStatus  `json:"status"`
+	Compliance ApiServiceCompliance `json:"compliance"`
+	Details    ApiServiceDetails    `json:"details"`
+	Owner      *apiv1.Owner         `json:"owner"`
+	Spec       ApiServiceSpec       `json:"spec"`
+	// Status     ApiServiceStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -133,6 +135,7 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["compliance"] = res.Compliance
 	out["details"] = res.Details
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -164,6 +167,20 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Compliance
+	if v, ok := aux.SubResources["compliance"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "compliance")
+		err = json.Unmarshal(sr, &res.Compliance)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Details

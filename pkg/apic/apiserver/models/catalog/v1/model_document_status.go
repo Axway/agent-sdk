@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentStatus  (catalog.v1.Document)
+// DocumentStatus struct for DocumentStatus
 type DocumentStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// SupportContactSpecOfficeHours  (catalog.v1alpha1.SupportContact)
+// SupportContactSpecOfficeHours struct for SupportContactSpecOfficeHours
 type SupportContactSpecOfficeHours struct {
 	// Long IANA Time Zone format. Examples: 'America/New_York' or 'Europe/Paris'
 	Timezone string                                 `json:"timezone"`

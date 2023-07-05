@@ -9,7 +9,7 @@
 
 package catalog
 
-// ReleaseTagStatus  (catalog.v1alpha1.ReleaseTag)
+// ReleaseTagStatus struct for ReleaseTagStatus
 type ReleaseTagStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

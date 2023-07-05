@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestMarketplaceResource The Marketplace Access Request resource details. (catalog.v1alpha1.AssetRequest)
+// AssetRequestMarketplaceResource The Marketplace Access Request resource details.
 type AssetRequestMarketplaceResource struct {
 	Metadata AssetRequestMarketplaceResourceMetadata `json:"metadata"`
 	Owner    AssetRequestMarketplaceResourceOwner    `json:"owner,omitempty"`

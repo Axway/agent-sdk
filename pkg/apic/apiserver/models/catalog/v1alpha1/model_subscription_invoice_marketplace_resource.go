@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceMarketplaceResource The Marketplace Subscription Invoice resource details. (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceMarketplaceResource The Marketplace Subscription Invoice resource details.
 type SubscriptionInvoiceMarketplaceResource struct {
 	Owner SubscriptionInvoiceMarketplaceResourceOwner `json:"owner,omitempty"`
 }

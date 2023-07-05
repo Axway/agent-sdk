@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceRevisionComplianceLintingStatusResult Linting results.
+// ApiServiceRevisionComplianceLintingStatusResult APIServiceRevision Linting results.
 type ApiServiceRevisionComplianceLintingStatusResult struct {
 	// The total number of errors in the linting result.
 	ErrorCount int32 `json:"errorCount,omitempty"`

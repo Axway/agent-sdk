@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ProductStatusReasons  (catalog.v1alpha1.Product)
+// ProductStatusReasons struct for ProductStatusReasons
 type ProductStatusReasons struct {
 	Type string `json:"type"`
 	// Details of the error.

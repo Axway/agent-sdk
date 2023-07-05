@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecReferencesToResources  (definitions.v1alpha1.ResourceDefinition)
+// ResourceDefinitionSpecReferencesToResources struct for ResourceDefinitionSpecReferencesToResources
 type ResourceDefinitionSpecReferencesToResources struct {
 	// Defines the kind of the resource.
 	Group string `json:"group,omitempty"`

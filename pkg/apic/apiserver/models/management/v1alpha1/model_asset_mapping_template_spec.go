@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingTemplateSpec  (management.v1alpha1.AssetMappingTemplate)
+// AssetMappingTemplateSpec struct for AssetMappingTemplateSpec
 type AssetMappingTemplateSpec struct {
 	// A list of filters for the API Service resource on which the template applies.
 	Filters []AssetMappingTemplateSpecFilters `json:"filters,omitempty"`

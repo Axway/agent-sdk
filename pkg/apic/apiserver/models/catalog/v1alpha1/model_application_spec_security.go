@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationSpecSecurity  (catalog.v1alpha1.Application)
+// ApplicationSpecSecurity struct for ApplicationSpecSecurity
 type ApplicationSpecSecurity struct {
 	// public key to be used to encrypt the credentials linked to this Application.
 	EncryptionKey       string `json:"encryptionKey"`

@@ -16,14 +16,13 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// CredentialStatusReasons  (catalog.v1alpha1.Credential)
+// CredentialStatusReasons struct for CredentialStatusReasons
 type CredentialStatusReasons struct {
 	// type of the reason.
 	Type string `json:"type"`
 	// Details of the type.
 	Detail string `json:"detail"`
 	// Time when the update occurred.
-	Timestamp time.Time `json:"timestamp"`
-	//  (catalog.v1alpha1.Credential)
-	Meta map[string]map[string]interface{} `json:"meta,omitempty"`
+	Timestamp time.Time                         `json:"timestamp"`
+	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

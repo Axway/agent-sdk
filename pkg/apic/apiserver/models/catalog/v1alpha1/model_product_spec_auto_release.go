@@ -9,8 +9,8 @@
 
 package catalog
 
-// ProductSpecAutoRelease Defines if a product should create releases everytime there is an update to the product references. (catalog.v1alpha1.Product)
+// ProductSpecAutoRelease Defines if a product should create releases everytime there is an update to the product references.
 type ProductSpecAutoRelease struct {
-	ReleaseType      string                                 `json:"releaseType"`
-	PreviousReleases ProductSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
+	ReleaseType      string                               `json:"releaseType"`
+	PreviousReleases AssetSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
 }

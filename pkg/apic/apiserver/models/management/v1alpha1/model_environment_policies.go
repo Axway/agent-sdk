@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentPolicies  (management.v1alpha1.Environment)
+// EnvironmentPolicies struct for EnvironmentPolicies
 type EnvironmentPolicies struct {
 	Credentials EnvironmentPoliciesCredentials `json:"credentials,omitempty"`
 }

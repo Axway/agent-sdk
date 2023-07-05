@@ -9,9 +9,9 @@
 
 package management
 
-// AccessRequestDefinitionSpecProvision  (management.v1alpha1.AccessRequestDefinition)
+// AccessRequestDefinitionSpecProvision struct for AccessRequestDefinitionSpecProvision
 type AccessRequestDefinitionSpecProvision struct {
-	// JSON Schema draft \\#7 for describing the data to be sent back after access has been provisioned. (management.v1alpha1.AccessRequestDefinition)
+	// JSON Schema draft \\#7 for describing the data to be sent back after access has been provisioned.
 	Schema   map[string]interface{}                       `json:"schema,omitempty"`
 	Policies AccessRequestDefinitionSpecProvisionPolicies `json:"policies,omitempty"`
 }

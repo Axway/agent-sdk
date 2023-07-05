@@ -9,7 +9,7 @@
 
 package catalog
 
-// MarketplaceBilling Billing options for the Marketplace. (catalog.v1alpha1.Marketplace)
+// MarketplaceBilling Billing options for the Marketplace.
 type MarketplaceBilling struct {
 	Payment MarketplaceBillingPayment `json:"payment,omitempty"`
 }

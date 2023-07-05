@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecSpec  (management.v1alpha1.APISpec)
+// ApiSpecSpec struct for ApiSpecSpec
 type ApiSpecSpec struct {
 	SpecDiscoveryRef string                 `json:"specDiscoveryRef,omitempty"`
 	Definition       ApiSpecSpecDefinition  `json:"definition,omitempty"`

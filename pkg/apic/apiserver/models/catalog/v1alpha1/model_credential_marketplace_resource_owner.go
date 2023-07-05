@@ -9,11 +9,11 @@
 
 package catalog
 
-// CredentialMarketplaceResourceOwner Owner of the Credential. (catalog.v1alpha1.Credential)
+// CredentialMarketplaceResourceOwner Owner of the Credential.
 type CredentialMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`
 	// Id of the owner of the resource.
-	Id           string                                         `json:"id,omitempty"`
-	Organization CredentialMarketplaceResourceOwnerOrganization `json:"organization"`
+	Id           string                                          `json:"id,omitempty"`
+	Organization ApplicationMarketplaceResourceOwnerOrganization `json:"organization"`
 }

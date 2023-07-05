@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceReferences  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceReferences struct for ApiServiceInstanceReferences
 type ApiServiceInstanceReferences struct {
 	// Reference to Amplify Central APIService
 	ApiService string `json:"apiService,omitempty"`

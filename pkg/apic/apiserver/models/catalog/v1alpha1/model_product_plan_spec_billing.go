@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecBilling Paid plan billing details. (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBilling Paid plan billing details.
 type ProductPlanSpecBilling struct {
 	Currency string `json:"currency"`
 	// The base price for the plan.

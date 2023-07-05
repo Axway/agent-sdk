@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialReferences  (catalog.v1alpha1.Credential)
+// CredentialReferences struct for CredentialReferences
 type CredentialReferences struct {
 	// Reference to the Credential for managed app that got created from this catalog credential.
 	Credential string `json:"credential,omitempty"`

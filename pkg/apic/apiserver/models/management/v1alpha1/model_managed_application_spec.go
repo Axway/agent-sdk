@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationSpec  (management.v1alpha1.ManagedApplication)
+// ManagedApplicationSpec struct for ManagedApplicationSpec
 type ManagedApplicationSpec struct {
 	Security ManagedApplicationSpecSecurity `json:"security,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionMarketplaceResourceMetadata Marketplace Subscription metadata. (catalog.v1alpha1.Subscription)
+// SubscriptionMarketplaceResourceMetadata Marketplace Subscription metadata.
 type SubscriptionMarketplaceResourceMetadata struct {
 	// Id of the user that created the entity.
 	CreateUserId string `json:"createUserId,omitempty"`

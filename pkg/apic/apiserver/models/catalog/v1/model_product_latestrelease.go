@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductLatestrelease Provides newest non-archived release and version. Will be unassigned if no releases exist. (catalog.v1.Product)
+// ProductLatestrelease Provides newest non-archived release and version. Will be unassigned if no releases exist.
 type ProductLatestrelease struct {
 	Name    string `json:"name,omitempty"`
 	TagName string `json:"tagName,omitempty"`

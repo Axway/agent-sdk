@@ -9,7 +9,7 @@
 
 package catalog
 
-// AuthorizationProfilePoliciesCredentialsExpiry Expiry properties for Credentials linked to this definition. (catalog.v1alpha1.AuthorizationProfile)
+// AuthorizationProfilePoliciesCredentialsExpiry Expiry properties for Credentials linked to this definition.
 type AuthorizationProfilePoliciesCredentialsExpiry struct {
 	Notifications AuthorizationProfilePoliciesCredentialsExpiryNotifications `json:"notifications,omitempty"`
 }

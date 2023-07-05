@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialExpiration Credential expiration properties. (catalog.v1alpha1.Credential)
+// CredentialExpiration Credential expiration properties.
 type CredentialExpiration struct {
 	Notification CredentialExpirationNotification `json:"notification,omitempty"`
 }

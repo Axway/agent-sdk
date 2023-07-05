@@ -9,7 +9,7 @@
 
 package catalog
 
-// CategoryVisibilitySpec  (catalog.v1.CategoryVisibility)
+// CategoryVisibilitySpec struct for CategoryVisibilitySpec
 type CategoryVisibilitySpec struct {
 	Category string `json:"category"`
 	// Defines if the Category is featured in the marketplace.

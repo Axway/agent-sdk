@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionMarketplace Details about the marketplace Subscription. (catalog.v1alpha1.Subscription)
+// SubscriptionMarketplace Details about the marketplace Subscription.
 type SubscriptionMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                          `json:"name"`

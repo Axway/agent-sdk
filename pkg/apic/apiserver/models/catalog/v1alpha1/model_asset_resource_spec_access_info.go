@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceSpecAccessInfo  (catalog.v1alpha1.AssetResource)
+// AssetResourceSpecAccessInfo struct for AssetResourceSpecAccessInfo
 type AssetResourceSpecAccessInfo struct {
 	// url where the definition can be accessed.
 	Url string `json:"url,omitempty"`

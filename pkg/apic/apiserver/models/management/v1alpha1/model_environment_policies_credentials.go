@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentPoliciesCredentials Defines the policies for the Environment's Credentials (management.v1alpha1.Environment)
+// EnvironmentPoliciesCredentials Defines the policies for the Environment's Credentials
 type EnvironmentPoliciesCredentials struct {
 	Expiry EnvironmentPoliciesCredentialsExpiry `json:"expiry,omitempty"`
 }

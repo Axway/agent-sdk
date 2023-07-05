@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceSpec  (catalog.v1alpha1.AssetResource)
+// AssetResourceSpec struct for AssetResourceSpec
 type AssetResourceSpec struct {
 	// The Stage this Asset Resource is deployed on.
 	Stage                        string   `json:"stage,omitempty"`
@@ -18,6 +18,8 @@ type AssetResourceSpec struct {
 	Type                         string   `json:"type"`
 	// content-type of the spec.
 	ContentType string `json:"contentType,omitempty"`
+	// The version of referenced resource.
+	Version string `json:"version,omitempty"`
 	// Base64 encoded value of the api specification.
 	Definition string `json:"definition"`
 	// Resource availabiltiy

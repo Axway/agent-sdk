@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusSourceResourceApiService  (management.v1alpha1.AssetMapping)
+// AssetMappingStatusSourceResourceApiService struct for AssetMappingStatusSourceResourceApiService
 type AssetMappingStatusSourceResourceApiService struct {
 	Ref string `json:"ref,omitempty"`
 	// GENERATE: The following code has been modified after code generation

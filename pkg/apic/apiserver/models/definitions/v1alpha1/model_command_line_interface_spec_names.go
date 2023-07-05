@@ -9,7 +9,7 @@
 
 package definitions
 
-// CommandLineInterfaceSpecNames  (definitions.v1alpha1.CommandLineInterface)
+// CommandLineInterfaceSpecNames struct for CommandLineInterfaceSpecNames
 type CommandLineInterfaceSpecNames struct {
 	// Defines the name used to access resources in this group. Also provided as default in the autocomplete for listing commands.
 	Plural string `json:"plural"`
