@@ -176,6 +176,11 @@ func (b *serviceBodyBuilder) SetResourceType(resourceType string) ServiceBuilder
 	return b
 }
 
+func (b *serviceBodyBuilder) SetResourceContentType(resourceContentType string) ServiceBuilder {
+	b.serviceBody.ResourceContentType = resourceContentType
+	return b
+}
+
 func (b *serviceBodyBuilder) SetSubscriptionName(subscriptionName string) ServiceBuilder {
 	b.serviceBody.SubscriptionName = subscriptionName
 	return b
@@ -283,8 +288,12 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		return b.serviceBody, fmt.Errorf("failed to parse service specification for '%s': %s", b.serviceBody.APIName, err)
 	}
 	specProcessor := specParser.GetSpecProcessor()
+	if b.serviceBody.ResourceContentType == "" {
+		b.serviceBody.ResourceContentType = specParser.getResourceContentType()
+	}
 	b.serviceBody.ResourceType = specProcessor.getResourceType()
 	b.serviceBody.specHash = fmt.Sprintf("%v", specParser.specHash)
+	b.serviceBody.specVersion = specProcessor.GetVersion()
 
 	// Check if the type is unstructured to gather more info
 

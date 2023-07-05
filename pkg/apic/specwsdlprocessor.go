@@ -21,6 +21,11 @@ func (p *wsdlProcessor) getResourceType() string {
 	return Wsdl
 }
 
+// GetVersion -
+func (p *wsdlProcessor) GetVersion() string {
+	return ""
+}
+
 // GetEndpoints -
 func (p *wsdlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}

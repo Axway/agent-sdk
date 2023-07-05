@@ -18,6 +18,20 @@ func (p *asyncAPIProcessor) getResourceType() string {
 	return AsyncAPI
 }
 
+// GetVersion -
+func (p *asyncAPIProcessor) GetVersion() string {
+	info := p.asyncapiDef["info"]
+	if info != nil {
+		if infoDetail, ok := info.(map[string]interface{}); ok {
+			version := infoDetail["version"]
+			if version != nil {
+				return version.(string)
+			}
+		}
+	}
+	return ""
+}
+
 // GetEndPoints -
 func (p *asyncAPIProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endpoints := make([]EndpointDefinition, 0)

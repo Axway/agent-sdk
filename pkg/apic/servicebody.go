@@ -32,6 +32,7 @@ type ServiceBody struct {
 	Image                     string
 	ImageContentType          string
 	CreatedBy                 string
+	ResourceContentType       string
 	ResourceType              string
 	SubscriptionName          string
 	APIUpdateSeverity         string
@@ -54,6 +55,7 @@ type ServiceBody struct {
 	ardName                   string
 	uniqueARD                 bool
 	specHash                  string
+	specVersion               string
 	accessRequestDefinition   *management.AccessRequestDefinition
 	specHashes                map[string]interface{} // map of hash values to revision names
 	requestDefinitionsAllowed bool                   // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
@@ -122,4 +124,9 @@ func (s *ServiceBody) createAccessRequestDefinition() error {
 		}
 	}
 	return nil
+}
+
+// GetSpecVersion - returns version parsed from the spec
+func (s *ServiceBody) GetSpecVersion() string {
+	return s.specVersion
 }
