@@ -235,7 +235,7 @@ func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) management.ApiService
 			Type:        getRevisionDefinitionType(*serviceBody),
 			Value:       base64.StdEncoding.EncodeToString(serviceBody.SpecDefinition),
 			ContentType: serviceBody.ResourceContentType,
-			// Version:  serviceBody.GetSpecVersion(),
+			Version:     serviceBody.GetSpecVersion(),
 		},
 	}
 }
