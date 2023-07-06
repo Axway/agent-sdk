@@ -9,7 +9,7 @@
 
 package catalog
 
-// SupportContactSpec struct for SupportContactSpec
+// SupportContactSpec  (catalog.v1.SupportContact)
 type SupportContactSpec struct {
 	// Email address of the Support Contact.
 	Email string `json:"email"`

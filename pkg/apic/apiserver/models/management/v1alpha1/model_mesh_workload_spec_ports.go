@@ -9,7 +9,7 @@
 
 package management
 
-// MeshWorkloadSpecPorts struct for MeshWorkloadSpecPorts
+// MeshWorkloadSpecPorts  (management.v1alpha1.MeshWorkload)
 type MeshWorkloadSpecPorts struct {
 	// The name of the port.
 	Name string `json:"name,omitempty"`

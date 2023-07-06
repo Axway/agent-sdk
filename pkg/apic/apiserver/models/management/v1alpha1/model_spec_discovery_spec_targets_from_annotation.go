@@ -9,7 +9,7 @@
 
 package management
 
-// SpecDiscoverySpecTargetsFromAnnotation struct for SpecDiscoverySpecTargetsFromAnnotation
+// SpecDiscoverySpecTargetsFromAnnotation  (management.v1alpha1.SpecDiscovery)
 type SpecDiscoverySpecTargetsFromAnnotation struct {
 	// annotation template. golang template that's fed the following object for each declared port of the pod: {\"name\", \"number\"}
 	Template string `json:"template,omitempty"`

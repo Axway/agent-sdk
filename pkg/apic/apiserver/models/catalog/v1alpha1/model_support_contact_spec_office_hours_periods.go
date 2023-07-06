@@ -9,7 +9,7 @@
 
 package catalog
 
-// SupportContactSpecOfficeHoursPeriods struct for SupportContactSpecOfficeHoursPeriods
+// SupportContactSpecOfficeHoursPeriods  (catalog.v1alpha1.SupportContact)
 type SupportContactSpecOfficeHoursPeriods struct {
 	// Time in 24hr ISO 8601 extended format (hh:mm). Valid values are 00:00-24:00.
 	OpenTime string `json:"openTime"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// PublishedProductSpec struct for PublishedProductSpec
+// PublishedProductSpec  (catalog.v1alpha1.PublishedProduct)
 type PublishedProductSpec struct {
 	Product   PublishedProductSpecProduct   `json:"product,omitempty"`
 	Resources PublishedProductSpecResources `json:"resources,omitempty"`

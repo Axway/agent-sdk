@@ -9,11 +9,11 @@
 
 package management
 
-// MeshWorkloadSpec struct for MeshWorkloadSpec
+// MeshWorkloadSpec  (management.v1alpha1.MeshWorkload)
 type MeshWorkloadSpec struct {
 	// References to k8sresources making up the workload.
 	Resources []string `json:"resources,omitempty"`
-	// Labels from the k8sresources making up the workload.
+	// Labels from the k8sresources making up the workload. (management.v1alpha1.MeshWorkload)
 	Labels map[string]string `json:"labels,omitempty"`
 	// Discovered ports on the workload.
 	Ports []MeshWorkloadSpecPorts `json:"ports,omitempty"`

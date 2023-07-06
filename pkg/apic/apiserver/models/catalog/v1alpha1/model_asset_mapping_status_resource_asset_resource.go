@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatusResourceAssetResource struct for AssetMappingStatusResourceAssetResource
+// AssetMappingStatusResourceAssetResource  (catalog.v1alpha1.AssetMapping)
 type AssetMappingStatusResourceAssetResource struct {
 	Ref string `json:"ref,omitempty"`
 	// GENERATE: The following code has been modified after code generation

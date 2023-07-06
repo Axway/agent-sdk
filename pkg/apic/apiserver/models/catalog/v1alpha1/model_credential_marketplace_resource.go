@@ -9,8 +9,8 @@
 
 package catalog
 
-// CredentialMarketplaceResource The Marketplace Credential resource details.
+// CredentialMarketplaceResource The Marketplace Credential resource details. (catalog.v1alpha1.Credential)
 type CredentialMarketplaceResource struct {
-	Metadata ApplicationMarketplaceResourceMetadata `json:"metadata"`
-	Owner    CredentialMarketplaceResourceOwner     `json:"owner,omitempty"`
+	Metadata CredentialMarketplaceResourceMetadata `json:"metadata"`
+	Owner    CredentialMarketplaceResourceOwner    `json:"owner,omitempty"`
 }

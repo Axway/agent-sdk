@@ -9,7 +9,7 @@
 
 package catalog
 
-// MarketplaceBillingPayment Supported payment properties.
+// MarketplaceBillingPayment Supported payment properties. (catalog.v1.Marketplace)
 type MarketplaceBillingPayment struct {
 	// The billing system type used for this Marketplace.
 	Type string `json:"type"`

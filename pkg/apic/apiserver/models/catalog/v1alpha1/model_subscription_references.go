@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionReferences struct for SubscriptionReferences
+// SubscriptionReferences  (catalog.v1alpha1.Subscription)
 type SubscriptionReferences struct {
 	// Reference a source Subscription if the Subscription was generated from a Subscription migration to a new Product Plan.
 	Subscription string `json:"subscription,omitempty"`

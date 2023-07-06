@@ -9,7 +9,7 @@
 
 package management
 
-// SpecDiscoverySpecNamespaceFilter a list of namespace names to follow. If not set, follows all namespaces.
+// SpecDiscoverySpecNamespaceFilter a list of namespace names to follow. If not set, follows all namespaces. (management.v1alpha1.SpecDiscovery)
 type SpecDiscoverySpecNamespaceFilter struct {
 	Names []string `json:"names,omitempty"`
 }

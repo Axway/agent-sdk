@@ -9,7 +9,7 @@
 
 package catalog
 
-// MarketplaceSpec struct for MarketplaceSpec
+// MarketplaceSpec  (catalog.v1alpha1.Marketplace)
 type MarketplaceSpec struct {
 	// description of the Marketplace.
 	Description string `json:"description,omitempty"`

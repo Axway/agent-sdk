@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanReferences struct for ProductPlanReferences
+// ProductPlanReferences  (catalog.v1alpha1.ProductPlan)
 type ProductPlanReferences struct {
 	Product ProductPlanReferencesProduct `json:"product,omitempty"`
 }

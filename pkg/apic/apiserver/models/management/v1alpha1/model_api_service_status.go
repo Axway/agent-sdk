@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceStatus struct for ApiServiceStatus
+// ApiServiceStatus  (management.v1alpha1.APIService)
 type ApiServiceStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

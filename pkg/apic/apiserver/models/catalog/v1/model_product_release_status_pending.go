@@ -22,6 +22,6 @@ type ProductReleaseStatusPending struct {
 	// Time when the change occured.
 	Timestamp time.Time `json:"timestamp"`
 	// Reason for being in Pending.
-	Detail string            `json:"detail"`
-	Meta   ProductStatusMeta `json:"meta,omitempty"`
+	Detail string                          `json:"detail"`
+	Meta   ProductReleaseStatusPendingMeta `json:"meta,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// SpecDiscoverySpec struct for SpecDiscoverySpec
+// SpecDiscoverySpec  (management.v1alpha1.SpecDiscovery)
 type SpecDiscoverySpec struct {
 	NamespaceFilter SpecDiscoverySpecNamespaceFilter `json:"namespaceFilter,omitempty"`
 	ResourceFilter  SpecDiscoverySpecResourceFilter  `json:"resourceFilter,omitempty"`

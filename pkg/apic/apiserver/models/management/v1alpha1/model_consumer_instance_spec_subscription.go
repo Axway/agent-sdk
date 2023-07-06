@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerInstanceSpecSubscription struct for ConsumerInstanceSpecSubscription
+// ConsumerInstanceSpecSubscription  (management.v1alpha1.ConsumerInstance)
 type ConsumerInstanceSpecSubscription struct {
 	// Defines if subscriptions are allowed on the Catalog Item.
 	Enabled bool `json:"enabled,omitempty"`

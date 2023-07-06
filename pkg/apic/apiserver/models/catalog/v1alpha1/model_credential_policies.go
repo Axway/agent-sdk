@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialPolicies struct for CredentialPolicies
+// CredentialPolicies  (catalog.v1alpha1.Credential)
 type CredentialPolicies struct {
 	Expiry CredentialPoliciesExpiry `json:"expiry,omitempty"`
 }

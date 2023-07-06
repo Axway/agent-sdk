@@ -9,7 +9,7 @@
 
 package management
 
-// IntegrationSpec struct for IntegrationSpec
+// IntegrationSpec  (management.v1alpha1.Integration)
 type IntegrationSpec struct {
 	Description string `json:"description,omitempty"`
 }

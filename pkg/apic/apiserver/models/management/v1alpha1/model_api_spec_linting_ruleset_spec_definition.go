@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingRulesetSpecDefinition The API Specification Ruleset details.
+// ApiSpecLintingRulesetSpecDefinition The API Specification Ruleset details. (management.v1alpha1.APISpecLintingRuleset)
 type ApiSpecLintingRulesetSpecDefinition struct {
 	// The type of the API Specification Linting Ruleset.
 	LintingType string `json:"lintingType"`

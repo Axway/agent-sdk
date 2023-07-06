@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionSpec struct for SubscriptionSpec
+// SubscriptionSpec  (catalog.v1alpha1.Subscription)
 type SubscriptionSpec struct {
 	// Reference to Product resource
 	Product string               `json:"product"`
