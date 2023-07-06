@@ -9,8 +9,8 @@
 
 package catalog
 
-// PublishedProductSpec  (catalog.v1alpha1.PublishedProduct)
-type PublishedProductSpec struct {
-	Product   PublishedProductSpecProduct   `json:"product,omitempty"`
-	Resources PublishedProductSpecResources `json:"resources,omitempty"`
+// PublishedProductSpecResources  (catalog.v1alpha1.PublishedProduct)
+type PublishedProductSpecResources struct {
+	// GENERATE: The following code has been modified after code generation
+	GroupBy interface{} `json:"groupBy,omitempty"`
 }

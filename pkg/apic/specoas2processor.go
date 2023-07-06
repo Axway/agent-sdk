@@ -35,6 +35,11 @@ func (p *oas2SpecProcessor) getResourceType() string {
 	return Oas2
 }
 
+// GetVersion -
+func (p *oas2SpecProcessor) GetVersion() string {
+	return p.spec.Info.Version
+}
+
 // GetEndpoints -
 func (p *oas2SpecProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}

@@ -14,4 +14,6 @@ type SubscriptionInvoiceSpecQuotas struct {
 	Name string `json:"name,omitempty"`
 	// Number of consumed units.
 	Units int32 `json:"units,omitempty"`
+	// Defined for quotas with overages per specific time period.
+	Intervals []SubscriptionInvoiceSpecIntervals `json:"intervals,omitempty"`
 }

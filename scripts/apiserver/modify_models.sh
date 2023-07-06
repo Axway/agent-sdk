@@ -80,6 +80,21 @@ go fmt ${MODEL_PATH}/AccessRequest.go
 
 
 ######################
+# For APIService.go, we want to turn    "Compliance ApiServiceCompliance `json:"compliance"`" into
+# "Compliance *ApiServiceCompliance `json:"compliance,omitempty"`"
+######################
+SEARCH="\s*Compliance\s*ApiServiceCompliance.*"
+REPLACE="Compliance *ApiServiceCompliance \`json:\"compliance,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
+# add in the new line we want
+$SED -i "/ApiServiceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIService.go
+
+######################
 # Update any time imports in the models, we want to turn "time" into
 # time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 ######################

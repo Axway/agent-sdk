@@ -12,6 +12,11 @@ func (p *unstructuredProcessor) getResourceType() string {
 	return Unstructured
 }
 
+// GetVersion -
+func (p *unstructuredProcessor) GetVersion() string {
+	return ""
+}
+
 // GetEndpoints -
 func (p *unstructuredProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return []EndpointDefinition{}, nil

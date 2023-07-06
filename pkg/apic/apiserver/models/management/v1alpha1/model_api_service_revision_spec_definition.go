@@ -17,4 +17,6 @@ type ApiServiceRevisionSpecDefinition struct {
 	Value string `json:"value,omitempty"`
 	// content-type of the spec.
 	ContentType string `json:"contentType,omitempty"`
+	// The version of the api specification. Will be extracted from \"value\" if not assigned.
+	Version string `json:"version,omitempty"`
 }

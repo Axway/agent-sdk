@@ -16,4 +16,6 @@ type ApiSpecLintingJobResult struct {
 	Summary ApiSpecLintingJobResultSummary   `json:"summary"`
 	// Reference to the APISpecLintingRuleset revision
 	ApiSpecLintingRulesetRevision int32 `json:"apiSpecLintingRulesetRevision,omitempty"`
+	// Set the value to true if the linting result details count has reached the threshold
+	DetailsThresholdExceeded bool `json:"detailsThresholdExceeded,omitempty"`
 }

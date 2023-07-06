@@ -223,7 +223,9 @@ func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	}
 
 	for k, v := range rawSubs {
-		rawMeta[k] = v
+		if v != nil {
+			rawMeta[k] = v
+		}
 	}
 
 	return json.Marshal(rawMeta)
@@ -276,7 +278,9 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 	}
 
 	for k, v := range rawSubs {
-		rm.SubResources[k] = v
+		if v != nil {
+			rm.SubResources[k] = v
+		}
 	}
 
 	return nil

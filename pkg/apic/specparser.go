@@ -14,8 +14,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	mimeApplicationJSON = "application/json"
+	mimeApplicationYAML = "application/yaml"
+)
+
 // SpecProcessor -
 type SpecProcessor interface {
+	GetVersion() string
 	GetEndpoints() ([]EndpointDefinition, error)
 	getResourceType() string
 }
@@ -30,10 +36,11 @@ type OasSpecProcessor interface {
 
 // SpecResourceParser -
 type SpecResourceParser struct {
-	resourceSpecType string
-	resourceSpec     []byte
-	specProcessor    SpecProcessor
-	specHash         uint64
+	resourceSpecType    string
+	resourceContentType string
+	resourceSpec        []byte
+	specProcessor       SpecProcessor
+	specHash            uint64
 }
 
 // NewSpecResourceParser -
@@ -57,6 +64,10 @@ func (s *SpecResourceParser) Parse() error {
 		s.specProcessor = newUnstructuredSpecProcessor(s.resourceSpec)
 	}
 	return nil
+}
+
+func (s *SpecResourceParser) getResourceContentType() string {
+	return s.resourceContentType
 }
 
 func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() {
@@ -94,9 +105,11 @@ func (s *SpecResourceParser) GetSpecProcessor() SpecProcessor {
 func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
-	err := yaml.Unmarshal(s.resourceSpec, &specDef)
+	contentType := mimeApplicationJSON
+	err := json.Unmarshal(s.resourceSpec, &specDef)
 	if err != nil {
-		err := json.Unmarshal(s.resourceSpec, &specDef)
+		contentType = mimeApplicationYAML
+		err := yaml.Unmarshal(s.resourceSpec, &specDef)
 		if err != nil {
 			return nil, err
 		}
@@ -106,6 +119,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	if ok {
 		openapi := specType.(string)
 		if strings.HasPrefix(openapi, "3.") {
+			s.resourceContentType = contentType
 			return s.parseOAS3Spec()
 		}
 		if strings.HasPrefix(openapi, "2.") {
@@ -125,6 +139,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 
 	_, ok = specDef["asyncapi"]
 	if ok {
+		s.resourceContentType = contentType
 		return newAsyncAPIProcessor(specDef), nil
 	}
 	return nil, errors.New("unknown yaml or json based specification")
@@ -141,10 +156,11 @@ func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
 	swaggerObj := &oas2Swagger{}
 	// lowercase the byte array to ensure keys we care about are parsed
-
-	err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
+	contentType := mimeApplicationJSON
+	err := json.Unmarshal(s.resourceSpec, swaggerObj)
 	if err != nil {
-		err := json.Unmarshal(s.resourceSpec, swaggerObj)
+		contentType = mimeApplicationYAML
+		err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
 		if err != nil {
 			return nil, err
 		}
@@ -152,6 +168,7 @@ func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
 	if swaggerObj.Info.Title == "" {
 		return nil, errors.New("invalid openapi 2.0 specification")
 	}
+	s.resourceContentType = contentType
 	return newOas2Processor(swaggerObj), nil
 }
 
@@ -166,15 +183,18 @@ func (s *SpecResourceParser) parseOAS3Spec() (SpecProcessor, error) {
 func (s *SpecResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {
 	specDef := make(map[string]interface{})
 	// lowercase the byte array to ensure keys we care about are parsed
-	err := yaml.Unmarshal(s.resourceSpec, &specDef)
+	contentType := mimeApplicationJSON
+	err := json.Unmarshal(s.resourceSpec, &specDef)
 	if err != nil {
-		err := json.Unmarshal(s.resourceSpec, &specDef)
+		contentType = mimeApplicationYAML
+		err := yaml.Unmarshal(s.resourceSpec, &specDef)
 		if err != nil {
 			return nil, err
 		}
 	}
 	_, ok := specDef["asyncapi"]
 	if ok {
+		s.resourceContentType = contentType
 		return newAsyncAPIProcessor(specDef), nil
 	}
 	return nil, errors.New("invalid asyncapi specification")

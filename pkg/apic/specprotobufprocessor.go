@@ -16,6 +16,11 @@ func (p *protobufProcessor) getResourceType() string {
 	return Protobuf
 }
 
+// GetVersion -
+func (p *protobufProcessor) GetVersion() string {
+	return ""
+}
+
 // GetEndpoints -
 func (p *protobufProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return []EndpointDefinition{}, nil
