@@ -228,7 +228,6 @@ func (c *ServiceClient) GetAPIRevisionByName(name string) (*management.APIServic
 }
 
 func buildAPIServiceRevisionSpec(serviceBody *ServiceBody) management.ApiServiceRevisionSpec {
-	fmt.Println(serviceBody.GetSpecVersion())
 	return management.ApiServiceRevisionSpec{
 		ApiService: serviceBody.serviceContext.serviceName,
 		Definition: management.ApiServiceRevisionSpecDefinition{
