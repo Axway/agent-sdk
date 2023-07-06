@@ -45,11 +45,14 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	Compliance ApiServiceCompliance `json:"compliance"`
-	Details    ApiServiceDetails    `json:"details"`
-	Owner      *apiv1.Owner         `json:"owner"`
-	Spec       ApiServiceSpec       `json:"spec"`
-	// Status     ApiServiceStatus     `json:"status"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Compliance ApiServiceCompliance `json:"compliance"`
+	Compliance *ApiServiceCompliance `json:"compliance,omitempty"`
+	Details    ApiServiceDetails     `json:"details"`
+	Owner      *apiv1.Owner          `json:"owner"`
+	Spec       ApiServiceSpec        `json:"spec"`
+	// Status     ApiServiceStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
