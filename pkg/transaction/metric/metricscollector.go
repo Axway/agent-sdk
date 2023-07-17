@@ -777,16 +777,14 @@ func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4D
 
 func (c *collector) getStatusText(statusCode string) string {
 	httpStatusCode, _ := strconv.Atoi(statusCode)
-	statusText := "Unknown"
 	switch {
 	case httpStatusCode >= 100 && httpStatusCode < 400:
-		statusText = "Success"
+		return "Success"
 	case httpStatusCode >= 400 && httpStatusCode < 500:
-		statusText = "Failure"
-	case httpStatusCode >= 500:
-		statusText = "Exception"
+		return "Failure"
+	default:
+		return "Exception"
 	}
-	return statusText
 }
 
 func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
