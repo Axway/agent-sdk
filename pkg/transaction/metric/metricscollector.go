@@ -779,11 +779,11 @@ func (c *collector) getStatusText(statusCode string) string {
 	httpStatusCode, _ := strconv.Atoi(statusCode)
 	statusText := "Unknown"
 	switch {
-	case httpStatusCode >= 200 && httpStatusCode < 400:
+	case httpStatusCode >= 100 && httpStatusCode < 400:
 		statusText = "Success"
 	case httpStatusCode >= 400 && httpStatusCode < 500:
 		statusText = "Failure"
-	case httpStatusCode >= 500 && httpStatusCode < 511:
+	case httpStatusCode >= 500:
 		statusText = "Exception"
 	}
 	return statusText
