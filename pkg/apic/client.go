@@ -870,6 +870,8 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		newRI = existingRI
 	}
 
 	if data := util.GetAgentDetails(data); data != nil && updateAgentDetails {
