@@ -2,8 +2,10 @@ package config
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -178,26 +180,35 @@ type TLSConfig interface {
 type TLSConfiguration struct {
 	IConfigValidator
 	// NextProtos is a list of supported application level protocols, in order of preference.
-	NextProtos []string `config:"nextProtos,replace"`
+	NextProtos []string `config:"nextProtos,replace" json:"nextProtos,omitempty"`
 
 	// InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name.
 	// If InsecureSkipVerify is true, TLS accepts any certificate presented by the server and any host
 	// name in that certificate. In this mode, TLS is susceptible to man-in-the-middle attacks.
 	// This should be used only for testing.
-	InsecureSkipVerify bool `config:"insecureSkipVerify"`
+	InsecureSkipVerify bool `config:"insecureSkipVerify" json:"insecureSkipVerify,omitempty"`
 
 	// CipherSuites is a list of supported cipher suites for TLS versions up to TLS 1.2. If CipherSuites
 	// is nil, a default list of secure cipher suites is used, with a preference order based on hardware
 	// performance. The default cipher suites might change over Go versions. Note that TLS 1.3
 	// ciphersuites are not configurable.
-	CipherSuites []TLSCipherSuite `config:"cipherSuites,replace"`
+	CipherSuites []TLSCipherSuite `config:"cipherSuites,replace" json:"cipherSuites,omitempty"`
 
 	// MinVersion contains the minimum SSL/TLS version that is acceptable. If zero, then TLS 1.0 is taken as the minimum.
-	MinVersion TLSVersion `config:"minVersion"`
+	MinVersion TLSVersion `config:"minVersion" json:"minVersion,omitempty"`
 
 	// MaxVersion contains the maximum SSL/TLS version that is acceptable. If zero, then the maximum
 	// version supported by this package is used, which is currently TLS 1.3.
-	MaxVersion TLSVersion `config:"maxVersion"`
+	MaxVersion TLSVersion `config:"maxVersion" json:"maxVersion,omitempty"`
+
+	// RootCertificate
+	RootCertificatePath string `config:"rootCACertPath" json:"rootCACertPath,omitempty"`
+
+	// Client Certificate Path
+	ClientCertificatePath string `config:"clientCertPath" json:"clientCertPath,omitempty"`
+
+	// Client Key Path
+	ClientKeyPath string `config:"clientKeyPath" json:"clientKeyPath,omitempty"`
 }
 
 // NewTLSConfig - build default config
@@ -219,13 +230,30 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 
 	ciphers := c.buildUintArrayFromSuites()
-	return &tls.Config{
+	cfg := &tls.Config{
 		MinVersion:         uint16(c.MinVersion),
 		MaxVersion:         uint16(c.MaxVersion),
 		InsecureSkipVerify: c.InsecureSkipVerify,
 		CipherSuites:       ciphers,
 		NextProtos:         c.NextProtos,
 	}
+	if c.RootCertificatePath != "" {
+		caCert, err := ioutil.ReadFile(c.RootCertificatePath)
+		if err == nil { // config validated in ValidateCfg
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			cfg.RootCAs = caCertPool
+		}
+	}
+
+	if c.ClientCertificatePath != "" && c.ClientKeyPath != "" {
+		cert, err := tls.LoadX509KeyPair(c.ClientCertificatePath, c.ClientKeyPath)
+		if err == nil { // config validated in ValidateCfg
+			cfg.Certificates = []tls.Certificate{cert}
+		}
+	}
+
+	return cfg
 }
 
 // LoadFrom takes the `tls.Config` and transforms it into a TLSConfiguration.
@@ -323,6 +351,18 @@ func (c *TLSConfiguration) validateConfig() {
 
 	if len(c.CipherSuites) != 0 && !c.isValidCiphers() {
 		exception.Throw(errors.New("ssl.cipherSuites not valid in config"))
+	}
+	if c.RootCertificatePath != "" {
+		_, err := ioutil.ReadFile(c.RootCertificatePath)
+		if err != nil {
+			exception.Throw(errors.New("ssl.rootCertificatePath not valid in config"))
+		}
+	}
+	if c.ClientCertificatePath != "" {
+		_, err := tls.LoadX509KeyPair(c.ClientCertificatePath, c.ClientKeyPath)
+		if err != nil {
+			exception.Throw(errors.New("ssl.clientCertificatePath or sss.clientKeyPath not valid in config"))
+		}
 	}
 }
 

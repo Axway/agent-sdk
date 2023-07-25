@@ -41,6 +41,7 @@ const (
 	metaGrantType           = "grant_type"
 	metaClientID            = "client_id"
 	metaClientSecret        = "client_secret"
+	metaScope               = "scope"
 	metaClientAssertionType = "client_assertion_type"
 	metaClientAssertion     = "client_assertion"
 )
