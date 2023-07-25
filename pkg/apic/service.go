@@ -193,11 +193,17 @@ func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(cat
 // Update description and title after updating or creating APIService to include the stage name if it exists
 func (c *ServiceClient) postAPIServiceUpdate(serviceBody *ServiceBody) {
 	if serviceBody.Stage != "" {
-		addDescription := fmt.Sprintf("%s: %s", serviceBody.StageDescriptor, serviceBody.Stage)
+		stageDescription := fmt.Sprintf("%s: %s", serviceBody.StageDescriptor, serviceBody.Stage)
 		if len(serviceBody.Description) > 0 {
-			serviceBody.Description = fmt.Sprintf("%s, %s", serviceBody.Description, addDescription)
+			stageDescription = fmt.Sprintf(", %s", stageDescription)
+			if len(serviceBody.Description)+len(stageDescription) >= maxDescriptionLength {
+				description := serviceBody.Description[0 : maxDescriptionLength-len(strEllipsis)-len(stageDescription)]
+				serviceBody.Description = fmt.Sprintf("%s%s%s", description, strEllipsis, stageDescription)
+			} else {
+				serviceBody.Description = fmt.Sprintf("%s%s", serviceBody.Description, stageDescription)
+			}
 		} else {
-			serviceBody.Description = addDescription
+			serviceBody.Description = stageDescription
 		}
 		serviceBody.NameToPush = fmt.Sprintf("%v (%s: %v)", serviceBody.NameToPush, serviceBody.StageDescriptor, serviceBody.Stage)
 	} else if c.cfg.GetAppendEnvironmentToTitle() {
