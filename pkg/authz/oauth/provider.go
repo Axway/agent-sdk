@@ -85,7 +85,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() == IDPAuthTypeClient {
 		p.authClient, err = NewAuthClient(p.authServerMetadata.TokenEndpoint, apiClient,
 			WithServerName(idp.GetIDPName()),
-			WithClientSecretAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret()))
+			WithClientSecretAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
 		if err != nil {
 			return nil, err
 		}

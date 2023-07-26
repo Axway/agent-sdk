@@ -80,11 +80,12 @@ func WithServerName(serverName string) AuthClientOption {
 }
 
 // WithClientSecretAuth - sets up to use client secret authenticator
-func WithClientSecretAuth(clientID, clientSecret string) AuthClientOption {
+func WithClientSecretAuth(clientID, clientSecret, scope string) AuthClientOption {
 	return func(opt *authClientOptions) {
 		opt.authenticator = &clientSecretAuthenticator{
 			clientID,
 			clientSecret,
+			scope,
 		}
 	}
 }
@@ -160,6 +161,7 @@ func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
 			WithField("server", c.options.serverName).
 			WithField("url", c.tokenURL).
 			WithField("status", resp.Code).
+			WithField("body", string(resp.Body)).
 			WithError(err).
 			Debug(err.Error())
 		return nil, err

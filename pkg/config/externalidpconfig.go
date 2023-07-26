@@ -9,23 +9,28 @@ import (
 )
 
 const (
-	accessToken = "accessToken"
-	client      = "client"
-
-	pathExternalIDP     = "agentFeatures.idp"
-	fldName             = "name"
-	fldTitle            = "title"
-	fldType             = "type"
-	fldMetadataURL      = "metadataUrl"
-	fldExtraProperties  = "extraProperties"
-	fldScope            = "scope"
-	fldGrantType        = "grantType"
-	fldAuthMethod       = "authMethod"
-	fldAuthResponseType = "authResponseType"
-	fldAuthType         = "auth.type"
-	fldAuthAccessToken  = "auth.accessToken"
-	fldAuthClientID     = "auth.clientId"
-	fldAuthClientSecret = "auth.clientSecret"
+	accessToken              = "accessToken"
+	client                   = "client"
+	propInsecureSkipVerify   = "insecureSkipVerify"
+	pathExternalIDP          = "agentFeatures.idp"
+	fldName                  = "name"
+	fldTitle                 = "title"
+	fldType                  = "type"
+	fldMetadataURL           = "metadataUrl"
+	fldExtraProperties       = "extraProperties"
+	fldScope                 = "scope"
+	fldGrantType             = "grantType"
+	fldAuthMethod            = "authMethod"
+	fldAuthResponseType      = "authResponseType"
+	fldAuthType              = "auth.type"
+	fldAuthAccessToken       = "auth.accessToken"
+	fldAuthClientID          = "auth.clientId"
+	fldAuthClientSecret      = "auth.clientSecret"
+	fldAuthClientScope       = "auth.clientScope"
+	fldSSLInsecureSkipVerify = "ssl." + propInsecureSkipVerify
+	fldSSLRootCACertPath     = "ssl.rootCACertPath"
+	fldSSLClientCertPath     = "ssl.clientCertPath"
+	fldSSLClientKeyPath      = "ssl.clientKeyPath"
 )
 
 var configProperties = []string{
@@ -42,6 +47,11 @@ var configProperties = []string{
 	fldAuthAccessToken,
 	fldAuthClientID,
 	fldAuthClientSecret,
+	fldAuthClientScope,
+	fldSSLInsecureSkipVerify,
+	fldSSLRootCACertPath,
+	fldSSLClientCertPath,
+	fldSSLClientKeyPath,
 }
 
 var validIDPAuthType = map[string]bool{accessToken: true, client: true}
@@ -105,8 +115,10 @@ type IDPAuthConfig interface {
 	GetClientID() string
 	// GetClientSecret - Secret for the client in IdP that can used to create new OAuth clients
 	GetClientSecret() string
+	// GetClientScope - Scopes used for requesting the token using the ID client
+	GetClientScope() string
 	// validate - Validates the IDP auth configuration
-	validate()
+	validate(isMTLS bool)
 }
 
 // IDPConfig - interface for IdP provider config
@@ -131,17 +143,19 @@ type IDPConfig interface {
 	GetAuthResponseType() string
 	// GetExtraProperties - set of additional properties to be applied when registering the client
 	GetExtraProperties() map[string]string
+	// GetTLSConfig - tls config for IDP connection
+	GetTLSConfig() TLSConfig
 	// validate - Validates the IDP configuration
 	validate()
 }
 
 // IDPAuthConfiguration - Structure to hold the IdP provider auth config
 type IDPAuthConfiguration struct {
-	Type         string   `json:"type,omitempty"`
-	AccessToken  string   `json:"accessToken,omitempty"`
-	ClientID     string   `json:"clientId,omitempty"`
-	ClientSecret string   `json:"clientSecret,omitempty"`
-	ClientScopes []string `json:"clientScopes,omitempty"`
+	Type         string `json:"type,omitempty"`
+	AccessToken  string `json:"accessToken,omitempty"`
+	ClientID     string `json:"clientId,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
+	ClientScope  string `json:"clientScope,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -156,6 +170,7 @@ type IDPConfiguration struct {
 	AuthMethod       string          `json:"authMethod,omitempty"`
 	AuthResponseType string          `json:"authResponseType,omitempty"`
 	ExtraProperties  ExtraProperties `json:"extraProperties,omitempty"`
+	TLSConfig        TLSConfig       `json:"ssl,omitempty"`
 }
 
 // GetIDPName - for the identity provider
@@ -208,6 +223,11 @@ func (i *IDPConfiguration) GetAuthResponseType() string {
 	return i.AuthResponseType
 }
 
+// GetTLSConfig - tls config for IDP connection
+func (i *IDPConfiguration) GetTLSConfig() TLSConfig {
+	return i.TLSConfig
+}
+
 // validate - Validates the IDP configuration
 func (i *IDPConfiguration) validate() {
 	if i.Name == "" {
@@ -221,7 +241,11 @@ func (i *IDPConfiguration) validate() {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldMetadataURL))
 	}
 
-	i.AuthConfig.validate()
+	isMTLS := false
+	if i.TLSConfig != nil {
+		isMTLS = i.TLSConfig.(*TLSConfiguration).ClientCertificatePath != "" && i.TLSConfig.(*TLSConfiguration).ClientKeyPath != ""
+	}
+	i.AuthConfig.validate(isMTLS)
 }
 
 // GetType - type of authentication mechanism to use "accessToken" or "client"
@@ -244,8 +268,13 @@ func (i *IDPAuthConfiguration) GetClientSecret() string {
 	return i.ClientSecret
 }
 
+// GetClientScope - scopes used for requesting the token using the ID client
+func (i *IDPAuthConfiguration) GetClientScope() string {
+	return i.ClientScope
+}
+
 // validate - Validates the IDP auth configuration
-func (i *IDPAuthConfiguration) validate() {
+func (i *IDPAuthConfiguration) validate(isMTLS bool) {
 	if ok := validIDPAuthType[i.GetType()]; !ok {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthType))
 	}
@@ -258,8 +287,10 @@ func (i *IDPAuthConfiguration) validate() {
 		if i.GetClientID() == "" {
 			exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientID))
 		}
-		if i.GetClientSecret() == "" {
-			exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientSecret))
+		if !isMTLS {
+			if i.GetClientSecret() == "" {
+				exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientSecret))
+			}
 		}
 	}
 }
@@ -287,9 +318,25 @@ func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, err
 
 		buf, _ := json.Marshal(envIdpCfg)
 		json.Unmarshal(buf, idpCfg)
-
+		if entry, ok := envIdpCfg["ssl"]; ok && entry != nil {
+			idpCfg.TLSConfig = parseExternalIDPTLSConfig(entry)
+		}
 		cfg.IDPConfigs[idpCfg.Name] = idpCfg
 	}
 
 	return cfg, nil
+}
+
+func parseExternalIDPTLSConfig(idpTLSCfg interface{}) TLSConfig {
+	tlsCfg := NewTLSConfig()
+	tlsConfig, ok := idpTLSCfg.(map[string]interface{})
+	if ok {
+		buf, _ := json.Marshal(tlsConfig)
+		json.Unmarshal(buf, tlsCfg)
+		v := tlsConfig[propInsecureSkipVerify]
+		if s, ok := v.(string); ok && s == "true" {
+			tlsCfg.(*TLSConfiguration).InsecureSkipVerify = true
+		}
+	}
+	return tlsCfg
 }

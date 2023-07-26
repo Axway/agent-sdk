@@ -236,10 +236,14 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 func registerExternalIDPs() {
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
-		tlsCfg := agent.cfg.GetTLSConfig()
+
 		proxy := agent.cfg.GetProxyURL()
 		timeout := agent.cfg.GetClientTimeout()
 		for _, idp := range idPCfg.GetIDPList() {
+			tlsCfg := idp.GetTLSConfig()
+			if idp.GetTLSConfig() == nil {
+				tlsCfg = agent.cfg.GetTLSConfig()
+			}
 			registerCredentialProvider(idp, tlsCfg, proxy, timeout)
 		}
 	}
