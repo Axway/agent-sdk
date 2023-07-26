@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sonar-scanner -X \
-    -Dsonar.host.url=${SONAR_HOST} \
+    -Dsonar.host.url=${SONAR_HOST_URL} \
     -Dsonar.language=go \
     -Dsonar.projectName=APIC_AGENTS_SDK \
     -Dsonar.projectVersion=1.0 \
