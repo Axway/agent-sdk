@@ -20,6 +20,8 @@ type DiscoveryAgentSpecConfig struct {
 	AdditionalTags []string `json:"additionalTags,omitempty"`
 	// The list of tags to exclude from the API service resource that the agent publishes to Amplify Central
 	IgnoreTags []string `json:"ignoreTags,omitempty"`
+	// Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
+	OwningTeam string `json:"owningTeam,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

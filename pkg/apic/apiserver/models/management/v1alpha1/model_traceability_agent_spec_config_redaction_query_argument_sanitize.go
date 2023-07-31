@@ -11,6 +11,6 @@ package management
 
 // TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize struct {
-	KeyMatch   string `json:"keyMatch,omitempty"`
-	ValueMatch string `json:"valueMatch,omitempty"`
+	KeyMatch   string `json:"keyMatch"`
+	ValueMatch string `json:"valueMatch"`
 }

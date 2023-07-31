@@ -16,6 +16,6 @@ type TraceabilityAgentSpecConfigRedaction struct {
 	QueryArgument   TraceabilityAgentSpecConfigRedactionQueryArgument   `json:"queryArgument,omitempty"`
 	RequestHeaders  TraceabilityAgentSpecConfigRedactionRequestHeaders  `json:"requestHeaders,omitempty"`
 	ResponseHeaders TraceabilityAgentSpecConfigRedactionResponseHeaders `json:"responseHeaders,omitempty"`
-	// The character to apply to values that are sanitized before saving for Business and Consumer Insights. Default is '*'
+	// The character(s) to apply to values that are sanitized before saving for Business and Consumer Insights. Max length of 5 Default is '{*}'
 	MaskingCharacter string `json:"maskingCharacter,omitempty"`
 }

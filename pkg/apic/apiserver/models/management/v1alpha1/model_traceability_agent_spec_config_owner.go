@@ -14,5 +14,5 @@ type TraceabilityAgentSpecConfigOwner struct {
 	// The type of the owner. Defaults to team if not present.
 	Type string `json:"type,omitempty"`
 	// Id of the owner of the resource.
-	Id string `json:"id,omitempty"`
+	Id string `json:"id"`
 }

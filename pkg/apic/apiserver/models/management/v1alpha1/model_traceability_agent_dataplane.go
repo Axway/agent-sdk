@@ -11,7 +11,7 @@ package management
 
 // TraceabilityAgentDataplane  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentDataplane struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Defines the interval that the dataplane will be accessed (30m = 30 minutes, 5h 5m = 5 hours and 5 mins, 2d = 2 days). 30m minimum
 	Frequency string `json:"frequency,omitempty"`
 	// Queues this agent to run a traffic collection process. Defaults to false
