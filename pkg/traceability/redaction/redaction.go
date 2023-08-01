@@ -17,7 +17,7 @@ const (
 
 var sanitizeValue string
 
-//Redactions - the public methods available for redaction config
+// Redactions - the public methods available for redaction config
 type Redactions interface {
 	URIRedaction(uri string) (string, error)
 	PathRedaction(path string) string
@@ -30,37 +30,37 @@ type Redactions interface {
 
 // Config - the configuration of all redactions
 type Config struct {
-	Path              path   `config:"path" yaml:"path"`
-	Args              filter `config:"queryArgument" yaml:"queryArgument"`
-	RequestHeaders    filter `config:"requestHeader" yaml:"requestHeader"`
-	ResponseHeaders   filter `config:"responseHeader" yaml:"responseHeader"`
+	Path              Path   `config:"path" yaml:"path"`
+	Args              Filter `config:"queryArgument" yaml:"queryArgument"`
+	RequestHeaders    Filter `config:"requestHeader" yaml:"requestHeader"`
+	ResponseHeaders   Filter `config:"responseHeader" yaml:"responseHeader"`
 	MaskingCharacters string `config:"maskingCharacters" yaml:"maskingCharacters"`
-	JMSProperties     filter `config:"jmsProperties" yaml:"jmsProperties"`
+	JMSProperties     Filter `config:"jmsProperties" yaml:"jmsProperties"`
 }
 
 // path - the keyMatches to show, all else are redacted
-type path struct {
-	Allowed []show `config:"show" yaml:"show"`
+type Path struct {
+	Allowed []Show `config:"show" yaml:"show"`
 }
 
 // filter - the configuration of a filter for each redaction config
-type filter struct {
-	Allowed  []show     `config:"show" yaml:"show"`
-	Sanitize []sanitize `config:"sanitize" yaml:"sanitize"`
+type Filter struct {
+	Allowed  []Show     `config:"show" yaml:"show"`
+	Sanitize []Sanitize `config:"sanitize" yaml:"sanitize"`
 }
 
 // show - the keyMatches to show, all else are redacted
-type show struct {
+type Show struct {
 	KeyMatch string `config:"keyMatch" yaml:"keyMatch"`
 }
 
 // sanitize - the keys and values to sanitize
-type sanitize struct {
+type Sanitize struct {
 	KeyMatch   string `config:"keyMatch" yaml:"keyMatch"`
 	ValueMatch string `config:"valueMatch" yaml:"valueMatch"`
 }
 
-//redactionRegex - the compiled regex of the configuration fields
+// redactionRegex - the compiled regex of the configuration fields
 type redactionRegex struct {
 	Redactions
 	pathFilters           []showRegex
@@ -84,33 +84,33 @@ type sanitizeRegex struct {
 	valueMatch *regexp.Regexp
 }
 
-//DefaultConfig - returns a default reaction config where all things are redacted
+// DefaultConfig - returns a default reaction config where all things are redacted
 func DefaultConfig() Config {
 	return Config{
-		Path: path{
-			Allowed: []show{},
+		Path: Path{
+			Allowed: []Show{},
 		},
-		Args: filter{
-			Allowed:  []show{},
-			Sanitize: []sanitize{},
+		Args: Filter{
+			Allowed:  []Show{},
+			Sanitize: []Sanitize{},
 		},
-		RequestHeaders: filter{
-			Allowed:  []show{},
-			Sanitize: []sanitize{},
+		RequestHeaders: Filter{
+			Allowed:  []Show{},
+			Sanitize: []Sanitize{},
 		},
-		ResponseHeaders: filter{
-			Allowed:  []show{},
-			Sanitize: []sanitize{},
+		ResponseHeaders: Filter{
+			Allowed:  []Show{},
+			Sanitize: []Sanitize{},
 		},
 		MaskingCharacters: "{*}",
-		JMSProperties: filter{
-			Allowed:  []show{},
-			Sanitize: []sanitize{},
+		JMSProperties: Filter{
+			Allowed:  []Show{},
+			Sanitize: []Sanitize{},
 		},
 	}
 }
 
-//SetupRedactions - set up redactionRegex based on the redactionConfig
+// SetupRedactions - set up redactionRegex based on the redactionConfig
 func (cfg *Config) SetupRedactions() (Redactions, error) {
 	var redactionSetup redactionRegex
 	var err error
@@ -189,6 +189,11 @@ func validateMaskingChars(mask string) (bool, error) {
 
 // URIRedaction - takes a uri and returns the redacted version of that URI
 func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
+	// skip redaction if nothing sent in
+	if fullURI == "" {
+		return "", nil
+	}
+
 	// just in case uri is really a full url, we want to only want the URI portion
 	parsedURI, err := url.ParseRequestURI(fullURI)
 	if err != nil {
@@ -200,10 +205,8 @@ func (r *redactionRegex) URIRedaction(fullURI string) (string, error) {
 	}
 	switch parsedURL.Scheme {
 	case http, https, "":
-		parsedURL.Path, err = PathRedaction(parsedURL.Path)
-		if err != nil {
-			return "", err
-		}
+		parsedURL.Path = r.PathRedaction(parsedURL.Path)
+
 		parsedURL.RawQuery, err = r.QueryArgsRedactionString(parsedURL.RawQuery)
 		if err != nil {
 			return "", err

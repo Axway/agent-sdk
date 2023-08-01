@@ -35,9 +35,18 @@ const (
 	metric         = "metric"
 )
 
+var exitMetricInit = false
+var exitMutex = &sync.RWMutex{}
+
+func ExitMetricInit() {
+	exitMutex.Lock()
+	defer exitMutex.Unlock()
+	exitMetricInit = true
+}
+
 // Collector - interface for collecting metrics
 type Collector interface {
-	AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string)
+	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddMetricDetail(metricDetail Detail)
 }
 
@@ -86,6 +95,14 @@ func init() {
 		dataDir := ""
 		_, err := os.Stat(dataDir)
 		for dataDir == "" || os.IsNotExist(err) {
+			time.Sleep(time.Millisecond * 50)
+			exitMutex.RLock()
+			if exitMetricInit {
+				exitMutex.RUnlock()
+				return
+			}
+			exitMutex.RUnlock()
+
 			dataDir = traceability.GetDataDirPath()
 			_, err = os.Stat(dataDir)
 		}
@@ -204,7 +221,7 @@ func (c *collector) Execute() error {
 }
 
 // AddMetric - add metric for API transaction to collection
-func (c *collector) AddMetric(apiDetails APIDetails, statusCode string, duration, bytes int64, appName string) {
+func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
@@ -346,8 +363,8 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 	return accessRequest, managedApp
 }
 
-func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDetails {
-	detail := SubscriptionDetails{
+func (c *collector) createSubscriptionDetail(subRef v1.Reference) models.Subscription {
+	detail := models.Subscription{
 		ID:   unknown,
 		Name: unknown,
 	}
@@ -359,8 +376,8 @@ func (c *collector) createSubscriptionDetail(subRef v1.Reference) SubscriptionDe
 	return detail
 }
 
-func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
-	detail := AppDetails{
+func (c *collector) createAppDetail(app *v1.ResourceInstance) models.AppDetails {
+	detail := models.AppDetails{
 		ID:   unknown,
 		Name: unknown,
 	}
@@ -372,8 +389,8 @@ func (c *collector) createAppDetail(app *v1.ResourceInstance) AppDetails {
 	return detail
 }
 
-func (c *collector) createAPIDetail(api APIDetails, accessReq *management.AccessRequest) APIDetails {
-	detail := APIDetails{
+func (c *collector) createAPIDetail(api models.APIDetails, accessReq *management.AccessRequest) models.APIDetails {
+	detail := models.APIDetails{
 		ID:                 api.ID,
 		Name:               api.Name,
 		Revision:           api.Revision,
@@ -796,7 +813,10 @@ func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
 	app := &management.ManagedApplication{}
 	app.FromInstance(ri)
 
-	return app.Marketplace.Resource.Owner.Organization.Id
+	if app.Marketplace.Resource.Owner != nil {
+		return app.Marketplace.Resource.Owner.Organization.ID
+	}
+	return ""
 }
 
 func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, string) {

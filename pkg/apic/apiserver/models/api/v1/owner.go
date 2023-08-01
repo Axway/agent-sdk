@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+type Organization struct {
+	ID string `json:"id"`
+}
+
 // OwnerType -
 type OwnerType uint
 
@@ -22,8 +26,9 @@ var ownerTypeFromString = map[string]OwnerType{
 
 // Owner is the owner of a resource
 type Owner struct {
-	Type OwnerType `json:"type,omitempty"`
-	ID   string    `json:"id"`
+	Type         OwnerType    `json:"type,omitempty"`
+	ID           string       `json:"id"`
+	Organization Organization `json:"organization,omitempty"`
 }
 
 // SetType sets the type of the owner
@@ -45,12 +50,14 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 	}
 
 	aux := struct {
-		Type string `json:"type,omitempty"`
-		ID   string `json:"id"`
+		Type         string       `json:"type,omitempty"`
+		ID           string       `json:"id"`
+		Organization Organization `json:"organization,omitempty"`
 	}{}
 
 	aux.Type = t
 	aux.ID = o.ID
+	aux.Organization = o.Organization
 
 	return json.Marshal(aux)
 }
@@ -58,8 +65,9 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshalls the owner from JSON to convert the owner type to a string
 func (o *Owner) UnmarshalJSON(bytes []byte) error {
 	aux := struct {
-		Type string `json:"type,omitempty"`
-		ID   string `json:"id"`
+		Type         string       `json:"type,omitempty"`
+		ID           string       `json:"id"`
+		Organization Organization `json:"organization,omitempty"`
 	}{}
 
 	if err := json.Unmarshal(bytes, &aux); err != nil {
@@ -72,6 +80,7 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 	}
 	o.Type = ownerString
 	o.ID = aux.ID
+	o.Organization = aux.Organization
 
 	return nil
 }

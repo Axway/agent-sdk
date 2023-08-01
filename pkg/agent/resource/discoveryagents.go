@@ -18,7 +18,10 @@ func discoveryAgent(res *v1.ResourceInstance) *management.DiscoveryAgent {
 func mergeDiscoveryAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.CentralConfiguration) {
 	da := discoveryAgent(agentRes)
 	resCfgAdditionalTags := strings.Join(da.Spec.Config.AdditionalTags, ",")
-	resCfgTeamName := da.Spec.Config.OwningTeam
+	var resCfgTeamID string
+	if da.Spec.Config.Owner != nil {
+		resCfgTeamID = da.Spec.Config.Owner.ID
+	}
 	resCfgLogLevel := da.Spec.Logging.Level
-	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel)
+	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel)
 }

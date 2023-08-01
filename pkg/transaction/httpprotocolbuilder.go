@@ -36,6 +36,7 @@ type HTTPProtocolBuilder interface {
 	AddIndexedResponseHeader(headerKey string, headerValue string) HTTPProtocolBuilder
 	SetPayload(requestPayload, responsePayload string) HTTPProtocolBuilder
 	SetWAFStatus(wasStatus int) HTTPProtocolBuilder
+	SetRedactionConfig(config redaction.Redactions) HTTPProtocolBuilder
 
 	Build() (TransportProtocol, error)
 }
@@ -49,6 +50,7 @@ type httpProtocolBuilder struct {
 	responseHeaders        map[string]string
 	indexedRequestHeaders  map[string]string
 	indexedResponseHeaders map[string]string
+	redactionConfig        redaction.Redactions
 }
 
 // NewHTTPProtocolBuilder - Creates a new http protocol builder
@@ -72,7 +74,6 @@ func (b *httpProtocolBuilder) SetURI(uri string) HTTPProtocolBuilder {
 		return b
 	}
 	b.httpProtocol.uriRaw = uri
-	b.httpProtocol.URI, b.err = redaction.URIRedaction(uri)
 	return b
 }
 
@@ -338,15 +339,38 @@ func (b *httpProtocolBuilder) SetWAFStatus(wasStatus int) HTTPProtocolBuilder {
 	return b
 }
 
-func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
-	// Complete the redactions
-	b.queryArgsRedaction()
-	b.headersRedaction()
-	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
+func (b *httpProtocolBuilder) SetRedactionConfig(config redaction.Redactions) HTTPProtocolBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.redactionConfig = config
+	return b
+}
 
+func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
 	if b.err != nil {
 		return nil, b.err
 	}
+	// Complete the redactions
+	b.queryArgsRedaction()
+	if b.err != nil {
+		return nil, b.err
+	}
+	b.headersRedaction()
+	if b.err != nil {
+		return nil, b.err
+	}
+	//set redacted URI
+	if b.httpProtocol.uriRaw == "" {
+		return nil, errors.New("Raw Uri property not set in HTTP protocol details")
+	}
+	if b.redactionConfig == nil {
+		b.httpProtocol.URI, _ = redaction.URIRedaction(b.httpProtocol.uriRaw)
+	} else {
+		b.httpProtocol.URI, _ = b.redactionConfig.URIRedaction(b.httpProtocol.uriRaw)
+	}
+
+	// b.indexedHeadersRedaction()  // Indexed headers are not currently used in central
 
 	if b.httpProtocol.RequestHeaders == "" || b.httpProtocol.ResponseHeaders == "" {
 		return nil, errors.New("request or Response Headers not set in HTTP protocol details")
@@ -375,9 +399,14 @@ func (b *httpProtocolBuilder) queryArgsRedaction() {
 	if b.err != nil {
 		return
 	}
-
+	var redactedArgs map[string][]string
+	var err error
 	if len(b.argsMap) > 0 {
-		redactedArgs, err := redaction.QueryArgsRedaction(b.argsMap)
+		if b.redactionConfig == nil {
+			redactedArgs, err = redaction.QueryArgsRedaction(b.argsMap)
+		} else {
+			redactedArgs, err = b.redactionConfig.QueryArgsRedaction(b.argsMap)
+		}
 		if err != nil {
 			b.err = ErrInRedactions.FormatError("QueryArgs", err)
 			return
@@ -398,7 +427,7 @@ func (b *httpProtocolBuilder) headersRedaction() {
 	}
 
 	b.httpProtocol.RequestHeaders, b.httpProtocol.ResponseHeaders, b.err =
-		headersRedaction(b.requestHeaders, b.responseHeaders)
+		headersRedaction(b.requestHeaders, b.responseHeaders, b.redactionConfig)
 }
 
 func (b *httpProtocolBuilder) indexedHeadersRedaction() {
@@ -408,16 +437,22 @@ func (b *httpProtocolBuilder) indexedHeadersRedaction() {
 	}
 
 	b.httpProtocol.IndexedRequestHeaders, b.httpProtocol.IndexedResponseHeaders, b.err =
-		headersRedaction(b.indexedRequestHeaders, b.indexedResponseHeaders)
+		headersRedaction(b.indexedRequestHeaders, b.indexedResponseHeaders, b.redactionConfig)
 }
 
-func headersRedaction(requestHeaders, responseHeaders map[string]string) (string, string, error) {
+func headersRedaction(requestHeaders, responseHeaders map[string]string, redactionConfig redaction.Redactions) (string, string, error) {
 	const emptyHeaders = "{}"
 	reqHeadersBytes := []byte(emptyHeaders)
 	resHeadersBytes := []byte(emptyHeaders)
 
 	if len(requestHeaders) > 0 {
-		redactedHeaders, err := redaction.RequestHeadersRedaction(requestHeaders)
+		var redactedHeaders map[string]string
+		var err error
+		if redactionConfig == nil {
+			redactedHeaders, err = redaction.RequestHeadersRedaction(requestHeaders)
+		} else {
+			redactedHeaders, err = redactionConfig.RequestHeadersRedaction(redactedHeaders)
+		}
 		if err != nil {
 			return emptyHeaders, emptyHeaders, ErrInRedactions.FormatError("RequestHeaders", err)
 		}
@@ -428,7 +463,13 @@ func headersRedaction(requestHeaders, responseHeaders map[string]string) (string
 	}
 
 	if len(responseHeaders) > 0 {
-		redactedHeaders, err := redaction.ResponseHeadersRedaction(responseHeaders)
+		var redactedHeaders map[string]string
+		var err error
+		if redactionConfig == nil {
+			redactedHeaders, err = redaction.ResponseHeadersRedaction(responseHeaders)
+		} else {
+			redactedHeaders, err = redactionConfig.ResponseHeadersRedaction(responseHeaders)
+		}
 		if err != nil {
 			return emptyHeaders, emptyHeaders, ErrInRedactions.FormatError("ResponseHeaders", err)
 		}

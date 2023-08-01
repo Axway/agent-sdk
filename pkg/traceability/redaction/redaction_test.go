@@ -91,8 +91,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "PathRegex",
 			config: Config{
-				Path: path{
-					Allowed: []show{
+				Path: Path{
+					Allowed: []Show{
 						{
 							KeyMatch: "*test",
 						},
@@ -103,8 +103,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "QueryArgsAllowRegex",
 			config: Config{
-				Args: filter{
-					Allowed: []show{
+				Args: Filter{
+					Allowed: []Show{
 						{
 							KeyMatch: "*test",
 						},
@@ -115,8 +115,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "QueryArgsSanitizeRegex",
 			config: Config{
-				Args: filter{
-					Sanitize: []sanitize{
+				Args: Filter{
+					Sanitize: []Sanitize{
 						{
 							KeyMatch:   "test",
 							ValueMatch: "*test",
@@ -128,8 +128,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "ResponseHeadersSanitizeRegex",
 			config: Config{
-				ResponseHeaders: filter{
-					Sanitize: []sanitize{
+				ResponseHeaders: Filter{
+					Sanitize: []Sanitize{
 						{
 							KeyMatch:   "*test",
 							ValueMatch: "*test",
@@ -141,8 +141,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "ResponseHeadersRegex",
 			config: Config{
-				ResponseHeaders: filter{
-					Allowed: []show{
+				ResponseHeaders: Filter{
+					Allowed: []Show{
 						{
 							KeyMatch: "*test",
 						},
@@ -153,8 +153,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "RequesteHeadersSanitizeRegex",
 			config: Config{
-				RequestHeaders: filter{
-					Sanitize: []sanitize{
+				RequestHeaders: Filter{
+					Sanitize: []Sanitize{
 						{
 							KeyMatch:   "*test",
 							ValueMatch: "*test",
@@ -166,8 +166,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "RequestHeadersRegex",
 			config: Config{
-				RequestHeaders: filter{
-					Allowed: []show{
+				RequestHeaders: Filter{
+					Allowed: []Show{
 						{
 							KeyMatch: "*test",
 						},
@@ -178,8 +178,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "JMSPropertiesSanitizeRegex",
 			config: Config{
-				RequestHeaders: filter{
-					Sanitize: []sanitize{
+				RequestHeaders: Filter{
+					Sanitize: []Sanitize{
 						{
 							KeyMatch:   "*test",
 							ValueMatch: "*test",
@@ -191,8 +191,8 @@ func TestBadSetupRedaction(t *testing.T) {
 		{
 			name: "JMSPropertiesRegex",
 			config: Config{
-				RequestHeaders: filter{
-					Allowed: []show{
+				RequestHeaders: Filter{
+					Allowed: []Show{
 						{
 							KeyMatch: "*test",
 						},
@@ -214,13 +214,13 @@ func TestBadSetupRedaction(t *testing.T) {
 func TestURIRedaction(t *testing.T) {
 	testCases := []struct {
 		name       string
-		pathConfig []show
+		pathConfig []Show
 		input      string
 		output     string
 	}{
 		{
 			name: "SingleWord",
-			pathConfig: []show{
+			pathConfig: []Show{
 				{
 					KeyMatch: "test",
 				},
@@ -230,7 +230,7 @@ func TestURIRedaction(t *testing.T) {
 		},
 		{
 			name: "TwoWords",
-			pathConfig: []show{
+			pathConfig: []Show{
 				{
 					KeyMatch: "test",
 				},
@@ -243,7 +243,7 @@ func TestURIRedaction(t *testing.T) {
 		},
 		{
 			name: "Regex",
-			pathConfig: []show{
+			pathConfig: []Show{
 				{
 					KeyMatch: ".*th.*",
 				},
@@ -273,14 +273,14 @@ func TestURIRedaction(t *testing.T) {
 func TestQueryParamsRedaction(t *testing.T) {
 	testCases := []struct {
 		name     string
-		qpConfig filter
+		qpConfig Filter
 		input    map[string][]string
 		output   map[string][]string
 	}{
 		{
 			name: "SingleParam",
-			qpConfig: filter{
-				Allowed: []show{
+			qpConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "param1",
 					},
@@ -293,8 +293,8 @@ func TestQueryParamsRedaction(t *testing.T) {
 		},
 		{
 			name: "TwoParas",
-			qpConfig: filter{
-				Allowed: []show{
+			qpConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "param1",
 					},
@@ -311,8 +311,8 @@ func TestQueryParamsRedaction(t *testing.T) {
 		},
 		{
 			name: "AllowRegex",
-			qpConfig: filter{
-				Allowed: []show{
+			qpConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "param\\d",
 					},
@@ -326,8 +326,8 @@ func TestQueryParamsRedaction(t *testing.T) {
 		},
 		{
 			name: "Sanitize1",
-			qpConfig: filter{
-				Allowed: []show{
+			qpConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "param1",
 					},
@@ -335,7 +335,7 @@ func TestQueryParamsRedaction(t *testing.T) {
 						KeyMatch: "param2",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "param2",
 						ValueMatch: "time",
@@ -350,13 +350,13 @@ func TestQueryParamsRedaction(t *testing.T) {
 		},
 		{
 			name: "SanitizeButNotAllowed",
-			qpConfig: filter{
-				Allowed: []show{
+			qpConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "param1",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "param2",
 						ValueMatch: "time",
@@ -391,8 +391,8 @@ func TestQueryParamsRedaction(t *testing.T) {
 func TestHeadersRedaction(t *testing.T) {
 	testCases := []struct {
 		name           string
-		responseConfig filter
-		requestConfig  filter
+		responseConfig Filter
+		requestConfig  Filter
 		inputResponse  map[string]string
 		inputRequest   map[string]string
 		outputResponse map[string]string
@@ -400,15 +400,15 @@ func TestHeadersRedaction(t *testing.T) {
 	}{
 		{
 			name: "SingleParam",
-			responseConfig: filter{
-				Allowed: []show{
+			responseConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "x-value",
 					},
 				},
 			},
-			requestConfig: filter{
-				Allowed: []show{
+			requestConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "request",
 					},
@@ -425,8 +425,8 @@ func TestHeadersRedaction(t *testing.T) {
 		},
 		{
 			name: "TwoParams",
-			responseConfig: filter{
-				Allowed: []show{
+			responseConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "x-value",
 					},
@@ -435,8 +435,8 @@ func TestHeadersRedaction(t *testing.T) {
 					},
 				},
 			},
-			requestConfig: filter{
-				Allowed: []show{
+			requestConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "request",
 					},
@@ -458,15 +458,15 @@ func TestHeadersRedaction(t *testing.T) {
 		},
 		{
 			name: "Regex",
-			responseConfig: filter{
-				Allowed: []show{
+			responseConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "^.*response",
 					},
 				},
 			},
-			requestConfig: filter{
-				Allowed: []show{
+			requestConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "^x-amplify.*$",
 					},
@@ -485,26 +485,26 @@ func TestHeadersRedaction(t *testing.T) {
 		},
 		{
 			name: "Sanitize",
-			responseConfig: filter{
-				Allowed: []show{
+			responseConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "^x-.*",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "^x-value.*$",
 						ValueMatch: "^tes",
 					},
 				},
 			},
-			requestConfig: filter{
-				Allowed: []show{
+			requestConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "^x-amplify.*$",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "^x-amplify.*$",
 						ValueMatch: "^ran",
@@ -524,26 +524,26 @@ func TestHeadersRedaction(t *testing.T) {
 		},
 		{
 			name: "SanitizeNoShow",
-			responseConfig: filter{
-				Allowed: []show{
+			responseConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "x-response",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "^x-value",
 						ValueMatch: "^tes",
 					},
 				},
 			},
-			requestConfig: filter{
-				Allowed: []show{
+			requestConfig: Filter{
+				Allowed: []Show{
 					{
 						KeyMatch: "^x-amplify-somethingelse",
 					},
 				},
-				Sanitize: []sanitize{
+				Sanitize: []Sanitize{
 					{
 						KeyMatch:   "^x-amplify-something",
 						ValueMatch: "^ran",

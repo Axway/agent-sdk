@@ -9,14 +9,14 @@ import (
 // Global Agent redactions
 var agentRedactions Redactions
 
-//SetupGlobalRedaction - set up redactionRegex based on the redactionConfig
+// SetupGlobalRedaction - set up redactionRegex based on the redactionConfig
 func SetupGlobalRedaction(cfg Config) error {
 	var err error
 	agentRedactions, err = cfg.SetupRedactions()
 	return err
 }
 
-func setupShowRegex(showFilters []show) ([]showRegex, error) {
+func setupShowRegex(showFilters []Show) ([]showRegex, error) {
 	newShowRegex := make([]showRegex, 0)
 	for _, filter := range showFilters {
 		if filter.KeyMatch == "" {
@@ -36,7 +36,7 @@ func setupShowRegex(showFilters []show) ([]showRegex, error) {
 	return newShowRegex, nil
 }
 
-func setupSanitizeRegex(sanitizeFilters []sanitize) ([]sanitizeRegex, error) {
+func setupSanitizeRegex(sanitizeFilters []Sanitize) ([]sanitizeRegex, error) {
 	newSanitizeRegex := make([]sanitizeRegex, 0)
 	for _, filter := range sanitizeFilters {
 		if filter.KeyMatch == "" {

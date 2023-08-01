@@ -151,7 +151,7 @@ func getTimestamp() apiv1.Time {
 	return newV1Time
 }
 
-func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamName, resCfgLogLevel string) {
+func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string) {
 	agentResLogLevel := log.GlobalLoggerConfig.GetLevel()
 	if resCfgLogLevel != "" && !strings.EqualFold(agentResLogLevel, resCfgLogLevel) {
 		log.GlobalLoggerConfig.Level(resCfgLogLevel).Apply()
@@ -162,8 +162,8 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	}
 
 	// If config team is blank, check resource team name.  If resource team name is not blank, use resource team name
-	if resCfgTeamName != "" && !strings.EqualFold(cfg.TeamName, resCfgTeamName) {
-		cfg.TeamName = resCfgTeamName
+	if resCfgTeamID != "" && cfg.TeamName == "" {
+		cfg.SetTeamID(resCfgTeamID)
 	}
 }
 

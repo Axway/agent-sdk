@@ -19,9 +19,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -265,7 +263,6 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	if err != nil {
 		return err
 	}
-	updateEnvAgentDetails(env, client)
 
 	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
 	if cfg.GetEnvironmentID() == "" {
@@ -287,33 +284,6 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	}
 
 	return nil
-}
-
-func updateEnvAgentDetails(env *management.Environment, client apic.Client) {
-	if agent.cfg != nil {
-		xAgentDetail, update := setEnvAgentDetail(env)
-		if update {
-			client.CreateSubResource(env.ResourceMeta, map[string]interface{}{defs.XAgentDetails: xAgentDetail})
-		}
-	}
-}
-
-func setEnvAgentDetail(env *management.Environment) (xAgentDetail map[string]interface{}, updated bool) {
-	xAgentDetail = util.GetAgentDetails(env)
-	keyPrefix := agent.cfg.GetAgentType().ToString()
-	// Ignore setting x-agent-details for generic services
-	if keyPrefix != "" {
-		// update x-agent-detail if no x-agent-detail present or agent-type-enabled property not set
-		if xAgentDetail == nil {
-			xAgentDetail = map[string]interface{}{keyPrefix + "-enabled": "true"}
-			util.SetAgentDetails(env, xAgentDetail)
-			updated = true
-		} else if _, ok := xAgentDetail[keyPrefix+"-enabled"]; !ok {
-			util.SetAgentDetailsKey(env, keyPrefix+"-enabled", "true")
-			updated = true
-		}
-	}
-	return
 }
 
 func checkRunningAgent() error {
