@@ -46,7 +46,7 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 	var t string
 	var ok bool
 	if t, ok = ownerTypeToString[o.Type]; !ok {
-		return nil, fmt.Errorf("unknown owner type %d", o.Type)
+		t = ownerTypeToString[TeamOwner]
 	}
 
 	aux := struct {
@@ -74,11 +74,15 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	ownerString, ok := ownerTypeFromString[aux.Type]
-	if !ok {
-		return fmt.Errorf("unknown owner type %s", aux.Type)
+	ownerType := TeamOwner
+	if aux.Type != "" {
+		var ok bool
+		ownerType, ok = ownerTypeFromString[aux.Type]
+		if !ok {
+			return fmt.Errorf("unknown owner type %s", aux.Type)
+		}
 	}
-	o.Type = ownerString
+	o.Type = ownerType
 	o.ID = aux.ID
 	o.Organization = aux.Organization
 
