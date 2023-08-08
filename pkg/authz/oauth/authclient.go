@@ -39,7 +39,7 @@ type authClient struct {
 }
 
 type authenticator interface {
-	prepareRequest() (url.Values, error)
+	prepareRequest() (url.Values, map[string]string, error)
 }
 
 type tokenResponse struct {
@@ -79,10 +79,10 @@ func WithServerName(serverName string) AuthClientOption {
 	}
 }
 
-// WithClientSecretAuth - sets up to use client secret authenticator
-func WithClientSecretAuth(clientID, clientSecret, scope string) AuthClientOption {
+// WithClientSecretBasicAuth - sets up to use client secret basic authenticator
+func WithClientSecretBasicAuth(clientID, clientSecret, scope string) AuthClientOption {
 	return func(opt *authClientOptions) {
-		opt.authenticator = &clientSecretAuthenticator{
+		opt.authenticator = &clientSecretBasicAuthenticator{
 			clientID,
 			clientSecret,
 			scope,
@@ -90,14 +90,50 @@ func WithClientSecretAuth(clientID, clientSecret, scope string) AuthClientOption
 	}
 }
 
+// WithClientSecretPostAuth - sets up to use client secret authenticator
+func WithClientSecretPostAuth(clientID, clientSecret, scope string) AuthClientOption {
+	return func(opt *authClientOptions) {
+		opt.authenticator = &clientSecretPostAuthenticator{
+			clientID,
+			clientSecret,
+			scope,
+		}
+	}
+}
+
+// WithClientSecretJwtAuth - sets up to use client secret authenticator
+func WithClientSecretJwtAuth(clientID, clientSecret, scope, issuer, aud string) AuthClientOption {
+	return func(opt *authClientOptions) {
+		opt.authenticator = &clientSecretJwtAuthenticator{
+			clientID,
+			clientSecret,
+			scope,
+			issuer,
+			aud,
+		}
+	}
+}
+
 // WithKeyPairAuth - sets up to use public/private key pair authenticator
-func WithKeyPairAuth(clientID, audience string, privKey *rsa.PrivateKey, publicKey []byte) AuthClientOption {
+func WithKeyPairAuth(clientID, issuer, audience string, privKey *rsa.PrivateKey, publicKey []byte, scope string) AuthClientOption {
 	return func(opt *authClientOptions) {
 		opt.authenticator = &keyPairAuthenticator{
 			clientID,
+			issuer,
 			audience,
 			privKey,
 			publicKey,
+			scope,
+		}
+	}
+}
+
+// WithTLSClientAuth - sets up to use tls_client_auth and self_signed_tls_client_auth authenticator
+func WithTLSClientAuth(clientID, scope string) AuthClientOption {
+	return func(opt *authClientOptions) {
+		opt.authenticator = &tlsClientAuthenticator{
+			clientID: clientID,
+			scope:    scope,
 		}
 	}
 }
@@ -145,12 +181,12 @@ func (c *authClient) fetchNewToken() (string, error) {
 }
 
 func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
-	req, err := c.options.authenticator.prepareRequest()
+	req, headers, err := c.options.authenticator.prepareRequest()
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := c.postAuthForm(req)
+	resp, err := c.postAuthForm(req, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -175,14 +211,18 @@ func (c *authClient) getOAuthTokens() (*tokenResponse, error) {
 	return &tokens, nil
 }
 
-func (c *authClient) postAuthForm(data url.Values) (resp *api.Response, err error) {
+func (c *authClient) postAuthForm(data url.Values, headers map[string]string) (resp *api.Response, err error) {
+	reqHeaders := map[string]string{
+		hdrContentType: mimeApplicationFormURLEncoded,
+	}
+	for name, value := range headers {
+		reqHeaders[name] = value
+	}
 	req := api.Request{
-		Method: api.POST,
-		URL:    c.tokenURL,
-		Body:   []byte(data.Encode()),
-		Headers: map[string]string{
-			hdrContentType: mimeApplicationFormURLEncoded,
-		},
+		Method:  api.POST,
+		URL:     c.tokenURL,
+		Body:    []byte(data.Encode()),
+		Headers: reqHeaders,
 	}
 	return c.apiClient.Send(req)
 }

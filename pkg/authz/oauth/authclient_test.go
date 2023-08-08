@@ -78,7 +78,7 @@ func TestGetPlatformTokensHttpError(t *testing.T) {
 	s.SetTokenResponse("", 0, http.StatusBadRequest)
 	ac, err = NewAuthClient(s.GetTokenURL(), apiClient,
 		WithServerName("testServer"),
-		WithKeyPairAuth("invalid_client", "", privateKey, publicKey))
+		WithKeyPairAuth("invalid_client", "", "", privateKey, publicKey, ""))
 	assert.Nil(t, err)
 	assert.NotNil(t, ac)
 
@@ -88,7 +88,7 @@ func TestGetPlatformTokensHttpError(t *testing.T) {
 	s.SetTokenResponse("token", 3*time.Second, http.StatusOK)
 	ac, err = NewAuthClient(s.GetTokenURL(), apiClient,
 		WithServerName("testServer"),
-		WithKeyPairAuth("invalid_client", "", privateKey, publicKey))
+		WithKeyPairAuth("invalid_client", "", "", privateKey, publicKey, ""))
 	assert.Nil(t, err)
 	assert.NotNil(t, ac)
 

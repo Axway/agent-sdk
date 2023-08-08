@@ -3,7 +3,6 @@
 package auth
 
 import (
-	"crypto/rsa"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -90,11 +88,10 @@ func NewPlatformTokenGetter(privKey, publicKey, password, url, aud, clientID str
 func NewPlatformTokenGetterWithCentralConfig(centralCfg config.CentralConfig) PlatformTokenGetter {
 	return &platformTokenGetter{
 		cfg: centralCfg,
-		keyReader: &keyReader{
-			privKey:   centralCfg.GetAuthConfig().GetPrivateKey(),
-			publicKey: centralCfg.GetAuthConfig().GetPublicKey(),
-			password:  centralCfg.GetAuthConfig().GetKeyPassword(),
-		},
+		keyReader: oauth.NewKeyReader(
+			centralCfg.GetAuthConfig().GetPrivateKey(),
+			centralCfg.GetAuthConfig().GetPublicKey(),
+			centralCfg.GetAuthConfig().GetKeyPassword()),
 	}
 }
 
@@ -114,25 +111,10 @@ func staticTokenGetter(token string) funcTokenGetter {
 	return funcTokenGetter(func() (string, error) { return token, nil })
 }
 
-type keyReader struct {
-	privKey   string // path to rsa encoded private key, used to sign platform tokens
-	publicKey string // path to the rsa encoded public key
-	password  string // path to password for private key
-}
-
-func (kr *keyReader) getPrivateKey() (*rsa.PrivateKey, error) {
-	return util.ReadPrivateKeyFile(kr.privKey, kr.password)
-}
-
-// getPublicKey from the path provided
-func (kr *keyReader) getPublicKey() ([]byte, error) {
-	return util.ReadPublicKeyBytes(kr.publicKey)
-}
-
 // platformTokenGetter can get an access token from apic platform.
 type platformTokenGetter struct {
-	cfg config.CentralConfig
-	*keyReader
+	cfg           config.CentralConfig
+	keyReader     oauth.KeyReader
 	axwayIDClient oauth.AuthClient
 }
 
@@ -142,12 +124,12 @@ func (ptp *platformTokenGetter) Close() error {
 }
 
 func (ptp *platformTokenGetter) initAxwayIDPClient() error {
-	privateKey, err := ptp.getPrivateKey()
+	privateKey, err := ptp.keyReader.GetPrivateKey()
 	if err != nil {
 		return err
 	}
 
-	publicKey, err := ptp.getPublicKey()
+	publicKey, err := ptp.keyReader.GetPublicKey()
 	if err != nil {
 		return err
 	}
@@ -162,9 +144,10 @@ func (ptp *platformTokenGetter) initAxwayIDPClient() error {
 		oauth.WithServerName("AxwayId"),
 		oauth.WithKeyPairAuth(
 			ptp.cfg.GetAuthConfig().GetClientID(),
+			"",
 			ptp.cfg.GetAuthConfig().GetAudience(),
 			privateKey,
-			publicKey))
+			publicKey, ""))
 
 	return err
 }

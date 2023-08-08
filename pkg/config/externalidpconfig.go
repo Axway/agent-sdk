@@ -11,6 +11,12 @@ import (
 const (
 	accessToken              = "accessToken"
 	client                   = "client"
+	clientSecretBasic        = "client_secret_basic"
+	clientSecretPost         = "client_secret_post"
+	clientSecretJwt          = "client_secret_jwt"
+	privateKeyJwt            = "private_key_jwt"
+	tlsClientAuth            = "tls_client_auth"
+	selfSignedTlsClientAuth  = "self_signed_tls_client_auth"
 	propInsecureSkipVerify   = "insecureSkipVerify"
 	pathExternalIDP          = "agentFeatures.idp"
 	fldName                  = "name"
@@ -27,6 +33,9 @@ const (
 	fldAuthClientID          = "auth.clientId"
 	fldAuthClientSecret      = "auth.clientSecret"
 	fldAuthClientScope       = "auth.clientScope"
+	fldAuthPrivateKey        = "auth.privateKey"
+	fldAuthPublicKey         = "auth.publicKey"
+	fldAuthKeyPassword       = "auth.keyPassword"
 	fldSSLInsecureSkipVerify = "ssl." + propInsecureSkipVerify
 	fldSSLRootCACertPath     = "ssl.rootCACertPath"
 	fldSSLClientCertPath     = "ssl.clientCertPath"
@@ -52,9 +61,21 @@ var configProperties = []string{
 	fldSSLRootCACertPath,
 	fldSSLClientCertPath,
 	fldSSLClientKeyPath,
+	fldAuthPrivateKey,
+	fldAuthPublicKey,
+	fldAuthKeyPassword,
 }
 
-var validIDPAuthType = map[string]bool{accessToken: true, client: true}
+var validIDPAuthType = map[string]bool{
+	accessToken:             true,
+	client:                  true,
+	clientSecretBasic:       true,
+	clientSecretPost:        true,
+	clientSecretJwt:         true,
+	privateKeyJwt:           true,
+	selfSignedTlsClientAuth: true,
+	tlsClientAuth:           true,
+}
 
 // ExternalIDPConfig -
 type ExternalIDPConfig interface {
@@ -119,6 +140,12 @@ type IDPAuthConfig interface {
 	GetClientScope() string
 	// validate - Validates the IDP auth configuration
 	validate(isMTLS bool)
+	// GetPrivateKey() - private key to be used for private_key_jwt authentication
+	GetPrivateKey() string
+	// GetPublicKey() - public key to be used for private_key_jwt authentication
+	GetPublicKey() string
+	// GetKeyPassword() - public key to be used for private_key_jwt authentication
+	GetKeyPassword() string
 }
 
 // IDPConfig - interface for IdP provider config
@@ -156,6 +183,9 @@ type IDPAuthConfiguration struct {
 	ClientID     string `json:"clientId,omitempty"`
 	ClientSecret string `json:"clientSecret,omitempty"`
 	ClientScope  string `json:"clientScope,omitempty"`
+	PrivateKey   string `json:"privateKey,omitempty"`
+	PublicKey    string `json:"publicKey,omitempty"`
+	KeyPwd       string `json:"keyPassword,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -271,6 +301,21 @@ func (i *IDPAuthConfiguration) GetClientSecret() string {
 // GetClientScope - scopes used for requesting the token using the ID client
 func (i *IDPAuthConfiguration) GetClientScope() string {
 	return i.ClientScope
+}
+
+// GetPrivateKey -
+func (i *IDPAuthConfiguration) GetPrivateKey() string {
+	return i.PrivateKey
+}
+
+// GetPublicKey -
+func (i *IDPAuthConfiguration) GetPublicKey() string {
+	return i.PublicKey
+}
+
+// GetKeyPassword -
+func (i *IDPAuthConfiguration) GetKeyPassword() string {
+	return i.KeyPwd
 }
 
 // validate - Validates the IDP auth configuration
