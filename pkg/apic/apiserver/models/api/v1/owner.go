@@ -50,14 +50,18 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 	}
 
 	aux := struct {
-		Type         string       `json:"type,omitempty"`
-		ID           string       `json:"id"`
-		Organization Organization `json:"organization,omitempty"`
+		Type         string        `json:"type,omitempty"`
+		ID           string        `json:"id"`
+		Organization *Organization `json:"organization,omitempty"`
 	}{}
 
 	aux.Type = t
 	aux.ID = o.ID
-	aux.Organization = o.Organization
+	if o.Organization.ID != "" {
+		aux.Organization = &Organization{
+			ID: o.Organization.ID,
+		}
+	}
 
 	return json.Marshal(aux)
 }
