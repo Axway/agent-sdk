@@ -26,6 +26,7 @@ func TestOwner_MarshalJSON(t *testing.T) {
 
 	b, err = o.MarshalJSON()
 	assert.Nil(t, err)
+	assert.NotContains(t, string(b), "organization")
 
 	o2 = &Owner{}
 	err = json.Unmarshal(b, o2)
@@ -42,4 +43,13 @@ func TestOwner_MarshalJSON(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, o.Type, TeamOwner)
 	assert.Equal(t, o.ID, o2.ID)
+
+	o = &Owner{}
+	o.SetType(TeamOwner)
+	o.SetID("123")
+	o.Organization = Organization{ID: "321"}
+
+	b, err = o.MarshalJSON()
+	assert.Nil(t, err)
+	assert.Contains(t, string(b), "organization")
 }
