@@ -66,7 +66,7 @@ func TestGetPlatformTokensHttpError(t *testing.T) {
 	s.SetTokenResponse("", 0, http.StatusBadRequest)
 	ac, err := NewAuthClient(s.GetTokenURL(), apiClient,
 		WithServerName("testServer"),
-		WithClientSecretAuth("invalid_client", "invalid-secrt", ""))
+		WithClientSecretPostAuth("invalid_client", "invalid-secrt", ""))
 	assert.Nil(t, err)
 	assert.NotNil(t, ac)
 
@@ -106,7 +106,7 @@ func TestGetPlatformTokensTimeout(t *testing.T) {
 	apiClient := api.NewClientWithTimeout(config.NewTLSConfig(), "", time.Second)
 	ac, err := NewAuthClient(s.URL, apiClient,
 		WithServerName("testServer"),
-		WithClientSecretAuth("invalid_client", "invalid-secrt", ""))
+		WithClientSecretPostAuth("invalid_client", "invalid-secrt", ""))
 
 	assert.Nil(t, err)
 	assert.NotNil(t, ac)

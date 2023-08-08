@@ -187,6 +187,9 @@ func (p *provider) GetIssuer() string {
 }
 
 func (p *provider) useTLSAuth() bool {
+	if p.cfg.GetAuthConfig() == nil {
+		return false
+	}
 	return p.cfg.GetAuthConfig().GetType() == IDPAuthTypeTLSClientAuth || p.cfg.GetAuthConfig().GetType() == IDPAuthTypeSelfSignedTLSClientAuth
 }
 
