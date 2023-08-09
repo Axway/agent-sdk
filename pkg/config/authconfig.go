@@ -82,40 +82,30 @@ func (a *AuthConfiguration) validate() {
 	a.validatePublicKey()
 }
 
-func (a *AuthConfiguration) validatePrivateKey() {
-	if a.GetPrivateKey() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
+func validateAuthFileConfig(configKeyName, authFile, dataEnvVar, errMsg string) {
+	if authFile == "" {
+		exception.Throw(ErrBadConfig.FormatError(configKeyName))
 	} else {
-		if !fileExists(a.GetPrivateKey()) {
-			privateKeyData := os.Getenv("CENTRAL_AUTH_PRIVATEKEY_DATA")
-			if privateKeyData == "" {
-				exception.Throw(ErrBadConfig.FormatError(pathAuthPrivateKey))
+		if !fileExists(authFile) && dataEnvVar != "" {
+			data := os.Getenv(dataEnvVar)
+			if data == "" {
+				exception.Throw(ErrBadConfig.FormatError(configKeyName))
 			}
-			saveKeyData(a.GetPrivateKey(), privateKeyData)
+			saveKeyData(authFile, data)
 		}
 		// Validate that the file is readable
-		if _, err := os.Open(a.GetPrivateKey()); err != nil {
-			exception.Throw(ErrReadingKeyFile.FormatError("private key", a.GetPrivateKey()))
+		if _, err := os.Open(authFile); err != nil {
+			exception.Throw(ErrReadingKeyFile.FormatError(errMsg, authFile))
 		}
 	}
 }
 
+func (a *AuthConfiguration) validatePrivateKey() {
+	validateAuthFileConfig(pathAuthPrivateKey, a.GetPrivateKey(), "CENTRAL_AUTH_PRIVATEKEY_DATA", "private key")
+}
+
 func (a *AuthConfiguration) validatePublicKey() {
-	if a.GetPublicKey() == "" {
-		exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
-	} else {
-		if !fileExists(a.GetPublicKey()) {
-			publicKeyData := os.Getenv("CENTRAL_AUTH_PUBLICKEY_DATA")
-			if publicKeyData == "" {
-				exception.Throw(ErrBadConfig.FormatError(pathAuthPublicKey))
-			}
-			saveKeyData(a.GetPublicKey(), publicKeyData)
-		}
-		// Validate that the file is readable
-		if _, err := os.Open(a.GetPublicKey()); err != nil {
-			exception.Throw(ErrReadingKeyFile.FormatError("public key", a.GetPublicKey()))
-		}
-	}
+	validateAuthFileConfig(pathAuthPublicKey, a.GetPublicKey(), "CENTRAL_AUTH_PUBLICKEY_DATA", "public key")
 }
 
 // GetTokenURL - Returns the token URL
