@@ -192,6 +192,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
 		h.onError(ctx, ar, err)
+		return
 	}
 
 	ri, _ := ar.AsInstance()
