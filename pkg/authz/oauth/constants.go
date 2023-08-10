@@ -14,18 +14,6 @@ const (
 	TypeKeycloak = "keycloak"
 )
 
-// IDP Auth type string const
-const (
-	IDPAuthTypeAccessToken             = "accessToken"
-	IDPAuthTypeClient                  = "client"
-	IDPAuthTypeClientSecretBasic       = "client_secret_basic"
-	IDPAuthTypeClientSecretPost        = "client_secret_post"
-	IDPAuthTypeClientSecretJWT         = "client_secret_jwt"
-	IDPAuthTypePrivateKeyJWT           = "private_key_jwt"
-	IDPAuthTypeTLSClientAuth           = "tls_client_auth"
-	IDPAuthTypeSelfSignedTLSClientAuth = "self_signed_tls_client_auth"
-)
-
 const (
 	defaultServerName = "OAuth server"
 

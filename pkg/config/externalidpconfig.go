@@ -9,14 +9,15 @@ import (
 )
 
 const (
-	accessToken              = "accessToken"
-	client                   = "client"
-	clientSecretBasic        = "client_secret_basic"
-	clientSecretPost         = "client_secret_post"
-	clientSecretJwt          = "client_secret_jwt"
-	privateKeyJwt            = "private_key_jwt"
-	tlsClientAuth            = "tls_client_auth"
-	selfSignedTlsClientAuth  = "self_signed_tls_client_auth"
+	AccessToken             = "accessToken"
+	Client                  = "client"
+	ClientSecretBasic       = "client_secret_basic"
+	ClientSecretPost        = "client_secret_post"
+	ClientSecretJWT         = "client_secret_jwt"
+	PrivateKeyJWT           = "private_key_jwt"
+	TLSClientAuth           = "tls_client_auth"
+	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
+
 	propInsecureSkipVerify   = "insecureSkipVerify"
 	pathExternalIDP          = "agentFeatures.idp"
 	fldName                  = "name"
@@ -67,14 +68,14 @@ var configProperties = []string{
 }
 
 var validIDPAuthType = map[string]bool{
-	accessToken:             true,
-	client:                  true,
-	clientSecretBasic:       true,
-	clientSecretPost:        true,
-	clientSecretJwt:         true,
-	privateKeyJwt:           true,
-	selfSignedTlsClientAuth: true,
-	tlsClientAuth:           true,
+	AccessToken:             true,
+	Client:                  true,
+	ClientSecretBasic:       true,
+	ClientSecretPost:        true,
+	ClientSecretJWT:         true,
+	PrivateKeyJWT:           true,
+	SelfSignedTLSClientAuth: true,
+	TLSClientAuth:           true,
 }
 
 // ExternalIDPConfig -
@@ -321,21 +322,21 @@ func (i *IDPAuthConfiguration) validate(tlsCfg TLSConfig) {
 	}
 
 	switch i.GetType() {
-	case accessToken:
+	case AccessToken:
 		i.validateAccessTokenAuthConfig()
-	case client:
+	case Client:
 		fallthrough
-	case clientSecretBasic:
+	case ClientSecretBasic:
 		fallthrough
-	case clientSecretPost:
+	case ClientSecretPost:
 		fallthrough
-	case clientSecretJwt:
+	case ClientSecretJWT:
 		i.validateClientSecretAuthConfig()
-	case privateKeyJwt:
+	case PrivateKeyJWT:
 		i.validatePrivateKeyJwtAuthConfig()
-	case tlsClientAuth:
+	case TLSClientAuth:
 		fallthrough
-	case selfSignedTlsClientAuth:
+	case SelfSignedTLSClientAuth:
 		i.validateTLSClientAuthConfig(tlsCfg)
 	}
 }

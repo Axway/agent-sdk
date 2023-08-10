@@ -83,7 +83,8 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 
 	p.authServerMetadata = metadata
 
-	if p.cfg.GetAuthConfig() != nil {
+	// No OAuth client is needed to request token for access token based authentication to IdP
+	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
 		p.authClient, err = p.createAuthClient()
 		if err != nil {
 			return nil, err
@@ -114,19 +115,19 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 
 func (p *provider) createAuthClient() (AuthClient, error) {
 	switch p.cfg.GetAuthConfig().GetType() {
-	case IDPAuthTypeClient:
+	case corecfg.Client:
 		fallthrough
-	case IDPAuthTypeClientSecretPost:
+	case corecfg.ClientSecretPost:
 		return p.createClientSecretPostAuthClient()
-	case IDPAuthTypeClientSecretBasic:
+	case corecfg.ClientSecretBasic:
 		return p.createClientSecretBasicAuthClient()
-	case IDPAuthTypeClientSecretJWT:
+	case corecfg.ClientSecretJWT:
 		return p.createClientSecretJWTAuthClient()
-	case IDPAuthTypePrivateKeyJWT:
+	case corecfg.PrivateKeyJWT:
 		return p.createPrivateKeyJWTAuthClient()
-	case IDPAuthTypeTLSClientAuth:
+	case corecfg.TLSClientAuth:
 		fallthrough
-	case IDPAuthTypeSelfSignedTLSClientAuth:
+	case corecfg.SelfSignedTLSClientAuth:
 		return p.createTLSAuthClient()
 	default:
 		return nil, fmt.Errorf("%s", "unknown IdP auth type")
@@ -213,7 +214,7 @@ func (p *provider) useTLSAuth() bool {
 	if p.cfg.GetAuthConfig() == nil {
 		return false
 	}
-	return p.cfg.GetAuthConfig().GetType() == IDPAuthTypeTLSClientAuth || p.cfg.GetAuthConfig().GetType() == IDPAuthTypeSelfSignedTLSClientAuth
+	return p.cfg.GetAuthConfig().GetType() == corecfg.TLSClientAuth || p.cfg.GetAuthConfig().GetType() == corecfg.SelfSignedTLSClientAuth
 }
 
 // GetTokenEndpoint - return the token endpoint URL
