@@ -186,10 +186,18 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessR
 
 // onDeleting deprovisions an access request and removes the finalizer
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
+	log := getLoggerFromContext(ctx)
+
+	app, err := h.getManagedApp(ctx, ar)
+	if err != nil {
+		log.WithError(err).Error("error getting managed app")
+		h.onError(ctx, ar, err)
+		return
+	}
+
 	ri, _ := ar.AsInstance()
 
-	log := getLoggerFromContext(ctx)
-	req, err := h.newReq(ctx, ar, map[string]interface{}{})
+	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
 	if err != nil {
 		log.WithError(err).Debug("removing finalizers on the access request")
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
