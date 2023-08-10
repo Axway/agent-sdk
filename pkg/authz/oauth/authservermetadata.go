@@ -1,5 +1,12 @@
 package oauth
 
+type MTLSEndPointAlias struct {
+	TokenEndpoint         string `json:"token_endpoint,omitempty"`
+	RegistrationEndpoint  string `json:"registration_endpoint,omitempty"`
+	IntrospectionEndpoint string `json:"introspection_endpoint,omitempty"`
+	RevocationEndpoint    string `json:"revocation_endpoint,omitempty"`
+}
+
 // AuthorizationServerMetadata - OAuth metadata from IdP
 type AuthorizationServerMetadata struct {
 	Issuer string `json:"issuer,omitempty"`
@@ -27,4 +34,6 @@ type AuthorizationServerMetadata struct {
 
 	RequestParameterSupported              bool     `json:"request_parameter_supported,omitempty"`
 	RequestObjectSigningAlgValuesSupported []string `json:"request_object_signing_alg_values_supported,omitempty"`
+
+	MTLSEndPointAlias *MTLSEndPointAlias `json:"mtls_endpoint_aliases,omitempty"`
 }

@@ -82,10 +82,10 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	}
 
 	p.authServerMetadata = metadata
-	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() == IDPAuthTypeClient {
-		p.authClient, err = NewAuthClient(p.authServerMetadata.TokenEndpoint, apiClient,
-			WithServerName(idp.GetIDPName()),
-			WithClientSecretAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
+
+	// No OAuth client is needed to request token for access token based authentication to IdP
+	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
+		p.authClient, err = p.createAuthClient()
 		if err != nil {
 			return nil, err
 		}
@@ -113,6 +113,85 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 
 }
 
+func (p *provider) createAuthClient() (AuthClient, error) {
+	switch p.cfg.GetAuthConfig().GetType() {
+	case corecfg.Client:
+		fallthrough
+	case corecfg.ClientSecretPost:
+		return p.createClientSecretPostAuthClient()
+	case corecfg.ClientSecretBasic:
+		return p.createClientSecretBasicAuthClient()
+	case corecfg.ClientSecretJWT:
+		return p.createClientSecretJWTAuthClient()
+	case corecfg.PrivateKeyJWT:
+		return p.createPrivateKeyJWTAuthClient()
+	case corecfg.TLSClientAuth:
+		fallthrough
+	case corecfg.SelfSignedTLSClientAuth:
+		return p.createTLSAuthClient()
+	default:
+		return nil, fmt.Errorf("%s", "unknown IdP auth type")
+	}
+}
+
+func (p *provider) createClientSecretPostAuthClient() (AuthClient, error) {
+	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+		WithServerName(p.cfg.GetIDPName()),
+		WithClientSecretPostAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
+}
+
+func (p *provider) createClientSecretBasicAuthClient() (AuthClient, error) {
+	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+		WithServerName(p.cfg.GetIDPName()),
+		WithClientSecretBasicAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
+}
+
+func (p *provider) createClientSecretJWTAuthClient() (AuthClient, error) {
+	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+		WithServerName(p.cfg.GetIDPName()),
+		WithClientSecretJwtAuth(
+			p.cfg.GetAuthConfig().GetClientID(),
+			p.cfg.GetAuthConfig().GetClientSecret(),
+			p.cfg.GetAuthConfig().GetClientScope(),
+			p.cfg.GetAuthConfig().GetClientID(),
+			p.authServerMetadata.Issuer,
+		))
+}
+
+func (p *provider) createPrivateKeyJWTAuthClient() (AuthClient, error) {
+	keyReader := NewKeyReader(
+		p.cfg.GetAuthConfig().GetPrivateKey(),
+		p.cfg.GetAuthConfig().GetPublicKey(),
+		p.cfg.GetAuthConfig().GetKeyPassword(),
+	)
+	privateKey, keyErr := keyReader.GetPrivateKey()
+	if keyErr != nil {
+		return nil, keyErr
+	}
+
+	publicKey, keyErr := keyReader.GetPublicKey()
+	if keyErr != nil {
+		return nil, keyErr
+	}
+	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+		WithServerName(p.cfg.GetIDPName()),
+		WithKeyPairAuth(
+			p.cfg.GetAuthConfig().GetClientID(),
+			p.cfg.GetAuthConfig().GetClientID(),
+			p.authServerMetadata.Issuer,
+			privateKey,
+			publicKey,
+			p.cfg.GetAuthConfig().GetClientScope(),
+		),
+	)
+}
+
+func (p *provider) createTLSAuthClient() (AuthClient, error) {
+	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+		WithServerName(p.cfg.GetIDPName()),
+		WithTLSClientAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientScope()))
+}
+
 // GetName - returns the name of the provider
 func (p *provider) GetName() string {
 	return p.cfg.GetIDPName()
@@ -131,9 +210,19 @@ func (p *provider) GetIssuer() string {
 	return ""
 }
 
+func (p *provider) useTLSAuth() bool {
+	if p.cfg.GetAuthConfig() == nil {
+		return false
+	}
+	return p.cfg.GetAuthConfig().GetType() == corecfg.TLSClientAuth || p.cfg.GetAuthConfig().GetType() == corecfg.SelfSignedTLSClientAuth
+}
+
 // GetTokenEndpoint - return the token endpoint URL
 func (p *provider) GetTokenEndpoint() string {
 	if p.authServerMetadata != nil {
+		if p.useTLSAuth() && p.authServerMetadata.MTLSEndPointAlias != nil && p.authServerMetadata.MTLSEndPointAlias.TokenEndpoint != "" {
+			return p.authServerMetadata.MTLSEndPointAlias.TokenEndpoint
+		}
 		return p.authServerMetadata.TokenEndpoint
 	}
 	return ""

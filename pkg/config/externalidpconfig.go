@@ -9,8 +9,15 @@ import (
 )
 
 const (
-	accessToken              = "accessToken"
-	client                   = "client"
+	AccessToken             = "accessToken"
+	Client                  = "client"
+	ClientSecretBasic       = "client_secret_basic"
+	ClientSecretPost        = "client_secret_post"
+	ClientSecretJWT         = "client_secret_jwt"
+	PrivateKeyJWT           = "private_key_jwt"
+	TLSClientAuth           = "tls_client_auth"
+	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
+
 	propInsecureSkipVerify   = "insecureSkipVerify"
 	pathExternalIDP          = "agentFeatures.idp"
 	fldName                  = "name"
@@ -27,6 +34,9 @@ const (
 	fldAuthClientID          = "auth.clientId"
 	fldAuthClientSecret      = "auth.clientSecret"
 	fldAuthClientScope       = "auth.clientScope"
+	fldAuthPrivateKey        = "auth.privateKey"
+	fldAuthPublicKey         = "auth.publicKey"
+	fldAuthKeyPassword       = "auth.keyPassword"
 	fldSSLInsecureSkipVerify = "ssl." + propInsecureSkipVerify
 	fldSSLRootCACertPath     = "ssl.rootCACertPath"
 	fldSSLClientCertPath     = "ssl.clientCertPath"
@@ -52,9 +62,21 @@ var configProperties = []string{
 	fldSSLRootCACertPath,
 	fldSSLClientCertPath,
 	fldSSLClientKeyPath,
+	fldAuthPrivateKey,
+	fldAuthPublicKey,
+	fldAuthKeyPassword,
 }
 
-var validIDPAuthType = map[string]bool{accessToken: true, client: true}
+var validIDPAuthType = map[string]bool{
+	AccessToken:             true,
+	Client:                  true,
+	ClientSecretBasic:       true,
+	ClientSecretPost:        true,
+	ClientSecretJWT:         true,
+	PrivateKeyJWT:           true,
+	SelfSignedTLSClientAuth: true,
+	TLSClientAuth:           true,
+}
 
 // ExternalIDPConfig -
 type ExternalIDPConfig interface {
@@ -118,7 +140,13 @@ type IDPAuthConfig interface {
 	// GetClientScope - Scopes used for requesting the token using the ID client
 	GetClientScope() string
 	// validate - Validates the IDP auth configuration
-	validate(isMTLS bool)
+	validate(tlsCfg TLSConfig)
+	// GetPrivateKey() - private key to be used for private_key_jwt authentication
+	GetPrivateKey() string
+	// GetPublicKey() - public key to be used for private_key_jwt authentication
+	GetPublicKey() string
+	// GetKeyPassword() - public key to be used for private_key_jwt authentication
+	GetKeyPassword() string
 }
 
 // IDPConfig - interface for IdP provider config
@@ -156,6 +184,9 @@ type IDPAuthConfiguration struct {
 	ClientID     string `json:"clientId,omitempty"`
 	ClientSecret string `json:"clientSecret,omitempty"`
 	ClientScope  string `json:"clientScope,omitempty"`
+	PrivateKey   string `json:"privateKey,omitempty"`
+	PublicKey    string `json:"publicKey,omitempty"`
+	KeyPwd       string `json:"keyPassword,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -241,11 +272,7 @@ func (i *IDPConfiguration) validate() {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldMetadataURL))
 	}
 
-	isMTLS := false
-	if i.TLSConfig != nil {
-		isMTLS = i.TLSConfig.(*TLSConfiguration).ClientCertificatePath != "" && i.TLSConfig.(*TLSConfiguration).ClientKeyPath != ""
-	}
-	i.AuthConfig.validate(isMTLS)
+	i.AuthConfig.validate(i.TLSConfig)
 }
 
 // GetType - type of authentication mechanism to use "accessToken" or "client"
@@ -273,26 +300,85 @@ func (i *IDPAuthConfiguration) GetClientScope() string {
 	return i.ClientScope
 }
 
+// GetPrivateKey -
+func (i *IDPAuthConfiguration) GetPrivateKey() string {
+	return i.PrivateKey
+}
+
+// GetPublicKey -
+func (i *IDPAuthConfiguration) GetPublicKey() string {
+	return i.PublicKey
+}
+
+// GetKeyPassword -
+func (i *IDPAuthConfiguration) GetKeyPassword() string {
+	return i.KeyPwd
+}
+
 // validate - Validates the IDP auth configuration
-func (i *IDPAuthConfiguration) validate(isMTLS bool) {
+func (i *IDPAuthConfiguration) validate(tlsCfg TLSConfig) {
 	if ok := validIDPAuthType[i.GetType()]; !ok {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthType))
 	}
 
-	if i.GetType() == accessToken && i.GetAccessToken() == "" {
+	switch i.GetType() {
+	case AccessToken:
+		i.validateAccessTokenAuthConfig()
+	case Client:
+		fallthrough
+	case ClientSecretBasic:
+		fallthrough
+	case ClientSecretPost:
+		fallthrough
+	case ClientSecretJWT:
+		i.validateClientSecretAuthConfig()
+	case PrivateKeyJWT:
+		i.validatePrivateKeyJwtAuthConfig()
+	case TLSClientAuth:
+		fallthrough
+	case SelfSignedTLSClientAuth:
+		i.validateTLSClientAuthConfig(tlsCfg)
+	}
+}
+
+func (i *IDPAuthConfiguration) validateAccessTokenAuthConfig() {
+	if i.GetAccessToken() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthAccessToken))
 	}
+}
 
-	if i.GetType() == client {
-		if i.GetClientID() == "" {
-			exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientID))
-		}
-		if !isMTLS {
-			if i.GetClientSecret() == "" {
-				exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientSecret))
-			}
-		}
+func (i *IDPAuthConfiguration) validateClientIDConfig() {
+	if i.GetClientID() == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientID))
 	}
+}
+
+func (i *IDPAuthConfiguration) validateClientSecretConfig() {
+	if i.GetClientSecret() == "" {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldAuthClientSecret))
+	}
+}
+
+func (i *IDPAuthConfiguration) validateClientSecretAuthConfig() {
+	i.validateClientIDConfig()
+	i.validateClientSecretConfig()
+}
+
+func (i *IDPAuthConfiguration) validatePrivateKeyJwtAuthConfig() {
+	i.validateClientIDConfig()
+
+	validateAuthFileConfig(pathExternalIDP+"."+fldAuthPrivateKey, i.PrivateKey, "", "private key")
+	validateAuthFileConfig(pathExternalIDP+"."+fldAuthPublicKey, i.PublicKey, "", "public key")
+}
+
+func (i *IDPAuthConfiguration) validateTLSClientAuthConfig(tlsCfg TLSConfig) {
+	i.validateClientIDConfig()
+
+	if tlsCfg == nil {
+		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldSSLClientCertPath))
+	}
+	validateAuthFileConfig(pathExternalIDP+"."+fldSSLClientCertPath, tlsCfg.(*TLSConfiguration).ClientCertificatePath, "", "tls client certificate")
+	validateAuthFileConfig(pathExternalIDP+"."+fldSSLClientKeyPath, tlsCfg.(*TLSConfiguration).ClientKeyPath, "", "tls client key")
 }
 
 func addExternalIDPProperties(props properties.Properties) {

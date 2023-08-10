@@ -14,12 +14,6 @@ const (
 	TypeKeycloak = "keycloak"
 )
 
-// IDP Auth type string const
-const (
-	IDPAuthTypeAccessToken = "accessToken"
-	IDPAuthTypeClient      = "client"
-)
-
 const (
 	defaultServerName = "OAuth server"
 

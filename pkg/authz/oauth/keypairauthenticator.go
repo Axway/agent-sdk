@@ -13,18 +13,23 @@ import (
 
 type keyPairAuthenticator struct {
 	clientID   string
+	issuer     string
 	aud        string
 	privateKey *rsa.PrivateKey
 	publicKey  []byte
+	scope      string
 }
 
 // prepareInitialToken prepares a token for an access request
-func (p *keyPairAuthenticator) prepareInitialToken(privateKey interface{}, kid, clientID, aud string) (string, error) {
+func (p *keyPairAuthenticator) prepareInitialToken(kid string) (string, error) {
 	now := time.Now()
+	if p.issuer == "" {
+		p.issuer = fmt.Sprintf("%s:%s", assertionTypeJWT, p.clientID)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{
-		Issuer:    fmt.Sprintf("%s:%s", assertionTypeJWT, clientID),
-		Subject:   clientID,
-		Audience:  aud,
+		Issuer:    p.issuer,
+		Subject:   p.clientID,
+		Audience:  p.aud,
 		ExpiresAt: now.Add(60*time.Second).UnixNano() / 1e9,
 		IssuedAt:  now.UnixNano() / 1e9,
 		Id:        uuid.New().String(),
@@ -32,7 +37,7 @@ func (p *keyPairAuthenticator) prepareInitialToken(privateKey interface{}, kid, 
 
 	token.Header["kid"] = kid
 
-	requestToken, err := token.SignedString(privateKey)
+	requestToken, err := token.SignedString(p.privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -40,20 +45,25 @@ func (p *keyPairAuthenticator) prepareInitialToken(privateKey interface{}, kid, 
 	return requestToken, nil
 }
 
-func (p *keyPairAuthenticator) prepareRequest() (url.Values, error) {
+func (p *keyPairAuthenticator) prepareRequest() (url.Values, map[string]string, error) {
 	kid, err := util.ComputeKIDFromDER(p.publicKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	requestToken, err := p.prepareInitialToken(p.privateKey, kid, p.clientID, p.aud)
+	requestToken, err := p.prepareInitialToken(kid)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return url.Values{
+	v := url.Values{
 		metaGrantType:           []string{grantClientCredentials},
 		metaClientAssertionType: []string{assertionTypeJWT},
 		metaClientAssertion:     []string{requestToken},
-	}, nil
+	}
+
+	if p.scope != "" {
+		v.Add(metaScope, p.scope)
+	}
+	return v, nil, nil
 }

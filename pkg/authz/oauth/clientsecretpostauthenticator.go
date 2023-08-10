@@ -1,14 +1,16 @@
 package oauth
 
-import "net/url"
+import (
+	"net/url"
+)
 
-type clientSecretAuthenticator struct {
+type clientSecretPostAuthenticator struct {
 	clientID     string
 	clientSecret string
 	scope        string
 }
 
-func (p *clientSecretAuthenticator) prepareRequest() (url.Values, error) {
+func (p *clientSecretPostAuthenticator) prepareRequest() (url.Values, map[string]string, error) {
 	v := url.Values{
 		metaGrantType: []string{grantClientCredentials},
 		metaClientID:  []string{p.clientID},
@@ -21,5 +23,5 @@ func (p *clientSecretAuthenticator) prepareRequest() (url.Values, error) {
 	if p.scope != "" {
 		v.Add(metaScope, p.scope)
 	}
-	return v, nil
+	return v, nil, nil
 }
