@@ -233,7 +233,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 				expectedAPIID:         instRefID,
 				expectedAppName:       managedAppRefName,
 				expectedAccessDetails: util.GetAgentDetails(&ar),
-				expectedAppDetails:    map[string]interface{}{},
+				expectedAppDetails:    util.GetAgentDetails(mApp),
 				expectedStatus: mock.MockRequestStatus{
 					Status: tc.outboundStatus,
 					Msg:    "msg",
