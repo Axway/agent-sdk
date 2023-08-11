@@ -43,7 +43,7 @@ func (p *clientSecretJwtAuthenticator) prepareRequest() (url.Values, map[string]
 	}
 
 	v := url.Values{
-		metaGrantType:           []string{grantClientCredentials},
+		metaGrantType:           []string{GrantTypeClientCredentials},
 		metaClientID:            []string{p.clientID},
 		metaClientAssertionType: []string{assertionTypeJWT},
 		metaClientAssertion:     []string{requestToken},

@@ -13,6 +13,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -445,24 +446,39 @@ func (h *credentials) getCRD(ctx context.Context, cred *management.Credential) (
 	return crd, err
 }
 
+func formattedJWKS(jwks string) string {
+	formattedJWKS := strings.ReplaceAll(jwks, "----- ", "-----\n")
+	return strings.ReplaceAll(formattedJWKS, " -----", "\n-----")
+}
+
 func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
 	p := cr.GetIDPProvider()
 	idpCredData := cr.GetIDPCredentialData()
 
-	formattedJWKS := strings.ReplaceAll(idpCredData.GetPublicKey(), "----- ", "-----\n")
-	formattedJWKS = strings.ReplaceAll(formattedJWKS, " -----", "\n-----")
-
 	// prepare external client metadata from CRD data
-	clientMetadata, err := oauth.NewClientMetadataBuilder().
+	builder := oauth.NewClientMetadataBuilder().
 		SetClientName(cr.GetName()).
 		SetScopes(idpCredData.GetScopes()).
 		SetGrantTypes(idpCredData.GetGrantTypes()).
 		SetTokenEndpointAuthMethod(idpCredData.GetTokenEndpointAuthMethod()).
 		SetResponseType(idpCredData.GetResponseTypes()).
-		SetRedirectURIs(idpCredData.GetRedirectURIs()).
-		SetJWKS([]byte(formattedJWKS)).
-		SetJWKSURI(idpCredData.GetJwksURI()).
-		Build()
+		SetRedirectURIs(idpCredData.GetRedirectURIs())
+
+	if idpCredData.GetTokenEndpointAuthMethod() == config.PrivateKeyJWT {
+		builder.SetJWKS([]byte(formattedJWKS(idpCredData.GetPublicKey()))).
+			SetJWKSURI(idpCredData.GetJwksURI())
+	}
+
+	if idpCredData.GetTokenEndpointAuthMethod() == config.TLSClientAuth || idpCredData.GetTokenEndpointAuthMethod() == config.SelfSignedTLSClientAuth {
+		builder.SetJWKS([]byte(formattedJWKS(idpCredData.GetCertificate()))).
+			SetCertificateMetadata(idpCredData.GetCertificateMetadata()).
+			SetTLSClientAuthSanDNS(idpCredData.GetTLSClientAuthSanDNS()).
+			SetTLSClientAuthSanEmail(idpCredData.GetTLSClientAuthSanEmail()).
+			SetTLSClientAuthSanIP(idpCredData.GetTLSClientAuthSanIP()).
+			SetTLSClientAuthSanURI(idpCredData.GetTLSClientAuthSanURI())
+	}
+
+	clientMetadata, err := builder.Build()
 	if err != nil {
 		return err
 	}
@@ -535,15 +551,21 @@ type provCreds struct {
 }
 
 type idpCredData struct {
-	clientID        string
-	clientSecret    string
-	scopes          []string
-	grantTypes      []string
-	tokenAuthMethod string
-	responseTypes   []string
-	redirectURLs    []string
-	jwksURI         string
-	publicKey       string
+	clientID              string
+	clientSecret          string
+	scopes                []string
+	grantTypes            []string
+	tokenAuthMethod       string
+	responseTypes         []string
+	redirectURLs          []string
+	jwksURI               string
+	publicKey             string
+	certificate           string
+	certificateMetadata   string
+	tlsClientAuthSanDNS   string
+	tlsClientAuthSanEmail string
+	tlsClientAuthSanIP    string
+	tlsClientAuthSanURI   string
 }
 
 func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
@@ -601,6 +623,12 @@ func newIDPCredData(p oauth.Provider, credData, provData map[string]interface{})
 	cd.tokenAuthMethod = util.GetStringFromMapInterface(prov.OauthTokenAuthMethod, credData)
 	cd.publicKey = util.GetStringFromMapInterface(prov.OauthJwks, credData)
 	cd.jwksURI = util.GetStringFromMapInterface(prov.OauthJwksURI, credData)
+	cd.certificate = util.GetStringFromMapInterface(prov.OauthCertificate, credData)
+	cd.certificateMetadata = util.GetStringFromMapInterface(prov.OauthCertificateMetadata, credData)
+	cd.tlsClientAuthSanDNS = util.GetStringFromMapInterface(prov.OauthTLSAuthSANDNS, credData)
+	cd.tlsClientAuthSanEmail = util.GetStringFromMapInterface(prov.OauthTLSAuthSANEmail, credData)
+	cd.tlsClientAuthSanIP = util.GetStringFromMapInterface(prov.OauthTLSAuthSANIP, credData)
+	cd.tlsClientAuthSanURI = util.GetStringFromMapInterface(prov.OauthTLSAuthSANURI, credData)
 
 	return cd
 }
@@ -735,6 +763,36 @@ func (c *idpCredData) GetJwksURI() string {
 // GetPublicKey - returns the public key
 func (c *idpCredData) GetPublicKey() string {
 	return c.publicKey
+}
+
+// GetCertificate - returns the certificate
+func (c *idpCredData) GetCertificate() string {
+	return c.certificate
+}
+
+// GetCertificateMetadata - returns the certificate metadata property
+func (c *idpCredData) GetCertificateMetadata() string {
+	return c.certificateMetadata
+}
+
+// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
+func (c *idpCredData) GetTLSClientAuthSanDNS() string {
+	return c.tlsClientAuthSanDNS
+}
+
+// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
+func (c *idpCredData) GetTLSClientAuthSanEmail() string {
+	return c.tlsClientAuthSanEmail
+}
+
+// GetTLSClientAuthSanIP - returns the value for tls_client_auth_san_ip
+func (c *idpCredData) GetTLSClientAuthSanIP() string {
+	return c.tlsClientAuthSanIP
+}
+
+// GetTLSClientAuthSanURI - returns the value for tls_client_auth_san_uri
+func (c *idpCredData) GetTLSClientAuthSanURI() string {
+	return c.tlsClientAuthSanURI
 }
 
 // encryptSchema schema is the json schema. credData is the data that contains data to encrypt based on the key, alg and hash.

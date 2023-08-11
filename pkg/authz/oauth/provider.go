@@ -362,7 +362,7 @@ func (p *provider) applyClientDefaults(clientRequest *clientMetadata) {
 	if len(clientRequest.ResponseTypes) == 0 {
 		defaultAuthResponseType := p.cfg.GetAuthResponseType()
 		if defaultAuthResponseType == "" {
-			defaultAuthResponseType = authResponseToken
+			defaultAuthResponseType = AuthResponseToken
 		}
 		clientRequest.ResponseTypes = []string{defaultAuthResponseType}
 	}
@@ -370,9 +370,9 @@ func (p *provider) applyClientDefaults(clientRequest *clientMetadata) {
 
 func (p *provider) preProcessResponseType(clientRequest *clientMetadata) {
 	for _, grantTypes := range clientRequest.GrantTypes {
-		if grantTypes == grantAuthorizationCode {
+		if grantTypes == GrantTypeAuthorizationCode {
 			if !p.hasCodeResponseMethod(clientRequest) {
-				clientRequest.ResponseTypes = []string{authResponseCode}
+				clientRequest.ResponseTypes = []string{AuthResponseCode}
 			}
 		}
 	}
@@ -380,7 +380,7 @@ func (p *provider) preProcessResponseType(clientRequest *clientMetadata) {
 
 func (p *provider) hasCodeResponseMethod(clientRequest *clientMetadata) bool {
 	for _, authResponseMethod := range clientRequest.ResponseTypes {
-		if authResponseMethod == authResponseCode {
+		if authResponseMethod == AuthResponseCode {
 			return true
 		}
 	}

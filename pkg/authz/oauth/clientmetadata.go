@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
 // Time - time
@@ -39,7 +41,7 @@ type ClientMetadata interface {
 	GetRedirectURIs() []string
 	GetLogoURI() string
 	GetJwksURI() string
-	GetJwks() map[string]interface{}
+	GetJwks() jwk.Set
 	GetExtraProperties() map[string]string
 }
 
@@ -56,12 +58,18 @@ type clientMetadata struct {
 	ResponseTypes           []string `json:"response_types,omitempty"`
 	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty"`
 
-	ClientURI       string                 `json:"client_uri,omitempty"`
-	RedirectURIs    []string               `json:"redirect_uris,omitempty"`
-	JwksURI         string                 `json:"jwks_uri,omitempty"`
-	Jwks            map[string]interface{} `json:"jwks,omitempty"`
-	LogoURI         string                 `json:"logo_uri,omitempty"`
-	extraProperties map[string]string      `json:"-"`
+	ClientURI              string   `json:"client_uri,omitempty"`
+	RedirectURIs           []string `json:"redirect_uris,omitempty"`
+	JwksURI                string   `json:"jwks_uri,omitempty"`
+	Jwks                   jwk.Set  `json:"jwks,omitempty"`
+	LogoURI                string   `json:"logo_uri,omitempty"`
+	TLSClientAuthSubjectDN string   `json:"tls_client_auth_subject_dn,omitempty"`
+	TLSClientAuthSanDNS    string   `json:"tls_client_auth_san_dns,omitempty"`
+	TLSClientAuthSanEmail  string   `json:"tls_client_auth_san_email,omitempty"`
+	TLSClientAuthSanIP     string   `json:"tls_client_auth_san_ip,omitempty"`
+	TLSClientAuthSanURI    string   `json:"tls_client_auth_san_uri,omitempty"`
+
+	extraProperties map[string]string `json:"-"`
 }
 
 var clientFields map[string]bool
@@ -144,7 +152,7 @@ func (c *clientMetadata) GetJwksURI() string {
 	return c.JwksURI
 }
 
-func (c *clientMetadata) GetJwks() map[string]interface{} {
+func (c *clientMetadata) GetJwks() jwk.Set {
 	return c.Jwks
 }
 

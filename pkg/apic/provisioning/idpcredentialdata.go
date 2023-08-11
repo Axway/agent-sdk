@@ -20,4 +20,16 @@ type IDPCredentialData interface {
 	GetJwksURI() string
 	// GetPublicKey - returns the public key
 	GetPublicKey() string
+	// GetCertificate - returns the public certificate
+	GetCertificate() string
+	// GetCertificateMetadata - returns the certificate metadata property
+	GetCertificateMetadata() string
+	// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
+	GetTLSClientAuthSanDNS() string
+	// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
+	GetTLSClientAuthSanEmail() string
+	// GetTLSClientAuthSanIP - returns the value for tls_client_auth_san_ip
+	GetTLSClientAuthSanIP() string
+	// GetTLSClientAuthSanURI - returns the value for tls_client_auth_san_uri
+	GetTLSClientAuthSanURI() string
 }

@@ -1,14 +1,18 @@
 package oauth
 
 import (
-	"encoding/json"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/lestrrat-go/jwx/jwk"
+	jwkcert "github.com/lestrrat-go/jwx/v2/cert"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-var grantTypeWithRedirects = map[string]bool{grantAuthorizationCode: true, grantImplicit: true}
+var grantTypeWithRedirects = map[string]bool{GrantTypeAuthorizationCode: true, GrantTypeImplicit: true}
 
 // ClientBuilder - Builder for IdP client representation
 type ClientBuilder interface {
@@ -24,14 +28,26 @@ type ClientBuilder interface {
 
 	SetJWKSURI(string) ClientBuilder
 	SetJWKS([]byte) ClientBuilder
+
+	SetCertificateMetadata(certificateMetaddata string) ClientBuilder
+	SetTLSClientAuthSanDNS(tlsClientAuthSanDNS string) ClientBuilder
+	SetTLSClientAuthSanEmail(tlsClientAuthSanEmail string) ClientBuilder
+	SetTLSClientAuthSanIP(tlsClientAuthSanIP string) ClientBuilder
+	SetTLSClientAuthSanURI(tlsClientAuthSanURI string) ClientBuilder
 	SetExtraProperties(map[string]string) ClientBuilder
 
 	Build() (ClientMetadata, error)
 }
 
 type clientBuilder struct {
-	publicKey         []byte
-	idpClientMetadata *clientMetadata
+	jwks                  []byte
+	jwksURI               string
+	idpClientMetadata     *clientMetadata
+	certificateMetadata   string
+	tlsClientAuthSanDNS   string
+	tlsClientAuthSanEmail string
+	tlsClientAuthSanIP    string
+	tlsClientAuthSanURI   string
 }
 
 // NewClientMetadataBuilder -  create a new instance of builder to construct client metadata
@@ -77,12 +93,37 @@ func (b *clientBuilder) SetLogoURI(logoURI string) ClientBuilder {
 }
 
 func (b *clientBuilder) SetJWKSURI(jwksURI string) ClientBuilder {
-	b.idpClientMetadata.JwksURI = jwksURI
+	b.jwksURI = jwksURI
 	return b
 }
 
-func (b *clientBuilder) SetJWKS(publicKey []byte) ClientBuilder {
-	b.publicKey = publicKey
+func (b *clientBuilder) SetJWKS(jwks []byte) ClientBuilder {
+	b.jwks = jwks
+	return b
+}
+
+func (b *clientBuilder) SetCertificateMetadata(certificateMetadata string) ClientBuilder {
+	b.certificateMetadata = certificateMetadata
+	return b
+}
+
+func (b *clientBuilder) SetTLSClientAuthSanDNS(tlsClientAuthSanDNS string) ClientBuilder {
+	b.tlsClientAuthSanDNS = tlsClientAuthSanDNS
+	return b
+}
+
+func (b *clientBuilder) SetTLSClientAuthSanEmail(tlsClientAuthSanEmail string) ClientBuilder {
+	b.tlsClientAuthSanEmail = tlsClientAuthSanEmail
+	return b
+}
+
+func (b *clientBuilder) SetTLSClientAuthSanIP(tlsClientAuthSanIP string) ClientBuilder {
+	b.tlsClientAuthSanIP = tlsClientAuthSanIP
+	return b
+}
+
+func (b *clientBuilder) SetTLSClientAuthSanURI(tlsClientAuthSanURI string) ClientBuilder {
+	b.tlsClientAuthSanURI = tlsClientAuthSanURI
 	return b
 }
 
@@ -91,42 +132,116 @@ func (b *clientBuilder) SetExtraProperties(extraProperties map[string]string) Cl
 	return b
 }
 
-func (b *clientBuilder) decodeJWKS() ([]byte, error) {
-	p, err := util.ParsePublicKey(b.publicKey)
+func (b *clientBuilder) decodePublicKeyJWKS() (jwk.Key, error) {
+	p, err := util.ParsePublicKey(b.jwks)
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := jwk.New(p)
+	key, err := jwk.FromRaw(p)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %s", err)
 	}
-	kid, _ := util.ComputeKIDFromDER(b.publicKey)
+	kid, _ := util.ComputeKIDFromDER(b.jwks)
 	key.Set(jwk.KeyIDKey, kid)
 	key.Set(jwk.KeyUsageKey, jwk.ForSignature)
 
-	buf, err := json.MarshalIndent(key, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal jwks: %s", err)
+	return key, nil
+}
+
+func (b *clientBuilder) decodeCertificateJWKS() (string, jwk.Key, error) {
+	pemBlock, _ := pem.Decode(b.jwks)
+	if pemBlock == nil {
+		return "", nil, fmt.Errorf("failed to decode certificate")
 	}
-	return buf, nil
+
+	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to parse certificate: %s", err)
+	}
+
+	subjectDN := cert.Subject.String()
+	key, err := jwk.FromRaw(cert.PublicKey)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to parse client certificate: %s", err)
+	}
+
+	c := &jwkcert.Chain{}
+	c.Add([]byte(base64.StdEncoding.EncodeToString(pemBlock.Bytes)))
+	key.Set(jwk.X509CertChainKey, c)
+	key.Set(jwk.KeyUsageKey, jwk.ForSignature)
+
+	return subjectDN, key, nil
+}
+
+func (b *clientBuilder) setClientMetadataJWKS(key jwk.Key) error {
+	b.idpClientMetadata.Jwks = jwk.NewSet()
+	b.idpClientMetadata.Jwks.AddKey(key)
+	return nil
+}
+
+func (b *clientBuilder) setPrivateKeyJWTProperties() error {
+	if len(b.jwks) == 0 && len(b.jwksURI) == 0 {
+		return fmt.Errorf("public key is required for private_key_jwt token authentication method")
+	}
+	if len(b.jwks) != 0 {
+		key, err := b.decodePublicKeyJWKS()
+		if err != nil {
+			return err
+		}
+		b.setClientMetadataJWKS(key)
+	}
+	b.idpClientMetadata.JwksURI = b.jwksURI
+	return nil
+}
+
+func (b *clientBuilder) setTLSClientAuthProperties() error {
+	if len(b.jwks) == 0 && len(b.jwksURI) == 0 {
+		return fmt.Errorf("client certificate is required for tls_client_auth/self_signed_tls_client_auth token authentication method")
+	}
+	if len(b.jwks) != 0 {
+		subjectDN, jwksBuf, err := b.decodeCertificateJWKS()
+		if err != nil {
+			return err
+		}
+		b.setClientMetadataJWKS(jwksBuf)
+
+		switch b.certificateMetadata {
+		case TLSClientAuthSanDNS:
+			b.idpClientMetadata.TLSClientAuthSanDNS = b.tlsClientAuthSanDNS
+		case TLSClientAuthSanEmail:
+			b.idpClientMetadata.TLSClientAuthSanEmail = b.tlsClientAuthSanEmail
+		case TLSClientAuthSanIP:
+			b.idpClientMetadata.TLSClientAuthSanIP = b.tlsClientAuthSanIP
+		case TLSClientAuthSanURI:
+			b.idpClientMetadata.TLSClientAuthSanURI = b.tlsClientAuthSanURI
+		default:
+			b.idpClientMetadata.TLSClientAuthSubjectDN = subjectDN
+		}
+	}
+	b.idpClientMetadata.JwksURI = b.jwksURI
+	return nil
 }
 
 func (b *clientBuilder) Build() (ClientMetadata, error) {
-	if b.publicKey != nil && len(b.publicKey) > 0 {
-		jwksBuf, err := b.decodeJWKS()
-		if err != nil {
-			return nil, err
-		}
-
-		b.idpClientMetadata.Jwks = map[string]interface{}{
-			"keys": []json.RawMessage{json.RawMessage(jwksBuf)},
-		}
-	}
-
 	for _, grantType := range b.idpClientMetadata.GrantTypes {
 		if _, ok := grantTypeWithRedirects[grantType]; ok && len(b.idpClientMetadata.RedirectURIs) == 0 {
 			return nil, fmt.Errorf("invalid client metadata redirect uri should be set for %s grant type", grantType)
+		}
+	}
+
+	switch b.idpClientMetadata.GetTokenEndpointAuthMethod() {
+	case config.PrivateKeyJWT:
+		err := b.setPrivateKeyJWTProperties()
+		if err != nil {
+			return nil, err
+		}
+	case config.TLSClientAuth:
+		fallthrough
+	case config.SelfSignedTLSClientAuth:
+		err := b.setTLSClientAuthProperties()
+		if err != nil {
+			return nil, err
 		}
 	}
 	return b.idpClientMetadata, nil

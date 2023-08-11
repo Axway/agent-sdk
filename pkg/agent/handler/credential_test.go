@@ -975,10 +975,10 @@ func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
 			ClientID:     "test",
 			ClientSecret: "test",
 		},
-		GrantType:        "client_credentials",
+		GrantType:        oauth.GrantTypeClientCredentials,
 		ClientScopes:     "read,write",
-		AuthMethod:       "client_secret_basic",
-		AuthResponseType: "token",
+		AuthMethod:       config.ClientSecretBasic,
+		AuthResponseType: oauth.AuthResponseToken,
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
 	}
 }

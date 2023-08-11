@@ -16,14 +16,25 @@ import (
 )
 
 var supportedIDPGrantTypes = map[string]bool{
-	"client_credentials": true,
-	"authorization_code": true}
+	oauth.GrantTypeClientCredentials: true,
+	oauth.GrantTypeAuthorizationCode: true}
 
 var supportedIDPTokenAuthMethods = map[string]bool{
-	"client_secret_basic": true,
-	"client_secret_post":  true,
-	"client_secret_jwt":   true,
-	"private_key_jwt":     true}
+	config.ClientSecretBasic:       true,
+	config.ClientSecretPost:        true,
+	config.ClientSecretJWT:         true,
+	config.PrivateKeyJWT:           true,
+	config.TLSClientAuth:           true,
+	config.SelfSignedTLSClientAuth: true,
+}
+
+var tlsAuthCertificateMetadata = []string{
+	oauth.TLSClientAuthSubjectDN,
+	oauth.TLSClientAuthSanDNS,
+	oauth.TLSClientAuthSanEmail,
+	oauth.TLSClientAuthSanIP,
+	oauth.TLSClientAuthSanURI,
+}
 
 // credential request definitions
 // createOrUpdateDefinition -
@@ -233,6 +244,7 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 		setIDPRedirectURIsSchemaProperty(p, c)
 		setIDPJWKSURISchemaProperty(p, c)
 		setIDPJWKSSchemaProperty(p, c)
+		setIDPTLSClientAuthSchemaProperty(p, c)
 	}
 }
 
@@ -277,7 +289,7 @@ func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 			SetName(provisioning.OauthGrantType).
 			SetLabel("Grant Type").
 			IsString().
-			SetDefaultValue("client_credentials").
+			SetDefaultValue(oauth.GrantTypeClientCredentials).
 			SetEnumValues(grantType))
 }
 
@@ -300,7 +312,7 @@ func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions)
 			SetName(provisioning.OauthTokenAuthMethod).
 			SetLabel("Token Auth Method").
 			IsString().
-			SetDefaultValue("client_secret_basic").
+			SetDefaultValue(config.ClientSecretBasic).
 			SetEnumValues(tokenAuthMethod))
 }
 
@@ -331,6 +343,41 @@ func setIDPJWKSSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 			SetLabel("Public Key").
 			IsString())
 
+}
+
+func setIDPTLSClientAuthSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthCertificate).
+			SetLabel("Public Certificate").
+			IsString())
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthCertificateMetadata).
+			SetLabel("Certificate Metadata").
+			IsString().
+			SetDefaultValue(oauth.TLSClientAuthSubjectDN).
+			SetEnumValues(tlsAuthCertificateMetadata))
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthTLSAuthSANDNS).
+			SetLabel("Certificate Subject Alternative Name, DNS").
+			IsString())
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthTLSAuthSANEmail).
+			SetLabel("Certificate Subject Alternative Name, Email").
+			IsString())
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthTLSAuthSANIP).
+			SetLabel("Certificate Subject Alternative Name, IP address").
+			IsString())
+	c.reqProps = append(c.reqProps,
+		provisioning.NewSchemaPropertyBuilder().
+			SetName(provisioning.OauthTLSAuthSANURI).
+			SetLabel("Certificate Subject Alternative Name, URI").
+			IsString())
 }
 
 // WithCRDOAuthSecret - set that the Oauth cred is secret based

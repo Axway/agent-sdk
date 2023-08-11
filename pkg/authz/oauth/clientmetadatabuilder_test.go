@@ -3,6 +3,7 @@ package oauth
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,8 +22,8 @@ func TestClientBuilder(t *testing.T) {
 
 	cm, err = NewClientMetadataBuilder().
 		SetClientName("test").
-		SetGrantTypes([]string{"client_credentials", "authorization_code"}).
-		SetTokenEndpointAuthMethod("client_secret_post").
+		SetGrantTypes([]string{GrantTypeClientCredentials, GrantTypeAuthorizationCode}).
+		SetTokenEndpointAuthMethod(config.ClientSecretPost).
 		SetResponseType([]string{"token"}).
 		SetRedirectURIs([]string{"http://localhost"}).
 		SetScopes([]string{"scope1", "scope2"}).
@@ -45,8 +46,8 @@ func TestClientBuilder(t *testing.T) {
 
 	cm, err = NewClientMetadataBuilder().
 		SetClientName("test").
-		SetGrantTypes([]string{"client_credentials"}).
-		SetTokenEndpointAuthMethod("private_key_jwt").
+		SetGrantTypes([]string{GrantTypeClientCredentials}).
+		SetTokenEndpointAuthMethod(config.PrivateKeyJWT).
 		SetJWKS(publicKey).
 		Build()
 
@@ -58,8 +59,8 @@ func TestClientBuilder(t *testing.T) {
 func TestBuildValidations(t *testing.T) {
 	client, err := NewClientMetadataBuilder().
 		SetClientName("test").
-		SetGrantTypes([]string{"client_credentials"}).
-		SetTokenEndpointAuthMethod("private_key_jwt").
+		SetGrantTypes([]string{GrantTypeClientCredentials}).
+		SetTokenEndpointAuthMethod(config.PrivateKeyJWT).
 		SetJWKS([]byte("invalid-public-key")).
 		Build()
 
@@ -71,10 +72,11 @@ func TestBuildValidations(t *testing.T) {
 
 	client, err = NewClientMetadataBuilder().
 		SetClientName("test").
-		SetGrantTypes([]string{"authorization_code"}).
+		SetGrantTypes([]string{GrantTypeClientCredentials}).
+		SetTokenEndpointAuthMethod(config.PrivateKeyJWT).
 		SetJWKS(publicKey).
 		Build()
 
-	assert.NotNil(t, err)
-	assert.Nil(t, client)
+	assert.Nil(t, err)
+	assert.NotNil(t, client)
 }

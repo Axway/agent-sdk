@@ -77,9 +77,9 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 						ClientID:     "test",
 						ClientSecret: "test",
 					},
-					GrantType:        "client_credentials",
+					GrantType:        oauth.GrantTypeClientCredentials,
 					ClientScopes:     "read,write",
-					AuthMethod:       "client_secret_basic",
+					AuthMethod:       config.ClientSecretBasic,
 					AuthResponseType: "token",
 					ExtraProperties:  config.ExtraProperties{"key": "value"},
 				}

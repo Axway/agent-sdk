@@ -2,7 +2,12 @@ package oauth
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/url"
+)
+
+const (
+	basicAuthHeaderTemplate = "Basic %s"
 )
 
 type clientSecretBasicAuthenticator struct {
@@ -13,7 +18,7 @@ type clientSecretBasicAuthenticator struct {
 
 func (p *clientSecretBasicAuthenticator) prepareRequest() (url.Values, map[string]string, error) {
 	v := url.Values{
-		metaGrantType: []string{grantClientCredentials},
+		metaGrantType: []string{GrantTypeClientCredentials},
 	}
 
 	if p.scope != "" {
@@ -22,7 +27,7 @@ func (p *clientSecretBasicAuthenticator) prepareRequest() (url.Values, map[strin
 
 	token := base64.StdEncoding.EncodeToString([]byte(p.clientID + ":" + p.clientSecret))
 	headers := map[string]string{
-		"Authorization": "Basic " + token,
+		hdrAuthorization: fmt.Sprintf(basicAuthHeaderTemplate, token),
 	}
 	return v, headers, nil
 }

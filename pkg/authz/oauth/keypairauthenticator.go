@@ -57,7 +57,7 @@ func (p *keyPairAuthenticator) prepareRequest() (url.Values, map[string]string, 
 	}
 
 	v := url.Values{
-		metaGrantType:           []string{grantClientCredentials},
+		metaGrantType:           []string{GrantTypeClientCredentials},
 		metaClientAssertionType: []string{assertionTypeJWT},
 		metaClientAssertion:     []string{requestToken},
 	}
