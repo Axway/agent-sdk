@@ -3,6 +3,7 @@ package oauth
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 
@@ -175,8 +176,14 @@ func (b *clientBuilder) decodeCertificateJWKS() (string, jwk.Key, error) {
 }
 
 func (b *clientBuilder) setClientMetadataJWKS(key jwk.Key) error {
-	b.idpClientMetadata.Jwks = jwk.NewSet()
-	b.idpClientMetadata.Jwks.AddKey(key)
+	jwksBuf, err := json.Marshal(key)
+	if err != nil {
+		return err
+	}
+	b.idpClientMetadata.Jwks = map[string]interface{}{
+		"keys": []json.RawMessage{json.RawMessage(jwksBuf)},
+	}
+
 	return nil
 }
 
@@ -200,11 +207,11 @@ func (b *clientBuilder) setTLSClientAuthProperties() error {
 		return fmt.Errorf("client certificate is required for tls_client_auth/self_signed_tls_client_auth token authentication method")
 	}
 	if len(b.jwks) != 0 {
-		subjectDN, jwksBuf, err := b.decodeCertificateJWKS()
+		subjectDN, jwks, err := b.decodeCertificateJWKS()
 		if err != nil {
 			return err
 		}
-		b.setClientMetadataJWKS(jwksBuf)
+		b.setClientMetadataJWKS(jwks)
 
 		switch b.certificateMetadata {
 		case TLSClientAuthSanDNS:
