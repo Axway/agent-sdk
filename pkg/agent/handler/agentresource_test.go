@@ -138,3 +138,9 @@ func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
 }
 
 func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
+func (m *mockResourceManager) GetAgentDetails() map[string]interface{} {
+	return make(map[string]interface{})
+}
+func (m *mockResourceManager) GetAgentResourceType() *v1.ResourceInstance {
+	return m.resource
+}

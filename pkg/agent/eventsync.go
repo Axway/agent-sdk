@@ -2,10 +2,12 @@ package agent
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
@@ -132,10 +134,38 @@ func (es *EventSync) initCache() error {
 	return nil
 }
 
-func (es *EventSync) rebuildCache() {
+func (es *EventSync) RebuildCache() {
 	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
+	}
+	// update cacheUpdateTime in agent resource
+	if agent.agentResourceManager != nil {
+		agentDetails := agent.agentResourceManager.GetAgentDetails()
+
+		value, exits := agentDetails["cacheUpdateTime"]
+		if !exits {
+			// cache update time hasn't been established yet.  Update time to 7 days from current now time
+			currentTime := time.Now().Add(7 * 24 * time.Hour)
+			cacheUpdateTime, _ := apiv1.Time(currentTime).MarshalJSON()
+
+			agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
+		} else {
+			// if the cache update time already exists, update to 7 days from current cache update time
+			currentCacheUpdateTime := time.Time{}
+			currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
+
+			currentCacheUpdateTime.Add(7 * 24 * time.Hour)
+			cacheUpdateTime, _ := apiv1.Time(currentCacheUpdateTime).MarshalJSON()
+
+			agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
+		}
+
+		currentTime := time.Now().Add(7 * 24 * time.Hour)
+		cacheUpdateTime, _ := apiv1.Time(currentTime).MarshalJSON()
+		agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
+
+		util.SetAgentDetails(agent.agentResourceManager.GetAgentResourceType(), agentDetails)
 	}
 }
 
@@ -154,7 +184,7 @@ func (es *EventSync) startPollMode() error {
 		agent.cfg,
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
-		poller.WithOnClientStop(es.rebuildCache),
+		poller.WithOnClientStop(es.RebuildCache),
 		poller.WithOnConnect(),
 	)
 
@@ -178,7 +208,7 @@ func (es *EventSync) startStreamMode() error {
 		agent.tokenRequester,
 		handlers,
 		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(es.rebuildCache),
+		stream.WithEventSyncError(es.RebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
 		stream.WithCacheManager(agent.cacheManager),

@@ -22,7 +22,9 @@ type Manager interface {
 	SetAgentResource(agentResource *apiv1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
+	GetAgentDetails() map[string]interface{}
 	AddUpdateAgentDetails(key, value string)
+	GetAgentResourceType() *v1.ResourceInstance
 }
 
 type executeAPIClient interface {
@@ -55,7 +57,7 @@ func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClie
 		logger:                     logger,
 	}
 
-	if m.getAgentResourceType() != nil {
+	if m.GetAgentResourceType() != nil {
 		err := m.FetchAgentResource()
 		if err != nil {
 			return nil, err
@@ -118,7 +120,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		return nil
 	}
 
-	agentInstance := a.getAgentResourceType()
+	agentInstance := a.GetAgentResourceType()
 	// using discovery agent status here, but all agent status resources have the same structure
 	agentInstance.SubResources["status"] = management.DiscoveryAgentStatus{
 		Version:                config.AgentVersion,
@@ -130,13 +132,33 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		SdkVersion:             config.SDKVersion,
 	}
 
-	// add any details
-	if len(a.agentDetails) > 0 {
-		util.SetAgentDetails(agentInstance, a.agentDetails)
+	rebuildCache := false
+	value, exits := a.agentDetails["cacheUpdateTime"]
+	if exits {
+		sevenDaysAgo := time.Now().Add(7 * 24 * time.Hour)
+
+		currentCacheUpdateTime := time.Time{}
+		err := currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
+		if err != nil {
+			return err
+		}
+
+		if currentCacheUpdateTime.Before(sevenDaysAgo) {
+			rebuildCache = true
+		}
+	}
+
+	if rebuildCache {
+		// rebuild cache
 	}
 
 	err := a.apicClient.CreateSubResource(agentInstance.ResourceMeta, agentInstance.SubResources)
 	return err
+}
+
+// GetAgentDetails - Gets current agent details
+func (a *agentResourceManager) GetAgentDetails() map[string]interface{} {
+	return a.agentDetails
 }
 
 // AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource
@@ -183,7 +205,7 @@ func (a *agentResourceManager) onResourceChange() {
 	}
 }
 
-func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
+func (a *agentResourceManager) GetAgentResourceType() *v1.ResourceInstance {
 	var agentRes v1.Interface
 	switch a.cfg.GetAgentType() {
 	case config.DiscoveryAgent:
@@ -200,7 +222,7 @@ func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 
 // GetAgentResource - returns the agent resource
 func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, error) {
-	agentRes := a.getAgentResourceType()
+	agentRes := a.GetAgentResourceType()
 	if agentRes == nil {
 		return nil, fmt.Errorf("unknown agent type")
 	}
@@ -214,7 +236,7 @@ func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, erro
 
 // GetAgentResource - returns the agent resource
 func (a *agentResourceManager) getAgentResource() (*v1.ResourceInstance, error) {
-	agentRes := a.getAgentResourceType()
+	agentRes := a.GetAgentResourceType()
 	if agentRes == nil {
 		return nil, fmt.Errorf("unknown agent type")
 	}
@@ -228,7 +250,7 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		return
 	}
 
-	switch a.getAgentResourceType().Kind {
+	switch a.GetAgentResourceType().Kind {
 	case management.DiscoveryAgentGVK().Kind:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	case management.TraceabilityAgentGVK().Kind:
