@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -93,7 +93,7 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 				return
 			}
 			resp.WriteHeader(http.StatusCreated)
-			clientBuf, _ := ioutil.ReadAll(req.Body)
+			clientBuf, _ := io.ReadAll(req.Body)
 			cl := &clientMetadata{}
 			json.Unmarshal(clientBuf, cl)
 			cl.ClientID = uuid.New().String()

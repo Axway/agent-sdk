@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -445,6 +446,11 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 	s := oauth.NewMockIDPServer()
 	defer s.Close()
 
+	publicKey, err := os.ReadFile("../../authz/oauth/testdata/publickey")
+	assert.Nil(t, err)
+
+	certificate, err := os.ReadFile("../../authz/oauth/testdata/client_cert.pem")
+	assert.Nil(t, err)
 	tests := []struct {
 		name               string
 		metadataURL        string
@@ -454,6 +460,8 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 		registrationStatus int
 		handlerInvoked     bool
 		hasError           bool
+		authMethod         string
+		jwks               []byte
 	}{
 		{
 			name:               "should provision IDP credential with no error",
@@ -462,13 +470,71 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 			expectedProvType:   provision,
 			outboundStatus:     prov.Success,
 			registrationStatus: http.StatusCreated,
+			authMethod:         config.ClientSecretBasic,
 		},
 		{
 			name:           "should fail to provision and set the status to error",
 			metadataURL:    s.GetMetadataURL(),
 			tokenURL:       "test",
 			outboundStatus: prov.Error,
-			hasError:       true,
+			authMethod:     config.ClientSecretBasic,
+		},
+		{
+			name:           "should fail to provision with no jwks for private_kwy_jwt",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       s.GetTokenURL(),
+			outboundStatus: prov.Error,
+			authMethod:     config.PrivateKeyJWT,
+		},
+		{
+			name:           "should fail to provision with no jwks for tls_client_auth",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       s.GetTokenURL(),
+			outboundStatus: prov.Error,
+			authMethod:     config.TLSClientAuth,
+		},
+		{
+			name:           "should fail to provision with no jwks for self_signed_tls_client_auth",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       s.GetTokenURL(),
+			outboundStatus: prov.Error,
+			authMethod:     config.SelfSignedTLSClientAuth,
+		},
+		{
+			name:           "should fail to provision with invalid jwks for private_kwy_jwt",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       s.GetTokenURL(),
+			outboundStatus: prov.Error,
+			authMethod:     config.PrivateKeyJWT,
+			jwks:           []byte("invalid-private-key"),
+		},
+		{
+			name:           "should fail to provision with invalid jwks for tls_client_auth",
+			metadataURL:    s.GetMetadataURL(),
+			tokenURL:       s.GetTokenURL(),
+			outboundStatus: prov.Error,
+			authMethod:     config.TLSClientAuth,
+			jwks:           []byte("invalid-certificate"),
+		},
+		{
+			name:               "should fail to provision with invalid jwks for private_kwy_jwt",
+			metadataURL:        s.GetMetadataURL(),
+			tokenURL:           s.GetTokenURL(),
+			outboundStatus:     prov.Success,
+			expectedProvType:   provision,
+			authMethod:         config.PrivateKeyJWT,
+			jwks:               publicKey,
+			registrationStatus: http.StatusCreated,
+		},
+		{
+			name:               "should fail to provision with invalid jwks for tls_client_auth",
+			metadataURL:        s.GetMetadataURL(),
+			tokenURL:           s.GetTokenURL(),
+			outboundStatus:     prov.Success,
+			expectedProvType:   provision,
+			authMethod:         config.TLSClientAuth,
+			jwks:               certificate,
+			registrationStatus: http.StatusCreated,
 		},
 	}
 	for _, tc := range tests {
@@ -481,7 +547,11 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 			cred.Status.Level = prov.Pending.String()
 
 			cred.Spec.Data = map[string]interface{}{
-				"idpTokenURL": tc.tokenURL,
+				prov.IDPTokenURL:          tc.tokenURL,
+				prov.OauthGrantType:       "client_credentials",
+				prov.OauthTokenAuthMethod: tc.authMethod,
+				prov.OauthJwks:            string(tc.jwks),
+				prov.OauthCertificate:     string(tc.jwks),
 			}
 
 			p := &mockCredProv{
@@ -515,8 +585,12 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 			ri, _ := cred.AsInstance()
 			s.SetRegistrationResponseCode(tc.registrationStatus)
 			err := handler.Handle(NewEventContext(proto.Event_UPDATED, nil, ri.Kind, ri.Name), nil, ri)
-			assert.Equal(t, tc.expectedProvType, p.expectedProvType)
 			assert.Nil(t, err)
+			if !tc.hasError {
+				assert.Equal(t, tc.expectedProvType, p.expectedProvType)
+			} else {
+				assert.NotNil(t, err)
+			}
 		})
 	}
 }

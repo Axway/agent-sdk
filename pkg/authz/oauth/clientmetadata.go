@@ -41,6 +41,10 @@ type ClientMetadata interface {
 	GetJwksURI() string
 	GetJwks() map[string]interface{}
 	GetExtraProperties() map[string]string
+	GetTLSClientAuthSanDNS() string
+	GetTLSClientAuthSanEmail() string
+	GetTLSClientAuthSanIP() string
+	GetTLSClientAuthSanURI() string
 }
 
 type clientMetadata struct {
@@ -156,6 +160,22 @@ func (c *clientMetadata) GetJwks() map[string]interface{} {
 
 func (c *clientMetadata) GetExtraProperties() map[string]string {
 	return c.extraProperties
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanDNS() string {
+	return c.TLSClientAuthSanDNS
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanEmail() string {
+	return c.TLSClientAuthSanEmail
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanIP() string {
+	return c.TLSClientAuthSanIP
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanURI() string {
+	return c.TLSClientAuthSanURI
 }
 
 // MarshalJSON serialize the client metadata with provider metadata
