@@ -155,6 +155,7 @@ func (p *provider) createClientSecretJWTAuthClient() (AuthClient, error) {
 			p.cfg.GetAuthConfig().GetClientScope(),
 			p.cfg.GetAuthConfig().GetClientID(),
 			p.authServerMetadata.Issuer,
+			p.cfg.GetAuthConfig().GetTokenSigningMethod(),
 		))
 }
 
@@ -182,6 +183,7 @@ func (p *provider) createPrivateKeyJWTAuthClient() (AuthClient, error) {
 			privateKey,
 			publicKey,
 			p.cfg.GetAuthConfig().GetClientScope(),
+			p.cfg.GetAuthConfig().GetTokenSigningMethod(),
 		),
 	)
 }

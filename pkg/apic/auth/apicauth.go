@@ -147,7 +147,7 @@ func (ptp *platformTokenGetter) initAxwayIDPClient() error {
 			"",
 			ptp.cfg.GetAuthConfig().GetAudience(),
 			privateKey,
-			publicKey, ""))
+			publicKey, "", oauth.SigningMethodRS256))
 
 	return err
 }
