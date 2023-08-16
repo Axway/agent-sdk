@@ -135,6 +135,7 @@ func (es *EventSync) initCache() error {
 }
 
 func (es *EventSync) RebuildCache() {
+	// SDB - NOTE : Do we need to pause jobs.
 	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
@@ -161,11 +162,8 @@ func (es *EventSync) RebuildCache() {
 			agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
 		}
 
-		currentTime := time.Now().Add(7 * 24 * time.Hour)
-		cacheUpdateTime, _ := apiv1.Time(currentTime).MarshalJSON()
-		agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
-
 		util.SetAgentDetails(agent.agentResourceManager.GetAgentResourceType(), agentDetails)
+		agent.apicClient.CreateSubResource(agent.agentResourceManager.GetAgentResource().ResourceMeta, agent.agentResourceManager.GetAgentResource().SubResources)
 	}
 }
 

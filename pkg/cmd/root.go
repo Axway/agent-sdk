@@ -329,6 +329,35 @@ func (c *agentRootCommand) initConfig() error {
 	return nil
 }
 
+func (c *agentRootCommand) rebuildCache(eventSync *agent.EventSync) error {
+	rebuildCache := false
+	agentDetails := agent.GetResourceManager().GetAgentDetails()
+	value, exists := agentDetails["cacheUpdateTime"]
+	if value != nil {
+		sevenDaysAgo := time.Now().Add(7 * 24 * time.Hour)
+
+		currentCacheUpdateTime := time.Time{}
+		err := currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
+		if err != nil {
+			return err
+		}
+
+		// check to see if 7 days have passed since last refresh cache
+		if currentCacheUpdateTime.Before(sevenDaysAgo) {
+			rebuildCache = true
+		}
+	} else {
+		if !exists {
+			rebuildCache = true
+		}
+	}
+
+	if rebuildCache {
+		eventSync.RebuildCache()
+	}
+	return nil
+}
+
 func (c *agentRootCommand) finishInit() error {
 	if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		eventSync, err := agent.NewEventSync()
@@ -339,6 +368,7 @@ func (c *agentRootCommand) finishInit() error {
 		if err := eventSync.SyncCache(); err != nil {
 			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
 		}
+		c.rebuildCache(eventSync)
 	}
 
 	// Start the initial and recurring version check jobs
