@@ -21,6 +21,7 @@ type Provider interface {
 	GetTitle() string
 	GetIssuer() string
 	GetTokenEndpoint() string
+	GetMTLSTokenEndpoint() string
 	GetAuthorizationEndpoint() string
 	GetSupportedScopes() []string
 	GetSupportedGrantTypes() []string
@@ -82,7 +83,6 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	}
 
 	p.authServerMetadata = metadata
-
 	// No OAuth client is needed to request token for access token based authentication to IdP
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
 		p.authClient, err = p.createAuthClient()
@@ -189,7 +189,7 @@ func (p *provider) createPrivateKeyJWTAuthClient() (AuthClient, error) {
 }
 
 func (p *provider) createTLSAuthClient() (AuthClient, error) {
-	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
+	return NewAuthClient(p.GetMTLSTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
 		WithTLSClientAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientScope()))
 }
@@ -221,8 +221,12 @@ func (p *provider) useTLSAuth() bool {
 
 // GetTokenEndpoint - return the token endpoint URL
 func (p *provider) GetTokenEndpoint() string {
+	return p.authServerMetadata.TokenEndpoint
+}
+
+func (p *provider) GetMTLSTokenEndpoint() string {
 	if p.authServerMetadata != nil {
-		if p.useTLSAuth() && p.authServerMetadata.MTLSEndPointAlias != nil && p.authServerMetadata.MTLSEndPointAlias.TokenEndpoint != "" {
+		if p.authServerMetadata.MTLSEndPointAlias != nil && p.authServerMetadata.MTLSEndPointAlias.TokenEndpoint != "" {
 			return p.authServerMetadata.MTLSEndPointAlias.TokenEndpoint
 		}
 		return p.authServerMetadata.TokenEndpoint
@@ -271,6 +275,15 @@ func (p *provider) GetSupportedResponseMethod() []string {
 	return []string{""}
 }
 
+func (p *provider) getClientRegistraionEndpoint() string {
+	registrationEndpoint := p.authServerMetadata.RegistrationEndpoint
+	if p.useTLSAuth() &&
+		p.authServerMetadata.MTLSEndPointAlias != nil && p.authServerMetadata.MTLSEndPointAlias.RegistrationEndpoint != "" {
+		registrationEndpoint = p.authServerMetadata.MTLSEndPointAlias.RegistrationEndpoint
+	}
+	return registrationEndpoint
+}
+
 // RegisterClient - register the OAuth client with IDP
 func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, error) {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
@@ -296,7 +309,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 
 	request := coreapi.Request{
 		Method:  coreapi.POST,
-		URL:     p.authServerMetadata.RegistrationEndpoint,
+		URL:     p.getClientRegistraionEndpoint(),
 		Headers: header,
 		Body:    clientBuffer,
 	}
@@ -403,7 +416,7 @@ func (p *provider) UnregisterClient(clientID string) error {
 
 	request := coreapi.Request{
 		Method:  coreapi.DELETE,
-		URL:     p.authServerMetadata.RegistrationEndpoint + "/" + clientID,
+		URL:     p.getClientRegistraionEndpoint() + "/" + clientID,
 		Headers: header,
 	}
 
