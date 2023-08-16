@@ -29,7 +29,6 @@ type Manager interface {
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
 	AddUpdateAgentDetails(key, value string)
-	GetAgentResourceType() *v1.ResourceInstance
 	SetRebuildCacheFunc(rebuildCache EventSyncCache)
 }
 
@@ -64,7 +63,7 @@ func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClie
 		logger:                     logger,
 	}
 
-	if m.GetAgentResourceType() != nil {
+	if m.getAgentResourceType() != nil {
 		err := m.FetchAgentResource()
 		if err != nil {
 			return nil, err
@@ -131,7 +130,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		return nil
 	}
 
-	agentInstance := a.GetAgentResourceType()
+	agentInstance := a.getAgentResourceType()
 	// using discovery agent status here, but all agent status resources have the same structure
 	agentInstance.SubResources["status"] = management.DiscoveryAgentStatus{
 		Version:                config.AgentVersion,
@@ -243,7 +242,7 @@ func (a *agentResourceManager) onResourceChange() {
 	}
 }
 
-func (a *agentResourceManager) GetAgentResourceType() *v1.ResourceInstance {
+func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 	var agentRes v1.Interface
 	switch a.cfg.GetAgentType() {
 	case config.DiscoveryAgent:
@@ -260,7 +259,7 @@ func (a *agentResourceManager) GetAgentResourceType() *v1.ResourceInstance {
 
 // GetAgentResource - returns the agent resource
 func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, error) {
-	agentRes := a.GetAgentResourceType()
+	agentRes := a.getAgentResourceType()
 	if agentRes == nil {
 		return nil, fmt.Errorf("unknown agent type")
 	}
@@ -274,7 +273,7 @@ func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, erro
 
 // GetAgentResource - returns the agent resource
 func (a *agentResourceManager) getAgentResource() (*v1.ResourceInstance, error) {
-	agentRes := a.GetAgentResourceType()
+	agentRes := a.getAgentResourceType()
 	if agentRes == nil {
 		return nil, fmt.Errorf("unknown agent type")
 	}
@@ -288,7 +287,7 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		return
 	}
 
-	switch a.GetAgentResourceType().Kind {
+	switch a.getAgentResourceType().Kind {
 	case management.DiscoveryAgentGVK().Kind:
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	case management.TraceabilityAgentGVK().Kind:

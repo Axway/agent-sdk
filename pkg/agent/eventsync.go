@@ -142,7 +142,7 @@ func (es *EventSync) RebuildCache() {
 		logger.WithError(err).Error("failed to rebuild cache")
 	}
 
-	agentInstance := agent.agentResourceManager.GetAgentResourceType()
+	agentInstance := agent.agentResourceManager.GetAgentResource()
 	agentDetails := util.GetAgentDetails(agentInstance)
 	if agentDetails == nil {
 		agentDetails = make(map[string]interface{})
