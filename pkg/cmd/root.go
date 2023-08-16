@@ -5,10 +5,12 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd/agentsync"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
@@ -329,26 +331,35 @@ func (c *agentRootCommand) initConfig() error {
 	return nil
 }
 
+// See if we need to rebuildCache
+//
+// 1. On startup, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
+// 2. On startup, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
 func (c *agentRootCommand) rebuildCache(eventSync *agent.EventSync) error {
 	rebuildCache := false
-	agentDetails := agent.GetResourceManager().GetAgentDetails()
-	value, exists := agentDetails["cacheUpdateTime"]
-	if value != nil {
-		sevenDaysAgo := time.Now().Add(7 * 24 * time.Hour)
+	agentInstance := agent.GetResourceManager().GetAgentResource()
+	agentDetails := agentInstance.GetSubResource(definitions.XAgentDetails)
 
-		currentCacheUpdateTime := time.Time{}
-		err := currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
-		if err != nil {
-			return err
-		}
-
-		// check to see if 7 days have passed since last refresh cache
-		if currentCacheUpdateTime.Before(sevenDaysAgo) {
-			rebuildCache = true
-		}
+	if agentDetails == nil {
+		// x-agent-details hasn't been established yet. Rebuild cache to populate cacheUpdateTime
+		rebuildCache = true
 	} else {
-		if !exists {
-			rebuildCache = true
+		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
+		if value != nil {
+			// get current cacheUpdateTime from x-agent-details
+			convToTimestamp, _ := strconv.ParseInt(value.(string), 10, 64)
+			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
+			plusSevenDays := currentCacheUpdateTime.Add(7 * 24 * time.Hour)
+
+			// check to see if 7 days have passed since last refresh cache
+			if time.Now().UnixNano() > plusSevenDays.UnixNano() {
+				rebuildCache = true
+			}
+		} else {
+			if !exists {
+				// x-agent-details exists, however, cacheUpdateTime key doesn't exist. Rebuild cache to populate cacheUpdateTime
+				rebuildCache = true
+			}
 		}
 	}
 

@@ -2,13 +2,14 @@ package agent
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -140,31 +141,31 @@ func (es *EventSync) RebuildCache() {
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
 	}
-	// update cacheUpdateTime in agent resource
-	if agent.agentResourceManager != nil {
-		agentDetails := agent.agentResourceManager.GetAgentDetails()
 
-		value, exits := agentDetails["cacheUpdateTime"]
-		if !exits {
-			// cache update time hasn't been established yet.  Update time to 7 days from current now time
-			currentTime := time.Now().Add(7 * 24 * time.Hour)
-			cacheUpdateTime, _ := apiv1.Time(currentTime).MarshalJSON()
-
-			agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
-		} else {
-			// if the cache update time already exists, update to 7 days from current cache update time
-			currentCacheUpdateTime := time.Time{}
-			currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
-
-			currentCacheUpdateTime.Add(7 * 24 * time.Hour)
-			cacheUpdateTime, _ := apiv1.Time(currentCacheUpdateTime).MarshalJSON()
-
-			agent.agentResourceManager.AddUpdateAgentDetails("cacheUpdateTime", string(cacheUpdateTime))
-		}
-
-		util.SetAgentDetails(agent.agentResourceManager.GetAgentResourceType(), agentDetails)
-		agent.apicClient.CreateSubResource(agent.agentResourceManager.GetAgentResource().ResourceMeta, agent.agentResourceManager.GetAgentResource().SubResources)
+	agentInstance := agent.agentResourceManager.GetAgentResourceType()
+	agentDetails := util.GetAgentDetails(agentInstance)
+	if agentDetails == nil {
+		agentDetails = make(map[string]interface{})
 	}
+
+	cacheUpdateTime := int64(0)
+
+	// update cacheUpdateTime in agent resource
+	value, exits := agentDetails["cacheUpdateTime"]
+	if !exits {
+		// cache update time hasn't been established yet.  Update time to 7 days from current now time
+		currentTime := time.Now().Add(7 * 24 * time.Hour)
+		cacheUpdateTime = currentTime.UnixNano()
+	} else {
+		// if the cache update time already exists, update to 7 days from current cache update time
+		parsedTime, _ := time.Parse(time.RFC3339, value.(string))
+		parsedTime.Add(7 * 24 * time.Hour)
+		cacheUpdateTime = parsedTime.UnixNano()
+	}
+
+	// persist cacheUpdateTime
+	agentDetails["cacheUpdateTime"] = strconv.FormatInt(cacheUpdateTime, 10)
+	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: agentDetails})
 }
 
 func (es *EventSync) startCentralEventProcessor() error {

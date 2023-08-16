@@ -131,28 +131,11 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		LastActivityTime:       getTimestamp(),
 		SdkVersion:             config.SDKVersion,
 	}
-	/*
-		rebuildCache := false
-		value, exits := a.agentDetails["cacheUpdateTime"]
-		if exits {
-			sevenDaysAgo := time.Now().Add(7 * 24 * time.Hour)
+	// add any details
+	if len(a.agentDetails) > 0 {
+		util.SetAgentDetails(agentInstance, a.agentDetails)
+	}
 
-			currentCacheUpdateTime := time.Time{}
-			err := currentCacheUpdateTime.UnmarshalJSON([]byte(value.(string)))
-			if err != nil {
-				return err
-			}
-
-			// check to see if 7 days have passed since last refresh cache
-			if currentCacheUpdateTime.Before(sevenDaysAgo) {
-				rebuildCache = true
-			}
-		}
-
-		if rebuildCache {
-			// rebuild cache
-		}
-	*/
 	err := a.apicClient.CreateSubResource(agentInstance.ResourceMeta, agentInstance.SubResources)
 	return err
 }
