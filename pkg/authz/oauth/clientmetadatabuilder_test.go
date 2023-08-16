@@ -143,6 +143,42 @@ func TestClientBuilder(t *testing.T) {
 			tlsClientAuthSanIP:    "san-ip",
 			tlsClientAuthSanURI:   "san-uri",
 		},
+		{
+			name:                "test_build_with_tls_client_auth_valid_jwks_with_no_san_dns",
+			grantTypes:          []string{GrantTypeClientCredentials},
+			tokenAuthMethod:     config.TLSClientAuth,
+			responseType:        []string{AuthResponseToken},
+			certificate:         certificate,
+			certificateMetadata: TLSClientAuthSanDNS,
+			expectErr:           true,
+		},
+		{
+			name:                "test_build_with_tls_client_auth_valid_jwks_with_no_san_email",
+			grantTypes:          []string{GrantTypeClientCredentials},
+			tokenAuthMethod:     config.TLSClientAuth,
+			responseType:        []string{AuthResponseToken},
+			certificate:         certificate,
+			certificateMetadata: TLSClientAuthSanEmail,
+			expectErr:           true,
+		},
+		{
+			name:                "test_build_with_tls_client_auth_valid_jwks_with_no_san_ip",
+			grantTypes:          []string{GrantTypeClientCredentials},
+			tokenAuthMethod:     config.TLSClientAuth,
+			responseType:        []string{AuthResponseToken},
+			certificate:         certificate,
+			certificateMetadata: TLSClientAuthSanIP,
+			expectErr:           true,
+		},
+		{
+			name:                "test_build_with_tls_client_auth_valid_jwks_with_no_san_uri",
+			grantTypes:          []string{GrantTypeClientCredentials},
+			tokenAuthMethod:     config.TLSClientAuth,
+			responseType:        []string{AuthResponseToken},
+			certificate:         certificate,
+			certificateMetadata: TLSClientAuthSanURI,
+			expectErr:           true,
+		},
 	}
 	for _, tc := range cases {
 		builder := NewClientMetadataBuilder().

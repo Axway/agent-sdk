@@ -215,12 +215,24 @@ func (b *clientBuilder) setTLSClientAuthProperties() error {
 
 		switch b.certificateMetadata {
 		case TLSClientAuthSanDNS:
+			if b.tlsClientAuthSanDNS == "" {
+				return fmt.Errorf("no value provided for tls_client_auth_san_dns")
+			}
 			b.idpClientMetadata.TLSClientAuthSanDNS = b.tlsClientAuthSanDNS
 		case TLSClientAuthSanEmail:
+			if b.tlsClientAuthSanEmail == "" {
+				return fmt.Errorf("no value provided for tls_client_auth_san_email")
+			}
 			b.idpClientMetadata.TLSClientAuthSanEmail = b.tlsClientAuthSanEmail
 		case TLSClientAuthSanIP:
+			if b.tlsClientAuthSanIP == "" {
+				return fmt.Errorf("no value provided for tls_client_auth_san_ip")
+			}
 			b.idpClientMetadata.TLSClientAuthSanIP = b.tlsClientAuthSanIP
 		case TLSClientAuthSanURI:
+			if b.tlsClientAuthSanURI == "" {
+				return fmt.Errorf("no value provided for tls_client_auth_san_uri")
+			}
 			b.idpClientMetadata.TLSClientAuthSanURI = b.tlsClientAuthSanURI
 		default:
 			b.idpClientMetadata.TLSClientAuthSubjectDN = subjectDN

@@ -114,3 +114,96 @@ func TestGetPlatformTokensTimeout(t *testing.T) {
 	_, err = ac.GetToken()
 	assert.NotNil(t, err)
 }
+
+func TestAuthClientTypes(t *testing.T) {
+	s := NewMockIDPServer()
+	defer s.Close()
+	keyReader := NewKeyReader(
+		"testdata/private_key.pem",
+		"testdata/publickey",
+		"",
+	)
+	privateKey, keyErr := keyReader.GetPrivateKey()
+	assert.Nil(t, keyErr)
+
+	publicKey, keyErr := keyReader.GetPublicKey()
+	assert.Nil(t, keyErr)
+
+	cases := []struct {
+		name                             string
+		tokenReqWithAuthorization        bool
+		typedAuthOpt                     AuthClientOption
+		expectedTokenReqClientID         string
+		expectedTokenReqClientSecret     string
+		expectedTokenReqClientAssertType string
+		expectedTokenReqScope            string
+	}{
+		{
+			name:                      "test",
+			typedAuthOpt:              WithClientSecretBasicAuth("test-id", "test-secret", "test-scope"),
+			tokenReqWithAuthorization: true,
+			expectedTokenReqScope:     "test-scope",
+		},
+		{
+			name:                         "test",
+			typedAuthOpt:                 WithClientSecretPostAuth("test-id", "test-secret", "test-scope"),
+			expectedTokenReqClientID:     "test-id",
+			expectedTokenReqClientSecret: "test-secret",
+			expectedTokenReqScope:        "test-scope",
+		},
+		{
+			name:                             "test",
+			typedAuthOpt:                     WithClientSecretJwtAuth("test-id", "test-secret", "test-scope", "", "aud"),
+			expectedTokenReqClientID:         "test-id",
+			expectedTokenReqScope:            "test-scope",
+			expectedTokenReqClientAssertType: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+		},
+		{
+			name:                             "test",
+			typedAuthOpt:                     WithKeyPairAuth("test-id", "", "aud", privateKey, publicKey, "test-scope"),
+			expectedTokenReqScope:            "test-scope",
+			expectedTokenReqClientAssertType: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+		},
+		{
+			name:                     "test",
+			typedAuthOpt:             WithTLSClientAuth("test-id", "test-scope"),
+			expectedTokenReqClientID: "test-id",
+			expectedTokenReqScope:    "test-scope",
+		},
+	}
+	for _, tc := range cases {
+		s.SetTokenResponse("token", 3*time.Second, http.StatusOK)
+		apiClient := api.NewClientWithTimeout(config.NewTLSConfig(), "", time.Second)
+		opts := []AuthClientOption{WithServerName("testServer"), tc.typedAuthOpt}
+		ac, err := NewAuthClient(s.GetTokenURL(), apiClient, opts...)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, ac)
+
+		token, err := ac.GetToken()
+		assert.Nil(t, err)
+		assert.Equal(t, "token", token)
+		if tc.tokenReqWithAuthorization {
+			headers := s.GetTokenRequestHeaders()
+			authHeaderVal := headers.Get("Authorization")
+			assert.NotEmpty(t, authHeaderVal)
+		}
+		tokenReqValues := s.GetTokenRequestValues()
+
+		grantType := tokenReqValues.Get("grant_type")
+		assert.Equal(t, "client_credentials", grantType)
+
+		clientID := tokenReqValues.Get("client_id")
+		assert.Equal(t, tc.expectedTokenReqClientID, clientID)
+
+		clientSecret := tokenReqValues.Get("client_secret")
+		assert.Equal(t, tc.expectedTokenReqClientSecret, clientSecret)
+
+		clientAssertType := tokenReqValues.Get("client_assertion_type")
+		assert.Equal(t, tc.expectedTokenReqClientAssertType, clientAssertType)
+
+		tokenScope := tokenReqValues.Get("scope")
+		assert.Equal(t, tc.expectedTokenReqScope, tokenScope)
+
+	}
+}
