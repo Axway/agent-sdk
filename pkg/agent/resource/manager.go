@@ -2,6 +2,7 @@ package resource
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
@@ -22,7 +24,6 @@ type Manager interface {
 	SetAgentResource(agentResource *apiv1.ResourceInstance)
 	FetchAgentResource() error
 	UpdateAgentStatus(status, prevStatus, message string) error
-	GetAgentDetails() map[string]interface{}
 	AddUpdateAgentDetails(key, value string)
 	GetAgentResourceType() *v1.ResourceInstance
 }
@@ -131,13 +132,57 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		LastActivityTime:       getTimestamp(),
 		SdkVersion:             config.SDKVersion,
 	}
+
+	timeToRebuild, err := a.shouldRebuildCache()
+	if timeToRebuild {
+
+	}
+
 	// add any details
 	if len(a.agentDetails) > 0 {
 		util.SetAgentDetails(agentInstance, a.agentDetails)
 	}
 
-	err := a.apicClient.CreateSubResource(agentInstance.ResourceMeta, agentInstance.SubResources)
+	err = a.apicClient.CreateSubResource(agentInstance.ResourceMeta, agentInstance.SubResources)
 	return err
+}
+
+// See if we need to rebuildCache
+//
+// 1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
+// 2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
+func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
+	rebuildCache := false
+	agentInstance := a.GetAgentResource()
+	agentDetails := agentInstance.GetSubResource(definitions.XAgentDetails)
+
+	if agentDetails == nil {
+		// x-agent-details hasn't been established yet. Rebuild cache to populate cacheUpdateTime
+		rebuildCache = true
+	} else {
+		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
+		if value != nil {
+			// get current cacheUpdateTime from x-agent-details
+			convToTimestamp, err := strconv.ParseInt(value.(string), 10, 64)
+			if err != nil {
+				return false, err
+			}
+			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
+			plusSevenDays := currentCacheUpdateTime.Add(7 * 24 * time.Hour)
+
+			// check to see if 7 days have passed since last refresh cache
+			if time.Now().UnixNano() > plusSevenDays.UnixNano() {
+				rebuildCache = true
+			}
+		} else {
+			if !exists {
+				// x-agent-details exists, however, cacheUpdateTime key doesn't exist. Rebuild cache to populate cacheUpdateTime
+				rebuildCache = true
+			}
+		}
+	}
+
+	return rebuildCache, nil
 }
 
 // GetAgentDetails - Gets current agent details
