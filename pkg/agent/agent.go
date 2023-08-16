@@ -434,6 +434,11 @@ func GetAgentResource() *apiV1.ResourceInstance {
 	return agent.agentResourceManager.GetAgentResource()
 }
 
+// GetAgentResource - Returns Agent resource
+func GetAgentResourceManager() resource.Manager {
+	return agent.agentResourceManager
+}
+
 // AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource
 func AddUpdateAgentDetails(key, value string) {
 	if agent.agentResourceManager != nil {

@@ -17,6 +17,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+type SyncCache interface {
+	RebuildCache()
+}
+
 // Manager - interface to manage agent resource
 type Manager interface {
 	OnConfigChange(cfg config.CentralConfig, apicClient apic.Client)
@@ -26,6 +30,7 @@ type Manager interface {
 	UpdateAgentStatus(status, prevStatus, message string) error
 	AddUpdateAgentDetails(key, value string)
 	GetAgentResourceType() *v1.ResourceInstance
+	SetCacheRebuilder(rebuildCache SyncCache)
 }
 
 type executeAPIClient interface {
@@ -42,6 +47,7 @@ type agentResourceManager struct {
 	agentResourceChangeHandler func()
 	agentDetails               map[string]interface{}
 	logger                     log.FieldLogger
+	rebuildCache               SyncCache
 }
 
 // NewAgentResourceManager - Create a new agent resource manager
@@ -86,6 +92,10 @@ func (a *agentResourceManager) SetAgentResource(agentResource *apiv1.ResourceIns
 		a.agentResource = agentResource
 		a.onResourceChange()
 	}
+}
+
+func (a *agentResourceManager) SetCacheRebuilder(rebuildCache SyncCache) {
+	a.rebuildCache = rebuildCache
 }
 
 // FetchAgentResource - Gets the agent resource using API call to apiserver
@@ -134,8 +144,8 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	}
 
 	timeToRebuild, err := a.shouldRebuildCache()
-	if timeToRebuild {
-
+	if timeToRebuild && a.rebuildCache != nil {
+		a.rebuildCache.RebuildCache()
 	}
 
 	// add any details
