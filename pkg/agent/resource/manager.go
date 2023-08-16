@@ -17,7 +17,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-type SyncCache interface {
+type EventSyncCache interface {
 	RebuildCache()
 }
 
@@ -30,7 +30,7 @@ type Manager interface {
 	UpdateAgentStatus(status, prevStatus, message string) error
 	AddUpdateAgentDetails(key, value string)
 	GetAgentResourceType() *v1.ResourceInstance
-	SetCacheRebuilder(rebuildCache SyncCache)
+	SetRebuildCacheFunc(rebuildCache EventSyncCache)
 }
 
 type executeAPIClient interface {
@@ -47,7 +47,7 @@ type agentResourceManager struct {
 	agentResourceChangeHandler func()
 	agentDetails               map[string]interface{}
 	logger                     log.FieldLogger
-	rebuildCache               SyncCache
+	rebuildCache               EventSyncCache
 }
 
 // NewAgentResourceManager - Create a new agent resource manager
@@ -94,7 +94,7 @@ func (a *agentResourceManager) SetAgentResource(agentResource *apiv1.ResourceIns
 	}
 }
 
-func (a *agentResourceManager) SetCacheRebuilder(rebuildCache SyncCache) {
+func (a *agentResourceManager) SetRebuildCacheFunc(rebuildCache EventSyncCache) {
 	a.rebuildCache = rebuildCache
 }
 
@@ -143,6 +143,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		SdkVersion:             config.SDKVersion,
 	}
 
+	// See if we need to rebuildCache
 	timeToRebuild, err := a.shouldRebuildCache()
 	if timeToRebuild && a.rebuildCache != nil {
 		a.rebuildCache.RebuildCache()
@@ -157,8 +158,6 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	return err
 }
 
-// See if we need to rebuildCache
-//
 // 1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
 // 2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
 func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
