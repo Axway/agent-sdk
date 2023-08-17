@@ -346,8 +346,7 @@ func removeUnsupportedTypes(values []string, supportedTypes map[string]bool, def
 
 func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) []string {
 	tokenAuthMethods, defaultTokenMethod := removeUnsupportedTypes(
-		// p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
-		[]string{"private_key_jwt", "self_signed_tls_client_auth"}, supportedIDPTokenAuthMethods, config.ClientSecretBasic)
+		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
 
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
