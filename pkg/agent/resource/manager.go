@@ -166,6 +166,7 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 
 	if agentDetails == nil {
 		// x-agent-details hasn't been established yet. Rebuild cache to populate cacheUpdateTime
+		a.logger.Trace("create x-agent-detail subresource and add key 'cacheUpdateTime'")
 		rebuildCache = true
 	} else {
 		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
@@ -177,14 +178,17 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 			}
 			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
 			plusSevenDays := currentCacheUpdateTime.Add(7 * 24 * time.Hour)
+			a.logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, plusSevenDays.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 
 			// check to see if 7 days have passed since last refresh cache
 			if time.Now().UnixNano() > plusSevenDays.UnixNano() {
+				a.logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
 				rebuildCache = true
 			}
 		} else {
 			if !exists {
 				// x-agent-details exists, however, cacheUpdateTime key doesn't exist. Rebuild cache to populate cacheUpdateTime
+				a.logger.Trace("update x-agent-detail subresource and add key 'cacheUpdateTime'")
 				rebuildCache = true
 			}
 		}

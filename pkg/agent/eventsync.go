@@ -137,6 +137,7 @@ func (es *EventSync) initCache() error {
 
 func (es *EventSync) RebuildCache() {
 	// SDB - NOTE : Do we need to pause jobs.
+	logger.Info("rebuild cache")
 	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
