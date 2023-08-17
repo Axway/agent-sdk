@@ -339,6 +339,7 @@ func (c *agentRootCommand) finishInit() error {
 		if err := eventSync.SyncCache(); err != nil {
 			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
 		}
+		// set the rebuild function in the agent resource manager
 		agent.GetAgentResourceManager().SetRebuildCacheFunc(eventSync)
 
 	}

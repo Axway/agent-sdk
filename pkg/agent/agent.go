@@ -434,7 +434,7 @@ func GetAgentResource() *apiV1.ResourceInstance {
 	return agent.agentResourceManager.GetAgentResource()
 }
 
-// GetAgentResource - Returns Agent resource
+// GetAgentResourceManager - Returns Agent resource
 func GetAgentResourceManager() resource.Manager {
 	return agent.agentResourceManager
 }
