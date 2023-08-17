@@ -227,6 +227,24 @@ func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crd
 	}
 }
 
+func idpUsesPrivateKeyJWTAuth(tokenAuthMethods []string) bool {
+	for _, s := range tokenAuthMethods {
+		if s == config.PrivateKeyJWT {
+			return true
+		}
+	}
+	return false
+}
+
+func idpUsesTLSClientAuth(tokenAuthMethods []string) bool {
+	for _, s := range tokenAuthMethods {
+		if s == config.TLSClientAuth || s == config.SelfSignedTLSClientAuth {
+			return true
+		}
+	}
+	return false
+}
+
 // WithCRDForIDP - set the schema properties using the provider metadata
 func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
@@ -240,11 +258,22 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 		setIDPTokenURLSchemaProperty(p, c)
 		setIDPScopesSchemaProperty(p, scopes, c)
 		setIDPGrantTypesSchemaProperty(p, c)
-		setIDPTokenAuthMethodSchemaProperty(p, c)
 		setIDPRedirectURIsSchemaProperty(p, c)
-		setIDPJWKSURISchemaProperty(p, c)
-		setIDPJWKSSchemaProperty(p, c)
-		setIDPTLSClientAuthSchemaProperty(p, c)
+		tokenAuthMethods := setIDPTokenAuthMethodSchemaProperty(p, c)
+		usePrivateKeyJWTAuth := idpUsesPrivateKeyJWTAuth(tokenAuthMethods)
+		useTLSClientAuth := idpUsesTLSClientAuth(tokenAuthMethods)
+
+		if usePrivateKeyJWTAuth || useTLSClientAuth {
+			setIDPJWKSURISchemaProperty(p, c)
+		}
+
+		if usePrivateKeyJWTAuth {
+			setIDPJWKSSchemaProperty(p, c)
+		}
+
+		if useTLSClientAuth {
+			setIDPTLSClientAuthSchemaProperty(p, c)
+		}
 	}
 }
 
@@ -315,9 +344,10 @@ func removeUnsupportedTypes(values []string, supportedTypes map[string]bool, def
 	return result, defaultType
 }
 
-func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	tokenAuthMethod, defaultTokenMethod := removeUnsupportedTypes(
-		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
+func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) []string {
+	tokenAuthMethods, defaultTokenMethod := removeUnsupportedTypes(
+		// p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
+		[]string{"private_key_jwt", "self_signed_tls_client_auth"}, supportedIDPTokenAuthMethods, config.ClientSecretBasic)
 
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
@@ -325,7 +355,8 @@ func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions)
 			SetLabel("Token Auth Method").
 			IsString().
 			SetDefaultValue(defaultTokenMethod).
-			SetEnumValues(tokenAuthMethod))
+			SetEnumValues(tokenAuthMethods))
+	return tokenAuthMethods
 }
 
 func setIDPRedirectURIsSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
