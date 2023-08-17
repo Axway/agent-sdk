@@ -258,11 +258,11 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 		setIDPTokenURLSchemaProperty(p, c)
 		setIDPScopesSchemaProperty(p, scopes, c)
 		setIDPGrantTypesSchemaProperty(p, c)
-		setIDPRedirectURIsSchemaProperty(p, c)
 		tokenAuthMethods := setIDPTokenAuthMethodSchemaProperty(p, c)
+		setIDPRedirectURIsSchemaProperty(p, c)
+
 		usePrivateKeyJWTAuth := idpUsesPrivateKeyJWTAuth(tokenAuthMethods)
 		useTLSClientAuth := idpUsesTLSClientAuth(tokenAuthMethods)
-
 		if usePrivateKeyJWTAuth || useTLSClientAuth {
 			setIDPJWKSURISchemaProperty(p, c)
 		}
