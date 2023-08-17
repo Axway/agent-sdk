@@ -281,38 +281,50 @@ func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilder
 }
 
 func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	grantType := removeUnsupportedTypes(
-		p.GetSupportedGrantTypes(), supportedIDPGrantTypes)
+	grantType, defaultGrantType := removeUnsupportedTypes(
+		p.GetSupportedGrantTypes(), supportedIDPGrantTypes, oauth.GrantTypeClientCredentials)
 
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthGrantType).
 			SetLabel("Grant Type").
 			IsString().
-			SetDefaultValue(oauth.GrantTypeClientCredentials).
+			SetDefaultValue(defaultGrantType).
 			SetEnumValues(grantType))
 }
 
-func removeUnsupportedTypes(values []string, supportedTypes map[string]bool) []string {
+func removeUnsupportedTypes(values []string, supportedTypes map[string]bool, defaultType string) ([]string, string) {
 	var result []string
+	defaultSupportedType := ""
+	defaultExists := false
 	for _, s := range values {
 		if ok := supportedTypes[s]; ok {
+			if s == defaultType {
+				defaultExists = true
+			}
+			if defaultSupportedType == "" {
+				defaultSupportedType = s
+			}
 			result = append(result, s)
 		}
 	}
-	return result
+
+	if !defaultExists {
+		defaultType = defaultSupportedType
+	}
+	return result, defaultType
 }
 
 func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	tokenAuthMethod := removeUnsupportedTypes(
-		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods)
+	tokenAuthMethod, defaultTokenMethod := removeUnsupportedTypes(
+		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
 
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTokenAuthMethod).
 			SetLabel("Token Auth Method").
 			IsString().
-			SetDefaultValue(config.ClientSecretBasic).
+			SetDefaultValue(defaultTokenMethod).
 			SetEnumValues(tokenAuthMethod))
 }
 
