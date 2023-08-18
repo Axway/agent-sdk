@@ -102,7 +102,7 @@ func WithClientSecretPostAuth(clientID, clientSecret, scope string) AuthClientOp
 }
 
 // WithClientSecretJwtAuth - sets up to use client secret authenticator
-func WithClientSecretJwtAuth(clientID, clientSecret, scope, issuer, aud string) AuthClientOption {
+func WithClientSecretJwtAuth(clientID, clientSecret, scope, issuer, aud, signingMethod string) AuthClientOption {
 	return func(opt *authClientOptions) {
 		opt.authenticator = &clientSecretJwtAuthenticator{
 			clientID,
@@ -110,12 +110,13 @@ func WithClientSecretJwtAuth(clientID, clientSecret, scope, issuer, aud string) 
 			scope,
 			issuer,
 			aud,
+			signingMethod,
 		}
 	}
 }
 
 // WithKeyPairAuth - sets up to use public/private key pair authenticator
-func WithKeyPairAuth(clientID, issuer, audience string, privKey *rsa.PrivateKey, publicKey []byte, scope string) AuthClientOption {
+func WithKeyPairAuth(clientID, issuer, audience string, privKey *rsa.PrivateKey, publicKey []byte, scope, signingMethod string) AuthClientOption {
 	return func(opt *authClientOptions) {
 		opt.authenticator = &keyPairAuthenticator{
 			clientID,
@@ -124,6 +125,7 @@ func WithKeyPairAuth(clientID, issuer, audience string, privKey *rsa.PrivateKey,
 			privKey,
 			publicKey,
 			scope,
+			signingMethod,
 		}
 	}
 }

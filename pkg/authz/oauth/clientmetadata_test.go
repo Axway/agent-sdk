@@ -5,15 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClientMetadataSerialization(t *testing.T) {
 	c, err := NewClientMetadataBuilder().
 		SetClientName("test").
-		SetGrantTypes([]string{"client_credentials", "authorization_code"}).
-		SetTokenEndpointAuthMethod("client_secret_jwt").
-		SetResponseType([]string{"token"}).
+		SetGrantTypes([]string{GrantTypeClientCredentials, GrantTypeAuthorizationCode}).
+		SetTokenEndpointAuthMethod(config.ClientSecretJWT).
+		SetResponseType([]string{AuthResponseToken}).
 		SetRedirectURIs([]string{"http://localhost"}).
 		SetScopes([]string{"scope1", "scope2"}).
 		SetLogoURI("http://localhost").

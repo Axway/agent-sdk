@@ -9,17 +9,18 @@ import (
 )
 
 type clientSecretJwtAuthenticator struct {
-	clientID     string
-	clientSecret string
-	scope        string
-	issuer       string
-	aud          string
+	clientID      string
+	clientSecret  string
+	scope         string
+	issuer        string
+	aud           string
+	signingMethod string
 }
 
 // prepareInitialToken prepares a token for an access request
 func (p *clientSecretJwtAuthenticator) prepareInitialToken() (string, error) {
 	now := time.Now()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+	token := jwt.NewWithClaims(getSigningMethod(p.signingMethod, jwt.SigningMethodHS256), jwt.StandardClaims{
 		Issuer:    p.issuer,
 		Subject:   p.clientID,
 		Audience:  p.aud,
@@ -43,7 +44,7 @@ func (p *clientSecretJwtAuthenticator) prepareRequest() (url.Values, map[string]
 	}
 
 	v := url.Values{
-		metaGrantType:           []string{grantClientCredentials},
+		metaGrantType:           []string{GrantTypeClientCredentials},
 		metaClientID:            []string{p.clientID},
 		metaClientAssertionType: []string{assertionTypeJWT},
 		metaClientAssertion:     []string{requestToken},

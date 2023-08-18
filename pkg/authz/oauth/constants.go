@@ -23,12 +23,12 @@ const (
 	mimeApplicationFormURLEncoded = "application/x-www-form-urlencoded"
 	mimeApplicationJSON           = "application/json"
 
-	grantAuthorizationCode = "authorization_code"
-	grantImplicit          = "implicit"
-	grantClientCredentials = "client_credentials"
+	GrantTypeAuthorizationCode = "authorization_code"
+	GrantTypeImplicit          = "implicit"
+	GrantTypeClientCredentials = "client_credentials"
 
-	authResponseToken = "token"
-	authResponseCode  = "code"
+	AuthResponseToken = "token"
+	AuthResponseCode  = "code"
 
 	assertionTypeJWT = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 
@@ -38,4 +38,10 @@ const (
 	metaScope               = "scope"
 	metaClientAssertionType = "client_assertion_type"
 	metaClientAssertion     = "client_assertion"
+
+	TLSClientAuthSubjectDN = "tls_client_auth_subject_dn"
+	TLSClientAuthSanDNS    = "tls_client_auth_san_dns"
+	TLSClientAuthSanEmail  = "tls_client_auth_san_email"
+	TLSClientAuthSanIP     = "tls_client_auth_san_ip"
+	TLSClientAuthSanURI    = "tls_client_auth_san_uri"
 )

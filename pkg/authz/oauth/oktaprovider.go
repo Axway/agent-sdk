@@ -24,7 +24,7 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 	}
 
 	for _, grantTypes := range clientRequest.GrantTypes {
-		if grantTypes != grantClientCredentials {
+		if grantTypes != GrantTypeClientCredentials {
 			appType = oktaAppTypeWeb
 		}
 	}

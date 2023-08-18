@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	issuerKeyPrefix  = "issuer:"
-	tokenEpKeyPrefix = "tokenEp:"
-	authEpKeyPrefix  = "authEp:"
+	issuerKeyPrefix      = "issuer:"
+	tokenEpKeyPrefix     = "tokenEp:"
+	mtlsTokenEpKeyPrefix = "mtlsTokenEp:"
+	authEpKeyPrefix      = "authEp:"
 )
 
 // ProviderRegistry - interface for provider registry
@@ -55,6 +56,7 @@ func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecf
 	name := p.GetName()
 	issuer := p.GetIssuer()
 	tokenEndpoint := p.GetTokenEndpoint()
+	mtlsTokenEndpoint := p.GetMTLSTokenEndpoint()
 	authEndPoint := p.GetAuthorizationEndpoint()
 
 	r.logger.
@@ -67,6 +69,9 @@ func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecf
 	r.providerMap.Set(name, p)
 	r.providerMap.SetSecondaryKey(name, issuerKeyPrefix+issuer)
 	r.providerMap.SetSecondaryKey(name, tokenEpKeyPrefix+tokenEndpoint)
+	if mtlsTokenEndpoint != "" {
+		r.providerMap.SetSecondaryKey(name, mtlsTokenEpKeyPrefix+mtlsTokenEndpoint)
+	}
 	r.providerMap.SetSecondaryKey(name, authEpKeyPrefix+authEndPoint)
 
 	return nil
@@ -93,7 +98,11 @@ func (r *providerRegistry) GetProviderByIssuer(issuer string) (Provider, error) 
 
 // GetProviderByTokenEndpoint - returns the provider from registry based on the IDP token endpoint
 func (r *providerRegistry) GetProviderByTokenEndpoint(tokenEndpoint string) (Provider, error) {
-	return r.getProviderBySecondaryKey(tokenEpKeyPrefix + tokenEndpoint)
+	p, err := r.getProviderBySecondaryKey(mtlsTokenEpKeyPrefix + tokenEndpoint)
+	if err != nil {
+		p, err = r.getProviderBySecondaryKey(tokenEpKeyPrefix + tokenEndpoint)
+	}
+	return p, err
 }
 
 // GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
