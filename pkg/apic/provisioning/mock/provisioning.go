@@ -7,10 +7,11 @@ import (
 
 type MockApplicationRequest struct {
 	provisioning.ApplicationRequest
-	ID       string
-	AppName  string
-	Details  map[string]string
-	TeamName string
+	ID            string
+	AppName       string
+	Details       map[string]string
+	TeamName      string
+	ConsumerOrgID string
 }
 
 func (m MockApplicationRequest) GetID() string {
@@ -26,6 +27,10 @@ func (m MockApplicationRequest) GetApplicationDetailsValue(key string) string {
 }
 func (m MockApplicationRequest) GetTeamName() string {
 	return m.TeamName
+}
+
+func (m MockApplicationRequest) GetConsumerOrgID() string {
+	return m.ConsumerOrgID
 }
 
 type MockCredentialRequest struct {
