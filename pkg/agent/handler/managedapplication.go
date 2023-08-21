@@ -64,6 +64,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		managedAppName: app.Name,
 		teamName:       h.getTeamName(ctx, app.Owner),
 		data:           util.GetAgentDetails(app),
+		consumerOrgID:  h.getConsumerOrgID(app),
 		id:             app.Metadata.ID,
 	}
 
@@ -150,9 +151,18 @@ func (h *managedApplication) getTeamName(_ context.Context, owner *apiv1.Owner) 
 	return teamName
 }
 
+func (h *managedApplication) getConsumerOrgID(app *management.ManagedApplication) string {
+	consumerOrgID := ""
+	if app != nil && app.Marketplace.Resource.Owner != nil && app.Marketplace.Resource.Owner.Organization.ID != "" {
+		consumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
+	}
+	return consumerOrgID
+}
+
 type provManagedApp struct {
 	managedAppName string
 	teamName       string
+	consumerOrgID  string
 	id             string
 	data           map[string]interface{}
 }
@@ -179,4 +189,9 @@ func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 	}
 
 	return util.ToString(a.data[key])
+}
+
+// GetConsumerOrgID returns the ID of the consumer org for the managed application
+func (a provManagedApp) GetConsumerOrgID() string {
+	return a.consumerOrgID
 }
