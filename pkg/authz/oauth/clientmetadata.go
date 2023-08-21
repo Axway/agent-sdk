@@ -41,6 +41,10 @@ type ClientMetadata interface {
 	GetJwksURI() string
 	GetJwks() map[string]interface{}
 	GetExtraProperties() map[string]string
+	GetTLSClientAuthSanDNS() string
+	GetTLSClientAuthSanEmail() string
+	GetTLSClientAuthSanIP() string
+	GetTLSClientAuthSanURI() string
 }
 
 type clientMetadata struct {
@@ -56,12 +60,18 @@ type clientMetadata struct {
 	ResponseTypes           []string `json:"response_types,omitempty"`
 	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty"`
 
-	ClientURI       string                 `json:"client_uri,omitempty"`
-	RedirectURIs    []string               `json:"redirect_uris,omitempty"`
-	JwksURI         string                 `json:"jwks_uri,omitempty"`
-	Jwks            map[string]interface{} `json:"jwks,omitempty"`
-	LogoURI         string                 `json:"logo_uri,omitempty"`
-	extraProperties map[string]string      `json:"-"`
+	ClientURI              string                 `json:"client_uri,omitempty"`
+	RedirectURIs           []string               `json:"redirect_uris,omitempty"`
+	JwksURI                string                 `json:"jwks_uri,omitempty"`
+	Jwks                   map[string]interface{} `json:"jwks,omitempty"`
+	LogoURI                string                 `json:"logo_uri,omitempty"`
+	TLSClientAuthSubjectDN string                 `json:"tls_client_auth_subject_dn,omitempty"`
+	TLSClientAuthSanDNS    string                 `json:"tls_client_auth_san_dns,omitempty"`
+	TLSClientAuthSanEmail  string                 `json:"tls_client_auth_san_email,omitempty"`
+	TLSClientAuthSanIP     string                 `json:"tls_client_auth_san_ip,omitempty"`
+	TLSClientAuthSanURI    string                 `json:"tls_client_auth_san_uri,omitempty"`
+
+	extraProperties map[string]string `json:"-"`
 }
 
 var clientFields map[string]bool
@@ -150,6 +160,22 @@ func (c *clientMetadata) GetJwks() map[string]interface{} {
 
 func (c *clientMetadata) GetExtraProperties() map[string]string {
 	return c.extraProperties
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanDNS() string {
+	return c.TLSClientAuthSanDNS
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanEmail() string {
+	return c.TLSClientAuthSanEmail
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanIP() string {
+	return c.TLSClientAuthSanIP
+}
+
+func (c *clientMetadata) GetTLSClientAuthSanURI() string {
+	return c.TLSClientAuthSanURI
 }
 
 // MarshalJSON serialize the client metadata with provider metadata

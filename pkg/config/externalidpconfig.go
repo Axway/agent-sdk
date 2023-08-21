@@ -18,29 +18,30 @@ const (
 	TLSClientAuth           = "tls_client_auth"
 	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
 
-	propInsecureSkipVerify   = "insecureSkipVerify"
-	pathExternalIDP          = "agentFeatures.idp"
-	fldName                  = "name"
-	fldTitle                 = "title"
-	fldType                  = "type"
-	fldMetadataURL           = "metadataUrl"
-	fldExtraProperties       = "extraProperties"
-	fldScope                 = "scope"
-	fldGrantType             = "grantType"
-	fldAuthMethod            = "authMethod"
-	fldAuthResponseType      = "authResponseType"
-	fldAuthType              = "auth.type"
-	fldAuthAccessToken       = "auth.accessToken"
-	fldAuthClientID          = "auth.clientId"
-	fldAuthClientSecret      = "auth.clientSecret"
-	fldAuthClientScope       = "auth.clientScope"
-	fldAuthPrivateKey        = "auth.privateKey"
-	fldAuthPublicKey         = "auth.publicKey"
-	fldAuthKeyPassword       = "auth.keyPassword"
-	fldSSLInsecureSkipVerify = "ssl." + propInsecureSkipVerify
-	fldSSLRootCACertPath     = "ssl.rootCACertPath"
-	fldSSLClientCertPath     = "ssl.clientCertPath"
-	fldSSLClientKeyPath      = "ssl.clientKeyPath"
+	propInsecureSkipVerify    = "insecureSkipVerify"
+	pathExternalIDP           = "agentFeatures.idp"
+	fldName                   = "name"
+	fldTitle                  = "title"
+	fldType                   = "type"
+	fldMetadataURL            = "metadataUrl"
+	fldExtraProperties        = "extraProperties"
+	fldScope                  = "scope"
+	fldGrantType              = "grantType"
+	fldAuthMethod             = "authMethod"
+	fldAuthResponseType       = "authResponseType"
+	fldAuthType               = "auth.type"
+	fldAuthAccessToken        = "auth.accessToken"
+	fldAuthClientID           = "auth.clientId"
+	fldAuthClientSecret       = "auth.clientSecret"
+	fldAuthClientScope        = "auth.clientScope"
+	fldAuthPrivateKey         = "auth.privateKey"
+	fldAuthPublicKey          = "auth.publicKey"
+	fldAuthKeyPassword        = "auth.keyPassword"
+	fldAuthTokenSigningMethod = "auth.tokenSigningMethod"
+	fldSSLInsecureSkipVerify  = "ssl." + propInsecureSkipVerify
+	fldSSLRootCACertPath      = "ssl.rootCACertPath"
+	fldSSLClientCertPath      = "ssl.clientCertPath"
+	fldSSLClientKeyPath       = "ssl.clientKeyPath"
 )
 
 var configProperties = []string{
@@ -65,6 +66,7 @@ var configProperties = []string{
 	fldAuthPrivateKey,
 	fldAuthPublicKey,
 	fldAuthKeyPassword,
+	fldAuthTokenSigningMethod,
 }
 
 var validIDPAuthType = map[string]bool{
@@ -147,6 +149,8 @@ type IDPAuthConfig interface {
 	GetPublicKey() string
 	// GetKeyPassword() - public key to be used for private_key_jwt authentication
 	GetKeyPassword() string
+	// GetSigningMethod() - the token signing method for private_key_jwt authentication
+	GetTokenSigningMethod() string
 }
 
 // IDPConfig - interface for IdP provider config
@@ -179,14 +183,15 @@ type IDPConfig interface {
 
 // IDPAuthConfiguration - Structure to hold the IdP provider auth config
 type IDPAuthConfiguration struct {
-	Type         string `json:"type,omitempty"`
-	AccessToken  string `json:"accessToken,omitempty"`
-	ClientID     string `json:"clientId,omitempty"`
-	ClientSecret string `json:"clientSecret,omitempty"`
-	ClientScope  string `json:"clientScope,omitempty"`
-	PrivateKey   string `json:"privateKey,omitempty"`
-	PublicKey    string `json:"publicKey,omitempty"`
-	KeyPwd       string `json:"keyPassword,omitempty"`
+	Type               string `json:"type,omitempty"`
+	AccessToken        string `json:"accessToken,omitempty"`
+	ClientID           string `json:"clientId,omitempty"`
+	ClientSecret       string `json:"clientSecret,omitempty"`
+	ClientScope        string `json:"clientScope,omitempty"`
+	PrivateKey         string `json:"privateKey,omitempty"`
+	PublicKey          string `json:"publicKey,omitempty"`
+	KeyPwd             string `json:"keyPassword,omitempty"`
+	TokenSigningMethod string `json:"tokenSigningMethod,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -313,6 +318,11 @@ func (i *IDPAuthConfiguration) GetPublicKey() string {
 // GetKeyPassword -
 func (i *IDPAuthConfiguration) GetKeyPassword() string {
 	return i.KeyPwd
+}
+
+// GetTokenSigningMethod -
+func (i *IDPAuthConfiguration) GetTokenSigningMethod() string {
+	return i.TokenSigningMethod
 }
 
 // validate - Validates the IDP auth configuration

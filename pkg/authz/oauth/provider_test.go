@@ -19,13 +19,13 @@ func TestRegistration(t *testing.T) {
 		Type:        "okta",
 		MetadataURL: s.GetMetadataURL(),
 		AuthConfig: &config.IDPAuthConfiguration{
-			Type:         "client",
+			Type:         config.Client,
 			ClientID:     "test",
 			ClientSecret: "test",
 		},
-		GrantType:        "client_credentials",
+		GrantType:        GrantTypeClientCredentials,
 		ClientScopes:     "read,write",
-		AuthMethod:       "client_secret_basic",
+		AuthMethod:       config.ClientSecretBasic,
 		AuthResponseType: "",
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
 	}

@@ -2,9 +2,11 @@ package oauth
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"time"
 
@@ -20,6 +22,8 @@ type MockIDPServer interface {
 	SetMetadataResponseCode(statusCode int)
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
+	GetTokenRequestHeaders() http.Header
+	GetTokenRequestValues() url.Values
 	Close()
 }
 
@@ -31,6 +35,8 @@ type mockIDPServer struct {
 	tokenExpiry          time.Duration
 	serverMetadata       *AuthorizationServerMetadata
 	server               *httptest.Server
+	tokenReqHeaders      http.Header
+	tokenReqValues       url.Values
 }
 
 // NewMockIDPServer - creates a new mock IDP server for tests
@@ -65,6 +71,16 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 		resp.Write(buf)
 	}
 	if strings.Contains(req.RequestURI, "/token") {
+		m.tokenReqHeaders = req.Header
+		m.tokenReqValues = nil
+		reqBuf, _ := io.ReadAll(req.Body)
+		if len(reqBuf) != 0 {
+			fmt.Printf("%s\n", string(reqBuf))
+			val, err := url.ParseQuery(string(reqBuf))
+			if err == nil {
+				m.tokenReqValues = val
+			}
+		}
 		defer func() {
 			m.tokenResponseCode = http.StatusOK
 			m.accessToken = ""
@@ -93,7 +109,7 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 				return
 			}
 			resp.WriteHeader(http.StatusCreated)
-			clientBuf, _ := ioutil.ReadAll(req.Body)
+			clientBuf, _ := io.ReadAll(req.Body)
 			cl := &clientMetadata{}
 			json.Unmarshal(clientBuf, cl)
 			cl.ClientID = uuid.New().String()
@@ -143,6 +159,14 @@ func (m *mockIDPServer) SetTokenResponse(accessToken string, expiry time.Duratio
 
 func (m *mockIDPServer) SetRegistrationResponseCode(statusCode int) {
 	m.registerResponseCode = statusCode
+}
+
+func (m *mockIDPServer) GetTokenRequestHeaders() http.Header {
+	return m.tokenReqHeaders
+}
+
+func (m *mockIDPServer) GetTokenRequestValues() url.Values {
+	return m.tokenReqValues
 }
 
 func (m *mockIDPServer) Close() {

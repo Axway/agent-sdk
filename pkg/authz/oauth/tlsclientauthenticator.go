@@ -9,7 +9,7 @@ type tlsClientAuthenticator struct {
 
 func (p *tlsClientAuthenticator) prepareRequest() (url.Values, map[string]string, error) {
 	v := url.Values{
-		metaGrantType: []string{grantClientCredentials},
+		metaGrantType: []string{GrantTypeClientCredentials},
 		metaClientID:  []string{p.clientID},
 	}
 
