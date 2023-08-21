@@ -145,16 +145,8 @@ func (es *EventSync) RebuildCache() {
 
 	agentInstance := agent.agentResourceManager.GetAgentResource()
 
-	// x-agent-details "cacheUpdateTime" key doesn't exist, set current cache time to now
-	currentCacheUpdateTime := time.Now()
-	value, _ := util.GetAgentDetailsValue(agentInstance, "cacheUpdateTime")
-	// otherwise, get the current value from "cacheUpdateTime"
-	if value != "" {
-		currentCacheUpdateTime, _ = time.Parse(time.RFC3339, value)
-	}
-
-	// add 7 days to the "cacheUpdateTime"
-	nextCacheUpdateTime := currentCacheUpdateTime.Add(7 * 24 * time.Hour)
+	// add 7 days to the current date for the next rebuild cache
+	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
 
 	// persist cacheUpdateTime
 	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))

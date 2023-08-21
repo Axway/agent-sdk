@@ -2,6 +2,7 @@ package resource
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+// QA EnvVars
+const qaTriggerSevenDayRefreshCache = "QA_CENTRAL_TRIGGER_REFRESH_CACHE"
 
 type EventSyncCache interface {
 	RebuildCache()
@@ -177,11 +181,10 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 				return false, err
 			}
 			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
-			plusSevenDays := currentCacheUpdateTime.Add(7 * 24 * time.Hour)
-			a.logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, plusSevenDays.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+			a.logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 
-			// check to see if 7 days have passed since last refresh cache
-			if time.Now().UnixNano() > plusSevenDays.UnixNano() {
+			// check to see if 7 days have passed since last refresh cache. currentCacheUpdateTime is the date at the time we rebuilt cache plus 7 days(in event sync - RebuildCache)
+			if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
 				a.logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
 				rebuildCache = true
 			}
@@ -195,6 +198,16 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 	}
 
 	return rebuildCache, nil
+}
+
+func (a *agentResourceManager) getCurrentTime() int64 {
+	val := os.Getenv(qaTriggerSevenDayRefreshCache)
+	if val == "" {
+		// if this isn't set, then just pass back the current time
+		return time.Now().UnixNano()
+	}
+	// if this is set, then pass back the current time, plus 7 days to trigger a rebuild
+	return time.Now().Add(7 * 24 * time.Hour).UnixNano()
 }
 
 // GetAgentDetails - Gets current agent details
