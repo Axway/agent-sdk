@@ -419,12 +419,24 @@ func GetCacheManager() agentcache.Manager {
 	return agent.cacheManager
 }
 
+func GetResourceManager() resource.Manager {
+	if agent.agentResourceManager == nil {
+		return nil
+	}
+	return agent.agentResourceManager
+}
+
 // GetAgentResource - Returns Agent resource
 func GetAgentResource() *apiV1.ResourceInstance {
 	if agent.agentResourceManager == nil {
 		return nil
 	}
 	return agent.agentResourceManager.GetAgentResource()
+}
+
+// GetAgentResourceManager - Returns Agent resource
+func GetAgentResourceManager() resource.Manager {
+	return agent.agentResourceManager
 }
 
 // AddUpdateAgentDetails - Adds a new or Updates an existing key on the agent details sub resource

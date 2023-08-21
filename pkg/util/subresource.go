@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 )
 
@@ -13,6 +14,13 @@ type handler interface {
 	GetSubResource(key string) interface{}
 	// SetSubResource saves a value to a sub resource by name and overrides the current value.
 	SetSubResource(key string, resource interface{})
+}
+
+func GetSubResourceDetails(h handler) map[string]interface{} {
+	if h == nil {
+		return nil
+	}
+	return map[string]interface{}{definitions.XAgentDetails: GetAgentDetails(h)}
 }
 
 // GetAgentDetails get all the values for the x-agent-details sub resource

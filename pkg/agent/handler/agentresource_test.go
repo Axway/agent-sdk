@@ -3,6 +3,7 @@ package handler
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
@@ -115,8 +116,13 @@ func TestAgentResourceHandler(t *testing.T) {
 
 }
 
+type EventSyncCache interface {
+	RebuildCache()
+}
+
 type mockResourceManager struct {
-	resource *v1.ResourceInstance
+	resource     *v1.ResourceInstance
+	rebuildCache resource.EventSyncCache
 }
 
 func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstance) {
@@ -138,3 +144,7 @@ func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
 }
 
 func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
+
+func (m *mockResourceManager) SetRebuildCacheFunc(rebuildCache resource.EventSyncCache) {
+	m.rebuildCache = rebuildCache
+}

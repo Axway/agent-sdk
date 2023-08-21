@@ -2,6 +2,8 @@ package agent
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
@@ -132,11 +134,24 @@ func (es *EventSync) initCache() error {
 	return nil
 }
 
-func (es *EventSync) rebuildCache() {
+func (es *EventSync) RebuildCache() {
+	// SDB - NOTE : Do we need to pause jobs.
+	logger.Info("rebuild cache")
+
 	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
 	}
+
+	agentInstance := agent.agentResourceManager.GetAgentResource()
+
+	// add 7 days to the current date for the next rebuild cache
+	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
+
+	// persist cacheUpdateTime
+	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
+	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
+	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 }
 
 func (es *EventSync) startCentralEventProcessor() error {
@@ -154,7 +169,7 @@ func (es *EventSync) startPollMode() error {
 		agent.cfg,
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
-		poller.WithOnClientStop(es.rebuildCache),
+		poller.WithOnClientStop(es.RebuildCache),
 		poller.WithOnConnect(),
 	)
 
@@ -178,7 +193,7 @@ func (es *EventSync) startStreamMode() error {
 		agent.tokenRequester,
 		handlers,
 		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(es.rebuildCache),
+		stream.WithEventSyncError(es.RebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
 		stream.WithCacheManager(agent.cacheManager),
