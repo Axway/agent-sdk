@@ -297,7 +297,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		return nil, err
 	}
 
-	token, err := p.getClientToken(true)
+	token, err := p.getClientToken()
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +405,7 @@ func (p *provider) hasCodeResponseMethod(clientRequest *clientMetadata) bool {
 // UnregisterClient - removes the OAuth client from IDP
 func (p *provider) UnregisterClient(clientID string) error {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
-	token, err := p.getClientToken(false)
+	token, err := p.getClientToken()
 	if err != nil {
 		return err
 	}
@@ -441,9 +441,10 @@ func (p *provider) UnregisterClient(clientID string) error {
 	return nil
 }
 
-func (p *provider) getClientToken(useCachedToken bool) (string, error) {
+func (p *provider) getClientToken() (string, error) {
 	if p.authClient != nil {
-		return p.authClient.FetchToken(useCachedToken)
+		useTokenCache := p.cfg.GetAuthConfig().UseTokenCache()
+		return p.authClient.FetchToken(useTokenCache)
 	}
 	return p.cfg.GetAuthConfig().GetAccessToken(), nil
 }

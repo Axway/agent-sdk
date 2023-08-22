@@ -19,6 +19,7 @@ const (
 	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
 
 	propInsecureSkipVerify    = "insecureSkipVerify"
+	propUseCachedToken        = "useCachedToken"
 	pathExternalIDP           = "agentFeatures.idp"
 	fldName                   = "name"
 	fldTitle                  = "title"
@@ -38,6 +39,7 @@ const (
 	fldAuthPublicKey          = "auth.publicKey"
 	fldAuthKeyPassword        = "auth.keyPassword"
 	fldAuthTokenSigningMethod = "auth.tokenSigningMethod"
+	fldAuthUseCachedToken     = "auth." + propUseCachedToken
 	fldSSLInsecureSkipVerify  = "ssl." + propInsecureSkipVerify
 	fldSSLRootCACertPath      = "ssl.rootCACertPath"
 	fldSSLClientCertPath      = "ssl.clientCertPath"
@@ -67,6 +69,7 @@ var configProperties = []string{
 	fldAuthPublicKey,
 	fldAuthKeyPassword,
 	fldAuthTokenSigningMethod,
+	fldAuthUseCachedToken,
 }
 
 var validIDPAuthType = map[string]bool{
@@ -151,6 +154,8 @@ type IDPAuthConfig interface {
 	GetKeyPassword() string
 	// GetSigningMethod() - the token signing method for private_key_jwt authentication
 	GetTokenSigningMethod() string
+	// UseTokenCache() - return flag to indicate if the auth client to get new token on each request
+	UseTokenCache() bool
 }
 
 // IDPConfig - interface for IdP provider config
@@ -192,6 +197,7 @@ type IDPAuthConfiguration struct {
 	PublicKey          string `json:"publicKey,omitempty"`
 	KeyPwd             string `json:"keyPassword,omitempty"`
 	TokenSigningMethod string `json:"tokenSigningMethod,omitempty"`
+	UseCachedToken     bool   `json:"-"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -323,6 +329,54 @@ func (i *IDPAuthConfiguration) GetKeyPassword() string {
 // GetTokenSigningMethod -
 func (i *IDPAuthConfiguration) GetTokenSigningMethod() string {
 	return i.TokenSigningMethod
+}
+
+// UseTokenCache - return flag to indicate if the auth client to get new token on each request
+func (i *IDPAuthConfiguration) UseTokenCache() bool {
+	return i.UseCachedToken
+}
+
+// UnmarshalJSON - custom unmarshaler for IDPAuthConfiguration struct
+func (i *IDPAuthConfiguration) UnmarshalJSON(data []byte) error {
+	type Alias IDPAuthConfiguration // Create an intermittent type to unmarshal the base attributes
+
+	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(i)}); err != nil {
+		return err
+	}
+
+	var allFields interface{}
+	json.Unmarshal(data, &allFields)
+	b := allFields.(map[string]interface{})
+
+	// Default to use the cached token
+	i.UseCachedToken = true
+	if v, ok := b[propUseCachedToken]; ok {
+		i.UseCachedToken = (v == "true")
+	}
+
+	return nil
+}
+
+// MarshalJSON - custom marshaler for Application struct
+func (i *IDPAuthConfiguration) MarshalJSON() ([]byte, error) {
+	type Alias IDPAuthConfiguration // Create an intermittent type to marshal the base attributes
+
+	app, err := json.Marshal(&struct{ *Alias }{Alias: (*Alias)(i)})
+	if err != nil {
+		return nil, err
+	}
+
+	// decode it back to get a map
+	var allFields interface{}
+	json.Unmarshal(app, &allFields)
+	b := allFields.(map[string]interface{})
+
+	if i.UseCachedToken {
+		b[propUseCachedToken] = "true"
+	}
+
+	// Return encoding of the map
+	return json.Marshal(b)
 }
 
 // validate - Validates the IDP auth configuration
