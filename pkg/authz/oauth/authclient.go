@@ -17,6 +17,7 @@ import (
 // AuthClient - Interface representing the auth Client
 type AuthClient interface {
 	GetToken() (string, error)
+	FetchToken(useCachedToken bool) (string, error)
 }
 
 // AuthClientOption - configures auth client.
@@ -156,12 +157,18 @@ func (c *authClient) getCachedToken() string {
 
 // GetToken returns a token from cache if not expired or fetches a new token
 func (c *authClient) GetToken() (string, error) {
+	return c.FetchToken(true)
+}
+
+// GetToken returns a token from cache if not expired or fetches a new token
+func (c *authClient) FetchToken(useCachedToken bool) (string, error) {
 	// only one GetToken should execute at a time
 	c.getTokenMutex.Lock()
 	defer c.getTokenMutex.Unlock()
-
-	if token := c.getCachedToken(); token != "" {
-		return token, nil
+	if useCachedToken {
+		if token := c.getCachedToken(); token != "" {
+			return token, nil
+		}
 	}
 
 	// try fetching a new token
