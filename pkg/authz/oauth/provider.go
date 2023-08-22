@@ -443,7 +443,8 @@ func (p *provider) UnregisterClient(clientID string) error {
 
 func (p *provider) getClientToken() (string, error) {
 	if p.authClient != nil {
-		return p.authClient.GetToken()
+		useTokenCache := p.cfg.GetAuthConfig().UseTokenCache()
+		return p.authClient.FetchToken(useTokenCache)
 	}
 	return p.cfg.GetAuthConfig().GetAccessToken(), nil
 }
