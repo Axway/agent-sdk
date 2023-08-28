@@ -454,14 +454,16 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.Equal(t, 1, batch.retryCount)
 
 	s.responseStatus = 500
-
+	batch = createBatch("somemessage")
 	group, err = createTransport(testConfig)
+	assert.Nil(t, err)
+
 	traceabilityClient = group.Clients[0].(*Client)
 	traceabilityClient.Connect()
 	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()
-	assert.Nil(t, err)
-	assert.True(t, batch.acked)
+	assert.NotNil(t, err)
+	assert.False(t, batch.acked)
 	assert.Equal(t, 1, batch.retryCount)
 	publishedMessages := s.GetMessages()
 	assert.Nil(t, publishedMessages)
