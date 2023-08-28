@@ -42,7 +42,7 @@ sonar: test-sonar
 	./build/scripts/sonar.sh
 
 apiserver-generate: # generate api server resources, prod by default. ex: make apiserver-generate protocol=https host=apicentral.axway.com port=443
-	docker run --rm -v $(shell pwd)/scripts/apiserver:/codegen/scripts -v $(shell pwd)/pkg/apic/apiserver:/codegen/output -e PROTOCOL='$(protocol)' -e HOST='$(host)'  -e PORT='$(port)' -e USERID=$(shell id -u) -e GROUPID=$(shell id -g) -w /codegen/scripts --entrypoint ./apiserver_generate.sh ampc-beano-docker-snapshot-phx.artifactory-phx.ecd.axway.int/beano-alpine-codegen:latest
+	docker run --rm -v $(shell pwd)/scripts/apiserver:/codegen/scripts -v $(shell pwd)/pkg/apic/apiserver:/codegen/output -e PROTOCOL='$(protocol)' -e HOST='$(host)'  -e PORT='$(port)' -e USERID=$(shell id -u) -e GROUPID=$(shell id -g) -w /codegen/scripts --entrypoint ./apiserver_generate.sh ampc-beano-docker-release-phx.artifactory-phx.ecd.axway.int/base-images/beano-alpine-codegen:latest
 
 unifiedcatalog-generate: ## generate unified catalog resources
 	./scripts/unifiedcatalog/unifiedcatalog_generate.sh
