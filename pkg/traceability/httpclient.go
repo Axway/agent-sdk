@@ -127,11 +127,11 @@ func (client *HTTPClient) Close() error {
 // Publish sends events to the clients sink.
 func (client *HTTPClient) Publish(_ context.Context, batch publisher.Batch) error {
 	events := batch.Events()
-	rest, err := client.publishEvents(events)
-	if len(rest) == 0 {
+	err := client.publishEvents(events)
+	if err == nil {
 		batch.ACK()
 	} else {
-		batch.RetryEvents(rest)
+		batch.RetryEvents(events)
 	}
 	return err
 }
@@ -157,13 +157,13 @@ func (client *HTTPClient) Clone() *HTTPClient {
 }
 
 // publishEvents - posts all events to the http endpoint.
-func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Event, error) {
+func (client *HTTPClient) publishEvents(data []publisher.Event) error {
 	if len(data) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	if !client.connected {
-		return data, ErrHTTPNotConnected
+		return ErrHTTPNotConnected
 	}
 
 	if client.headers == nil {
@@ -189,28 +189,21 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) ([]publisher.Eve
 		}
 	}
 	status, _, err := client.request(events, client.headers, timeStamp)
-	if err != nil && err == ErrJSONEncodeFailed {
-		client.logger.WithError(err).Debug("failed to publish event")
-		return nil, nil
-	}
-	switch {
-	case status == 500 || status == 400: // server error or bad input, don't retry
-		client.logger.WithField("status", status).Debug("failed to publish event")
-		return nil, nil
-	case status >= 300: // retry
-		return data, err
-	case status == 0:
-		client.logger.WithError(err).Debug("transport error")
+	if err != nil {
+		client.logger.WithError(err).Error("transport error")
+		return err
 	}
 
-	return nil, nil
+	if status != http.StatusOK && status != http.StatusCreated { // server error or bad input
+		client.logger.WithField("status", status).Error("failed to publish event")
+		return fmt.Errorf("failed to publish event, status: %d", status)
+	}
+
+	return nil
 }
 
 func (conn *Connection) request(body interface{}, headers map[string]string, eventTime time.Time) (int, []byte, error) {
-	urlStr := conn.URL
-	if strings.HasSuffix(urlStr, "/") {
-		urlStr = strings.TrimSuffix(urlStr, "/")
-	}
+	urlStr := strings.TrimSuffix(conn.URL, "/")
 
 	if err := conn.encoder.Marshal(body); err != nil {
 		return 0, nil, ErrJSONEncodeFailed
