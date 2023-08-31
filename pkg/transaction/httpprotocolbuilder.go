@@ -451,7 +451,7 @@ func headersRedaction(requestHeaders, responseHeaders map[string]string, redacti
 		if redactionConfig == nil {
 			redactedHeaders, err = redaction.RequestHeadersRedaction(requestHeaders)
 		} else {
-			redactedHeaders, err = redactionConfig.RequestHeadersRedaction(redactedHeaders)
+			redactedHeaders, err = redactionConfig.RequestHeadersRedaction(requestHeaders)
 		}
 		if err != nil {
 			return emptyHeaders, emptyHeaders, ErrInRedactions.FormatError("RequestHeaders", err)
