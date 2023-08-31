@@ -213,10 +213,11 @@ func TestBadSetupRedaction(t *testing.T) {
 
 func TestURIRedaction(t *testing.T) {
 	testCases := []struct {
-		name       string
-		pathConfig []Show
-		input      string
-		output     string
+		name              string
+		pathConfig        []Show
+		input             string
+		output            string
+		maskingCharacters string
 	}{
 		{
 			name: "SingleWord",
@@ -238,18 +239,31 @@ func TestURIRedaction(t *testing.T) {
 					KeyMatch: "redaction",
 				},
 			},
-			input:  "https://apicentral.axway.com/test/the/path/redaction",
-			output: "/test/{*}/{*}/redaction",
+			maskingCharacters: "{#}",
+			input:             "https://apicentral.axway.com/test/the/path/redaction",
+			output:            "/test/{#}/{#}/redaction",
 		},
 		{
-			name: "Regex",
+			name: "Regex - invalid masking character",
 			pathConfig: []Show{
 				{
 					KeyMatch: ".*th.*",
 				},
 			},
-			input:  "https://apicentral.axway.com/test/the/path/redaction",
-			output: "/{*}/the/path/{*}",
+			maskingCharacters: "{$}", // invalid masking character
+			input:             "https://apicentral.axway.com/test/the/path/redaction",
+			output:            "/{*}/the/path/{*}",
+		},
+		{
+			name: "Regex - overriding masking character",
+			pathConfig: []Show{
+				{
+					KeyMatch: ".*th.*",
+				},
+			},
+			maskingCharacters: "{^}", // invalid masking character
+			input:             "https://apicentral.axway.com/test/the/path/redaction",
+			output:            "/{^}/the/path/{^}",
 		},
 	}
 
@@ -257,6 +271,9 @@ func TestURIRedaction(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defConfig := DefaultConfig()
 			defConfig.Path.Allowed = test.pathConfig // update to the test config
+			if test.maskingCharacters != "" {
+				defConfig.MaskingCharacters = test.maskingCharacters
+			}
 
 			err := SetupGlobalRedaction(defConfig)
 			assert.Nil(t, err)
