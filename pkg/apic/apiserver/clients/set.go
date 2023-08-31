@@ -64,11 +64,13 @@ type Set struct {
 	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
 	SubscriptionJobCatalogV1alpha1                   *catalog_v1alpha1.UnscopedSubscriptionJobClient
 	SubscriptionInvoiceCatalogV1alpha1               *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
+	DocumentResourceCatalogV1alpha1                  *catalog_v1alpha1.DocumentResourceClient
 	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
 	ConsumerProductVisibilityCatalogV1alpha1         *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
 	CategoryVisibilityCatalogV1alpha1                *catalog_v1alpha1.UnscopedCategoryVisibilityClient
+	PublishedDocumentResourceCatalogV1alpha1         *catalog_v1alpha1.UnscopedPublishedDocumentResourceClient
 	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
@@ -89,8 +91,10 @@ type Set struct {
 	SecretCatalogV1alpha1                            *catalog_v1alpha1.UnscopedSecretClient
 	AccessControlListCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                                *catalog_v1.CategoryClient
+	DocumentResourceCatalogV1                        *catalog_v1.DocumentResourceClient
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
 	CategoryVisibilityCatalogV1                      *catalog_v1.UnscopedCategoryVisibilityClient
+	PublishedDocumentResourceCatalogV1               *catalog_v1.UnscopedPublishedDocumentResourceClient
 	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
@@ -302,6 +306,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionInvoice: %s", err))
 	}
+	s.DocumentResourceCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentResourceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentResource: %s", err))
+	}
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Marketplace: %s", err))
@@ -321,6 +329,10 @@ func New(b cAPIV1.Base) *Set {
 	s.CategoryVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewCategoryVisibilityClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.CategoryVisibility: %s", err))
+	}
+	s.PublishedDocumentResourceCatalogV1alpha1, err = catalog_v1alpha1.NewPublishedDocumentResourceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedDocumentResource: %s", err))
 	}
 	s.SupportContactCatalogV1alpha1, err = catalog_v1alpha1.NewSupportContactClient(b)
 	if err != nil {
@@ -402,6 +414,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Category: %s", err))
 	}
+	s.DocumentResourceCatalogV1, err = catalog_v1.NewDocumentResourceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentResource: %s", err))
+	}
 	s.MarketplaceCatalogV1, err = catalog_v1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Marketplace: %s", err))
@@ -409,6 +425,10 @@ func New(b cAPIV1.Base) *Set {
 	s.CategoryVisibilityCatalogV1, err = catalog_v1.NewCategoryVisibilityClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.CategoryVisibility: %s", err))
+	}
+	s.PublishedDocumentResourceCatalogV1, err = catalog_v1.NewPublishedDocumentResourceClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.PublishedDocumentResource: %s", err))
 	}
 	s.SupportContactCatalogV1, err = catalog_v1.NewSupportContactClient(b)
 	if err != nil {

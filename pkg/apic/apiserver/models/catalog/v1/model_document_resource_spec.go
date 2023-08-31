@@ -9,16 +9,13 @@
 
 package catalog
 
-// ResourceSpec  (catalog.v1.Resource)
-type ResourceSpec struct {
-	// Resource description.
+// DocumentResourceSpec  (catalog.v1.DocumentResource)
+type DocumentResourceSpec struct {
+	// Document description.
 	Description string `json:"description,omitempty"`
-	// Version of the Resource.
-	Version string `json:"version,omitempty"`
-	// The type of the resource, example: pdf
-	FileType string `json:"fileType"`
-	// The content type
-	ContentType string `json:"contentType"`
+	// Version of the DocumentResource.
+	Version string                    `json:"version"`
+	Usage   DocumentResourceSpecUsage `json:"usage"`
 	// GENERATE: The following code has been modified after code generation
 	Data interface{} `json:"data"`
 }

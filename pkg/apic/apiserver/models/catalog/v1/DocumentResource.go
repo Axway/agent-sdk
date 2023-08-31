@@ -13,64 +13,63 @@ import (
 )
 
 var (
-	ProductReleaseCtx log.ContextField = "productRelease"
+	DocumentResourceCtx log.ContextField = "documentResource"
 
-	_ProductReleaseGVK = apiv1.GroupVersionKind{
+	_DocumentResourceGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "ProductRelease",
+			Kind:  "DocumentResource",
 		},
-		APIVersion: "v1alpha1",
+		APIVersion: "v1",
 	}
 
-	ProductReleaseScopes = []string{""}
+	DocumentResourceScopes = []string{""}
 )
 
 const (
-	ProductReleaseResourceName              = "productreleases"
-	ProductReleaseIconSubResourceName       = "icon"
-	ProductReleaseReferencesSubResourceName = "references"
-	ProductReleaseStatusSubResourceName     = "status"
+	DocumentResourceResourceName              = "documentresources"
+	DocumentResourceIconSubResourceName       = "icon"
+	DocumentResourceReferencesSubResourceName = "references"
+	DocumentResourceStateSubResourceName      = "state"
 )
 
-func ProductReleaseGVK() apiv1.GroupVersionKind {
-	return _ProductReleaseGVK
+func DocumentResourceGVK() apiv1.GroupVersionKind {
+	return _DocumentResourceGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ProductReleaseGVK, ProductReleaseScopes[0], ProductReleaseResourceName)
-	log.RegisterContextField(ProductReleaseCtx)
+	apiv1.RegisterGVK(_DocumentResourceGVK, DocumentResourceScopes[0], DocumentResourceResourceName)
+	log.RegisterContextField(DocumentResourceCtx)
 }
 
-// ProductRelease Resource
-type ProductRelease struct {
+// DocumentResource Resource
+type DocumentResource struct {
 	apiv1.ResourceMeta
-	Icon       interface{}              `json:"icon"`
-	Owner      *apiv1.Owner             `json:"owner"`
-	References ProductReleaseReferences `json:"references"`
-	Spec       ProductReleaseSpec       `json:"spec"`
-	// Status     ProductReleaseStatus     `json:"status"`
-	Status *apiv1.ResourceStatus `json:"status"`
+	Icon       interface{}                `json:"icon"`
+	Owner      *apiv1.Owner               `json:"owner"`
+	References DocumentResourceReferences `json:"references"`
+	Spec       DocumentResourceSpec       `json:"spec"`
+	State      DocumentResourceState      `json:"state"`
 }
 
-// NewProductRelease creates an empty *ProductRelease
-func NewProductRelease(name string) *ProductRelease {
-	return &ProductRelease{
+// NewDocumentResource creates an empty *DocumentResource
+func NewDocumentResource(name string) *DocumentResource {
+	return &DocumentResource{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _ProductReleaseGVK,
+			GroupVersionKind: _DocumentResourceGVK,
 		},
 	}
 }
 
-// ProductReleaseFromInstanceArray converts a []*ResourceInstance to a []*ProductRelease
-func ProductReleaseFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ProductRelease, error) {
-	newArray := make([]*ProductRelease, 0)
+// DocumentResourceFromInstanceArray converts a []*ResourceInstance to a []*DocumentResource
+func DocumentResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*DocumentResource, error) {
+	newArray := make([]*DocumentResource, 0)
 	for _, item := range fromArray {
-		res := &ProductRelease{}
+		res := &DocumentResource{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*ProductRelease, 0), err
+			return make([]*DocumentResource, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -78,10 +77,10 @@ func ProductReleaseFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Pr
 	return newArray, nil
 }
 
-// AsInstance converts a ProductRelease to a ResourceInstance
-func (res *ProductRelease) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a DocumentResource to a ResourceInstance
+func (res *DocumentResource) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ProductReleaseGVK()
+	meta.GroupVersionKind = DocumentResourceGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -98,8 +97,8 @@ func (res *ProductRelease) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a ProductRelease
-func (res *ProductRelease) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a DocumentResource
+func (res *DocumentResource) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -117,7 +116,7 @@ func (res *ProductRelease) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *ProductRelease) MarshalJSON() ([]byte, error) {
+func (res *DocumentResource) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -133,13 +132,13 @@ func (res *ProductRelease) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
-	out["status"] = res.Status
+	out["state"] = res.State
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *ProductRelease) UnmarshalJSON(data []byte) error {
+func (res *DocumentResource) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -191,17 +190,15 @@ func (res *ProductRelease) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource Status
-	if v, ok := aux.SubResources["status"]; ok {
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
 		sr, err = json.Marshal(v)
 		if err != nil {
 			return err
 		}
 
-		delete(aux.SubResources, "status")
-		// err = json.Unmarshal(sr, &res.Status)
-		res.Status = &apiv1.ResourceStatus{}
-		err = json.Unmarshal(sr, res.Status)
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}
@@ -211,6 +208,6 @@ func (res *ProductRelease) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *ProductRelease) PluralName() string {
-	return ProductReleaseResourceName
+func (res *DocumentResource) PluralName() string {
+	return DocumentResourceResourceName
 }
