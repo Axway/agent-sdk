@@ -15,8 +15,6 @@ const (
 	https                = "https"
 )
 
-var sanitizeValue string
-
 // Redactions - the public methods available for redaction config
 type Redactions interface {
 	URIRedaction(uri string) (string, error)
@@ -68,6 +66,7 @@ type redactionRegex struct {
 	requestHeaderFilters  filterRegex
 	responseHeaderFilters filterRegex
 	jmsPropertiesFilters  filterRegex
+	sanitizeValue         string
 }
 
 type filterRegex struct {
@@ -169,10 +168,10 @@ func (cfg *Config) SetupRedactions() (Redactions, error) {
 	}
 
 	if isValidMask {
-		sanitizeValue = cfg.MaskingCharacters
+		redactionSetup.sanitizeValue = cfg.MaskingCharacters
 	} else {
 		log.Error("error validating masking characters: ", string(cfg.MaskingCharacters), ", using default mask: ", defaultSanitizeValue)
-		sanitizeValue = defaultSanitizeValue
+		redactionSetup.sanitizeValue = defaultSanitizeValue
 	}
 
 	return &redactionSetup, err
@@ -226,7 +225,7 @@ func (r *redactionRegex) PathRedaction(path string) string {
 		}
 		// If the value is not matched, sanitize it
 		if !isValidValueToShow(segment, r.pathFilters) {
-			pathSegments[i] = sanitizeValue
+			pathSegments[i] = r.sanitizeValue
 		}
 	}
 
@@ -254,7 +253,7 @@ func (r *redactionRegex) QueryArgsRedaction(args map[string][]string) (map[strin
 		runSanitize, sanitizeRegex := shouldSanitize(argName, r.argsFilters.sanitize)
 		for _, value := range argValue {
 			if runSanitize {
-				queryArgs.Add(argName, sanitizeRegex.ReplaceAllLiteralString(value, sanitizeValue))
+				queryArgs.Add(argName, sanitizeRegex.ReplaceAllLiteralString(value, r.sanitizeValue))
 			} else {
 				queryArgs.Add(argName, value)
 			}
@@ -316,7 +315,7 @@ func (r *redactionRegex) headersRedaction(properties map[string]string, filters 
 		newProperties[propName] = propValue
 		// Now check for sanitization
 		if runSanitize, sanitizeRegex := shouldSanitize(propName, filters.sanitize); runSanitize {
-			newProperties[propName] = sanitizeRegex.ReplaceAllLiteralString(propValue, sanitizeValue)
+			newProperties[propName] = sanitizeRegex.ReplaceAllLiteralString(propValue, r.sanitizeValue)
 		}
 	}
 
