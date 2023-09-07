@@ -11,6 +11,8 @@ package catalog
 
 // ProductReferences  (catalog.v1alpha1.Product)
 type ProductReferences struct {
+	// Computed DocumentResources used in all Product's Documents articles.
+	DocumentResources []string `json:"documentResources,omitempty"`
 	// Computed latest AssetReleases for each Asset reference in the Product.
 	Assets []ProductReferencesAssets `json:"assets,omitempty"`
 	// The marketplaces this product has been published to.

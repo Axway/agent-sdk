@@ -11,6 +11,10 @@ package catalog
 
 // ResourceSpec  (catalog.v1alpha1.Resource)
 type ResourceSpec struct {
+	// Resource description.
+	Description string `json:"description,omitempty"`
+	// Version of the Resource.
+	Version string `json:"version,omitempty"`
 	// The type of the resource, example: pdf
 	FileType string `json:"fileType"`
 	// The content type
