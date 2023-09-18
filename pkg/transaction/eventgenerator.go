@@ -148,7 +148,7 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
-	if agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+	if agent.GetCentralClient() != nil && agent.GetCentralClient().IsMarketplaceSubsEnabled() {
 		err := e.processTxnSummary(summaryEvent)
 		if err != nil {
 			return nil, err
