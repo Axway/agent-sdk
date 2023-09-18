@@ -1,5 +1,5 @@
 {
-  "project": "APIC Agents SDK",
+  "project": "Amplify - APIC Agents SDK",
   "repo_url": "https://github.com/Axway/agent-sdk",
 	"security_guide": "https://docs.axway.com/bundle/axway_resources/page/amplify_api_management_platform_security_white_paper.html",
   "requirements": {
