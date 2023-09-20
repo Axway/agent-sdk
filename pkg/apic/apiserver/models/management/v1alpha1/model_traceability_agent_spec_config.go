@@ -19,7 +19,10 @@ type TraceabilityAgentSpecConfig struct {
 	// Configures the agent to include request and response headers in captured traffic. Defaults to true
 	ProcessHeaders bool                                 `json:"processHeaders,omitempty"`
 	Redaction      TraceabilityAgentSpecConfigRedaction `json:"redaction,omitempty"`
-	Sampling       TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Sampling       TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`
+	Sampling *TraceabilityAgentSpecConfigSampling `json:"sampling"`
 	// GENERATE: The following code has been modified after code generation
 	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

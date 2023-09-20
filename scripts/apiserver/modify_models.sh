@@ -97,6 +97,20 @@ $SED -i "/ApiServiceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIService.go
 
+######################
+# For model_traceability_agent_spec_config.go, we want to turn 	"Sampling TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`" into
+# "Sampling  *TraceabilityAgentSpecConfigSampling  `json:"sampling"`"
+######################
+SEARCH="\s*Sampling\s*TraceabilityAgentSpecConfigSampling.*"
+REPLACE="Sampling *TraceabilityAgentSpecConfigSampling \`json:\"sampling\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_traceability_agent_spec_config.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_traceability_agent_spec_config.go
+# add in the new line we want
+$SED -i "/TraceabilityAgentSpecConfigSampling/a ${REPLACE}" ${MODEL_PATH}/model_traceability_agent_spec_config.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_traceability_agent_spec_config.go
 
 ######################
 # Update the Status subresource in generated model to use v1.ResourceStatus
