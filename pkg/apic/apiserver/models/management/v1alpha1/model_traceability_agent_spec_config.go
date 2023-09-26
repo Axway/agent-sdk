@@ -22,7 +22,7 @@ type TraceabilityAgentSpecConfig struct {
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Sampling       TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`
-	Sampling *TraceabilityAgentSpecConfigSampling `json:"sampling"`
+	Sampling *TraceabilityAgentSpecConfigSampling `json:"sampling,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

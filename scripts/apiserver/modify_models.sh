@@ -102,7 +102,7 @@ go fmt ${MODEL_PATH}/APIService.go
 # "Sampling  *TraceabilityAgentSpecConfigSampling  `json:"sampling"`"
 ######################
 SEARCH="\s*Sampling\s*TraceabilityAgentSpecConfigSampling.*"
-REPLACE="Sampling *TraceabilityAgentSpecConfigSampling \`json:\"sampling\"\`"
+REPLACE="Sampling *TraceabilityAgentSpecConfigSampling \`json:\"sampling,omitempty\"\`"
 # add a comment to the code
 $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_traceability_agent_spec_config.go
 # comment out the line we're changing
