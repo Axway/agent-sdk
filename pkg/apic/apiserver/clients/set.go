@@ -76,6 +76,7 @@ type Set struct {
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
 	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
 	ProductPlanCatalogV1alpha1                       *catalog_v1alpha1.ProductPlanClient
+	SubscriptionRequestDefinitionCatalogV1alpha1     *catalog_v1alpha1.SubscriptionRequestDefinitionClient
 	ProductPlanJobCatalogV1alpha1                    *catalog_v1alpha1.UnscopedProductPlanJobClient
 	QuotaCatalogV1alpha1                             *catalog_v1alpha1.UnscopedQuotaClient
 	AssetMappingCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetMappingClient
@@ -98,6 +99,7 @@ type Set struct {
 	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
+	SubscriptionRequestDefinitionCatalogV1           *catalog_v1.SubscriptionRequestDefinitionClient
 	QuotaCatalogV1                                   *catalog_v1.UnscopedQuotaClient
 	DocumentCatalogV1                                *catalog_v1.UnscopedDocumentClient
 	ResourceCatalogV1                                *catalog_v1.UnscopedResourceClient
@@ -354,6 +356,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlan: %s", err))
 	}
+	s.SubscriptionRequestDefinitionCatalogV1alpha1, err = catalog_v1alpha1.NewSubscriptionRequestDefinitionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionRequestDefinition: %s", err))
+	}
 	s.ProductPlanJobCatalogV1alpha1, err = catalog_v1alpha1.NewProductPlanJobClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlanJob: %s", err))
@@ -441,6 +447,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductReleaseCatalogV1, err = catalog_v1.NewProductReleaseClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.ProductRelease: %s", err))
+	}
+	s.SubscriptionRequestDefinitionCatalogV1, err = catalog_v1.NewSubscriptionRequestDefinitionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.SubscriptionRequestDefinition: %s", err))
 	}
 	s.QuotaCatalogV1, err = catalog_v1.NewQuotaClient(b)
 	if err != nil {
