@@ -11,7 +11,9 @@ package catalog
 
 // ProductPlanSpecSubscription Defines Plan's subscription information (catalog.v1alpha1.ProductPlan)
 type ProductPlanSpecSubscription struct {
-	Interval ProductPlanSpecSubscriptionInterval `json:"interval,omitempty"`
-	Renewal  string                              `json:"renewal,omitempty"`
-	Approval string                              `json:"approval,omitempty"`
+	// Defines properties required from a consumer to subscribe to the plan.
+	Definition string                              `json:"definition,omitempty"`
+	Interval   ProductPlanSpecSubscriptionInterval `json:"interval,omitempty"`
+	Renewal    string                              `json:"renewal,omitempty"`
+	Approval   string                              `json:"approval,omitempty"`
 }
