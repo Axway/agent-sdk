@@ -69,7 +69,7 @@ func AddLogConfigProperties(props properties.Properties, defaultFileName string)
 	// Log file options
 	props.AddStringProperty(pathLogFileName, defaultFileName, "Name of the log files")
 	props.AddStringProperty(pathLogFilePath, "logs", "Log file path if output type is file or both")
-	props.AddIntProperty(pathLogFileMaxSize, 1048576, "The maximum size of a log file, in bytes  (default: 10485760 - 10 MB)")
+	props.AddIntProperty(pathLogFileMaxSize, 10485760, "The maximum size of a log file, in bytes  (default: 10485760 - 10 MB)")
 	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backps")
 	props.AddIntProperty(pathLogFileMaxBackups, 7, "The maximum number of backups to keep of log files (default: 7)")
 }
