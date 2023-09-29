@@ -359,6 +359,7 @@ func TestMetricCollector(t *testing.T) {
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
+				metricCollector.nextUsageTime = time.Time{}
 				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{

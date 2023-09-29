@@ -26,6 +26,11 @@ func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) 
 	b.histograms[eventID] = histogram
 }
 
+// AddEvent - adds an event to the batch
+func (b *EventBatch) AddEventWithoutHistogram(event beatPub.Event) {
+	b.events = append(b.events, event)
+}
+
 // Publish - connects to the traceability clients and sends this batch of events
 func (b *EventBatch) Publish() error {
 	b.batchLock()
@@ -137,7 +142,7 @@ func (b *EventBatch) retryEvents(events []beatPub.Event) {
 		}
 	}
 	b.events = retryEvents
-	b.publish()
+	b.Publish()
 }
 
 // RetryEvents - certain events sent to retry

@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -48,6 +49,8 @@ func ExitMetricInit() {
 type Collector interface {
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddMetricDetail(metricDetail Detail)
+	AddAPIMetric(apiMetric *APIMetric)
+	Publish()
 }
 
 // collector - collects the metrics for transactions events
@@ -58,6 +61,7 @@ type collector struct {
 	metricStartTime  time.Time
 	metricEndTime    time.Time
 	orgGUID          string
+	nextUsageTime    time.Time
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
 	registry         metrics.Registry
@@ -155,6 +159,7 @@ func createMetricCollector() Collector {
 		publishItemQueue: make([]publishQueueItem, 0),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
+		nextUsageTime:    time.Time{},
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -234,6 +239,29 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.updateMetric(metricDetail)
+}
+
+// AddAPIMetric - add api metric for API transaction
+func (c *collector) AddAPIMetric(metric *APIMetric) {
+	metric.Status = c.getStatusText(metric.StatusCode)
+
+	v4Event := c.createV4Event(metric.Observation.Start, metric)
+	metricData, _ := json.Marshal(v4Event)
+	pubEvent, err := (&CondorMetricEvent{
+		Message:   string(metricData),
+		Fields:    make(map[string]interface{}),
+		Timestamp: v4Event.Data.GetStartTime(),
+		ID:        v4Event.ID,
+	}).CreateEvent()
+	if err != nil {
+		return
+	}
+	c.updateUsage(metric.Count)
+	c.metricBatch.AddEventWithoutHistogram(pubEvent)
+}
+
+func (c *collector) Publish() {
+	c.metricBatch.Publish()
 }
 
 func (c *collector) updateVolume(bytes int64) {
@@ -327,6 +355,9 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 
 // getAccessRequest -
 func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail Detail) (*management.AccessRequest, *v1.ResourceInstance) {
+	if detail.AppDetails.Name == "" {
+		return nil, nil
+	}
 
 	c.logger.
 		WithField("apiID", detail.APIDetails.ID).
@@ -577,10 +608,24 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	}
 }
 
+func (c *collector) skipUsageCreate() bool {
+	if c.publisher.offline {
+		return false
+	}
+	if time.Now().After(c.nextUsageTime) {
+		return false
+	}
+	return true
+}
+
 func (c *collector) generateUsageEvent(orgGUID string) {
+	if c.skipUsageCreate() {
+		return
+	}
 	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
+	c.nextUsageTime = time.Now().Add(c.usageConfig.GetReportInterval())
 }
 
 func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
@@ -673,17 +718,16 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *API
 	metric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
 	metric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
 	// Generate app subscription metric
-	c.generateV4Event(histogram, metric, c.orgGUID)
-
+	c.generateV4Event(histogram, metric)
 }
 
-func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data, orgGUID string) {
+func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	eventID, _ := uuid.NewRandom()
-	event := V4Event{
+	return V4Event{
 		ID:        eventID.String(),
-		Timestamp: c.metricStartTime.UnixNano() / 1e6,
+		Timestamp: startTime,
 		Event:     metricEvent,
-		App:       orgGUID,
+		App:       c.orgGUID,
 		Version:   "4",
 		Distribution: &V4EventDistribution{
 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
@@ -691,7 +735,10 @@ func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data, 
 		},
 		Data: v4data,
 	}
-	AddCondorMetricEventToBatch(event, c.metricBatch, histogram)
+}
+
+func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data) {
+	AddCondorMetricEventToBatch(c.createV4Event(c.metricStartTime.UnixMilli(), v4data), c.metricBatch, histogram)
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
