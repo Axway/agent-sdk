@@ -61,6 +61,7 @@ type collector struct {
 	metricStartTime  time.Time
 	metricEndTime    time.Time
 	orgGUID          string
+	nextUsageTime    time.Time
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
 	registry         metrics.Registry
@@ -158,6 +159,7 @@ func createMetricCollector() Collector {
 		publishItemQueue: make([]publishQueueItem, 0),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
+		nextUsageTime:    time.Time{},
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -607,9 +609,13 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 }
 
 func (c *collector) generateUsageEvent(orgGUID string) {
+	if !time.Now().After(c.nextUsageTime) {
+		return
+	}
 	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
+	c.nextUsageTime = time.Now().Add(c.usageConfig.GetReportInterval())
 }
 
 func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
