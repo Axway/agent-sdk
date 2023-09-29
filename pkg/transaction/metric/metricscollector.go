@@ -608,8 +608,18 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	}
 }
 
+func (c *collector) skipUsageCreate() bool {
+	if c.publisher.offline {
+		return false
+	}
+	if time.Now().After(c.nextUsageTime) {
+		return false
+	}
+	return true
+}
+
 func (c *collector) generateUsageEvent(orgGUID string) {
-	if !time.Now().After(c.nextUsageTime) {
+	if c.skipUsageCreate() {
 		return
 	}
 	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
