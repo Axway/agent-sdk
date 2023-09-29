@@ -26,7 +26,7 @@ func TestDefaultLogConfig(t *testing.T) {
 	assert.Equal(t, "", props.StringPropertyValue(pathLogMaskedValues), "Unexpected default masked values")
 	assert.Equal(t, logName, props.StringPropertyValue(pathLogFileName), "Unexpected default file name")
 	assert.Equal(t, "logs", props.StringPropertyValue(pathLogFilePath), "Unexpected default log path")
-	assert.Equal(t, 1048576, props.IntPropertyValue(pathLogFileMaxSize), "Unexpected default max size")
+	assert.Equal(t, 10485760, props.IntPropertyValue(pathLogFileMaxSize), "Unexpected default max size")
 	assert.Equal(t, 0, props.IntPropertyValue(pathLogFileMaxAge), "Unexpected default max age")
 	assert.Equal(t, 7, props.IntPropertyValue(pathLogFileMaxBackups), "Unexpected default max backups")
 }
