@@ -167,7 +167,7 @@ func (u *UsageReportingConfiguration) validateUsageSchedule() {
 	}
 	for i := 1; i < checks-1; i++ {
 		delta := nextRuns[i].Sub(nextRuns[i-1])
-		if delta < (time.Hour * 15) {
+		if delta < time.Hour {
 			log.Tracef("%s must be at 1 hour apart", pathUsageReportingUsageSchedule)
 			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
 		}
