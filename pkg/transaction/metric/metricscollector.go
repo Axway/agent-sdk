@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
+	"github.com/gorhill/cronexpr"
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -62,6 +63,7 @@ type collector struct {
 	metricEndTime    time.Time
 	orgGUID          string
 	nextUsageTime    time.Time
+	nextUTCron       *cronexpr.Expression
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
 	registry         metrics.Registry
@@ -160,6 +162,7 @@ func createMetricCollector() Collector {
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
 		nextUsageTime:    time.Time{},
+		nextUTCron:       cronexpr.MustParse(agent.GetCentralConfig().GetUsageReportingConfig().GetUsageSchedule()),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -612,10 +615,8 @@ func (c *collector) skipUsageCreate() bool {
 	if c.publisher.offline {
 		return false
 	}
-	if time.Now().After(c.nextUsageTime) {
-		return false
-	}
-	return true
+	// only skip if now is not after the previously set next usage time
+	return !time.Now().After(c.nextUsageTime)
 }
 
 func (c *collector) generateUsageEvent(orgGUID string) {
@@ -625,7 +626,8 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
-	c.nextUsageTime = time.Now().Add(c.usageConfig.GetReportInterval())
+	// set the next usage time according to the cron schedule
+	c.nextUsageTime = c.nextUTCron.Next(time.Now())
 }
 
 func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
