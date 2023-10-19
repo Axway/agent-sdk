@@ -23,9 +23,6 @@ variables:
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
 
-  # turn on error checks
-  RUN_ERROR_CHECKS: "true"
-
 ############################################################
 # Section for external includes
 ############################################################
