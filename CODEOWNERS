@@ -12,6 +12,5 @@ whitesource.config @dfeldick
 # cicd-related files
 .gitlab-ci.yml @dfeldick @jcollins-axway @vivekschauhan
 Makefile @dfeldick @jcollins-axway @vivekschauhan
-sonar.sh @dfeldick @jcollins-axway @vivekschauhan
 build/scripts/ @dfeldick @jcollins-axway @vivekschauhan
 .github/ @dfeldick @jcollins-axway @vivekschauhan

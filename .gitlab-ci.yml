@@ -27,6 +27,9 @@ variables:
 # Section for external includes
 ############################################################
 include:
+  - project: "apigov/gitlabci"
+    ref: master
+    file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
     ref: $BEANO_CICD_LATEST
     # the order of these include files is important
@@ -48,7 +51,8 @@ include:
 
 stages:
   - test
-  - sonar
+  - sonar-preview
+  - sonar-publish
   - security-scans
   - security-review
   - update-dep
