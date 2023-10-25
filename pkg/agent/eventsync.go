@@ -138,6 +138,10 @@ func (es *EventSync) RebuildCache() {
 	// SDB - NOTE : Do we need to pause jobs.
 	logger.Info("rebuild cache")
 
+	// close window so discovery doesn't happen during this cache rebuild
+	PublishingLock()
+	defer PublishingUnlock()
+
 	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
