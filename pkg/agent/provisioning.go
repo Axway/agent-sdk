@@ -306,7 +306,7 @@ func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilder
 			AddItem(
 				provisioning.NewSchemaPropertyBuilder().
 					SetName("scope").
-					IsString().SetEnumValues(scopes)))
+					IsString().SetEnumValues(scopes).SetSortEnumValues()))
 }
 
 func setIDPGrantTypesSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {

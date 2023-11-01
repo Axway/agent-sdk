@@ -19,6 +19,12 @@ type anyOfPropertyDefinitions struct {
 	AnyOf []propertyDefinition `json:"anyOf,omitempty"`
 }
 
+type PropertyDefinition interface {
+	GetType() string
+	GetArrayItems() []PropertyDefinition
+	GetEnums() []string
+}
+
 // propertyDefinition -
 type propertyDefinition struct {
 	Type               string                        `json:"type"`
@@ -40,6 +46,24 @@ type propertyDefinition struct {
 	IsCopyable         bool                          `json:"x-axway-copyable,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
+}
+
+func (p *propertyDefinition) GetType() string {
+	return p.Type
+}
+
+func (p *propertyDefinition) GetArrayItems() []PropertyDefinition {
+	ret := make([]PropertyDefinition, 0)
+	if p.Items != nil {
+		for _, p := range p.Items.AnyOf {
+			ret = append(ret, &p)
+		}
+	}
+	return ret
+}
+
+func (p *propertyDefinition) GetEnums() []string {
+	return p.Enum
 }
 
 // PropertyBuilder - mandatory methods for all property builders
