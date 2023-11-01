@@ -7,6 +7,19 @@ import (
 )
 
 // SchemaBuilder - used to build a subscription schema for API Central
+type SchemaParser interface {
+	Parse(schemaBytes []byte) (map[string]PropertyDefinition, error)
+}
+
+type schemaParser struct {
+}
+
+// NewSchemaBuilder - Creates a new subscription schema builder
+func NewSchemaParser() SchemaParser {
+	return &schemaParser{}
+}
+
+// SchemaBuilder - used to build a subscription schema for API Central
 type SchemaBuilder interface {
 	SetName(name string) SchemaBuilder
 	SetDescription(description string) SchemaBuilder
@@ -167,4 +180,21 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	}
 
 	return schemaMap, nil
+}
+
+func (s *schemaParser) Parse(schemaBytes []byte) (map[string]PropertyDefinition, error) {
+	schema := &jsonSchema{}
+	err := json.Unmarshal(schemaBytes, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make(map[string]PropertyDefinition)
+	for s, p := range schema.Properties {
+		buf, _ := json.Marshal(p)
+		newprop := &propertyDefinition{}
+		json.Unmarshal(buf, newprop)
+		ret[s] = newprop
+	}
+	return ret, nil
 }
