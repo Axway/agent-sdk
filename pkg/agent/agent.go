@@ -72,6 +72,7 @@ type agentData struct {
 	authProviderRegistry oauth.ProviderRegistry
 
 	publishingLock *sync.Mutex
+	ardLock        sync.Mutex
 
 	// profiling
 	profileDone chan struct{}

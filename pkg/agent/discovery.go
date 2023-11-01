@@ -167,6 +167,9 @@ func RemovePublishedAPIAgentDetail(externalAPIID, detailKey string) error {
 }
 
 func publishAccessRequestDefinition(serviceBody *apic.ServiceBody) (*apiV1.ResourceInstance, error) {
+	agent.ardLock.Lock()
+	defer agent.ardLock.Unlock()
+
 	if serviceBody.GetAccessRequestDefinition() != nil {
 		newARD, err := createOrUpdateAccessRequestDefinition(serviceBody.GetAccessRequestDefinition())
 		if err == nil && newARD != nil {
