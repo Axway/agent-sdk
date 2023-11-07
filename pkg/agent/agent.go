@@ -269,7 +269,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 			WithField("metadata-url", idp.GetMetadataURL()).
 			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
-	crdName := idp.GetIDPTitle() + " " + provisioning.OAuthIDPCRD
+	crdName := idp.GetIDPName() + " " + provisioning.OAuthIDPCRD
 
 	crd, err := NewOAuthCredentialRequestBuilder(
 		WithCRDName(crdName),
