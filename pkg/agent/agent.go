@@ -281,7 +281,6 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	).Register()
 	if err != nil {
 		logger.
-			WithField("name", crd.Name).
 			WithField("title", idp.GetIDPTitle()).
 			Errorf("unable to create and register credential request definition. %s", err.Error())
 	} else {
