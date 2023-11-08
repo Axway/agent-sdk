@@ -37,6 +37,10 @@ const (
 	AgentStopped   = "stopped"
 	AgentFailed    = "failed"
 	AgentUnhealthy = "unhealthy"
+	// CorsField -
+	CorsField = "cors"
+	// RedirectURLsField -
+	RedirectURLsField = "redirectURLs"
 )
 
 // AgentResourceType - Holds the type for agent resource in Central
@@ -213,10 +217,14 @@ func handleInitialization() error {
 
 		registerCredentialChecker()
 
-		registerExternalIDPs()
+		err := registerExternalIDPs()
+		if err != nil {
+			return err
+		}
+
 		startTeamACLCache()
 
-		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+		err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 		if err != nil {
 			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 		}
@@ -232,7 +240,7 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 	}
 }
 
-func registerExternalIDPs() {
+func registerExternalIDPs() error {
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
 
@@ -243,12 +251,16 @@ func registerExternalIDPs() {
 			if idp.GetTLSConfig() == nil {
 				tlsCfg = agent.cfg.GetTLSConfig()
 			}
-			registerCredentialProvider(idp, tlsCfg, proxy, timeout)
+			err := registerCredentialProvider(idp, tlsCfg, proxy, timeout)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) {
+func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
 		logger.
@@ -257,6 +269,50 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 			WithField("metadata-url", idp.GetMetadataURL()).
 			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
+	crdName := idp.GetIDPName() + " " + provisioning.OAuthIDPCRD
+
+	crd, err := NewOAuthCredentialRequestBuilder(
+		WithCRDName(crdName),
+		WithCRDTitle(idp.GetIDPTitle()),
+		WithCRDOAuthSecret(),
+		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
+		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
+		WithCRDIsSuspendable(),
+	).Register()
+	if err != nil {
+		logger.
+			WithField("title", idp.GetIDPTitle()).
+			Errorf("unable to create and register credential request definition. %s", err.Error())
+	} else {
+		logger.
+			WithField("name", crd.Name).
+			WithField("title", idp.GetIDPTitle()).
+			Info("successfully created and registered credential request definition.")
+	}
+	return err
+}
+
+func getCorsSchemaPropertyBuilder() provisioning.PropertyBuilder {
+	// register the supported credential request defs
+	return provisioning.NewSchemaPropertyBuilder().
+		SetName(CorsField).
+		SetLabel("Javascript Origins").
+		IsArray().
+		AddItem(
+			provisioning.NewSchemaPropertyBuilder().
+				SetName("Origins").
+				IsString())
+}
+
+func getAuthRedirectSchemaPropertyBuilder() provisioning.PropertyBuilder {
+	return provisioning.NewSchemaPropertyBuilder().
+		SetName(RedirectURLsField).
+		SetLabel("Redirect URLs").
+		IsArray().
+		AddItem(
+			provisioning.NewSchemaPropertyBuilder().
+				SetName("URL").
+				IsString())
 }
 
 func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
