@@ -20,6 +20,9 @@ variables:
   # Whitesource
   WS_PROJECT_ID: "APIC_Agents_SDK"
 
+  # Blackduck
+  BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
+
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
 
@@ -42,6 +45,7 @@ include:
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-whitesource.yml"
+      - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
     ref: $BEANO_CICD_LATEST
@@ -89,6 +93,10 @@ trigger-azure-discovery-agent:
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
 whitesource:
+  rules:
+    - !reference [.mirror-branch-csr-rules, rules]
+
+blackduck:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
 
