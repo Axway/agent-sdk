@@ -238,6 +238,9 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 func registerExternalIDPs() error {
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
+		if idPCfg == nil {
+			return nil
+		}
 
 		proxy := agent.cfg.GetProxyURL()
 		timeout := agent.cfg.GetClientTimeout()
