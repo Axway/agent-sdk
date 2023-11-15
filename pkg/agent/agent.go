@@ -217,14 +217,9 @@ func handleInitialization() error {
 
 		registerCredentialChecker()
 
-		err := registerExternalIDPs()
-		if err != nil {
-			return err
-		}
-
 		startTeamACLCache()
 
-		err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 		if err != nil {
 			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 		}
@@ -243,6 +238,9 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 func registerExternalIDPs() error {
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
+		if idPCfg == nil {
+			return nil
+		}
 
 		proxy := agent.cfg.GetProxyURL()
 		timeout := agent.cfg.GetClientTimeout()

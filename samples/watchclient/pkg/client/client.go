@@ -2,7 +2,6 @@ package client
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -110,10 +109,16 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 			Timeout:    config.Auth.Timeout,
 		},
 	}
+	sm := getSequenceManager()
 	ta := auth.NewPlatformTokenGetterWithCentralConfig(ccfg)
-	hCfg := harvester.NewConfig(ccfg, ta, getSequenceManager())
+	hCfg := harvester.NewConfig(ccfg, ta, sm)
 	hClient := harvester.NewClient(hCfg)
-	watchOptions = append(watchOptions, wm.WithHarvester(hClient, getSequenceManager()))
+	seqID, err := hClient.ReceiveSyncEvents(config.TopicSelfLink, 0, nil)
+	if err != nil {
+		return nil, err
+	}
+	sm.SetSequence(seqID)
+	watchOptions = append(watchOptions, wm.WithHarvester(hClient, sm))
 	cfg := &wm.Config{
 		Host:        ccfg.GRPCCfg.Host,
 		Port:        uint32(ccfg.GRPCCfg.Port),
@@ -155,8 +160,15 @@ func (w WatchClient) Watch() {
 			w.wm.CloseWatch(subscriptionID)
 			return
 		case event := <-eventChannel:
-			bts, _ := json.MarshalIndent(event, "", "  ")
-			log.Info(string(bts))
+			log.
+				WithField("type", event.Type).
+				WithField("group", event.Payload.Group).
+				WithField("kind", event.Payload.Kind).
+				WithField("scopeKind", event.Payload.Metadata.Scope.Kind).
+				WithField("scopeName", event.Payload.Metadata.Scope.Name).
+				WithField("id", event.Payload.Metadata.Id).
+				WithField("name", event.Payload.Name).
+				Info("event received")
 		}
 	}
 }
