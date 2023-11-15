@@ -96,7 +96,12 @@ func (es *EventSync) SyncCache() error {
 		}
 	}
 
-	err := es.startCentralEventProcessor()
+	err := registerExternalIDPs()
+	if err != nil {
+		logger.WithError(err).Warn("failed to register CRDs for external IdP config")
+	}
+
+	err = es.startCentralEventProcessor()
 	if err != nil {
 		return err
 	}

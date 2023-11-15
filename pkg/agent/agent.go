@@ -217,14 +217,9 @@ func handleInitialization() error {
 
 		registerCredentialChecker()
 
-		err := registerExternalIDPs()
-		if err != nil {
-			return err
-		}
-
 		startTeamACLCache()
 
-		err = registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
+		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
 		if err != nil {
 			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
 		}
