@@ -20,7 +20,7 @@ var (
 	execCommand = exec.Command
 )
 
-//AgentService -
+// AgentService -
 type AgentService struct {
 	service     daemon.Daemon
 	Name        string
@@ -30,6 +30,7 @@ type AgentService struct {
 	EnvFile     string
 	User        string
 	Group       string
+	InstallDir  string
 }
 
 func newAgentService() (*AgentService, error) {
@@ -60,6 +61,7 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		a.service.SetEnvFile(a.EnvFile)
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
+		a.service.SetInstallDir(a.InstallDir)
 		_, err = a.service.Install(a.PathArg, a.Path)
 	case "update":
 		fmt.Println("updating the agent service")
@@ -67,6 +69,7 @@ func (a *AgentService) HandleServiceFlag(command string) error {
 		a.service.SetEnvFile(a.EnvFile)
 		a.service.SetUser(a.User)
 		a.service.SetGroup(a.Group)
+		a.service.SetInstallDir(a.InstallDir)
 		_, err = a.service.Update(a.PathArg, a.Path)
 	case "remove":
 		fmt.Println("removing the agent service")
