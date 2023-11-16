@@ -340,7 +340,7 @@ After={{.Dependencies}}
 ExecStart={{.Path}} {{.Args}}
 User={{.User}}
 Group={{.Group}}
-WorkingDirectory{{.InstallDir}}
+WorkingDirectory={{.InstallDir}}
 Restart=on-failure
 RestartSec=60s
 
