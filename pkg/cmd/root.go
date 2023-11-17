@@ -32,7 +32,7 @@ const (
 	EnvFileFlag               = "envFile"
 	EnvFileFlagDescription    = "Path of the file with environment variables to override configuration"
 	InstallDirFlag            = "installDir"
-	InstallDirFlagDescription = "The working directory"
+	InstallDirFlagDescription = "The path to the working directory. If not set, will default the working directory to the execution path"
 	cpuprofile                = "cpuprofile"
 	memprofile                = "memprofile"
 	httpprofile               = "httpprofile"
