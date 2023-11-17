@@ -80,10 +80,14 @@ func (s *systemDRecord) install(args ...string) (string, error) {
 		return failed, err
 	}
 
-	execPatch, err := executablePath(s.name)
+	execPath, err := executablePath(s.name)
 	if err != nil {
 		file.Close()
 		return failed, err
+	}
+
+	if s.installDir == "" {
+		s.installDir = filepath.Dir(execPath)
 	}
 
 	templ, err := template.New("systemDConfig").Parse(systemDConfig)
@@ -106,8 +110,8 @@ func (s *systemDRecord) install(args ...string) (string, error) {
 			strings.Join(s.dependencies, " "),
 			s.user,
 			s.group,
+			execPath,
 			s.installDir,
-			execPatch,
 			strings.Join(args, " "),
 		},
 	); err != nil {
