@@ -53,6 +53,9 @@ type Daemon interface {
 
 	// GetServiceName - gets the name of the service
 	GetServiceName() string
+
+	// SetInstallDir - sets the installation directory
+	SetInstallDir(string) error
 }
 
 // Executable interface defines controlling methods of executable service

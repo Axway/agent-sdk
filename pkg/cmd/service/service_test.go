@@ -8,6 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	UNEXPECTED_ERR = "Unexpected error returned"
+)
+
 type mockDaemon struct {
 	installCalled     bool
 	updateCalled      bool
@@ -21,11 +25,12 @@ type mockDaemon struct {
 	serviceNameCalled bool
 }
 
-func (m *mockDaemon) GetTemplate() string      { return "" }
-func (m *mockDaemon) SetTemplate(string) error { return nil }
-func (m *mockDaemon) SetEnvFile(string) error  { return nil }
-func (m *mockDaemon) SetUser(string) error     { return nil }
-func (m *mockDaemon) SetGroup(string) error    { return nil }
+func (m *mockDaemon) GetTemplate() string        { return "" }
+func (m *mockDaemon) SetTemplate(string) error   { return nil }
+func (m *mockDaemon) SetEnvFile(string) error    { return nil }
+func (m *mockDaemon) SetUser(string) error       { return nil }
+func (m *mockDaemon) SetGroup(string) error      { return nil }
+func (m *mockDaemon) SetInstallDir(string) error { return nil }
 
 func (m *mockDaemon) Install(args ...string) (string, error) {
 	m.installCalled = true
@@ -87,6 +92,7 @@ func newMockAgentService() *AgentService {
 		User:        "user",
 		Group:       "group",
 		EnvFile:     "./filename",
+		InstallDir:  "/this/install/dir",
 	}
 }
 
@@ -130,54 +136,54 @@ func TestHandleService(t *testing.T) {
 	// Install
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("install")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).installCalled)
 
 	// Update
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("update")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).updateCalled)
 
 	// Remove
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("remove")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).removeCalled)
 
 	// Start
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("start")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).startCalled)
 
 	// Stop
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("stop")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).stopCalled)
 
 	// Logs
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("logs")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).logsCalled)
 
 	// Status
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("status")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).statusCalled)
 
 	// Enable
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("enable")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).enableCalled)
 
 	// Service Name
 	a = newMockAgentService()
 	err = a.HandleServiceFlag("name")
-	assert.Nil(t, err, "Unexpected error returned")
+	assert.Nil(t, err, UNEXPECTED_ERR)
 	assert.True(t, a.service.(*mockDaemon).serviceNameCalled)
 }

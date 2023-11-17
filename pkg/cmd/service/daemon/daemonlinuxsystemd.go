@@ -24,6 +24,7 @@ type systemDRecord struct {
 	user         string
 	group        string
 	envFile      string
+	installDir   string
 }
 
 // Standard service path for systemD daemons
@@ -79,10 +80,14 @@ func (s *systemDRecord) install(args ...string) (string, error) {
 		return failed, err
 	}
 
-	execPatch, err := executablePath(s.name)
+	execPath, err := executablePath(s.name)
 	if err != nil {
 		file.Close()
 		return failed, err
+	}
+
+	if s.installDir == "" {
+		s.installDir = filepath.Dir(execPath)
 	}
 
 	templ, err := template.New("systemDConfig").Parse(systemDConfig)
@@ -98,14 +103,15 @@ func (s *systemDRecord) install(args ...string) (string, error) {
 	if err := templ.Execute(
 		file,
 		&struct {
-			Name, Description, Dependencies, User, Group, Path, Args string
+			Name, Description, Dependencies, User, Group, Path, InstallDir, Args string
 		}{
 			s.name,
 			s.description,
 			strings.Join(s.dependencies, " "),
 			s.user,
 			s.group,
-			execPatch,
+			execPath,
+			s.installDir,
 			strings.Join(args, " "),
 		},
 	); err != nil {
@@ -309,6 +315,14 @@ func (s *systemDRecord) SetEnvFile(envFile string) error {
 	return nil
 }
 
+// SetInstallDir - sets the installDir that will be used by the service
+func (s *systemDRecord) SetInstallDir(installDir string) error {
+	// set the absolute path, incase it is relative
+	envFileAbsolute, _ := filepath.Abs(installDir)
+	s.installDir = envFileAbsolute
+	return nil
+}
+
 // SetUser - sets the user that will execute the service
 func (s *systemDRecord) SetUser(user string) error {
 	s.user = user
@@ -330,6 +344,7 @@ After={{.Dependencies}}
 ExecStart={{.Path}} {{.Args}}
 User={{.User}}
 Group={{.Group}}
+WorkingDirectory={{.InstallDir}}
 Restart=on-failure
 RestartSec=60s
 
