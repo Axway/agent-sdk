@@ -67,10 +67,8 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	metaData.Put(sampling.SampleKey, true)
 
 	if logEvent.TransactionSummary != nil {
-		// Check to see if marketplace provisioning/subs is enabled
-		if agent.GetCentralClient() != nil && agent.GetCentralClient().IsMarketplaceSubsEnabled() {
-			e.processTxnSummary(logEvent)
-		}
+
+		e.processTxnSummary(logEvent)
 		e.trackMetrics(logEvent, 0)
 	}
 
@@ -149,11 +147,9 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
-	if agent.GetCentralClient() != nil && agent.GetCentralClient().IsMarketplaceSubsEnabled() {
-		err := e.processTxnSummary(summaryEvent)
-		if err != nil {
-			return nil, err
-		}
+	err := e.processTxnSummary(summaryEvent)
+	if err != nil {
+		return nil, err
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -216,6 +212,10 @@ func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime t
 }
 
 func (e *Generator) processTxnSummary(summaryEvent LogEvent) error {
+	// only process if there is a central client and marketplace subs are enabled
+	if agent.GetCentralClient() == nil || !agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+		return nil
+	}
 	if summaryEvent.TransactionSummary != nil {
 		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
 		if txnSummary != nil {
