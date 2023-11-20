@@ -58,11 +58,8 @@ func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 	e.shouldUseTrafficForAggregation = useTrafficForAggregation
 }
 
-// CreateEvent - Creates a new event to be sent to Amplify Observability
+// CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
-	// DEPRECATED
-	log.DeprecationWarningReplace("CreateEvent", "CreateEvents")
-
 	// if CreateEvent is being used, sampling will not work, so all events need to be sent
 	if metaData == nil {
 		metaData = common.MapStr{}
@@ -70,6 +67,10 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	metaData.Put(sampling.SampleKey, true)
 
 	if logEvent.TransactionSummary != nil {
+		// Check to see if marketplace provisioning/subs is enabled
+		if agent.GetCentralClient() != nil && agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+			e.processTxnSummary(logEvent)
+		}
 		e.trackMetrics(logEvent, 0)
 	}
 
