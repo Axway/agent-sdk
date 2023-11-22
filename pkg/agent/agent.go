@@ -52,6 +52,9 @@ type APIValidator func(apiID, stageName string) bool
 // ConfigChangeHandler - Callback for Config change event
 type ConfigChangeHandler func()
 
+// ShutdownHandler - function that the agent may implement to be called when a shutdown request is received
+type ShutdownHandler func()
+
 type agentData struct {
 	agentResourceManager resource.Manager
 
@@ -67,6 +70,7 @@ type agentData struct {
 	apiValidatorJobID          string
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	agentShutdownHandler       ShutdownHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
@@ -390,6 +394,11 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 	return agent.authProviderRegistry
 }
 
+// RegisterShutdownHandler - Registers shutdown handler
+func RegisterShutdownHandler(handler ShutdownHandler) {
+	agent.agentShutdownHandler = handler
+}
+
 func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
 	if at == config.DiscoveryAgent {
 		return client.RegisterSubscriptionWebhook()
@@ -544,6 +553,12 @@ func setupSignalProcessor() {
 		if agent.profileDone != nil {
 			<-agent.profileDone
 		}
+
+		// call the agent shutdown handler
+		if agent.agentShutdownHandler != nil {
+			agent.agentShutdownHandler()
+		}
+
 		cleanUp()
 		agent.cacheManager.SaveCache()
 		os.Exit(0)
