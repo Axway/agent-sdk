@@ -52,6 +52,7 @@ type Collector interface {
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetric(apiMetric *APIMetric)
 	Publish()
+	ShutdownPublish()
 }
 
 // collector - collects the metrics for transactions events
@@ -265,6 +266,11 @@ func (c *collector) AddAPIMetric(metric *APIMetric) {
 
 func (c *collector) Publish() {
 	c.metricBatch.Publish()
+}
+
+func (c *collector) ShutdownPublish() {
+	c.Execute()
+	c.publisher.Execute()
 }
 
 func (c *collector) updateVolume(bytes int64) {

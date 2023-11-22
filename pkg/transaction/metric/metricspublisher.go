@@ -3,12 +3,10 @@ package metric
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/textproto"
-	"strconv"
 
 	"github.com/google/uuid"
 
@@ -26,13 +24,14 @@ type metricPublisher struct {
 	jobID     string
 	ready     bool
 	offline   bool
+	logger    log.FieldLogger
 }
 
 func (c *metricPublisher) publishEvent(event interface{}) error {
 	if lighthouseUsageEvent, ok := event.(LighthouseUsageEvent); ok {
 		return c.publishToCache(lighthouseUsageEvent)
 	}
-	log.Error("event was not a lighthouse event")
+	c.logger.Error("event was not a lighthouse event")
 	return nil
 }
 
@@ -62,14 +61,17 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 		Headers: headers,
 		Body:    b.Bytes(),
 	}
-	log.Debugf("Payload for Usage event : %s\n", b.String())
+	c.logger.Debugf("Payload for Usage event : %s\n", b.String())
 	response, err := c.apiClient.Send(request)
 	if err != nil {
+		c.logger.WithError(err).Error("publishing usage")
 		return err
 	}
 	if response.Code >= 400 {
 		resBody := string(response.Body)
-		return errors.New("Request failed with code: " + strconv.Itoa(response.Code) + ", content: " + resBody)
+		err := fmt.Errorf("request failed with unexpected status code")
+		c.logger.WithField("statusCode", response.Code).WithError(err).Error(resBody)
+		return err
 	}
 	return nil
 }
@@ -110,6 +112,7 @@ func newMetricPublisher(storage storageCache, report *cacheReport) *metricPublis
 		storage: storage,
 		report:  report,
 		offline: agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
+		logger:  log.NewFieldLogger().WithComponent("metricPublisher").WithPackage("metric"),
 	}
 
 	publisher.registerReportJob()
@@ -134,7 +137,7 @@ func (c *metricPublisher) registerReportJob() {
 	var err error
 	c.jobID, err = jobs.RegisterScheduledJobWithName(c, schedule, "Usage Reporting")
 	if err != nil {
-		log.Errorf("could not register usage report creation job: %s", err.Error())
+		c.logger.WithError(err).Error("could not register usage report creation job")
 	}
 }
 
@@ -158,7 +161,7 @@ func (c *metricPublisher) Ready() bool {
 
 	err := c.Execute()
 	if err != nil {
-		log.Errorf("error hit generating report, report still in cache: %s", err.Error())
+		c.logger.WithError(err).Errorf("error hit generating report, report still in cache")
 	}
 	return true
 }
