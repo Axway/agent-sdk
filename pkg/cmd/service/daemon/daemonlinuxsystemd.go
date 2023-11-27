@@ -313,14 +313,6 @@ func (s *systemDRecord) SetEnvFile(envFile string) error {
 	return nil
 }
 
-// SetInstallDir - sets the installDir that will be used by the service
-func (s *systemDRecord) SetInstallDir(installDir string) error {
-	// set the absolute path, incase it is relative
-	envFileAbsolute, _ := filepath.Abs(installDir)
-	s.installDir = envFileAbsolute
-	return nil
-}
-
 // SetUser - sets the user that will execute the service
 func (s *systemDRecord) SetUser(user string) error {
 	s.user = user
