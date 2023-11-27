@@ -61,6 +61,9 @@ func GenServiceCmd(pathArg string) *cobra.Command {
 			if pflag := cmd.Flag(corecmd.EnvFileFlag); pflag != nil {
 				globalAgentService.EnvFile = pflag.Value.String()
 			}
+			if pflag := cmd.Flag(corecmd.InstallDirFlag); pflag != nil {
+				globalAgentService.InstallDir = pflag.Value.String()
+			}
 			if globalAgentService.Path == "." || globalAgentService.Path == "" {
 				var err error
 				globalAgentService.Path, err = os.Getwd()

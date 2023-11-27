@@ -26,10 +26,11 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	perAPIEnabled := s.config.PerAPI && details.APIID != ""
 
 	if s.config.PerSub && details.SubID != "" {
+		apiSamp := false
 		if perAPIEnabled {
-			s.shouldSampleWithCounter(details.APIID)
+			apiSamp = s.shouldSampleWithCounter(details.APIID)
 		}
-		return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID))
+		return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID)) || apiSamp
 	}
 
 	if perAPIEnabled {

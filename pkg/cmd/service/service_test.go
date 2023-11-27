@@ -25,11 +25,12 @@ type mockDaemon struct {
 	serviceNameCalled bool
 }
 
-func (m *mockDaemon) GetTemplate() string      { return "" }
-func (m *mockDaemon) SetTemplate(string) error { return nil }
-func (m *mockDaemon) SetEnvFile(string) error  { return nil }
-func (m *mockDaemon) SetUser(string) error     { return nil }
-func (m *mockDaemon) SetGroup(string) error    { return nil }
+func (m *mockDaemon) GetTemplate() string        { return "" }
+func (m *mockDaemon) SetTemplate(string) error   { return nil }
+func (m *mockDaemon) SetEnvFile(string) error    { return nil }
+func (m *mockDaemon) SetUser(string) error       { return nil }
+func (m *mockDaemon) SetGroup(string) error      { return nil }
+func (m *mockDaemon) SetInstallDir(string) error { return nil }
 
 func (m *mockDaemon) Install(args ...string) (string, error) {
 	m.installCalled = true
@@ -91,6 +92,7 @@ func newMockAgentService() *AgentService {
 		User:        "user",
 		Group:       "group",
 		EnvFile:     "./filename",
+		InstallDir:  "/this/install/dir",
 	}
 }
 
