@@ -27,15 +27,13 @@ import (
 
 // Constants for cmd flags
 const (
-	pathConfigFlag            = "pathConfig"
-	beatsPathConfigFlag       = "path.config"
-	EnvFileFlag               = "envFile"
-	EnvFileFlagDescription    = "Path of the file with environment variables to override configuration"
-	InstallDirFlag            = "installDir"
-	InstallDirFlagDescription = "The path to the working directory. If not set, will default the working directory to the execution path"
-	cpuprofile                = "cpuprofile"
-	memprofile                = "memprofile"
-	httpprofile               = "httpprofile"
+	pathConfigFlag         = "pathConfig"
+	beatsPathConfigFlag    = "path.config"
+	EnvFileFlag            = "envFile"
+	EnvFileFlagDescription = "Path of the file with environment variables to override configuration"
+	cpuprofile             = "cpuprofile"
+	memprofile             = "memprofile"
+	httpprofile            = "httpprofile"
 )
 
 // CommandHandler - Root command execution handler
@@ -175,7 +173,6 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 func (c *agentRootCommand) addBaseProps(agentType config.AgentType) {
 	c.props.AddStringPersistentFlag(pathConfigFlag, ".", "Path to the directory containing the YAML configuration file for the agent")
 	c.props.AddStringPersistentFlag(EnvFileFlag, "", EnvFileFlagDescription)
-	c.props.AddStringPersistentFlag(InstallDirFlag, "", InstallDirFlagDescription)
 	if agentType == config.DiscoveryAgent {
 		c.props.AddStringProperty(cpuprofile, "", "write cpu profile to `file`")
 		c.props.AddStringProperty(memprofile, "", "write memory profile to `file`")
