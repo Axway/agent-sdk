@@ -249,6 +249,11 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 }
 
 func (a *agentResourceManager) onResourceChange() {
+	subRes := a.agentResource.GetSubResource(definitions.XAgentDetails)
+	if details, ok := subRes.(map[string]interface{}); ok {
+		a.agentDetails = details
+	}
+
 	isChanged := (a.prevAgentResHash != 0)
 	agentResHash, _ := util.ComputeHash(a.agentResource)
 	if a.prevAgentResHash != 0 && a.prevAgentResHash == agentResHash {
