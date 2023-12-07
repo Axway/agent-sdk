@@ -10,14 +10,15 @@ import (
 )
 
 type wsdlProcessor struct {
-	spec *wsdl.Definitions
+	wsdlDef *wsdl.Definitions
+	spec    []byte
 }
 
-func newWsdlProcessor(wsdlDef *wsdl.Definitions) *wsdlProcessor {
-	return &wsdlProcessor{spec: wsdlDef}
+func newWsdlProcessor(wsdlDef *wsdl.Definitions, spec []byte) *wsdlProcessor {
+	return &wsdlProcessor{wsdlDef: wsdlDef, spec: spec}
 }
 
-func (p *wsdlProcessor) getResourceType() string {
+func (p *wsdlProcessor) GetResourceType() string {
 	return Wsdl
 }
 
@@ -26,10 +27,15 @@ func (p *wsdlProcessor) GetVersion() string {
 	return ""
 }
 
+// GetDescription -
+func (p *wsdlProcessor) GetDescription() string {
+	return ""
+}
+
 // GetEndpoints -
 func (p *wsdlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	endPoints := []EndpointDefinition{}
-	ports := p.spec.Service.Ports
+	ports := p.wsdlDef.Service.Ports
 	for _, val := range ports {
 		loc := val.Address.Location
 		fixed, err := url.Parse(loc)
@@ -72,4 +78,9 @@ func (p *wsdlProcessor) contains(endpts []EndpointDefinition, endpt EndpointDefi
 		}
 	}
 	return false
+}
+
+// GetSpecBytes -
+func (p *wsdlProcessor) GetSpecBytes() []byte {
+	return p.spec
 }

@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/json"
 	"net"
 	"sort"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 	coreerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/getkin/kin-openapi/openapi2"
 )
 
 var validOA2Schemes = map[string]bool{"http": true, "https": true, "ws": true, "wss": true}
@@ -31,7 +33,7 @@ func newOas2Processor(oas2Spec *oas2Swagger) *oas2SpecProcessor {
 	return &oas2SpecProcessor{spec: oas2Spec}
 }
 
-func (p *oas2SpecProcessor) getResourceType() string {
+func (p *oas2SpecProcessor) GetResourceType() string {
 	return Oas2
 }
 
@@ -113,6 +115,23 @@ func (p *oas2SpecProcessor) GetOAuthScopes() map[string]string {
 
 func (p *oas2SpecProcessor) GetAPIKeyInfo() []APIKeyInfo {
 	return p.apiKeyInfo
+}
+
+func (p *oas2SpecProcessor) GetTitle() string {
+	return p.spec.Info.Title
+}
+
+func (p *oas2SpecProcessor) GetDescription() string {
+	return p.spec.Info.Description
+}
+
+func (p *oas2SpecProcessor) StripSpecAuth() {
+	p.spec.SecurityDefinitions = map[string]*openapi2.SecurityScheme{}
+}
+
+func (p *oas2SpecProcessor) GetSpecBytes() []byte {
+	s, _ := json.Marshal(p.spec)
+	return s
 }
 
 func createEndpointDefinition(scheme, host string, port int, basePath string) EndpointDefinition {

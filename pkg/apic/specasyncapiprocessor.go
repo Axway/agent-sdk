@@ -8,13 +8,14 @@ import (
 
 type asyncAPIProcessor struct {
 	asyncapiDef map[string]interface{}
+	spec        []byte
 }
 
-func newAsyncAPIProcessor(asyncapiDef map[string]interface{}) *asyncAPIProcessor {
-	return &asyncAPIProcessor{asyncapiDef: asyncapiDef}
+func newAsyncAPIProcessor(asyncapiDef map[string]interface{}, spec []byte) *asyncAPIProcessor {
+	return &asyncAPIProcessor{asyncapiDef: asyncapiDef, spec: spec}
 }
 
-func (p *asyncAPIProcessor) getResourceType() string {
+func (p *asyncAPIProcessor) GetResourceType() string {
 	return AsyncAPI
 }
 
@@ -24,6 +25,20 @@ func (p *asyncAPIProcessor) GetVersion() string {
 	if info != nil {
 		if infoDetail, ok := info.(map[string]interface{}); ok {
 			version := infoDetail["version"]
+			if version != nil {
+				return version.(string)
+			}
+		}
+	}
+	return ""
+}
+
+// GetDescription -
+func (p *asyncAPIProcessor) GetDescription() string {
+	info := p.asyncapiDef["info"]
+	if info != nil {
+		if infoDetail, ok := info.(map[string]interface{}); ok {
+			version := infoDetail["description"]
 			if version != nil {
 				return version.(string)
 			}
@@ -129,4 +144,9 @@ func (p *asyncAPIProcessor) parseVariableObject(serverObjInterface map[string]in
 		}
 	}
 	return varDefaultValue
+}
+
+// GetSpecBytes -
+func (p *asyncAPIProcessor) GetSpecBytes() []byte {
+	return p.spec
 }

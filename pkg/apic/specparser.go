@@ -23,7 +23,9 @@ const (
 type SpecProcessor interface {
 	GetVersion() string
 	GetEndpoints() ([]EndpointDefinition, error)
-	getResourceType() string
+	GetDescription() string
+	GetSpecBytes() []byte
+	GetResourceType() string
 }
 
 // OasSpecProcessor -
@@ -32,6 +34,8 @@ type OasSpecProcessor interface {
 	GetAPIKeyInfo() []APIKeyInfo
 	GetOAuthScopes() map[string]string
 	GetAuthPolicies() []string
+	StripSpecAuth()
+	GetTitle() string
 }
 
 // SpecResourceParser -
@@ -140,7 +144,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	_, ok = specDef["asyncapi"]
 	if ok {
 		s.resourceContentType = contentType
-		return newAsyncAPIProcessor(specDef), nil
+		return newAsyncAPIProcessor(specDef, s.resourceSpec), nil
 	}
 	return nil, errors.New("unknown yaml or json based specification")
 }
@@ -150,7 +154,7 @@ func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newWsdlProcessor(def), nil
+	return newWsdlProcessor(def, s.resourceSpec), nil
 }
 
 func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
@@ -195,7 +199,7 @@ func (s *SpecResourceParser) parseAsyncAPISpec() (SpecProcessor, error) {
 	_, ok := specDef["asyncapi"]
 	if ok {
 		s.resourceContentType = contentType
-		return newAsyncAPIProcessor(specDef), nil
+		return newAsyncAPIProcessor(specDef, s.resourceSpec), nil
 	}
 	return nil, errors.New("invalid asyncapi specification")
 }
@@ -209,7 +213,7 @@ func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 	}
 
 	if len(definition.Elements) > 0 {
-		return newProtobufProcessor(definition), nil
+		return newProtobufProcessor(definition, s.resourceSpec), nil
 	}
 	return nil, errors.New("invalid protobuf specification")
 
