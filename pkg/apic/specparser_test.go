@@ -111,8 +111,8 @@ func TestSpecDiscovery(t *testing.T) {
 			assert.Nil(t, err)
 			specProcessor := specParser.GetSpecProcessor()
 			assert.NotNil(t, specProcessor)
-			assert.Equal(t, tc.expectedType, specProcessor.getResourceType())
-			if tc.expectedType != specProcessor.getResourceType() {
+			assert.Equal(t, tc.expectedType, specProcessor.GetResourceType())
+			if tc.expectedType != specProcessor.GetResourceType() {
 				return
 			}
 			ok := false

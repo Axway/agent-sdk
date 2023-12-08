@@ -2,7 +2,6 @@
 image: docker:dind
 
 variables:
-  PACKAGE_NAME: apic-agents-sdk
   GIT_REPO_PATH: src/github.com/Axway # overridden from variables.yml
   GIT_REPO_NAME: agent-sdk
 

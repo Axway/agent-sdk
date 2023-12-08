@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
@@ -25,7 +26,7 @@ func newOas3Processor(oas3Obj *openapi3.T) *oas3SpecProcessor {
 	return &oas3SpecProcessor{spec: oas3Obj}
 }
 
-func (p *oas3SpecProcessor) getResourceType() string {
+func (p *oas3SpecProcessor) GetResourceType() string {
 	return Oas3
 }
 
@@ -198,4 +199,21 @@ func (p *oas3SpecProcessor) GetOAuthScopes() map[string]string {
 
 func (p *oas3SpecProcessor) GetAPIKeyInfo() []APIKeyInfo {
 	return p.apiKeyInfo
+}
+
+func (p *oas3SpecProcessor) GetTitle() string {
+	return p.spec.Info.Title
+}
+
+func (p *oas3SpecProcessor) GetDescription() string {
+	return p.spec.Info.Description
+}
+
+func (p *oas3SpecProcessor) StripSpecAuth() {
+	p.spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
+}
+
+func (p *oas3SpecProcessor) GetSpecBytes() []byte {
+	s, _ := json.Marshal(p.spec)
+	return s
 }

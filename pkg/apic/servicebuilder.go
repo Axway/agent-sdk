@@ -291,7 +291,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	if b.serviceBody.ResourceContentType == "" {
 		b.serviceBody.ResourceContentType = specParser.getResourceContentType()
 	}
-	b.serviceBody.ResourceType = specProcessor.getResourceType()
+	b.serviceBody.ResourceType = specProcessor.GetResourceType()
 	b.serviceBody.specHash = fmt.Sprintf("%v", specParser.specHash)
 	b.serviceBody.specVersion = specProcessor.GetVersion()
 
