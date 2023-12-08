@@ -38,9 +38,9 @@ func (p *asyncAPIProcessor) GetDescription() string {
 	info := p.asyncapiDef["info"]
 	if info != nil {
 		if infoDetail, ok := info.(map[string]interface{}); ok {
-			version := infoDetail["description"]
-			if version != nil {
-				return version.(string)
+			description := infoDetail["description"]
+			if description != nil {
+				return description.(string)
 			}
 		}
 	}
