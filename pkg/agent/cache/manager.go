@@ -125,6 +125,7 @@ type Manager interface {
 	ReleaseResourceReadLock()
 }
 
+type teamRefreshHandler func()
 type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
@@ -148,10 +149,19 @@ type cacheManager struct {
 	isCacheUpdated          bool
 	isPersistedCacheEnabled bool
 	migrators               []cacheMigrate
+	teamRefreshHandler      teamRefreshHandler
+}
+
+type cacheManagerOptions func(*cacheManager)
+
+func WithTeamRefreshHandler(handler teamRefreshHandler) cacheManagerOptions {
+	return func(cm *cacheManager) {
+		cm.teamRefreshHandler = handler
+	}
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
-func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Manager {
+func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool, opt ...cacheManagerOptions) Manager {
 	logger := log.NewFieldLogger().
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
@@ -172,6 +182,10 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
 		migrators:               []cacheMigrate{},
+	}
+
+	for _, o := range opt {
+		o(m)
 	}
 
 	if m.isPersistedCacheEnabled {
