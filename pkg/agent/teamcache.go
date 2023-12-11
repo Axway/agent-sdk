@@ -38,10 +38,7 @@ func (j *centralTeamsCache) Execute() error {
 	}
 
 	for _, team := range platformTeams {
-		savedTeam := agent.cacheManager.GetTeamByID(team.ID)
-		if savedTeam == nil {
-			agent.cacheManager.AddTeam(&team)
-		}
+		agent.cacheManager.AddTeam(&team)
 	}
 	j.lastUpdateTime = time.Now()
 	return nil
@@ -58,7 +55,10 @@ func refreshTeamCache() {
 		agent.teamJob = &centralTeamsCache{}
 	}
 
-	if agent.teamJob.lastUpdateTime.IsZero() || agent.teamJob.lastUpdateTime.Before(time.Now().Add(-1*time.Hour)) {
+	log.Tracef("lastUpdateTime - %s", agent.teamJob.lastUpdateTime)
+	log.Tracef("versus time - %s", time.Now().Add(-1*time.Hour))
+
+	if agent.teamJob.lastUpdateTime.IsZero() || agent.teamJob.lastUpdateTime.Before(time.Now().Add(1*time.Hour)) {
 		// execute the job on startup to populate the team cache
 		agent.teamJob.Execute()
 	}
