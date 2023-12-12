@@ -57,11 +57,11 @@ type ShutdownHandler func()
 
 type agentData struct {
 	agentResourceManager resource.Manager
-
-	apicClient       apic.Client
-	cfg              config.CentralConfig
-	agentFeaturesCfg config.AgentFeaturesConfig
-	tokenRequester   auth.PlatformTokenGetter
+	teamJob              *centralTeamsCache
+	apicClient           apic.Client
+	cfg                  config.CentralConfig
+	agentFeaturesCfg     config.AgentFeaturesConfig
+	tokenRequester       auth.PlatformTokenGetter
 
 	teamMap                    cache.Cache
 	cacheManager               agentcache.Manager

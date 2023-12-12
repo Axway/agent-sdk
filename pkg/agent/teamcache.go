@@ -15,6 +15,7 @@ import (
 const qaTeamCacheInterval = "QA_CENTRAL_TEAMCACHE_INTERVAL"
 
 type centralTeamsCache struct {
+	lastUpdateTime time.Time
 	jobs.Job
 }
 
@@ -37,25 +38,31 @@ func (j *centralTeamsCache) Execute() error {
 	}
 
 	for _, team := range platformTeams {
-		savedTeam := agent.cacheManager.GetTeamByID(team.ID)
-		if savedTeam == nil {
-			agent.cacheManager.AddTeam(&team)
-		}
+		agent.cacheManager.AddTeam(&team)
 	}
+	j.lastUpdateTime = time.Now()
 	return nil
 }
 
 // registerTeamMapCacheJob -
 func registerTeamMapCacheJob() {
-	job := &centralTeamsCache{}
+	RefreshTeamCache()
+	jobs.RegisterIntervalJobWithName(agent.teamJob, getJobInterval(), "Team Cache")
+}
 
-	// execute the job on startup to populate the team cache
-	job.Execute()
-	jobs.RegisterIntervalJobWithName(job, getJobInterval(), "Team Cache")
+func RefreshTeamCache() {
+	if agent.teamJob == nil {
+		agent.teamJob = &centralTeamsCache{}
+	}
+
+	if agent.teamJob.lastUpdateTime.IsZero() || agent.teamJob.lastUpdateTime.Before(time.Now().Add(12*time.Hour)) {
+		// execute the job on startup to populate the team cache
+		agent.teamJob.Execute()
+	}
 }
 
 func getJobInterval() time.Duration {
-	interval := time.Hour
+	interval := 12 * time.Hour
 	// check for QA env vars
 	if val := os.Getenv(qaTeamCacheInterval); val != "" {
 		if duration, err := time.ParseDuration(val); err == nil {

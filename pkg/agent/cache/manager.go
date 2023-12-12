@@ -125,6 +125,7 @@ type Manager interface {
 	ReleaseResourceReadLock()
 }
 
+type teamRefreshHandler func()
 type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
@@ -148,7 +149,10 @@ type cacheManager struct {
 	isCacheUpdated          bool
 	isPersistedCacheEnabled bool
 	migrators               []cacheMigrate
+	teamRefreshHandler      teamRefreshHandler
 }
+
+type cacheManagerOptions func(*cacheManager)
 
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Manager {
