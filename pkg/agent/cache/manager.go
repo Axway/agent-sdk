@@ -154,12 +154,6 @@ type cacheManager struct {
 
 type cacheManagerOptions func(*cacheManager)
 
-func WithTeamRefreshHandler(handler teamRefreshHandler) cacheManagerOptions {
-	return func(cm *cacheManager) {
-		cm.teamRefreshHandler = handler
-	}
-}
-
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool, opt ...cacheManagerOptions) Manager {
 	logger := log.NewFieldLogger().
@@ -182,10 +176,6 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool, op
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
 		migrators:               []cacheMigrate{},
-	}
-
-	for _, o := range opt {
-		o(m)
 	}
 
 	if m.isPersistedCacheEnabled {

@@ -133,8 +133,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled(),
-			agentcache.WithTeamRefreshHandler(refreshTeamCache))
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
 
 	setCentralConfig(centralCfg)

@@ -21,16 +21,6 @@ func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
 }
 
 func (c *cacheManager) GetTeamByName(name string) *defs.PlatformTeam {
-	team := c.getTeamByName(name)
-	if team == nil && c.teamRefreshHandler != nil {
-		c.teamRefreshHandler()
-		return c.getTeamByName(name)
-	}
-	return nil
-}
-
-// GetTeamByName gets a team by name
-func (c *cacheManager) getTeamByName(name string) *defs.PlatformTeam {
 	item, err := c.teams.Get(name)
 	if err != nil {
 		return nil
@@ -66,16 +56,6 @@ func (c *cacheManager) GetDefaultTeam() *defs.PlatformTeam {
 }
 
 func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
-	team := c.getTeamByID(id)
-	if team == nil && c.teamRefreshHandler != nil {
-		c.teamRefreshHandler()
-		return c.getTeamByID(id)
-	}
-	return nil
-}
-
-// GetTeamByID gets a team by id
-func (c *cacheManager) getTeamByID(id string) *defs.PlatformTeam {
 	item, err := c.teams.GetBySecondaryKey(id)
 	if err != nil {
 		return nil

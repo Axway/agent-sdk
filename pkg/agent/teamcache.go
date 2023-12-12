@@ -46,26 +46,23 @@ func (j *centralTeamsCache) Execute() error {
 
 // registerTeamMapCacheJob -
 func registerTeamMapCacheJob() {
-	refreshTeamCache()
+	RefreshTeamCache()
 	jobs.RegisterIntervalJobWithName(agent.teamJob, getJobInterval(), "Team Cache")
 }
 
-func refreshTeamCache() {
+func RefreshTeamCache() {
 	if agent.teamJob == nil {
 		agent.teamJob = &centralTeamsCache{}
 	}
 
-	log.Tracef("lastUpdateTime - %s", agent.teamJob.lastUpdateTime)
-	log.Tracef("versus time - %s", time.Now().Add(-1*time.Hour))
-
-	if agent.teamJob.lastUpdateTime.IsZero() || agent.teamJob.lastUpdateTime.Before(time.Now().Add(1*time.Hour)) {
+	if agent.teamJob.lastUpdateTime.IsZero() || agent.teamJob.lastUpdateTime.Before(time.Now().Add(12*time.Hour)) {
 		// execute the job on startup to populate the team cache
 		agent.teamJob.Execute()
 	}
 }
 
 func getJobInterval() time.Duration {
-	interval := time.Hour
+	interval := 12 * time.Hour
 	// check for QA env vars
 	if val := os.Getenv(qaTeamCacheInterval); val != "" {
 		if duration, err := time.ParseDuration(val); err == nil {
