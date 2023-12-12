@@ -20,6 +20,7 @@ func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
 	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
 }
 
+// GetTeamByName gets a team by name
 func (c *cacheManager) GetTeamByName(name string) *defs.PlatformTeam {
 	item, err := c.teams.Get(name)
 	if err != nil {
@@ -55,6 +56,7 @@ func (c *cacheManager) GetDefaultTeam() *defs.PlatformTeam {
 	return &defaultTeam
 }
 
+// GetTeamByID gets a team by id
 func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
 	item, err := c.teams.GetBySecondaryKey(id)
 	if err != nil {
