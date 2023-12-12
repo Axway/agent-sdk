@@ -155,7 +155,7 @@ type cacheManager struct {
 type cacheManagerOptions func(*cacheManager)
 
 // NewAgentCacheManager - Create a new agent cache manager
-func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool, opt ...cacheManagerOptions) Manager {
+func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Manager {
 	logger := log.NewFieldLogger().
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
