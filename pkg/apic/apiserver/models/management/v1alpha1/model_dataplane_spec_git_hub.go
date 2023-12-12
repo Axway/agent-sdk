@@ -11,8 +11,10 @@ package management
 
 // DataplaneSpecGitHub The configuration common to all GitHub agents that use this dataplane
 type DataplaneSpecGitHub struct {
-	Type      string                    `json:"type,omitempty"`
-	Name      string                    `json:"name"`
-	OwnerName string                    `json:"ownerName,omitempty"`
+	Type string `json:"type,omitempty"`
+	// The repository name used for api specs discovery
+	Name string `json:"name"`
+	// The repository owner Name
+	OwnerName string                    `json:"ownerName"`
 	Filter    DataplaneSpecGitHubFilter `json:"filter,omitempty"`
 }

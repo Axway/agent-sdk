@@ -15,4 +15,6 @@ type DataplaneSpecGitHubFilter struct {
 	Paths []string `json:"paths,omitempty"`
 	// The regular expressions that when a file name passes any of the patterns, a spec file will be used to create an api service
 	Pattern []string `json:"pattern,omitempty"`
+	// The GitHub repository branch that'll be used for the discovery process
+	Branch string `json:"branch,omitempty"`
 }
