@@ -126,6 +126,7 @@ func (es *EventSync) initCache() error {
 	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
 	// when the poll/stream client is ready
 	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
+	agent.cacheManager.Flush()
 	if seqID > 0 {
 		es.sequence.SetSequence(seqID - 1)
 	}
@@ -147,7 +148,6 @@ func (es *EventSync) RebuildCache() {
 	PublishingLock()
 	defer PublishingUnlock()
 
-	agent.cacheManager.Flush()
 	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
 	}
