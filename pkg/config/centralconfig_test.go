@@ -156,10 +156,10 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
 	centralConfig.ReportActivityFrequency = time.Minute
 
-	centralConfig.APIValidationFrequency = 0
+	centralConfig.APIValidationCronSchedule = ""
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
-	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationFrequency, please set and/or check its value", err.Error())
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
 
 	cleanupFiles(tmpFile.Name())
 }
