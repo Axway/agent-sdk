@@ -161,6 +161,19 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
 
+	centralConfig.APIValidationCronSchedule = "* * * * *"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
+
+	centralConfig.APIValidationCronSchedule = "*/59 * * * *"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
+
+	centralConfig.APIValidationCronSchedule = "@daily"
+	err = cfgValidator.ValidateCfg()
+	assert.Nil(t, err)
 	cleanupFiles(tmpFile.Name())
 }
 
