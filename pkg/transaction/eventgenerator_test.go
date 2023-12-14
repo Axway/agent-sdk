@@ -33,7 +33,7 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			SubscriptionConfiguration: corecfg.NewSubscriptionConfig(),
 			UsageReporting:            corecfg.NewUsageReporting("https://platform.xxx.com"),
 			ReportActivityFrequency:   2 * time.Minute,
-			APIValidationCronSchedule: "0 * * * *",
+			APIValidationCronSchedule: "0 0 * * *",
 			ClientTimeout:             1 * time.Minute,
 			Auth: &corecfg.AuthConfiguration{
 				URL:        authURL,
