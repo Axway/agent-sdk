@@ -1,8 +1,12 @@
 package agent
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/agent/resource"
+	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
@@ -14,13 +18,29 @@ import (
 func TestEventSync_pollMode(t *testing.T) {
 	cfg := createCentralCfg("https://abc.com", "mockenv")
 	err := Initialize(cfg)
+	cfg.AgentName = "Test-DA"
+	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
 
-	mc := &mock.Client{}
-	mc.GetResourceMock = func(url string) (*apiv1.ResourceInstance, error) {
-		wt := management.NewWatchTopic("mock-wt")
-		ri, err := wt.AsInstance()
-		return ri, err
+	mc := &mock.Client{
+		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+			if method == api.PUT {
+				return buffer, nil
+			}
+			return json.Marshal(agentRes)
+		},
+		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
+			if strings.Contains(url, "/discoveryagents") {
+				return agentRes, nil
+			}
+			wt := management.NewWatchTopic("mock-wt")
+			ri, err := wt.AsInstance()
+			return ri, err
+		},
 	}
+
+	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
+	agent.agentResourceManager = m
+
 	InitializeForTest(mc)
 	assert.Nil(t, err)
 
@@ -51,12 +71,28 @@ func TestEventSync_streamMode(t *testing.T) {
 		MarketplaceProvisioning: true,
 	}
 
-	mc := &mock.Client{}
-	mc.GetResourceMock = func(url string) (*apiv1.ResourceInstance, error) {
-		wt := management.NewWatchTopic("mock-wt")
-		ri, err := wt.AsInstance()
-		return ri, err
+	cfg.AgentName = "Test-DA"
+	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
+	mc := &mock.Client{
+		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+			if method == api.PUT {
+				return buffer, nil
+			}
+			return json.Marshal(agentRes)
+		},
+		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
+			if strings.Contains(url, "/discoveryagents") {
+				return agentRes, nil
+			}
+			wt := management.NewWatchTopic("mock-wt")
+			ri, err := wt.AsInstance()
+			return ri, err
+		},
 	}
+
+	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
+	agent.agentResourceManager = m
+
 	InitializeForTest(mc)
 	assert.Nil(t, err)
 
