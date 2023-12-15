@@ -44,6 +44,7 @@ type propertyDefinition struct {
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
 	Widget             string                        `json:"x-axway-widget,omitempty"`
 	IsCopyable         bool                          `json:"x-axway-copyable,omitempty"`
+	ScopesUniqueItems  bool                          `json:"uniqueItems,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -170,6 +171,7 @@ type schemaProperty struct {
 	readOnly    bool
 	hidden      bool
 	dataType    string
+	uniqueItems bool
 	PropertyBuilder
 }
 
@@ -187,6 +189,9 @@ func (p *schemaProperty) SetName(name string) TypePropertyBuilder {
 // SetLabel - sets the label of the property
 func (p *schemaProperty) SetLabel(label string) TypePropertyBuilder {
 	p.label = label
+	if p.label == OauthScopes {
+		p.uniqueItems = true
+	}
 	return p
 }
 
@@ -270,18 +275,18 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 	}
 
 	prop := &propertyDefinition{
-		Name:        p.name,
-		Title:       p.label,
-		Type:        p.dataType,
-		Description: p.description,
-		ReadOnly:    p.readOnly,
-		Required:    p.required,
+		Name:              p.name,
+		Title:             p.label,
+		Type:              p.dataType,
+		Description:       p.description,
+		ReadOnly:          p.readOnly,
+		Required:          p.required,
+		ScopesUniqueItems: p.uniqueItems,
 	}
 
 	if p.hidden {
 		prop.Format = "hidden"
 	}
-
 	return prop, nil
 }
 
