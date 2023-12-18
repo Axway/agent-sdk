@@ -44,7 +44,7 @@ type propertyDefinition struct {
 	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
 	Widget             string                        `json:"x-axway-widget,omitempty"`
 	IsCopyable         bool                          `json:"x-axway-copyable,omitempty"`
-	ScopesUniqueItems  bool                          `json:"uniqueItems,omitempty"`
+	UniqueItems        bool                          `json:"uniqueItems,omitempty"`
 	Name               string                        `json:"-"`
 	Required           bool                          `json:"-"`
 }
@@ -171,7 +171,6 @@ type schemaProperty struct {
 	readOnly    bool
 	hidden      bool
 	dataType    string
-	uniqueItems bool
 	PropertyBuilder
 }
 
@@ -189,9 +188,6 @@ func (p *schemaProperty) SetName(name string) TypePropertyBuilder {
 // SetLabel - sets the label of the property
 func (p *schemaProperty) SetLabel(label string) TypePropertyBuilder {
 	p.label = label
-	if p.label == OauthScopes {
-		p.uniqueItems = true
-	}
 	return p
 }
 
@@ -275,13 +271,12 @@ func (p *schemaProperty) Build() (*propertyDefinition, error) {
 	}
 
 	prop := &propertyDefinition{
-		Name:              p.name,
-		Title:             p.label,
-		Type:              p.dataType,
-		Description:       p.description,
-		ReadOnly:          p.readOnly,
-		Required:          p.required,
-		ScopesUniqueItems: p.uniqueItems,
+		Name:        p.name,
+		Title:       p.label,
+		Type:        p.dataType,
+		Description: p.description,
+		ReadOnly:    p.readOnly,
+		Required:    p.required,
 	}
 
 	if p.hidden {
@@ -518,6 +513,7 @@ type arraySchemaProperty struct {
 	items          []propertyDefinition
 	minItems       *uint
 	maxItems       *uint
+	uniqueItems    bool
 	PropertyBuilder
 }
 
@@ -548,6 +544,13 @@ func (p *arraySchemaProperty) SetMaxItems(max uint) ArrayPropertyBuilder {
 	return p
 }
 
+// setUniqueItems - automatically adds an uniqueItems property to the array if only one element is present
+func (p *arraySchemaProperty) setUniqueItems() {
+	if len(p.items) == 1 {
+		p.uniqueItems = true
+	}
+}
+
 // Build - create the propertyDefinition for use in the subscription schema builder
 func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
@@ -558,6 +561,7 @@ func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
 	var anyOfItems *anyOfPropertyDefinitions
 	if p.items != nil {
 		anyOfItems = &anyOfPropertyDefinitions{p.items}
+		p.setUniqueItems()
 	}
 
 	if p.minItems != nil && p.maxItems != nil && *p.minItems > *p.maxItems {
@@ -567,6 +571,7 @@ func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
 	def.Items = anyOfItems
 	def.MinItems = p.minItems
 	def.MaxItems = p.maxItems
+	def.UniqueItems = p.uniqueItems
 	return def, err
 }
 

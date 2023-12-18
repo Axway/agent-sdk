@@ -148,17 +148,6 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Title: "The Label",
 				Type:  DataTypeString,
 			}},
-		{"Minimal String property with Scopes",
-			NewSchemaPropertyBuilder().
-				SetName("scopes name").
-				SetLabel(OauthScopes).
-				IsString(),
-			propertyDefinition{
-				Name:              "scopes name",
-				Title:             OauthScopes,
-				Type:              DataTypeString,
-				ScopesUniqueItems: true,
-			}},
 		{"Full String property with unsorted enum and first value",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -326,8 +315,9 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 						},
 					},
 				},
-				MinItems: getUintPointer(0),
-				MaxItems: getUintPointer(1),
+				MinItems:    getUintPointer(0),
+				MaxItems:    getUintPointer(1),
+				UniqueItems: true,
 			}},
 		{"Minimal Object property",
 			NewSchemaPropertyBuilder().
