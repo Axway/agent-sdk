@@ -539,10 +539,10 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 
 // UpdateStatusWithContext - Updates the agent state providing a context
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
+	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
-		agent.status = status
 		if err != nil {
 			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
