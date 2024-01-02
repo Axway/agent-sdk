@@ -361,7 +361,7 @@ func (m *Client) GetResource(url string) (*v1.ResourceInstance, error) {
 }
 
 func (m *Client) GetResources(ri v1.Interface) ([]v1.Interface, error) {
-	if m.GetResourceMock != nil {
+	if m.GetResourcesMock != nil {
 		return m.GetResourcesMock(ri)
 	}
 	return nil, nil
