@@ -82,6 +82,8 @@ type agentData struct {
 	publishingLock *sync.Mutex
 	ardLock        sync.Mutex
 
+	status string
+
 	// profiling
 	profileDone chan struct{}
 }
@@ -519,6 +521,11 @@ func GetDetailFromAgentResource(key string) string {
 	return val
 }
 
+// GetStatus - get the last reported status
+func GetStatus() string {
+	return agent.status
+}
+
 // UpdateStatus - Updates the agent state
 func UpdateStatus(status, description string) {
 	UpdateStatusWithPrevious(status, status, description)
@@ -535,6 +542,7 @@ func UpdateStatusWithContext(ctx context.Context, status, prevStatus, descriptio
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
+		agent.status = status
 		if err != nil {
 			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
