@@ -20,6 +20,7 @@ type ServiceBody struct {
 	URL                       string
 	Stage                     string
 	StageDescriptor           string
+	StageDisplayName          string
 	Description               string
 	Version                   string
 	AuthPolicy                string

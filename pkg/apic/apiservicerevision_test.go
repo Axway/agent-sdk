@@ -12,13 +12,14 @@ import (
 
 func TestUpdateAPIServiceRevisionTitle(t *testing.T) {
 	testCases := []struct {
-		name     string
-		format   string
-		apiName  string
-		stage    string
-		label    string
-		count    int
-		expected string
+		name         string
+		format       string
+		apiName      string
+		stage        string
+		stageDisplay string
+		label        string
+		count        int
+		expected     string
 	}{
 		{
 			name:     "No Stage",
@@ -78,6 +79,16 @@ func TestUpdateAPIServiceRevisionTitle(t *testing.T) {
 			count:    6,
 			expected: "MyStage - API-Name - \\d{2}/\\d{2}/\\d{4} - r 6",
 		},
+		{
+			name:         "Stage - new format",
+			format:       "{{.Stage}} - {{.APIServiceName}} - {{.Date:MM/DD/YYYY}} - r {{.Revision}}",
+			apiName:      "API-Name",
+			stage:        "e4e084b66fcf325a016fcf54677b0001",
+			stageDisplay: "MyStage",
+			label:        "Test",
+			count:        6,
+			expected:     "MyStage - API-Name - \\d{2}/\\d{2}/\\d{4} - r 6",
+		},
 	}
 
 	for _, test := range testCases {
@@ -89,8 +100,9 @@ func TestUpdateAPIServiceRevisionTitle(t *testing.T) {
 			c.cfg.(*config.CentralConfiguration).APIServiceRevisionPattern = test.format
 
 			s := &ServiceBody{
-				APIName: test.apiName,
-				Stage:   test.stage,
+				APIName:          test.apiName,
+				Stage:            test.stage,
+				StageDisplayName: test.stageDisplay,
 				serviceContext: serviceContext{
 					revisionCount: test.count,
 				},
