@@ -51,7 +51,8 @@ func TestServiceBodySetters(t *testing.T) {
 		SetID("1234").
 		SetPrimaryKey("PrimaryKey").
 		SetRequestDefinitionsAllowed(true).
-		SetStage("teststage").
+		SetStage("stageID").
+		SetStageDisplayName("teststage").
 		SetURL("https://1234.execute-api.us-region.amazonaws.com/teststage").
 		SetDescription(longDescription).
 		SetVersion("1.0.0").
@@ -89,7 +90,8 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "testAPI", sb.APIName)
 	assert.Equal(t, "1234", sb.RestAPIID)
 	assert.Equal(t, "PrimaryKey", sb.PrimaryKey)
-	assert.Equal(t, "teststage", sb.Stage)
+	assert.Equal(t, "stageID", sb.Stage)
+	assert.Equal(t, "teststage", sb.StageDisplayName)
 	assert.Equal(t, "https://1234.execute-api.us-region.amazonaws.com/teststage", sb.URL)
 	assert.Equal(t, 350, len(sb.Description))
 

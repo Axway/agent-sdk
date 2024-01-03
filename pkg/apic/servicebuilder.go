@@ -22,6 +22,7 @@ type ServiceBuilder interface {
 	SetURL(url string) ServiceBuilder
 	SetStage(stage string) ServiceBuilder
 	SetStageDescriptor(stageDescriptor string) ServiceBuilder
+	SetStageDisplayName(stageName string) ServiceBuilder
 	SetDescription(description string) ServiceBuilder
 	SetVersion(version string) ServiceBuilder
 	SetAuthPolicy(authPolicy string) ServiceBuilder
@@ -125,6 +126,11 @@ func (b *serviceBodyBuilder) SetStage(stage string) ServiceBuilder {
 
 func (b *serviceBodyBuilder) SetStageDescriptor(stageDescriptor string) ServiceBuilder {
 	b.serviceBody.StageDescriptor = stageDescriptor
+	return b
+}
+
+func (b *serviceBodyBuilder) SetStageDisplayName(stageDisplayName string) ServiceBuilder {
+	b.serviceBody.StageDisplayName = stageDisplayName
 	return b
 }
 

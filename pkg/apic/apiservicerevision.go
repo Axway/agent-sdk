@@ -171,13 +171,18 @@ func (c *ServiceClient) updateAPIServiceRevisionTitle(serviceBody *ServiceBody) 
 		strconv.Itoa(serviceBody.serviceContext.revisionCount),
 	)
 
+	stage := serviceBody.Stage
+	if serviceBody.StageDisplayName != "" {
+		stage = serviceBody.StageDisplayName
+	}
+
 	// create apiservicerevision template
 	apiSvcRevTitleTemplate := APIServiceRevisionTitle{
 		APIServiceName: serviceBody.APIName,
 		Date:           time.Now().Format(dateFormat),
 		Revision:       strconv.Itoa(serviceBody.serviceContext.revisionCount),
 		StageLabel:     serviceBody.StageDescriptor,
-		Stage:          serviceBody.Stage,
+		Stage:          stage,
 	}
 
 	title, err := template.New("apiSvcRevTitle").Parse(apiSvcRevPattern)
