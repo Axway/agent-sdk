@@ -16,9 +16,6 @@ variables:
   FORTIFY_INCLUDE: "**/*.go"
   FORTIFY_EXCLUDE: "**/*_test.go"
 
-  # Whitesource
-  WS_PROJECT_ID: "APIC_Agents_SDK"
-
   # Blackduck
   BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
 
@@ -40,10 +37,9 @@ include:
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
-    ref: $SCURITY_V2
+    ref: $SCURITY_LATEST
     file:
       - "/.gitlab-ci-fortify.yml"
-      - "/.gitlab-ci-whitesource.yml"
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
@@ -91,11 +87,7 @@ trigger-azure-discovery-agent:
   extends: .trigger-downstream-agent
 
 # overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
-whitesource:
-  rules:
-    - !reference [.mirror-branch-csr-rules, rules]
-
-blackduck:
+blackduck-rapid:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
 
