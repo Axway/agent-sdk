@@ -415,7 +415,7 @@ func TestMetricCollector(t *testing.T) {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
 						APIDetails: apiDetails1,
-						StatusCode: "202",
+						StatusCode: "200",
 						Duration:   10,
 						Bytes:      10,
 						AppDetails: models.AppDetails{
