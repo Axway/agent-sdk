@@ -117,6 +117,7 @@ func (s *testHTTPServer) startServer() {
 				}
 			}
 		}
+		resp.WriteHeader(202)
 	}))
 }
 
@@ -414,7 +415,7 @@ func TestMetricCollector(t *testing.T) {
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
 						APIDetails: apiDetails1,
-						StatusCode: "200",
+						StatusCode: "202",
 						Duration:   10,
 						Bytes:      10,
 						AppDetails: models.AppDetails{

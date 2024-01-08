@@ -69,7 +69,7 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 		return err
 	}
 
-	if response.Code < 400 {
+	if response.Code == 202 {
 		return nil
 	} else if response.Code >= 500 {
 		err := fmt.Errorf("Server error")
@@ -78,20 +78,20 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 	}
 
 	usageResp := LighthouseUsageResponse{}
-	unmarshalErr := json.Unmarshal(response.Body, &usageResp)
-	if unmarshalErr != nil {
-		c.logger.WithField("responseBody", string(response.Body)).WithField("statusCode", response.Code).Error(unmarshalErr)
-		return unmarshalErr
+	err = json.Unmarshal(response.Body, &usageResp)
+	if err != nil {
+		c.logger.WithField("responseBody", string(response.Body)).WithField("statusCode", response.Code).
+			WithError(err).Error("Could not unmarshal response body")
+		return err
 	}
 	if strings.HasPrefix(usageResp.Description, "The file exceeds the maximum upload size of ") || usageResp.Description == "Environment ID not found" {
 		err := fmt.Errorf("request failed with unexpected status code. Not scheduling for retry in the next batch.")
 		c.logger.WithField("statusCode", response.Code).WithError(err).Error(usageResp.Description)
 		return nil
-	} else {
-		err := fmt.Errorf("request failed with unexpected status code")
-		c.logger.WithField("statusCode", response.Code).WithError(err).Error(usageResp.Description)
-		return err
 	}
+	err = fmt.Errorf("request failed with unexpected status code")
+	c.logger.WithField("statusCode", response.Code).WithError(err).Error(usageResp.Description)
+	return err
 }
 
 func (c *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (b bytes.Buffer, contentType string, err error) {
