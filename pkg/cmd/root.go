@@ -165,8 +165,25 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
+	removeBeatSubCommands(c.rootCmd)
 	// Call the config add props
 	return c
+}
+
+func removeBeatSubCommands(rootCmd *cobra.Command) {
+	removeBeatSubCommand(rootCmd, "export")
+	removeBeatSubCommand(rootCmd, "keystore")
+	removeBeatSubCommand(rootCmd, "run")
+	removeBeatSubCommand(rootCmd, "setup")
+	removeBeatSubCommand(rootCmd, "test")
+	removeBeatSubCommand(rootCmd, "version")
+}
+
+func removeBeatSubCommand(rootCmd *cobra.Command, subCmdName string) {
+	subCmd, _, err := rootCmd.Find([]string{subCmdName})
+	if err == nil {
+		rootCmd.RemoveCommand(subCmd)
+	}
 }
 
 // Add the command line properties for the logger and path config
