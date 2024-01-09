@@ -315,8 +315,9 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 						},
 					},
 				},
-				MinItems: getUintPointer(0),
-				MaxItems: getUintPointer(1),
+				MinItems:    getUintPointer(0),
+				MaxItems:    getUintPointer(1),
+				UniqueItems: true,
 			}},
 		{"Minimal Object property",
 			NewSchemaPropertyBuilder().
