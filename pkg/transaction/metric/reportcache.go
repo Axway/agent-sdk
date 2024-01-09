@@ -118,7 +118,6 @@ func (c *cacheReport) generateReportPath(timestamp ISO8601Time, index int) strin
 
 // validateReport - copies usage events setting all usages to 0 for any missing time interval
 func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) LighthouseUsageEvent {
-	reportDuration := time.Duration(savedEvents.Granularity * int(time.Millisecond))
 
 	// order all the keys, this will be used to find any missing times
 	orderedKeys := make([]string, 0, len(savedEvents.Report))
@@ -127,25 +126,24 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 	}
 	sort.Strings(orderedKeys)
 
-	// create an empty report to insert when necessary
-	emptyReport := LighthouseUsageReport{
+	// create a single report which has all savedEventsReports appended
+	finalReport := LighthouseUsageReport{
 		Product: savedEvents.Report[orderedKeys[0]].Product,
 		Usage:   make(map[string]int64),
 		Meta:    savedEvents.Report[orderedKeys[0]].Meta,
 	}
-	for usage := range savedEvents.Report[orderedKeys[0]].Usage {
-		emptyReport.Usage[usage] = 0
-	}
 
-	curDate, _ := time.Parse(ISO8601, orderedKeys[0])
-	lastDate, _ := time.Parse(ISO8601, orderedKeys[len(orderedKeys)-1])
-	for curDate.Before(lastDate) {
-		curDateString := curDate.Format(ISO8601)
-		if _, exists := savedEvents.Report[curDateString]; !exists {
-			savedEvents.Report[curDateString] = emptyReport
+	for _, reportKey := range orderedKeys {
+		usage := savedEvents.Report[reportKey].Usage
+		for usageKey := range usage {
+			if _, ok := finalReport.Usage[usageKey]; ok {
+				finalReport.Usage[usageKey] += usage[usageKey]
+			} else {
+				finalReport.Usage[usageKey] = usage[usageKey]
+			}
 		}
-		curDate = curDate.Add(reportDuration)
 	}
+	savedEvents.Report[orderedKeys[0]] = finalReport
 	return savedEvents
 }
 
