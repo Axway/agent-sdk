@@ -141,6 +141,13 @@ func cleanUpReportfiles() {
 	os.RemoveAll("./reports")
 }
 
+func getFirstStringKeyFromMap(m map[string]LighthouseUsageReport) string {
+	for k := range m {
+		return k
+	}
+	return ""
+}
+
 func createRI(group, kind, id, name string, subRes map[string]interface{}) *apiv1.ResourceInstance {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -553,6 +560,25 @@ func TestOfflineMetricCollector(t *testing.T) {
 				}
 			}
 
+			validateProcessedReportEvents := func(report LighthouseUsageEvent) {
+				if test.loopCount == 0 {
+					return
+				}
+				expectedTransactions := 0
+				for k := range test.apiTransactionCount {
+					expectedTransactions += test.apiTransactionCount[k]
+				}
+				assert.Equal(t, 1, len(report.Report))
+				reportKey := getFirstStringKeyFromMap(report.Report)
+				assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
+				assert.Equal(t, expectedTransactions, int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
+				// validate granularity when reports not empty
+				assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
+				cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+				assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
+				assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
+			}
+
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
@@ -593,7 +619,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			assert.NotNil(t, reportEvents)
 
 			// validate event in generated reports
-			validateEvents(reportEvents)
+			validateProcessedReportEvents(reportEvents)
 
 			s.resetOffline(myCollector)
 		})

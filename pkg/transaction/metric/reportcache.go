@@ -127,23 +127,25 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 	sort.Strings(orderedKeys)
 
 	// create a single report which has all savedEventsReports appended
-	finalReport := LighthouseUsageReport{
-		Product: savedEvents.Report[orderedKeys[0]].Product,
-		Usage:   make(map[string]int64),
-		Meta:    savedEvents.Report[orderedKeys[0]].Meta,
+	finalReport := map[string]LighthouseUsageReport{
+		orderedKeys[0]: {
+			Product: savedEvents.Report[orderedKeys[0]].Product,
+			Usage:   make(map[string]int64),
+			Meta:    savedEvents.Report[orderedKeys[0]].Meta,
+		},
 	}
 
 	for _, reportKey := range orderedKeys {
 		usage := savedEvents.Report[reportKey].Usage
 		for usageKey := range usage {
-			if _, ok := finalReport.Usage[usageKey]; ok {
-				finalReport.Usage[usageKey] += usage[usageKey]
+			if _, ok := finalReport[orderedKeys[0]].Usage[usageKey]; ok {
+				finalReport[orderedKeys[0]].Usage[usageKey] += usage[usageKey]
 			} else {
-				finalReport.Usage[usageKey] = usage[usageKey]
+				finalReport[orderedKeys[0]].Usage[usageKey] = usage[usageKey]
 			}
 		}
 	}
-	savedEvents.Report[orderedKeys[0]] = finalReport
+	savedEvents.Report = finalReport
 	return savedEvents
 }
 
