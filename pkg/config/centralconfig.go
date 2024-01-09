@@ -11,6 +11,8 @@ import (
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/gorhill/cronexpr"
 )
 
 const urlCutSet = " /"
@@ -130,7 +132,7 @@ type CentralConfig interface {
 	GetProxyURL() string
 	GetPollInterval() time.Duration
 	GetReportActivityFrequency() time.Duration
-	GetAPIValidationFrequency() time.Duration
+	GetAPIValidationCronSchedule() string
 	GetJobExecutionTimeout() time.Duration
 	GetClientTimeout() time.Duration
 	GetAPIServiceRevisionPattern() string
@@ -175,7 +177,7 @@ type CentralConfiguration struct {
 	PollInterval              time.Duration        `config:"pollInterval"`
 	ReportActivityFrequency   time.Duration        `config:"reportActivityFrequency"`
 	ClientTimeout             time.Duration        `config:"clientTimeout"`
-	APIValidationFrequency    time.Duration        `config:"apiValidationFrequency"`
+	APIValidationCronSchedule string               `config:"apiValidationCronSchedule"`
 	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string               `config:"proxyUrl"`
 	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
@@ -216,7 +218,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
-		APIValidationFrequency:    1 * time.Hour,
+		APIValidationCronSchedule: "@daily",
 		UsageReporting:            NewUsageReporting(platformURL),
 		JobExecutionTimeout:       5 * time.Minute,
 		CacheStorageInterval:      10 * time.Second,
@@ -491,9 +493,9 @@ func (c *CentralConfiguration) GetReportActivityFrequency() time.Duration {
 	return c.ReportActivityFrequency
 }
 
-// GetAPIValidationFrequency - Returns the interval between running the api validator
-func (c *CentralConfiguration) GetAPIValidationFrequency() time.Duration {
-	return c.APIValidationFrequency
+// GetAPIValidationCronSchedule - Returns the cron schedule running the api validator
+func (c *CentralConfiguration) GetAPIValidationCronSchedule() string {
+	return c.APIValidationCronSchedule
 }
 
 // GetJobExecutionTimeout - Returns the max time a job execution can run before considered failed
@@ -637,7 +639,7 @@ const (
 	pathAPIServerVersion          = "central.apiServerVersion"
 	pathAdditionalTags            = "central.additionalTags"
 	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
-	pathAPIValidationFrequency    = "central.apiValidationFrequency"
+	pathAPIValidationCronSchedule = "central.apiValidationCronSchedule"
 	pathJobTimeout                = "central.jobTimeout"
 	pathGRPCEnabled               = "central.grpc.enabled"
 	pathGRPCHost                  = "central.grpc.host"
@@ -703,9 +705,24 @@ func (c *CentralConfiguration) validateConfig() {
 	if c.GetReportActivityFrequency() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
-	if c.GetAPIValidationFrequency() <= 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationFrequency))
+
+	cron, err := cronexpr.Parse(c.GetAPIValidationCronSchedule())
+	if err != nil {
+		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
 	}
+	checks := 5
+	nextRuns := cron.NextN(time.Now(), uint(checks))
+	if len(nextRuns) != checks {
+		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
+	}
+	for i := 1; i < checks-1; i++ {
+		delta := nextRuns[i].Sub(nextRuns[i-1])
+		if delta < time.Hour {
+			log.Tracef("%s must be at least 1 hour apart", pathAPIValidationCronSchedule)
+			exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
+		}
+	}
+
 	if c.GetClientTimeout() <= 0 {
 		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
 	}
@@ -783,7 +800,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathProxyURL, "", "The Proxy URL to use for communication to Amplify Central")
 	props.AddDurationProperty(pathPollInterval, 60*time.Second, "The time interval at which the central will be polled for subscription processing")
 	props.AddDurationProperty(pathReportActivityFrequency, 5*time.Minute, "The time interval at which the agent polls for event changes for the periodic agent status updater")
-	props.AddDurationProperty(pathAPIValidationFrequency, 1*time.Hour, "The time interval at which the agent validates API Services with the dataplane", properties.WithLowerLimit(5*time.Minute), properties.WithQAOverride())
+	props.AddStringProperty(pathAPIValidationCronSchedule, "@daily", "The cron schedule at which the agent validates API Services with the dataplane")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response")
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
@@ -831,7 +848,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
-		APIValidationFrequency:    props.DurationPropertyValue(pathAPIValidationFrequency),
+		APIValidationCronSchedule: props.StringPropertyValue(pathAPIValidationCronSchedule),
 		JobExecutionTimeout:       props.DurationPropertyValue(pathJobTimeout),
 		ClientTimeout:             props.DurationPropertyValue(pathClientTimeout),
 		APIServiceRevisionPattern: props.StringPropertyValue(pathAPIServiceRevisionPattern),
