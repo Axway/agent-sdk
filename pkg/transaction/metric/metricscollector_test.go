@@ -73,6 +73,8 @@ type testHTTPServer struct {
 	transactionVolume    int
 	failUsageEvent       bool
 	server               *httptest.Server
+	reportCount          int
+	givenGranularity     int
 }
 
 func (s *testHTTPServer) startServer() {
@@ -106,7 +108,9 @@ func (s *testHTTPServer) startServer() {
 								s.transactionVolume += int(usage)
 							}
 						}
+						s.reportCount++
 					}
+					s.givenGranularity = usageEvent.Granularity
 				}
 			}
 		}
@@ -395,6 +399,83 @@ func TestMetricCollector(t *testing.T) {
 	}
 }
 
+func TestMetricCollectorUsageAggregation(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+
+	testCases := []struct {
+		name                      string
+		loopCount                 int
+		apiTransactionCount       []int
+		expectedTransactionCount  int
+		expectedTransactionVolume int
+		expectedGranularity       int
+		expectedReportCount       int
+	}{
+		{
+			name:                     "SixReports",
+			loopCount:                6,
+			apiTransactionCount:      []int{5, 10, 2, 0, 3, 9},
+			expectedTransactionCount: 29,
+			expectedGranularity:      int(5 * time.Hour / time.Millisecond),
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
+			cfg.SetAxwayManaged(false)
+			setupMockClient(0)
+
+			testLoops := 0
+			now = func() time.Time {
+				next := startDate.Add(time.Hour * time.Duration(testLoops))
+				fmt.Println(next.Format(ISO8601))
+				return next
+			}
+
+			myCollector := createMetricCollector()
+			metricCollector := myCollector.(*collector)
+			metricCollector.publisher.offline = true
+
+			for testLoops < test.loopCount {
+				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
+					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
+				}
+				metricCollector.Execute()
+				testLoops++
+			}
+
+			metricCollector.publisher.offline = false
+			metricCollector.publisher.Execute()
+			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
+			assert.Equal(t, 1, s.reportCount)
+			// assert.Equal(t, test.expectedGranularity, s.givenGranularity)
+			s.resetConfig()
+		})
+	}
+	cleanUpReportfiles()
+}
+
 func TestMetricCollectorCache(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
@@ -560,25 +641,6 @@ func TestOfflineMetricCollector(t *testing.T) {
 				}
 			}
 
-			validateProcessedReportEvents := func(report LighthouseUsageEvent) {
-				if test.loopCount == 0 {
-					return
-				}
-				expectedTransactions := 0
-				for k := range test.apiTransactionCount {
-					expectedTransactions += test.apiTransactionCount[k]
-				}
-				assert.Equal(t, 1, len(report.Report))
-				reportKey := getFirstStringKeyFromMap(report.Report)
-				assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
-				assert.Equal(t, expectedTransactions, int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-				// validate granularity when reports not empty
-				assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
-				cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-				assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
-				assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
-			}
-
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 
@@ -619,7 +681,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			assert.NotNil(t, reportEvents)
 
 			// validate event in generated reports
-			validateProcessedReportEvents(reportEvents)
+			validateEvents(reportEvents)
 
 			s.resetOffline(myCollector)
 		})

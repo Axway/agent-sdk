@@ -118,6 +118,7 @@ func (c *cacheReport) generateReportPath(timestamp ISO8601Time, index int) strin
 
 // validateReport - copies usage events setting all usages to 0 for any missing time interval
 func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) LighthouseUsageEvent {
+	reportDuration := time.Duration(savedEvents.Granularity * int(time.Millisecond))
 
 	// order all the keys, this will be used to find any missing times
 	orderedKeys := make([]string, 0, len(savedEvents.Report))
@@ -126,26 +127,25 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 	}
 	sort.Strings(orderedKeys)
 
-	// create a single report which has all savedEventsReports appended
-	finalReport := map[string]LighthouseUsageReport{
-		orderedKeys[0]: {
-			Product: savedEvents.Report[orderedKeys[0]].Product,
-			Usage:   make(map[string]int64),
-			Meta:    savedEvents.Report[orderedKeys[0]].Meta,
-		},
+	// create an empty report to insert when necessary
+	emptyReport := LighthouseUsageReport{
+		Product: savedEvents.Report[orderedKeys[0]].Product,
+		Usage:   make(map[string]int64),
+		Meta:    savedEvents.Report[orderedKeys[0]].Meta,
+	}
+	for usage := range savedEvents.Report[orderedKeys[0]].Usage {
+		emptyReport.Usage[usage] = 0
 	}
 
-	for _, reportKey := range orderedKeys {
-		usage := savedEvents.Report[reportKey].Usage
-		for usageKey := range usage {
-			if _, ok := finalReport[orderedKeys[0]].Usage[usageKey]; ok {
-				finalReport[orderedKeys[0]].Usage[usageKey] += usage[usageKey]
-			} else {
-				finalReport[orderedKeys[0]].Usage[usageKey] = usage[usageKey]
-			}
+	curDate, _ := time.Parse(ISO8601, orderedKeys[0])
+	lastDate, _ := time.Parse(ISO8601, orderedKeys[len(orderedKeys)-1])
+	for curDate.Before(lastDate) {
+		curDateString := curDate.Format(ISO8601)
+		if _, exists := savedEvents.Report[curDateString]; !exists {
+			savedEvents.Report[curDateString] = emptyReport
 		}
+		curDate = curDate.Add(reportDuration)
 	}
-	savedEvents.Report = finalReport
 	return savedEvents
 }
 
