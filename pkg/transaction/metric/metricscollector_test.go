@@ -413,15 +413,6 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
-	cm := agent.GetCacheManager()
-	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
-
-	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
-	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
-
-	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
-	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
-
 	testCases := []struct {
 		name                      string
 		loopCount                 int
@@ -436,13 +427,14 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			loopCount:                6,
 			apiTransactionCount:      []int{5, 10, 2, 0, 3, 9},
 			expectedTransactionCount: 29,
-			expectedGranularity:      int(5 * time.Hour / time.Millisecond),
+			// 1 minute because of metricStartTime, and 4 hours because of the first 2 reports being only 1 minute apart
+			expectedGranularity: int((4*time.Hour + 1*time.Minute) / time.Millisecond),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
+			startDate := time.Date(2021, 1, 28, 12, 30, 0, 0, time.Local)
 			cfg.SetAxwayManaged(false)
 			setupMockClient(0)
 
@@ -455,6 +447,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
+			// starting with the offline publish first in order to save multiple reports
 			metricCollector.publisher.offline = true
 
 			for testLoops < test.loopCount {
@@ -464,12 +457,12 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 				metricCollector.Execute()
 				testLoops++
 			}
-
+			// changing it later so it triggers the lighthouse publish
 			metricCollector.publisher.offline = false
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
-			// assert.Equal(t, test.expectedGranularity, s.givenGranularity)
+			assert.Equal(t, test.expectedGranularity, s.givenGranularity)
 			s.resetConfig()
 		})
 	}
