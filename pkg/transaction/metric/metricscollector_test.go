@@ -166,13 +166,6 @@ func cleanUpReportfiles() {
 	os.RemoveAll("./reports")
 }
 
-func getFirstStringKeyFromMap(m map[string]LighthouseUsageReport) string {
-	for k := range m {
-		return k
-	}
-	return ""
-}
-
 func createRI(group, kind, id, name string, subRes map[string]interface{}) *apiv1.ResourceInstance {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
