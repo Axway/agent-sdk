@@ -128,6 +128,8 @@ func (s *testHTTPServer) resetConfig() {
 	s.transactionCount = 0
 	s.transactionVolume = 0
 	s.failUsageEvent = false
+	s.givenGranularity = 0
+	s.reportCount = 0
 }
 
 func (s *testHTTPServer) resetOffline(myCollector Collector) {
@@ -139,6 +141,25 @@ func (s *testHTTPServer) resetOffline(myCollector Collector) {
 
 func cleanUpCachedMetricFile() {
 	os.RemoveAll("./cache")
+}
+
+func generateMockReports(transactionPerReport []int) string {
+	jsonStructure := `{"envId":"267bd671-e5e2-4679-bcc3-bbe7b70f30fd","timestamp":"2021-01-31T10:30:00+02:00","granularity":900000,"schemaId":"http://127.0.0.1:53493/lighthouse/api/v1/report.schema.json","report":{},"meta":{"AgentName":"","AgentVersion":""}}`
+	var mockEvent LighthouseUsageEvent
+	json.Unmarshal([]byte(jsonStructure), &mockEvent)
+	startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
+	nextTime := func(i int) string {
+		next := startDate.Add(time.Hour * time.Duration(i))
+		return next.Format(ISO8601)
+	}
+	for i, transaction := range transactionPerReport {
+		mockEvent.Report[nextTime(i)] = LighthouseUsageReport{
+			Product: "Azure",
+			Usage:   map[string]int64{"Azure.Transactions": int64(transaction)},
+		}
+	}
+	b, _ := json.Marshal(mockEvent)
+	return string(b)
 }
 
 func cleanUpReportfiles() {
@@ -415,50 +436,34 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 
 	testCases := []struct {
 		name                      string
-		loopCount                 int
-		apiTransactionCount       []int
+		transactionsPerReport     []int
 		expectedTransactionCount  int
 		expectedTransactionVolume int
 		expectedGranularity       int
 		expectedReportCount       int
 	}{
 		{
-			name:                     "SixReports",
-			loopCount:                6,
-			apiTransactionCount:      []int{5, 10, 2, 0, 3, 9},
-			expectedTransactionCount: 29,
-			// 1 minute because of metricStartTime, and 4 hours because of the first 2 reports being only 1 minute apart
-			expectedGranularity: int((4*time.Hour + 1*time.Minute) / time.Millisecond),
+			name:                     "FourReports",
+			transactionsPerReport:    []int{3, 4, 5, 6},
+			expectedTransactionCount: 18,
+			expectedGranularity:      3 * int(time.Hour/time.Millisecond),
+		},
+		{
+			name:                     "SevenReports",
+			transactionsPerReport:    []int{1, 2, 3, 4, 5, 6, 7},
+			expectedTransactionCount: 28,
+			expectedGranularity:      6 * int(time.Hour/time.Millisecond),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			startDate := time.Date(2021, 1, 28, 12, 30, 0, 0, time.Local)
 			cfg.SetAxwayManaged(false)
 			setupMockClient(0)
-
-			testLoops := 0
-			now = func() time.Time {
-				next := startDate.Add(time.Hour * time.Duration(testLoops))
-				fmt.Println(next.Format(ISO8601))
-				return next
-			}
-
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
-			// starting with the offline publish first in order to save multiple reports
-			metricCollector.publisher.offline = true
 
-			for testLoops < test.loopCount {
-				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
-				}
-				metricCollector.Execute()
-				testLoops++
-			}
-			// changing it later so it triggers the lighthouse publish
-			metricCollector.publisher.offline = false
+			metricCollector.reports.reportCache.Set("lighthouse_events", generateMockReports(test.transactionsPerReport))
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
