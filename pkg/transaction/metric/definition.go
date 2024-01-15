@@ -136,6 +136,12 @@ type LighthouseUsageEvent struct {
 	Meta        map[string]interface{}           `json:"meta"`
 }
 
+type LighthouseUsageResponse struct {
+	Success     bool   `json:"success"`
+	Description string `json:"description"`
+	StatusCode  int    `json:"code"`
+}
+
 // Data - struct for data to report as API Metrics
 type Data struct {
 	APIDetails models.APIDetails
