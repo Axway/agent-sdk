@@ -72,6 +72,7 @@ type testHTTPServer struct {
 	transactionCount     int
 	transactionVolume    int
 	failUsageEvent       bool
+	failUsageResponse    *LighthouseUsageResponse
 	server               *httptest.Server
 	reportCount          int
 	givenGranularity     int
@@ -85,6 +86,12 @@ func (s *testHTTPServer) startServer() {
 		}
 		if strings.Contains(req.RequestURI, "/lighthouse") {
 			if s.failUsageEvent {
+				if s.failUsageResponse != nil {
+					b, _ := json.Marshal(*s.failUsageResponse)
+					resp.WriteHeader(s.failUsageResponse.StatusCode)
+					resp.Write(b)
+					return
+				}
 				resp.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -114,6 +121,7 @@ func (s *testHTTPServer) startServer() {
 				}
 			}
 		}
+		resp.WriteHeader(202)
 	}))
 }
 
@@ -275,6 +283,7 @@ func TestMetricCollector(t *testing.T) {
 		retryBatchCount           int
 		apiTransactionCount       []int
 		failUsageEventOnServer    []bool
+		failUsageResponseOnServer []*LighthouseUsageResponse
 		expectedLHEvents          []int
 		expectedTransactionCount  []int
 		trackVolume               bool
@@ -289,6 +298,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -302,6 +312,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -316,6 +327,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -330,6 +342,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{0},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{0},
 			expectedTransactionCount:  []int{0},
 			trackVolume:               false,
@@ -338,15 +351,51 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
-			name:                      "WithLighthouseWithFailure",
-			loopCount:                 3,
-			retryBatchCount:           0,
-			apiTransactionCount:       []int{5, 10, 12},
-			failUsageEventOnServer:    []bool{false, true, false, false},
+			name:                   "WithLighthouseWithFailure",
+			loopCount:              3,
+			retryBatchCount:        0,
+			apiTransactionCount:    []int{5, 10, 12},
+			failUsageEventOnServer: []bool{false, true, false, false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{
+				nil, {
+					Description: "Regular failure",
+					StatusCode:  400,
+					Success:     false,
+				},
+				nil,
+				nil,
+			},
 			expectedLHEvents:          []int{1, 1, 2},
 			expectedTransactionCount:  []int{5, 5, 17},
 			trackVolume:               true,
 			expectedTransactionVolume: []int{50, 50, 170},
+			expectedMetricEventsAcked: 1,
+			appName:                   "unknown",
+		},
+		// Test case with failing request to LH, no subsequent request triggered.
+		{
+			name:                   "WithLighthouseWithFailureWithSpecificDescription",
+			loopCount:              3,
+			retryBatchCount:        0,
+			apiTransactionCount:    []int{1, 1, 1},
+			failUsageEventOnServer: []bool{true, true, false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{
+				{
+					Description: "The file exceeds the maximum upload size of 454545",
+					StatusCode:  400,
+					Success:     false,
+				},
+				{
+					Description: "Environment ID not found",
+					StatusCode:  404,
+					Success:     false,
+				},
+				nil,
+			},
+			expectedLHEvents:          []int{0, 0, 1},
+			expectedTransactionCount:  []int{0, 0, 1},
+			trackVolume:               true,
+			expectedTransactionVolume: []int{0, 0, 10},
 			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
@@ -357,6 +406,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           1,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               true,
@@ -371,6 +421,7 @@ func TestMetricCollector(t *testing.T) {
 			retryBatchCount:           4,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -400,7 +451,7 @@ func TestMetricCollector(t *testing.T) {
 					metricCollector.AddMetricDetail(metricDetail)
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
-
+				s.failUsageResponse = test.failUsageResponseOnServer[l]
 				metricCollector.Execute()
 				metricCollector.publisher.Execute()
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)

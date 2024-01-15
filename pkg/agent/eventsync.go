@@ -111,7 +111,7 @@ func (es *EventSync) SyncCache() error {
 
 func (es *EventSync) registerInstanceValidator() error {
 	if agent.apiValidatorJobID == "" && agent.cfg.GetAgentType() == config.DiscoveryAgent {
-		jobID, err := jobs.RegisterIntervalJobWithName(newInstanceValidator(), agent.cfg.GetAPIValidationFrequency(), "API service instance validator")
+		jobID, err := jobs.RegisterScheduledJobWithName(newInstanceValidator(), agent.cfg.GetAPIValidationCronSchedule(), "API service instance validator")
 		agent.apiValidatorJobID = jobID
 		return err
 	}
