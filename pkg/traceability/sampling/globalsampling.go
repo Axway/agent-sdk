@@ -52,7 +52,7 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 		counterLock:   sync.Mutex{},
 	}
 	if invalidSampling {
-		return ErrSamplingCfg
+		return ErrSamplingCfg.FormatError(maximumSamplingRate, defaultSamplingRate)
 	}
 	return nil
 }
