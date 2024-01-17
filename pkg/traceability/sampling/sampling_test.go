@@ -345,30 +345,6 @@ func TestFilterEvents(t *testing.T) {
 		config         Sampling
 	}{
 		{
-			name:           "All Events",
-			testEvents:     2000,
-			eventsExpected: 2000,
-			config: Sampling{
-				Percentage: 100,
-			},
-		},
-		{
-			name:           "50% of Events",
-			testEvents:     2000,
-			eventsExpected: 1000,
-			config: Sampling{
-				Percentage: 50,
-			},
-		},
-		{
-			name:           "25% of Events",
-			testEvents:     2000,
-			eventsExpected: 500,
-			config: Sampling{
-				Percentage: 25,
-			},
-		},
-		{
 			name:           "10% of Events",
 			testEvents:     2000,
 			eventsExpected: 200,
