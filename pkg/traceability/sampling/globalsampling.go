@@ -11,7 +11,7 @@ var agentSamples *sample
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
-	Percentage      int  `config:"percentage"    validate:"min=0, max=10"`
+	Percentage      int  `config:"percentage"`
 	PerAPI          bool `config:"per_api"`
 	PerSub          bool `config:"per_subscription"`
 	ReportAllErrors bool `config:"reportAllErrors" yaml:"reportAllErrors"`
@@ -34,19 +34,25 @@ func GetGlobalSamplingPercentage() (int, error) {
 
 // SetupSampling - set up the global sampling for use by traceability
 func SetupSampling(cfg Sampling, offlineMode bool) error {
+	invalidSampling := false
 	if offlineMode {
 		// In offline mode sampling is always 0
 		cfg.Percentage = 0
 	}
 
 	// Validate the config to make sure it is not out of bounds
-	if cfg.Percentage < 0 || cfg.Percentage > countMax {
-		return ErrSamplingCfg
+	if cfg.Percentage < 0 || cfg.Percentage > maximumSamplingRate {
+		invalidSampling = true
+		cfg.Percentage = defaultSamplingRate
 	}
+
 	agentSamples = &sample{
 		config:        cfg,
 		currentCounts: make(map[string]int),
 		counterLock:   sync.Mutex{},
+	}
+	if invalidSampling {
+		return ErrSamplingCfg
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ const (
 	SampleKey           = "sample"
 	countMax            = 100
 	defaultSamplingRate = 1
+	maximumSamplingRate = 10
 	globalCounter       = "global"
 )
 
