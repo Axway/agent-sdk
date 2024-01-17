@@ -4,7 +4,7 @@ package sampling
 // defaultSamplingRate - the default sampling rate in percentage
 const (
 	SampleKey           = "sample"
-	countMax            = 100
+	countMax            = 10
 	defaultSamplingRate = 1
 	globalCounter       = "global"
 )
