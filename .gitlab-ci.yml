@@ -57,7 +57,7 @@ stages:
   - update-dep
 
 ############################################################
-# Section for triggering agent updates
+# Section for triggering agent updates 
 ############################################################
 .trigger-downstream-agent:
   stage: update-dep
