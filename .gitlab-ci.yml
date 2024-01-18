@@ -86,7 +86,7 @@ trigger-azure-discovery-agent:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
 
-# overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branchs
+# overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branches
 blackduck-rapid:
   rules:
     - !reference [.mirror-branch-csr-rules, rules]
