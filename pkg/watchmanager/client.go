@@ -116,13 +116,14 @@ func (c *watchClient) processRequest() error {
 
 // send a message with a new token to the grpc server and returns the expiration time
 func (c *watchClient) send() error {
+	c.timer.Stop()
+
 	token, err := c.cfg.tokenGetter()
 	if err != nil {
 		return err
 	}
 
 	exp, err := c.getTokenExpirationTime(token)
-
 	if err != nil {
 		return err
 	}
@@ -140,10 +141,13 @@ func (c *watchClient) send() error {
 func (c *watchClient) handleError(err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.isRunning = false
-	c.timer.Stop()
-	c.cfg.errors <- err
-	c.cancelStreamCtx()
+
+	if c.isRunning {
+		c.isRunning = false
+		c.timer.Stop()
+		c.cfg.errors <- err
+		c.cancelStreamCtx()
+	}
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
@@ -177,6 +181,10 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 	i := big.NewInt(int64(exp))
 	i = i.Mul(i, big.NewInt(4))
 	i = i.Div(i, big.NewInt(5))
+	d := time.Duration(i.Int64())
 
-	return time.Duration(i.Int64()), nil
+	if d.Milliseconds() < 0 {
+		return time.Duration(0), fmt.Errorf("token is expired")
+	}
+	return d, nil
 }
