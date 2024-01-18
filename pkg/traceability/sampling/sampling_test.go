@@ -23,17 +23,17 @@ func TestSamplingConfig(t *testing.T) {
 			errExpected: false,
 			config:      DefaultConfig(),
 			expectedConfig: Sampling{
-				Percentage: 10,
+				Percentage: 1,
 			},
 		},
 		{
 			name:        "Good Custom Config",
 			errExpected: false,
 			config: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 			},
 			expectedConfig: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 			},
 		},
 		{
@@ -54,11 +54,11 @@ func TestSamplingConfig(t *testing.T) {
 			name:        "Good Config, Report All Errors",
 			errExpected: false,
 			config: Sampling{
-				Percentage:      50,
+				Percentage:      10,
 				ReportAllErrors: true,
 			},
 			expectedConfig: Sampling{
-				Percentage: 50,
+				Percentage: 10,
 			},
 		},
 	}
@@ -88,43 +88,28 @@ func TestShouldSample(t *testing.T) {
 		subIDs           map[string]string
 	}{
 		{
-			name: "All Transactions",
+			name: "Maximum Transactions",
 			apiTransactions: map[string]int{
 				"id1": 1000,
 				"id2": 1000,
 			},
-			expectedSampled: 2000,
+			expectedSampled: 200,
 			config: Sampling{
-				Percentage: 100,
+				Percentage: 10,
 				PerAPI:     false,
 			},
 		},
 		{
-			name: "50% of Transactions when per api is disabled",
+			name: "5% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 50,
 				"id2": 50,
 				"id3": 50,
 				"id4": 50,
 			}, // Total = 200
-			expectedSampled: 100,
+			expectedSampled: 10,
 			config: Sampling{
-				Percentage: 50,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "25% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 105,
-				"id2": 100,
-				"id3": 50,
-				"id4": 15,
-				"id5": 5,
-			}, // Total = 275
-			expectedSampled: 75,
-			config: Sampling{
-				Percentage: 25,
+				Percentage: 5,
 				PerAPI:     false,
 			},
 		},
@@ -165,36 +150,21 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
-			name: "50% per API of Transactions when per api is enabled",
+			name: "5% per API of Transactions when per api is enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
 				"id3": 50, // expect 50
 				"id4": 50, // expect 50
 			},
-			expectedSampled: 200,
+			expectedSampled: 20,
 			config: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 				PerAPI:     true,
 			},
 		},
 		{
-			name: "25% per API of Transactions when per api is enabled",
-			apiTransactions: map[string]int{
-				"id1": 105, // expect 30
-				"id2": 100, // expect 25
-				"id3": 50,  // expect 25
-				"id4": 15,  // expect 15
-				"id5": 5,   // expect 5
-			},
-			expectedSampled: 100,
-			config: Sampling{
-				Percentage: 25,
-				PerAPI:     true,
-			},
-		},
-		{
-			name: "50% of subscription transactions when per api and per sub are enabled",
+			name: "5% of subscription transactions when per api and per sub are enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -207,15 +177,15 @@ func TestShouldSample(t *testing.T) {
 				"id3": "sub3",
 				"id4": "sub4",
 			},
-			expectedSampled: 200,
+			expectedSampled: 20,
 			config: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 				PerAPI:     true,
 				PerSub:     true,
 			},
 		},
 		{
-			name: "50% of subscription transactions when per api is disabled and per sub is enabled",
+			name: "5% of subscription transactions when per api is disabled and per sub is enabled",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -228,15 +198,15 @@ func TestShouldSample(t *testing.T) {
 				"id3": "sub3",
 				"id4": "sub4",
 			},
-			expectedSampled: 200,
+			expectedSampled: 20,
 			config: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 				PerAPI:     false,
 				PerSub:     true,
 			},
 		},
 		{
-			name: "50% of per API transactions when per api and per sub are enabled, but no subID is found",
+			name: "5% of per API transactions when per api and per sub are enabled, but no subID is found",
 			apiTransactions: map[string]int{
 				"id1": 50, // expect 50
 				"id2": 50, // expect 50
@@ -244,9 +214,9 @@ func TestShouldSample(t *testing.T) {
 				"id4": 50, // expect 50
 			},
 			subIDs:          map[string]string{},
-			expectedSampled: 200,
+			expectedSampled: 20,
 			config: Sampling{
-				Percentage: 50,
+				Percentage: 5,
 				PerAPI:     true,
 				PerSub:     true,
 			},
@@ -344,30 +314,6 @@ func TestFilterEvents(t *testing.T) {
 		eventsExpected int
 		config         Sampling
 	}{
-		{
-			name:           "All Events",
-			testEvents:     2000,
-			eventsExpected: 2000,
-			config: Sampling{
-				Percentage: 100,
-			},
-		},
-		{
-			name:           "50% of Events",
-			testEvents:     2000,
-			eventsExpected: 1000,
-			config: Sampling{
-				Percentage: 50,
-			},
-		},
-		{
-			name:           "25% of Events",
-			testEvents:     2000,
-			eventsExpected: 500,
-			config: Sampling{
-				Percentage: 25,
-			},
-		},
 		{
 			name:           "10% of Events",
 			testEvents:     2000,
