@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/harvester"
@@ -32,26 +31,25 @@ import (
 
 // StreamerClient client for starting a watch controller stream and handling the events
 type StreamerClient struct {
-	apiClient               events.APIClient
-	handlers                []handler.Handler
-	listener                *events.EventListener
-	manager                 wm.Manager
-	newListener             events.NewListenerFunc
-	newManager              wm.NewManagerFunc
-	onStreamConnection      func()
-	sequence                events.SequenceProvider
-	topicSelfLink           string
-	watchCfg                *wm.Config
-	watchOpts               []wm.Option
-	cacheManager            agentcache.Manager
-	resourcesOnStartupTimer *time.Timer
-	logger                  log.FieldLogger
-	environmentURL          string
-	wt                      *management.WatchTopic
-	harvester               harvester.Harvest
-	onEventSyncError        func()
-	mutex                   sync.RWMutex
-	isInitialized           bool
+	apiClient          events.APIClient
+	handlers           []handler.Handler
+	listener           *events.EventListener
+	manager            wm.Manager
+	newListener        events.NewListenerFunc
+	newManager         wm.NewManagerFunc
+	onStreamConnection func()
+	sequence           events.SequenceProvider
+	topicSelfLink      string
+	watchCfg           *wm.Config
+	watchOpts          []wm.Option
+	cacheManager       agentcache.Manager
+	logger             log.FieldLogger
+	environmentURL     string
+	wt                 *management.WatchTopic
+	harvester          harvester.Harvest
+	onEventSyncError   func()
+	mutex              sync.RWMutex
+	isInitialized      bool
 }
 
 // NewStreamerClient creates a StreamerClient
