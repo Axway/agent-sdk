@@ -1,6 +1,8 @@
 package sampling
 
 import (
+	"fmt"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -122,6 +124,41 @@ func TestShouldSample(t *testing.T) {
 			expectedSampled: 200,
 			config: Sampling{
 				Percentage: 10,
+				PerAPI:     false,
+			},
+		},
+		{
+			name: "0.55% of Transactions when per api is disabled",
+			apiTransactions: map[string]int{
+				"id1": 10000,
+			},
+			expectedSampled: 55,
+			config: Sampling{
+				Percentage: 0.55,
+				PerAPI:     false,
+			},
+		},
+		{
+			name: "9.99% of Transactions when per api is disabled",
+			apiTransactions: map[string]int{
+				"id1": 10000,
+				"id2": 10000,
+				"id3": 10000,
+			},
+			expectedSampled: 30000 * 999 / 10000,
+			config: Sampling{
+				Percentage: 9.99,
+				PerAPI:     false,
+			},
+		},
+		{
+			name: "0.0006% of Transactions when per api is disabled",
+			apiTransactions: map[string]int{
+				"id1": 2000000,
+			},
+			expectedSampled: 12,
+			config: Sampling{
+				Percentage: 0.0006,
 				PerAPI:     false,
 			},
 		},
@@ -266,14 +303,16 @@ func TestShouldSample(t *testing.T) {
 	}
 }
 
-func createEvents(numberOfEvents, samplePercent int) []publisher.Event {
+func createEvents(numberOfEvents int, samplePercent float64) []publisher.Event {
 	events := []publisher.Event{}
 
 	count := 0
 	sampled := 0
+	countMax := 100 * int(math.Pow(10, float64(numberOfDecimals(samplePercent))))
+	limit := int(float64(countMax) * samplePercent / 100)
 	for i := 0; i < numberOfEvents; i++ {
 		var event publisher.Event
-		if count < samplePercent {
+		if count < limit {
 			sampled++
 			event = createEvent(true)
 		} else {
@@ -281,7 +320,7 @@ func createEvents(numberOfEvents, samplePercent int) []publisher.Event {
 		}
 		events = append(events, event)
 		count++
-		if count == 100 {
+		if count == countMax {
 			count = 0
 		}
 	}
@@ -331,6 +370,14 @@ func TestFilterEvents(t *testing.T) {
 			},
 		},
 		{
+			name:           "0.1% of Events",
+			testEvents:     2000,
+			eventsExpected: 2,
+			config: Sampling{
+				Percentage: 0.1,
+			},
+		},
+		{
 			name:           "0% of Events",
 			testEvents:     2000,
 			eventsExpected: 0,
@@ -350,6 +397,35 @@ func TestFilterEvents(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.Len(t, filterEvents, test.eventsExpected)
+		})
+	}
+}
+
+func Test_SamplingPercentageDecimals(t *testing.T) {
+	testCases := []struct {
+		value                float64
+		expectedNbOfDecimals int
+	}{
+		{
+			value:                10.9654,
+			expectedNbOfDecimals: 4,
+		},
+		{
+			value:                2.34567890,
+			expectedNbOfDecimals: 7,
+		},
+		{
+			value:                0,
+			expectedNbOfDecimals: 0,
+		},
+		{
+			value:                100,
+			expectedNbOfDecimals: 0,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(fmt.Sprintf("%f", test.value), func(t *testing.T) {
+			assert.Equal(t, numberOfDecimals(test.value), test.expectedNbOfDecimals)
 		})
 	}
 }
