@@ -135,8 +135,10 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	}
 
 	agentInstance := a.getAgentResourceType()
+
+	statusSubResourceName := management.DiscoveryAgentStatusSubResourceName
 	// using discovery agent status here, but all agent status resources have the same structure
-	agentInstance.SubResources["status"] = management.DiscoveryAgentStatus{
+	agentInstance.SubResources[statusSubResourceName] = management.DiscoveryAgentStatus{
 		Version:                config.AgentVersion,
 		LatestAvailableVersion: config.AgentLatestVersion,
 		State:                  status,
@@ -152,12 +154,15 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		a.rebuildCache.RebuildCache()
 	}
 
+	subResources := make(map[string]interface{})
+	subResources[statusSubResourceName] = agentInstance.SubResources[statusSubResourceName]
 	// add any details
 	if len(a.agentDetails) > 0 {
 		util.SetAgentDetails(agentInstance, a.agentDetails)
+		subResources[definitions.XAgentDetails] = agentInstance.SubResources[definitions.XAgentDetails]
 	}
 
-	err = a.apicClient.CreateSubResource(agentInstance.ResourceMeta, agentInstance.SubResources)
+	err = a.apicClient.CreateSubResource(agentInstance.ResourceMeta, subResources)
 	return err
 }
 
