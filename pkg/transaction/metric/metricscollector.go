@@ -247,6 +247,9 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 
 // AddAPIMetric - add api metric for API transaction
 func (c *collector) AddAPIMetric(metric *APIMetric) {
+	if metric.EventID == "" {
+		metric.EventID = uuid.NewString()
+	}
 	metric.Status = c.getStatusText(metric.StatusCode)
 
 	v4Event := c.createV4Event(metric.Observation.Start, metric)
@@ -354,6 +357,7 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 			StatusCode:    statusCode,
 			Status:        c.getStatusText(statusCode),
 			StartTime:     now(),
+			EventID:       uuid.NewString(),
 		}
 	}
 	histogram.Update(detail.Duration)
@@ -702,7 +706,7 @@ func (c *collector) processMetric(metricName string, metric interface{}) {
 				if statusMap, ok := apiMap[apiID]; ok {
 					if statusDetail, ok := statusMap[statusCode]; ok {
 						statusMetric := (metric.(metrics.Histogram))
-						c.settMetricsFromHistogram(statusDetail, statusMetric)
+						c.setMetricsFromHistogram(statusDetail, statusMetric)
 						c.generateMetricEvent(statusMetric, statusDetail, appID)
 					}
 				}
@@ -711,7 +715,7 @@ func (c *collector) processMetric(metricName string, metric interface{}) {
 	}
 }
 
-func (c *collector) settMetricsFromHistogram(metrics *APIMetric, histogram metrics.Histogram) {
+func (c *collector) setMetricsFromHistogram(metrics *APIMetric, histogram metrics.Histogram) {
 	metrics.Count = histogram.Count()
 	metrics.Response.Max = histogram.Max()
 	metrics.Response.Min = histogram.Min()
@@ -730,9 +734,8 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *API
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
-	eventID, _ := uuid.NewRandom()
 	return V4Event{
-		ID:        eventID.String(),
+		ID:        v4data.GetEventID(),
 		Timestamp: startTime,
 		Event:     metricEvent,
 		App:       c.orgGUID,
