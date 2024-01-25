@@ -97,6 +97,8 @@ func (s *SpecResourceParser) createProcessorWithResourceType() error {
 		s.specProcessor, err = s.parseProtobufSpec()
 	case AsyncAPI:
 		s.specProcessor, err = s.parseAsyncAPISpec()
+	case GraphQL:
+		s.specProcessor, err = s.parseGraphQLSpec()
 	}
 	return err
 }
@@ -155,6 +157,10 @@ func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
 		return nil, err
 	}
 	return newWsdlProcessor(def, s.resourceSpec), nil
+}
+
+func (s *SpecResourceParser) parseGraphQLSpec() (SpecProcessor, error) {
+	return newGraphQLSpecProcessor(s.resourceSpec), nil
 }
 
 func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
