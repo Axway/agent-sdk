@@ -24,7 +24,7 @@ const (
 	Unstructured  = "unstructured"
 	Specification = "specification"
 	Swagger       = "swagger"
-	GraphQL       = "graphql"
+	GraphQL       = "graphql-sdl"
 
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
 	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
