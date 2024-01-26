@@ -61,6 +61,7 @@ type APIMetric struct {
 	Count         int64                `json:"count"`
 	Response      ResponseMetrics      `json:"response"`
 	Observation   ObservationDetails   `json:"observation"`
+	EventID       string               `json:"eventID"`
 	StartTime     time.Time            `json:"-"`
 }
 
@@ -72,6 +73,11 @@ func (a *APIMetric) GetStartTime() time.Time {
 // GetType - Returns APIMetric
 func (a *APIMetric) GetType() string {
 	return "APIMetric"
+}
+
+// GetType - Returns APIMetric
+func (a *APIMetric) GetEventID() string {
+	return a.EventID
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
@@ -104,6 +110,7 @@ type V4Session struct {
 type V4Data interface {
 	GetStartTime() time.Time
 	GetType() string
+	GetEventID() string
 }
 
 // V4Event - represents V7 event
