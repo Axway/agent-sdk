@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	MeshDiscoveryResourceName = "meshdiscoveries"
+	MeshDiscoveryResourceName             = "meshdiscoveries"
+	MeshDiscovery_embeddedSubResourceName = "_embedded"
 )
 
 func MeshDiscoveryGVK() apiv1.GroupVersionKind {
@@ -42,8 +43,9 @@ func init() {
 // MeshDiscovery Resource
 type MeshDiscovery struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner      `json:"owner"`
-	Spec  MeshDiscoverySpec `json:"spec"`
+	_embedded interface{}       `json:"_embedded"`
+	Owner     *apiv1.Owner      `json:"owner"`
+	Spec      MeshDiscoverySpec `json:"spec"`
 }
 
 // NewMeshDiscovery creates an empty *MeshDiscovery
@@ -128,6 +130,7 @@ func (res *MeshDiscovery) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -157,6 +160,20 @@ func (res *MeshDiscovery) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

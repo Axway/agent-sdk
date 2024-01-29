@@ -28,6 +28,7 @@ var (
 
 const (
 	AccessRequestResourceName              = "accessrequests"
+	AccessRequest_embeddedSubResourceName  = "_embedded"
 	AccessRequestDataSubResourceName       = "data"
 	AccessRequestReferencesSubResourceName = "references"
 	AccessRequestStatusSubResourceName     = "status"
@@ -45,8 +46,9 @@ func init() {
 // AccessRequest Resource
 type AccessRequest struct {
 	apiv1.ResourceMeta
-	Data  interface{}  `json:"data"`
-	Owner *apiv1.Owner `json:"owner"`
+	_embedded interface{}  `json:"_embedded"`
+	Data      interface{}  `json:"data"`
+	Owner     *apiv1.Owner `json:"owner"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	References interface{}         `json:"references"`
@@ -138,6 +140,7 @@ func (res *AccessRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["data"] = res.Data
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -170,6 +173,20 @@ func (res *AccessRequest) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Data

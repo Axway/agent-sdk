@@ -28,6 +28,7 @@ var (
 
 const (
 	TraceabilityAgentResourceName             = "traceabilityagents"
+	TraceabilityAgent_embeddedSubResourceName = "_embedded"
 	TraceabilityAgentDataplaneSubResourceName = "dataplane"
 	TraceabilityAgentStatusSubResourceName    = "status"
 )
@@ -44,6 +45,7 @@ func init() {
 // TraceabilityAgent Resource
 type TraceabilityAgent struct {
 	apiv1.ResourceMeta
+	_embedded interface{}                `json:"_embedded"`
 	Dataplane TraceabilityAgentDataplane `json:"dataplane"`
 	Owner     *apiv1.Owner               `json:"owner"`
 	Spec      TraceabilityAgentSpec      `json:"spec"`
@@ -132,6 +134,7 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -163,6 +166,20 @@ func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Dataplane

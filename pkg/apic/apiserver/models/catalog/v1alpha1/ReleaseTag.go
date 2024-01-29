@@ -28,9 +28,10 @@ var (
 )
 
 const (
-	ReleaseTagResourceName          = "releasetags"
-	ReleaseTagStateSubResourceName  = "state"
-	ReleaseTagStatusSubResourceName = "status"
+	ReleaseTagResourceName             = "releasetags"
+	ReleaseTag_embeddedSubResourceName = "_embedded"
+	ReleaseTagStateSubResourceName     = "state"
+	ReleaseTagStatusSubResourceName    = "status"
 )
 
 func ReleaseTagGVK() apiv1.GroupVersionKind {
@@ -45,10 +46,11 @@ func init() {
 // ReleaseTag Resource
 type ReleaseTag struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner   `json:"owner"`
-	Spec  ReleaseTagSpec `json:"spec"`
-	State interface{}    `json:"state"`
-	// Status ReleaseTagStatus `json:"status"`
+	_embedded interface{}    `json:"_embedded"`
+	Owner     *apiv1.Owner   `json:"owner"`
+	Spec      ReleaseTagSpec `json:"spec"`
+	State     interface{}    `json:"state"`
+	// Status    ReleaseTagStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -145,6 +147,7 @@ func (res *ReleaseTag) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["state"] = res.State
@@ -176,6 +179,20 @@ func (res *ReleaseTag) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource State

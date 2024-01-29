@@ -28,6 +28,7 @@ var (
 
 const (
 	AssetRequestDefinitionResourceName                 = "assetrequestdefinitions"
+	AssetRequestDefinition_embeddedSubResourceName     = "_embedded"
 	AssetRequestDefinitionAuthorizationSubResourceName = "authorization"
 	AssetRequestDefinitionReferencesSubResourceName    = "references"
 	AssetRequestDefinitionWebhooksSubResourceName      = "webhooks"
@@ -45,6 +46,7 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
+	_embedded     interface{}                         `json:"_embedded"`
 	Authorization AssetRequestDefinitionAuthorization `json:"authorization"`
 	Owner         *apiv1.Owner                        `json:"owner"`
 	References    interface{}                         `json:"references"`
@@ -134,6 +136,7 @@ func (res *AssetRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["authorization"] = res.Authorization
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -166,6 +169,20 @@ func (res *AssetRequestDefinition) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Authorization

@@ -28,6 +28,7 @@ var (
 
 const (
 	ApplicationResourceName               = "applications"
+	Application_embeddedSubResourceName   = "_embedded"
 	ApplicationMarketplaceSubResourceName = "marketplace"
 	ApplicationStateSubResourceName       = "state"
 )
@@ -44,6 +45,7 @@ func init() {
 // Application Resource
 type Application struct {
 	apiv1.ResourceMeta
+	_embedded   interface{}            `json:"_embedded"`
 	Marketplace ApplicationMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner           `json:"owner"`
 	Spec        ApplicationSpec        `json:"spec"`
@@ -126,6 +128,7 @@ func (res *Application) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -157,6 +160,20 @@ func (res *Application) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Marketplace

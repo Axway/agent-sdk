@@ -28,7 +28,8 @@ var (
 )
 
 const (
-	AccessControlListResourceName = "accesscontrollists"
+	AccessControlListResourceName             = "accesscontrollists"
+	AccessControlList_embeddedSubResourceName = "_embedded"
 )
 
 func AccessControlListGVK() apiv1.GroupVersionKind {
@@ -43,8 +44,9 @@ func init() {
 // AccessControlList Resource
 type AccessControlList struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner          `json:"owner"`
-	Spec  AccessControlListSpec `json:"spec"`
+	_embedded interface{}           `json:"_embedded"`
+	Owner     *apiv1.Owner          `json:"owner"`
+	Spec      AccessControlListSpec `json:"spec"`
 }
 
 // NewAccessControlList creates an empty *AccessControlList
@@ -140,6 +142,7 @@ func (res *AccessControlList) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -169,6 +172,20 @@ func (res *AccessControlList) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
