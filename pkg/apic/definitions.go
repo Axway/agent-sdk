@@ -25,6 +25,7 @@ const (
 	Specification = "specification"
 	Swagger       = "swagger"
 	GraphQL       = "graphql-sdl"
+	Raml          = "RAML"
 
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
 	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
@@ -57,6 +58,12 @@ const (
 const (
 	MajorChange = "MAJOR"
 	MinorChange = "MINOR"
+)
+
+// consts for RAML versions
+const (
+	Raml08 = "RAML 0.8"
+	Raml10 = "RAML 1.0"
 )
 
 type serviceContext struct {
