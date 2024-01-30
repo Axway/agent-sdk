@@ -50,7 +50,7 @@ func (s *sample) shouldSampleWithCounter(counterName string) bool {
 
 	// Only sampling on percentage, not currently looking at the details
 	shouldSample := false
-	if s.currentCounts[counterName] < int(float64(s.config.countMax)*s.config.Percentage/100) {
+	if s.currentCounts[counterName] < s.config.shouldSampleMax {
 		shouldSample = true
 	}
 	s.currentCounts[counterName]++

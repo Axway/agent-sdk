@@ -18,6 +18,7 @@ type Sampling struct {
 	PerSub          bool    `config:"per_subscription"`
 	ReportAllErrors bool    `config:"reportAllErrors" yaml:"reportAllErrors"`
 	countMax        int
+	shouldSampleMax int
 }
 
 // DefaultConfig - returns a default sampling config where all transactions are sent
@@ -50,6 +51,7 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 		cfg.Percentage = defaultSamplingRate
 	}
 	cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
+	cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 
 	agentSamples = &sample{
 		config:        cfg,
