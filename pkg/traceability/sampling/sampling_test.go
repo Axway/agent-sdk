@@ -102,6 +102,15 @@ func TestShouldSample(t *testing.T) {
 			},
 		},
 		{
+			name: "Default config transactions",
+			apiTransactions: map[string]int{
+				"id1": 1000,
+				"id2": 1000,
+			},
+			expectedSampled: 20,
+			config:          DefaultConfig(),
+		},
+		{
 			name: "5% of Transactions when per api is disabled",
 			apiTransactions: map[string]int{
 				"id1": 50,

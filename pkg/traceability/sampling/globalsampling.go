@@ -29,6 +29,7 @@ func DefaultConfig() Sampling {
 		PerSub:          true,
 		ReportAllErrors: true,
 		countMax:        countMax,
+		shouldSampleMax: defaultSamplingRate,
 	}
 }
 
