@@ -67,13 +67,20 @@ func (p *ramlProcessor) getProtocols() []string {
 }
 
 func (p *ramlProcessor) uriToEndpoints(uri string, protocols []string) ([]EndpointDefinition, error) {
-	// currently accepting only version as a dynamic value to the endpoints
+	parseURL, err := url.Parse(uri)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(strings.ToLower(parseURL.Scheme), "http") {
+		return p.uriToEndpoints("https://"+uri, protocols)
+	}
 	endpoints := []EndpointDefinition{}
 	ep := EndpointDefinition{}
+	// currently accepting only version as a dynamic value to the endpoints
 	if version := p.ramlDef["version"]; version != nil {
-		uri = strings.Replace(uri, "{version}", fmt.Sprintf("%v", version), 1)
+		parseURL.Path = strings.Replace(parseURL.Path, "{version}", fmt.Sprintf("%v", version), 1)
 	}
-	parseURL, err := url.Parse(uri)
+
 	ep.Host = parseURL.Hostname()
 	ep.BasePath = parseURL.Path
 	ep.Protocol = parseURL.Scheme

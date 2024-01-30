@@ -311,20 +311,20 @@ func ValidateRamlProcessors(t *testing.T, specParser SpecResourceParser, inputFi
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with raml")
 	if inputFile == "./testdata/raml_10.raml" {
 		for i := range endPoints {
-			assert.True(t, isInList(endPoints[i].Protocol, []string{"https", "https"}))
+			assert.True(t, isInList(endPoints[i].Protocol, []string{"http", "https"}))
 			assert.True(t, isInList(endPoints[i].Port, []int32{80, 443}))
 		}
 		assert.Equal(t, "na1.salesforce.com", endPoints[0].Host)
 		assert.Equal(t, "/services/data/v3/chatter", endPoints[0].BasePath)
 		assert.Equal(t, "Grand Theft Auto:Vice City", description)
 		assert.Equal(t, "v3", version)
-	} else if inputFile == "./testdata/raml08.raml" {
+	} else if inputFile == "./testdata/raml_08.raml" {
 		assert.Equal(t, "Sonny Forelli", description)
 		assert.Equal(t, "1.0", version)
 		assert.Equal(t, "example.local", endPoints[0].Host)
 		assert.Equal(t, endPoints[0].Protocol, "https")
 		assert.Equal(t, endPoints[0].Port, int32(8000))
-		assert.Equal(t, "/services/data/v3/chatter", endPoints[0].BasePath)
+		assert.Equal(t, "/api", endPoints[0].BasePath)
 	}
 }
 
