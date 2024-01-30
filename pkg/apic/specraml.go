@@ -2,6 +2,7 @@ package apic
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,23 +21,20 @@ func (p *ramlProcessor) GetResourceType() string {
 	return Raml
 }
 
-// GetVersion -
 func (p *ramlProcessor) GetVersion() string {
 	if version := p.ramlDef["version"]; version != nil {
-		return version.(string)
+		return fmt.Sprintf("%v", version)
 	}
 	return ""
 }
 
-// GetDescription -
 func (p *ramlProcessor) GetDescription() string {
-	if description := p.ramlDef["info"]; description != nil {
-		return description.(string)
+	if description := p.ramlDef["description"]; description != nil {
+		return fmt.Sprintf("%v", description)
 	}
 	return ""
 }
 
-// GetEndPoints -
 func (p *ramlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	baseUri := p.ramlDef["baseUri"]
 	if baseUri == nil {
@@ -47,42 +45,66 @@ func (p *ramlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 		return nil, fmt.Errorf("Not implemented error")
 	}
 
-	return uriToEndpoints(baseUri.(string), p.getProtocols())
+	return p.uriToEndpoints(baseUri.(string), p.getProtocols())
+}
+
+func (p *ramlProcessor) GetSpecBytes() []byte {
+	return p.spec
 }
 
 func (p *ramlProcessor) getProtocols() []string {
 	if protocols := p.ramlDef["protocols"]; protocols != nil {
-		if validProtocols, ok := protocols.([]string); ok {
-			return validProtocols
+		// in case [HTTP, HTTPS] is provided
+		if ramlProtocols, ok := protocols.([]interface{}); ok {
+			return validateRamlProtocols(ramlProtocols)
+		}
+		// in case just HTTP is provided
+		if ramlProtocols, ok := protocols.(string); ok {
+			return validateRamlProtocols([]interface{}{ramlProtocols})
 		}
 	}
 	return nil
 }
 
-func uriToEndpoints(uri string, protocols []string) ([]EndpointDefinition, error) {
-	parseURL, err := url.Parse(uri)
-	endpoint := EndpointDefinition{}
-	endpoint.Host = parseURL.Hostname()
-	port, _ := strconv.Atoi(parseURL.Port())
-	endpoint.Port = int32(port)
-	endpoint.BasePath = parseURL.Path
-	endpoint.Protocol = "HTTP"
-	if strings.HasPrefix(uri, "HTTPS") {
-		endpoint.Protocol = "HTTPS"
+func (p *ramlProcessor) uriToEndpoints(uri string, protocols []string) ([]EndpointDefinition, error) {
+	// currently accepting only version as a dynamic value to the endpoints
+	endpoints := []EndpointDefinition{}
+	ep := EndpointDefinition{}
+	if version := p.ramlDef["version"]; version != nil {
+		uri = strings.Replace(uri, "{version}", fmt.Sprintf("%v", version), 1)
 	}
+	parseURL, err := url.Parse(uri)
+	ep.Host = parseURL.Hostname()
+	ep.BasePath = parseURL.Path
+	ep.Protocol = parseURL.Scheme
+
+	port, _ := strconv.Atoi(parseURL.Port())
+	if port == 0 {
+		port, _ = net.LookupPort("tcp", ep.Protocol)
+	}
+	ep.Port = int32(port)
 
 	if len(protocols) == 0 {
-		return []EndpointDefinition{endpoint}, err
+		return append(endpoints, ep), err
+		// Overrides the protocol from the URI, but does not override the port.
+	} else if len(protocols) == 1 {
+		ep.Protocol = strings.ToLower(protocols[0])
+		if port == 0 {
+			port, _ = net.LookupPort("tcp", ep.Protocol)
+		}
+		ep.Port = int32(port)
+		return append(endpoints, ep), err
 	}
-	if len(protocols) == 1 {
-		endpoint.Protocol = protocols[0]
-		return []EndpointDefinition{endpoint}, err
+	// With multiple protocols provided, ignores the port from the url.
+	for i := range protocols {
+		epCpy := endpointCopy(ep)
+		port, _ = net.LookupPort("tcp", protocols[i])
+		epCpy.Port = int32(port)
+		epCpy.Protocol = strings.ToLower(protocols[i])
+		endpoints = append(endpoints, epCpy)
 	}
 
-	endpoint.Protocol = "HTTP"
-	endpointCpy := endpointCopy(endpoint)
-	endpointCpy.Protocol = "HTTPS"
-	return []EndpointDefinition{endpoint, endpointCpy}, err
+	return endpoints, err
 }
 
 func endpointCopy(e EndpointDefinition) EndpointDefinition {
@@ -90,6 +112,17 @@ func endpointCopy(e EndpointDefinition) EndpointDefinition {
 	return *ed
 }
 
-func (p *ramlProcessor) GetSpecBytes() []byte {
-	return p.spec
+func validateRamlProtocols(protocols []interface{}) []string {
+	stringProtocols := []string{}
+	for i := range protocols {
+		p, ok := protocols[i].(string)
+		if !ok {
+			return []string{}
+		}
+		if strings.ToUpper(p) != "HTTPS" && strings.ToUpper(p) != "HTTP" {
+			return []string{}
+		}
+		stringProtocols = append(stringProtocols, p)
+	}
+	return stringProtocols
 }

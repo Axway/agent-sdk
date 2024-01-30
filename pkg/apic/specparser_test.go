@@ -55,6 +55,12 @@ func TestSpecDiscovery(t *testing.T) {
 			inputType: Wsdl,
 		},
 		{
+			name:      "Raml input type with no valid raml version provided",
+			inputFile: "./testdata/raml_invalid.raml",
+			parseErr:  true,
+			inputType: Raml,
+		},
+		{
 			name:         "No input type bad OAS version creates Unstructured",
 			inputFile:    "./testdata/petstore-openapi-bad-version.json",
 			expectedType: Unstructured,
@@ -95,6 +101,16 @@ func TestSpecDiscovery(t *testing.T) {
 			expectedType: AsyncAPI,
 		},
 		{
+			name:         "No input type Raml 1.0 spec",
+			inputFile:    "./testdata/raml_10.raml",
+			expectedType: Raml,
+		},
+		{
+			name:         "No input type Raml 0.8 spec",
+			inputFile:    "./testdata/raml_08.raml",
+			expectedType: Raml,
+		},
+		{
 			name:         "No input type Unstructured",
 			inputFile:    "./testdata/multiplication.thrift",
 			expectedType: Unstructured,
@@ -132,6 +148,9 @@ func TestSpecDiscovery(t *testing.T) {
 			case AsyncAPI:
 				_, ok = specProcessor.(*asyncAPIProcessor)
 				ValidateAsyncAPIProcessors(t, specParser)
+			case Raml:
+				_, ok = specProcessor.(*ramlProcessor)
+				ValidateRamlProcessors(t, specParser, tc.inputFile)
 			case Unstructured:
 				_, ok = specProcessor.(*unstructuredProcessor)
 			}
@@ -282,4 +301,38 @@ func ValidateAsyncAPIProcessors(t *testing.T, specParser SpecResourceParser) {
 			"version": "0.2.0",
 		},
 	}, endPoints[0].Details)
+}
+
+func ValidateRamlProcessors(t *testing.T, specParser SpecResourceParser, inputFile string) {
+	specProcessor := specParser.GetSpecProcessor()
+	endPoints, err := specProcessor.GetEndpoints()
+	description := specProcessor.GetDescription()
+	version := specProcessor.GetVersion()
+	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with raml")
+	if inputFile == "./testdata/raml_10.raml" {
+		for i := range endPoints {
+			assert.True(t, isInList(endPoints[i].Protocol, []string{"https", "https"}))
+			assert.True(t, isInList(endPoints[i].Port, []int32{80, 443}))
+		}
+		assert.Equal(t, "na1.salesforce.com", endPoints[0].Host)
+		assert.Equal(t, "/services/data/v3/chatter", endPoints[0].BasePath)
+		assert.Equal(t, "Grand Theft Auto:Vice City", description)
+		assert.Equal(t, "v3", version)
+	} else if inputFile == "./testdata/raml08.raml" {
+		assert.Equal(t, "Sonny Forelli", description)
+		assert.Equal(t, "1.0", version)
+		assert.Equal(t, "example.local", endPoints[0].Host)
+		assert.Equal(t, endPoints[0].Protocol, "https")
+		assert.Equal(t, endPoints[0].Port, int32(8000))
+		assert.Equal(t, "/services/data/v3/chatter", endPoints[0].BasePath)
+	}
+}
+
+func isInList[T comparable](actual T, validValues []T) bool {
+	for i := range validValues {
+		if validValues[i] == actual {
+			return true
+		}
+	}
+	return false
 }
