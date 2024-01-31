@@ -84,8 +84,10 @@ func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 func numberOfDecimals(v float64) int {
 	dec := decimal.NewFromFloat(v)
 	x := dec.Exponent()
+	// Exponent returns positive values if number is a multiple of 10
 	if x > 0 {
 		return 0
 	}
+	// and negative if it contains non-zero decimals
 	return int(x) * (-1)
 }
