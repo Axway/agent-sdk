@@ -23,7 +23,16 @@ func (p *ramlProcessor) GetResourceType() string {
 
 func (p *ramlProcessor) GetVersion() string {
 	if version := p.ramlDef["version"]; version != nil {
-		return fmt.Sprintf("%v", version)
+		switch v := version.(type) {
+		// yaml Unmarshalling converts the underlying interface values which can be floats like 2.0 to 2
+		case float64:
+			if float64(int(v)) == v {
+				return fmt.Sprintf("%v.0", v)
+			}
+			return fmt.Sprintf("%v", v)
+		default:
+			return fmt.Sprintf("%v", v)
+		}
 	}
 	return ""
 }
