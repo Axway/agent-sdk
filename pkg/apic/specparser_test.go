@@ -320,7 +320,7 @@ func ValidateRamlProcessors(t *testing.T, specParser SpecResourceParser, inputFi
 		assert.Equal(t, "v3", version)
 	} else if inputFile == "./testdata/raml_08.raml" {
 		assert.Equal(t, "Sonny Forelli", description)
-		assert.Equal(t, "1.0", version)
+		assert.Equal(t, "1.1", version)
 		assert.Equal(t, "example.local", endPoints[0].Host)
 		assert.Equal(t, endPoints[0].Protocol, "https")
 		assert.Equal(t, endPoints[0].Port, int32(8000))
