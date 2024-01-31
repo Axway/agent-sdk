@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
@@ -157,6 +158,21 @@ func TestSpecDiscovery(t *testing.T) {
 			assert.True(t, ok)
 		})
 	}
+}
+
+func TestLoadRamlAsYaml(t *testing.T) {
+	var v map[string]interface{}
+	yamlFile, err := os.ReadFile("./testdata/raml_08.raml")
+	assert.Nil(t, err)
+
+	err = yaml.Unmarshal(yamlFile, &v)
+	assert.Nil(t, err)
+
+	yamlFile, err = os.ReadFile("./testdata/raml_10.raml")
+	assert.Nil(t, err)
+
+	err = yaml.Unmarshal(yamlFile, &v)
+	assert.Nil(t, err)
 }
 
 func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser) {
