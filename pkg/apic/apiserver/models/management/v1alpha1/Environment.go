@@ -28,10 +28,8 @@ var (
 
 const (
 	EnvironmentResourceName                   = "environments"
-	Environment_embeddedSubResourceName       = "_embedded"
 	EnvironmentCompliancetasksSubResourceName = "compliancetasks"
 	EnvironmentPoliciesSubResourceName        = "policies"
-	EnvironmentStagesSubResourceName          = "stages"
 )
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
@@ -46,12 +44,10 @@ func init() {
 // Environment Resource
 type Environment struct {
 	apiv1.ResourceMeta
-	_embedded       interface{}                `json:"_embedded"`
 	Compliancetasks EnvironmentCompliancetasks `json:"compliancetasks"`
 	Owner           *apiv1.Owner               `json:"owner"`
 	Policies        EnvironmentPolicies        `json:"policies"`
 	Spec            EnvironmentSpec            `json:"spec"`
-	Stages          EnvironmentStages          `json:"stages"`
 }
 
 // NewEnvironment creates an empty *Environment
@@ -130,12 +126,10 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["compliancetasks"] = res.Compliancetasks
 	out["owner"] = res.Owner
 	out["policies"] = res.Policies
 	out["spec"] = res.Spec
-	out["stages"] = res.Stages
 
 	return json.Marshal(out)
 }
@@ -165,20 +159,6 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource Compliancetasks
 	if v, ok := aux.SubResources["compliancetasks"]; ok {
 		sr, err = json.Marshal(v)
@@ -202,20 +182,6 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "policies")
 		err = json.Unmarshal(sr, &res.Policies)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Stages
-	if v, ok := aux.SubResources["stages"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "stages")
-		err = json.Unmarshal(sr, &res.Stages)
 		if err != nil {
 			return err
 		}

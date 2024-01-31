@@ -13,7 +13,7 @@ package management
 type DataplaneSpecApigee struct {
 	Type string `json:"type"`
 	// The Project ID on GCP that Apigee is configured in
-	ProjectId string `json:"projectId"`
+	ProjectID string `json:"projectID"`
 	// The Developer that will own all Apigee Applications created by the agent
 	DeveloperEmail string `json:"developerEmail"`
 	// The discovery mode that the Apigee agents should use

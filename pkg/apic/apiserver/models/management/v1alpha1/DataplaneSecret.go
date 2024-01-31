@@ -27,10 +27,9 @@ var (
 )
 
 const (
-	DataplaneSecretResourceName             = "dataplanesecrets"
-	DataplaneSecret_embeddedSubResourceName = "_embedded"
-	DataplaneSecretStateSubResourceName     = "state"
-	DataplaneSecretStatusSubResourceName    = "status"
+	DataplaneSecretResourceName          = "dataplanesecrets"
+	DataplaneSecretStateSubResourceName  = "state"
+	DataplaneSecretStatusSubResourceName = "status"
 )
 
 func DataplaneSecretGVK() apiv1.GroupVersionKind {
@@ -45,11 +44,10 @@ func init() {
 // DataplaneSecret Resource
 type DataplaneSecret struct {
 	apiv1.ResourceMeta
-	_embedded interface{}          `json:"_embedded"`
-	Owner     *apiv1.Owner         `json:"owner"`
-	Spec      DataplaneSecretSpec  `json:"spec"`
-	State     DataplaneSecretState `json:"state"`
-	// Status    DataplaneSecretStatus `json:"status"`
+	Owner *apiv1.Owner         `json:"owner"`
+	Spec  DataplaneSecretSpec  `json:"spec"`
+	State DataplaneSecretState `json:"state"`
+	// Status DataplaneSecretStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -135,7 +133,6 @@ func (res *DataplaneSecret) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["state"] = res.State
@@ -167,20 +164,6 @@ func (res *DataplaneSecret) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource State

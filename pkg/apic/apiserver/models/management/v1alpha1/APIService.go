@@ -28,10 +28,8 @@ var (
 
 const (
 	APIServiceResourceName              = "apiservices"
-	ApiService_embeddedSubResourceName  = "_embedded"
 	ApiServiceComplianceSubResourceName = "compliance"
 	ApiServiceDetailsSubResourceName    = "details"
-	ApiServiceReferencesSubResourceName = "references"
 	ApiServiceStatusSubResourceName     = "status"
 )
 
@@ -47,14 +45,12 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	_embedded interface{} `json:"_embedded"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Compliance ApiServiceCompliance `json:"compliance"`
 	Compliance *ApiServiceCompliance `json:"compliance,omitempty"`
 	Details    ApiServiceDetails     `json:"details"`
 	Owner      *apiv1.Owner          `json:"owner"`
-	References ApiServiceReferences  `json:"references"`
 	Spec       ApiServiceSpec        `json:"spec"`
 	// Status     ApiServiceStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
@@ -142,11 +138,9 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["compliance"] = res.Compliance
 	out["details"] = res.Details
 	out["owner"] = res.Owner
-	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -178,20 +172,6 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource Compliance
 	if v, ok := aux.SubResources["compliance"]; ok {
 		sr, err = json.Marshal(v)
@@ -215,20 +195,6 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "details")
 		err = json.Unmarshal(sr, &res.Details)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource References
-	if v, ok := aux.SubResources["references"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "references")
-		err = json.Unmarshal(sr, &res.References)
 		if err != nil {
 			return err
 		}

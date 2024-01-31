@@ -28,7 +28,6 @@ var (
 
 const (
 	CredentialRequestDefinitionResourceName              = "credentialrequestdefinitions"
-	CredentialRequestDefinition_embeddedSubResourceName  = "_embedded"
 	CredentialRequestDefinitionReferencesSubResourceName = "references"
 	CredentialRequestDefinitionWebhooksSubResourceName   = "webhooks"
 )
@@ -45,7 +44,6 @@ func init() {
 // CredentialRequestDefinition Resource
 type CredentialRequestDefinition struct {
 	apiv1.ResourceMeta
-	_embedded  interface{}                           `json:"_embedded"`
 	Owner      *apiv1.Owner                          `json:"owner"`
 	References CredentialRequestDefinitionReferences `json:"references"`
 	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
@@ -134,7 +132,6 @@ func (res *CredentialRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -166,20 +163,6 @@ func (res *CredentialRequestDefinition) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource References

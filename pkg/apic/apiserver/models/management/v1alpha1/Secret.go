@@ -28,8 +28,7 @@ var (
 )
 
 const (
-	SecretResourceName             = "secrets"
-	Secret_embeddedSubResourceName = "_embedded"
+	SecretResourceName = "secrets"
 )
 
 func SecretGVK() apiv1.GroupVersionKind {
@@ -44,9 +43,8 @@ func init() {
 // Secret Resource
 type Secret struct {
 	apiv1.ResourceMeta
-	_embedded interface{}  `json:"_embedded"`
-	Owner     *apiv1.Owner `json:"owner"`
-	Spec      SecretSpec   `json:"spec"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  SecretSpec   `json:"spec"`
 }
 
 // NewSecret creates an empty *Secret
@@ -142,7 +140,6 @@ func (res *Secret) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -172,20 +169,6 @@ func (res *Secret) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

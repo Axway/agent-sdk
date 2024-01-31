@@ -28,7 +28,6 @@ var (
 
 const (
 	AssetResourceName                 = "assets"
-	Asset_embeddedSubResourceName     = "_embedded"
 	AssetAccessSubResourceName        = "access"
 	AssetIconSubResourceName          = "icon"
 	AssetLatestreleaseSubResourceName = "latestrelease"
@@ -49,7 +48,6 @@ func init() {
 // Asset Resource
 type Asset struct {
 	apiv1.ResourceMeta
-	_embedded     interface{}        `json:"_embedded"`
 	Access        AssetAccess        `json:"access"`
 	Icon          interface{}        `json:"icon"`
 	Latestrelease AssetLatestrelease `json:"latestrelease"`
@@ -137,7 +135,6 @@ func (res *Asset) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["access"] = res.Access
 	out["icon"] = res.Icon
 	out["latestrelease"] = res.Latestrelease
@@ -173,20 +170,6 @@ func (res *Asset) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Access

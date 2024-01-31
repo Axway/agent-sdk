@@ -28,10 +28,8 @@ var (
 )
 
 const (
-	AssetResourceResourceName               = "assetresources"
-	AssetResource_embeddedSubResourceName   = "_embedded"
-	AssetResourceReferencesSubResourceName  = "references"
-	AssetResourceReleasehashSubResourceName = "releasehash"
+	AssetResourceResourceName              = "assetresources"
+	AssetResourceReferencesSubResourceName = "references"
 )
 
 func AssetResourceGVK() apiv1.GroupVersionKind {
@@ -46,11 +44,9 @@ func init() {
 // AssetResource Resource
 type AssetResource struct {
 	apiv1.ResourceMeta
-	_embedded   interface{}             `json:"_embedded"`
-	Owner       *apiv1.Owner            `json:"owner"`
-	References  AssetResourceReferences `json:"references"`
-	Releasehash interface{}             `json:"releasehash"`
-	Spec        AssetResourceSpec       `json:"spec"`
+	Owner      *apiv1.Owner            `json:"owner"`
+	References AssetResourceReferences `json:"references"`
+	Spec       AssetResourceSpec       `json:"spec"`
 }
 
 // NewAssetResource creates an empty *AssetResource
@@ -146,10 +142,8 @@ func (res *AssetResource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["references"] = res.References
-	out["releasehash"] = res.Releasehash
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -180,20 +174,6 @@ func (res *AssetResource) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource References
 	if v, ok := aux.SubResources["references"]; ok {
 		sr, err = json.Marshal(v)
@@ -203,20 +183,6 @@ func (res *AssetResource) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
-	}
-
-	// marshalling subresource Releasehash
-	if v, ok := aux.SubResources["releasehash"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "releasehash")
-		err = json.Unmarshal(sr, &res.Releasehash)
 		if err != nil {
 			return err
 		}

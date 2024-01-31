@@ -27,8 +27,7 @@ var (
 )
 
 const (
-	SpecDiscoveryResourceName             = "specdiscoveries"
-	SpecDiscovery_embeddedSubResourceName = "_embedded"
+	SpecDiscoveryResourceName = "specdiscoveries"
 )
 
 func SpecDiscoveryGVK() apiv1.GroupVersionKind {
@@ -43,9 +42,8 @@ func init() {
 // SpecDiscovery Resource
 type SpecDiscovery struct {
 	apiv1.ResourceMeta
-	_embedded interface{}       `json:"_embedded"`
-	Owner     *apiv1.Owner      `json:"owner"`
-	Spec      SpecDiscoverySpec `json:"spec"`
+	Owner *apiv1.Owner      `json:"owner"`
+	Spec  SpecDiscoverySpec `json:"spec"`
 }
 
 // NewSpecDiscovery creates an empty *SpecDiscovery
@@ -130,7 +128,6 @@ func (res *SpecDiscovery) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -160,20 +157,6 @@ func (res *SpecDiscovery) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

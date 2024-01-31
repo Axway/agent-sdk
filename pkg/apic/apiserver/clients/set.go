@@ -71,9 +71,6 @@ type Set struct {
 	ConsumerProductVisibilityCatalogV1alpha1         *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
 	CategoryVisibilityCatalogV1alpha1                *catalog_v1alpha1.UnscopedCategoryVisibilityClient
 	PublishedDocumentResourceCatalogV1alpha1         *catalog_v1alpha1.UnscopedPublishedDocumentResourceClient
-	PublishedStageCatalogV1alpha1                    *catalog_v1alpha1.UnscopedPublishedStageClient
-	StageVisibilityCatalogV1alpha1                   *catalog_v1alpha1.UnscopedStageVisibilityClient
-	ConsumerStageVisibilityCatalogV1alpha1           *catalog_v1alpha1.UnscopedConsumerStageVisibilityClient
 	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
 	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
 	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
@@ -99,7 +96,6 @@ type Set struct {
 	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
 	CategoryVisibilityCatalogV1                      *catalog_v1.UnscopedCategoryVisibilityClient
 	PublishedDocumentResourceCatalogV1               *catalog_v1.UnscopedPublishedDocumentResourceClient
-	PublishedStageCatalogV1                          *catalog_v1.UnscopedPublishedStageClient
 	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
 	ProductCatalogV1                                 *catalog_v1.ProductClient
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
@@ -340,18 +336,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedDocumentResource: %s", err))
 	}
-	s.PublishedStageCatalogV1alpha1, err = catalog_v1alpha1.NewPublishedStageClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.PublishedStage: %s", err))
-	}
-	s.StageVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewStageVisibilityClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.StageVisibility: %s", err))
-	}
-	s.ConsumerStageVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewConsumerStageVisibilityClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ConsumerStageVisibility: %s", err))
-	}
 	s.SupportContactCatalogV1alpha1, err = catalog_v1alpha1.NewSupportContactClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SupportContact: %s", err))
@@ -451,10 +435,6 @@ func New(b cAPIV1.Base) *Set {
 	s.PublishedDocumentResourceCatalogV1, err = catalog_v1.NewPublishedDocumentResourceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.PublishedDocumentResource: %s", err))
-	}
-	s.PublishedStageCatalogV1, err = catalog_v1.NewPublishedStageClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.PublishedStage: %s", err))
 	}
 	s.SupportContactCatalogV1, err = catalog_v1.NewSupportContactClient(b)
 	if err != nil {
