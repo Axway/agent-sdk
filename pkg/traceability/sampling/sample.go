@@ -50,13 +50,13 @@ func (s *sample) shouldSampleWithCounter(counterName string) bool {
 
 	// Only sampling on percentage, not currently looking at the details
 	shouldSample := false
-	if s.currentCounts[counterName] < s.config.Percentage {
+	if s.currentCounts[counterName] < s.config.shouldSampleMax {
 		shouldSample = true
 	}
 	s.currentCounts[counterName]++
 
-	// reset the count once we hit 100 messages
-	if s.currentCounts[counterName] == countMax {
+	// reset the count once we hit 100 * 10^(nb_decimals) messages
+	if s.currentCounts[counterName] == s.config.countMax {
 		s.currentCounts[counterName] = 0
 	}
 
