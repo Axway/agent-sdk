@@ -9,10 +9,8 @@
 
 package catalog
 
-// SubscriptionState  (catalog.v1alpha1.Subscription)
-type SubscriptionState struct {
-	Name string `json:"name"`
-	// Additional info on the state.
-	Reason string                `json:"reason,omitempty"`
-	When   SubscriptionStateWhen `json:"when,omitempty"`
+// DocumentResourceReferencesPlatformSettings  (catalog.v1alpha1.DocumentResource)
+type DocumentResourceReferencesPlatformSettings struct {
+	// Defines the DocumentResource used in the platform settings or not.
+	Used bool `json:"used"`
 }
