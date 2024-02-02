@@ -14,7 +14,7 @@ type AssetMappingSpecInputs struct {
 	ApiService         string `json:"apiService"`
 	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
-	// This property is deprecated and will be ignored.
+	// name of the stage
 	Stage string `json:"stage,omitempty"`
 	// list of categories for the asset.
 	Categories []string `json:"categories,omitempty"`

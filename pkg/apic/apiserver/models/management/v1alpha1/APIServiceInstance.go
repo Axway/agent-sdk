@@ -28,7 +28,6 @@ var (
 
 const (
 	APIServiceInstanceResourceName              = "apiserviceinstances"
-	ApiServiceInstanceLifecycleSubResourceName  = "lifecycle"
 	ApiServiceInstanceReferencesSubResourceName = "references"
 )
 
@@ -44,7 +43,6 @@ func init() {
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
-	Lifecycle  ApiServiceInstanceLifecycle  `json:"lifecycle"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
 	Spec       ApiServiceInstanceSpec       `json:"spec"`
@@ -132,7 +130,6 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["lifecycle"] = res.Lifecycle
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -163,20 +160,6 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource Lifecycle
-	if v, ok := aux.SubResources["lifecycle"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "lifecycle")
-		err = json.Unmarshal(sr, &res.Lifecycle)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource References
