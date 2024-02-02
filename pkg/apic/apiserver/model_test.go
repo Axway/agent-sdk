@@ -165,6 +165,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
 				},
+				"references": map[string]interface{}{},
 				"status": map[string]interface{}{
 					"level": "Error",
 					"reasons": []interface{}{
