@@ -27,9 +27,8 @@ var (
 )
 
 const (
-	CategoryResourceName             = "categories"
-	Category_embeddedSubResourceName = "_embedded"
-	CategoryIconSubResourceName      = "icon"
+	CategoryResourceName        = "categories"
+	CategoryIconSubResourceName = "icon"
 )
 
 func CategoryGVK() apiv1.GroupVersionKind {
@@ -44,10 +43,9 @@ func init() {
 // Category Resource
 type Category struct {
 	apiv1.ResourceMeta
-	_embedded interface{}  `json:"_embedded"`
-	Icon      interface{}  `json:"icon"`
-	Owner     *apiv1.Owner `json:"owner"`
-	Spec      CategorySpec `json:"spec"`
+	Icon  interface{}  `json:"icon"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  CategorySpec `json:"spec"`
 }
 
 // NewCategory creates an empty *Category
@@ -126,7 +124,6 @@ func (res *Category) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["icon"] = res.Icon
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -157,20 +154,6 @@ func (res *Category) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Icon

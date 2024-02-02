@@ -28,7 +28,6 @@ var (
 
 const (
 	PublishedProductResourceName              = "publishedproducts"
-	PublishedProduct_embeddedSubResourceName  = "_embedded"
 	PublishedProductReferencesSubResourceName = "references"
 )
 
@@ -44,7 +43,6 @@ func init() {
 // PublishedProduct Resource
 type PublishedProduct struct {
 	apiv1.ResourceMeta
-	_embedded  interface{}                `json:"_embedded"`
 	Owner      *apiv1.Owner               `json:"owner"`
 	References PublishedProductReferences `json:"references"`
 	Spec       PublishedProductSpec       `json:"spec"`
@@ -132,7 +130,6 @@ func (res *PublishedProduct) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -163,20 +160,6 @@ func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource References

@@ -28,7 +28,6 @@ var (
 
 const (
 	APIServiceResourceName              = "apiservices"
-	ApiService_embeddedSubResourceName  = "_embedded"
 	ApiServiceComplianceSubResourceName = "compliance"
 	ApiServiceDetailsSubResourceName    = "details"
 	ApiServiceReferencesSubResourceName = "references"
@@ -47,7 +46,6 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	_embedded interface{} `json:"_embedded"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Compliance ApiServiceCompliance `json:"compliance"`
@@ -142,7 +140,6 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["compliance"] = res.Compliance
 	out["details"] = res.Details
 	out["owner"] = res.Owner
@@ -176,20 +173,6 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Compliance

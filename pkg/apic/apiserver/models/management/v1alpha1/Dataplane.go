@@ -28,7 +28,6 @@ var (
 
 const (
 	DataplaneResourceName                = "dataplanes"
-	Dataplane_embeddedSubResourceName    = "_embedded"
 	DataplaneSecretschemaSubResourceName = "secretschema"
 	DataplaneSecuritySubResourceName     = "security"
 )
@@ -45,7 +44,6 @@ func init() {
 // Dataplane Resource
 type Dataplane struct {
 	apiv1.ResourceMeta
-	_embedded    interface{}       `json:"_embedded"`
 	Owner        *apiv1.Owner      `json:"owner"`
 	Secretschema interface{}       `json:"secretschema"`
 	Security     DataplaneSecurity `json:"security"`
@@ -134,7 +132,6 @@ func (res *Dataplane) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["secretschema"] = res.Secretschema
 	out["security"] = res.Security
@@ -166,20 +163,6 @@ func (res *Dataplane) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Secretschema

@@ -27,8 +27,7 @@ var (
 )
 
 const (
-	K8SResourceResourceName             = "k8sresources"
-	K8SResource_embeddedSubResourceName = "_embedded"
+	K8SResourceResourceName = "k8sresources"
 )
 
 func K8SResourceGVK() apiv1.GroupVersionKind {
@@ -43,9 +42,8 @@ func init() {
 // K8SResource Resource
 type K8SResource struct {
 	apiv1.ResourceMeta
-	_embedded interface{}     `json:"_embedded"`
-	Owner     *apiv1.Owner    `json:"owner"`
-	Spec      K8SResourceSpec `json:"spec"`
+	Owner *apiv1.Owner    `json:"owner"`
+	Spec  K8SResourceSpec `json:"spec"`
 }
 
 // NewK8SResource creates an empty *K8SResource
@@ -130,7 +128,6 @@ func (res *K8SResource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -160,20 +157,6 @@ func (res *K8SResource) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

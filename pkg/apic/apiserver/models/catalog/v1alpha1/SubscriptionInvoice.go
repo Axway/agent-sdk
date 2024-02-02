@@ -28,7 +28,6 @@ var (
 
 const (
 	SubscriptionInvoiceResourceName               = "subscriptioninvoices"
-	SubscriptionInvoice_embeddedSubResourceName   = "_embedded"
 	SubscriptionInvoiceBillingSubResourceName     = "billing"
 	SubscriptionInvoiceMarketplaceSubResourceName = "marketplace"
 	SubscriptionInvoiceStateSubResourceName       = "state"
@@ -47,7 +46,6 @@ func init() {
 // SubscriptionInvoice Resource
 type SubscriptionInvoice struct {
 	apiv1.ResourceMeta
-	_embedded   interface{}                    `json:"_embedded"`
 	Billing     SubscriptionInvoiceBilling     `json:"billing"`
 	Marketplace SubscriptionInvoiceMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner                   `json:"owner"`
@@ -139,7 +137,6 @@ func (res *SubscriptionInvoice) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["billing"] = res.Billing
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
@@ -173,20 +170,6 @@ func (res *SubscriptionInvoice) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Billing

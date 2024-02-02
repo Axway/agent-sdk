@@ -27,8 +27,7 @@ var (
 )
 
 const (
-	ProductPlanUnitResourceName             = "productplanunits"
-	ProductPlanUnit_embeddedSubResourceName = "_embedded"
+	ProductPlanUnitResourceName = "productplanunits"
 )
 
 func ProductPlanUnitGVK() apiv1.GroupVersionKind {
@@ -43,9 +42,8 @@ func init() {
 // ProductPlanUnit Resource
 type ProductPlanUnit struct {
 	apiv1.ResourceMeta
-	_embedded interface{}         `json:"_embedded"`
-	Owner     *apiv1.Owner        `json:"owner"`
-	Spec      ProductPlanUnitSpec `json:"spec"`
+	Owner *apiv1.Owner        `json:"owner"`
+	Spec  ProductPlanUnitSpec `json:"spec"`
 }
 
 // NewProductPlanUnit creates an empty *ProductPlanUnit
@@ -124,7 +122,6 @@ func (res *ProductPlanUnit) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -154,20 +151,6 @@ func (res *ProductPlanUnit) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

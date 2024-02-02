@@ -27,8 +27,7 @@ var (
 )
 
 const (
-	CommandLineInterfaceResourceName             = "commandlines"
-	CommandLineInterface_embeddedSubResourceName = "_embedded"
+	CommandLineInterfaceResourceName = "commandlines"
 )
 
 func CommandLineInterfaceGVK() apiv1.GroupVersionKind {
@@ -43,9 +42,8 @@ func init() {
 // CommandLineInterface Resource
 type CommandLineInterface struct {
 	apiv1.ResourceMeta
-	_embedded interface{}              `json:"_embedded"`
-	Owner     *apiv1.Owner             `json:"owner"`
-	Spec      CommandLineInterfaceSpec `json:"spec"`
+	Owner *apiv1.Owner             `json:"owner"`
+	Spec  CommandLineInterfaceSpec `json:"spec"`
 }
 
 // NewCommandLineInterface creates an empty *CommandLineInterface
@@ -130,7 +128,6 @@ func (res *CommandLineInterface) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -160,20 +157,6 @@ func (res *CommandLineInterface) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
