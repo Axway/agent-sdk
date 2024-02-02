@@ -9,10 +9,7 @@
 
 package catalog
 
-// SubscriptionState  (catalog.v1alpha1.Subscription)
-type SubscriptionState struct {
-	Name string `json:"name"`
-	// Additional info on the state.
-	Reason string                `json:"reason,omitempty"`
-	When   SubscriptionStateWhen `json:"when,omitempty"`
+// StageVisibilitySpecAuthenticatedRef struct for StageVisibilitySpecAuthenticatedRef
+type StageVisibilitySpecAuthenticatedRef struct {
+	Type string `json:"type"`
 }
