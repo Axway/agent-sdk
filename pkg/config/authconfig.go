@@ -156,7 +156,8 @@ func (a *AuthConfiguration) GetTimeout() time.Duration {
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	if err != nil {
+		log.Errorf("could not gather stats on %v: %v", filename, err.Error())
 		return false
 	}
 	return !info.IsDir()
