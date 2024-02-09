@@ -110,6 +110,7 @@ func (e *externalIDPConfig) ValidateCfg() (err error) {
 			Catch: func(e error) {
 				err = e
 			},
+			Usage: "pkg.config.externalIDPConfig.ValidateCfg",
 		}.Do()
 	}
 	return err

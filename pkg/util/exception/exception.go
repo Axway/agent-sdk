@@ -1,10 +1,13 @@
 package exception
 
+import "fmt"
+
 // Block - defines the try, catch and finally code blocks
 type Block struct {
 	Try     func()
 	Catch   func(error)
 	Finally func()
+	Usage   string
 }
 
 // Throw - raises the error
@@ -29,8 +32,17 @@ func (block Block) Do() {
 	if block.Catch != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				block.Catch(r.(error))
+				if block.Usage != "" {
+					fmt.Printf("%s threw exception\n", block.Usage)
+				} else {
+					fmt.Println("error thrown, but caught, no usage name given")
+				}
+				panic(r)
 			}
+
+			// if r := recover(); r != nil {
+			// 	block.Catch(r.(error))
+			// }
 		}()
 	}
 	block.Try()

@@ -334,6 +334,7 @@ func (c *TLSConfiguration) ValidateCfg() (err error) {
 		Catch: func(e error) {
 			err = e
 		},
+		Usage: "pkg.config.tlsconfig.ValidateCfg",
 	}.Do()
 
 	return

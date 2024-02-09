@@ -79,7 +79,7 @@ func init() {
 	config.AgentDataPlaneType = BuildDataPlaneType
 	config.SDKVersion = SDKBuildVersion
 	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
-	rand.Seed(time.Now().UnixNano())
+	rand.NewSource(time.Now().UnixNano())
 }
 
 func buildCmdVersion(desc string) string {

@@ -661,7 +661,6 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 			c.validateConfig()
 			c.Auth.validate()
-
 			// Check that platform service account is used with market place provisioning
 			if c.IsMarketplaceSubsEnabled() && strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
 				exception.Throw(ErrServiceAccount)
@@ -674,6 +673,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 		Catch: func(e error) {
 			err = e
 		},
+		Usage: "pkg.config.centralconfig.CentralConfiguration.ValidateCfg",
 	}.Do()
 
 	return
