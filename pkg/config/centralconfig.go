@@ -660,7 +660,11 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 				return
 			}
 			c.validateConfig()
+			if c.Auth == nil {
+				exception.Throw(fmt.Errorf("authentication data was nil"))
+			}
 			c.Auth.validate()
+
 			// Check that platform service account is used with market place provisioning
 			if c.IsMarketplaceSubsEnabled() && strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
 				exception.Throw(ErrServiceAccount)

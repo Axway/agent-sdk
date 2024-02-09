@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 // ApplyResourceToConfig - applies the resources to agent configs
@@ -15,7 +14,7 @@ func ApplyResourceToConfig(cfg interface{}) error {
 	// This defer func is to catch a possible panic that WILL occur if the cfg object that is passed in embedds the IResourceConfig interface
 	// within its struct, but does NOT implement the ApplyResources method. While it might be that this method really isn't necessary, we will
 	// log an error alerting the user in case it wasn't intentional.
-	defer util.HandleInterfaceFuncNotImplemented(cfg, "ApplyResources", "IResourceConfigCallback")
+	// defer util.HandleInterfaceFuncNotImplemented(cfg, "ApplyResources", "IResourceConfigCallback")
 
 	agentRes := GetAgentResource()
 	if agentRes == nil {
