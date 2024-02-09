@@ -1,9 +1,11 @@
 package sampling
 
 import (
+	"math"
 	"sync"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
+	"github.com/shopspring/decimal"
 )
 
 // Global Agent samples
@@ -11,10 +13,12 @@ var agentSamples *sample
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
-	Percentage      int  `config:"percentage"`
-	PerAPI          bool `config:"per_api"`
-	PerSub          bool `config:"per_subscription"`
-	ReportAllErrors bool `config:"reportAllErrors" yaml:"reportAllErrors"`
+	Percentage      float64 `config:"percentage"`
+	PerAPI          bool    `config:"per_api"`
+	PerSub          bool    `config:"per_subscription"`
+	ReportAllErrors bool    `config:"reportAllErrors" yaml:"reportAllErrors"`
+	countMax        int
+	shouldSampleMax int
 }
 
 // DefaultConfig - returns a default sampling config where all transactions are sent
@@ -24,11 +28,13 @@ func DefaultConfig() Sampling {
 		PerAPI:          true,
 		PerSub:          true,
 		ReportAllErrors: true,
+		countMax:        countMax,
+		shouldSampleMax: defaultSamplingRate,
 	}
 }
 
 // GetGlobalSamplingPercentage -
-func GetGlobalSamplingPercentage() (int, error) {
+func GetGlobalSamplingPercentage() (float64, error) {
 	return agentSamples.config.Percentage, nil
 }
 
@@ -45,6 +51,8 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 		invalidSampling = true
 		cfg.Percentage = defaultSamplingRate
 	}
+	cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
+	cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 
 	agentSamples = &sample{
 		config:        cfg,
@@ -71,4 +79,15 @@ func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 		return events, ErrGlobalSamplingCfg
 	}
 	return agentSamples.FilterEvents(events), nil
+}
+
+func numberOfDecimals(v float64) int {
+	dec := decimal.NewFromFloat(v)
+	x := dec.Exponent()
+	// Exponent returns positive values if number is a multiple of 10
+	if x > 0 {
+		return 0
+	}
+	// and negative if it contains non-zero decimals
+	return int(x) * (-1)
 }

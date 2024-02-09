@@ -355,12 +355,36 @@ func checkRunningAgent() error {
 	return nil
 }
 
+type TestOpt func(*testOpts)
+
+type testOpts struct {
+	marketplace bool
+}
+
 // InitializeForTest - Initialize for test
-func InitializeForTest(apicClient apic.Client) {
+func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
 	if agent.cfg != nil {
 		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	}
 	agent.apicClient = apicClient
+	tOpts := &testOpts{}
+	for _, o := range opts {
+		o(tOpts)
+	}
+	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
+		ConnectToCentral:        true,
+		ProcessSystemSignals:    true,
+		VersionChecker:          true,
+		PersistCache:            false,
+		MarketplaceProvisioning: tOpts.marketplace,
+		AgentStatusUpdates:      true,
+	}
+}
+
+func TestWithMarketplace() func(*testOpts) {
+	return func(o *testOpts) {
+		o.marketplace = true
+	}
 }
 
 // GetConfigChangeHandler - returns registered config change handler
