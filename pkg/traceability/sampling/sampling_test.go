@@ -3,10 +3,13 @@ package sampling
 import (
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -17,6 +20,8 @@ func TestSamplingConfig(t *testing.T) {
 	testCases := []struct {
 		name           string
 		errExpected    bool
+		apicDeployment string
+		qaOverride     string
 		config         Sampling
 		expectedConfig Sampling
 	}{
@@ -53,6 +58,39 @@ func TestSamplingConfig(t *testing.T) {
 			},
 		},
 		{
+			name:           "QA Override for production",
+			errExpected:    true,
+			qaOverride:     "100",
+			apicDeployment: "prod-eu",
+			config: Sampling{
+				Percentage: 150,
+			},
+		},
+		{
+			name:           "QA Override for non-production",
+			errExpected:    false,
+			qaOverride:     "100",
+			apicDeployment: "preprod",
+			config: Sampling{
+				Percentage: 150,
+			},
+			expectedConfig: Sampling{
+				Percentage: 100,
+			},
+		},
+		{
+			name:           "Invalid QA Override for non-production",
+			errExpected:    true,
+			qaOverride:     "150",
+			apicDeployment: "preprod",
+			config: Sampling{
+				Percentage: 150,
+			},
+			expectedConfig: Sampling{
+				Percentage: 1,
+			},
+		},
+		{
 			name:        "Good Config, Report All Errors",
 			errExpected: false,
 			config: Sampling{
@@ -67,6 +105,14 @@ func TestSamplingConfig(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			cfg := config.NewTestCentralConfig(config.TraceabilityAgent)
+			if test.apicDeployment != "" {
+				centralCfg := cfg.(*config.CentralConfiguration)
+				centralCfg.APICDeployment = test.apicDeployment
+			}
+			os.Setenv(qaSamplingPercentageEnvVar, test.qaOverride)
+			agent.Initialize(cfg)
+
 			err := SetupSampling(test.config, false)
 			if test.errExpected {
 				assert.NotNil(t, err, "Expected the config to fail")
@@ -273,6 +319,9 @@ func TestShouldSample(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			waitGroup := sync.WaitGroup{}
 			sampleCounterLock := sync.Mutex{}
+			centralCfg := config.NewTestCentralConfig(config.TraceabilityAgent)
+			agent.Initialize(centralCfg)
+
 			err := SetupSampling(test.config, false)
 			assert.Nil(t, err)
 
@@ -398,6 +447,9 @@ func TestFilterEvents(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			centralCfg := config.NewTestCentralConfig(config.TraceabilityAgent)
+			agent.Initialize(centralCfg)
+
 			err := SetupSampling(test.config, false)
 			assert.Nil(t, err)
 

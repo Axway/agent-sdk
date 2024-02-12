@@ -2,14 +2,23 @@ package sampling
 
 import (
 	"math"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
 )
 
 // Global Agent samples
 var agentSamples *sample
+
+const (
+	qaSamplingPercentageEnvVar = "QA_TRACEABILITY_SAMPLING_PERCENTAGE"
+)
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
@@ -38,19 +47,36 @@ func GetGlobalSamplingPercentage() (float64, error) {
 	return agentSamples.config.Percentage, nil
 }
 
-// SetupSampling - set up the global sampling for use by traceability
-func SetupSampling(cfg Sampling, offlineMode bool) error {
-	invalidSampling := false
+func getSamplingPercentageConfig(percentage float64, offlineMode bool) (float64, error) {
 	if offlineMode {
 		// In offline mode sampling is always 0
-		cfg.Percentage = 0
+		return 0, nil
+	}
+	maxAllowedSampling := float64(maximumSamplingRate)
+	if !strings.HasPrefix(agent.GetCentralConfig().GetAPICDeployment(), "prod") {
+		if val := os.Getenv(qaSamplingPercentageEnvVar); val != "" {
+			if qaSamplingPercentage, err := strconv.ParseFloat(val, 64); err == nil {
+				log.Tracef("Using %s (%s) rather than the default (%d) for non-production", qaSamplingPercentageEnvVar, val, defaultSamplingRate)
+				percentage = qaSamplingPercentage
+				maxAllowedSampling = 100
+			} else {
+				log.Tracef("Could not use %s (%s) it is not a proper sampling percentage", qaSamplingPercentageEnvVar, val)
+			}
+		}
 	}
 
 	// Validate the config to make sure it is not out of bounds
-	if cfg.Percentage < 0 || cfg.Percentage > maximumSamplingRate {
-		invalidSampling = true
-		cfg.Percentage = defaultSamplingRate
+	if percentage < 0 || percentage > maxAllowedSampling {
+		return defaultSamplingRate, ErrSamplingCfg.FormatError(maximumSamplingRate, defaultSamplingRate)
 	}
+
+	return percentage, nil
+}
+
+// SetupSampling - set up the global sampling for use by traceability
+func SetupSampling(cfg Sampling, offlineMode bool) error {
+	var err error
+	cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage, offlineMode)
 	cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
 	cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 
@@ -59,8 +85,9 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 		currentCounts: make(map[string]int),
 		counterLock:   sync.Mutex{},
 	}
-	if invalidSampling {
-		return ErrSamplingCfg.FormatError(maximumSamplingRate, defaultSamplingRate)
+
+	if err != nil {
+		return err
 	}
 	return nil
 }
