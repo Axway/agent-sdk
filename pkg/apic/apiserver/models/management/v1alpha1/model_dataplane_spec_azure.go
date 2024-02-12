@@ -24,4 +24,6 @@ type DataplaneSpecAzure struct {
 	EventHubName string `json:"eventHubName"`
 	// The event hub namespace is a management container for event hubs or topics
 	EventHubNamespace string `json:"eventHubNamespace"`
+	// Consumer groups enable consuming applications to each have a separate view of the event stream. They read the stream independently at their own pace and with their own offsets.
+	EventHubConsumerGroup string `json:"eventHubConsumerGroup"`
 }
