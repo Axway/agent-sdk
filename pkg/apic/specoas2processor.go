@@ -131,7 +131,7 @@ func (p *oas2SpecProcessor) StripSpecAuth() {
 }
 
 func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
-	return newSpecSecurityBuilder(2)
+	return newSpecSecurityBuilder(oas2)
 }
 
 func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {

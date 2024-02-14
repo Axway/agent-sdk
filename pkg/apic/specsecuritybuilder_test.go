@@ -13,7 +13,7 @@ func TestAPIKeySecuritySchemeBuilder(t *testing.T) {
 	b := newSpecSecurityBuilder(2)
 
 	// api key builder
-	oas2Schemes := b.IsAPIKey().InCookie().InHeader().InQueryParam().SetArgumentName("api-key").Build()
+	oas2Schemes := b.APIKey().InCookie().InHeader().InQueryParam().SetArgumentName("api-key").Build()
 	assert.Len(t, oas2Schemes, 2)
 	assert.NotContains(t, oas2Schemes, "apiKeyCookie")
 	oas2Header, ok := oas2Schemes["apiKeyHeader"].(*openapi2.SecurityScheme)
@@ -23,7 +23,7 @@ func TestAPIKeySecuritySchemeBuilder(t *testing.T) {
 	assert.Equal(t, "apiKey", oas2Header.Type)
 	assert.Equal(t, "header", oas2Header.In)
 	assert.Equal(t, "api-key", oas2Header.Name)
-	oas2Query, ok := oas2Schemes["apiKeyQueryParam"].(*openapi2.SecurityScheme)
+	oas2Query, ok := oas2Schemes["apiKeyQuery"].(*openapi2.SecurityScheme)
 	if !ok {
 		assert.FailNow(t, "interface was not an *openapi2.SecurityScheme type")
 	}
@@ -35,7 +35,7 @@ func TestAPIKeySecuritySchemeBuilder(t *testing.T) {
 	b = newSpecSecurityBuilder(3)
 
 	// api key builder
-	oas3Schemes := b.IsAPIKey().InCookie().InHeader().InQueryParam().SetArgumentName("api-key").Build()
+	oas3Schemes := b.APIKey().InCookie().InHeader().InQueryParam().SetArgumentName("api-key").Build()
 	assert.Len(t, oas3Schemes, 3)
 	assert.Contains(t, oas3Schemes, "apiKeyCookie")
 	oas3Header, ok := oas3Schemes["apiKeyHeader"].(*openapi3.SecurityScheme)
@@ -45,7 +45,7 @@ func TestAPIKeySecuritySchemeBuilder(t *testing.T) {
 	assert.Equal(t, "apiKey", oas3Header.Type)
 	assert.Equal(t, "header", oas3Header.In)
 	assert.Equal(t, "api-key", oas3Header.Name)
-	oas3Query, ok := oas3Schemes["apiKeyQueryParam"].(*openapi3.SecurityScheme)
+	oas3Query, ok := oas3Schemes["apiKeyQuery"].(*openapi3.SecurityScheme)
 	if !ok {
 		assert.FailNow(t, "interface was not an *openapi3.SecurityScheme type")
 	}
@@ -65,7 +65,7 @@ func TestHTTPBasicSecuritySchemeBuilder(t *testing.T) {
 	// OAS2
 	b := newSpecSecurityBuilder(2)
 
-	oas2Schemes := b.IsHTTPBasic().Build()
+	oas2Schemes := b.HTTPBasic().Build()
 	assert.Len(t, oas2Schemes, 1)
 	oas2Basic, ok := oas2Schemes["basicAuth"].(*openapi2.SecurityScheme)
 	if !ok {
@@ -76,7 +76,7 @@ func TestHTTPBasicSecuritySchemeBuilder(t *testing.T) {
 	// OAS3
 	b = newSpecSecurityBuilder(3)
 
-	oas3Schemes := b.IsHTTPBasic().Build()
+	oas3Schemes := b.HTTPBasic().Build()
 	assert.Len(t, oas3Schemes, 1)
 	oas3Basic, ok := oas3Schemes["basicAuth"].(*openapi3.SecurityScheme)
 	if !ok {
@@ -90,13 +90,13 @@ func TestBearerSecuritySchemeBuilder(t *testing.T) {
 	// OAS2
 	b := newSpecSecurityBuilder(2)
 
-	oas2Schemes := b.IsBearer().SetFormat("jwt").Build()
+	oas2Schemes := b.Bearer().SetFormat("jwt").Build()
 	assert.Len(t, oas2Schemes, 0)
 
 	// OAS3
 	b = newSpecSecurityBuilder(3)
 
-	oas3Schemes := b.IsBearer().SetFormat("jwt").Build()
+	oas3Schemes := b.Bearer().SetFormat("jwt").Build()
 	assert.Len(t, oas3Schemes, 1)
 	oas3Bearer, ok := oas3Schemes["bearerAuth"].(*openapi3.SecurityScheme)
 	if !ok {
@@ -111,13 +111,13 @@ func TestOpenIDSecuritySchemeBuilder(t *testing.T) {
 	// OAS2
 	b := newSpecSecurityBuilder(2)
 
-	oas2Schemes := b.IsOpenID().SetURL("http://test.com").Build()
+	oas2Schemes := b.OpenID().SetURL("http://test.com").Build()
 	assert.Len(t, oas2Schemes, 0)
 
 	// OAS3
 	b = newSpecSecurityBuilder(3)
 
-	oas3Schemes := b.IsOpenID().SetURL("http://test.com").Build()
+	oas3Schemes := b.OpenID().SetURL("http://test.com").Build()
 	assert.Len(t, oas3Schemes, 1)
 	oas3Bearer, ok := oas3Schemes["openId"].(*openapi3.SecurityScheme)
 	if !ok {
@@ -131,28 +131,28 @@ func TestOAuthSecuritySchemeBuilder(t *testing.T) {
 	// OAS2
 	b := newSpecSecurityBuilder(2)
 
-	oas2Schemes := b.IsOAuth().
+	oas2Schemes := b.OAuth().
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetAuthorizationURL("http://authurl.com").
-			IsImplicit()).
+			Implicit()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetTokenURL("http://tokenurl.com").
-			IsClientCredentials()).
+			ClientCredentials()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetAuthorizationURL("http://authurl.com").
 			SetTokenURL("http://tokenurl.com").
-			IsAuthorizationCode()).
+			AuthorizationCode()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetTokenURL("http://tokenurl.com").
-			IsPassword()).
+			Password()).
 		Build()
 	assert.Len(t, oas2Schemes, 4)
 
@@ -196,32 +196,32 @@ func TestOAuthSecuritySchemeBuilder(t *testing.T) {
 	// OAS3
 	b = newSpecSecurityBuilder(3)
 
-	oas3Schemes := b.IsOAuth().
+	oas3Schemes := b.OAuth().
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetAuthorizationURL("http://authurl.com").
 			SetRefreshURL("http://refreshurl.com").
-			IsImplicit()).
+			Implicit()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetRefreshURL("http://refreshurl.com").
 			SetTokenURL("http://tokenurl.com").
-			IsClientCredentials()).
+			ClientCredentials()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetAuthorizationURL("http://authurl.com").
 			SetRefreshURL("http://refreshurl.com").
 			SetTokenURL("http://tokenurl.com").
-			IsAuthorizationCode()).
+			AuthorizationCode()).
 		AddFlow(NewOAuthFlowBuilder().
 			SetScopes(map[string]string{"scope1": ""}).
 			AddScope("scope2", "").
 			SetRefreshURL("http://refreshurl.com").
 			SetTokenURL("http://tokenurl.com").
-			IsPassword()).
+			Password()).
 		Build()
 	assert.Len(t, oas3Schemes, 1)
 

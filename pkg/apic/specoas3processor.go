@@ -219,7 +219,7 @@ func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 }
 
 func (p *oas3SpecProcessor) GetSecurityBuilder() SecurityBuilder {
-	return newSpecSecurityBuilder(3)
+	return newSpecSecurityBuilder(oas3)
 }
 
 func (p *oas3SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {

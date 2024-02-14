@@ -9,6 +9,21 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	oas2              = 2
+	oas3              = 3
+	httpScheme        = "http"
+	cookie            = "cookie"
+	header            = "header"
+	query             = "query"
+	implicit          = "implicit"
+	authorizationCode = "authorizationCode"
+	clientCredentials = "clientCredentials"
+	password          = "password"
+	accessCode        = "accessCode"
+	application       = "application"
+)
+
 // used by oas spec parsers to start the builder
 func newSpecSecurityBuilder(oasMajorVersion int) SecurityBuilder {
 	return &specSecurity{
@@ -18,18 +33,18 @@ func newSpecSecurityBuilder(oasMajorVersion int) SecurityBuilder {
 
 // first select the type of security we are building
 type SecurityBuilder interface {
-	IsHTTPBasic() HTTPBasicSecurityBuilder
-	IsAPIKey() APIKeySecurityBuilder
-	IsOAuth() OAuthSecurityBuilder
-	IsBearer() BearerSecurityBuilder
-	IsOpenID() OpenIDSecurityBuilder
+	HTTPBasic() HTTPBasicSecurityBuilder
+	APIKey() APIKeySecurityBuilder
+	OAuth() OAuthSecurityBuilder
+	Bearer() BearerSecurityBuilder
+	OpenID() OpenIDSecurityBuilder
 }
 
 type specSecurity struct {
 	oasMajorVersion int
 }
 
-func (s *specSecurity) IsHTTPBasic() HTTPBasicSecurityBuilder {
+func (s *specSecurity) HTTPBasic() HTTPBasicSecurityBuilder {
 	return &httpBasicSecurity{
 		specSecurity: s,
 	}
@@ -59,13 +74,13 @@ func (s *httpBasicSecurity) Build() map[string]interface{} {
 	}
 	return map[string]interface{}{
 		name: &openapi3.SecurityScheme{
-			Type:   "http",
+			Type:   httpScheme,
 			Scheme: basic,
 		},
 	}
 }
 
-func (s *specSecurity) IsAPIKey() APIKeySecurityBuilder {
+func (s *specSecurity) APIKey() APIKeySecurityBuilder {
 	return &apiKeySecurity{
 		specSecurity: s,
 		locations:    []string{},
@@ -87,17 +102,17 @@ type apiKeySecurity struct {
 }
 
 func (s *apiKeySecurity) InCookie() APIKeySecurityBuilder {
-	s.locations = append(s.locations, "cookie")
+	s.locations = append(s.locations, cookie)
 	return s
 }
 
 func (s *apiKeySecurity) InHeader() APIKeySecurityBuilder {
-	s.locations = append(s.locations, "header")
+	s.locations = append(s.locations, header)
 	return s
 }
 
 func (s *apiKeySecurity) InQueryParam() APIKeySecurityBuilder {
-	s.locations = append(s.locations, "query")
+	s.locations = append(s.locations, query)
 	return s
 }
 
@@ -113,15 +128,10 @@ func (s *apiKeySecurity) Build() map[string]interface{} {
 	output := map[string]interface{}{}
 
 	for _, location := range s.locations {
-		name := "apiKeyHeader"
-		if location == "query" {
-			name = "apiKeyQueryParam"
-		} else if location == "cookie" {
-			name = "apiKeyCookie"
-		}
+		name := fmt.Sprintf("%v%v", apiKey, cases.Title(language.English).String(location))
 
 		if s.oasMajorVersion == 2 {
-			if location == "cookie" {
+			if location == cookie {
 				// only supported on oas3, return empty for oas2
 				continue
 			}
@@ -163,10 +173,10 @@ type OAuthFlowBuilder interface {
 	SetAuthorizationURL(url string) OAuthFlowBuilder
 	SetRefreshURL(url string) OAuthFlowBuilder
 	SetTokenURL(url string) OAuthFlowBuilder
-	IsImplicit() *oAuthFlow
-	IsPassword() *oAuthFlow
-	IsAuthorizationCode() *oAuthFlow
-	IsClientCredentials() *oAuthFlow
+	Implicit() *oAuthFlow
+	Password() *oAuthFlow
+	AuthorizationCode() *oAuthFlow
+	ClientCredentials() *oAuthFlow
 }
 
 func (s *oAuthFlow) SetScopes(scopes map[string]string) OAuthFlowBuilder {
@@ -194,23 +204,23 @@ func (s *oAuthFlow) SetRefreshURL(url string) OAuthFlowBuilder {
 	return s
 }
 
-func (s *oAuthFlow) IsImplicit() *oAuthFlow {
-	s.flow = "implicit"
+func (s *oAuthFlow) Implicit() *oAuthFlow {
+	s.flow = implicit
 	return s
 }
 
-func (s *oAuthFlow) IsPassword() *oAuthFlow {
-	s.flow = "password"
+func (s *oAuthFlow) Password() *oAuthFlow {
+	s.flow = password
 	return s
 }
 
-func (s *oAuthFlow) IsAuthorizationCode() *oAuthFlow {
-	s.flow = "authorizationCode"
+func (s *oAuthFlow) AuthorizationCode() *oAuthFlow {
+	s.flow = authorizationCode
 	return s
 }
 
-func (s *oAuthFlow) IsClientCredentials() *oAuthFlow {
-	s.flow = "clientCredentials"
+func (s *oAuthFlow) ClientCredentials() *oAuthFlow {
+	s.flow = clientCredentials
 	return s
 }
 
@@ -224,7 +234,7 @@ type oAuthSecurity struct {
 	flows []*oAuthFlow
 }
 
-func (s *specSecurity) IsOAuth() OAuthSecurityBuilder {
+func (s *specSecurity) OAuth() OAuthSecurityBuilder {
 	return &oAuthSecurity{
 		specSecurity: s,
 		flows:        []*oAuthFlow{},
@@ -245,10 +255,10 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 		for _, f := range s.flows {
 
 			// adjust the name of the flow for oas2 support
-			if f.flow == "authorizationCode" {
-				f.flow = "accessCode"
-			} else if f.flow == "clientCredentials" {
-				f.flow = "application"
+			if f.flow == authorizationCode {
+				f.flow = accessCode
+			} else if f.flow == clientCredentials {
+				f.flow = application
 			}
 
 			fName := fmt.Sprintf("%v%v", oauth2, cases.Title(language.English).String(f.flow))
@@ -273,13 +283,13 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 			Scopes:           f.scopes,
 		}
 		switch f.flow {
-		case "authorizationCode":
+		case authorizationCode:
 			oauthFlows.AuthorizationCode = oFlow
-		case "password":
+		case password:
 			oauthFlows.Password = oFlow
-		case "clientCredentials":
+		case clientCredentials:
 			oauthFlows.ClientCredentials = oFlow
-		case "implicit":
+		case implicit:
 			oauthFlows.Implicit = oFlow
 		}
 	}
@@ -291,7 +301,7 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 	}
 }
 
-func (s *specSecurity) IsBearer() BearerSecurityBuilder {
+func (s *specSecurity) Bearer() BearerSecurityBuilder {
 	return &bearerSecurity{
 		specSecurity: s,
 	}
@@ -324,14 +334,14 @@ func (s *bearerSecurity) Build() map[string]interface{} {
 	}
 	return map[string]interface{}{
 		name: &openapi3.SecurityScheme{
-			Type:         "http",
+			Type:         httpScheme,
 			Scheme:       bearer,
 			BearerFormat: s.format,
 		},
 	}
 }
 
-func (s *specSecurity) IsOpenID() OpenIDSecurityBuilder {
+func (s *specSecurity) OpenID() OpenIDSecurityBuilder {
 	return &openIDSecurity{
 		specSecurity: s,
 	}
@@ -354,7 +364,8 @@ func (s *openIDSecurity) SetURL(url string) OpenIDSecurityBuilder {
 
 func (s *openIDSecurity) Build() map[string]interface{} {
 	const (
-		name = "openId"
+		name          = "openId"
+		openIdConnect = "openIdConnect"
 	)
 
 	if s.oasMajorVersion == 2 {
@@ -363,7 +374,7 @@ func (s *openIDSecurity) Build() map[string]interface{} {
 	}
 	return map[string]interface{}{
 		name: &openapi3.SecurityScheme{
-			Type:             "openIdConnect",
+			Type:             openIdConnect,
 			OpenIdConnectUrl: s.url,
 		},
 	}
