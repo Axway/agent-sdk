@@ -8,8 +8,8 @@ import (
 	"mime/multipart"
 	"net/textproto"
 	"sort"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 

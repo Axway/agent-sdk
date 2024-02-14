@@ -69,8 +69,6 @@ func getSamplingPercentageConfig(percentage float64, offlineMode bool) (float64,
 	if percentage < 0 || percentage > maxAllowedSampling {
 		return defaultSamplingRate, ErrSamplingCfg.FormatError(maximumSamplingRate, defaultSamplingRate)
 	}
-	cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
-	cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 
 	return percentage, nil
 }
