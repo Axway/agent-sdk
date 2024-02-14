@@ -1,0 +1,162 @@
+#%RAML 0.8
+title: example 
+description: Sonny Forelli 
+version: 1.0
+protocols: HTTPS
+baseUri: example.local:8000/api
+
+traits:
+  - secured:
+      description: Some requests require authentication
+      headers:
+        X-User:
+          description: Token to authenticate the user
+          required: true
+  - unsecured:
+      description: This is not secured
+  - pageable:
+      queryParameters:
+        offset:
+          description: Skip over a number of elements by specifying an offset value for the query
+          type: integer
+          required: false
+          example: 20
+          default: 0
+        limit:
+          description: Limit the number of elements on the response
+          type: integer
+          required: false
+          example: 80
+          default: 10
+  - unauthorized:
+      responses:
+        401:
+          description: User Not Authorized, token invalid
+          body:
+            application/json:
+              schema: |
+                {
+                  "$schema": "http://json-schema.org/schema#",
+                  "type": "object",
+                  "description": "User not authorized",
+                  "properties": {
+                    "error": {
+                      "description": "The error definition",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              example: |
+                {
+                  "code": 401,
+                  "error": "Not Authorized"
+                }
+  - badRequest:
+      responses:
+        400:
+          description: Bad Request
+          body:
+            application/json:
+              example: |
+                {
+                  "code": 400,
+                  "error": "Bad Request"
+                }
+                         
+  - internalError:
+      responses:
+        500:
+          description: Internal Server Error
+          body:
+            application/json:
+              schema: |
+                {
+                  "$schema": "http://json-schema.org/schema#",
+                  "type": "object",
+                  "description": "Internal Server Error",
+                  "properties": {
+                    "error": {
+                      "description": "The error definition",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              example: |
+                {
+                  "error": "Internal Server Error"
+                }
+  - missingParams:
+      responses:
+        400:
+          description: Bad Request, parameters missing
+          body:
+            application/json:
+              schema: |
+                {
+                  "$schema": "http://json-schema.org/schema#",
+                  "type": "object",
+                  "description": "Parametter Missing",
+                  "properties": {
+                    "error": {
+                      "description": "The error definition",
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              example: |
+                {
+                  "error": "Parametter Missing"
+                }
+                
+/callback/order:
+ /sim:
+    displayName: postSimOrderAction
+    description: Set New Sim from External Provider
+    is: [ unauthorized, internalError]
+    post: 
+      is: [ unauthorized, internalError]
+      description: " Set New Sim from External Provider"
+      body:
+        application/json:
+          schema: callbacksim
+          example: |
+            {
+             "trackingId": "dsn16zueuw",
+             "iccid": "89341231321312",
+             "checksum": "4d4fdcca079a2c98ef327f597b6cadfe8731feec94d8d2aabfcfe3db66d98410ca0201fc3df419a7534843f03fcbefe3afe4d9917f37719863254b45ae71fdf1"
+            }
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "result": "OK",
+                }
+ /contract:
+    displayName: postSignContractOrderAction
+    description: Set ContractSign from External Provider
+    is: [ unauthorized, internalError]
+    post: 
+      is: [ unauthorized, internalError]
+      description: " Set New Sim from External Provider"
+      body:
+        application/json:
+          schema: callbacksigncontract
+          example: |
+            {
+             "trackingId": "dsn16zueuw",
+             "date": "16/02/2016 15:23",
+             "checksum": "4d4fdcca079a2c98ef327f597b6cadfe8731feec94d8d2aabfcfe3db66d98410ca0201fc3df419a7534843f03fcbefe3afe4d9917f37719863254b45ae71fdf1"
+            }          
+      responses:
+        200:
+          body:
+            application/json:
+              example: |
+                {
+                  "result": "OK",
+                }
