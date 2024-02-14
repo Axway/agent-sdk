@@ -36,6 +36,8 @@ type OasSpecProcessor interface {
 	GetAuthPolicies() []string
 	StripSpecAuth()
 	GetTitle() string
+	GetSecurityBuilder() SecurityBuilder
+	AddSecuritySchemes(map[string]interface{})
 }
 
 // SpecResourceParser -
