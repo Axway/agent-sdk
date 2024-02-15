@@ -116,9 +116,6 @@ func (c *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (b
 }
 
 func aggregateReports(event LighthouseUsageEvent) LighthouseUsageEvent {
-	if len(event.Report) <= 1 {
-		return event
-	}
 
 	// order all the keys, this will be used to find first and last timestamp
 	orderedKeys := make([]string, 0, len(event.Report))
@@ -138,17 +135,13 @@ func aggregateReports(event LighthouseUsageEvent) LighthouseUsageEvent {
 
 	for _, report := range event.Report {
 		for usageKey, usageVal := range report.Usage {
-			if _, ok := finalReport[orderedKeys[0]].Usage[usageKey]; ok {
-				finalReport[orderedKeys[0]].Usage[usageKey] += usageVal
-			} else {
-				finalReport[orderedKeys[0]].Usage[usageKey] = usageVal
-			}
+			finalReport[orderedKeys[0]].Usage[usageKey] += usageVal
 		}
 	}
 	event.Report = finalReport
 
 	startTime, _ := time.Parse(ISO8601, orderedKeys[0])
-	endTime, _ := time.Parse(ISO8601, orderedKeys[len(orderedKeys)-1])
+	endTime := now()
 	event.Granularity = int(endTime.Sub(startTime).Milliseconds())
 	return event
 }

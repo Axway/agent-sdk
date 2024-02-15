@@ -151,13 +151,13 @@ func cleanUpCachedMetricFile() {
 	os.RemoveAll("./cache")
 }
 
-func generateMockReports(transactionPerReport []int) string {
-	jsonStructure := `{"envId":"267bd671-e5e2-4679-bcc3-bbe7b70f30fd","timestamp":"2021-01-31T10:30:00+02:00","granularity":900000,"schemaId":"http://127.0.0.1:53493/lighthouse/api/v1/report.schema.json","report":{},"meta":{"AgentName":"","AgentVersion":""}}`
+func generateMockReports(transactionPerReport []int) LighthouseUsageEvent {
+	jsonStructure := `{"envId":"267bd671-e5e2-4679-bcc3-bbe7b70f30fd","timestamp":"2024-02-14T10:30:00+02:00","granularity":3600000,"schemaId":"http://127.0.0.1:53493/lighthouse/api/v1/report.schema.json","report":{},"meta":{"AgentName":"","AgentVersion":""}}`
 	var mockEvent LighthouseUsageEvent
 	json.Unmarshal([]byte(jsonStructure), &mockEvent)
-	startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
+	startDate := time.Time(mockEvent.Timestamp)
 	nextTime := func(i int) string {
-		next := startDate.Add(time.Hour * time.Duration(i))
+		next := startDate.Add(time.Hour * time.Duration(-i-1))
 		return next.Format(ISO8601)
 	}
 	for i, transaction := range transactionPerReport {
@@ -166,8 +166,7 @@ func generateMockReports(transactionPerReport []int) string {
 			Usage:   map[string]int64{"Azure.Transactions": int64(transaction)},
 		}
 	}
-	b, _ := json.Marshal(mockEvent)
-	return string(b)
+	return mockEvent
 }
 
 func cleanUpReportfiles() {
@@ -490,13 +489,19 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			name:                     "FourReports",
 			transactionsPerReport:    []int{3, 4, 5, 6},
 			expectedTransactionCount: 18,
-			expectedGranularity:      3 * int(time.Hour/time.Millisecond),
+			expectedGranularity:      4 * int(time.Hour/time.Millisecond),
 		},
 		{
 			name:                     "SevenReports",
 			transactionsPerReport:    []int{1, 2, 3, 4, 5, 6, 7},
 			expectedTransactionCount: 28,
-			expectedGranularity:      6 * int(time.Hour/time.Millisecond),
+			expectedGranularity:      7 * int(time.Hour/time.Millisecond),
+		},
+		{
+			name:                     "OneReport",
+			transactionsPerReport:    []int{1},
+			expectedTransactionCount: 1,
+			expectedGranularity:      1 * int(time.Hour/time.Millisecond),
 		},
 	}
 
@@ -506,12 +511,18 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			setupMockClient(0)
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
-
-			metricCollector.reports.reportCache.Set("lighthouse_events", generateMockReports(test.transactionsPerReport))
+			mockReports := generateMockReports(test.transactionsPerReport)
+			b, _ := json.Marshal(mockReports)
+			metricCollector.reports.reportCache.Set("lighthouse_events", string(b))
+			now := func() time.Time {
+				return time.Time(mockReports.Timestamp)
+			}
+			firstReportTimestamp := now().Add(-time.Hour * time.Duration(len(test.transactionsPerReport)))
+			lastReportTimestamp := now()
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
-			assert.Equal(t, test.expectedGranularity, s.givenGranularity)
+			assert.Equal(t, test.expectedGranularity, int(lastReportTimestamp.Sub(firstReportTimestamp)/time.Millisecond))
 			s.resetConfig()
 		})
 	}
