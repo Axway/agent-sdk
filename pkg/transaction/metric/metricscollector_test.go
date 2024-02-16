@@ -76,6 +76,7 @@ type testHTTPServer struct {
 	server               *httptest.Server
 	reportCount          int
 	givenGranularity     int
+	eventTimestamp       ISO8601Time
 }
 
 func (s *testHTTPServer) startServer() {
@@ -118,6 +119,7 @@ func (s *testHTTPServer) startServer() {
 						s.reportCount++
 					}
 					s.givenGranularity = usageEvent.Granularity
+					s.eventTimestamp = usageEvent.Timestamp
 				}
 			}
 		}
@@ -514,15 +516,14 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			mockReports := generateMockReports(test.transactionsPerReport)
 			b, _ := json.Marshal(mockReports)
 			metricCollector.reports.reportCache.Set("lighthouse_events", string(b))
-			now := func() time.Time {
+			now = func() time.Time {
 				return time.Time(mockReports.Timestamp)
 			}
-			firstReportTimestamp := now().Add(-time.Hour * time.Duration(len(test.transactionsPerReport)))
-			lastReportTimestamp := now()
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
-			assert.Equal(t, test.expectedGranularity, int(lastReportTimestamp.Sub(firstReportTimestamp)/time.Millisecond))
+			assert.Equal(t, test.expectedGranularity, s.givenGranularity)
+			assert.Equal(t, ISO8601Time(now()), s.eventTimestamp)
 			s.resetConfig()
 		})
 	}

@@ -8,8 +8,8 @@ import (
 	"mime/multipart"
 	"net/textproto"
 	"sort"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -143,6 +143,7 @@ func aggregateReports(event LighthouseUsageEvent) LighthouseUsageEvent {
 	startTime, _ := time.Parse(ISO8601, orderedKeys[0])
 	endTime := now()
 	event.Granularity = int(endTime.Sub(startTime).Milliseconds())
+	event.Timestamp = ISO8601Time(endTime)
 	return event
 }
 
