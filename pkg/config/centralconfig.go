@@ -235,6 +235,7 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config.URL = "https://central.com"
 	config.PlatformURL = "https://platform.axway.com"
 	config.Environment = "environment"
+	config.environmentID = "env-id"
 	config.Auth = newTestAuthConfig()
 	config.MigrationSettings = newTestMigrationConfig()
 	if agentType == TraceabilityAgent {
