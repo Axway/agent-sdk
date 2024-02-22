@@ -308,7 +308,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
 		},
 		{
-			name:                      "WithLighthouseWithAsyncPriorPublish",
+			name:                      "WithLighthouseWithPriorPublish",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
