@@ -469,9 +469,8 @@ func TestMetricCollector(t *testing.T) {
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				s.failUsageResponse = test.failUsageResponseOnServer[l]
 				if test.publishPrior {
-					go metricCollector.publisher.Execute()
-					go metricCollector.Execute()
-					time.Sleep(50 * time.Millisecond)
+					metricCollector.publisher.Execute()
+					metricCollector.Execute()
 				} else {
 					metricCollector.Execute()
 					metricCollector.publisher.onlinePublishReady = true
