@@ -9,6 +9,7 @@ import (
 	"net/textproto"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,13 +22,15 @@ import (
 )
 
 type metricPublisher struct {
-	apiClient api.Client
-	storage   storageCache
-	report    *cacheReport
-	jobID     string
-	ready     bool
-	offline   bool
-	logger    log.FieldLogger
+	apiClient          api.Client
+	storage            storageCache
+	report             *cacheReport
+	jobID              string
+	ready              bool
+	onlinePublishReady bool
+	lock               sync.Mutex
+	offline            bool
+	logger             log.FieldLogger
 }
 
 func (c *metricPublisher) publishEvent(event interface{}) error {
@@ -73,9 +76,10 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 	}
 
 	if response.Code == 202 {
+		c.logger.WithField("statusCode", 202).Debugf("successful request with payload: %s", b.String())
 		return nil
 	} else if response.Code >= 500 {
-		err := fmt.Errorf("Server error")
+		err := fmt.Errorf("server error")
 		c.logger.WithField("statusCode", response.Code).WithError(err).Error(string(response.Body))
 		return err
 	}
@@ -88,7 +92,7 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 		return err
 	}
 	if strings.HasPrefix(usageResp.Description, "The file exceeds the maximum upload size of ") || usageResp.Description == "Environment ID not found" {
-		err := fmt.Errorf("request failed with unexpected status code. Not scheduling for retry in the next batch.")
+		err := fmt.Errorf("request failed with unexpected status code. Not scheduling for retry in the next batch")
 		c.logger.WithField("statusCode", response.Code).WithError(err).Error(usageResp.Description)
 		return nil
 	}
@@ -116,9 +120,6 @@ func (c *metricPublisher) createMultipartFormData(event LighthouseUsageEvent) (b
 }
 
 func aggregateReports(event LighthouseUsageEvent) LighthouseUsageEvent {
-	if len(event.Report) <= 1 {
-		return event
-	}
 
 	// order all the keys, this will be used to find first and last timestamp
 	orderedKeys := make([]string, 0, len(event.Report))
@@ -138,18 +139,15 @@ func aggregateReports(event LighthouseUsageEvent) LighthouseUsageEvent {
 
 	for _, report := range event.Report {
 		for usageKey, usageVal := range report.Usage {
-			if _, ok := finalReport[orderedKeys[0]].Usage[usageKey]; ok {
-				finalReport[orderedKeys[0]].Usage[usageKey] += usageVal
-			} else {
-				finalReport[orderedKeys[0]].Usage[usageKey] = usageVal
-			}
+			finalReport[orderedKeys[0]].Usage[usageKey] += usageVal
 		}
 	}
 	event.Report = finalReport
 
 	startTime, _ := time.Parse(ISO8601, orderedKeys[0])
-	endTime, _ := time.Parse(ISO8601, orderedKeys[len(orderedKeys)-1])
+	endTime := now()
 	event.Granularity = int(endTime.Sub(startTime).Milliseconds())
+	event.Timestamp = ISO8601Time(endTime)
 	return event
 }
 
@@ -230,5 +228,12 @@ func (c *metricPublisher) Execute() error {
 	if c.offline {
 		return c.report.saveReport()
 	}
-	return c.report.sendReport(c.publishToLighthouse)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.onlinePublishReady {
+		c.onlinePublishReady = false
+		return c.report.sendReport(c.publishToLighthouse)
+	}
+	c.onlinePublishReady = true
+	return nil
 }
