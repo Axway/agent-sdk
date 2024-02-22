@@ -219,13 +219,16 @@ func (c *collector) Execute() error {
 		WithField(startTimestamp, util.ConvertTimeToMillis(c.metricStartTime)).
 		WithField(endTimestamp, util.ConvertTimeToMillis(c.metricEndTime)).
 		WithField(eventType, metric).
-		Debugf("generating metric event")
+		Debug("generating metric event")
 	defer func() {
 		c.cleanup()
 	}()
 
 	c.generateEvents()
 	c.publishEvents()
+	if c.publisher.onlinePublishReady && !c.publisher.offline {
+		return c.publisher.Execute()
+	}
 	return nil
 }
 
@@ -273,6 +276,7 @@ func (c *collector) Publish() {
 
 func (c *collector) ShutdownPublish() {
 	c.Execute()
+	c.publisher.onlinePublishReady = true
 	c.publisher.Execute()
 }
 
