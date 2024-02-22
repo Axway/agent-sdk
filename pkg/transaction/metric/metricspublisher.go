@@ -9,6 +9,7 @@ import (
 	"net/textproto"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,13 +22,15 @@ import (
 )
 
 type metricPublisher struct {
-	apiClient api.Client
-	storage   storageCache
-	report    *cacheReport
-	jobID     string
-	ready     bool
-	offline   bool
-	logger    log.FieldLogger
+	apiClient          api.Client
+	storage            storageCache
+	report             *cacheReport
+	jobID              string
+	ready              bool
+	onlinePublishReady bool
+	lock               sync.Mutex
+	offline            bool
+	logger             log.FieldLogger
 }
 
 func (c *metricPublisher) publishEvent(event interface{}) error {
@@ -73,9 +76,10 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 	}
 
 	if response.Code == 202 {
+		c.logger.WithField("statusCode", 202).Debugf("successful request with payload: %s", b.String())
 		return nil
 	} else if response.Code >= 500 {
-		err := fmt.Errorf("Server error")
+		err := fmt.Errorf("server error")
 		c.logger.WithField("statusCode", response.Code).WithError(err).Error(string(response.Body))
 		return err
 	}
@@ -88,7 +92,7 @@ func (c *metricPublisher) publishToLighthouse(event LighthouseUsageEvent) error 
 		return err
 	}
 	if strings.HasPrefix(usageResp.Description, "The file exceeds the maximum upload size of ") || usageResp.Description == "Environment ID not found" {
-		err := fmt.Errorf("request failed with unexpected status code. Not scheduling for retry in the next batch.")
+		err := fmt.Errorf("request failed with unexpected status code. Not scheduling for retry in the next batch")
 		c.logger.WithField("statusCode", response.Code).WithError(err).Error(usageResp.Description)
 		return nil
 	}
@@ -224,5 +228,12 @@ func (c *metricPublisher) Execute() error {
 	if c.offline {
 		return c.report.saveReport()
 	}
-	return c.report.sendReport(c.publishToLighthouse)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.onlinePublishReady {
+		c.onlinePublishReady = false
+		return c.report.sendReport(c.publishToLighthouse)
+	}
+	c.onlinePublishReady = true
+	return nil
 }

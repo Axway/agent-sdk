@@ -291,6 +291,7 @@ func TestMetricCollector(t *testing.T) {
 		expectedTransactionVolume []int
 		expectedMetricEventsAcked int
 		appName                   string
+		publishPrior              bool
 	}{
 		// Success case with no app detail
 		{
@@ -305,6 +306,20 @@ func TestMetricCollector(t *testing.T) {
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
+		},
+		{
+			name:                      "WithLighthouseWithAsyncPriorPublish",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{5},
+			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			expectedLHEvents:          []int{1},
+			expectedTransactionCount:  []int{5},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
+			publishPrior:              true,
 		},
 		// Success case
 		{
@@ -453,8 +468,15 @@ func TestMetricCollector(t *testing.T) {
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				s.failUsageResponse = test.failUsageResponseOnServer[l]
-				metricCollector.Execute()
-				metricCollector.publisher.Execute()
+				if test.publishPrior {
+					go metricCollector.publisher.Execute()
+					go metricCollector.Execute()
+					time.Sleep(50 * time.Millisecond)
+				} else {
+					metricCollector.Execute()
+					metricCollector.publisher.onlinePublishReady = true
+					metricCollector.publisher.Execute()
+				}
 				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
 				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
 				assert.Equal(t, test.expectedTransactionVolume[l], s.transactionVolume)
@@ -519,6 +541,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			now = func() time.Time {
 				return time.Time(mockReports.Timestamp)
 			}
+			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
@@ -566,6 +589,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 			metricCollector.Execute()
+			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			metricCollector.AddMetric(apiDetails1, "401", 15, 10, "")
 			metricCollector.AddMetric(apiDetails2, "200", 20, 10, "")
@@ -592,6 +616,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
 
 			metricCollector.Execute()
+			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
 			assert.Equal(t, 1, s.lighthouseEventCount)
