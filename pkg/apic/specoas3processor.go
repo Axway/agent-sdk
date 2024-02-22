@@ -217,3 +217,19 @@ func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
 	return s
 }
+
+func (p *oas3SpecProcessor) GetSecurityBuilder() SecurityBuilder {
+	return newSpecSecurityBuilder(oas3)
+}
+
+func (p *oas3SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
+	for name, scheme := range authSchemes {
+		s, ok := scheme.(*openapi3.SecurityScheme)
+		if !ok {
+			continue
+		}
+		p.spec.Components.SecuritySchemes[name] = &openapi3.SecuritySchemeRef{
+			Value: s,
+		}
+	}
+}
