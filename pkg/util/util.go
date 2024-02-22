@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -520,4 +521,18 @@ func ConvertToDomainNameCompliant(str string) string {
 	r1 := strings.ReplaceAll(newName, "-.", "--")
 	r2 := strings.ReplaceAll(r1, ".-", "--")
 	return strings.ReplaceAll(r2, "..", "--")
+}
+
+func OrderStringsInMap[T any](input map[string]T) map[string]T {
+	keys := make([]string, 0, len(input))
+	for k := range input {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	output := map[string]T{}
+	for _, k := range keys {
+		output[k] = input[k]
+	}
+	return output
 }

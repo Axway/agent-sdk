@@ -3,6 +3,7 @@ package apic
 import (
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 	"golang.org/x/text/cases"
@@ -253,7 +254,6 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 		// create separate scheme for each flow type
 		oauthFlows := map[string]interface{}{}
 		for _, f := range s.flows {
-
 			// adjust the name of the flow for oas2 support
 			if f.flow == authorizationCode {
 				f.flow = accessCode
@@ -265,12 +265,12 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 			oauthFlows[fName] = &openapi2.SecurityScheme{
 				Type:             oauth2,
 				Flow:             f.flow,
-				Scopes:           f.scopes,
+				Scopes:           util.OrderStringsInMap(f.scopes),
 				AuthorizationURL: f.authURL,
 				TokenURL:         f.tokenURL,
 			}
 		}
-		return oauthFlows
+		return util.OrderStringsInMap(oauthFlows)
 	}
 
 	// create single scheme with all flows
@@ -280,7 +280,7 @@ func (s *oAuthSecurity) Build() map[string]interface{} {
 			AuthorizationURL: f.authURL,
 			RefreshURL:       f.refreshURL,
 			TokenURL:         f.tokenURL,
-			Scopes:           f.scopes,
+			Scopes:           util.OrderStringsInMap(f.scopes),
 		}
 		switch f.flow {
 		case authorizationCode:

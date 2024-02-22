@@ -223,7 +223,7 @@ func (p *oas3SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 }
 
 func (p *oas3SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
-	for name, scheme := range authSchemes {
+	for name, scheme := range util.OrderStringsInMap(authSchemes) {
 		s, ok := scheme.(*openapi3.SecurityScheme)
 		if !ok {
 			continue
