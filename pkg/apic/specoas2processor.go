@@ -135,7 +135,8 @@ func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 }
 
 func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
-	for name, scheme := range authSchemes {
+	// order authSchemas by name
+	for name, scheme := range util.OrderStringsInMap(authSchemes) {
 		p.spec.SecurityDefinitions[name], _ = scheme.(*openapi2.SecurityScheme)
 
 		// get scopes in array
@@ -143,6 +144,9 @@ func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{
 		for s := range p.spec.SecurityDefinitions[name].Scopes {
 			scopes = append(scopes, s)
 		}
+
+		// order the scopes
+		sort.Strings(scopes)
 
 		// add security to spec
 		p.spec.Security = append(p.spec.Security, map[string][]string{
