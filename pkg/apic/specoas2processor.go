@@ -127,6 +127,28 @@ func (p *oas2SpecProcessor) GetDescription() string {
 
 func (p *oas2SpecProcessor) StripSpecAuth() {
 	p.spec.SecurityDefinitions = map[string]*openapi2.SecurityScheme{}
+	p.spec.Security = make(openapi2.SecurityRequirements, 0)
+}
+
+func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
+	return newSpecSecurityBuilder(oas2)
+}
+
+func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
+	for name, scheme := range authSchemes {
+		p.spec.SecurityDefinitions[name], _ = scheme.(*openapi2.SecurityScheme)
+
+		// get scopes in array
+		scopes := []string{}
+		for s := range p.spec.SecurityDefinitions[name].Scopes {
+			scopes = append(scopes, s)
+		}
+
+		// add security to spec
+		p.spec.Security = append(p.spec.Security, map[string][]string{
+			name: scopes,
+		})
+	}
 }
 
 func (p *oas2SpecProcessor) GetSpecBytes() []byte {

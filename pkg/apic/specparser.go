@@ -36,6 +36,8 @@ type OasSpecProcessor interface {
 	GetAuthPolicies() []string
 	StripSpecAuth()
 	GetTitle() string
+	GetSecurityBuilder() SecurityBuilder
+	AddSecuritySchemes(map[string]interface{})
 }
 
 // SpecResourceParser -
@@ -99,6 +101,8 @@ func (s *SpecResourceParser) createProcessorWithResourceType() error {
 		s.specProcessor, err = s.parseAsyncAPISpec()
 	case GraphQL:
 		s.specProcessor, err = s.parseGraphQLSpec()
+	case Raml:
+		s.specProcessor, err = s.parseRamlSpec()
 	}
 	return err
 }
@@ -148,6 +152,16 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 		s.resourceContentType = contentType
 		return newAsyncAPIProcessor(specDef, s.resourceSpec), nil
 	}
+
+	ramlVersion := ""
+	if len(s.resourceSpec) > 10 {
+		ramlVersion = string(s.resourceSpec[2:10])
+	}
+	if ramlVersion == Raml08 || ramlVersion == Raml10 {
+		s.resourceContentType = contentType
+		return newRamlProcessor(specDef, s.resourceSpec), nil
+	}
+
 	return nil, errors.New("unknown yaml or json based specification")
 }
 
@@ -223,4 +237,24 @@ func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 	}
 	return nil, errors.New("invalid protobuf specification")
 
+}
+
+func (s *SpecResourceParser) parseRamlSpec() (SpecProcessor, error) {
+	specDef := make(map[string]interface{})
+	s.resourceContentType = mimeApplicationYAML
+
+	ramlVersion := ""
+	if len(s.resourceSpec) > 10 {
+		ramlVersion = string(s.resourceSpec[2:10])
+	}
+	if ramlVersion != Raml08 && ramlVersion != Raml10 {
+		return nil, errors.New("invalid RAML specification")
+	}
+
+	err := yaml.Unmarshal(s.resourceSpec, &specDef)
+	if err != nil {
+		return nil, err
+	}
+
+	return newRamlProcessor(specDef, s.resourceSpec), nil
 }
