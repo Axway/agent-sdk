@@ -359,18 +359,20 @@ type TestOpt func(*testOpts)
 
 type testOpts struct {
 	marketplace bool
+	agentType   config.AgentType
 }
 
 // InitializeForTest - Initialize for test
 func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
-	if agent.cfg != nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
-	}
 	agent.apicClient = apicClient
 	tOpts := &testOpts{}
 	for _, o := range opts {
 		o(tOpts)
 	}
+	if agent.cfg == nil {
+		agent.cfg = config.NewTestCentralConfig(tOpts.agentType)
+	}
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
 		ConnectToCentral:        true,
 		ProcessSystemSignals:    true,
@@ -384,6 +386,18 @@ func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
 func TestWithMarketplace() func(*testOpts) {
 	return func(o *testOpts) {
 		o.marketplace = true
+	}
+}
+
+func TestWithCentralConfig(cfg config.CentralConfig) func(*testOpts) {
+	return func(o *testOpts) {
+		agent.cfg = cfg
+	}
+}
+
+func TestWithAgentType(agentType config.AgentType) func(*testOpts) {
+	return func(o *testOpts) {
+		o.agentType = agentType
 	}
 }
 
