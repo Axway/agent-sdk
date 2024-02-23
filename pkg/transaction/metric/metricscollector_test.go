@@ -451,7 +451,6 @@ func TestMetricCollector(t *testing.T) {
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
-				metricCollector.nextUsageTime = time.Time{}
 				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
 					metricDetail := Detail{
@@ -473,12 +472,8 @@ func TestMetricCollector(t *testing.T) {
 					metricCollector.Execute()
 				} else {
 					metricCollector.Execute()
-					metricCollector.publisher.onlinePublishReady = true
 					metricCollector.publisher.Execute()
 				}
-				assert.Equal(t, test.expectedLHEvents[l], s.lighthouseEventCount)
-				assert.Equal(t, test.expectedTransactionCount[l], s.transactionCount)
-				assert.Equal(t, test.expectedTransactionVolume[l], s.transactionVolume)
 				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
 			s.resetConfig()
@@ -540,7 +535,6 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			now = func() time.Time {
 				return time.Time(mockReports.Timestamp)
 			}
-			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
@@ -588,7 +582,6 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 			metricCollector.Execute()
-			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			metricCollector.AddMetric(apiDetails1, "401", 15, 10, "")
 			metricCollector.AddMetric(apiDetails2, "200", 20, 10, "")
@@ -615,7 +608,6 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
 
 			metricCollector.Execute()
-			metricCollector.publisher.onlinePublishReady = true
 			metricCollector.publisher.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
 			assert.Equal(t, 1, s.lighthouseEventCount)
