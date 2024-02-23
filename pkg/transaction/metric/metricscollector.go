@@ -11,7 +11,6 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	"github.com/gorhill/cronexpr"
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -63,8 +62,6 @@ type collector struct {
 	metricStartTime  time.Time
 	metricEndTime    time.Time
 	orgGUID          string
-	nextUsageTime    time.Time
-	nextUTCron       *cronexpr.Expression
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
 	registry         metrics.Registry
@@ -162,8 +159,6 @@ func createMetricCollector() Collector {
 		publishItemQueue: make([]publishQueueItem, 0),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
-		nextUsageTime:    time.Time{},
-		nextUTCron:       cronexpr.MustParse(agent.GetCentralConfig().GetUsageReportingConfig().GetUsageSchedule()),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -226,9 +221,6 @@ func (c *collector) Execute() error {
 
 	c.generateEvents()
 	c.publishEvents()
-	if c.publisher.onlinePublishReady && !c.publisher.offline {
-		return c.publisher.Execute()
-	}
 	return nil
 }
 
@@ -276,7 +268,6 @@ func (c *collector) Publish() {
 
 func (c *collector) ShutdownPublish() {
 	c.Execute()
-	c.publisher.onlinePublishReady = true
 	c.publisher.Execute()
 }
 
@@ -582,6 +573,9 @@ func (c *collector) generateEvents() {
 		return
 	}
 
+	c.metricBatch = NewEventBatch(c)
+	c.registry.Each(c.processUsageFromRegistry)
+
 	if len(c.publishItemQueue) == 0 {
 		c.logger.
 			WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
@@ -596,8 +590,6 @@ func (c *collector) generateEvents() {
 			Info("no metric event generated as no transactions recorded")
 	}
 
-	c.metricBatch = NewEventBatch(c)
-	c.registry.Each(c.processUsageFromRegistry)
 	if c.usageConfig.CanPublishMetric() {
 		err := c.metricBatch.Publish()
 		if err != nil {
@@ -625,23 +617,10 @@ func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
 	}
 }
 
-func (c *collector) skipUsageCreate() bool {
-	if c.publisher.offline {
-		return false
-	}
-	// only skip if now is not after the previously set next usage time
-	return !time.Now().After(c.nextUsageTime)
-}
-
 func (c *collector) generateUsageEvent(orgGUID string) {
-	if c.skipUsageCreate() {
-		return
-	}
 	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
 		c.generateLighthouseUsageEvent(orgGUID)
 	}
-	// set the next usage time according to the cron schedule
-	c.nextUsageTime = c.nextUTCron.Next(time.Now())
 }
 
 func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
