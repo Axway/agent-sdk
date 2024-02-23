@@ -536,3 +536,13 @@ func OrderStringsInMap[T any](input map[string]T) map[string]T {
 	}
 	return output
 }
+
+func OrderedKeys[T any](input map[string]T) []string {
+	keys := make([]string, 0, len(input))
+	for k := range input {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys
+}

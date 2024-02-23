@@ -133,10 +133,10 @@ func (p *oas2SpecProcessor) StripSpecAuth() {
 func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 	return newSpecSecurityBuilder(oas2)
 }
-
 func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
 	// order authSchemas by name
-	for name, scheme := range util.OrderStringsInMap(authSchemes) {
+	for _, name := range util.OrderedKeys(authSchemes) {
+		scheme := authSchemes[name]
 		p.spec.SecurityDefinitions[name], _ = scheme.(*openapi2.SecurityScheme)
 
 		// get scopes in array

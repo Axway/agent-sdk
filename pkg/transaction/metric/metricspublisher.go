@@ -9,7 +9,6 @@ import (
 	"net/textproto"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,15 +21,13 @@ import (
 )
 
 type metricPublisher struct {
-	apiClient          api.Client
-	storage            storageCache
-	report             *cacheReport
-	jobID              string
-	ready              bool
-	onlinePublishReady bool
-	lock               sync.Mutex
-	offline            bool
-	logger             log.FieldLogger
+	apiClient api.Client
+	storage   storageCache
+	report    *cacheReport
+	jobID     string
+	ready     bool
+	offline   bool
+	logger    log.FieldLogger
 }
 
 func (c *metricPublisher) publishEvent(event interface{}) error {
@@ -228,12 +225,5 @@ func (c *metricPublisher) Execute() error {
 	if c.offline {
 		return c.report.saveReport()
 	}
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.onlinePublishReady {
-		c.onlinePublishReady = false
-		return c.report.sendReport(c.publishToLighthouse)
-	}
-	c.onlinePublishReady = true
-	return nil
+	return c.report.sendReport(c.publishToLighthouse)
 }
