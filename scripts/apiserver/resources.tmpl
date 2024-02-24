@@ -37,7 +37,7 @@ const (
     {{range $field, $isNotEmpty := .res.fields -}}
 		{{- $type := $field | strings.Title -}}
         {{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
-        {{- if and (ne $type "Spec") (ne $type "Owner") -}}
+        {{- if and (ne $type "Spec") (ne $type "Owner") (ne $type "_embedded") -}}
             {{ $varName }}{{ $type }}SubResourceName = "{{$field | strings.ToLower}}"
         {{ end -}} 
     {{ end -}}
@@ -57,7 +57,8 @@ type {{.res.kind}} struct {
 	apiv1.ResourceMeta
 	{{range $field, $isNotEmpty := .res.fields -}}
 		{{$type := $field | strings.Title -}}
-		{{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
+        {{- if ne $type "_embedded" -}}
+        {{- $varName := $.res.kind | strings.ReplaceAll "API" "Api" | strings.ReplaceAll "AWS" "Aws" -}}
         {{- $type }} {{ if $isNotEmpty -}}
                         {{ $varName }}{{ $type }} 
                     {{- else -}} 
@@ -66,7 +67,8 @@ type {{.res.kind}} struct {
                         {{- end -}} 
                     {{- end -}} 
                         `json:"{{$field | strings.ToLower}}"`
-	                {{ end }}
+                    {{ end }}
+        {{- end -}}
 }
 
 // New{{.res.kind}} creates an empty *{{.res.kind}}
@@ -165,7 +167,9 @@ func (res *{{.res.kind}}) MarshalJSON() ([]byte, error) {
 	{{range $field, $isNotEmpty := .res.fields -}}
         {{- $fieldName := $field | strings.Title -}}
 		{{- $keyName := $field | strings.ToLower -}}
+        {{- if (ne $keyName "_embedded") -}}
 		out["{{$keyName}}"] = res.{{$fieldName}}
+        {{ end -}}
 	{{end}}
 
 	return json.Marshal(out)
@@ -201,6 +205,7 @@ func (res *{{.res.kind}}) UnmarshalJSON(data []byte) error {
         {{- $keyName := $field | strings.ToLower -}}
         {{if eq $keyName "owner"}}
         {{else if eq $keyName "spec"}}
+        {{else if eq $keyName "_embedded"}}
         {{else}}
         // marshalling subresource {{$fieldName}}
         if v, ok := aux.SubResources["{{$keyName}}"]; ok {
