@@ -118,7 +118,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewAPISvcHandler(cacheManager)
+			handler := NewAPISvcHandler(cacheManager, "")
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
