@@ -27,7 +27,8 @@ var (
 )
 
 const (
-	ResourceGroupResourceName = "groups"
+	ResourceGroupResourceName             = "groups"
+	ResourceGroup_embeddedSubResourceName = "_embedded"
 )
 
 func ResourceGroupGVK() apiv1.GroupVersionKind {
@@ -42,8 +43,9 @@ func init() {
 // ResourceGroup Resource
 type ResourceGroup struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner `json:"owner"`
-	Spec  interface{}  `json:"spec"`
+	_embedded interface{}  `json:"_embedded"`
+	Owner     *apiv1.Owner `json:"owner"`
+	Spec      interface{}  `json:"spec"`
 }
 
 // NewResourceGroup creates an empty *ResourceGroup
@@ -122,6 +124,7 @@ func (res *ResourceGroup) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -151,6 +154,20 @@ func (res *ResourceGroup) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

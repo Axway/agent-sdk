@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingTemplateSpecFilters  (management.v1alpha1.AssetMappingTemplate)
+// AssetMappingTemplateSpecFilters struct for AssetMappingTemplateSpecFilters
 type AssetMappingTemplateSpecFilters struct {
 	ApiService []AssetMappingTemplateSpecApiService `json:"apiService,omitempty"`
 	// name of the stage

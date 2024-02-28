@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	APISpecLintingRulesetResourceName            = "apispeclintingrulesets"
-	ApiSpecLintingRulesetRevisionSubResourceName = "revision"
+	APISpecLintingRulesetResourceName             = "apispeclintingrulesets"
+	ApiSpecLintingRuleset_embeddedSubResourceName = "_embedded"
+	ApiSpecLintingRulesetRevisionSubResourceName  = "revision"
 )
 
 func APISpecLintingRulesetGVK() apiv1.GroupVersionKind {
@@ -43,9 +44,10 @@ func init() {
 // APISpecLintingRuleset Resource
 type APISpecLintingRuleset struct {
 	apiv1.ResourceMeta
-	Owner    *apiv1.Owner              `json:"owner"`
-	Revision interface{}               `json:"revision"`
-	Spec     ApiSpecLintingRulesetSpec `json:"spec"`
+	_embedded interface{}               `json:"_embedded"`
+	Owner     *apiv1.Owner              `json:"owner"`
+	Revision  interface{}               `json:"revision"`
+	Spec      ApiSpecLintingRulesetSpec `json:"spec"`
 }
 
 // NewAPISpecLintingRuleset creates an empty *APISpecLintingRuleset
@@ -124,6 +126,7 @@ func (res *APISpecLintingRuleset) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["revision"] = res.Revision
 	out["spec"] = res.Spec
@@ -154,6 +157,20 @@ func (res *APISpecLintingRuleset) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Revision

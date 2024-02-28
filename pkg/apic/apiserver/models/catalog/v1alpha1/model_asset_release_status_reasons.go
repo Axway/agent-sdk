@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// AssetReleaseStatusReasons  (catalog.v1alpha1.AssetRelease)
+// AssetReleaseStatusReasons struct for AssetReleaseStatusReasons
 type AssetReleaseStatusReasons struct {
 	Type string `json:"type"`
 	// Details of the error.

@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	QuotaResourceName          = "quotas"
-	QuotaStatusSubResourceName = "status"
+	QuotaResourceName             = "quotas"
+	Quota_embeddedSubResourceName = "_embedded"
+	QuotaStatusSubResourceName    = "status"
 )
 
 func QuotaGVK() apiv1.GroupVersionKind {
@@ -43,9 +44,10 @@ func init() {
 // Quota Resource
 type Quota struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner `json:"owner"`
-	Spec  QuotaSpec    `json:"spec"`
-	// Status QuotaStatus  `json:"status"`
+	_embedded interface{}  `json:"_embedded"`
+	Owner     *apiv1.Owner `json:"owner"`
+	Spec      QuotaSpec    `json:"spec"`
+	// Status    QuotaStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -131,6 +133,7 @@ func (res *Quota) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -161,6 +164,20 @@ func (res *Quota) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status

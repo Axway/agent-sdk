@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceState  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceState struct for SubscriptionInvoiceState
 type SubscriptionInvoiceState struct {
 	Name string `json:"name,omitempty"`
 	// Additional info on the state.

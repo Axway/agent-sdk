@@ -9,9 +9,9 @@
 
 package catalog
 
-// ProductPlanJobSpec  (catalog.v1alpha1.ProductPlanJob)
+// ProductPlanJobSpec struct for ProductPlanJobSpec
 type ProductPlanJobSpec struct {
 	// GENERATE: The following code has been modified after code generation
-	Action interface{}            `json:"action"`
-	When   ProductPlanJobSpecWhen `json:"when,omitempty"`
+	Action interface{}             `json:"action"`
+	When   SubscriptionJobSpecWhen `json:"when,omitempty"`
 }

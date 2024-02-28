@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingJobResult  (management.v1.APISpecLintingJob)
+// ApiSpecLintingJobResult struct for ApiSpecLintingJobResult
 type ApiSpecLintingJobResult struct {
 	// The API Specification Linting Result details.
 	Details []ApiSpecLintingJobResultDetails `json:"details"`

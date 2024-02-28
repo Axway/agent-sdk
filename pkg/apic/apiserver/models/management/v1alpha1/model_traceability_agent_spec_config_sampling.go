@@ -9,11 +9,10 @@
 
 package management
 
-// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection
 type TraceabilityAgentSpecConfigSampling struct {
 	// The number of transactions, out of 100, that the agent will save the full transaction details for, valid values are 0 to 50
-	// GENERATE: The following code has been modified after code generation
-	Percentage float64 `json:"percentage"`
+	Percentage int32 `json:"percentage"`
 	// When set to true will send transactional data for every errored transaction for Business and Consumer Insights
 	AllErrors bool `json:"allErrors"`
 }

@@ -9,11 +9,10 @@
 
 package management
 
-// EnvironmentSpec  (management.v1alpha1.Environment)
+// EnvironmentSpec struct for EnvironmentSpec
 type EnvironmentSpec struct {
-	Description string `json:"description,omitempty"`
-	//  (management.v1alpha1.Environment)
-	Variables map[string]string `json:"variables,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Variables   map[string]string `json:"variables,omitempty"`
 	// Production environment will be used to perform production processing or connect to a non-Axway gateway. This usage will count against your entitled quota.
 	Production bool `json:"production,omitempty"`
 	// Axway Managed environment is hosted in the Axway Managed Cloud.

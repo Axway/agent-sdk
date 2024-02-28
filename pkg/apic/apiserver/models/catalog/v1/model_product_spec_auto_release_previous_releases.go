@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpecAutoReleasePreviousReleases  (catalog.v1.Product)
+// ProductSpecAutoReleasePreviousReleases struct for ProductSpecAutoReleasePreviousReleases
 type ProductSpecAutoReleasePreviousReleases struct {
 	// Updates all prior non-archived releases to the deprecated state.
 	UpdateState string `json:"updateState,omitempty"`

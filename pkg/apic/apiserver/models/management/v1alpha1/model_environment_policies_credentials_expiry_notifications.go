@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentPoliciesCredentialsExpiryNotifications Notifications properties for Credentials expiry. (management.v1alpha1.Environment)
+// EnvironmentPoliciesCredentialsExpiryNotifications Notifications properties for Credentials expiry.
 type EnvironmentPoliciesCredentialsExpiryNotifications struct {
 	// The days interval at which to send notifications before the Credentials are to expire.
 	DaysBefore []int32 `json:"daysBefore,omitempty"`

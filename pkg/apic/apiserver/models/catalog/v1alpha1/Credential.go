@@ -28,6 +28,7 @@ var (
 
 const (
 	CredentialResourceName               = "credentials"
+	Credential_embeddedSubResourceName   = "_embedded"
 	CredentialDataSubResourceName        = "data"
 	CredentialExpirationSubResourceName  = "expiration"
 	CredentialMarketplaceSubResourceName = "marketplace"
@@ -49,6 +50,7 @@ func init() {
 // Credential Resource
 type Credential struct {
 	apiv1.ResourceMeta
+	_embedded   interface{}           `json:"_embedded"`
 	Data        interface{}           `json:"data"`
 	Expiration  CredentialExpiration  `json:"expiration"`
 	Marketplace CredentialMarketplace `json:"marketplace"`
@@ -143,6 +145,7 @@ func (res *Credential) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["_embedded"] = res._embedded
 	out["data"] = res.Data
 	out["expiration"] = res.Expiration
 	out["marketplace"] = res.Marketplace
@@ -179,6 +182,20 @@ func (res *Credential) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource _embedded
+	if v, ok := aux.SubResources["_embedded"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "_embedded")
+		err = json.Unmarshal(sr, &res._embedded)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Data

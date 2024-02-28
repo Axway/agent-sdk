@@ -12,7 +12,7 @@ package catalog
 // GENERATE: The following code has been modified after code generation
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-// AssetRequestMarketplaceResource The Marketplace Access Request resource details. (catalog.v1alpha1.AssetRequest)
+// AssetRequestMarketplaceResource The Marketplace Access Request resource details.
 type AssetRequestMarketplaceResource struct {
 	Metadata AssetRequestMarketplaceResourceMetadata `json:"metadata"`
 	// GENERATE: The following code has been modified after code generation

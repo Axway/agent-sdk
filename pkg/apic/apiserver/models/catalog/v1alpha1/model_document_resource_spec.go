@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpec  (catalog.v1alpha1.DocumentResource)
+// DocumentResourceSpec struct for DocumentResourceSpec
 type DocumentResourceSpec struct {
 	// Document description.
 	Description string `json:"description,omitempty"`

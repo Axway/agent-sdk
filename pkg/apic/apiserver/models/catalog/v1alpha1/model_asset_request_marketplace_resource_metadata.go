@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestMarketplaceResourceMetadata Marketplace Access Request metadata. (catalog.v1alpha1.AssetRequest)
+// AssetRequestMarketplaceResourceMetadata Marketplace Access Request metadata.
 type AssetRequestMarketplaceResourceMetadata struct {
 	// Id of the user that created the entity.
 	CreateUserId string `json:"createUserId,omitempty"`

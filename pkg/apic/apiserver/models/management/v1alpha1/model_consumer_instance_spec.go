@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerInstanceSpec  (management.v1alpha1.ConsumerInstance)
+// ConsumerInstanceSpec struct for ConsumerInstanceSpec
 type ConsumerInstanceSpec struct {
 	// Maps to the name of the Catalog Item. If not provided, the resource title will be used.
 	Name string `json:"name,omitempty"`

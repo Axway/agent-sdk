@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceSpecQuotas  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceSpecQuotas struct for SubscriptionInvoiceSpecQuotas
 type SubscriptionInvoiceSpecQuotas struct {
 	Name string `json:"name,omitempty"`
 	// Number of consumed units.

@@ -9,8 +9,10 @@
 
 package management
 
-// ApiServiceInstanceReferences  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceReferences struct for ApiServiceInstanceReferences
 type ApiServiceInstanceReferences struct {
 	// Reference to Amplify Central APIService
 	ApiService string `json:"apiService,omitempty"`
+	// Computes the APIServiceInstance stage based on the Environment default stage or any override provided in the APIServiceInstance spec.stage property.
+	Stage string `json:"stage,omitempty"`
 }

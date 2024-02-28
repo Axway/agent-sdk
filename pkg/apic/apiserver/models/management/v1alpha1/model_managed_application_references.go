@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationReferences  (management.v1alpha1.ManagedApplication)
+// ManagedApplicationReferences struct for ManagedApplicationReferences
 type ManagedApplicationReferences struct {
 	// Reference to Application resource
 	Application string `json:"application,omitempty"`

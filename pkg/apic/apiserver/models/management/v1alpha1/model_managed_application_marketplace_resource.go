@@ -12,7 +12,7 @@ package management
 // GENERATE: The following code has been modified after code generation
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-// ManagedApplicationMarketplaceResource The Marketplace Application resource details. (management.v1alpha1.ManagedApplication)
+// ManagedApplicationMarketplaceResource The Marketplace Application resource details.
 type ManagedApplicationMarketplaceResource struct {
 	Metadata ManagedApplicationMarketplaceResourceMetadata `json:"metadata"`
 	// GENERATE: The following code has been modified after code generation
