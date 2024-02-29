@@ -144,10 +144,16 @@ func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 	resources := make(map[string]discoverFunc)
 
 	for _, filter := range dc.watchTopic.Spec.Filters {
-		dc.logger.Debugf("adding function %s to be executed", filter.Kind)
+		kind := filter.Kind
+		scope := ""
+		if filter.Scope != nil && filter.Scope.Name != "" {
+			scope = filter.Scope.Name
+		}
+		key := fmt.Sprintf("%s:%s", kind, scope)
+		dc.logger.Debugf("adding function kind:%s,scope:%s to be executed", kind, scope)
 		f := dc.buildResourceFunc(filter)
 		if !isMPResource(filter.Kind) {
-			resources[filter.Kind] = f
+			resources[key] = f
 		}
 	}
 

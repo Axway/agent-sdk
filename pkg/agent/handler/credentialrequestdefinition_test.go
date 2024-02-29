@@ -100,7 +100,7 @@ func TestCRDHandler(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewInstanceHandler(cacheManager)
+			handler := NewInstanceHandler(cacheManager, "")
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
