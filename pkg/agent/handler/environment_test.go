@@ -52,7 +52,7 @@ func TestEnvironmentHandler(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewEnvironmentHandler(cacheManager, tc.credentialConfg)
+			handler := NewEnvironmentHandler(cacheManager, tc.credentialConfg, tc.resource.Name)
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), tc.meta, tc.resource)
 			if tc.hasError {
