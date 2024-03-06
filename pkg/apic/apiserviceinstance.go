@@ -38,6 +38,24 @@ func buildAPIServiceInstanceMarketplaceSpec(
 	}
 }
 
+func buildAPIServiceInstanceSourceSubResource(serviceBody *ServiceBody) *management.ApiServiceInstanceSource {
+	// only set status if ownerErr != nil
+	dataplaneType := serviceBody.GetDataplaneType()
+	if dataplaneType != "" {
+		source := &management.ApiServiceInstanceSource{
+			DataplaneType: management.ApiServiceInstanceSourceDataplaneType{},
+		}
+		if serviceBody.IsDesignDataplane() {
+			source.DataplaneType.Design = dataplaneType.String()
+		} else {
+			source.DataplaneType.Managed = dataplaneType.String()
+		}
+		source.References.ApiServiceInstance = serviceBody.GetReferencedServiceName()
+		return source
+	}
+	return nil
+}
+
 func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBody) []string {
 	crds := serviceBody.GetCredentialRequestDefinitions()
 
@@ -99,8 +117,9 @@ func (c *ServiceClient) buildAPIServiceInstance(
 				},
 			},
 		},
-		Spec:  spec,
-		Owner: owner,
+		Spec:   spec,
+		Owner:  owner,
+		Source: buildAPIServiceInstanceSourceSubResource(serviceBody),
 	}
 
 	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
@@ -127,6 +146,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
 	}
 	instance.Owner = owner
+	instance.Source = buildAPIServiceInstanceSourceSubResource(serviceBody)
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
@@ -159,6 +179,11 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	addSpecHashToResource(instance)
 
 	ri, err := c.CreateOrUpdateResource(instance)
+	// TBD - check if update for source subresource is needed
+	if err == nil {
+		err = c.updateAPIServiceInstanceSubresources(instance)
+	}
+
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -173,6 +198,18 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.instanceName = instance.Name
 
 	return err
+}
+
+func (c *ServiceClient) updateAPIServiceInstanceSubresources(inst *management.APIServiceInstance) error {
+	subResources := make(map[string]interface{})
+	if inst.Source != nil { // check if source is not updated
+		subResources["source"] = inst.Source
+	}
+
+	if len(subResources) > 0 {
+		return c.CreateSubResource(inst.ResourceMeta, subResources)
+	}
+	return nil
 }
 
 func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiServiceInstanceSpecEndpoint, error) {

@@ -50,6 +50,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 		Spec:   buildAPIServiceSpec(serviceBody),
 		Owner:  owner,
 		Status: buildAPIServiceStatusSubResource(ownerErr),
+		Source: buildAPIServiceSourceSubResource(serviceBody),
 	}
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -94,6 +95,8 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	svc.Owner = owner
 	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
 	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
+	// check if source changed
+	svc.Source = buildAPIServiceSourceSubResource(serviceBody)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	newSVCDetails := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
@@ -112,6 +115,23 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 			Data:        serviceBody.Image,
 		}
 	}
+}
+
+func buildAPIServiceSourceSubResource(serviceBody *ServiceBody) *management.ApiServiceSource {
+	dataplaneType := serviceBody.GetDataplaneType()
+	if dataplaneType != "" {
+		source := &management.ApiServiceSource{
+			DataplaneType: management.ApiServiceSourceDataplaneType{},
+		}
+		if serviceBody.IsDesignDataplane() {
+			source.DataplaneType.Design = dataplaneType.String()
+		} else {
+			source.DataplaneType.Managed = dataplaneType.String()
+		}
+		source.References.ApiService = serviceBody.GetReferencedServiceName()
+		return source
+	}
+	return nil
 }
 
 func buildAPIServiceStatusSubResource(ownerErr error) *apiv1.ResourceStatus {
@@ -200,11 +220,17 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService)
 		}
 	}
 
+	// TBD - update only if source changed
+	if svc.Source != nil { // check if source is not updated
+		subResources["source"] = svc.Source
+	}
+
 	if len(subResources) > 0 {
 		return c.CreateSubResource(svc.ResourceMeta, subResources)
 	}
 	return nil
 }
+
 func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*management.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {

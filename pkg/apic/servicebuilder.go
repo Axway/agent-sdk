@@ -54,6 +54,11 @@ type ServiceBuilder interface {
 	SetServiceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetInstanceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetRevisionAgentDetails(attr map[string]interface{}) ServiceBuilder
+
+	SetSourceDataplaneType(dataplaneType DataplaneType, isDesign bool) ServiceBuilder
+	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
+	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
+
 	Build() (ServiceBody, error)
 }
 
@@ -350,6 +355,9 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 	}
 
+	if b.serviceBody.dataplaneType == "" {
+		b.serviceBody.dataplaneType = "Unidentified"
+	}
 	return b.serviceBody, nil
 }
 
@@ -369,5 +377,30 @@ func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDef
 func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder {
 	b.serviceBody.ardName = accessRequestDefName
 	b.serviceBody.uniqueARD = isUnique
+	return b
+}
+
+func (b *serviceBodyBuilder) SetSourceDataplaneType(dataplaneType DataplaneType, isDesign bool) ServiceBuilder {
+	b.serviceBody.dataplaneType = dataplaneType
+	b.serviceBody.isDesignDataplane = isDesign
+	return b
+}
+
+func (b *serviceBodyBuilder) SetReferenceServiceName(serviceName, envName string) ServiceBuilder {
+	if envName != "" {
+		b.serviceBody.referencedServiceName = fmt.Sprintf("%s/%s", envName, serviceName)
+	} else {
+		b.serviceBody.referencedServiceName = serviceName
+	}
+
+	return b
+}
+
+func (b *serviceBodyBuilder) SetReferenceInstanceName(instanceName, envName string) ServiceBuilder {
+	if envName != "" {
+		b.serviceBody.referencedInstanceName = fmt.Sprintf("%s/%s", envName, instanceName)
+	} else {
+		b.serviceBody.referencedInstanceName = instanceName
+	}
 	return b
 }
