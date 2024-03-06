@@ -28,7 +28,10 @@ var (
 
 const (
 	APIServiceInstanceResourceName              = "apiserviceinstances"
+	ApiServiceInstanceComplianceSubResourceName = "compliance"
+	ApiServiceInstanceLifecycleSubResourceName  = "lifecycle"
 	ApiServiceInstanceReferencesSubResourceName = "references"
+	ApiServiceInstanceSourceSubResourceName     = "source"
 )
 
 func APIServiceInstanceGVK() apiv1.GroupVersionKind {
@@ -43,8 +46,11 @@ func init() {
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
+	Compliance ApiServiceInstanceCompliance `json:"compliance"`
+	Lifecycle  ApiServiceInstanceLifecycle  `json:"lifecycle"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
+	Source     *ApiServiceInstanceSource    `json:"source"`
 	Spec       ApiServiceInstanceSpec       `json:"spec"`
 }
 
@@ -130,8 +136,11 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["compliance"] = res.Compliance
+	out["lifecycle"] = res.Lifecycle
 	out["owner"] = res.Owner
 	out["references"] = res.References
+	out["source"] = res.Source
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -162,6 +171,34 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource Compliance
+	if v, ok := aux.SubResources["compliance"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "compliance")
+		err = json.Unmarshal(sr, &res.Compliance)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Lifecycle
+	if v, ok := aux.SubResources["lifecycle"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "lifecycle")
+		err = json.Unmarshal(sr, &res.Lifecycle)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource References
 	if v, ok := aux.SubResources["references"]; ok {
 		sr, err = json.Marshal(v)
@@ -171,6 +208,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Source
+	if v, ok := aux.SubResources["source"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "source")
+		err = json.Unmarshal(sr, &res.Source)
 		if err != nil {
 			return err
 		}
