@@ -96,6 +96,7 @@ type Client interface {
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	PatchSubResource(ri apiv1.Interface, subResourceName string, patches []map[string]interface{}) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
 	GetResources(ri apiv1.Interface) ([]apiv1.Interface, error)
 
@@ -627,10 +628,14 @@ func (c *ServiceClient) deployAccessControl(acl *management.AccessControlList, m
 }
 
 // executeAPI - execute the api
-func (c *ServiceClient) executeAPI(method, url string, query map[string]string, buffer []byte) (*coreapi.Response, error) {
+func (c *ServiceClient) executeAPI(method, url string, query map[string]string, buffer []byte, overrideHeaders map[string]string) (*coreapi.Response, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
+	}
+
+	for key, value := range overrideHeaders {
+		headers[key] = value
 	}
 
 	request := coreapi.Request{
@@ -646,7 +651,12 @@ func (c *ServiceClient) executeAPI(method, url string, query map[string]string, 
 
 // ExecuteAPI - execute the api
 func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
-	response, err := c.executeAPI(method, url, query, buffer)
+	return c.ExecuteAPIWithHeader(method, url, query, buffer, nil)
+}
+
+// ExecuteAPI - execute the api
+func (c *ServiceClient) ExecuteAPIWithHeader(method, url string, query map[string]string, buffer []byte, headers map[string]string) ([]byte, error) {
+	response, err := c.executeAPI(method, url, query, buffer, headers)
 	if err != nil {
 		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
@@ -904,7 +914,7 @@ func (c *ServiceClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.Resou
 		return nil, err
 	}
 	if inst.GetSelfLink() == "" {
-		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
+		return nil, fmt.Errorf("could not update resource instance, could not get self link")
 	}
 	inst.Metadata.ResourceVersion = ""
 	bts, err := json.Marshal(ri)
@@ -955,6 +965,40 @@ func (c *ServiceClient) CreateResourceInstance(ri apiv1.Interface) (*apiv1.Resou
 	if err != nil {
 		return nil, err
 	}
+	r := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(bts, r)
+	return r, err
+}
+
+// PatchSubResource - applies the patches to the subresource
+func (c *ServiceClient) PatchSubResource(ri apiv1.Interface, subResourceName string, patches []map[string]interface{}) (*apiv1.ResourceInstance, error) {
+	inst, err := ri.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+
+	if inst.GetSelfLink() == "" {
+		return nil, fmt.Errorf("could not remove resource instance, could not get self link")
+	}
+	p := make([]map[string]interface{}, 0)
+	p = append(p, map[string]interface{}{
+		"op":   "x-build-object-tree",
+		"path": fmt.Sprintf("/%s", subResourceName),
+	})
+
+	p = append(p, patches...)
+
+	bts, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+
+	url := c.createAPIServerURL(fmt.Sprintf("%s/%s", inst.GetSelfLink(), subResourceName))
+	bts, err = c.ExecuteAPIWithHeader(coreapi.PATCH, url, nil, bts, map[string]string{"Content-Type": "application/json-patch+json"})
+	if err != nil {
+		return nil, err
+	}
+
 	r := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(bts, r)
 	return r, err
