@@ -13,5 +13,4 @@ package management
 type ApiServiceSource struct {
 	DataplaneType ApiServiceSourceDataplaneType `json:"dataplaneType,omitempty"`
 	References    ApiServiceSourceReferences    `json:"references,omitempty"`
-	Compliance    ApiServiceSourceCompliance    `json:"compliance,omitempty"`
 }

@@ -24,7 +24,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	AccessControlListScopes = []string{"APIRuntimeRuleset", "APISpecLintingRuleset", "Environment", "Integration", "K8SCluster", "Mesh", "WatchTopic"}
+	AccessControlListScopes = []string{"APISpecLintingRuleset", "Environment", "Integration", "K8SCluster", "Mesh", "WatchTopic"}
 )
 
 const (

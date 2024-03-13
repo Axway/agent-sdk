@@ -15,6 +15,4 @@ type EnvironmentSpecCompliance struct {
 	Design string `json:"design,omitempty"`
 	// Reference to Amplify Central security Ruleset
 	Security string `json:"security,omitempty"`
-	// Reference to Amplify Central runtime Ruleset
-	Runtime string `json:"runtime,omitempty"`
 }

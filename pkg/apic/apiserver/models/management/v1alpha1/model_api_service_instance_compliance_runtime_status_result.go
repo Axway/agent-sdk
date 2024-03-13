@@ -9,8 +9,17 @@
 
 package management
 
+import (
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	"time"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
+
 // ApiServiceInstanceComplianceRuntimeStatusResult APIServiceInstance runtime results.
 type ApiServiceInstanceComplianceRuntimeStatusResult struct {
+	// Time when the update occurred.
+	Timestamp time.Time `json:"timestamp,omitempty"`
 	// Grade result from the results summary.
 	Grade string `json:"grade,omitempty"`
 }

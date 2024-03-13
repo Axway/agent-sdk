@@ -27,7 +27,6 @@ type Set struct {
 	APIServiceInstanceManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceInstanceClient
 	APISpecLintingJobManagementV1alpha1              *management_v1alpha1.UnscopedAPISpecLintingJobClient
 	APISpecLintingRulesetManagementV1alpha1          *management_v1alpha1.APISpecLintingRulesetClient
-	APIRuntimeRulesetManagementV1alpha1              *management_v1alpha1.APIRuntimeRulesetClient
 	ConsumerInstanceManagementV1alpha1               *management_v1alpha1.UnscopedConsumerInstanceClient
 	ConsumerSubscriptionDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedConsumerSubscriptionDefinitionClient
 	IntegrationManagementV1alpha1                    *management_v1alpha1.IntegrationClient
@@ -54,7 +53,6 @@ type Set struct {
 	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
 	APISpecLintingJobManagementV1                    *management_v1.UnscopedAPISpecLintingJobClient
 	APISpecLintingRulesetManagementV1                *management_v1.APISpecLintingRulesetClient
-	APIRuntimeRulesetManagementV1                    *management_v1.APIRuntimeRulesetClient
 	BatchJobManagementV1                             *management_v1.UnscopedBatchJobClient
 	StageCatalogV1alpha1                             *catalog_v1alpha1.StageClient
 	AssetCatalogV1alpha1                             *catalog_v1alpha1.AssetClient
@@ -168,10 +166,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpecLintingRuleset: %s", err))
 	}
-	s.APIRuntimeRulesetManagementV1alpha1, err = management_v1alpha1.NewAPIRuntimeRulesetClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APIRuntimeRuleset: %s", err))
-	}
 	s.ConsumerInstanceManagementV1alpha1, err = management_v1alpha1.NewConsumerInstanceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ConsumerInstance: %s", err))
@@ -275,10 +269,6 @@ func New(b cAPIV1.Base) *Set {
 	s.APISpecLintingRulesetManagementV1, err = management_v1.NewAPISpecLintingRulesetClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.APISpecLintingRuleset: %s", err))
-	}
-	s.APIRuntimeRulesetManagementV1, err = management_v1.NewAPIRuntimeRulesetClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.APIRuntimeRuleset: %s", err))
 	}
 	s.BatchJobManagementV1, err = management_v1.NewBatchJobClient(b)
 	if err != nil {

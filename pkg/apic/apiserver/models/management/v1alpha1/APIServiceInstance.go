@@ -46,12 +46,18 @@ func init() {
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
-	Compliance ApiServiceInstanceCompliance `json:"compliance"`
-	Lifecycle  ApiServiceInstanceLifecycle  `json:"lifecycle"`
-	Owner      *apiv1.Owner                 `json:"owner"`
-	References ApiServiceInstanceReferences `json:"references"`
-	Source     *ApiServiceInstanceSource    `json:"source"`
-	Spec       ApiServiceInstanceSpec       `json:"spec"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Compliance ApiServiceInstanceCompliance `json:"compliance"`
+	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
+	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
+	Owner      *apiv1.Owner                  `json:"owner"`
+	References ApiServiceInstanceReferences  `json:"references"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Source     ApiServiceInstanceSource      `json:"source"`
+	Source *ApiServiceInstanceSource `json:"source,omitempty"`
+	Spec   ApiServiceInstanceSpec    `json:"spec"`
 }
 
 // NewAPIServiceInstance creates an empty *APIServiceInstance

@@ -11,6 +11,12 @@ package management
 
 // ApiServiceComplianceRuntimeStatusResult APIService runtime results.
 type ApiServiceComplianceRuntimeStatusResult struct {
+	// The total number of critical errors in the runtime compliance result.
+	CriticalCount int32 `json:"criticalCount,omitempty"`
+	// The total number of errors in the runtime compliance result.
+	ErrorCount int32 `json:"errorCount,omitempty"`
+	// The total number of warning in the runtime compliance result.
+	WarningCount int32 `json:"warningCount,omitempty"`
 	// Grade result from the results summary.
 	Grade string `json:"grade,omitempty"`
 }

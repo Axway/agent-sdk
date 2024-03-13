@@ -54,9 +54,12 @@ type APIService struct {
 	Details    ApiServiceDetails     `json:"details"`
 	Owner      *apiv1.Owner          `json:"owner"`
 	References ApiServiceReferences  `json:"references"`
-	Source     *ApiServiceSource     `json:"source"`
-	Spec       ApiServiceSpec        `json:"spec"`
-	// Status     ApiServiceStatus      `json:"status"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Source     ApiServiceSource      `json:"source"`
+	Source *ApiServiceSource `json:"source,omitempty"`
+	Spec   ApiServiceSpec    `json:"spec"`
+	// Status ApiServiceStatus  `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
