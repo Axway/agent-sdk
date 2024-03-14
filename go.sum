@@ -72,8 +72,8 @@ github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5Xh
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
-github.com/elastic/beats/v7 v7.17.16 h1:OE7Zr3HLtMsXfWlv2GUPSg71BylA1IvTs9Srg6nC5z8=
-github.com/elastic/beats/v7 v7.17.16/go.mod h1:y6EuhCZoj8WmkRNKd0JWGzMzKrnigxQcZUH6K6kvnvM=
+github.com/elastic/beats/v7 v7.17.17 h1:4NOBSc98bshb5tcPHDPICntj00sXuvGmXfw66Jamjbg=
+github.com/elastic/beats/v7 v7.17.17/go.mod h1:WheUDWAtQFQaSM78p0Jn+hY0mzPZQAcwRl3NT+4li5M=
 github.com/elastic/elastic-agent-client/v7 v7.8.0 h1:GHFzDJIWpdgI0qDk5EcqbQJGvwTsl2E2vQK3/xe+MYQ=
 github.com/elastic/elastic-agent-client/v7 v7.8.0/go.mod h1:ihtjqJzYiIltlRhNruaSSc0ogxIhqPD5hOMKq16cI1s=
 github.com/elastic/elastic-agent-libs v0.7.5 h1:4UMqB3BREvhwecYTs/L23oQp1hs/XUkcunPlmTZn5yg=
