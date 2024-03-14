@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.3
 
 require (
-	github.com/elastic/beats/v7 v7.17.16
+	github.com/elastic/beats/v7 v7.17.17
 	github.com/emersion/go-sasl v0.0.0-20211008083017-0b9dcfb154ac
 	github.com/emersion/go-smtp v0.15.0
 	github.com/emicklei/proto v1.9.2
