@@ -33,6 +33,7 @@ analysis.json
 coverage.html
 cache_save_file.json
 pkg/config/path
+pkg/traceability/sampling/file
 
 main-resources.json
 sub-resources.json
