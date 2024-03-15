@@ -9,11 +9,10 @@
 
 package management
 
-// DataplaneSpecSwaggerHub The configuration common to all AWS agents that use this dataplane
+// DataplaneSpecSwaggerHub The configuration common to all SwaggerHub agents that use this dataplane
 type DataplaneSpecSwaggerHub struct {
 	Type string `json:"type,omitempty"`
-	// This is defined whether to discover both private and public API's from SwaggerHub.
-	DiscoverPrivateAPI bool `json:"discoverPrivateAPI,omitempty"`
 	// The owner of the organization that is used to discovery the API Specs.
-	Owner string `json:"owner"`
+	Owner  string                        `json:"owner"`
+	Filter DataplaneSpecSwaggerHubFilter `json:"filter,omitempty"`
 }
