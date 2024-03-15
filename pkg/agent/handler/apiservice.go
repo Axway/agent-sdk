@@ -14,18 +14,24 @@ import (
 
 type apiSvcHandler struct {
 	agentCacheManager agentcache.Manager
+	envName           string
 }
 
 // NewAPISvcHandler creates a Handler for API Services.
-func NewAPISvcHandler(agentCacheManager agentcache.Manager) Handler {
+func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Handler {
 	return &apiSvcHandler{
 		agentCacheManager: agentCacheManager,
+		envName:           envName,
 	}
 }
 
 func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if resource.Kind != management.APIServiceGVK().Kind {
+		return nil
+	}
+
+	if resource.Metadata.Scope.Name != h.envName {
 		return nil
 	}
 

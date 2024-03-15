@@ -14,18 +14,24 @@ import (
 type environmentHandler struct {
 	agentCacheManager agentcache.Manager
 	credentialConfig  config.CredentialConfig
+	envName           string
 }
 
 // NewEnvironmentHandler creates a Handler for Environments.
-func NewEnvironmentHandler(agentCacheManager agentcache.Manager, credentialConfig config.CredentialConfig) Handler {
+func NewEnvironmentHandler(agentCacheManager agentcache.Manager, credentialConfig config.CredentialConfig, envName string) Handler {
 	return &environmentHandler{
 		agentCacheManager: agentCacheManager,
 		credentialConfig:  credentialConfig,
+		envName:           envName,
 	}
 }
 
 func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	if resource.Kind != environment.EnvironmentGVK().Kind {
+		return nil
+	}
+
+	if resource.Metadata.Scope.Name != c.envName {
 		return nil
 	}
 

@@ -668,9 +668,10 @@ func cleanUp() {
 }
 
 func newHandlers() []handler.Handler {
+	envName := GetCentralConfig().GetEnvironmentName()
 	handlers := []handler.Handler{
-		handler.NewAPISvcHandler(agent.cacheManager),
-		handler.NewInstanceHandler(agent.cacheManager),
+		handler.NewAPISvcHandler(agent.cacheManager, envName),
+		handler.NewInstanceHandler(agent.cacheManager, envName),
 		handler.NewAgentResourceHandler(agent.agentResourceManager),
 		handler.NewWatchResourceHandler(agent.cacheManager, agent.cfg),
 		agent.proxyResourceHandler,
@@ -682,7 +683,7 @@ func newHandlers() []handler.Handler {
 			handler.NewCategoryHandler(agent.cacheManager),
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
-			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
+			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
 		)
 	}
 
