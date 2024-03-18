@@ -11,5 +11,6 @@ package catalog
 
 // ProductReviewSpec struct for ProductReviewSpec
 type ProductReviewSpec struct {
-	Rating int32 `json:"rating"`
+	Rating  int32  `json:"rating"`
+	Comment string `json:"comment,omitempty"`
 }

@@ -12,7 +12,8 @@ package catalog
 // ReleaseTagSpec struct for ReleaseTagSpec
 type ReleaseTagSpec struct {
 	// Description of the Release Tag.
-	Description      string                               `json:"description,omitempty"`
-	ReleaseType      string                               `json:"releaseType"`
-	PreviousReleases AssetSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
+	Description              string                                 `json:"description,omitempty"`
+	ReleaseType              string                                 `json:"releaseType"`
+	ReleaseVersionProperties ReleaseTagSpecReleaseVersionProperties `json:"releaseVersionProperties,omitempty"`
+	PreviousReleases         ReleaseTagSpecPreviousReleases         `json:"previousReleases,omitempty"`
 }

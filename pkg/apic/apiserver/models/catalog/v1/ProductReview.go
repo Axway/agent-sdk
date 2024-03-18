@@ -30,6 +30,7 @@ const (
 	ProductReviewResourceName               = "productreviews"
 	ProductReview_embeddedSubResourceName   = "_embedded"
 	ProductReviewMarketplaceSubResourceName = "marketplace"
+	ProductReviewStateSubResourceName       = "state"
 )
 
 func ProductReviewGVK() apiv1.GroupVersionKind {
@@ -48,6 +49,7 @@ type ProductReview struct {
 	Marketplace ProductReviewMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner             `json:"owner"`
 	Spec        ProductReviewSpec        `json:"spec"`
+	State       ProductReviewState       `json:"state"`
 }
 
 // NewProductReview creates an empty *ProductReview
@@ -136,6 +138,7 @@ func (res *ProductReview) MarshalJSON() ([]byte, error) {
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
+	out["state"] = res.State
 
 	return json.Marshal(out)
 }
@@ -188,6 +191,20 @@ func (res *ProductReview) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "marketplace")
 		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource State
+	if v, ok := aux.SubResources["state"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "state")
+		err = json.Unmarshal(sr, &res.State)
 		if err != nil {
 			return err
 		}

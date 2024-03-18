@@ -11,6 +11,6 @@ package catalog
 
 // AssetSpecAutoReleasePreviousReleases struct for AssetSpecAutoReleasePreviousReleases
 type AssetSpecAutoReleasePreviousReleases struct {
-	// Updates all prior non-archived releases to the deprecated state.
+	// Updates all prior non-archived releases to the desired state.
 	UpdateState string `json:"updateState,omitempty"`
 }
