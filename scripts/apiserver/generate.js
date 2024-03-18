@@ -137,26 +137,21 @@ const writeMainResources = (mainResources) => {
 const createMainAndSubResources = (spec) => {
 	// main resources are passed to the go template. subresources are passed to the openapi-generator
 	const mainResources = {};
-	const subResources = Object.keys(spec.components.schemas).reduce(
-		(acc, schemaKey) => {
-			addResourceToGroupVersion(
-				spec.components.schemas[schemaKey]["x-axway-group"]
-					? mainResources
-					: acc,
-				spec,
-				schemaKey
-			);
-			return acc;
-		},
-		{}
-	);
+	const subResources = Object.keys(spec.components.schemas).reduce((acc, schemaKey) => {
+		addResourceToGroupVersion(
+			spec.components.schemas[schemaKey]["x-axway-group"] ? mainResources : acc,
+			spec,
+			schemaKey
+		);
+		return acc;
+	}, {});
 	return [subResources, mainResources];
 };
 
 const addResourceToGroupVersion = (acc, spec, schemaKey) => {
 	const { schemas } = spec.components;
 	let [group, version, ...kind] = schemaKey.split(".");
-	kind = kind.join(".")
+	kind = kind.join(".");
 
 	// if the group does not exist, create the grouped resource
 	if (!acc[group]) {
@@ -253,9 +248,7 @@ const createOasSchema = (openapi, schemas) => {
 
 // The main API Server resources get passed into here, like APISpec, Environment, etc. Used to format the object before parsing it with the resources.tmpl file.
 const createGomplateResource = (resource) => {
-	let scopes = resource["x-axway-scopes"]
-		? resource["x-axway-scopes"].map((scope) => scope.kind)
-		: null;
+	let scopes = resource["x-axway-scopes"] ? resource["x-axway-scopes"].map((scope) => scope.kind) : null;
 	if (scopes) {
 		scopes.sort();
 	}
@@ -277,20 +270,16 @@ const writeSet = (resources) => {
 	var setResources = [];
 	Object.entries(resources).forEach(([group, versions]) => {
 		Object.entries(versions).forEach(([version, versionFields]) => {
-			kinds = Object.entries(versionFields.components.schemas).map(
-				([kind, { "x-axway-scoped": scoped }]) => {
-					return { kind, scoped };
-				}
-			);
+			kinds = Object.entries(versionFields.components.schemas).map(([kind, { "x-axway-scoped": scoped }]) => {
+				return { kind, scoped };
+			});
 			setResources.push({ group, version, kinds });
 		});
 	});
 	const setInput = JSON.stringify({ set: setResources }, null, 2);
 
 	execSync(
-		`gomplate --context input='stdin:?type=application/json' -f ./set.tmpl --out "` +
-			outDir +
-			`/clients/set.go"`,
+		`gomplate --context input='stdin:?type=application/json' -f ./set.tmpl --out "` + outDir + `/clients/set.go"`,
 		{ input: setInput }
 	);
 };
