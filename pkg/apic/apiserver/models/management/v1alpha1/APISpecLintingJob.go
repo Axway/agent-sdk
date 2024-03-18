@@ -27,11 +27,10 @@ var (
 )
 
 const (
-	APISpecLintingJobResourceName             = "apispeclintingjobs"
-	ApiSpecLintingJob_embeddedSubResourceName = "_embedded"
-	ApiSpecLintingJobArchivedSubResourceName  = "archived"
-	ApiSpecLintingJobResultSubResourceName    = "result"
-	ApiSpecLintingJobStateSubResourceName     = "state"
+	APISpecLintingJobResourceName            = "apispeclintingjobs"
+	ApiSpecLintingJobArchivedSubResourceName = "archived"
+	ApiSpecLintingJobResultSubResourceName   = "result"
+	ApiSpecLintingJobStateSubResourceName    = "state"
 )
 
 func APISpecLintingJobGVK() apiv1.GroupVersionKind {
@@ -46,12 +45,11 @@ func init() {
 // APISpecLintingJob Resource
 type APISpecLintingJob struct {
 	apiv1.ResourceMeta
-	_embedded interface{}             `json:"_embedded"`
-	Archived  interface{}             `json:"archived"`
-	Owner     *apiv1.Owner            `json:"owner"`
-	Result    ApiSpecLintingJobResult `json:"result"`
-	Spec      ApiSpecLintingJobSpec   `json:"spec"`
-	State     ApiSpecLintingJobState  `json:"state"`
+	Archived interface{}             `json:"archived"`
+	Owner    *apiv1.Owner            `json:"owner"`
+	Result   ApiSpecLintingJobResult `json:"result"`
+	Spec     ApiSpecLintingJobSpec   `json:"spec"`
+	State    ApiSpecLintingJobState  `json:"state"`
 }
 
 // NewAPISpecLintingJob creates an empty *APISpecLintingJob
@@ -136,7 +134,6 @@ func (res *APISpecLintingJob) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["archived"] = res.Archived
 	out["owner"] = res.Owner
 	out["result"] = res.Result
@@ -169,20 +166,6 @@ func (res *APISpecLintingJob) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Archived

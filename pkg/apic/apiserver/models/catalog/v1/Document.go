@@ -28,10 +28,9 @@ var (
 )
 
 const (
-	DocumentResourceName             = "documents"
-	Document_embeddedSubResourceName = "_embedded"
-	DocumentIconSubResourceName      = "icon"
-	DocumentStatusSubResourceName    = "status"
+	DocumentResourceName          = "documents"
+	DocumentIconSubResourceName   = "icon"
+	DocumentStatusSubResourceName = "status"
 )
 
 func DocumentGVK() apiv1.GroupVersionKind {
@@ -46,11 +45,10 @@ func init() {
 // Document Resource
 type Document struct {
 	apiv1.ResourceMeta
-	_embedded interface{}  `json:"_embedded"`
-	Icon      interface{}  `json:"icon"`
-	Owner     *apiv1.Owner `json:"owner"`
-	Spec      DocumentSpec `json:"spec"`
-	// Status    DocumentStatus `json:"status"`
+	Icon  interface{}  `json:"icon"`
+	Owner *apiv1.Owner `json:"owner"`
+	Spec  DocumentSpec `json:"spec"`
+	// Status DocumentStatus `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -147,7 +145,6 @@ func (res *Document) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["icon"] = res.Icon
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -179,20 +176,6 @@ func (res *Document) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Icon

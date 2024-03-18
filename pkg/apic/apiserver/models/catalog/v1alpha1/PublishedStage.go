@@ -27,8 +27,7 @@ var (
 )
 
 const (
-	PublishedStageResourceName             = "publishedstages"
-	PublishedStage_embeddedSubResourceName = "_embedded"
+	PublishedStageResourceName = "publishedstages"
 )
 
 func PublishedStageGVK() apiv1.GroupVersionKind {
@@ -43,9 +42,8 @@ func init() {
 // PublishedStage Resource
 type PublishedStage struct {
 	apiv1.ResourceMeta
-	_embedded interface{}        `json:"_embedded"`
-	Owner     *apiv1.Owner       `json:"owner"`
-	Spec      PublishedStageSpec `json:"spec"`
+	Owner *apiv1.Owner       `json:"owner"`
+	Spec  PublishedStageSpec `json:"spec"`
 }
 
 // NewPublishedStage creates an empty *PublishedStage
@@ -130,7 +128,6 @@ func (res *PublishedStage) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	out["_embedded"] = res._embedded
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -160,20 +157,6 @@ func (res *PublishedStage) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource _embedded
-	if v, ok := aux.SubResources["_embedded"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "_embedded")
-		err = json.Unmarshal(sr, &res._embedded)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

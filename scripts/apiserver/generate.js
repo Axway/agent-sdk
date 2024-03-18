@@ -196,6 +196,7 @@ const filterFields = (resource) => {
 		"finalizers",
 		"attributes",
 		"tags",
+		"_embedded",
 	]);
 
 	for (key in properties) {
