@@ -13,4 +13,5 @@ package catalog
 type DocumentResourceReferences struct {
 	// The marketplaces this DocumentResource is being used in as part of the marketplace settings.
 	MarketplaceSettings []DocumentResourceReferencesMarketplaceSettings `json:"marketplaceSettings,omitempty"`
+	PlatformSettings    DocumentResourceReferencesPlatformSettings      `json:"platformSettings,omitempty"`
 }

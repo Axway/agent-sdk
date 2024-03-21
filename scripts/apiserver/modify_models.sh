@@ -97,6 +97,55 @@ $SED -i "/ApiServiceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIService.go
 
+
+######################
+# For APIService.go, we want to turn    "Source ApiServiceSource `json:"source"`" into
+# "Source *ApiServiceSource `json:"source"`"
+######################
+SEARCH="\s*Source\s*ApiServiceSource.*"
+REPLACE="Source *ApiServiceSource\`json:\"source,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
+# add in the new line we want
+$SED -i "/ApiServiceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIService.go
+
+
+######################
+# For APIServiceInstance.go, we want to turn    "Compliance ApiServiceInstanceCompliance `json:"compliance"`" into
+# "Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`"
+######################
+SEARCH="\s*Compliance\s*ApiServiceInstanceCompliance.*"
+REPLACE="Compliance *ApiServiceInstanceCompliance\`json:\"compliance,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
+
+
+######################
+# For APIServiceInstance.go, we want to turn    "Source ApiServiceInstanceSource `json:"source"`" into
+# "Source *ApiServiceInstanceSource `json:"source"`"
+######################
+SEARCH="\s*Source\s*ApiServiceInstanceSource.*"
+REPLACE="Source *ApiServiceInstanceSource\`json:\"source,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
+
+
 ######################
 # For model_traceability_agent_spec_config.go, we want to turn 	"Sampling TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`" into
 # "Sampling  *TraceabilityAgentSpecConfigSampling  `json:"sampling"`"
