@@ -14,4 +14,6 @@ type SubscriptionApproval struct {
 	State string `json:"state"`
 	// Reason for the state.
 	Reason string `json:"reason,omitempty"`
+	// Id of the user that approved or reject the subscription.
+	UserId string `json:"userId,omitempty"`
 }

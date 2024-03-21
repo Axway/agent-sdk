@@ -15,6 +15,7 @@ type ProductPlanSpecBilling struct {
 	// The base price for the plan.
 	Price float64 `json:"price,omitempty"`
 	// The billing cycle type.
-	Cycle    string `json:"cycle,omitempty"`
-	Interval string `json:"interval"`
+	Cycle    string                      `json:"cycle,omitempty"`
+	Interval string                      `json:"interval"`
+	Setup    ProductPlanSpecBillingSetup `json:"setup,omitempty"`
 }
