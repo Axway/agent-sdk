@@ -1,8 +1,10 @@
 package apic
 
 import (
+	"net/http"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -201,4 +203,236 @@ func Test_buildAPIServiceInstanceNilAttributes(t *testing.T) {
 
 	inst = client.updateAPIServiceInstance(body, inst, ep)
 	assert.NotNil(t, inst.Attributes)
+}
+
+func createAPIServiceInstance(name, id string, refInstance string, dpType string, isDesign bool) *management.APIServiceInstance {
+	instance := &management.APIServiceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:  name,
+			Title: name,
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					defs.AttrExternalAPIID:   id,
+					defs.AttrExternalAPIName: name,
+				},
+			},
+		},
+		Spec: management.ApiServiceInstanceSpec{},
+	}
+	if refInstance != "" || dpType != "" {
+		instance.Source = &management.ApiServiceInstanceSource{
+			References: management.ApiServiceInstanceSourceReferences{
+				ApiServiceInstance: refInstance,
+			},
+		}
+		instance.Source.DataplaneType = management.ApiServiceInstanceSourceDataplaneType{}
+		if isDesign {
+			instance.Source.DataplaneType.Design = dpType
+		} else {
+			instance.Source.DataplaneType.Managed = dpType
+		}
+	}
+	return instance
+}
+
+func TestInstanceSourceUpdates(t *testing.T) {
+	// case 1 - new instance, source managed dataplane, sub resource updated
+	// case 2 - new instance, source design dataplane, sub resource updated
+	// case 3 - new instance, source unmanaged dataplane with reference, sub resource updated
+	// case 4 - existing instance, no source, source updated
+	// case 5 - existing instance, existing source, different dataplane type, source updated
+	// case 6 - existing instance, existing source, different reference, source updated
+	// case 7 - existing instance, existing source, same dataplane type and same reference, no source updated
+	testCases := []struct {
+		name               string
+		instanceName       string
+		managedDataplane   DataplaneType
+		designDataplane    DataplaneType
+		existingInstance   *management.APIServiceInstance
+		referenceInstance  string
+		apiserverResponses []api.MockResponse
+	}{
+		{
+			name:             "new instance for managed dataplane",
+			instanceName:     "newInstManaged",
+			managedDataplane: AWS,
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/serviceinstance.json", // call to create the instance
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:            "new instance for design dataplane",
+			instanceName:    "newInstDesign",
+			designDataplane: GitLab,
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/serviceinstance.json", // call to create the instance
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:              "new instance for unmanaged dataplane with referenced instance",
+			instanceName:      "newInstUnmanaged",
+			managedDataplane:  Unclassified,
+			referenceInstance: "refInst",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/serviceinstance.json", // call to create the instance
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing instance with no source",
+			instanceName:     "daleapi",
+			managedDataplane: AWS,
+			existingInstance: createAPIServiceInstance("daleapi", "2f5f92f0-f5e4-44fb-bc84-599c27b3497a", "", "", false),
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/serviceinstance.json", // call to get the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing instance with different dataplane type",
+			instanceName:     "existingInstance",
+			managedDataplane: AWS,
+			existingInstance: createAPIServiceInstance("existingInstance", "existingInstance", "", Unclassified.String(), false),
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:              "existing instance with different referenced instance",
+			instanceName:      "existingInstance",
+			managedDataplane:  Unclassified,
+			existingInstance:  createAPIServiceInstance("existingInstance", "existingInstance", "refInstance", Unclassified.String(), false),
+			referenceInstance: "newRefInstance",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:              "existing instance with same source",
+			instanceName:      "existingInstance",
+			managedDataplane:  Unclassified,
+			existingInstance:  createAPIServiceInstance("existingInstance", "existingInstance", "refInstance", Unclassified.String(), false),
+			referenceInstance: "refInstance",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update the instance
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				// no source subresource update
+			},
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			client, httpClient := GetTestServiceClient()
+			body := &ServiceBody{
+				RestAPIID: test.instanceName,
+			}
+
+			if test.existingInstance != nil {
+				ri, _ := test.existingInstance.AsInstance()
+				client.caches.AddAPIServiceInstance(ri)
+				body.serviceContext.serviceAction = updateAPI
+				body.serviceContext.revisionCount = 1
+			}
+
+			if test.managedDataplane != "" {
+				body.dataplaneType = test.managedDataplane
+			}
+			if test.designDataplane != "" {
+				body.dataplaneType = test.designDataplane
+				body.isDesignDataplane = true
+			}
+			body.referencedInstanceName = test.referenceInstance
+			httpClient.SetResponses(test.apiserverResponses)
+
+			err := client.processInstance(body)
+			assert.Nil(t, err)
+			assert.Equal(t, len(test.apiserverResponses), httpClient.RespCount)
+		})
+	}
 }

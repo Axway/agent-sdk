@@ -3,7 +3,7 @@
         "group": "management",
         "apiVersion": "v1alpha1",
         "kind": "APIServiceInstance",
-        "name": "daleapi.1",
+        "name": "existingInstance",
         "title": "DaleAPI (V7)",
         "metadata": {
             "id": "e4ecaab773cb08300173dab5a4220273",
@@ -47,7 +47,15 @@
         },
         "x-agent-details": {
             "createdBy": "",
-            "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
+            "externalAPIID": "existingInstance"
+        },
+        "source" : {
+            "dataplaneType": {
+                "managed": "Unclassified"
+            },
+            "references" : {
+                "apiServiceInstance": "refInstance"
+            }
         }
     }
 ]
