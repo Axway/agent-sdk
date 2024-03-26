@@ -915,11 +915,11 @@ func createAPIService(name, id string, refSvc string, dpType string, isDesign bo
 	}
 	if refSvc != "" || dpType != "" {
 		apiSvc.Source = &management.ApiServiceSource{
-			References: management.ApiServiceSourceReferences{
+			References: &management.ApiServiceSourceReferences{
 				ApiService: refSvc,
 			},
 		}
-		apiSvc.Source.DataplaneType = management.ApiServiceSourceDataplaneType{}
+		apiSvc.Source.DataplaneType = &management.ApiServiceSourceDataplaneType{}
 		if isDesign {
 			apiSvc.Source.DataplaneType.Design = dpType
 		} else {

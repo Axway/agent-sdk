@@ -221,11 +221,11 @@ func createAPIServiceInstance(name, id string, refInstance string, dpType string
 	}
 	if refInstance != "" || dpType != "" {
 		instance.Source = &management.ApiServiceInstanceSource{
-			References: management.ApiServiceInstanceSourceReferences{
+			References: &management.ApiServiceInstanceSourceReferences{
 				ApiServiceInstance: refInstance,
 			},
 		}
-		instance.Source.DataplaneType = management.ApiServiceInstanceSourceDataplaneType{}
+		instance.Source.DataplaneType = &management.ApiServiceInstanceSourceDataplaneType{}
 		if isDesign {
 			instance.Source.DataplaneType.Design = dpType
 		} else {
