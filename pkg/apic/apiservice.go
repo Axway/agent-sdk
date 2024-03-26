@@ -127,6 +127,9 @@ func buildAPIServiceSourceSubResource(svc *management.APIService, serviceBody *S
 
 	dataplaneType := serviceBody.GetDataplaneType()
 	if dataplaneType != "" {
+		if source.DataplaneType == nil {
+			source.DataplaneType = &management.ApiServiceSourceDataplaneType{}
+		}
 		if serviceBody.IsDesignDataplane() {
 			if source.DataplaneType.Design != dataplaneType.String() {
 				source.DataplaneType.Design = dataplaneType.String()
@@ -139,9 +142,14 @@ func buildAPIServiceSourceSubResource(svc *management.APIService, serviceBody *S
 	}
 
 	referencedSvc := serviceBody.GetReferencedServiceName()
-	if referencedSvc != "" && source.References.ApiService != referencedSvc {
-		source.References.ApiService = serviceBody.GetReferencedServiceName()
-		serviceBody.serviceContext.updateServiceSource = true
+	if referencedSvc != "" {
+		if source.References == nil {
+			source.References = &management.ApiServiceSourceReferences{}
+		}
+		if source.References.ApiService != referencedSvc {
+			source.References.ApiService = serviceBody.GetReferencedServiceName()
+			serviceBody.serviceContext.updateServiceSource = true
+		}
 	}
 }
 
