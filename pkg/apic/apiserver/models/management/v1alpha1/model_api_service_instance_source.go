@@ -11,7 +11,16 @@ package management
 
 // ApiServiceInstanceSource  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSource struct {
-	DataplaneType ApiServiceInstanceSourceDataplaneType `json:"dataplaneType,omitempty"`
-	References    ApiServiceInstanceSourceReferences    `json:"references,omitempty"`
-	Compliance    ApiServiceInstanceSourceCompliance    `json:"compliance,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	DataplaneType ApiServiceInstanceSourceDataplaneType `json:"dataplaneType,omitempty"`
+	DataplaneType *ApiServiceInstanceSourceDataplaneType `json:"dataplaneType,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	References    ApiServiceInstanceSourceReferences     `json:"references,omitempty"`
+	References *ApiServiceInstanceSourceReferences `json:"references,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Compliance ApiServiceInstanceSourceCompliance  `json:"compliance,omitempty"`
+	Compliance *ApiServiceInstanceSourceCompliance `json:"compliance,omitempty"`
 }
