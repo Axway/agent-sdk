@@ -2,6 +2,7 @@ package exception
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,4 +58,24 @@ func TestExceptionTryCatchFinallyBlock(t *testing.T) {
 	assert.NotNil(t, catchErr)
 	assert.Equal(t, "try_catch_finally_err", catchErr.Error())
 	assert.Equal(t, "trycatchfinally", executionOrder)
+}
+
+func TestExceptionTryCatchBlockWithNPE(t *testing.T) {
+	var catchErr error
+	var executionOrder string
+	tryCatchFinallyBlockException := Block{
+		Try: func() {
+			executionOrder = "try"
+			b := Block{}
+			b.Try()
+		},
+		Catch: func(err error) {
+			executionOrder = executionOrder + "catch"
+			catchErr = err
+		},
+	}.Do
+
+	assert.NotPanics(t, tryCatchFinallyBlockException)
+	assert.NotNil(t, catchErr)
+	assert.Equal(t, strings.Contains(catchErr.Error(), "runtime error: invalid memory address or nil pointer dereference"), true)
 }
