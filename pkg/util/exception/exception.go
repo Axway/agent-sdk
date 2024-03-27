@@ -1,5 +1,10 @@
 package exception
 
+import (
+	"fmt"
+	"runtime/debug"
+)
+
 // Block - defines the try, catch and finally code blocks
 type Block struct {
 	Try     func()
@@ -29,7 +34,7 @@ func (block Block) Do() {
 	if block.Catch != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				block.Catch(r.(error))
+				block.Catch(fmt.Errorf(string(debug.Stack())))
 			}
 		}()
 	}
