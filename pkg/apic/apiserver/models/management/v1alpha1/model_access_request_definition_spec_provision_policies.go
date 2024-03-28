@@ -9,7 +9,7 @@
 
 package management
 
-// AccessRequestDefinitionSpecProvisionPolicies Defines the policies applied on the AccessRequests generated using this definition.
+// AccessRequestDefinitionSpecProvisionPolicies Defines the policies applied on the AccessRequests generated using this definition. (management.v1alpha1.AccessRequestDefinition)
 type AccessRequestDefinitionSpecProvisionPolicies struct {
 	// Defines on if AccessRequests using this definition can be moved from their current Subscription to a new one. This update implies that quotas and references are updated depending on the new Subscription's plan.
 	Transferable bool `json:"transferable,omitempty"`

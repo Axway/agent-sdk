@@ -9,7 +9,7 @@
 
 package catalog
 
-// WebhookSpecAuth Defines the authentication used to invoke the webhook. When invoking the webhook, the value from the secret/key will be sent in the Authorization header.
+// WebhookSpecAuth Defines the authentication used to invoke the webhook. When invoking the webhook, the value from the secret/key will be sent in the Authorization header.  (catalog.v1alpha1.Webhook)
 type WebhookSpecAuth struct {
 	Secret WebhookSpecAuthSecret `json:"secret,omitempty"`
 }

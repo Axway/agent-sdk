@@ -9,10 +9,10 @@
 
 package catalog
 
-// ConsumerStageVisibilitySpec struct for ConsumerStageVisibilitySpec
+// ConsumerStageVisibilitySpec  (catalog.v1alpha1.ConsumerStageVisibility)
 type ConsumerStageVisibilitySpec struct {
 	// Defines where the visibility settings apply.
-	Stages []StageVisibilitySpecStages `json:"stages"`
+	Stages []ConsumerStageVisibilitySpecStages `json:"stages"`
 	// GENERATE: The following code has been modified after code generation
 	Subjects []interface{} `json:"subjects,omitempty"`
 }

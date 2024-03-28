@@ -9,7 +9,7 @@
 
 package catalog
 
-// AuthorizationProfilePoliciesCredentials Defines the policies for the AuthorizationProfile's Credentials generated with the profiles CredentialRequestDefinitions.
+// AuthorizationProfilePoliciesCredentials Defines the policies for the AuthorizationProfile's Credentials generated with the profiles CredentialRequestDefinitions. (catalog.v1alpha1.AuthorizationProfile)
 type AuthorizationProfilePoliciesCredentials struct {
 	Expiry AuthorizationProfilePoliciesCredentialsExpiry `json:"expiry,omitempty"`
 }

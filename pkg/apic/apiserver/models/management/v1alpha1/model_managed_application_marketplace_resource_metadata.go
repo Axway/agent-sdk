@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationMarketplaceResourceMetadata Marketplace Application metadata.
+// ManagedApplicationMarketplaceResourceMetadata Marketplace Application metadata. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplaceResourceMetadata struct {
 	// Id of the user that created the entity.
 	CreateUserId string `json:"createUserId,omitempty"`

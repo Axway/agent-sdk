@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusResourceAssetResource struct for AssetMappingStatusResourceAssetResource
+// AssetMappingStatusResourceAssetResource  (management.v1alpha1.AssetMapping)
 type AssetMappingStatusResourceAssetResource struct {
 	Ref string `json:"ref,omitempty"`
 	// GENERATE: The following code has been modified after code generation

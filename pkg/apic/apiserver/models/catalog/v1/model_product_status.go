@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductStatus struct for ProductStatus
+// ProductStatus  (catalog.v1.Product)
 type ProductStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

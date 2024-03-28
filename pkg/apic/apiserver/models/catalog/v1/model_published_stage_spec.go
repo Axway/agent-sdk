@@ -9,7 +9,7 @@
 
 package catalog
 
-// PublishedStageSpec struct for PublishedStageSpec
+// PublishedStageSpec  (catalog.v1.PublishedStage)
 type PublishedStageSpec struct {
 	Stage PublishedStageSpecStage `json:"stage"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpecFilters Filters what AssetRelease the Product points to.
+// ProductSpecFilters Filters what AssetRelease the Product points to. (catalog.v1.Product)
 type ProductSpecFilters struct {
 	// The AssetRelease version to use. Examples:   - 1.0.1 for a specific asset release version   - 1.* for all minor and patch versions of version 1   - 1.2.* for all the patch version for version 1.2
 	Version string `json:"version,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// AuthorizationProfilePolicies struct for AuthorizationProfilePolicies
+// AuthorizationProfilePolicies  (catalog.v1alpha1.AuthorizationProfile)
 type AuthorizationProfilePolicies struct {
 	Credentials AuthorizationProfilePoliciesCredentials `json:"credentials,omitempty"`
 }

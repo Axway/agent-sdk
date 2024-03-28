@@ -9,7 +9,7 @@
 
 package management
 
-// DataplaneSpec struct for DataplaneSpec
+// DataplaneSpec  (management.v1alpha1.Dataplane)
 type DataplaneSpec struct {
 	// The dataplane type that this agent connects to
 	Type string `json:"type"`

@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentSpecCompliance Compliance for the Environment.
+// EnvironmentSpecCompliance Compliance for the Environment. (management.v1alpha1.Environment)
 type EnvironmentSpecCompliance struct {
 	// Reference to Amplify Central design Ruleset
 	Design string `json:"design,omitempty"`

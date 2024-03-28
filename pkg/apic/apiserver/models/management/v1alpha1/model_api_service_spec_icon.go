@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceSpecIcon Image for the APIService.
+// ApiServiceSpecIcon Image for the APIService. (management.v1alpha1.APIService)
 type ApiServiceSpecIcon struct {
 	// Content-Type of the image.
 	ContentType string `json:"contentType,omitempty"`

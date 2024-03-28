@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReferences struct for ProductReferences
+// ProductReferences  (catalog.v1.Product)
 type ProductReferences struct {
 	// Computed DocumentResources used in all Product's Documents articles.
 	DocumentResources []string `json:"documentResources,omitempty"`

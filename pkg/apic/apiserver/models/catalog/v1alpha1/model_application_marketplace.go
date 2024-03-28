@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationMarketplace Details about marketplace in Application.
+// ApplicationMarketplace Details about marketplace in Application. (catalog.v1alpha1.Application)
 type ApplicationMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                         `json:"name"`

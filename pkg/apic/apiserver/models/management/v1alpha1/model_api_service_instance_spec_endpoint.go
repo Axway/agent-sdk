@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceSpecEndpoint struct for ApiServiceInstanceSpecEndpoint
+// ApiServiceInstanceSpecEndpoint  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSpecEndpoint struct {
 	Host     string                        `json:"host"`
 	Port     int32                         `json:"port,omitempty"`

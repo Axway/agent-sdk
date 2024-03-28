@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationMarketplaceResourceOwnerOrganization Organization details.
+// ManagedApplicationMarketplaceResourceOwnerOrganization Organization details. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplaceResourceOwnerOrganization struct {
 	// Id of the organization.
 	Id string `json:"id"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestDefinitionSpecProvisionPolicies Defines the policies applied on the AccessRequests generated using this definition.
+// AssetRequestDefinitionSpecProvisionPolicies Defines the policies applied on the AccessRequests generated using this definition. (catalog.v1alpha1.AssetRequestDefinition)
 type AssetRequestDefinitionSpecProvisionPolicies struct {
 	// Defines on if AssetRequests using this definition can be moved from their current Subscription to a new one.
 	Transferable bool `json:"transferable,omitempty"`

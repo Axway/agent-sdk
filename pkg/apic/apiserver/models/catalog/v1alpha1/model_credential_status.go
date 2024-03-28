@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialStatus struct for CredentialStatus
+// CredentialStatus  (catalog.v1alpha1.Credential)
 type CredentialStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

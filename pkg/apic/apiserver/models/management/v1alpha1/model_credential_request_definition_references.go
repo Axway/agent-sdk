@@ -9,7 +9,7 @@
 
 package management
 
-// CredentialRequestDefinitionReferences struct for CredentialRequestDefinitionReferences
+// CredentialRequestDefinitionReferences  (management.v1alpha1.CredentialRequestDefinition)
 type CredentialRequestDefinitionReferences struct {
 	// The name of the CredentialRequestDefinition from an Environment.
 	CredentialReqDef string `json:"credentialReqDef,omitempty"`

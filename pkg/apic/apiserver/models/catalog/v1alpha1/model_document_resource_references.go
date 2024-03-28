@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceReferences struct for DocumentResourceReferences
+// DocumentResourceReferences  (catalog.v1alpha1.DocumentResource)
 type DocumentResourceReferences struct {
 	// The marketplaces this DocumentResource is being used in as part of the marketplace settings.
 	MarketplaceSettings []DocumentResourceReferencesMarketplaceSettings `json:"marketplaceSettings,omitempty"`

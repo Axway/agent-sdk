@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceLifecycleReleaseState struct for ApiServiceInstanceLifecycleReleaseState
+// ApiServiceInstanceLifecycleReleaseState  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceLifecycleReleaseState struct {
 	// Current release state of the API endpoint(s) such as stable or deprecated.
 	Name string `json:"name"`

@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerInstanceSpecIcon Image for the Catalog Item. If not present, the icon on the APISevice will be used in the Catalog Item.
+// ConsumerInstanceSpecIcon Image for the Catalog Item. If not present, the icon on the APISevice will be used in the Catalog Item. (management.v1alpha1.ConsumerInstance)
 type ConsumerInstanceSpecIcon struct {
 	// Content-Type of the image.
 	ContentType string `json:"contentType,omitempty"`

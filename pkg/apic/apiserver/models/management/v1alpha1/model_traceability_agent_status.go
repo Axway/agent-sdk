@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// TraceabilityAgentStatus struct for TraceabilityAgentStatus
+// TraceabilityAgentStatus  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentStatus struct {
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`

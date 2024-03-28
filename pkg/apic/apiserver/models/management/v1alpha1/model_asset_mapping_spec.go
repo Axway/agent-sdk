@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingSpec struct for AssetMappingSpec
+// AssetMappingSpec  (management.v1alpha1.AssetMapping)
 type AssetMappingSpec struct {
 	// Reference to the executed AssetMappingTemplate.
 	AssetMappingTemplate string                 `json:"assetMappingTemplate,omitempty"`

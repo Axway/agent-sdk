@@ -9,7 +9,7 @@
 
 package catalog
 
-// AuthorizationProfileReferences struct for AuthorizationProfileReferences
+// AuthorizationProfileReferences  (catalog.v1alpha1.AuthorizationProfile)
 type AuthorizationProfileReferences struct {
 	Environment string `json:"environment,omitempty"`
 }

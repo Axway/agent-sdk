@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentStages struct for EnvironmentStages
+// EnvironmentStages  (management.v1alpha1.Environment)
 type EnvironmentStages struct {
 	// The default stage to be assigned to the Environment's APIServiceInstances.
 	Default string `json:"default,omitempty"`

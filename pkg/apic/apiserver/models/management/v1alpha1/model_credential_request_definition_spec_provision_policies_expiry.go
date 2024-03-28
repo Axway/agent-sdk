@@ -9,7 +9,7 @@
 
 package management
 
-// CredentialRequestDefinitionSpecProvisionPoliciesExpiry Expiry properties for Credentials linked to this definition.
+// CredentialRequestDefinitionSpecProvisionPoliciesExpiry Expiry properties for Credentials linked to this definition. (management.v1alpha1.CredentialRequestDefinition)
 type CredentialRequestDefinitionSpecProvisionPoliciesExpiry struct {
 	// The number of days after the Credentials are considered to be expired.
 	Period int32 `json:"period"`

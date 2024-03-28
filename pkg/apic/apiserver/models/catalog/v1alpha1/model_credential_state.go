@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialState Current state of the Credential.
+// CredentialState Current state of the Credential. (catalog.v1alpha1.Credential)
 type CredentialState struct {
 	Name string `json:"name"`
 	// Additional info on the state.

@@ -9,7 +9,7 @@
 
 package management
 
-// DataplaneSecretSpec struct for DataplaneSecretSpec
+// DataplaneSecretSpec  (management.v1alpha1.DataplaneSecret)
 type DataplaneSecretSpec struct {
 	Dataplane string `json:"dataplane"`
 	// Key value pairs for accessing the dataplane. The value will be stored encrypted.

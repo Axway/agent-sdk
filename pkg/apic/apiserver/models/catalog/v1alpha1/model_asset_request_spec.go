@@ -9,8 +9,9 @@
 
 package catalog
 
-// AssetRequestSpec struct for AssetRequestSpec
+// AssetRequestSpec  (catalog.v1alpha1.AssetRequest)
 type AssetRequestSpec struct {
+	//  (catalog.v1alpha1.AssetRequest)
 	Data          map[string]interface{} `json:"data"`
 	AssetResource string                 `json:"assetResource"`
 	// reference to the Subscription to be used to access the Asset Resource.

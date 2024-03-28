@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetReleaseStatus struct for AssetReleaseStatus
+// AssetReleaseStatus  (catalog.v1alpha1.AssetRelease)
 type AssetReleaseStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

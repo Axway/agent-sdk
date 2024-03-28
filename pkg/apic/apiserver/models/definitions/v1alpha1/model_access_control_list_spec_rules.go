@@ -9,7 +9,7 @@
 
 package definitions
 
-// AccessControlListSpecRules struct for AccessControlListSpecRules
+// AccessControlListSpecRules  (definitions.v1alpha1.AccessControlList)
 type AccessControlListSpecRules struct {
 	// GENERATE: The following code has been modified after code generation
 	Access []interface{} `json:"access,omitempty"`

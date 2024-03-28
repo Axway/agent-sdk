@@ -9,10 +9,10 @@
 
 package catalog
 
-// SubscriptionJobStatus struct for SubscriptionJobStatus
+// SubscriptionJobStatus  (catalog.v1alpha1.SubscriptionJob)
 type SubscriptionJobStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []SubscriptionStatusReasons `json:"reasons,omitempty"`
+	Reasons []SubscriptionJobStatusReasons `json:"reasons,omitempty"`
 }

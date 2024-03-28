@@ -9,9 +9,9 @@
 
 package catalog
 
-// AssetRequestDefinitionSpecProvision struct for AssetRequestDefinitionSpecProvision
+// AssetRequestDefinitionSpecProvision  (catalog.v1alpha1.AssetRequestDefinition)
 type AssetRequestDefinitionSpecProvision struct {
-	// JSON Schema draft \\#7 for describing the data to be sent back after access has been provisioned.
+	// JSON Schema draft \\#7 for describing the data to be sent back after access has been provisioned. (catalog.v1alpha1.AssetRequestDefinition)
 	Schema   map[string]interface{}                      `json:"schema,omitempty"`
 	Policies AssetRequestDefinitionSpecProvisionPolicies `json:"policies,omitempty"`
 }

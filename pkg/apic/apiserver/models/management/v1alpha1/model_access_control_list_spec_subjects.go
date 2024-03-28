@@ -9,7 +9,7 @@
 
 package management
 
-// AccessControlListSpecSubjects struct for AccessControlListSpecSubjects
+// AccessControlListSpecSubjects  (management.v1alpha1.AccessControlList)
 type AccessControlListSpecSubjects struct {
 	// Type of the subject
 	Type string `json:"type,omitempty"`

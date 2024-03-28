@@ -9,7 +9,7 @@
 
 package management
 
-// WatchTopicSpecFilters struct for WatchTopicSpecFilters
+// WatchTopicSpecFilters  (management.v1alpha1.WatchTopic)
 type WatchTopicSpecFilters struct {
 	// Value for the group of the resource. Use \"*\" for any.
 	Group string `json:"group"`

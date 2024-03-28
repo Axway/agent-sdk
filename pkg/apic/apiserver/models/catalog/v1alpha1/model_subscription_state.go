@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionState struct for SubscriptionState
+// SubscriptionState  (catalog.v1alpha1.Subscription)
 type SubscriptionState struct {
 	Name string `json:"name"`
 	// Additional info on the state.

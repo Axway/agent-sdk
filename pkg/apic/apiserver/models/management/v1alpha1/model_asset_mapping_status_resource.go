@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusResource The resources that were impacted with the trigger of asset mapping.
+// AssetMappingStatusResource The resources that were impacted with the trigger of asset mapping. (management.v1alpha1.AssetMapping)
 type AssetMappingStatusResource struct {
 	AssetResource AssetMappingStatusResourceAssetResource `json:"assetResource,omitempty"`
 	Stage         AssetMappingStatusResourceStage         `json:"stage,omitempty"`

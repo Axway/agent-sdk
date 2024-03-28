@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentSpecIcon Image for the Environment.
+// EnvironmentSpecIcon Image for the Environment. (management.v1alpha1.Environment)
 type EnvironmentSpecIcon struct {
 	// Content-Type of the image.
 	ContentType string `json:"contentType,omitempty"`

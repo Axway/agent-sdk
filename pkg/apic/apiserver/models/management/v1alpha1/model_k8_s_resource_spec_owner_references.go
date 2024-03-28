@@ -9,7 +9,7 @@
 
 package management
 
-// K8SResourceSpecOwnerReferences struct for K8SResourceSpecOwnerReferences
+// K8SResourceSpecOwnerReferences  (management.v1alpha1.K8SResource)
 type K8SResourceSpecOwnerReferences struct {
 	Kind string `json:"kind,omitempty"`
 	Name string `json:"name,omitempty"`

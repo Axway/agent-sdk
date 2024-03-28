@@ -9,7 +9,7 @@
 
 package management
 
-// K8SClusterSpec struct for K8SClusterSpec
+// K8SClusterSpec  (management.v1alpha1.K8SCluster)
 type K8SClusterSpec struct {
 	Mesh string `json:"mesh,omitempty"`
 }

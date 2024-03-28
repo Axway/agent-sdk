@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationMarketplace Details about the marketplace Application.
+// ManagedApplicationMarketplace Details about the marketplace Application. (management.v1alpha1.ManagedApplication)
 type ManagedApplicationMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                                `json:"name"`

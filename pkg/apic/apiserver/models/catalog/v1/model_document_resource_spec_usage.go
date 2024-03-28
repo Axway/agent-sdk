@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpecUsage Defines where the DocumentResource can be used.
+// DocumentResourceSpecUsage Defines where the DocumentResource can be used. (catalog.v1.DocumentResource)
 type DocumentResourceSpecUsage struct {
 	MarketplaceSettings DocumentResourceSpecUsageMarketplaceSettings `json:"marketplaceSettings"`
 	Products            DocumentResourceSpecUsageProducts            `json:"products"`

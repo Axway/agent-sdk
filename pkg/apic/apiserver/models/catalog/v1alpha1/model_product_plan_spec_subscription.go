@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecSubscription Defines Plan's subscription information
+// ProductPlanSpecSubscription Defines Plan's subscription information (catalog.v1alpha1.ProductPlan)
 type ProductPlanSpecSubscription struct {
 	// Defines properties required from a consumer to subscribe to the plan.
 	Definition string                              `json:"definition,omitempty"`

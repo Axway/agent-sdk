@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReferencesAssets struct for ProductReferencesAssets
+// ProductReferencesAssets  (catalog.v1.Product)
 type ProductReferencesAssets struct {
 	// The Asset reference.
 	Name    string                   `json:"name,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecSubscriptionInterval The subscription interval
+// ProductPlanSpecSubscriptionInterval The subscription interval (catalog.v1alpha1.ProductPlan)
 type ProductPlanSpecSubscriptionInterval struct {
 	// The type of the interval
 	Type string `json:"type,omitempty"`

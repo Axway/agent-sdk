@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentPoliciesCredentialsExpiry Expiry properties for Credentials generated in the scoped Environment.
+// EnvironmentPoliciesCredentialsExpiry Expiry properties for Credentials generated in the scoped Environment. (management.v1alpha1.Environment)
 type EnvironmentPoliciesCredentialsExpiry struct {
 	// The number of days after the Credentials are considered to be expired.
 	Period int32 `json:"period,omitempty"`

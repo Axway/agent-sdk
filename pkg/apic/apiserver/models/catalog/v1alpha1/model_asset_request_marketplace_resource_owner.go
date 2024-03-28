@@ -9,11 +9,11 @@
 
 package catalog
 
-// AssetRequestMarketplaceResourceOwner Owner of the Access Request.
+// AssetRequestMarketplaceResourceOwner Owner of the Access Request. (catalog.v1alpha1.AssetRequest)
 type AssetRequestMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`
 	// Id of the owner of the resource.
-	Id           string                                          `json:"id,omitempty"`
-	Organization ApplicationMarketplaceResourceOwnerOrganization `json:"organization"`
+	Id           string                                           `json:"id,omitempty"`
+	Organization AssetRequestMarketplaceResourceOwnerOrganization `json:"organization"`
 }

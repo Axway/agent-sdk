@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// DiscoveryAgentStatus struct for DiscoveryAgentStatus
+// DiscoveryAgentStatus  (management.v1alpha1.DiscoveryAgent)
 type DiscoveryAgentStatus struct {
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`

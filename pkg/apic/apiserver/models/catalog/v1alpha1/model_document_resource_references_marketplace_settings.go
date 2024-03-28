@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceReferencesMarketplaceSettings struct for DocumentResourceReferencesMarketplaceSettings
+// DocumentResourceReferencesMarketplaceSettings  (catalog.v1alpha1.DocumentResource)
 type DocumentResourceReferencesMarketplaceSettings struct {
 	// The Marketplace reference.
 	Name string `json:"name,omitempty"`

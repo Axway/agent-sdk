@@ -9,7 +9,7 @@
 
 package catalog
 
-// PublishedDocumentResourceSpecDocumentResource struct for PublishedDocumentResourceSpecDocumentResource
+// PublishedDocumentResourceSpecDocumentResource  (catalog.v1.PublishedDocumentResource)
 type PublishedDocumentResourceSpecDocumentResource struct {
 	Name string `json:"name"`
 }

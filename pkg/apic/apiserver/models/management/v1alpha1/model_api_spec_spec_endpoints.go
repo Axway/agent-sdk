@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecSpecEndpoints struct for ApiSpecSpecEndpoints
+// ApiSpecSpecEndpoints  (management.v1alpha1.APISpec)
 type ApiSpecSpecEndpoints struct {
 	// The type of the endpoint.
 	Type string `json:"type,omitempty"`
@@ -19,6 +19,6 @@ type ApiSpecSpecEndpoints struct {
 	Port string `json:"port,omitempty"`
 	// The path on which this spec was discovered.
 	Path string `json:"path,omitempty"`
-	// The labels for the pod this spec was discovered on.
+	// The labels for the pod this spec was discovered on. (management.v1alpha1.APISpec)
 	Labels map[string]string `json:"labels,omitempty"`
 }
