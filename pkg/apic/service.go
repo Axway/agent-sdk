@@ -49,7 +49,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	// there is a current envoy restriction with the payload size (10mb). Quick check on the size
 	if binary.Size(serviceBody.SpecDefinition) >= tenMB {
 		// if greater than 10mb, return
-		err := fmt.Errorf("service %s carries a payload greater than 10mb. Service not created.", serviceBody.APIName)
+		err := fmt.Errorf("service %s carries a payload greater than 10mb. Service not created", serviceBody.APIName)
 		logger.WithError(err).Error("error processing service")
 		return nil, err
 	}

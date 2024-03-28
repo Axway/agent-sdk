@@ -15,4 +15,6 @@ type ApiServiceCompliance struct {
 	Design ApiServiceComplianceLintingStatus `json:"design,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	Security ApiServiceComplianceLintingStatus `json:"security,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	Runtime ApiServiceComplianceRuntimeStatus `json:"runtime,omitempty"`
 }

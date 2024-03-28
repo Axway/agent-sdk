@@ -898,3 +898,217 @@ func Test_buildAPIServiceNilAttributes(t *testing.T) {
 	client.updateAPIService(body, svc)
 	assert.NotNil(t, svc.Attributes)
 }
+
+func createAPIService(name, id string, refSvc string, dpType string, isDesign bool) *management.APIService {
+	apiSvc := &management.APIService{
+		ResourceMeta: apiv1.ResourceMeta{
+			Name:  name,
+			Title: name,
+			SubResources: map[string]interface{}{
+				defs.XAgentDetails: map[string]interface{}{
+					defs.AttrExternalAPIID:   id,
+					defs.AttrExternalAPIName: name,
+				},
+			},
+		},
+		Spec: management.ApiServiceSpec{},
+	}
+	if refSvc != "" || dpType != "" {
+		apiSvc.Source = &management.ApiServiceSource{
+			References: &management.ApiServiceSourceReferences{
+				ApiService: refSvc,
+			},
+		}
+		apiSvc.Source.DataplaneType = &management.ApiServiceSourceDataplaneType{}
+		if isDesign {
+			apiSvc.Source.DataplaneType.Design = dpType
+		} else {
+			apiSvc.Source.DataplaneType.Managed = dpType
+		}
+	}
+	return apiSvc
+}
+
+func TestServiceSourceUpdates(t *testing.T) {
+	// case 1 - new service, source managed dataplane, sub resource updated
+	// case 2 - new service, source design dataplane, sub resource updated
+	// case 3 - new service, source unmanaged dataplane with reference, sub resource updated
+	// case 4 - existing service, no source, source updated
+	// case 5 - existing service, existing source, different dataplane type, source updated
+	// case 6 - existing service, existing source, different reference, source updated
+	// case 7 - existing service, existing source, same dataplane type and same reference, no source updated
+	testCases := []struct {
+		name               string
+		svcName            string
+		managedDataplane   DataplaneType
+		designDataplane    DataplaneType
+		existingSvc        *management.APIService
+		referenceService   string
+		apiserverResponses []api.MockResponse
+	}{
+		{
+			name:             "new service for managed dataplane",
+			svcName:          "newSvcManaged",
+			managedDataplane: AWS,
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to create the service
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:            "new service for design dataplane",
+			svcName:         "newSvcDesign",
+			designDataplane: GitLab,
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to create the service
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "new service for unmanaged dataplane with referenced service",
+			svcName:          "newSvcUnmanaged",
+			managedDataplane: Unclassified,
+			referenceService: "refSvc",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to create the service
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing service with no source",
+			svcName:          "existingSvcNoSource",
+			managedDataplane: AWS,
+			existingSvc:      createAPIService("existingSvcNoSource", "existingSvcNoSource", "", "", false),
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to update the service
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing service with different dataplane type",
+			svcName:          "existingSvcDiffDpType",
+			managedDataplane: AWS,
+			existingSvc:      createAPIService("existingSvcDiffDpType", "existingSvcDiffDpType", "", Unidentified.String(), false),
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to update the service
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing service with different referenced service",
+			svcName:          "existingSvcDiffRefSvc",
+			managedDataplane: AWS,
+			existingSvc:      createAPIService("existingSvcDiffRefSvc", "existingSvcDiffRefSvc", "existingRefSvc", AWS.String(), false),
+			referenceService: "newRefSvc",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to update the service
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name:             "existing service with same source",
+			svcName:          "existingSvcSameSource",
+			managedDataplane: AWS,
+			existingSvc:      createAPIService("existingSvcSameSource", "existingSvcSameSource", "refSvc", AWS.String(), false),
+			referenceService: "refSvc",
+			apiserverResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/apiservice.json", // call to update the service
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/apiservice.json", // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
+				// no source subresource update
+			},
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			client, httpClient := GetTestServiceClient()
+			if test.existingSvc != nil {
+				ri, _ := test.existingSvc.AsInstance()
+				client.caches.AddAPIService(ri)
+			}
+
+			body := &ServiceBody{
+				RestAPIID: test.svcName,
+			}
+			if test.managedDataplane != "" {
+				body.dataplaneType = test.managedDataplane
+			}
+			if test.designDataplane != "" {
+				body.dataplaneType = test.designDataplane
+				body.isDesignDataplane = true
+			}
+			body.referencedServiceName = test.referenceService
+			httpClient.SetResponses(test.apiserverResponses)
+
+			svc, err := client.processService(body)
+			assert.Nil(t, err)
+			assert.NotNil(t, svc)
+			assert.Equal(t, len(test.apiserverResponses), httpClient.RespCount)
+		})
+	}
+}

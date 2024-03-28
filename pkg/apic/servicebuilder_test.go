@@ -82,6 +82,8 @@ func TestServiceBodySetters(t *testing.T) {
 		SetInstanceAgentDetails(instDetails).
 		SetRevisionAgentDetails(revDetails).
 		SetServiceEndpoints(ep).
+		SetReferenceServiceName("refSvc", "refEnv").
+		SetReferenceInstanceName("refInstance", "refEnv").
 		Build()
 
 	assert.Nil(t, err)
@@ -126,6 +128,19 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, svcDetails, sb.ServiceAgentDetails)
 	assert.Equal(t, instDetails, sb.InstanceAgentDetails)
 	assert.Equal(t, revDetails, sb.RevisionAgentDetails)
+	assert.Equal(t, Unidentified, sb.dataplaneType)
+	assert.Equal(t, false, sb.isDesignDataplane)
+	assert.Equal(t, "refEnv/refSvc", sb.GetReferencedServiceName())
+	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
+
+	sb, err = serviceBuilder.
+		SetSourceDataplaneType(GitHub, true).
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, GitHub, sb.dataplaneType)
+	assert.Equal(t, true, sb.isDesignDataplane)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {

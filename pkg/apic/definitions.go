@@ -39,6 +39,29 @@ const (
 	DefaultTeamKey = "DefaultTeam"
 )
 
+// consts for dataplane type
+type DataplaneType string
+
+const (
+	APIM         DataplaneType = "APIM"
+	AWS          DataplaneType = "AWS"
+	Azure        DataplaneType = "Azure"
+	Apigee       DataplaneType = "Apigee"
+	Istio        DataplaneType = "Istio"
+	Mulesoft     DataplaneType = "Mulesoft"
+	Kong         DataplaneType = "Kong"
+	Kafka        DataplaneType = "Kafka"
+	GitHub       DataplaneType = "GitHub"
+	GitLab       DataplaneType = "GitLab"
+	SwaggerHub   DataplaneType = "SwaggerHub"
+	Unidentified DataplaneType = "Unidentified"
+	Unclassified DataplaneType = "Unclassified"
+)
+
+func (t DataplaneType) String() string {
+	return string(t)
+}
+
 // consts for state
 const (
 	UnpublishedState     = "UNPUBLISHED"
@@ -74,6 +97,8 @@ type serviceContext struct {
 	revisionCount        int
 	instanceName         string
 	consumerInstanceName string
+	updateServiceSource  bool
+	updateInstanceSource bool
 }
 
 // EndpointDefinition - holds the service endpoint definition

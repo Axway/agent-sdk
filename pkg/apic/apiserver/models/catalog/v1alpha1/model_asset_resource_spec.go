@@ -22,8 +22,9 @@ type AssetResourceSpec struct {
 	Version string `json:"version,omitempty"`
 	// Base64 encoded value of the api specification.
 	Definition string `json:"definition"`
-	// Resource availabiltiy
+	// Resource availability
 	Status string `json:"status"`
 	// information to access the definition.
-	AccessInfo []AssetResourceSpecAccessInfo `json:"accessInfo,omitempty"`
+	AccessInfo         []AssetResourceSpecAccessInfo       `json:"accessInfo,omitempty"`
+	SourceReleaseState AssetResourceSpecSourceReleaseState `json:"sourceReleaseState,omitempty"`
 }
