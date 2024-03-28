@@ -9,7 +9,7 @@
 
 package management
 
-// ResourceHookSpecTriggers struct for ResourceHookSpecTriggers
+// ResourceHookSpecTriggers  (management.v1alpha1.ResourceHook)
 type ResourceHookSpecTriggers struct {
 	// Value for the group of the resource. Use \"*\" for any.
 	Group string                `json:"group"`

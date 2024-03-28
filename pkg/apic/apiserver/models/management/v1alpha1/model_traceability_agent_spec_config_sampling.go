@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection
+// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigSampling struct {
 	// The percentage of transactions that the agent will save the full transaction details for. Valid values(decimals included) are 0 to 10
 	// GENERATE: The following code has been modified after code generation

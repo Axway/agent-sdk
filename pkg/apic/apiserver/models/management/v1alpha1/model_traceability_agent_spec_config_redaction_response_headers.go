@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigRedactionResponseHeaders The allowed and sanitization setup of response headers in transactional data
+// TraceabilityAgentSpecConfigRedactionResponseHeaders The allowed and sanitization setup of response headers in transactional data (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigRedactionResponseHeaders struct {
 	// The regular expressions for response headers that, when matched, will be saved for Business and Consumer Insights
 	Show []string `json:"show,omitempty"`

@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// CredentialPoliciesExpiry struct for CredentialPoliciesExpiry
+// CredentialPoliciesExpiry  (catalog.v1alpha1.Credential)
 type CredentialPoliciesExpiry struct {
 	// Time when the Credential is set to be expired.
 	Timestamp time.Time `json:"timestamp"`

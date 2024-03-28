@@ -9,7 +9,7 @@
 
 package catalog
 
-// AuthorizationProfilePoliciesCredentialsExpiryNotifications Notifications properties for Credentials expiry.
+// AuthorizationProfilePoliciesCredentialsExpiryNotifications Notifications properties for Credentials expiry. (catalog.v1alpha1.AuthorizationProfile)
 type AuthorizationProfilePoliciesCredentialsExpiryNotifications struct {
 	// The days interval at which to send notifications before the Credentials are to expire.
 	DaysBefore []int32 `json:"daysBefore,omitempty"`

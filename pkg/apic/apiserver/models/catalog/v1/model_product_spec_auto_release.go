@@ -9,11 +9,13 @@
 
 package catalog
 
-// ProductSpecAutoRelease Defines if a product should create releases everytime there is an update to the product references.
+// ProductSpecAutoRelease Defines if a product should create releases everytime there is an update to the product references. (catalog.v1.Product)
 type ProductSpecAutoRelease struct {
 	// Description of the generated release tag.
 	Description              string                                         `json:"description,omitempty"`
 	ReleaseType              string                                         `json:"releaseType"`
 	ReleaseVersionProperties ProductSpecAutoReleaseReleaseVersionProperties `json:"releaseVersionProperties,omitempty"`
-	PreviousReleases         ProductSpecAutoReleasePreviousReleases         `json:"previousReleases,omitempty"`
+	// Set true to suspend auto-release until product state changes to active or deprecated. This property will be automatically removed once activated.
+	RequiresInitialActivation bool                                   `json:"requiresInitialActivation,omitempty"`
+	PreviousReleases          ProductSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
 }

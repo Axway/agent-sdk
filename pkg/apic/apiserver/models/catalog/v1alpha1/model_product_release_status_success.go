@@ -22,6 +22,6 @@ type ProductReleaseStatusSuccess struct {
 	// Time when the change occured.
 	Timestamp time.Time `json:"timestamp"`
 	// message of the result
-	Detail string            `json:"detail"`
-	Meta   ProductStatusMeta `json:"meta,omitempty"`
+	Detail string                          `json:"detail"`
+	Meta   ProductReleaseStatusPendingMeta `json:"meta,omitempty"`
 }

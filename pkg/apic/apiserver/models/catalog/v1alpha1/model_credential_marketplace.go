@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialMarketplace Details about the marketplace Application.
+// CredentialMarketplace Details about the marketplace Application. (catalog.v1alpha1.Credential)
 type CredentialMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                        `json:"name"`

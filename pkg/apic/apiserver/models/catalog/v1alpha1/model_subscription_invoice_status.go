@@ -9,10 +9,10 @@
 
 package catalog
 
-// SubscriptionInvoiceStatus struct for SubscriptionInvoiceStatus
+// SubscriptionInvoiceStatus  (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []SubscriptionStatusReasons `json:"reasons,omitempty"`
+	Reasons []SubscriptionInvoiceStatusReasons `json:"reasons,omitempty"`
 }

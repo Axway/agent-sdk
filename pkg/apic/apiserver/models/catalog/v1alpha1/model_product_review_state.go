@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReviewState struct for ProductReviewState
+// ProductReviewState  (catalog.v1alpha1.ProductReview)
 type ProductReviewState struct {
 	Name string `json:"name,omitempty"`
 	// Additional info on the state.

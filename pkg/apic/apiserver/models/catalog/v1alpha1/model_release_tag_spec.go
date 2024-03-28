@@ -9,7 +9,7 @@
 
 package catalog
 
-// ReleaseTagSpec struct for ReleaseTagSpec
+// ReleaseTagSpec  (catalog.v1alpha1.ReleaseTag)
 type ReleaseTagSpec struct {
 	// Description of the Release Tag.
 	Description              string                                 `json:"description,omitempty"`

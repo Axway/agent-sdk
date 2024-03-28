@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductOverviewSpecDocuments struct for ProductOverviewSpecDocuments
+// ProductOverviewSpecDocuments  (catalog.v1.ProductOverview)
 type ProductOverviewSpecDocuments struct {
 	Name string `json:"name"`
 }

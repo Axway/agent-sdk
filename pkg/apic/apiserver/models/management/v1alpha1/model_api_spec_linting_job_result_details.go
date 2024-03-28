@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingJobResultDetails struct for ApiSpecLintingJobResultDetails
+// ApiSpecLintingJobResultDetails  (management.v1alpha1.APISpecLintingJob)
 type ApiSpecLintingJobResultDetails struct {
 	// Name of the validation rule.
 	Rule string `json:"rule,omitempty"`

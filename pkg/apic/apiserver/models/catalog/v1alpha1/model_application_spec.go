@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationSpec struct for ApplicationSpec
+// ApplicationSpec  (catalog.v1alpha1.Application)
 type ApplicationSpec struct {
 	Security ApplicationSpecSecurity `json:"security"`
 }

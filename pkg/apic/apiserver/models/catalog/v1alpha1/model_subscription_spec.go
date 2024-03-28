@@ -9,11 +9,11 @@
 
 package catalog
 
-// SubscriptionSpec struct for SubscriptionSpec
+// SubscriptionSpec  (catalog.v1alpha1.Subscription)
 type SubscriptionSpec struct {
-	// Data matching the subscription definition schema set on the subscribed plan.
+	// Data matching the subscription definition schema set on the subscribed plan. (catalog.v1alpha1.Subscription)
 	Data map[string]interface{} `json:"data,omitempty"`
-	// Schema snapshot from the subscription definition when the subscription got created.
+	// Schema snapshot from the subscription definition when the subscription got created. (catalog.v1alpha1.Subscription)
 	Schema map[string]interface{} `json:"schema,omitempty"`
 	// Reference to Product resource
 	Product string               `json:"product"`

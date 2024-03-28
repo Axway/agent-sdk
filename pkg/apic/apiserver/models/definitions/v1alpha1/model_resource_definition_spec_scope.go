@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecScope struct for ResourceDefinitionSpecScope
+// ResourceDefinitionSpecScope  (definitions.v1alpha1.ResourceDefinition)
 type ResourceDefinitionSpecScope struct {
 	// Defines the kind of the scope. The server infers this from the endpoint the client submits the request to.
 	Kind string `json:"kind,omitempty"`

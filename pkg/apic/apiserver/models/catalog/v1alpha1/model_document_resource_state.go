@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceState Current state of the DocumentResource.
+// DocumentResourceState Current state of the DocumentResource. (catalog.v1alpha1.DocumentResource)
 type DocumentResourceState struct {
 	// The name of the state of the DocumentResource. If the state is \"final\" it means that the DocumentResource can be used in Products or Marketplace settings.
 	Name string `json:"name,omitempty"`
