@@ -9,8 +9,8 @@
 
 package catalog
 
-// ReleaseTagSpecPreviousReleases  (catalog.v1alpha1.ReleaseTag)
+// ReleaseTagSpecPreviousReleases struct for ReleaseTagSpecPreviousReleases
 type ReleaseTagSpecPreviousReleases struct {
-	// Updates all prior non-archived releases to the deprecated state.
+	// Updates all prior non-archived releases to the desired state.  The 'archived' state is currently available only for Product ReleaseTags.
 	UpdateState string `json:"updateState,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// BatchJobSpec  (management.v1.BatchJob)
+// BatchJobSpec struct for BatchJobSpec
 type BatchJobSpec struct {
 	// Unique string ID assigned by a controller indicating what action this job is performing.
 	Action     string                   `json:"action"`

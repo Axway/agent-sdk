@@ -12,7 +12,7 @@ package management
 // GENERATE: The following code has been modified after code generation
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-// TraceabilityAgentSpecConfig Represents the traceability agent config (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentSpecConfig Represents the traceability agent config
 type TraceabilityAgentSpecConfig struct {
 	// Name of the team that owns the catalog item created by agent. If not provided, the default team will be used.
 	OwningTeam string `json:"owningTeam,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatusResource The resources that were impacted with the trigger of asset mapping. (catalog.v1alpha1.AssetMapping)
+// AssetMappingStatusResource The resources that were impacted with the trigger of asset mapping.
 type AssetMappingStatusResource struct {
 	AssetResource AssetMappingStatusResourceAssetResource `json:"assetResource,omitempty"`
 	Stage         AssetMappingStatusResourceStage         `json:"stage,omitempty"`

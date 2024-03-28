@@ -9,8 +9,8 @@
 
 package catalog
 
-// SubscriptionRequestDefinitionSpec  (catalog.v1alpha1.SubscriptionRequestDefinition)
+// SubscriptionRequestDefinitionSpec struct for SubscriptionRequestDefinitionSpec
 type SubscriptionRequestDefinitionSpec struct {
-	// JSON Schema draft \\#7 for defining the properties needed from a consumer to subscribe to a plan. (catalog.v1alpha1.SubscriptionRequestDefinition)
+	// JSON Schema draft \\#7 for defining the properties needed from a consumer to subscribe to a plan.
 	Schema map[string]interface{} `json:"schema"`
 }

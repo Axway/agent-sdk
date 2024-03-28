@@ -28,8 +28,9 @@ var (
 )
 
 const (
-	AssetResourceResourceName              = "assetresources"
-	AssetResourceReferencesSubResourceName = "references"
+	AssetResourceResourceName               = "assetresources"
+	AssetResourceReferencesSubResourceName  = "references"
+	AssetResourceReleasehashSubResourceName = "releasehash"
 )
 
 func AssetResourceGVK() apiv1.GroupVersionKind {
@@ -44,9 +45,10 @@ func init() {
 // AssetResource Resource
 type AssetResource struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner            `json:"owner"`
-	References AssetResourceReferences `json:"references"`
-	Spec       AssetResourceSpec       `json:"spec"`
+	Owner       *apiv1.Owner            `json:"owner"`
+	References  AssetResourceReferences `json:"references"`
+	Releasehash interface{}             `json:"releasehash"`
+	Spec        AssetResourceSpec       `json:"spec"`
 }
 
 // NewAssetResource creates an empty *AssetResource
@@ -144,6 +146,7 @@ func (res *AssetResource) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["references"] = res.References
+	out["releasehash"] = res.Releasehash
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -183,6 +186,20 @@ func (res *AssetResource) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Releasehash
+	if v, ok := aux.SubResources["releasehash"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "releasehash")
+		err = json.Unmarshal(sr, &res.Releasehash)
 		if err != nil {
 			return err
 		}

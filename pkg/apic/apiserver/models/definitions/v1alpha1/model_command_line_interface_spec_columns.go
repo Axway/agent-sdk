@@ -9,7 +9,7 @@
 
 package definitions
 
-// CommandLineInterfaceSpecColumns  (definitions.v1alpha1.CommandLineInterface)
+// CommandLineInterfaceSpecColumns struct for CommandLineInterfaceSpecColumns
 type CommandLineInterfaceSpecColumns struct {
 	// The name of the column for the resource.
 	Name string `json:"name"`

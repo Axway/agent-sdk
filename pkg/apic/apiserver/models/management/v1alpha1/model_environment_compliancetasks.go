@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentCompliancetasks Subresource that is only accessible by the backend. Used by compliance-controller to auto-start/cancel linting jobs based on changes made to \"spec.compliance\" properties detected via mutation hook. (management.v1alpha1.Environment)
+// EnvironmentCompliancetasks Subresource that is only accessible by the backend. Used by compliance-controller to auto-start/cancel linting jobs based on changes made to \"spec.compliance\" properties detected via mutation hook.
 type EnvironmentCompliancetasks struct {
 	// GENERATE: The following code has been modified after code generation
 	Design EnvironmentCompliancetasksLinting `json:"design,omitempty"`
