@@ -9,7 +9,7 @@
 
 package management
 
-// BatchJobProgress  (management.v1.BatchJob)
+// BatchJobProgress struct for BatchJobProgress
 type BatchJobProgress struct {
 	// The last 1-based page number requested from API Server.
 	PageNumber int32 `json:"pageNumber,omitempty"`

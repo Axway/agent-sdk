@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpecUsageMarketplaceSettings  (catalog.v1.DocumentResource)
+// DocumentResourceSpecUsageMarketplaceSettings struct for DocumentResourceSpecUsageMarketplaceSettings
 type DocumentResourceSpecUsageMarketplaceSettings struct {
 	// Defines if the DocumentResource can be used in the platform marketplace settings. Create PublishedDocumentResources to indicate in which marketplaces the document is available.
 	Available bool `json:"available"`

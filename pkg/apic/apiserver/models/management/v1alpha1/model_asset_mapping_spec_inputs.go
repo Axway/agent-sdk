@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingSpecInputs The list of the inputs provided to the template. (management.v1alpha1.AssetMapping)
+// AssetMappingSpecInputs The list of the inputs provided to the template.
 type AssetMappingSpecInputs struct {
 	ApiService         string `json:"apiService"`
 	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`

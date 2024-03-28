@@ -9,15 +9,11 @@
 
 package catalog
 
-import (
+// ProductReferencesRatings struct for ProductReferencesRatings
+type ProductReferencesRatings struct {
+	Total int32 `json:"total,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	//
-	//	"time"
-	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-)
-
-// ProductPlanJobSpecWhen Describes when to execute the action. (catalog.v1alpha1.ProductPlanJob)
-type ProductPlanJobSpecWhen struct {
-	// Time when the migration should execute.
-	Timestamp time.Time `json:"timestamp,omitempty"`
+	Average float64 `json:"average,omitempty"`
+	// The ratings distribution per value.
+	Distribution []ProductReferencesRatingsDistribution `json:"distribution,omitempty"`
 }

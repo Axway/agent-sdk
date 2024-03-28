@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationSpecSecurity  (management.v1alpha1.ManagedApplication)
+// ManagedApplicationSpecSecurity struct for ManagedApplicationSpecSecurity
 type ManagedApplicationSpecSecurity struct {
 	// public key to be used to encrypt the credentials linked to this Managed Application.
 	EncryptionKey       string `json:"encryptionKey"`

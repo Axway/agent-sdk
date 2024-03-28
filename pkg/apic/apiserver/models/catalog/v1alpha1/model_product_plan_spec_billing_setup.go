@@ -9,7 +9,8 @@
 
 package catalog
 
-// ConsumerProductVisibilitySpecProducts  (catalog.v1alpha1.ConsumerProductVisibility)
-type ConsumerProductVisibilitySpecProducts struct {
-	Name string `json:"name"`
+// ProductPlanSpecBillingSetup Defines the properties for the setup of the plan's subscriptions.
+type ProductPlanSpecBillingSetup struct {
+	// One time charge for the setup of the subscription.
+	Price float64 `json:"price"`
 }

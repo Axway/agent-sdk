@@ -9,7 +9,7 @@
 
 package catalog
 
-// PublishedProductReferencesRelease The Product release that was published to the marketplace (catalog.v1alpha1.PublishedProduct)
+// PublishedProductReferencesRelease The Product release that was published to the marketplace
 type PublishedProductReferencesRelease struct {
 	// Reference to product release
 	Name string `json:"name,omitempty"`

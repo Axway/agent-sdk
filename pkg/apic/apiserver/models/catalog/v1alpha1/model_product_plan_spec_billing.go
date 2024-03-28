@@ -9,12 +9,13 @@
 
 package catalog
 
-// ProductPlanSpecBilling Paid plan billing details. (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBilling Paid plan billing details.
 type ProductPlanSpecBilling struct {
 	Currency string `json:"currency"`
 	// The base price for the plan.
 	Price float64 `json:"price,omitempty"`
 	// The billing cycle type.
-	Cycle    string `json:"cycle,omitempty"`
-	Interval string `json:"interval"`
+	Cycle    string                      `json:"cycle,omitempty"`
+	Interval string                      `json:"interval"`
+	Setup    ProductPlanSpecBillingSetup `json:"setup,omitempty"`
 }

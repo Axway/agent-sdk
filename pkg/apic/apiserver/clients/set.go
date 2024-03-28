@@ -82,6 +82,7 @@ type Set struct {
 	SubscriptionRequestDefinitionCatalogV1alpha1     *catalog_v1alpha1.SubscriptionRequestDefinitionClient
 	ProductPlanJobCatalogV1alpha1                    *catalog_v1alpha1.UnscopedProductPlanJobClient
 	QuotaCatalogV1alpha1                             *catalog_v1alpha1.UnscopedQuotaClient
+	ProductReviewCatalogV1alpha1                     *catalog_v1alpha1.UnscopedProductReviewClient
 	AssetMappingCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetMappingClient
 	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
 	AssetRequestDefinitionCatalogV1alpha1            *catalog_v1alpha1.UnscopedAssetRequestDefinitionClient
@@ -105,6 +106,7 @@ type Set struct {
 	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
 	SubscriptionRequestDefinitionCatalogV1           *catalog_v1.SubscriptionRequestDefinitionClient
 	QuotaCatalogV1                                   *catalog_v1.UnscopedQuotaClient
+	ProductReviewCatalogV1                           *catalog_v1.UnscopedProductReviewClient
 	DocumentCatalogV1                                *catalog_v1.UnscopedDocumentClient
 	ResourceCatalogV1                                *catalog_v1.UnscopedResourceClient
 	ProductOverviewCatalogV1                         *catalog_v1.UnscopedProductOverviewClient
@@ -384,6 +386,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Quota: %s", err))
 	}
+	s.ProductReviewCatalogV1alpha1, err = catalog_v1alpha1.NewProductReviewClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductReview: %s", err))
+	}
 	s.AssetMappingCatalogV1alpha1, err = catalog_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.AssetMapping: %s", err))
@@ -475,6 +481,10 @@ func New(b cAPIV1.Base) *Set {
 	s.QuotaCatalogV1, err = catalog_v1.NewQuotaClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Quota: %s", err))
+	}
+	s.ProductReviewCatalogV1, err = catalog_v1.NewProductReviewClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.ProductReview: %s", err))
 	}
 	s.DocumentCatalogV1, err = catalog_v1.NewDocumentClient(b)
 	if err != nil {

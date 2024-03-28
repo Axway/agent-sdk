@@ -176,6 +176,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 						},
 					},
 				},
+				"references": map[string]interface{}{},
 			},
 		},
 		Owner: &v1.Owner{

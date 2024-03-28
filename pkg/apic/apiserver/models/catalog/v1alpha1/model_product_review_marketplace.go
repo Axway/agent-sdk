@@ -9,8 +9,9 @@
 
 package catalog
 
-// AssetRequestMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.AssetRequest)
-type AssetRequestMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// ProductReviewMarketplace Details about the marketplace ratings.
+type ProductReviewMarketplace struct {
+	// The name of the Marketplace.
+	Name     string                           `json:"name"`
+	Resource ProductReviewMarketplaceResource `json:"resource"`
 }

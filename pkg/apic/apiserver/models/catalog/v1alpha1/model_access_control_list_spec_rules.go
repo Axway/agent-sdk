@@ -9,7 +9,7 @@
 
 package catalog
 
-// AccessControlListSpecRules  (catalog.v1alpha1.AccessControlList)
+// AccessControlListSpecRules struct for AccessControlListSpecRules
 type AccessControlListSpecRules struct {
 	// GENERATE: The following code has been modified after code generation
 	Access []interface{} `json:"access,omitempty"`

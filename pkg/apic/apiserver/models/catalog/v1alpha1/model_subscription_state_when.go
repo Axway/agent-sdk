@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// SubscriptionStateWhen Describes when to execute the scheduled action or when it was executed. Only valid for scheduled actions. (catalog.v1alpha1.Subscription)
+// SubscriptionStateWhen Describes when to execute the scheduled action or when it was executed. Only valid for scheduled actions.
 type SubscriptionStateWhen struct {
 	// Time when the scheduled action should execute or was executed.
 	Timestamp time.Time `json:"timestamp,omitempty"`

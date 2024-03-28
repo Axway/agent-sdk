@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceReferences  (management.v1alpha1.APIService)
+// ApiServiceReferences struct for ApiServiceReferences
 type ApiServiceReferences struct {
 	// The stages set on all the APIServiceInstances for this APIService.
 	Stages []string `json:"stages,omitempty"`

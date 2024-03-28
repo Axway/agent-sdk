@@ -9,8 +9,8 @@
 
 package catalog
 
-// SubscriptionInvoiceMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.SubscriptionInvoice)
-type SubscriptionInvoiceMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// ProductReviewSpec struct for ProductReviewSpec
+type ProductReviewSpec struct {
+	Rating  int32  `json:"rating"`
+	Comment string `json:"comment,omitempty"`
 }

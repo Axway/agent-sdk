@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceLifecycle  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceLifecycle struct for ApiServiceInstanceLifecycle
 type ApiServiceInstanceLifecycle struct {
 	// Overrides the Environment's default stage. Value must be one of Environment's allowed stages.
 	Stage        string                                  `json:"stage,omitempty"`

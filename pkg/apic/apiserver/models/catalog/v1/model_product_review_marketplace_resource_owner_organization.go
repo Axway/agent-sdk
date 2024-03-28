@@ -9,8 +9,8 @@
 
 package catalog
 
-// ProductReleaseStatusPendingMeta struct for ProductReleaseStatusPendingMeta
-type ProductReleaseStatusPendingMeta struct {
-	Asset        string `json:"asset,omitempty"`
-	AssetRelease string `json:"assetRelease,omitempty"`
+// ProductReviewMarketplaceResourceOwnerOrganization Organization details.
+type ProductReviewMarketplaceResourceOwnerOrganization struct {
+	// Id of the organization.
+	Id string `json:"id"`
 }

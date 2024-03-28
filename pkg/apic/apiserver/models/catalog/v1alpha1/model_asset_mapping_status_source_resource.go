@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatusSourceResource The resource that triggered the Asset Mapping. (catalog.v1alpha1.AssetMapping)
+// AssetMappingStatusSourceResource The resource that triggered the Asset Mapping.
 type AssetMappingStatusSourceResource struct {
 	ApiService           AssetMappingStatusSourceResourceApiService           `json:"apiService,omitempty"`
 	ApiServiceRevision   AssetMappingStatusSourceResourceApiServiceRevision   `json:"apiServiceRevision,omitempty"`

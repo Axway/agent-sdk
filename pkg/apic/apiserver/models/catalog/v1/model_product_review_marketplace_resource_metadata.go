@@ -9,10 +9,10 @@
 
 package catalog
 
-// CredentialMarketplaceResourceMetadata Marketplace Application metadata. (catalog.v1alpha1.Credential)
-type CredentialMarketplaceResourceMetadata struct {
+// ProductReviewMarketplaceResourceMetadata Marketplace Subscription metadata.
+type ProductReviewMarketplaceResourceMetadata struct {
 	// Id of the user that created the entity.
 	CreateUserId string `json:"createUserId,omitempty"`
-	// Id of the user that created the entity.
+	// Id of the user that modified the entity.
 	ModifyUserId string `json:"modifyUserId,omitempty"`
 }

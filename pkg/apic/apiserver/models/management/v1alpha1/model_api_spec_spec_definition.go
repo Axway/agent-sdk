@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecSpecDefinition  (management.v1alpha1.APISpec)
+// ApiSpecSpecDefinition struct for ApiSpecSpecDefinition
 type ApiSpecSpecDefinition struct {
 	// The type of the api specification.
 	Type string `json:"type,omitempty"`
