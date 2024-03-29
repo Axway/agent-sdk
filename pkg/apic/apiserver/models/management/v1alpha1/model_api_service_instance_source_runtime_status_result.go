@@ -20,10 +20,10 @@ import (
 type ApiServiceInstanceSourceRuntimeStatusResult struct {
 	// Time when the update occurred.
 	Timestamp time.Time `json:"timestamp,omitempty"`
-	// The total number of critical errors in the runtime compliance result.
-	CriticalCount int32 `json:"criticalCount,omitempty"`
-	// The total number of errors in the runtime compliance result.
-	ErrorCount int32 `json:"errorCount,omitempty"`
-	// The total number of warning in the runtime compliance result.
-	WarningCount int32 `json:"warningCount,omitempty"`
+	// The count of high risk in the runtime compliance result.
+	HighCount int32 `json:"highCount,omitempty"`
+	// The count of medium risk in the runtime compliance result.
+	MediumCount int32 `json:"mediumCount,omitempty"`
+	// The count of low risk in the runtime compliance result.
+	LowCount int32 `json:"lowCount,omitempty"`
 }
