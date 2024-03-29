@@ -15,5 +15,7 @@ type ProductSpecAutoRelease struct {
 	Description              string                                         `json:"description,omitempty"`
 	ReleaseType              string                                         `json:"releaseType"`
 	ReleaseVersionProperties ProductSpecAutoReleaseReleaseVersionProperties `json:"releaseVersionProperties,omitempty"`
-	PreviousReleases         ProductSpecAutoReleasePreviousReleases         `json:"previousReleases,omitempty"`
+	// Set true to suspend auto-release until product state changes to active or deprecated. This property will be automatically removed once activated.
+	RequiresInitialActivation bool                                   `json:"requiresInitialActivation,omitempty"`
+	PreviousReleases          ProductSpecAutoReleasePreviousReleases `json:"previousReleases,omitempty"`
 }
