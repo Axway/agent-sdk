@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ConsumerInstanceStatusPhase  (management.v1alpha1.ConsumerInstance)
+// ConsumerInstanceStatusPhase struct for ConsumerInstanceStatusPhase
 type ConsumerInstanceStatusPhase struct {
 	Name string `json:"name"`
 	// The criticality of the last update

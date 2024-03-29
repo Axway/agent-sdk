@@ -9,7 +9,7 @@
 
 package management
 
-// DataplaneSecurity  (management.v1alpha1.Dataplane)
+// DataplaneSecurity struct for DataplaneSecurity
 type DataplaneSecurity struct {
 	// public key to be used to encrypt the access data linked to this dataplane.
 	EncryptionKey       string `json:"encryptionKey"`

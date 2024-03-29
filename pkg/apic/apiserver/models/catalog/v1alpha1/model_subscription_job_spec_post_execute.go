@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionJobSpecPostExecute  (catalog.v1alpha1.SubscriptionJob)
+// SubscriptionJobSpecPostExecute struct for SubscriptionJobSpecPostExecute
 type SubscriptionJobSpecPostExecute struct {
 	// Actions to be executed after the new Subscription was created.
 	OnSuccess []map[string]interface{} `json:"onSuccess,omitempty"`

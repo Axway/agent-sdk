@@ -9,7 +9,7 @@
 
 package catalog
 
-// StageVisibilitySpec  (catalog.v1alpha1.StageVisibility)
+// StageVisibilitySpec struct for StageVisibilitySpec
 type StageVisibilitySpec struct {
 	// Defines where the visibility settings apply.
 	Stages []StageVisibilitySpecStages `json:"stages"`

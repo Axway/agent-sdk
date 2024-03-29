@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecBillingSetup Defines the properties for the setup of the plan's subscriptions. (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBillingSetup Defines the properties for the setup of the plan's subscriptions.
 type ProductPlanSpecBillingSetup struct {
 	// One time charge for the setup of the subscription.
 	Price float64 `json:"price"`

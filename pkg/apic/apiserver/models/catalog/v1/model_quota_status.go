@@ -9,7 +9,7 @@
 
 package catalog
 
-// QuotaStatus  (catalog.v1.Quota)
+// QuotaStatus struct for QuotaStatus
 type QuotaStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

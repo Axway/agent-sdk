@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingTemplateSpecAsset  (management.v1alpha1.AssetMappingTemplate)
+// AssetMappingTemplateSpecAsset struct for AssetMappingTemplateSpecAsset
 type AssetMappingTemplateSpecAsset struct {
 	// name of the asset or a template for name
 	Name string `json:"name,omitempty"`

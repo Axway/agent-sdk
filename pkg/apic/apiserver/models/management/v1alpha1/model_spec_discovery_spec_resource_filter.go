@@ -9,9 +9,8 @@
 
 package management
 
-// SpecDiscoverySpecResourceFilter Filter pod resources by name or labels. (management.v1alpha1.SpecDiscovery)
+// SpecDiscoverySpecResourceFilter Filter pod resources by name or labels.
 type SpecDiscoverySpecResourceFilter struct {
-	Names []string `json:"names,omitempty"`
-	//  (management.v1alpha1.SpecDiscovery)
+	Names       []string          `json:"names,omitempty"`
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }

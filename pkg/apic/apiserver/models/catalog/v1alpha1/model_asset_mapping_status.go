@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatus  (catalog.v1alpha1.AssetMapping)
+// AssetMappingStatus struct for AssetMappingStatus
 type AssetMappingStatus struct {
 	Level  string                   `json:"level,omitempty"`
 	Source AssetMappingStatusSource `json:"source,omitempty"`

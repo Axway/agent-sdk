@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReviewMarketplaceResourceOwner Owner of the Subscription. (catalog.v1.ProductReview)
+// ProductReviewMarketplaceResourceOwner Owner of the Subscription.
 type ProductReviewMarketplaceResourceOwner struct {
 	Organization ProductReviewMarketplaceResourceOwnerOrganization `json:"organization"`
 }

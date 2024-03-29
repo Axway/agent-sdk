@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpec  (definitions.v1alpha1.ResourceDefinition)
+// ResourceDefinitionSpec struct for ResourceDefinitionSpec
 type ResourceDefinitionSpec struct {
 	// Value used in the endpoint path for accessing the resource.
 	Plural string `json:"plural"`

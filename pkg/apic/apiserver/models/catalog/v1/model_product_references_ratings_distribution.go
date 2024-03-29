@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReferencesRatingsDistribution  (catalog.v1.Product)
+// ProductReferencesRatingsDistribution struct for ProductReferencesRatingsDistribution
 type ProductReferencesRatingsDistribution struct {
 	Rating int32 `json:"rating,omitempty"`
 	Total  int32 `json:"total,omitempty"`

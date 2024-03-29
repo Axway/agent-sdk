@@ -9,7 +9,7 @@
 
 package management
 
-// ResourceDiscoverySpec  (management.v1alpha1.ResourceDiscovery)
+// ResourceDiscoverySpec struct for ResourceDiscoverySpec
 type ResourceDiscoverySpec struct {
 	Version          string                               `json:"version,omitempty"`
 	Kind             string                               `json:"kind,omitempty"`
@@ -20,6 +20,5 @@ type ResourceDiscoverySpec struct {
 	KeepStatusFields []string                             `json:"keepStatusFields,omitempty"`
 	IgnoreLabels     []string                             `json:"ignoreLabels,omitempty"`
 	Tags             []string                             `json:"tags,omitempty"`
-	//  (management.v1alpha1.ResourceDiscovery)
-	ExtraAttributes map[string]string `json:"extraAttributes,omitempty"`
+	ExtraAttributes  map[string]string                    `json:"extraAttributes,omitempty"`
 }

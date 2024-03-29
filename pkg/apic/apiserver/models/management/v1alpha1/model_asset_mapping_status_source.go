@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusSource  (management.v1alpha1.AssetMapping)
+// AssetMappingStatusSource struct for AssetMappingStatusSource
 type AssetMappingStatusSource struct {
 	Resource AssetMappingStatusSourceResource `json:"resource,omitempty"`
 }

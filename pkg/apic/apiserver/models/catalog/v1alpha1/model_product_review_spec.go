@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReviewSpec  (catalog.v1alpha1.ProductReview)
+// ProductReviewSpec struct for ProductReviewSpec
 type ProductReviewSpec struct {
 	Rating  int32  `json:"rating"`
 	Comment string `json:"comment,omitempty"`

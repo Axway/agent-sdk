@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigRedaction How the agent will redact sensitive information within traffic events (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentSpecConfigRedaction How the agent will redact sensitive information within traffic events
 type TraceabilityAgentSpecConfigRedaction struct {
 	// The regular expressions for URL paths that, when matched, will be saved for Business and Consumer Insights
 	Path            []string                                            `json:"path,omitempty"`

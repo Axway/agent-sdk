@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingRulesetSpec  (management.v1.APISpecLintingRuleset)
+// ApiSpecLintingRulesetSpec struct for ApiSpecLintingRulesetSpec
 type ApiSpecLintingRulesetSpec struct {
 	Definition ApiSpecLintingRulesetSpecDefinition `json:"definition,omitempty"`
 	// Description of the API spec linting ruleset.

@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerInstanceStatus  (management.v1alpha1.ConsumerInstance)
+// ConsumerInstanceStatus struct for ConsumerInstanceStatus
 type ConsumerInstanceStatus struct {
 	Phase ConsumerInstanceStatusPhase `json:"phase"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// StageVisibilitySpecStages  (catalog.v1alpha1.StageVisibility)
+// StageVisibilitySpecStages struct for StageVisibilitySpecStages
 type StageVisibilitySpecStages struct {
 	Name string `json:"name"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// ReleaseTagSpecReleaseVersionProperties Version properties for the generated releases. Currently supported only for Products. (catalog.v1alpha1.ReleaseTag)
+// ReleaseTagSpecReleaseVersionProperties Version properties for the generated releases. Currently supported only for Products.
 type ReleaseTagSpecReleaseVersionProperties struct {
 	// Label for the generated release version.
 	Label string `json:"label,omitempty"`

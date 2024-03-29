@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReleaseSpecVersionProperties Defines version related properties. (catalog.v1alpha1.ProductRelease)
+// ProductReleaseSpecVersionProperties Defines version related properties.
 type ProductReleaseSpecVersionProperties struct {
 	// Label for the generated version.
 	Label string `json:"label,omitempty"`

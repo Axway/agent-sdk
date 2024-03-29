@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReferencesRatings  (catalog.v1alpha1.Product)
+// ProductReferencesRatings struct for ProductReferencesRatings
 type ProductReferencesRatings struct {
 	Total int32 `json:"total,omitempty"`
 	// GENERATE: The following code has been modified after code generation

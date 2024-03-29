@@ -9,7 +9,7 @@
 
 package management
 
-// ConsumerSubscriptionDefinitionSpec  (management.v1alpha1.ConsumerSubscriptionDefinition)
+// ConsumerSubscriptionDefinitionSpec struct for ConsumerSubscriptionDefinitionSpec
 type ConsumerSubscriptionDefinitionSpec struct {
 	// List of Webhook kind resource names that dictates what webhooks will be invoked on subscription changes.
 	Webhooks []string                                 `json:"webhooks,omitempty"`

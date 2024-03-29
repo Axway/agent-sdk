@@ -9,7 +9,7 @@
 
 package management
 
-// DataplaneSecretStatus  (management.v1alpha1.DataplaneSecret)
+// DataplaneSecretStatus struct for DataplaneSecretStatus
 type DataplaneSecretStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

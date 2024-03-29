@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialExpirationNotification Details about the scheduled notification job. (catalog.v1alpha1.Credential)
+// CredentialExpirationNotification Details about the scheduled notification job.
 type CredentialExpirationNotification struct {
 	// Latest scheduled command id for sending notifications.
 	CommandId string `json:"commandId"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceSpecSourceReleaseState Copy of APIServiceInstance lifecycle releaseState info. (catalog.v1alpha1.AssetResource)
+// AssetResourceSpecSourceReleaseState Copy of APIServiceInstance lifecycle releaseState info.
 type AssetResourceSpecSourceReleaseState struct {
 	// Current release state of the source such as stable or deprecated.
 	Name string `json:"name"`
