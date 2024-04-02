@@ -38,6 +38,27 @@ const (
 	TeamMapKey = "TeamMap"
 )
 
+// constants for patch request
+const (
+	PatchOpAdd             = "add"
+	PatchOpReplace         = "replace"
+	PatchOpDelete          = "delete"
+	PatchOpBuildObjectTree = "x-build-object-tree"
+	PatchOperation         = "op"
+	PatchPath              = "path"
+	PatchValue             = "value"
+	ContentTypeJsonPatch   = "application/json-patch+json"
+	ContentTypeJson        = "application/json"
+)
+
+// constants for patch request
+const (
+	BearerTokenPrefix = "Bearer "
+	HdrContentType    = "Content-Type"
+	HdrAuthorization  = "Authorization"
+	HdrAxwayTenantID  = "X-Axway-Tenant-Id"
+)
+
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth, Basic}
 
@@ -96,6 +117,7 @@ type Client interface {
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	PatchSubResource(ri apiv1.Interface, subResourceName string, patches []map[string]interface{}) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
 	GetResources(ri apiv1.Interface) ([]apiv1.Interface, error)
 
@@ -292,9 +314,9 @@ func (c *ServiceClient) createHeader() (map[string]string, error) {
 		return nil, err
 	}
 	headers := make(map[string]string)
-	headers["X-Axway-Tenant-Id"] = c.cfg.GetTenantID()
-	headers["Authorization"] = "Bearer " + token
-	headers["Content-Type"] = "application/json"
+	headers[HdrAxwayTenantID] = c.cfg.GetTenantID()
+	headers[HdrAuthorization] = BearerTokenPrefix + token
+	headers[HdrContentType] = ContentTypeJson
 	return headers, nil
 }
 
@@ -627,10 +649,14 @@ func (c *ServiceClient) deployAccessControl(acl *management.AccessControlList, m
 }
 
 // executeAPI - execute the api
-func (c *ServiceClient) executeAPI(method, url string, query map[string]string, buffer []byte) (*coreapi.Response, error) {
+func (c *ServiceClient) executeAPI(method, url string, query map[string]string, buffer []byte, overrideHeaders map[string]string) (*coreapi.Response, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
+	}
+
+	for key, value := range overrideHeaders {
+		headers[key] = value
 	}
 
 	request := coreapi.Request{
@@ -646,7 +672,12 @@ func (c *ServiceClient) executeAPI(method, url string, query map[string]string, 
 
 // ExecuteAPI - execute the api
 func (c *ServiceClient) ExecuteAPI(method, url string, query map[string]string, buffer []byte) ([]byte, error) {
-	response, err := c.executeAPI(method, url, query, buffer)
+	return c.ExecuteAPIWithHeader(method, url, query, buffer, nil)
+}
+
+// ExecuteAPI - execute the api
+func (c *ServiceClient) ExecuteAPIWithHeader(method, url string, query map[string]string, buffer []byte, headers map[string]string) ([]byte, error) {
+	response, err := c.executeAPI(method, url, query, buffer, headers)
 	if err != nil {
 		return nil, errors.Wrap(ErrNetwork, err.Error())
 	}
@@ -955,6 +986,48 @@ func (c *ServiceClient) CreateResourceInstance(ri apiv1.Interface) (*apiv1.Resou
 	if err != nil {
 		return nil, err
 	}
+	r := &apiv1.ResourceInstance{}
+	err = json.Unmarshal(bts, r)
+	return r, err
+}
+
+// PatchSubResource - applies the patches to the sub-resource
+func (c *ServiceClient) PatchSubResource(ri apiv1.Interface, subResourceName string, patches []map[string]interface{}) (*apiv1.ResourceInstance, error) {
+	inst, err := ri.AsInstance()
+	if err != nil {
+		return nil, err
+	}
+
+	if inst.GetSelfLink() == "" {
+		return nil, fmt.Errorf("could not apply patch to resource instance, unable to get self link")
+	}
+
+	// no patches to be applied
+	if len(patches) == 0 {
+		return inst, nil
+	}
+
+	p := make([]map[string]interface{}, 0)
+	// add operation to build object tree to allow api-server
+	// to expand the sub-resources while applying the patch
+	p = append(p, map[string]interface{}{
+		PatchOperation: PatchOpBuildObjectTree,
+		PatchPath:      fmt.Sprintf("/%s", subResourceName),
+	})
+
+	p = append(p, patches...)
+
+	bts, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+
+	url := c.createAPIServerURL(fmt.Sprintf("%s/%s", inst.GetSelfLink(), subResourceName))
+	bts, err = c.ExecuteAPIWithHeader(coreapi.PATCH, url, nil, bts, map[string]string{HdrContentType: ContentTypeJsonPatch})
+	if err != nil {
+		return nil, err
+	}
+
 	r := &apiv1.ResourceInstance{}
 	err = json.Unmarshal(bts, r)
 	return r, err
