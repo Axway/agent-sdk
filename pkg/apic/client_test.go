@@ -1,6 +1,7 @@
 package apic
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -316,6 +318,93 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 				assert.Equal(t, tt.expectedTagVal, ri.Tags[0])
 			}
 
+		})
+	}
+}
+
+func TestPatchRequest(t *testing.T) {
+	createInstance := func(name string) *v1.ResourceInstance {
+		inst := createAPIServiceInstance(name, name, "", "", false)
+		ri, _ := inst.AsInstance()
+		return ri
+	}
+
+	tests := []struct {
+		name             string
+		res              *v1.ResourceInstance
+		patchSubResource string
+		patches          []map[string]interface{}
+		apiResponses     []api.MockResponse
+		expectErr        bool
+	}{
+		{
+			name:         "no self link",
+			res:          &v1.ResourceInstance{},
+			apiResponses: []api.MockResponse{},
+			expectErr:    true,
+		},
+		{
+			name:      "no patches",
+			res:       createInstance("test"),
+			expectErr: false,
+		},
+		{
+			name: "send patch",
+			res:  createInstance("test"),
+			apiResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/serviceinstance.json",
+					RespCode: http.StatusOK,
+				},
+			},
+			patchSubResource: "source",
+			patches: []map[string]interface{}{
+				{
+					PatchOperation: PatchOpAdd,
+					PatchPath:      "/source/compliance",
+					PatchValue:     map[string]interface{}{},
+				},
+			},
+			expectErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svcClient, mockHTTPClient := GetTestServiceClient()
+			cfg := GetTestServiceClientCentralConfiguration(svcClient)
+			cfg.Environment = "mockenv"
+			cfg.PlatformURL = "http://foo.bar:4080"
+
+			mockHTTPClient.SetResponses(tt.apiResponses)
+
+			ri, err := svcClient.PatchSubResource(tt.res, tt.patchSubResource, tt.patches)
+			if tt.expectErr {
+				if tt.patches != nil {
+					assert.NotNil(t, err)
+				}
+			} else {
+				assert.Nil(t, err)
+				assert.NotNil(t, ri)
+				if len(tt.patches) > 0 {
+					assert.NotEmpty(t, mockHTTPClient.Requests)
+					p := make([]map[string]interface{}, 0)
+					json.Unmarshal(mockHTTPClient.Requests[0].Body, &p)
+					assert.NotEmpty(t, p)
+					assert.Equal(t, len(tt.patches)+1, len(p))
+					buildObjectTreePatchFound := false
+					for _, patch := range p {
+						operation := patch[PatchOperation]
+						if operation == PatchOpBuildObjectTree {
+							buildObjectTreePatchFound = true
+							assert.Equal(t, "/"+tt.patchSubResource, patch[PatchPath])
+						} else {
+							path := patch[PatchPath]
+							assert.Equal(t, path, tt.patches[0][PatchPath])
+						}
+					}
+					assert.True(t, buildObjectTreePatchFound)
+				}
+			}
 		})
 	}
 }
