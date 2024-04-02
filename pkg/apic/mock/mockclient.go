@@ -52,6 +52,7 @@ type Client struct {
 	CreateAccessControlListMock                              func(acl *management.AccessControlList) (*management.AccessControlList, error)
 	UpdateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
 	CreateResourceInstanceMock                               func(ri v1.Interface) (*v1.ResourceInstance, error)
+	PatchSubResourceMock                                     func(ri v1.Interface, subResourceName string, patches []map[string]interface{}) (*v1.ResourceInstance, error)
 	DeleteResourceInstanceMock                               func(ri v1.Interface) error
 	CreateSubResourceMock                                    func(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResourceMock                                          func(url string) (*v1.ResourceInstance, error)
@@ -335,6 +336,13 @@ func (m *Client) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, 
 func (m *Client) CreateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
 	if m.CreateResourceInstanceMock != nil {
 		return m.CreateResourceInstanceMock(ri)
+	}
+	return nil, nil
+}
+
+func (m *Client) PatchSubResource(ri v1.Interface, subResourceName string, patches []map[string]interface{}) (*v1.ResourceInstance, error) {
+	if m.PatchSubResourceMock != nil {
+		return m.PatchSubResourceMock(ri, subResourceName, patches)
 	}
 	return nil, nil
 }

@@ -25,6 +25,7 @@ const (
 	GET    string = http.MethodGet
 	POST   string = http.MethodPost
 	PUT    string = http.MethodPut
+	PATCH  string = http.MethodPatch
 	DELETE string = http.MethodDelete
 
 	defaultTimeout     = time.Second * 60
