@@ -17,5 +17,6 @@ type DataplaneSpecApigee struct {
 	// The Developer that will own all Apigee Applications created by the agent
 	DeveloperEmail string `json:"developerEmail"`
 	// The discovery mode that the Apigee agents should use
-	Mode string `json:"mode,omitempty"`
+	Mode          string                           `json:"mode,omitempty"`
+	MetricsFilter DataplaneSpecApigeeMetricsFilter `json:"metricsFilter,omitempty"`
 }
