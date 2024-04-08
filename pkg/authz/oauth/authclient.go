@@ -31,12 +31,12 @@ type authClientOptions struct {
 // authClient -
 type authClient struct {
 	tokenURL          string
+	logger            log.FieldLogger
 	apiClient         api.Client
 	cachedToken       *tokenResponse
-	cachedTokenExpiry *time.Timer
 	getTokenMutex     *sync.Mutex
 	options           *authClientOptions
-	logger            log.FieldLogger
+	cachedTokenExpiry time.Time
 }
 
 type authenticator interface {
@@ -142,15 +142,11 @@ func WithTLSClientAuth(clientID, scope string) AuthClientOption {
 }
 
 func (c *authClient) getCachedToken() string {
+	if time.Now().After(c.cachedTokenExpiry) {
+		c.cachedToken = nil
+	}
 	if c.cachedToken != nil {
-		select {
-		case <-c.cachedTokenExpiry.C:
-			// cleanup the token on expiry
-			c.cachedToken = nil
-			return ""
-		default:
-			return c.cachedToken.AccessToken
-		}
+		return c.cachedToken.AccessToken
 	}
 	return ""
 }
@@ -165,10 +161,9 @@ func (c *authClient) FetchToken(useCachedToken bool) (string, error) {
 	// only one GetToken should execute at a time
 	c.getTokenMutex.Lock()
 	defer c.getTokenMutex.Unlock()
-	if useCachedToken {
-		if token := c.getCachedToken(); token != "" {
-			return token, nil
-		}
+	token := c.getCachedToken()
+	if useCachedToken && token != "" {
+		return token, nil
 	}
 
 	// try fetching a new token
@@ -185,7 +180,7 @@ func (c *authClient) fetchNewToken() (string, error) {
 	almostExpires := (tokenResponse.ExpiresIn * 4) / 5
 
 	c.cachedToken = tokenResponse
-	c.cachedTokenExpiry = time.NewTimer(time.Duration(almostExpires) * time.Second)
+	c.cachedTokenExpiry = time.Now().Add(time.Duration(almostExpires) * time.Second)
 	return c.cachedToken.AccessToken, nil
 }
 
