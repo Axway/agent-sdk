@@ -29,6 +29,11 @@ import (
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
+const (
+	countStr     = "count"
+	eventTypeStr = "event-type"
+)
+
 // OutputEventProcessor - P
 type OutputEventProcessor interface {
 	Process(events []publisher.Event) []publisher.Event
@@ -42,6 +47,7 @@ const (
 	defaultStartMaxWindowSize int = 10
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
+	HealthCheckEndpoint           = traceabilityStr
 )
 
 var traceabilityClients []*Client
@@ -75,7 +81,7 @@ type traceabilityAgentHealthChecker struct {
 	tlsCfg   *tlscommon.Config
 	timeout  time.Duration
 	// TBD. Remove in future when Jobs interface is complete
-	hcJob *condorHealthCheckJob
+	hcJob *traceabilityHealthCheck
 }
 
 func init() {
@@ -377,15 +383,15 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 
 	if publishCount > 0 {
 		client.logger.
-			WithField("count", publishCount).
-			WithField("event-type", eventType).
+			WithField(countStr, publishCount).
+			WithField(eventTypeStr, eventType).
 			Info("creating events")
 	}
 
 	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
 		client.logger.
-			WithField("event-type", eventType).
+			WithField(eventTypeStr, eventType).
 			WithError(err).
 			Error("failed to publish event")
 		return err
@@ -393,8 +399,8 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 
 	if publishCount-len(batch.Events()) > 0 {
 		client.logger.
-			WithField("count", publishCount-len(batch.Events())).
-			WithField("event-type", eventType).
+			WithField(countStr, publishCount-len(batch.Events())).
+			WithField(eventTypeStr, eventType).
 			Info("published events")
 	}
 
@@ -417,59 +423,16 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 }
 
 func registerHealthCheckers(config *Config) error {
-	// register a unique healthchecker for each potential host
-	for i := range config.Hosts {
-		ta := &traceabilityAgentHealthChecker{
-			tlsCfg:   config.TLS,
-			protocol: config.Protocol,
-			host:     config.Hosts[i],
-			proxyURL: config.Proxy.URL,
-			timeout:  config.Timeout,
-		}
+	hcJob := newTraceabilityHealthCheckJob()
 
-		hcJob := &condorHealthCheckJob{
-			agentHealthChecker: ta,
-		}
-
-		// TBD. Remove in future when Jobs interface is complete
-		ta.hcJob = hcJob
-
-		_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Healthcheck")
-		if err != nil {
-			return err
-		}
-
-		// TBD. Remove in future when Jobs interface is complete
-		err = registerHealthChecker(hcJob, ta.host)
-		if err != nil {
-			return err
-		}
+	_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Health Check")
+	if err != nil {
+		return err
 	}
-	return nil
-}
 
-func registerHealthChecker(hcJob *condorHealthCheckJob, host string) error {
-	checkStatus := hcJob.agentHealthChecker.connectionHealthcheck
-
-	_, err := hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
+	_, err = hc.RegisterHealthcheck("Traceability Agent", HealthCheckEndpoint, hcJob.healthcheck)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (ta *traceabilityAgentHealthChecker) connectionHealthcheck(host string) *hc.Status {
-	// Create the default status
-	status := &hc.Status{
-		Result: hc.OK,
-	}
-
-	err := ta.hcJob.checkConnections(healthcheckCondor)
-	if err != nil {
-		status = &hc.Status{
-			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
-		}
-	}
-	return status
 }
