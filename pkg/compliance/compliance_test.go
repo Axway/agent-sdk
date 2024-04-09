@@ -60,9 +60,7 @@ func TestCompliance(t *testing.T) {
 			runtimeResults: []RuntimeResult{
 				{
 					APIServiceInstance: "test-1",
-					HighCount:          10,
-					MediumCount:        10,
-					LowCount:           0,
+					RiskScore:          10,
 				},
 			},
 		},
@@ -100,9 +98,7 @@ func TestCompliance(t *testing.T) {
 				instance.FromInstance(ri)
 				assert.NotNil(t, instance.Source)
 				assert.NotNil(t, instance.Source.Compliance)
-				assert.Equal(t, int32(result.HighCount), instance.Source.Compliance.Runtime.Result.HighCount)
-				assert.Equal(t, int32(result.MediumCount), instance.Source.Compliance.Runtime.Result.MediumCount)
-				assert.Equal(t, int32(result.LowCount), instance.Source.Compliance.Runtime.Result.LowCount)
+				assert.Equal(t, result.RiskScore, instance.Source.Compliance.Runtime.Result.RiskScore)
 			}
 			assert.Equal(t, len(tt.runtimeResults), patchReqCount)
 		})

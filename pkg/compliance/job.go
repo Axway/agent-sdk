@@ -60,10 +60,8 @@ func (j *runtimeComplianceJob) publishResources(results *runtimeResults) {
 			compliance := management.ApiServiceInstanceSourceCompliance{
 				Runtime: management.ApiServiceInstanceSourceRuntimeStatus{
 					Result: management.ApiServiceInstanceSourceRuntimeStatusResult{
-						Timestamp:   v1.Time(time.Now()),
-						HighCount:   int32(result.HighCount),
-						MediumCount: int32(result.MediumCount),
-						LowCount:    int32(result.LowCount),
+						Timestamp: v1.Time(time.Now()),
+						RiskScore: result.RiskScore,
 					},
 				},
 			}
@@ -78,9 +76,7 @@ func (j *runtimeComplianceJob) publishResources(results *runtimeResults) {
 			logger := j.logger.
 				WithField("instanceId", ri.Metadata.ID).
 				WithField("instanceName", instanceName).
-				WithField("high", result.HighCount).
-				WithField("medium", result.MediumCount).
-				WithField("high", result.LowCount)
+				WithField("riskScore", result.RiskScore)
 
 			logger.Debug("updating runtime compliance result")
 			_, err := agent.GetCentralClient().PatchSubResource(instance, management.ApiServiceInstanceSourceSubResourceName, patches)
