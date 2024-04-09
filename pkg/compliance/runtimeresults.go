@@ -5,10 +5,8 @@ import (
 )
 
 type RuntimeResult struct {
-	APIServiceInstance string `json:"apiServiceInstance"`
-	HighCount          int64  `json:"highCount"`
-	MediumCount        int64  `json:"mediumCount"`
-	LowCount           int64  `json:"lowCount"`
+	APIServiceInstance string  `json:"apiServiceInstance"`
+	RiskScore          float64 `json:"riskScore"`
 }
 
 type RuntimeResults interface {

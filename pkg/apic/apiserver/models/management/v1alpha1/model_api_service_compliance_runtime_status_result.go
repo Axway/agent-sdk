@@ -11,12 +11,9 @@ package management
 
 // ApiServiceComplianceRuntimeStatusResult APIService runtime results.
 type ApiServiceComplianceRuntimeStatusResult struct {
-	// The count of high risk in the runtime compliance result.
-	HighCount int32 `json:"highCount,omitempty"`
-	// The count of medium risk in the runtime compliance result.
-	MediumCount int32 `json:"mediumCount,omitempty"`
-	// The count of low risk in the runtime compliance result.
-	LowCount int32 `json:"lowCount,omitempty"`
+	// The average risk score in the runtime compliance result.
+	// GENERATE: The following code has been modified after code generation
+	RiskScore float64 `json:"riskScore,omitempty"`
 	// Grade result from the results summary.
 	Grade string `json:"grade,omitempty"`
 }
