@@ -30,7 +30,9 @@ func GetManager() Manager {
 }
 
 func (m *complianceManager) Trigger() {
-	m.job.Execute()
+	if m.job != nil {
+		m.job.Execute()
+	}
 }
 
 func (m *complianceManager) RegisterRuntimeComplianceJob(interval time.Duration, processor Processor) {
