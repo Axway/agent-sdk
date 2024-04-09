@@ -9,6 +9,7 @@ import (
 
 type Manager interface {
 	RegisterRuntimeComplianceJob(interval time.Duration, processor Processor)
+	Trigger()
 }
 
 type complianceManager struct {
@@ -26,6 +27,10 @@ func GetManager() Manager {
 		manager = cm
 	}
 	return manager
+}
+
+func (m *complianceManager) Trigger() {
+	m.job.Execute()
 }
 
 func (m *complianceManager) RegisterRuntimeComplianceJob(interval time.Duration, processor Processor) {
