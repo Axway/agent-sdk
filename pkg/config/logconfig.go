@@ -15,6 +15,7 @@ import (
 // LogConfig - Interface for logging config
 type LogConfig interface {
 	SetLevel(level string)
+	GetMetricConfig() LogFileConfiguration
 }
 
 // LogConfiguration -
@@ -45,6 +46,10 @@ func (l *LogConfiguration) setupLogger(agentType AgentType) error {
 	}
 
 	return cfg.Apply()
+}
+
+func (l *LogConfiguration) GetMetricConfig() LogFileConfiguration {
+	return l.MetricFile
 }
 
 // LogFileConfiguration - setup the logging configuration for file output

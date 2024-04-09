@@ -153,12 +153,24 @@ func (b *LoggerConfig) Path(path string) *LoggerConfig {
 	return b
 }
 
+func (b *LoggerConfig) validateSize(path string, maxSize int) error {
+	if maxSize < 1048576 {
+		return ErrInvalidLogConfig.FormatError(path, "minimum of 1048576")
+	}
+	return nil
+}
+
+func (b *LoggerConfig) validate0orGreater(path string, maxBackups int) error {
+	if maxBackups < 0 {
+		return ErrInvalidLogConfig.FormatError(path, "0 or greater")
+	}
+	return nil
+}
+
 // MaxSize -
 func (b *LoggerConfig) MaxSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
-		if maxSize < 1048576 {
-			b.err = ErrInvalidLogConfig.FormatError("log.file.rotateeverybytes", "minimum of 1048576")
-		}
+		b.err = b.validateSize("log.file.rotateeverybytes", maxSize)
 		b.cfg.MaxSize = int(float64(maxSize) / 1024 / 1024)
 	}
 	return b
@@ -167,9 +179,7 @@ func (b *LoggerConfig) MaxSize(maxSize int) *LoggerConfig {
 // MaxBackups -
 func (b *LoggerConfig) MaxBackups(maxBackups int) *LoggerConfig {
 	if b.err == nil {
-		if maxBackups < 0 {
-			b.err = ErrInvalidLogConfig.FormatError("log.file.keepfiles", "0 or greater")
-		}
+		b.err = b.validate0orGreater("log.file.keepfiles", maxBackups)
 		b.cfg.MaxBackups = maxBackups
 	}
 	return b
@@ -178,9 +188,7 @@ func (b *LoggerConfig) MaxBackups(maxBackups int) *LoggerConfig {
 // MaxAge -
 func (b *LoggerConfig) MaxAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
-		if maxAge < 0 {
-			b.err = ErrInvalidLogConfig.FormatError("log.file.cleanbackupsevery", "0 or greater")
-		}
+		b.err = b.validate0orGreater("log.file.cleanbackupsevery", maxAge)
 		b.cfg.MaxAge = maxAge
 	}
 	return b
@@ -189,9 +197,7 @@ func (b *LoggerConfig) MaxAge(maxAge int) *LoggerConfig {
 // MaxMetricSize -
 func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
-		if maxSize < 1048576 {
-			b.err = ErrInvalidLogConfig.FormatError("log.metricfile.rotateeverybytes", "minimum of 1048576")
-		}
+		b.err = b.validateSize("log.metricfile.rotateeverybytes", maxSize)
 	}
 	return b
 }
@@ -199,9 +205,7 @@ func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 // MaxMetricBackups -
 func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 	if b.err == nil {
-		if maxBackups < 0 {
-			b.err = ErrInvalidLogConfig.FormatError("log.metricfile.keepfiles", "0 or greater")
-		}
+		b.err = b.validate0orGreater("log.metricfile.keepfiles", maxBackups)
 	}
 	return b
 }
@@ -209,9 +213,7 @@ func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 // MaxAge -
 func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
-		if maxAge < 0 {
-			b.err = ErrInvalidLogConfig.FormatError("log.metricfile.cleanbackupsevery", "0 or greater")
-		}
+		b.err = b.validate0orGreater("log.metricfile.cleanbackupsevery", maxAge)
 	}
 	return b
 }
