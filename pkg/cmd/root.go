@@ -117,6 +117,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	config.AddMetricLogConfigProperties(c.props, agentType)
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)
@@ -283,7 +284,7 @@ func (c *agentRootCommand) initConfig() error {
 	// Clean the secret map on config change
 	c.secretResolver.ResetResolver()
 
-	_, err := config.ParseAndSetupLogConfig(c.GetProperties())
+	_, err := config.ParseAndSetupLogConfig(c.GetProperties(), c.agentType)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -23,19 +24,27 @@ type LogConfiguration struct {
 	Format       string               `config:"format"`
 	Output       string               `config:"output"`
 	File         LogFileConfiguration `config:"file"`
+	MetricFile   LogFileConfiguration `config:"metricsfile"`
 	MaskedValues string               `config:"maskedvalues"`
 }
 
-func (l *LogConfiguration) setupLogger() error {
-	return log.GlobalLoggerConfig.Level(l.Level).
+func (l *LogConfiguration) setupLogger(agentType AgentType) error {
+	cfg := log.GlobalLoggerConfig.Level(l.Level).
 		Format(l.Format).
 		Output(l.Output).
 		Filename(l.File.Name).
 		Path(l.File.Path).
 		MaxSize(l.File.MaxSize).
 		MaxBackups(l.File.MaxBackups).
-		MaxAge(l.File.MaxAge).
-		Apply()
+		MaxAge(l.File.MaxAge)
+
+	if agentType == TraceabilityAgent {
+		cfg = cfg.MaxMetricSize(l.MetricFile.MaxSize).
+			MaxMetricBackups(l.MetricFile.MaxBackups).
+			MaxMetricAge(l.MetricFile.MaxAge)
+	}
+
+	return cfg.Apply()
 }
 
 // LogFileConfiguration - setup the logging configuration for file output
@@ -48,15 +57,19 @@ type LogFileConfiguration struct {
 }
 
 const (
-	pathLogLevel          = "log.level"
-	pathLogFormat         = "log.format"
-	pathLogOutput         = "log.output"
-	pathLogMaskedValues   = "log.maskedValues"
-	pathLogFileName       = "log.file.name"
-	pathLogFilePath       = "log.file.path"
-	pathLogFileMaxSize    = "log.file.rotateeverybytes"
-	pathLogFileMaxAge     = "log.file.cleanbackups"
-	pathLogFileMaxBackups = "log.file.keepfiles"
+	pathLogLevel                 = "log.level"
+	pathLogFormat                = "log.format"
+	pathLogOutput                = "log.output"
+	pathLogMaskedValues          = "log.maskedValues"
+	pathLogFileName              = "log.file.name"
+	pathLogFilePath              = "log.file.path"
+	pathLogFileMaxSize           = "log.file.rotateeverybytes"
+	pathLogFileMaxAge            = "log.file.cleanbackups"
+	pathLogFileMaxBackups        = "log.file.keepfiles"
+	pathLogMetricsFileName       = "log.metricsfile.name"
+	pathLogMetricsFileMaxSize    = "log.metricsfile.rotateeverybytes"
+	pathLogMetricsFileMaxAge     = "log.metricsfile.cleanbackups"
+	pathLogMetricsFileMaxBackups = "log.metricsfile.keepfiles"
 )
 
 // AddLogConfigProperties - Adds the command properties needed for Log Config
@@ -70,12 +83,24 @@ func AddLogConfigProperties(props properties.Properties, defaultFileName string)
 	props.AddStringProperty(pathLogFileName, defaultFileName, "Name of the log files")
 	props.AddStringProperty(pathLogFilePath, "logs", "Log file path if output type is file or both")
 	props.AddIntProperty(pathLogFileMaxSize, 10485760, "The maximum size of a log file, in bytes  (default: 10485760 - 10 MB)")
-	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backps")
+	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backips")
 	props.AddIntProperty(pathLogFileMaxBackups, 7, "The maximum number of backups to keep of log files (default: 7)")
 }
 
+// AddMetricLogConfigProperties - Adds the command properties needed for Log Config
+func AddMetricLogConfigProperties(props properties.Properties, agentType AgentType) {
+	if agentType == DiscoveryAgent {
+		return
+	}
+	// Metric log file options
+	props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "Name of the metric log files)")
+	props.AddIntProperty(pathLogMetricsFileMaxSize, 10485760, "The maximum size of a metrics log file, in bytes  (default: 10485760 - 10 MB)")
+	props.AddIntProperty(pathLogMetricsFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the metrics log file backips")
+	props.AddIntProperty(pathLogMetricsFileMaxBackups, 0, "The maximum number of backups to keep of metrics log files (default: unlimited)")
+}
+
 // ParseAndSetupLogConfig - Parses the Log Config and setups the logger
-func ParseAndSetupLogConfig(props properties.Properties) (LogConfig, error) {
+func ParseAndSetupLogConfig(props properties.Properties, agentType AgentType) (LogConfig, error) {
 	cfg := &LogConfiguration{
 		Level:        props.StringPropertyValue(pathLogLevel),
 		Format:       props.StringPropertyValue(pathLogFormat),
@@ -90,12 +115,22 @@ func ParseAndSetupLogConfig(props properties.Properties) (LogConfig, error) {
 		},
 	}
 
+	if agentType == TraceabilityAgent {
+		cfg.MetricFile = LogFileConfiguration{
+			Name:       props.StringPropertyValue(pathLogMetricsFileName),
+			Path:       filepath.Join(cfg.File.Path, "metrics"),
+			MaxSize:    props.IntPropertyValue(pathLogMetricsFileMaxSize),
+			MaxBackups: props.IntPropertyValue(pathLogMetricsFileMaxBackups),
+			MaxAge:     props.IntPropertyValue(pathLogMetricsFileMaxAge),
+		}
+	}
+
 	// Only attempt to mask values if the key maskValues AND key words for maskValues exist
 	if cfg.MaskedValues != "" {
 		props.MaskValues(cfg.MaskedValues)
 	}
 
-	return cfg, cfg.setupLogger()
+	return cfg, cfg.setupLogger(agentType)
 }
 
 const (
