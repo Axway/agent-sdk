@@ -161,8 +161,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 			Tags:       []string{"tag1", "tag2"},
 			Finalizers: nil,
 			SubResources: map[string]interface{}{
-				"references": map[string]interface{}{},
-				"details":    map[string]interface{}{},
+				"details": map[string]interface{}{},
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
 				},
