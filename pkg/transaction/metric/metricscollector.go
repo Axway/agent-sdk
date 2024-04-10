@@ -74,7 +74,7 @@ type collector struct {
 	jobID            string
 	usagePublisher   *usagePublisher
 	storage          storageCache
-	reports          *cacheReport
+	reports          *usageReportCache
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
 	metricLogger     log.FieldLogger
@@ -218,17 +218,15 @@ func (c *collector) Execute() error {
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField(eventTypeStr, usageStr).
-		Debug("generating usage event")
+		Debug("caching usage event")
 
 	c.logger.
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
 		WithField(eventTypeStr, metricStr).
 		Debug("generating metric event")
-	defer func() {
-		c.cleanup()
-	}()
 
+	defer c.cleanup()
 	c.generateEvents()
 	c.publishEvents()
 	return nil
@@ -273,7 +271,7 @@ func (c *collector) AddAPIMetric(metric *APIMetric) {
 }
 
 func (c *collector) Publish() {
-	c.Execute()
+	c.metricBatch.Publish()
 }
 
 func (c *collector) ShutdownPublish() {
@@ -568,7 +566,10 @@ func (c *collector) getOrgGUID() string {
 	parser.SkipClaimsValidation = true
 
 	claims := jwt.MapClaims{}
-	_, _, _ = parser.ParseUnverified(authToken, claims)
+	_, _, err := parser.ParseUnverified(authToken, claims)
+	if err != nil {
+		return ""
+	}
 
 	claim, ok := claims["org_guid"]
 	if ok {
@@ -584,33 +585,25 @@ func (c *collector) generateEvents() {
 	}
 
 	c.metricBatch = NewEventBatch(c)
-	c.registry.Each(c.processUsageFromRegistry)
+	c.registry.Each(c.processRegistry)
 
-	if len(c.publishItemQueue) == 0 {
-		c.logger.
-			WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
-			WithField(eventTypeStr, usageStr).
-			Info("no usage event generated as no transactions recorded")
-
+	if len(c.metricBatch.events) == 0 {
 		c.logger.
 			WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
 			WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
 			WithField(eventTypeStr, metricStr).
-			Info("no metric event generated as no transactions recorded")
+			Info("no metric events generated as no transactions recorded")
 	}
 
 	if c.usageConfig.CanPublishMetric() {
 		err := c.metricBatch.Publish()
 		if err != nil {
-			c.logger.
-				WithError(err).
-				Errorf("could not send metric event. Current metric data is kept and will be added to the next trigger interval")
+			c.logger.WithError(err).Errorf("could not send metric event, data is kept and will be added to the next trigger interval")
 		}
 	}
 }
 
-func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
+func (c *collector) processRegistry(name string, metric interface{}) {
 	switch {
 	case name == transactionCountMetric:
 		if c.usageConfig.CanPublishUsage() {
@@ -778,12 +771,12 @@ func (c *collector) publishEvents() {
 					WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 					WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 					WithField(eventTypeStr, usageStr).
-					Error("failed to publish usage event. current usage report is kept and will be added to the next trigger interval")
+					Error("failed to add usage report to cache. Current usage report is kept and will be added to the next interval")
 			} else {
 				c.logger.
 					WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 					WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
-					Info("published usage report")
+					Info("added usage report to cache")
 				c.cleanupCounters(eventQueueItem)
 			}
 		}

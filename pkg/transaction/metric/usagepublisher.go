@@ -23,7 +23,7 @@ import (
 type usagePublisher struct {
 	apiClient api.Client
 	storage   storageCache
-	report    *cacheReport
+	report    *usageReportCache
 	jobID     string
 	ready     bool
 	offline   bool
@@ -157,7 +157,7 @@ func (c *usagePublisher) createFilePart(w *multipart.Writer, filename string) (i
 }
 
 // newUsagePublisher - Creates publisher job
-func newUsagePublisher(storage storageCache, report *cacheReport) *usagePublisher {
+func newUsagePublisher(storage storageCache, report *usageReportCache) *usagePublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &usagePublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
