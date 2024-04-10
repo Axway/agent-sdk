@@ -82,10 +82,15 @@ func (b *LoggerConfig) Apply() error {
 			log.AddHook(rotateFileHook)
 			logrus.StandardLogger().AddHook(rotateFileHook)
 		}
-		b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
-		rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
-		metric.AddHook(rotateMetricHook)
-		metric.SetOutput(io.Discard) // discard logging to stderr
+
+		// skip metric log setup in unit tests
+		if flag.Lookup("test.v") != nil {
+			b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
+			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
+			metric.AddHook(rotateMetricHook)
+			metric.SetOutput(io.Discard) // discard logging to stderr
+		}
+
 		// Set to initialized if this is not a test
 		b.initialized = flag.Lookup("test.v") == nil
 	}

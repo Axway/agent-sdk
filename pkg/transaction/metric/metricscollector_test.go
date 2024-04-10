@@ -19,6 +19,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,6 +42,7 @@ var (
 		Stage:              "",
 		Version:            "",
 	}
+	traceStatus = healthcheck.OK
 )
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
@@ -252,6 +254,16 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 	return ri
 }
 
+func runTestHealthcheck() {
+	// register a healthcheck
+	healthcheck.RegisterHealthcheck("Traceability", traceability.HealthCheckEndpoint,
+		func(name string) *healthcheck.Status {
+			return &healthcheck.Status{Result: traceStatus}
+		},
+	)
+	healthcheck.RunChecks()
+}
+
 func TestMetricCollector(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
@@ -292,10 +304,11 @@ func TestMetricCollector(t *testing.T) {
 		expectedMetricEventsAcked int
 		appName                   string
 		publishPrior              bool
+		hcStatus                  healthcheck.StatusLevel
 	}{
 		// Success case with no app detail
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
@@ -308,7 +321,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
 		},
 		{
-			name:                      "WithLighthouseWithPriorPublish",
+			name:                      "WithUsageWithPriorPublish",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
@@ -323,7 +336,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
@@ -338,7 +351,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case with consumer metric event
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
@@ -353,7 +366,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case with no usage report
 		{
-			name:                      "WithLighthouseNoUsageReport",
+			name:                      "WithUsageNoUsageReport",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{0},
@@ -367,7 +380,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
-			name:                   "WithLighthouseWithFailure",
+			name:                   "WithUsageWithFailure",
 			loopCount:              3,
 			retryBatchCount:        0,
 			apiTransactionCount:    []int{5, 10, 12},
@@ -390,7 +403,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Test case with failing request to LH, no subsequent request triggered.
 		{
-			name:                   "WithLighthouseWithFailureWithSpecificDescription",
+			name:                   "WithUsageWithFailureWithSpecificDescription",
 			loopCount:              3,
 			retryBatchCount:        0,
 			apiTransactionCount:    []int{1, 1, 1},
@@ -417,7 +430,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case, retry metrics
 		{
-			name:                      "WithLighthouseAndMetricRetry",
+			name:                      "WithUsageAndMetricRetry",
 			loopCount:                 1,
 			retryBatchCount:           1,
 			apiTransactionCount:       []int{5},
@@ -432,7 +445,7 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Retry limit hit
 		{
-			name:                      "WithLighthouseAndFailedMetric",
+			name:                      "WithUsageAndFailedMetric",
 			loopCount:                 1,
 			retryBatchCount:           4,
 			apiTransactionCount:       []int{5},
@@ -444,10 +457,31 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 0,
 		},
+		// Traceability healthcheck failing, nothing reported
+		{
+			name:                      "WithUsageTraceabilityNotConnected",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{0},
+			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*UsageResponse{nil},
+			expectedLHEvents:          []int{0},
+			expectedTransactionCount:  []int{0},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 0, // API metric + Provider subscription metric
+			appName:                   "managed-app-1",
+			hcStatus:                  healthcheck.FAIL,
+		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			if test.hcStatus != "" {
+				traceStatus = test.hcStatus
+			}
+			runTestHealthcheck()
+
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
@@ -494,6 +528,9 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	testCases := []struct {
 		name                      string
@@ -551,6 +588,9 @@ func TestMetricCollectorCache(t *testing.T) {
 	s := &testHTTPServer{}
 	defer s.closeServer()
 	s.startServer()
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	testCases := []struct {
 		name        string
@@ -638,6 +678,9 @@ func TestOfflineMetricCollector(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 	traceability.SetDataDirPath(".")
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
