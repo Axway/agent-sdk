@@ -83,8 +83,10 @@ func (b *LoggerConfig) Apply() error {
 			logrus.StandardLogger().AddHook(rotateFileHook)
 		}
 
+		isTest := flag.Lookup("test.v") != nil
+
 		// skip metric log setup in unit tests
-		if flag.Lookup("test.v") != nil {
+		if !isTest {
 			b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
 			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
 			metric.AddHook(rotateMetricHook)
@@ -92,7 +94,7 @@ func (b *LoggerConfig) Apply() error {
 		}
 
 		// Set to initialized if this is not a test
-		b.initialized = flag.Lookup("test.v") == nil
+		b.initialized = !isTest
 	}
 
 	return nil
