@@ -52,6 +52,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 		Status: buildAPIServiceStatusSubResource(ownerErr),
 	}
 
+	buildAPIServiceSourceSubResource(svc, serviceBody)
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	c.setMigrationFlags(svcDetails)
 
@@ -94,6 +95,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	svc.Owner = owner
 	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
 	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
+	buildAPIServiceSourceSubResource(svc, serviceBody)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	newSVCDetails := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
@@ -110,6 +112,43 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 		svc.Spec.Icon = management.ApiServiceSpecIcon{
 			ContentType: serviceBody.ImageContentType,
 			Data:        serviceBody.Image,
+		}
+	}
+}
+
+func buildAPIServiceSourceSubResource(svc *management.APIService, serviceBody *ServiceBody) {
+	serviceBody.serviceContext.updateServiceSource = false
+
+	source := svc.Source
+	if source == nil {
+		svc.Source = &management.ApiServiceSource{}
+		source = svc.Source
+	}
+
+	dataplaneType := serviceBody.GetDataplaneType()
+	if dataplaneType != "" {
+		if source.DataplaneType == nil {
+			source.DataplaneType = &management.ApiServiceSourceDataplaneType{}
+		}
+		if serviceBody.IsDesignDataplane() {
+			if source.DataplaneType.Design != dataplaneType.String() {
+				source.DataplaneType.Design = dataplaneType.String()
+				serviceBody.serviceContext.updateServiceSource = true
+			}
+		} else if source.DataplaneType.Managed != dataplaneType.String() {
+			source.DataplaneType.Managed = dataplaneType.String()
+			serviceBody.serviceContext.updateServiceSource = true
+		}
+	}
+
+	referencedSvc := serviceBody.GetReferencedServiceName()
+	if referencedSvc != "" {
+		if source.References == nil {
+			source.References = &management.ApiServiceSourceReferences{}
+		}
+		if source.References.ApiService != referencedSvc {
+			source.References.ApiService = serviceBody.GetReferencedServiceName()
+			serviceBody.serviceContext.updateServiceSource = true
 		}
 	}
 }
@@ -175,7 +214,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	}
 
 	svc.Name = serviceBody.serviceContext.serviceName
-	err = c.updateAPIServiceSubresources(svc)
+	err = c.updateAPIServiceSubresources(svc, serviceBody.serviceContext.updateServiceSource)
 	if err != nil && serviceBody.serviceContext.serviceAction == addAPI {
 		_, e := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
 		if e != nil {
@@ -188,10 +227,10 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	return svc, err
 }
 
-func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService) error {
+func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService, updateSource bool) error {
 	subResources := make(map[string]interface{})
 	if svc.Status != nil {
-		subResources["status"] = svc.Status
+		subResources[management.ApiServiceStatusSubResourceName] = svc.Status
 	}
 
 	if len(svc.SubResources) > 0 {
@@ -200,11 +239,16 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService)
 		}
 	}
 
+	if updateSource && svc.Source != nil {
+		subResources[management.ApiServiceSourceSubResourceName] = svc.Source
+	}
+
 	if len(subResources) > 0 {
 		return c.CreateSubResource(svc.ResourceMeta, subResources)
 	}
 	return nil
 }
+
 func (c *ServiceClient) getAPIServiceByExternalAPIID(apiID string) (*management.APIService, error) {
 	ri := c.caches.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {

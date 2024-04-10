@@ -108,7 +108,7 @@ func (c *ServiceClient) getRevisionCount(queryString string) int {
 		"page":     "1",
 		"pageSize": "1",
 	}
-	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil)
+	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
 	if err != nil {
 		return 0
 	}

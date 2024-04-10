@@ -9,12 +9,14 @@
 
 package management
 
-// ApiServiceCompliance struct for ApiServiceCompliance
-type ApiServiceCompliance struct {
+// ApiServiceSource  (management.v1alpha1.APIService)
+type ApiServiceSource struct {
 	// GENERATE: The following code has been modified after code generation
-	Design ApiServiceComplianceLintingStatus `json:"design,omitempty"`
+	//
+	//	DataplaneType ApiServiceSourceDataplaneType `json:"dataplaneType,omitempty"`
+	DataplaneType *ApiServiceSourceDataplaneType `json:"dataplaneType,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	Security ApiServiceComplianceLintingStatus `json:"security,omitempty"`
-	// GENERATE: The following code has been modified after code generation
-	Runtime ApiServiceComplianceRuntimeStatus `json:"runtime,omitempty"`
+	//
+	//	References    ApiServiceSourceReferences     `json:"references,omitempty"`
+	References *ApiServiceSourceReferences `json:"references,omitempty"`
 }
