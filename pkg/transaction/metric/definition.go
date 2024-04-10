@@ -125,25 +125,25 @@ type V4Event struct {
 	Session      *V4Session           `json:"session,omitempty"`
 }
 
-// LighthouseUsageReport -Lighthouse Usage report
-type LighthouseUsageReport struct {
+// UsageReport -Lighthouse Usage report
+type UsageReport struct {
 	Product string                 `json:"product"`
 	Usage   map[string]int64       `json:"usage"`
 	Meta    map[string]interface{} `json:"meta"`
 }
 
-// LighthouseUsageEvent -Lighthouse Usage Event
-type LighthouseUsageEvent struct {
-	OrgGUID     string                           `json:"-"`
-	EnvID       string                           `json:"envId"`
-	Timestamp   ISO8601Time                      `json:"timestamp"`
-	Granularity int                              `json:"granularity"`
-	SchemaID    string                           `json:"schemaId"`
-	Report      map[string]LighthouseUsageReport `json:"report"`
-	Meta        map[string]interface{}           `json:"meta"`
+// UsageEvent -Lighthouse Usage Event
+type UsageEvent struct {
+	OrgGUID     string                 `json:"-"`
+	EnvID       string                 `json:"envId"`
+	Timestamp   ISO8601Time            `json:"timestamp"`
+	Granularity int                    `json:"granularity"`
+	SchemaID    string                 `json:"schemaId"`
+	Report      map[string]UsageReport `json:"report"`
+	Meta        map[string]interface{} `json:"meta"`
 }
 
-type LighthouseUsageResponse struct {
+type UsageResponse struct {
 	Success     bool   `json:"success"`
 	Description string `json:"description"`
 	StatusCode  int    `json:"code"`
