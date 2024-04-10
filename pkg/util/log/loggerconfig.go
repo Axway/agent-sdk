@@ -28,6 +28,15 @@ func init() {
 				},
 			},
 		},
+		metricCfg: rotatefilehook.RotateFileConfig{
+			Level: logrus.InfoLevel,
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			},
+		},
 		initialized: false,
 	}
 }
@@ -38,6 +47,7 @@ type LoggerConfig struct {
 	output      LoggingOutput
 	path        string
 	cfg         rotatefilehook.RotateFileConfig
+	metricCfg   rotatefilehook.RotateFileConfig
 	initialized bool
 }
 
@@ -69,10 +79,13 @@ func (b *LoggerConfig) Apply() error {
 				b.cfg.Filename = path.Join(b.path, b.cfg.Filename)
 			}
 			rotateFileHook, _ := rotatefilehook.NewRotateFileHook(b.cfg)
-
 			log.AddHook(rotateFileHook)
 			logrus.StandardLogger().AddHook(rotateFileHook)
 		}
+		b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
+		rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
+		metric.AddHook(rotateMetricHook)
+		metric.SetOutput(io.Discard) // discard logging to stderr
 		// Set to initialized if this is not a test
 		b.initialized = flag.Lookup("test.v") == nil
 	}
@@ -194,10 +207,19 @@ func (b *LoggerConfig) MaxAge(maxAge int) *LoggerConfig {
 	return b
 }
 
+// Filename -
+func (b *LoggerConfig) MetricFilename(filename string) *LoggerConfig {
+	if b.err == nil {
+		b.metricCfg.Filename = filename
+	}
+	return b
+}
+
 // MaxMetricSize -
 func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
 		b.err = b.validateSize("log.metricfile.rotateeverybytes", maxSize)
+		b.metricCfg.MaxSize = maxSize
 	}
 	return b
 }
@@ -206,6 +228,7 @@ func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 	if b.err == nil {
 		b.err = b.validate0orGreater("log.metricfile.keepfiles", maxBackups)
+		b.metricCfg.MaxBackups = maxBackups
 	}
 	return b
 }
@@ -214,6 +237,7 @@ func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
 		b.err = b.validate0orGreater("log.metricfile.cleanbackupsevery", maxAge)
+		b.metricCfg.MaxAge = maxAge
 	}
 	return b
 }

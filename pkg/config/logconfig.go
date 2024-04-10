@@ -25,7 +25,7 @@ type LogConfiguration struct {
 	Format       string               `config:"format"`
 	Output       string               `config:"output"`
 	File         LogFileConfiguration `config:"file"`
-	MetricFile   LogFileConfiguration `config:"metricsfile"`
+	MetricFile   LogFileConfiguration `config:"metricfile"`
 	MaskedValues string               `config:"maskedvalues"`
 }
 
@@ -40,7 +40,8 @@ func (l *LogConfiguration) setupLogger(agentType AgentType) error {
 		MaxAge(l.File.MaxAge)
 
 	if agentType == TraceabilityAgent {
-		cfg = cfg.MaxMetricSize(l.MetricFile.MaxSize).
+		cfg = cfg.MetricFilename(l.MetricFile.Name).
+			MaxMetricSize(l.MetricFile.MaxSize).
 			MaxMetricBackups(l.MetricFile.MaxBackups).
 			MaxMetricAge(l.MetricFile.MaxAge)
 	}
@@ -71,10 +72,10 @@ const (
 	pathLogFileMaxSize           = "log.file.rotateeverybytes"
 	pathLogFileMaxAge            = "log.file.cleanbackups"
 	pathLogFileMaxBackups        = "log.file.keepfiles"
-	pathLogMetricsFileName       = "log.metricsfile.name"
-	pathLogMetricsFileMaxSize    = "log.metricsfile.rotateeverybytes"
-	pathLogMetricsFileMaxAge     = "log.metricsfile.cleanbackups"
-	pathLogMetricsFileMaxBackups = "log.metricsfile.keepfiles"
+	pathLogMetricsFileName       = "log.metricfile.name"
+	pathLogMetricsFileMaxSize    = "log.metricfile.rotateeverybytes"
+	pathLogMetricsFileMaxAge     = "log.metricfile.cleanbackups"
+	pathLogMetricsFileMaxBackups = "log.metricfile.keepfiles"
 )
 
 // AddLogConfigProperties - Adds the command properties needed for Log Config
