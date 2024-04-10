@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/sirupsen/logrus"
 )
 
 // use a variable for this to fake it for tests
@@ -80,6 +81,27 @@ func (a *APIMetric) GetEventID() string {
 	return a.EventID
 }
 
+func (a *APIMetric) GetLogFields() logrus.Fields {
+	fields := logrus.Fields{
+		"id":             a.EventID,
+		"count":          a.Count,
+		"status":         a.StatusCode,
+		"minResponse":    a.Response.Min,
+		"maxResponse":    a.Response.Max,
+		"avgResponse":    a.Response.Avg,
+		"startTimestamp": a.Observation.Start,
+		"endTimestamp":   a.Observation.End,
+	}
+	fields = a.Subscription.GetLogFields(fields)
+	fields = a.App.GetLogFields(fields)
+	fields = a.Product.GetLogFields(fields)
+	fields = a.API.GetLogFields(fields)
+	fields = a.AssetResource.GetLogFields(fields)
+	fields = a.ProductPlan.GetLogFields(fields)
+	fields = a.Quota.GetLogFields(fields)
+	return fields
+}
+
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
 	Subscription  models.Subscription  `json:"subscription,omitempty"`
@@ -111,6 +133,7 @@ type V4Data interface {
 	GetStartTime() time.Time
 	GetType() string
 	GetEventID() string
+	GetLogFields() logrus.Fields
 }
 
 // V4Event - represents V7 event
@@ -123,6 +146,10 @@ type V4Event struct {
 	Distribution *V4EventDistribution `json:"distribution"`
 	Data         V4Data               `json:"data"`
 	Session      *V4Session           `json:"session,omitempty"`
+}
+
+func (v V4Event) getLogFields() logrus.Fields {
+	return v.Data.GetLogFields()
 }
 
 // UsageReport -Lighthouse Usage report
