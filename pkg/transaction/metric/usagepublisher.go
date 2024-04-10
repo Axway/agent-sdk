@@ -156,8 +156,8 @@ func (c *usagePublisher) createFilePart(w *multipart.Writer, filename string) (i
 	return w.CreatePart(h)
 }
 
-// newMetricPublisher - Creates publisher job
-func newMetricPublisher(storage storageCache, report *cacheReport) *usagePublisher {
+// newUsagePublisher - Creates publisher job
+func newUsagePublisher(storage storageCache, report *cacheReport) *usagePublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &usagePublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
@@ -166,7 +166,7 @@ func newMetricPublisher(storage storageCache, report *cacheReport) *usagePublish
 		storage: storage,
 		report:  report,
 		offline: agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
-		logger:  log.NewFieldLogger().WithComponent("metricPublisher").WithPackage("metric"),
+		logger:  log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
 	}
 
 	publisher.registerReportJob()

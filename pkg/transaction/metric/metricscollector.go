@@ -170,7 +170,7 @@ func createMetricCollector() Collector {
 	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
 	metricCollector.reports = newReportCache()
-	metricCollector.usagePublisher = newMetricPublisher(metricCollector.storage, metricCollector.reports)
+	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports)
 
 	if util.IsNotTest() {
 		var err error
