@@ -43,18 +43,32 @@ func init() {
 
 // LoggerConfig - is a builder used to setup the logging for an agent
 type LoggerConfig struct {
-	err         error
-	output      LoggingOutput
-	path        string
-	cfg         rotatefilehook.RotateFileConfig
-	metricCfg   rotatefilehook.RotateFileConfig
-	initialized bool
+	err           error
+	output        LoggingOutput
+	path          string
+	cfg           rotatefilehook.RotateFileConfig
+	metricCfg     rotatefilehook.RotateFileConfig
+	initialized   bool
+	metricEnabled bool
 }
 
 // Apply - applies the config changes to the logger
 func (b *LoggerConfig) Apply() error {
 	if b.err != nil {
 		return b.err
+	}
+
+	// validate metric fields, if enabled
+	if b.metricEnabled {
+		if err := b.validateSize("log.metricfile.rotateeverybytes", b.metricCfg.MaxSize); err != nil {
+			return err
+		}
+		if err := b.validate0orGreater("log.metricfile.keepfiles", b.metricCfg.MaxBackups); err != nil {
+			return err
+		}
+		if err := b.validate0orGreater("log.metricfile.cleanbackupsevery", b.metricCfg.MaxAge); err != nil {
+			return err
+		}
 	}
 
 	// update the log logger
@@ -86,7 +100,7 @@ func (b *LoggerConfig) Apply() error {
 		isTest := flag.Lookup("test.v") != nil
 
 		// skip metric log setup in unit tests
-		if !isTest {
+		if !isTest && b.metricEnabled {
 			b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
 			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
 			metric.AddHook(rotateMetricHook)
@@ -173,6 +187,14 @@ func (b *LoggerConfig) Path(path string) *LoggerConfig {
 	return b
 }
 
+// Path -
+func (b *LoggerConfig) Metrics(enabled bool) *LoggerConfig {
+	if b.err == nil {
+		b.metricEnabled = enabled
+	}
+	return b
+}
+
 func (b *LoggerConfig) validateSize(path string, maxSize int) error {
 	if maxSize < 1048576 {
 		return ErrInvalidLogConfig.FormatError(path, "minimum of 1048576")
@@ -225,7 +247,6 @@ func (b *LoggerConfig) MetricFilename(filename string) *LoggerConfig {
 // MaxMetricSize -
 func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
-		b.err = b.validateSize("log.metricfile.rotateeverybytes", maxSize)
 		b.metricCfg.MaxSize = maxSize
 	}
 	return b
@@ -234,7 +255,6 @@ func (b *LoggerConfig) MaxMetricSize(maxSize int) *LoggerConfig {
 // MaxMetricBackups -
 func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 	if b.err == nil {
-		b.err = b.validate0orGreater("log.metricfile.keepfiles", maxBackups)
 		b.metricCfg.MaxBackups = maxBackups
 	}
 	return b
@@ -243,7 +263,6 @@ func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 // MaxAge -
 func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
-		b.err = b.validate0orGreater("log.metricfile.cleanbackupsevery", maxAge)
 		b.metricCfg.MaxAge = maxAge
 	}
 	return b

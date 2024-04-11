@@ -74,6 +74,7 @@ func TestLogConfigValidations(t *testing.T) {
 	testCases := map[string]struct {
 		errInfo          string
 		agentType        AgentType
+		metricsEnabled   bool
 		level            string
 		format           string
 		output           string
@@ -108,21 +109,26 @@ func TestLogConfigValidations(t *testing.T) {
 			errInfo: "log.file.cleanbackupsevery",
 			maxAge:  -1,
 		},
-		"success": {},
+		"success": {
+			metricsEnabled: true,
+		},
 		"expect err, traceability agent, bad metric log size": {
-			agentType:     TraceabilityAgent,
-			errInfo:       "log.metricfile.rotateeverybytes",
-			metricMaxSize: 1,
+			agentType:      TraceabilityAgent,
+			metricsEnabled: true,
+			errInfo:        "log.metricfile.rotateeverybytes",
+			metricMaxSize:  1,
 		},
 		"expect err, traceability agent, bad metric log backups": {
 			agentType:        TraceabilityAgent,
+			metricsEnabled:   true,
 			errInfo:          "log.metricfile.keepfiles",
 			metricMaxBackups: -1,
 		},
 		"expect err, traceability agent, bad metric log age": {
-			agentType:    TraceabilityAgent,
-			errInfo:      "log.metricfile.cleanbackupsevery",
-			metricMaxAge: -1,
+			agentType:      TraceabilityAgent,
+			metricsEnabled: true,
+			errInfo:        "log.metricfile.cleanbackupsevery",
+			metricMaxAge:   -1,
 		},
 	}
 	for name, tc := range testCases {
@@ -169,7 +175,8 @@ func TestLogConfigValidations(t *testing.T) {
 			props.AddIntProperty(pathLogFileMaxBackups, tc.maxBackups, "")
 			props.AddIntProperty(pathLogFileMaxAge, tc.maxAge, "")
 
-			if tc.agentType == TraceabilityAgent {
+			if tc.agentType == TraceabilityAgent && tc.metricsEnabled {
+				props.AddBoolProperty(pathLogMetricsFileEnabled, true, "")
 				props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "")
 				props.AddIntProperty(pathLogMetricsFileMaxSize, tc.metricMaxSize, "")
 				props.AddIntProperty(pathLogMetricsFileMaxBackups, tc.metricMaxBackups, "")
