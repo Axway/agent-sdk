@@ -39,7 +39,7 @@ func TestExecute(t *testing.T) {
 	job := newTraceabilityHealthCheckJob()
 	// hc not okay
 	err := job.Execute()
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 }
 
 func TestReady(t *testing.T) {
@@ -68,7 +68,7 @@ func TestStatus(t *testing.T) {
 	// previous errors, status not ok
 	job.prevErr = fmt.Errorf("")
 	err = job.Status()
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 }
 
 func TestHealthCheck(t *testing.T) {
