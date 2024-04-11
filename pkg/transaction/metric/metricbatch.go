@@ -12,7 +12,6 @@ import (
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
 	beatPub.Batch
-
 	events        []beatPub.Event
 	histograms    map[string]metrics.Histogram
 	collector     *collector
@@ -48,6 +47,7 @@ func (b *EventBatch) publish() error {
 		b.batchUnlock()
 		return err
 	}
+	go b.logEvents("publishing", b.events)
 	err = client.Publish(context.Background(), b)
 	if err != nil {
 		b.batchUnlock()
@@ -77,7 +77,71 @@ func (b *EventBatch) Events() []beatPub.Event {
 	return b.events
 }
 
-func (b *EventBatch) getMetricFromEvent(event beatPub.Event) *APIMetric {
+// ACK - all events have been acked, cleanup the counters
+func (b *EventBatch) ACK() {
+	for _, event := range b.events {
+		metric := getMetricFromEvent(event)
+		if metric != nil {
+			b.collector.logMetric("published", metric)
+			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
+		}
+	}
+	b.collector.metricStartTime = b.collector.metricEndTime
+	b.batchUnlock()
+}
+
+// Drop - drop the entire batch
+func (b *EventBatch) Drop() {
+	go b.logEvents("dropping", b.events)
+	b.batchUnlock()
+}
+
+// Retry - batch sent for retry, publish again
+func (b *EventBatch) Retry() {
+	go b.logEvents("retrying", b.events)
+	b.batchUnlock()
+}
+
+// Cancelled - batch has been cancelled
+func (b *EventBatch) Cancelled() {
+	go b.logEvents("cancelling", b.events)
+	b.batchUnlock()
+}
+
+// RetryEvents - certain events sent to retry
+func (b *EventBatch) RetryEvents(events []beatPub.Event) {
+	go b.logEvents("retrying", events)
+	b.events = events
+	b.publish()
+}
+
+// CancelledEvents - events have been cancelled
+func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
+	go b.logEvents("cancelling", events)
+	b.events = events
+	b.publish()
+}
+
+// Events - return the events in the batch
+func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
+	for _, event := range events {
+		metric := getMetricFromEvent(event)
+		if metric != nil {
+			b.collector.logMetric(status, metric)
+		}
+	}
+}
+
+// NewEventBatch - creates a new batch
+func NewEventBatch(c *collector) *EventBatch {
+	return &EventBatch{
+		collector:     c,
+		histograms:    make(map[string]metrics.Histogram),
+		haveBatchLock: false,
+	}
+}
+
+func getMetricFromEvent(event beatPub.Event) *APIMetric {
 	if data, found := event.Content.Fields[messageKey]; found {
 		v4Bytes := data.(string)
 		v4Event := make(map[string]interface{})
@@ -104,92 +168,4 @@ func (b *EventBatch) getMetricFromEvent(event beatPub.Event) *APIMetric {
 		return metric
 	}
 	return nil
-}
-
-// ACK - all events have been acked, cleanup the counters
-func (b *EventBatch) ACK() {
-	for _, event := range b.events {
-		metric := b.getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("published", metric)
-			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
-		}
-	}
-	b.collector.metricStartTime = b.collector.metricEndTime
-	b.batchUnlock()
-}
-
-// Drop - drop the entire batch
-func (b *EventBatch) Drop() {
-	for _, event := range b.events {
-		metric := b.getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("dropped", metric)
-		}
-	}
-	b.batchUnlock()
-}
-
-// Retry - batch sent for retry, publish again
-func (b *EventBatch) Retry() {
-	for _, event := range b.events {
-		metric := b.getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("retrying", metric)
-		}
-	}
-	b.retryEvents(b.events)
-}
-
-// Cancelled - batch has been cancelled
-func (b *EventBatch) Cancelled() {
-	for _, event := range b.events {
-		metric := b.getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("cancelled", metric)
-		}
-	}
-	b.batchUnlock()
-}
-
-func (b *EventBatch) retryEvents(events []beatPub.Event) {
-	retryEvents := make([]beatPub.Event, 0)
-	for _, event := range b.events {
-		if _, found := event.Content.Meta[metricRetries]; !found {
-			event.Content.Meta[metricRetries] = 0
-		}
-		count := event.Content.Meta[metricRetries].(int)
-		newCount := count + 1
-		if newCount <= 3 {
-			event.Content.Meta[metricRetries] = newCount
-			retryEvents = append(retryEvents, event)
-		}
-
-		// let the metric batch handle its own retries
-		if _, found := event.Content.Meta[retries]; found {
-			event.Content.Meta[retries] = 0
-		}
-	}
-	b.events = retryEvents
-	b.Publish()
-}
-
-// RetryEvents - certain events sent to retry
-func (b *EventBatch) RetryEvents(events []beatPub.Event) {
-	b.retryEvents(events)
-}
-
-// CancelledEvents - events have been cancelled
-func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
-	b.events = events
-	b.publish()
-}
-
-// NewEventBatch - creates a new batch
-func NewEventBatch(c *collector) *EventBatch {
-	return &EventBatch{
-		collector:     c,
-		histograms:    make(map[string]metrics.Histogram),
-		haveBatchLock: false,
-	}
 }

@@ -428,21 +428,6 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
-		// Success case, retry metrics
-		{
-			name:                      "WithUsageAndMetricRetry",
-			loopCount:                 1,
-			retryBatchCount:           1,
-			apiTransactionCount:       []int{5},
-			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*UsageResponse{nil},
-			expectedLHEvents:          []int{1},
-			expectedTransactionCount:  []int{5},
-			trackVolume:               true,
-			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 1,
-			appName:                   "unknown",
-		},
 		// Retry limit hit
 		{
 			name:                      "WithUsageAndFailedMetric",
