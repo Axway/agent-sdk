@@ -13,7 +13,7 @@ type retryJob struct {
 	retryJobProps
 }
 
-//newBaseJob - creates a single run job and sets up the structure for different job types
+// newBaseJob - creates a single run job and sets up the structure for different job types
 func newRetryJob(newJob Job, retries int, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := retryJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeRetry),
@@ -26,7 +26,7 @@ func newRetryJob(newJob Job, retries int, name string, failJobChan chan string) 
 	return &thisJob, nil
 }
 
-//start - calls the Execute function from the Job definition
+// start - calls the Execute function from the Job definition
 func (b *retryJob) start() {
 	b.startLog()
 	b.waitForReady()
@@ -46,7 +46,7 @@ func (b *retryJob) start() {
 	b.SetStatus(JobStatusFailed)
 }
 
-//stop - noop
+// stop - noop
 func (b *retryJob) stop() {
 	b.stopLog()
 }
