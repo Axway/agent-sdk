@@ -92,20 +92,20 @@ func (b *EventBatch) ACK() {
 
 // Drop - drop the entire batch
 func (b *EventBatch) Drop() {
-	go b.logEvents("dropping", b.events)
-	b.batchUnlock()
+	go b.logEvents("drop called, retrying", b.events)
+	b.publish()
 }
 
 // Retry - batch sent for retry, publish again
 func (b *EventBatch) Retry() {
-	go b.logEvents("retrying", b.events)
-	b.batchUnlock()
+	go b.logEvents("retrying batch", b.events)
+	b.publish()
 }
 
 // Cancelled - batch has been cancelled
 func (b *EventBatch) Cancelled() {
-	go b.logEvents("cancelling", b.events)
-	b.batchUnlock()
+	go b.logEvents("cancelled called, retrying", b.events)
+	b.publish()
 }
 
 // RetryEvents - certain events sent to retry
@@ -117,7 +117,7 @@ func (b *EventBatch) RetryEvents(events []beatPub.Event) {
 
 // CancelledEvents - events have been cancelled
 func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
-	go b.logEvents("cancelling", events)
+	go b.logEvents("cancelled called, retrying", events)
 	b.events = events
 	b.publish()
 }
