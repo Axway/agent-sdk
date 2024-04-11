@@ -89,7 +89,7 @@ func AddLogConfigProperties(props properties.Properties, defaultFileName string)
 	props.AddStringProperty(pathLogFileName, defaultFileName, "Name of the log files")
 	props.AddStringProperty(pathLogFilePath, "logs", "Log file path if output type is file or both")
 	props.AddIntProperty(pathLogFileMaxSize, 10485760, "The maximum size of a log file, in bytes  (default: 10485760 - 10 MB)")
-	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backips")
+	props.AddIntProperty(pathLogFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the log file backups")
 	props.AddIntProperty(pathLogFileMaxBackups, 7, "The maximum number of backups to keep of log files (default: 7)")
 }
 
@@ -101,7 +101,7 @@ func AddMetricLogConfigProperties(props properties.Properties, agentType AgentTy
 	// Metric log file options
 	props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "Name of the metric log files)")
 	props.AddIntProperty(pathLogMetricsFileMaxSize, 10485760, "The maximum size of a metrics log file, in bytes  (default: 10485760 - 10 MB)")
-	props.AddIntProperty(pathLogMetricsFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the metrics log file backips")
+	props.AddIntProperty(pathLogMetricsFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the metrics log file backups")
 	props.AddIntProperty(pathLogMetricsFileMaxBackups, 0, "The maximum number of backups to keep of metrics log files (default: unlimited)")
 }
 
