@@ -373,6 +373,11 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 	defer client.Unlock()
 
 	events := batch.Events()
+	if len(events) == 0 {
+		batch.ACK()
+		return nil // nothing to do
+	}
+
 	_, isMetric := events[0].Content.Meta["metric"]
 	logger := client.logger.WithField(eventTypeStr, "metric")
 
@@ -381,23 +386,16 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 		if outputEventProcessor != nil {
 			updatedEvents := outputEventProcessor.Process(events)
 			updateEvent(batch, updatedEvents)
-			events = batch.Events() // update the events, for changes from outputEventProcessor
-			// if len(updatedEvents) > 0 {
-			// } else {
-			// 	batch.ACK()
-			// 	return nil
-			// }
 		}
 
-		sampledEvents, err := sampling.FilterEvents(events)
+		sampledEvents, err := sampling.FilterEvents(batch.Events())
 		if err != nil {
 			logger.Error(err.Error())
 		}
-
 		updateEvent(batch, sampledEvents)
-		events = batch.Events()
 	}
 
+	events = batch.Events()
 	if len(events) == 0 {
 		batch.ACK()
 		return nil // nothing to do
