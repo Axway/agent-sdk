@@ -9,103 +9,189 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	defLevel          = "info"
+	defFormat         = "json"
+	defOutput         = "stdout"
+	defMaskedVals     = ""
+	defPath           = "logs"
+	defMaxSize        = 10485760
+	defMaxAge         = 0
+	defMaxFiles       = 7
+	defMetricName     = "metrics.log"
+	defMetricMaxSize  = 10485760
+	defMetricMaxAge   = 0
+	defMetricMaxFiles = 0
+)
+
 func TestDefaultLogConfig(t *testing.T) {
-	rootCmd := &cobra.Command{}
-	props := properties.NewProperties(rootCmd)
+	testCases := map[string]struct {
+		logName   string
+		agentType AgentType
+	}{
+		"default discovery agent configuration": {
+			agentType: DiscoveryAgent,
+			logName:   "discovery_agent.log",
+		},
+		"default traceability agent configuration": {
+			agentType: TraceabilityAgent,
+			logName:   "traceability_agent.log",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			rootCmd := &cobra.Command{}
+			props := properties.NewProperties(rootCmd)
+			AddLogConfigProperties(props, tc.logName)
+			AddMetricLogConfigProperties(props, tc.agentType)
 
-	// Add default properties
-	logName := "discovery_agent.log"
-	AddLogConfigProperties(props, logName)
+			// Parse config
+			_, err := ParseAndSetupLogConfig(props, tc.agentType)
+			assert.Nil(t, err, "Expected no error with default values")
 
-	// Validate the default
-	_, err := ParseAndSetupLogConfig(props)
-	assert.Nil(t, err, "Expected no error with default values")
-	assert.Equal(t, "info", props.StringPropertyValue(pathLogLevel), "Unexpected default log level")
-	assert.Equal(t, "json", props.StringPropertyValue(pathLogFormat), "Unexpected default log format")
-	assert.Equal(t, "stdout", props.StringPropertyValue(pathLogOutput), "Unexpected default log output")
-	assert.Equal(t, "", props.StringPropertyValue(pathLogMaskedValues), "Unexpected default masked values")
-	assert.Equal(t, logName, props.StringPropertyValue(pathLogFileName), "Unexpected default file name")
-	assert.Equal(t, "logs", props.StringPropertyValue(pathLogFilePath), "Unexpected default log path")
-	assert.Equal(t, 10485760, props.IntPropertyValue(pathLogFileMaxSize), "Unexpected default max size")
-	assert.Equal(t, 0, props.IntPropertyValue(pathLogFileMaxAge), "Unexpected default max age")
-	assert.Equal(t, 7, props.IntPropertyValue(pathLogFileMaxBackups), "Unexpected default max backups")
+			// Validate the default
+			assert.Equal(t, defLevel, props.StringPropertyValue(pathLogLevel))
+			assert.Equal(t, defFormat, props.StringPropertyValue(pathLogFormat))
+			assert.Equal(t, defOutput, props.StringPropertyValue(pathLogOutput))
+			assert.Equal(t, defMaskedVals, props.StringPropertyValue(pathLogMaskedValues))
+			assert.Equal(t, tc.logName, props.StringPropertyValue(pathLogFileName))
+			assert.Equal(t, defPath, props.StringPropertyValue(pathLogFilePath))
+			assert.Equal(t, defMaxSize, props.IntPropertyValue(pathLogFileMaxSize))
+			assert.Equal(t, defMaxAge, props.IntPropertyValue(pathLogFileMaxAge))
+			assert.Equal(t, defMaxFiles, props.IntPropertyValue(pathLogFileMaxBackups))
+
+			if tc.agentType == TraceabilityAgent {
+				assert.Equal(t, defMetricName, props.StringPropertyValue(pathLogMetricsFileName))
+				assert.Equal(t, defMetricMaxSize, props.IntPropertyValue(pathLogMetricsFileMaxSize))
+				assert.Equal(t, defMetricMaxAge, props.IntPropertyValue(pathLogMetricsFileMaxAge))
+				assert.Equal(t, defMetricMaxFiles, props.IntPropertyValue(pathLogMetricsFileMaxBackups))
+			}
+		})
+	}
 }
 
 func TestLogConfigValidations(t *testing.T) {
-	// Bad Level
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props := properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug1", "")
-	_, err := ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad log level")
+	testCases := map[string]struct {
+		errInfo          string
+		agentType        AgentType
+		metricsEnabled   bool
+		level            string
+		format           string
+		output           string
+		maxSize          int
+		maxBackups       int
+		maxAge           int
+		metricMaxSize    int
+		metricMaxBackups int
+		metricMaxAge     int
+	}{
+		"expect err, bad log level": {
+			errInfo: "log.level",
+			level:   "debug1",
+		},
+		"expect err, bad log format": {
+			errInfo: "log.format",
+			format:  "line1",
+		},
+		"expect err, bad log output": {
+			errInfo: "log.output",
+			output:  "unknown",
+		},
+		"expect err, bad max log size": {
+			errInfo: "log.file.rotateeverybytes",
+			maxSize: 1,
+		},
+		"expect err, bad max log backups": {
+			errInfo:    "log.file.keepfiles",
+			maxBackups: -1,
+		},
+		"expect err, bad max log age": {
+			errInfo: "log.file.cleanbackupsevery",
+			maxAge:  -1,
+		},
+		"success": {
+			metricsEnabled: true,
+		},
+		"expect err, traceability agent, bad metric log size": {
+			agentType:      TraceabilityAgent,
+			metricsEnabled: true,
+			errInfo:        "log.metricfile.rotateeverybytes",
+			metricMaxSize:  1,
+		},
+		"expect err, traceability agent, bad metric log backups": {
+			agentType:        TraceabilityAgent,
+			metricsEnabled:   true,
+			errInfo:          "log.metricfile.keepfiles",
+			metricMaxBackups: -1,
+		},
+		"expect err, traceability agent, bad metric log age": {
+			agentType:      TraceabilityAgent,
+			metricsEnabled: true,
+			errInfo:        "log.metricfile.cleanbackupsevery",
+			metricMaxAge:   -1,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.agentType == 0 {
+				tc.agentType = DiscoveryAgent
+			}
+			if tc.level == "" {
+				tc.level = defLevel
+			}
+			if tc.format == "" {
+				tc.format = defFormat
+			}
+			if tc.output == "" {
+				tc.output = defOutput
+			}
+			if tc.maxSize == 0 {
+				tc.maxSize = defMaxSize
+			}
+			if tc.maxBackups == 0 {
+				tc.maxBackups = defMaxFiles
+			}
+			if tc.maxAge == 0 {
+				tc.maxAge = defMaxAge
+			}
+			if tc.metricMaxSize == 0 {
+				tc.metricMaxSize = defMetricMaxSize
+			}
+			if tc.metricMaxBackups == 0 {
+				tc.metricMaxBackups = defMetricMaxFiles
+			}
+			if tc.metricMaxAge == 0 {
+				tc.metricMaxAge = defMetricMaxAge
+			}
 
-	// Bad Format
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line1", "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad log format")
+			log.GlobalLoggerConfig = log.LoggerConfig{}
+			props := properties.NewProperties(&cobra.Command{})
+			props.AddStringProperty(pathLogLevel, tc.level, "")
+			props.AddStringProperty(pathLogFormat, tc.format, "")
+			props.AddStringProperty(pathLogOutput, tc.output, "")
+			props.AddStringProperty(pathLogFileName, "agent.log", "")
+			props.AddStringProperty(pathLogFilePath, defPath, "")
+			props.AddIntProperty(pathLogFileMaxSize, tc.maxSize, "")
+			props.AddIntProperty(pathLogFileMaxBackups, tc.maxBackups, "")
+			props.AddIntProperty(pathLogFileMaxAge, tc.maxAge, "")
 
-	// Bad Output
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line", "")
-	props.AddStringProperty(pathLogOutput, "unknown", "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad log output")
+			if tc.agentType == TraceabilityAgent && tc.metricsEnabled {
+				props.AddBoolProperty(pathLogMetricsFileEnabled, true, "")
+				props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "")
+				props.AddIntProperty(pathLogMetricsFileMaxSize, tc.metricMaxSize, "")
+				props.AddIntProperty(pathLogMetricsFileMaxBackups, tc.metricMaxBackups, "")
+				props.AddIntProperty(pathLogMetricsFileMaxAge, tc.metricMaxAge, "")
+			}
 
-	// Bad Max Size
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line", "")
-	props.AddStringProperty(pathLogOutput, "file", "")
-	props.AddStringProperty(pathLogFileName, "filename", "")
-	props.AddStringProperty(pathLogFilePath, "path", "")
-	props.AddIntProperty(pathLogFileMaxSize, 0, "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad max size")
-
-	// Bad Max Backups
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line", "")
-	props.AddStringProperty(pathLogOutput, "file", "")
-	props.AddStringProperty(pathLogFileName, "filename", "")
-	props.AddStringProperty(pathLogFilePath, "path", "")
-	props.AddIntProperty(pathLogFileMaxSize, 1048576, "")
-	props.AddIntProperty(pathLogFileMaxBackups, -1, "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad max backups")
-
-	// Bad Max Age
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line", "")
-	props.AddStringProperty(pathLogOutput, "file", "")
-	props.AddStringProperty(pathLogFileName, "filename", "")
-	props.AddStringProperty(pathLogFilePath, "path", "")
-	props.AddIntProperty(pathLogFileMaxSize, 1048576, "")
-	props.AddIntProperty(pathLogFileMaxBackups, 1, "")
-	props.AddIntProperty(pathLogFileMaxAge, -1, "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.NotNil(t, err, "Expected error with bad max age")
-
-	// All Good
-	log.GlobalLoggerConfig = log.LoggerConfig{}
-	props = properties.NewProperties(&cobra.Command{})
-	props.AddStringProperty(pathLogLevel, "debug", "")
-	props.AddStringProperty(pathLogFormat, "line", "")
-	props.AddStringProperty(pathLogOutput, "file", "")
-	props.AddStringProperty(pathLogFileName, "filename", "")
-	props.AddStringProperty(pathLogFilePath, "path", "")
-	props.AddIntProperty(pathLogFileMaxSize, 1048576, "")
-	props.AddIntProperty(pathLogFileMaxBackups, 1, "")
-	props.AddIntProperty(pathLogFileMaxAge, 1, "")
-	_, err = ParseAndSetupLogConfig(props)
-	assert.Nil(t, err, "Expected no errors")
+			_, err := ParseAndSetupLogConfig(props, tc.agentType)
+			if tc.errInfo != "" {
+				if !assert.NotNil(t, err) {
+					return
+				}
+				assert.Contains(t, err.Error(), tc.errInfo)
+				return
+			}
+			assert.Nil(t, err)
+		})
+	}
 }

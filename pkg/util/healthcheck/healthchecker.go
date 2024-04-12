@@ -106,7 +106,8 @@ func GetStatus(endpoint string) StatusLevel {
 		logger.
 			WithField("details", statusCheck.Status.Details).
 			WithField("result", statusCheck.Status.Result).
-			Errorf("health check for %s in not OK", endpoint)
+			WithField("endpoint", endpoint).
+			Error("health check is not OK")
 	}
 	return statusCheck.Status.Result
 }

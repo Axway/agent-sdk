@@ -29,6 +29,11 @@ import (
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
+const (
+	countStr     = "count"
+	eventTypeStr = "event-type"
+)
+
 // OutputEventProcessor - P
 type OutputEventProcessor interface {
 	Process(events []publisher.Event) []publisher.Event
@@ -42,15 +47,25 @@ const (
 	defaultStartMaxWindowSize int = 10
 	defaultPort                   = 5044
 	traceabilityStr               = "traceability"
+	HealthCheckEndpoint           = traceabilityStr
 )
 
 var traceabilityClients []*Client
+var clientMutex *sync.Mutex
 var traceCfg *Config
 
 // GetClient - returns a random client from the clients array
 var GetClient = getClient
 
+func addClient(c *Client) {
+	clientMutex.Lock()
+	defer clientMutex.Unlock()
+	traceabilityClients = append(traceabilityClients, c)
+}
+
 func getClient() (*Client, error) {
+	clientMutex.Lock()
+	defer clientMutex.Unlock()
 	switch clients := len(traceabilityClients); clients {
 	case 0:
 		return nil, fmt.Errorf("no traceability clients, can't publish metrics")
@@ -64,6 +79,7 @@ func getClient() (*Client, error) {
 
 // Client - struct
 type Client struct {
+	sync.Mutex
 	transportClient outputs.Client
 	logger          log.FieldLogger
 }
@@ -75,10 +91,11 @@ type traceabilityAgentHealthChecker struct {
 	tlsCfg   *tlscommon.Config
 	timeout  time.Duration
 	// TBD. Remove in future when Jobs interface is complete
-	hcJob *condorHealthCheckJob
+	hcJob *traceabilityHealthCheck
 }
 
 func init() {
+	clientMutex = &sync.Mutex{}
 	outputs.RegisterType(traceabilityStr, makeTraceabilityAgent)
 }
 
@@ -205,7 +222,7 @@ func makeTraceabilityAgent(
 			logger:          logger,
 		}
 		clients = append(clients, outputClient)
-		traceabilityClients = append(traceabilityClients, outputClient)
+		addClient(outputClient)
 	}
 	traceabilityGroup.Clients = clients
 	return traceabilityGroup, nil
@@ -305,6 +322,8 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 
 // SetTransportClient - set the transport client
 func (client *Client) SetTransportClient(outputClient outputs.Client) {
+	client.Lock()
+	defer client.Unlock()
 	client.transportClient = outputClient
 }
 
@@ -315,6 +334,9 @@ func (client *Client) SetLogger(logger log.FieldLogger) {
 
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
+	client.Lock()
+	defer client.Unlock()
+
 	// do not attempt to establish a connection in offline mode
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
@@ -330,6 +352,9 @@ func (client *Client) Connect() error {
 
 // Close publish a single event to output.
 func (client *Client) Close() error {
+	client.Lock()
+	defer client.Unlock()
+
 	// do not attempt to close a connection in offline mode, it was never established
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
@@ -344,59 +369,48 @@ func (client *Client) Close() error {
 
 // Publish sends events to the clients sink.
 func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error {
-	events := batch.Events()
+	client.Lock()
+	defer client.Unlock()
 
-	eventType := "metric"
-	isMetric := false
-	if len(events) > 0 {
-		_, isMetric = events[0].Content.Meta["metric"]
+	events := batch.Events()
+	if len(events) == 0 {
+		batch.ACK()
+		return nil // nothing to do
 	}
+
+	_, isMetric := events[0].Content.Meta["metric"]
+	logger := client.logger.WithField(eventTypeStr, "metric")
 
 	if !isMetric {
-		eventType = "transaction"
+		logger = logger.WithField(eventTypeStr, "transaction")
 		if outputEventProcessor != nil {
 			updatedEvents := outputEventProcessor.Process(events)
-			if len(updatedEvents) > 0 {
-				updateEvent(batch, updatedEvents)
-				events = batch.Events() // update the events, for changes from outputEventProcessor
-			} else {
-				batch.ACK()
-				return nil
-			}
+			updateEvent(batch, updatedEvents)
 		}
 
-		sampledEvents, err := sampling.FilterEvents(events)
+		sampledEvents, err := sampling.FilterEvents(batch.Events())
 		if err != nil {
-			client.logger.Error(err.Error())
-		} else {
-			updateEvent(batch, sampledEvents)
+			logger.Error(err.Error())
 		}
+		updateEvent(batch, sampledEvents)
 	}
 
-	publishCount := len(batch.Events())
-
-	if publishCount > 0 {
-		client.logger.
-			WithField("count", publishCount).
-			WithField("event-type", eventType).
-			Info("creating events")
+	events = batch.Events()
+	if len(events) == 0 {
+		batch.ACK()
+		return nil // nothing to do
 	}
+
+	logger = logger.WithField(countStr, len(events))
+	logger.Info("publishing events")
 
 	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
-		client.logger.
-			WithField("event-type", eventType).
-			WithError(err).
-			Error("failed to publish event")
+		logger.WithError(err).Error("failed to publish events")
 		return err
 	}
 
-	if publishCount-len(batch.Events()) > 0 {
-		client.logger.
-			WithField("count", publishCount-len(batch.Events())).
-			WithField("event-type", eventType).
-			Info("published events")
-	}
+	logger.Info("published events")
 
 	return nil
 }
@@ -417,59 +431,16 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 }
 
 func registerHealthCheckers(config *Config) error {
-	// register a unique healthchecker for each potential host
-	for i := range config.Hosts {
-		ta := &traceabilityAgentHealthChecker{
-			tlsCfg:   config.TLS,
-			protocol: config.Protocol,
-			host:     config.Hosts[i],
-			proxyURL: config.Proxy.URL,
-			timeout:  config.Timeout,
-		}
+	hcJob := newTraceabilityHealthCheckJob()
 
-		hcJob := &condorHealthCheckJob{
-			agentHealthChecker: ta,
-		}
-
-		// TBD. Remove in future when Jobs interface is complete
-		ta.hcJob = hcJob
-
-		_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Healthcheck")
-		if err != nil {
-			return err
-		}
-
-		// TBD. Remove in future when Jobs interface is complete
-		err = registerHealthChecker(hcJob, ta.host)
-		if err != nil {
-			return err
-		}
+	_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Health Check")
+	if err != nil {
+		return err
 	}
-	return nil
-}
 
-func registerHealthChecker(hcJob *condorHealthCheckJob, host string) error {
-	checkStatus := hcJob.agentHealthChecker.connectionHealthcheck
-
-	_, err := hc.RegisterHealthcheck("Traceability Agent", host, checkStatus)
+	_, err = hc.RegisterHealthcheck("Traceability Agent", HealthCheckEndpoint, hcJob.healthcheck)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (ta *traceabilityAgentHealthChecker) connectionHealthcheck(host string) *hc.Status {
-	// Create the default status
-	status := &hc.Status{
-		Result: hc.OK,
-	}
-
-	err := ta.hcJob.checkConnections(healthcheckCondor)
-	if err != nil {
-		status = &hc.Status{
-			Result:  hc.FAIL,
-			Details: fmt.Sprintf("%s Failed. %s", host, err.Error()),
-		}
-	}
-	return status
 }

@@ -10,7 +10,7 @@ type channelJob struct {
 	channelJobProps
 }
 
-//newDetachedChannelJob - creates a channel job, detached from other cron jobs
+// newDetachedChannelJob - creates a channel job, detached from other cron jobs
 func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeDetachedChannel),
@@ -24,7 +24,7 @@ func newDetachedChannelJob(newJob Job, signalStop chan interface{}, name string,
 	return &thisJob, nil
 }
 
-//newChannelJob - creates a channel run job
+// newChannelJob - creates a channel run job
 func newChannelJob(newJob Job, signalStop chan interface{}, name string, failJobChan chan string) (JobExecution, error) {
 	thisJob := channelJob{
 		createBaseJob(newJob, failJobChan, name, JobTypeChannel),
@@ -50,7 +50,7 @@ func (b *channelJob) handleExecution() {
 	b.setConsecutiveFails(0)
 }
 
-//start - calls the Execute function from the Job definition
+// start - calls the Execute function from the Job definition
 func (b *channelJob) start() {
 	b.startLog()
 	b.waitForReady()
@@ -72,17 +72,17 @@ func (b *channelJob) start() {
 	b.SetStatus(JobStatusStopped)
 }
 
-//stop - write to the stop channel to stop the execution loop
+// stop - write to the stop channel to stop the execution loop
 func (b *channelJob) stop() {
 	if b.getIsStopped() {
-		b.baseJob.logger.Tracef("job has already been stopped")
+		b.logger.Tracef("job has already been stopped")
 		return
 	}
 	b.stopLog()
 	if b.IsReady() {
-		b.baseJob.logger.Tracef("writing to %s stop channel", b.GetName())
+		b.logger.Tracef("writing to %s stop channel", b.GetName())
 		b.stopChan <- true
-		b.baseJob.logger.Tracef("wrote to %s stop channel", b.GetName())
+		b.logger.Tracef("wrote to %s stop channel", b.GetName())
 		b.UnsetIsReady()
 	} else {
 		b.stopReadyIfWaiting(0)

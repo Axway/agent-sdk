@@ -360,6 +360,8 @@ func (p *Pool) getIsStartStop() bool {
 //	          other jobs are single run and never restarted
 //						 returns true when successful, false when not
 func (p *Pool) startAll() bool {
+	p.stopAll()
+
 	// Check that all are ready before starting
 	p.logger.Debug("Checking for all cron jobs to be ready")
 	for _, job := range p.getCronJobs() {

@@ -21,15 +21,16 @@ import (
 )
 
 const (
-	lighthouseEventsKey       = "lighthouse_events"
+	eventsKey                 = "lighthouse_events"
 	offlineCacheFileName      = "agent-report-working.json"
 	offlineReportSuffix       = "usage_report.json"
 	offlineReportDateFormat   = "2006_01_02"
 	qaOfflineReportDateFormat = "2006_01_02_15_04"
 )
 
-type cacheReport struct {
+type usageReportCache struct {
 	jobs.Job
+	logger                  log.FieldLogger
 	cacheFilePath           string
 	reportCache             cache.Cache
 	reportCacheLock         sync.Mutex
@@ -37,8 +38,9 @@ type cacheReport struct {
 	offlineReportDateFormat string
 }
 
-func newReportCache() *cacheReport {
-	reportManager := &cacheReport{
+func newReportCache() *usageReportCache {
+	reportManager := &usageReportCache{
+		logger:                  log.NewFieldLogger().WithPackage("metric").WithComponent("usageReportCache"),
 		cacheFilePath:           traceability.GetCacheDirPath() + "/" + offlineCacheFileName,
 		reportCacheLock:         sync.Mutex{},
 		reportCache:             cache.New(),
@@ -53,32 +55,32 @@ func newReportCache() *cacheReport {
 	return reportManager
 }
 
-func (c *cacheReport) initialize() {
+func (c *usageReportCache) initialize() {
 	reportCache := cache.Load(c.cacheFilePath)
 	c.reportCache = reportCache
 	c.isInitialized = true
 }
 
 // getEvents - gets the events from the cache, lock before calling this
-func (c *cacheReport) getEvents() LighthouseUsageEvent {
-	var savedLighthouseEvents LighthouseUsageEvent
+func (c *usageReportCache) getEvents() UsageEvent {
+	var savedLighthouseEvents UsageEvent
 
-	savedEventString, err := c.reportCache.Get(lighthouseEventsKey)
+	savedEventString, err := c.reportCache.Get(eventsKey)
 	if err != nil {
-		return LighthouseUsageEvent{Report: map[string]LighthouseUsageReport{}}
+		return UsageEvent{Report: map[string]UsageReport{}}
 	}
 
 	err = json.Unmarshal([]byte(savedEventString.(string)), &savedLighthouseEvents)
 	if err != nil {
-		return LighthouseUsageEvent{Report: map[string]LighthouseUsageReport{}}
+		return UsageEvent{Report: map[string]UsageReport{}}
 	}
 	return savedLighthouseEvents
 }
 
 // loadEvents - locks the cache before getting the events
-func (c *cacheReport) loadEvents() LighthouseUsageEvent {
+func (c *usageReportCache) loadEvents() UsageEvent {
 	if !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
-		return LighthouseUsageEvent{Report: map[string]LighthouseUsageReport{}}
+		return UsageEvent{Report: map[string]UsageReport{}}
 	}
 	c.reportCacheLock.Lock()
 	defer c.reportCacheLock.Unlock()
@@ -87,17 +89,17 @@ func (c *cacheReport) loadEvents() LighthouseUsageEvent {
 }
 
 // setEvents - sets the events in the cache and saves the cache to the disk, lock the cache before calling this
-func (c *cacheReport) setEvents(lighthouseEvent LighthouseUsageEvent) {
+func (c *usageReportCache) setEvents(lighthouseEvent UsageEvent) {
 	eventBytes, err := json.Marshal(lighthouseEvent)
 	if err != nil {
 		return
 	}
-	c.reportCache.Set(lighthouseEventsKey, string(eventBytes))
+	c.reportCache.Set(eventsKey, string(eventBytes))
 	c.reportCache.Save(c.cacheFilePath)
 }
 
 // updateEvents - locks the cache before setting the new light house events in the cache
-func (c *cacheReport) updateEvents(lighthouseEvent LighthouseUsageEvent) {
+func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
 	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
 		return
 	}
@@ -108,7 +110,7 @@ func (c *cacheReport) updateEvents(lighthouseEvent LighthouseUsageEvent) {
 	c.setEvents(lighthouseEvent)
 }
 
-func (c *cacheReport) generateReportPath(timestamp ISO8601Time, index int) string {
+func (c *usageReportCache) generateReportPath(timestamp ISO8601Time, index int) string {
 	format := "%s_%s"
 	if index != 0 {
 		format = "%s_" + strconv.Itoa(index) + "_%s"
@@ -117,7 +119,7 @@ func (c *cacheReport) generateReportPath(timestamp ISO8601Time, index int) strin
 }
 
 // validateReport - copies usage events setting all usages to 0 for any missing time interval
-func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) LighthouseUsageEvent {
+func (c *usageReportCache) validateReport(savedEvents UsageEvent) UsageEvent {
 	reportDuration := time.Duration(savedEvents.Granularity * int(time.Millisecond))
 
 	// order all the keys, this will be used to find any missing times
@@ -128,7 +130,7 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 	sort.Strings(orderedKeys)
 
 	// create an empty report to insert when necessary
-	emptyReport := LighthouseUsageReport{
+	emptyReport := UsageReport{
 		Product: savedEvents.Report[orderedKeys[0]].Product,
 		Usage:   make(map[string]int64),
 		Meta:    savedEvents.Report[orderedKeys[0]].Meta,
@@ -150,7 +152,7 @@ func (c *cacheReport) validateReport(savedEvents LighthouseUsageEvent) Lighthous
 }
 
 // addReport - adds a new report to the cache
-func (c *cacheReport) addReport(event LighthouseUsageEvent) error {
+func (c *usageReportCache) addReport(event UsageEvent) error {
 	// Open and load the existing usage file
 	savedEvents := c.loadEvents()
 
@@ -167,7 +169,7 @@ func (c *cacheReport) addReport(event LighthouseUsageEvent) error {
 }
 
 // saveReport - creates a new file with the latest cached events then clears all reports from the cache, lock outside of this
-func (c *cacheReport) saveReport() error {
+func (c *usageReportCache) saveReport() error {
 	savedEvents := c.getEvents()
 
 	// no reports yet, skip creating the event
@@ -208,13 +210,13 @@ func (c *cacheReport) saveReport() error {
 	}
 
 	// clear out all reports
-	savedEvents.Report = make(map[string]LighthouseUsageReport)
+	savedEvents.Report = make(map[string]UsageReport)
 	c.setEvents(savedEvents)
 	return nil
 }
 
 // sendReport - creates a new report with the latest cached events then clears all reports from the cache, lock outside of this
-func (c *cacheReport) sendReport(publishFunc func(event LighthouseUsageEvent) error) error {
+func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) error {
 	c.reportCacheLock.Lock()
 	defer c.reportCacheLock.Unlock()
 	savedEvents := c.getEvents()
@@ -225,11 +227,11 @@ func (c *cacheReport) sendReport(publishFunc func(event LighthouseUsageEvent) er
 	}
 	savedEvents = c.validateReport(savedEvents)
 	if err := publishFunc(savedEvents); err != nil {
-		log.Error("could not publish usage, will send at next scheduled publishing")
+		c.logger.Error("could not publish usage, will send at next scheduled publishing")
 		return nil
 	}
 
-	savedEvents.Report = make(map[string]LighthouseUsageReport)
+	savedEvents.Report = make(map[string]UsageReport)
 	c.setEvents(savedEvents)
 	return nil
 }

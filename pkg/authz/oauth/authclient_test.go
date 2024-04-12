@@ -48,7 +48,7 @@ func TestExpiredTokenHolder(t *testing.T) {
 		cachedToken: &tokenResponse{
 			AccessToken: "some_token",
 		},
-		cachedTokenExpiry: time.NewTimer(0),
+		cachedTokenExpiry: time.Now().Add(-time.Hour),
 	}
 
 	time.Sleep(time.Millisecond)

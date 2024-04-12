@@ -5,6 +5,9 @@ import "github.com/sirupsen/logrus"
 // Create a new instance of the logger
 var log = logrus.New()
 
+// Create a new instance of the metric logger
+var metric = logrus.New()
+
 // LoggingOutput - Defines how the logger will log its output
 type LoggingOutput int
 
