@@ -635,7 +635,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField(countStr, c.getOrRegisterCounter(transactionCountMetric).Count()).
 		WithField(eventTypeStr, usageStr).
-		Info("creating usage event")
+		Info("creating usage event for cache")
 
 	if agent.GetCentralConfig().IsAxwayManaged() {
 		usageMap[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
@@ -644,7 +644,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 			WithField("total-bytes", c.getOrRegisterCounter(transactionVolumeMetric).Count()).
 			WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 			WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
-			Infof("creating volume event")
+			Infof("creating volume event for cache")
 	}
 
 	granularity := c.usageConfig.GetReportGranularity()

@@ -9,6 +9,8 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+const cancelMsg = "event cancelled, counts added at next publish"
+
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
 	beatPub.Batch
@@ -39,11 +41,13 @@ func (b *EventBatch) Publish() error {
 func (b *EventBatch) publish() error {
 	client, err := traceability.GetClient()
 	if err != nil {
+		go b.logEvents("rejected", b.events)
 		b.batchUnlock()
 		return err
 	}
 	err = client.Connect()
 	if err != nil {
+		go b.logEvents("rejected", b.events)
 		b.batchUnlock()
 		return err
 	}
@@ -77,49 +81,43 @@ func (b *EventBatch) Events() []beatPub.Event {
 	return b.events
 }
 
-// ACK - all events have been acked, cleanup the counters
+// ACK - all events have been acknowledgeded, cleanup the counters
 func (b *EventBatch) ACK() {
-	for _, event := range b.events {
-		metric := getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("published", metric)
-			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
-		}
-	}
+	b.ackEvents(b.events)
 	b.collector.metricStartTime = b.collector.metricEndTime
+	b.batchUnlock()
+}
+
+func (b *EventBatch) eventsNotAcked(events []beatPub.Event) {
+	go b.logEvents(cancelMsg, events)
 	b.batchUnlock()
 }
 
 // Drop - drop the entire batch
 func (b *EventBatch) Drop() {
-	go b.logEvents("drop called, retrying", b.events)
-	b.publish()
+	b.eventsNotAcked(b.events)
 }
 
 // Retry - batch sent for retry, publish again
 func (b *EventBatch) Retry() {
-	go b.logEvents("retrying batch", b.events)
-	b.publish()
+	b.eventsNotAcked(b.events)
 }
 
 // Cancelled - batch has been cancelled
 func (b *EventBatch) Cancelled() {
-	go b.logEvents("cancelled called, retrying", b.events)
-	b.publish()
+	b.eventsNotAcked(b.events)
 }
 
 // RetryEvents - certain events sent to retry
 func (b *EventBatch) RetryEvents(events []beatPub.Event) {
-	go b.logEvents("retrying", events)
-	b.events = events
-	b.publish()
+	b.ackEvents(getEventsToAck(events, b.events))
+	b.eventsNotAcked(events)
 }
 
 // CancelledEvents - events have been cancelled
 func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
-	go b.logEvents("cancelled called, retrying", events)
-	b.events = events
-	b.publish()
+	b.ackEvents(getEventsToAck(events, b.events))
+	b.eventsNotAcked(events)
 }
 
 // Events - return the events in the batch
@@ -132,6 +130,16 @@ func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
 	}
 }
 
+func (b *EventBatch) ackEvents(events []beatPub.Event) {
+	for _, event := range events {
+		metric := getMetricFromEvent(event)
+		if metric != nil {
+			b.collector.logMetric("published", metric)
+			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
+		}
+	}
+}
+
 // NewEventBatch - creates a new batch
 func NewEventBatch(c *collector) *EventBatch {
 	return &EventBatch{
@@ -139,6 +147,25 @@ func NewEventBatch(c *collector) *EventBatch {
 		histograms:    make(map[string]metrics.Histogram),
 		haveBatchLock: false,
 	}
+}
+
+func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatPub.Event {
+	ackEvents := make([]beatPub.Event, 0)
+	for _, e := range events {
+		eID := getMetricFromEvent(e).EventID
+		found := false
+		for _, rE := range retryEvents {
+			rEID := getMetricFromEvent(rE).EventID
+			if rEID == eID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ackEvents = append(ackEvents, e)
+		}
+	}
+	return ackEvents
 }
 
 func getMetricFromEvent(event beatPub.Event) *APIMetric {

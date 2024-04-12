@@ -373,58 +373,46 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 	defer client.Unlock()
 
 	events := batch.Events()
-
-	eventType := "metric"
-	isMetric := false
-	if len(events) > 0 {
-		_, isMetric = events[0].Content.Meta["metric"]
-	}
+	_, isMetric := events[0].Content.Meta["metric"]
+	logger := client.logger.WithField(eventTypeStr, "metric")
 
 	if !isMetric {
-		eventType = "transaction"
+		logger = logger.WithField(eventTypeStr, "transaction")
 		if outputEventProcessor != nil {
 			updatedEvents := outputEventProcessor.Process(events)
-			if len(updatedEvents) > 0 {
-				updateEvent(batch, updatedEvents)
-				events = batch.Events() // update the events, for changes from outputEventProcessor
-			} else {
-				batch.ACK()
-				return nil
-			}
+			updateEvent(batch, updatedEvents)
+			events = batch.Events() // update the events, for changes from outputEventProcessor
+			// if len(updatedEvents) > 0 {
+			// } else {
+			// 	batch.ACK()
+			// 	return nil
+			// }
 		}
 
 		sampledEvents, err := sampling.FilterEvents(events)
 		if err != nil {
-			client.logger.Error(err.Error())
-		} else {
-			updateEvent(batch, sampledEvents)
+			logger.Error(err.Error())
 		}
+
+		updateEvent(batch, sampledEvents)
+		events = batch.Events()
 	}
 
-	publishCount := len(batch.Events())
-
-	if publishCount > 0 {
-		client.logger.
-			WithField(countStr, publishCount).
-			WithField(eventTypeStr, eventType).
-			Info("creating events")
+	if len(events) == 0 {
+		batch.ACK()
+		return nil // nothing to do
 	}
+
+	logger = logger.WithField(countStr, len(events))
+	logger.Info("publishing events")
 
 	err := client.transportClient.Publish(ctx, batch)
 	if err != nil {
-		client.logger.
-			WithField(eventTypeStr, eventType).
-			WithError(err).
-			Error("failed to publish event")
+		logger.WithError(err).Error("failed to publish events")
 		return err
 	}
 
-	if publishCount-len(batch.Events()) > 0 {
-		client.logger.
-			WithField(countStr, publishCount-len(batch.Events())).
-			WithField(eventTypeStr, eventType).
-			Info("published events")
-	}
+	logger.Info("published events")
 
 	return nil
 }
