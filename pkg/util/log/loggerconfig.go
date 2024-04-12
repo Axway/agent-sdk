@@ -101,7 +101,7 @@ func (b *LoggerConfig) Apply() error {
 
 		// skip metric log setup in unit tests
 		if !isTest && b.metricEnabled {
-			b.metricCfg.Filename = path.Join(b.path, "metrics", b.metricCfg.Filename)
+			b.metricCfg.Filename = path.Join(b.path, "audit", b.metricCfg.Filename)
 			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
 			metric.AddHook(rotateMetricHook)
 			metric.SetOutput(io.Discard) // discard logging to stderr
