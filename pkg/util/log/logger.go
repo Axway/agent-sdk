@@ -71,7 +71,6 @@ func NewMetricFieldLogger() FieldLogger {
 }
 
 type logger struct {
-	name   string
 	entry  *logrus.Entry
 	noLogP bool
 }
