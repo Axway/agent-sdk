@@ -56,37 +56,48 @@ type Redactor interface {
 func NewFieldLogger() FieldLogger {
 	entry := logrus.NewEntry(log)
 	return &logger{
-		entry: entry,
+		entry:  entry,
+		noLogP: false,
+	}
+}
+
+// NewFieldLogger returns a FieldLogger for standard logging, and logp logging.
+func NewMetricFieldLogger() FieldLogger {
+	entry := logrus.NewEntry(metric)
+	return &logger{
+		entry:  entry,
+		noLogP: true,
 	}
 }
 
 type logger struct {
-	entry *logrus.Entry
+	entry  *logrus.Entry
+	noLogP bool
 }
 
 // WithComponent adds a field to the log message
 func (l *logger) WithComponent(value string) FieldLogger {
-	return &logger{entry: l.entry.WithField("component", value)}
+	return &logger{entry: l.entry.WithField("component", value), noLogP: l.noLogP}
 }
 
 // WithPackage adds a field to the log message
 func (l *logger) WithPackage(value string) FieldLogger {
-	return &logger{entry: l.entry.WithField("package", value)}
+	return &logger{entry: l.entry.WithField("package", value), noLogP: l.noLogP}
 }
 
 // WithField adds a field to the log message
 func (l *logger) WithField(key string, value interface{}) FieldLogger {
-	return &logger{entry: l.entry.WithField(key, value)}
+	return &logger{entry: l.entry.WithField(key, value), noLogP: l.noLogP}
 }
 
 // WithFields adds multiple fields to the log message
 func (l *logger) WithFields(fields logrus.Fields) FieldLogger {
-	return &logger{entry: l.entry.WithFields(fields)}
+	return &logger{entry: l.entry.WithFields(fields), noLogP: l.noLogP}
 }
 
 // WithError adds an error field to the message
 func (l *logger) WithError(err error) FieldLogger {
-	return &logger{entry: l.entry.WithError(err)}
+	return &logger{entry: l.entry.WithError(err), noLogP: l.noLogP}
 }
 
 // Debugf prints a formatted debug message
@@ -350,6 +361,9 @@ func (l *logger) DebugRedacted(fields []string, args ...interface{}) {
 }
 
 func (l *logger) isLogP() bool {
+	if l.noLogP {
+		return false
+	}
 	return isLogP
 }
 

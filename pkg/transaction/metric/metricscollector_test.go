@@ -19,6 +19,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,6 +42,7 @@ var (
 		Stage:              "",
 		Version:            "",
 	}
+	traceStatus = healthcheck.OK
 )
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
@@ -72,7 +74,7 @@ type testHTTPServer struct {
 	transactionCount     int
 	transactionVolume    int
 	failUsageEvent       bool
-	failUsageResponse    *LighthouseUsageResponse
+	failUsageResponse    *UsageResponse
 	server               *httptest.Server
 	reportCount          int
 	givenGranularity     int
@@ -105,7 +107,7 @@ func (s *testHTTPServer) startServer() {
 						return
 					}
 					body, _ := io.ReadAll(file)
-					var usageEvent LighthouseUsageEvent
+					var usageEvent UsageEvent
 					json.Unmarshal(body, &usageEvent)
 					fmt.Printf("\n\n %+v \n\n", usageEvent)
 					for _, report := range usageEvent.Report {
@@ -144,7 +146,7 @@ func (s *testHTTPServer) resetConfig() {
 
 func (s *testHTTPServer) resetOffline(myCollector Collector) {
 	events := myCollector.(*collector).reports.loadEvents()
-	events.Report = make(map[string]LighthouseUsageReport)
+	events.Report = make(map[string]UsageReport)
 	myCollector.(*collector).reports.updateEvents(events)
 	s.resetConfig()
 }
@@ -153,9 +155,9 @@ func cleanUpCachedMetricFile() {
 	os.RemoveAll("./cache")
 }
 
-func generateMockReports(transactionPerReport []int) LighthouseUsageEvent {
+func generateMockReports(transactionPerReport []int) UsageEvent {
 	jsonStructure := `{"envId":"267bd671-e5e2-4679-bcc3-bbe7b70f30fd","timestamp":"2024-02-14T10:30:00+02:00","granularity":3600000,"schemaId":"http://127.0.0.1:53493/lighthouse/api/v1/report.schema.json","report":{},"meta":{"AgentName":"","AgentVersion":""}}`
-	var mockEvent LighthouseUsageEvent
+	var mockEvent UsageEvent
 	json.Unmarshal([]byte(jsonStructure), &mockEvent)
 	startDate := time.Time(mockEvent.Timestamp)
 	nextTime := func(i int) string {
@@ -163,7 +165,7 @@ func generateMockReports(transactionPerReport []int) LighthouseUsageEvent {
 		return next.Format(ISO8601)
 	}
 	for i, transaction := range transactionPerReport {
-		mockEvent.Report[nextTime(i)] = LighthouseUsageReport{
+		mockEvent.Report[nextTime(i)] = UsageReport{
 			Product: "Azure",
 			Usage:   map[string]int64{"Azure.Transactions": int64(transaction)},
 		}
@@ -252,6 +254,16 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 	return ri
 }
 
+func runTestHealthcheck() {
+	// register a healthcheck
+	healthcheck.RegisterHealthcheck("Traceability", traceability.HealthCheckEndpoint,
+		func(name string) *healthcheck.Status {
+			return &healthcheck.Status{Result: traceStatus}
+		},
+	)
+	healthcheck.RunChecks()
+}
+
 func TestMetricCollector(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
@@ -284,7 +296,7 @@ func TestMetricCollector(t *testing.T) {
 		retryBatchCount           int
 		apiTransactionCount       []int
 		failUsageEventOnServer    []bool
-		failUsageResponseOnServer []*LighthouseUsageResponse
+		failUsageResponseOnServer []*UsageResponse
 		expectedLHEvents          []int
 		expectedTransactionCount  []int
 		trackVolume               bool
@@ -292,15 +304,16 @@ func TestMetricCollector(t *testing.T) {
 		expectedMetricEventsAcked int
 		appName                   string
 		publishPrior              bool
+		hcStatus                  healthcheck.StatusLevel
 	}{
 		// Success case with no app detail
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -308,12 +321,12 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
 		},
 		{
-			name:                      "WithLighthouseWithPriorPublish",
+			name:                      "WithUsageWithPriorPublish",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -323,12 +336,12 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -338,12 +351,12 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case with consumer metric event
 		{
-			name:                      "WithLighthouse",
+			name:                      "WithUsage",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
@@ -353,12 +366,12 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Success case with no usage report
 		{
-			name:                      "WithLighthouseNoUsageReport",
+			name:                      "WithUsageNoUsageReport",
 			loopCount:                 1,
 			retryBatchCount:           0,
 			apiTransactionCount:       []int{0},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{0},
 			expectedTransactionCount:  []int{0},
 			trackVolume:               false,
@@ -367,12 +380,12 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
-			name:                   "WithLighthouseWithFailure",
+			name:                   "WithUsageWithFailure",
 			loopCount:              3,
 			retryBatchCount:        0,
 			apiTransactionCount:    []int{5, 10, 12},
 			failUsageEventOnServer: []bool{false, true, false, false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{
+			failUsageResponseOnServer: []*UsageResponse{
 				nil, {
 					Description: "Regular failure",
 					StatusCode:  400,
@@ -390,12 +403,12 @@ func TestMetricCollector(t *testing.T) {
 		},
 		// Test case with failing request to LH, no subsequent request triggered.
 		{
-			name:                   "WithLighthouseWithFailureWithSpecificDescription",
+			name:                   "WithUsageWithFailureWithSpecificDescription",
 			loopCount:              3,
 			retryBatchCount:        0,
 			apiTransactionCount:    []int{1, 1, 1},
 			failUsageEventOnServer: []bool{true, true, false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{
+			failUsageResponseOnServer: []*UsageResponse{
 				{
 					Description: "The file exceeds the maximum upload size of 454545",
 					StatusCode:  400,
@@ -415,39 +428,45 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
-		// Success case, retry metrics
-		{
-			name:                      "WithLighthouseAndMetricRetry",
-			loopCount:                 1,
-			retryBatchCount:           1,
-			apiTransactionCount:       []int{5},
-			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
-			expectedLHEvents:          []int{1},
-			expectedTransactionCount:  []int{5},
-			trackVolume:               true,
-			expectedTransactionVolume: []int{50},
-			expectedMetricEventsAcked: 1,
-			appName:                   "unknown",
-		},
 		// Retry limit hit
 		{
-			name:                      "WithLighthouseAndFailedMetric",
+			name:                      "WithUsageAndFailedMetric",
 			loopCount:                 1,
 			retryBatchCount:           4,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*LighthouseUsageResponse{nil},
+			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
 			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 0,
 		},
+		// Traceability healthcheck failing, nothing reported
+		{
+			name:                      "WithUsageTraceabilityNotConnected",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{0},
+			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*UsageResponse{nil},
+			expectedLHEvents:          []int{0},
+			expectedTransactionCount:  []int{0},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 0, // API metric + Provider subscription metric
+			appName:                   "managed-app-1",
+			hcStatus:                  healthcheck.FAIL,
+		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			if test.hcStatus != "" {
+				traceStatus = test.hcStatus
+			}
+			runTestHealthcheck()
+
 			cfg.SetAxwayManaged(test.trackVolume)
 			setupMockClient(test.retryBatchCount)
 			for l := 0; l < test.loopCount; l++ {
@@ -468,11 +487,11 @@ func TestMetricCollector(t *testing.T) {
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				s.failUsageResponse = test.failUsageResponseOnServer[l]
 				if test.publishPrior {
-					metricCollector.publisher.Execute()
+					metricCollector.usagePublisher.Execute()
 					metricCollector.Execute()
 				} else {
 					metricCollector.Execute()
-					metricCollector.publisher.Execute()
+					metricCollector.usagePublisher.Execute()
 				}
 				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
@@ -494,6 +513,9 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	testCases := []struct {
 		name                      string
@@ -535,7 +557,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			now = func() time.Time {
 				return time.Time(mockReports.Timestamp)
 			}
-			metricCollector.publisher.Execute()
+			metricCollector.usagePublisher.Execute()
 			assert.Equal(t, test.expectedTransactionCount, s.transactionCount)
 			assert.Equal(t, 1, s.reportCount)
 			assert.Equal(t, test.expectedGranularity, s.givenGranularity)
@@ -551,6 +573,9 @@ func TestMetricCollectorCache(t *testing.T) {
 	s := &testHTTPServer{}
 	defer s.closeServer()
 	s.startServer()
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	testCases := []struct {
 		name        string
@@ -582,7 +607,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 			metricCollector.Execute()
-			metricCollector.publisher.Execute()
+			metricCollector.usagePublisher.Execute()
 			metricCollector.AddMetric(apiDetails1, "401", 15, 10, "")
 			metricCollector.AddMetric(apiDetails2, "200", 20, 10, "")
 			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
@@ -608,7 +633,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.AddMetric(apiDetails2, "200", 10, 10, "")
 
 			metricCollector.Execute()
-			metricCollector.publisher.Execute()
+			metricCollector.usagePublisher.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
 			assert.Equal(t, 1, s.lighthouseEventCount)
 			assert.Equal(t, 8, s.transactionCount)
@@ -638,6 +663,9 @@ func TestOfflineMetricCollector(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 	traceability.SetDataDirPath(".")
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
@@ -696,7 +724,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 				return next
 			}
 
-			validateEvents := func(report LighthouseUsageEvent) {
+			validateEvents := func(report UsageEvent) {
 				for j := 0; j < test.loopCount; j++ {
 					reportKey := startDate.Add(time.Duration(j-1) * time.Hour).Format(ISO8601)
 					assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
@@ -715,7 +743,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			metricCollector := myCollector.(*collector)
 
 			reportGenerator := metricCollector.reports
-			publisher := metricCollector.publisher
+			publisher := metricCollector.usagePublisher
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
 					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
@@ -745,7 +773,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			assert.Nil(t, err)
 
 			// unmarshall it
-			var reportEvents LighthouseUsageEvent
+			var reportEvents UsageEvent
 			err = json.Unmarshal(data, &reportEvents)
 			assert.Nil(t, err)
 			assert.NotNil(t, reportEvents)

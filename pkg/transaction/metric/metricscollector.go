@@ -25,15 +25,18 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
-	startTimestamp = "start-timestamp"
-	endTimestamp   = "end-timestamp"
-	eventType      = "event-type"
-	usage          = "usage"
-	metric         = "metric"
+	startTimestampStr = "start-timestamp"
+	endTimestampStr   = "end-timestamp"
+	eventTypeStr      = "event-type"
+	usageStr          = "usage"
+	metricStr         = "metric"
+	volumeStr         = "volume"
+	countStr          = "count"
 )
 
 var exitMetricInit = false
@@ -69,11 +72,12 @@ type collector struct {
 	metricMap        map[string]map[string]map[string]map[string]*APIMetric
 	publishItemQueue []publishQueueItem
 	jobID            string
-	publisher        *metricPublisher
+	usagePublisher   *usagePublisher
 	storage          storageCache
-	reports          *cacheReport
+	reports          *usageReportCache
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
+	metricLogger     log.FieldLogger
 }
 
 type publishQueueItem interface {
@@ -88,7 +92,7 @@ type usageEventPublishItem interface {
 
 type usageEventQueueItem struct {
 	usageEventPublishItem
-	event        LighthouseUsageEvent
+	event        UsageEvent
 	usageMetric  metrics.Counter
 	volumeMetric metrics.Counter
 }
@@ -159,13 +163,14 @@ func createMetricCollector() Collector {
 		publishItemQueue: make([]publishQueueItem, 0),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
+		metricLogger:     log.NewMetricFieldLogger(),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
 	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
 	metricCollector.reports = newReportCache()
-	metricCollector.publisher = newMetricPublisher(metricCollector.storage, metricCollector.reports)
+	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports)
 
 	if util.IsNotTest() {
 		var err error
@@ -190,7 +195,7 @@ func (c *collector) Status() error {
 // Ready - indicates that the collector job is ready to process
 func (c *collector) Ready() bool {
 	// Wait until any existing offline reports are saved
-	if c.usageConfig.IsOfflineMode() && !c.publisher.isReady() {
+	if c.usageConfig.IsOfflineMode() && !c.usagePublisher.isReady() {
 		return false
 	}
 	return agent.GetCentralConfig().GetEnvironmentID() != ""
@@ -201,24 +206,27 @@ func (c *collector) Execute() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	if healthcheck.GetStatus(traceability.HealthCheckEndpoint) != healthcheck.OK {
+		c.logger.Warn("traceability is not connected, can not publish metrics at this time")
+		return nil
+	}
+
 	c.usageEndTime = now()
 	c.metricEndTime = now()
 	c.orgGUID = c.getOrgGUID()
 	c.logger.
-		WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-		WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-		WithField(eventType, usage).
-		Debug("generating usage event")
+		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField(eventTypeStr, usageStr).
+		Debug("caching usage event")
 
 	c.logger.
-		WithField(startTimestamp, util.ConvertTimeToMillis(c.metricStartTime)).
-		WithField(endTimestamp, util.ConvertTimeToMillis(c.metricEndTime)).
-		WithField(eventType, metric).
+		WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
+		WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
+		WithField(eventTypeStr, metricStr).
 		Debug("generating metric event")
-	defer func() {
-		c.cleanup()
-	}()
 
+	defer c.cleanup()
 	c.generateEvents()
 	c.publishEvents()
 	return nil
@@ -268,7 +276,7 @@ func (c *collector) Publish() {
 
 func (c *collector) ShutdownPublish() {
 	c.Execute()
-	c.publisher.Execute()
+	c.usagePublisher.Execute()
 }
 
 func (c *collector) updateVolume(bytes int64) {
@@ -377,7 +385,7 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 	if managedApp == nil {
 		c.logger.
 			WithField("appName", detail.AppDetails.Name).
-			Debug("could not get managed application by name, return empty API metrics")
+			Trace("could not get managed application by name, return empty API metrics")
 		return nil, nil
 	}
 	c.logger.
@@ -558,7 +566,10 @@ func (c *collector) getOrgGUID() string {
 	parser.SkipClaimsValidation = true
 
 	claims := jwt.MapClaims{}
-	_, _, _ = parser.ParseUnverified(authToken, claims)
+	_, _, err := parser.ParseUnverified(authToken, claims)
+	if err != nil {
+		return ""
+	}
 
 	claim, ok := claims["org_guid"]
 	if ok {
@@ -574,33 +585,25 @@ func (c *collector) generateEvents() {
 	}
 
 	c.metricBatch = NewEventBatch(c)
-	c.registry.Each(c.processUsageFromRegistry)
+	c.registry.Each(c.processRegistry)
 
-	if len(c.publishItemQueue) == 0 {
+	if len(c.metricBatch.events) == 0 {
 		c.logger.
-			WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-			WithField(eventType, usage).
-			Info("no usage event generated as no transactions recorded")
-
-		c.logger.
-			WithField(startTimestamp, util.ConvertTimeToMillis(c.metricStartTime)).
-			WithField(endTimestamp, util.ConvertTimeToMillis(c.metricEndTime)).
-			WithField(eventType, metric).
-			Info("no metric event generated as no transactions recorded")
+			WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
+			WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
+			WithField(eventTypeStr, metricStr).
+			Info("no metric events generated as no transactions recorded")
 	}
 
 	if c.usageConfig.CanPublishMetric() {
 		err := c.metricBatch.Publish()
 		if err != nil {
-			c.logger.
-				WithError(err).
-				Errorf("could not send metric event. Current metric data is kept and will be added to the next trigger interval")
+			c.logger.WithError(err).Errorf("could not send metric event, data is kept and will be added to the next trigger interval")
 		}
 	}
 }
 
-func (c *collector) processUsageFromRegistry(name string, metric interface{}) {
+func (c *collector) processRegistry(name string, metric interface{}) {
 	switch {
 	case name == transactionCountMetric:
 		if c.usageConfig.CanPublishUsage() {
@@ -624,24 +627,24 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 }
 
 func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
-	usage := map[string]int64{
+	usageMap := map[string]int64{
 		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
 	c.logger.
-		WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-		WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-		WithField("count", c.getOrRegisterCounter(transactionCountMetric).Count()).
-		WithField(eventType, usage).
-		Info("creating usage event")
+		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField(countStr, c.getOrRegisterCounter(transactionCountMetric).Count()).
+		WithField(eventTypeStr, usageStr).
+		Info("creating usage event for cache")
 
 	if agent.GetCentralConfig().IsAxwayManaged() {
-		usage[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
+		usageMap[fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseVolume)] = c.getOrRegisterCounter(transactionVolumeMetric).Count()
 		c.logger.
-			WithField(eventType, "volume").
+			WithField(eventTypeStr, volumeStr).
 			WithField("total-bytes", c.getOrRegisterCounter(transactionVolumeMetric).Count()).
-			WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-			Infof("creating volume event")
+			WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+			WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+			Infof("creating volume event for cache")
 	}
 
 	granularity := c.usageConfig.GetReportGranularity()
@@ -650,16 +653,16 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		reportTime = c.usageEndTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
-	lightHouseUsageEvent := LighthouseUsageEvent{
+	lightHouseUsageEvent := UsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.usageEndTime),
 		SchemaID:    c.usageConfig.GetURL() + schemaPath,
 		Granularity: granularity,
-		Report: map[string]LighthouseUsageReport{
+		Report: map[string]UsageReport{
 			reportTime: {
 				Product: cmd.GetBuildDataPlaneType(),
-				Usage:   usage,
+				Usage:   usageMap,
 				Meta:    make(map[string]interface{}),
 			},
 		},
@@ -690,7 +693,7 @@ func (c *collector) processMetric(metricName string, metric interface{}) {
 					if statusDetail, ok := statusMap[statusCode]; ok {
 						statusMetric := (metric.(metrics.Histogram))
 						c.setMetricsFromHistogram(statusDetail, statusMetric)
-						c.generateMetricEvent(statusMetric, statusDetail, appID)
+						c.generateMetricEvent(statusMetric, statusDetail)
 					}
 				}
 			}
@@ -705,7 +708,7 @@ func (c *collector) setMetricsFromHistogram(metrics *APIMetric, histogram metric
 	metrics.Response.Avg = histogram.Mean()
 }
 
-func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *APIMetric, apiID string) {
+func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *APIMetric) {
 	if metric.Count == 0 {
 		return
 	}
@@ -732,7 +735,9 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 }
 
 func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data) {
-	AddCondorMetricEventToBatch(c.createV4Event(c.metricStartTime.UnixMilli(), v4data), c.metricBatch, histogram)
+	generatedEvent := c.createV4Event(c.metricStartTime.UnixMilli(), v4data)
+	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, histogram)
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
@@ -759,19 +764,19 @@ func (c *collector) publishEvents() {
 		defer c.storage.save()
 
 		for _, eventQueueItem := range c.publishItemQueue {
-			err := c.publisher.publishEvent(eventQueueItem.GetEvent())
+			err := c.usagePublisher.publishEvent(eventQueueItem.GetEvent())
 			if err != nil {
 				c.logger.
 					WithError(err).
-					WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-					WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-					WithField(eventType, usage).
-					Error("failed to publish usage event. current usage report is kept and will be added to the next trigger interval")
+					WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+					WithField(eventTypeStr, usageStr).
+					Error("failed to add usage report to cache. Current usage report is kept and will be added to the next interval")
 			} else {
 				c.logger.
-					WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-					WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-					Info("published usage report")
+					WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+					WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+					Info("added usage report to cache")
 				c.cleanupCounters(eventQueueItem)
 			}
 		}
@@ -800,37 +805,38 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 	}
 }
 
-func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, v4Data V4Data) {
-	metric, ok := v4Data.(*APIMetric)
-	if ok {
-		subID := metric.Subscription.ID
-		appID := metric.App.ID
-		apiID := metric.API.ID
-		statusCode := metric.StatusCode
-		if consumerAppMap, ok := c.metricMap[subID]; ok {
-			if apiMap, ok := consumerAppMap[appID]; ok {
-				if apiStatusMap, ok := apiMap[apiID]; ok {
-					c.storage.removeMetric(apiStatusMap[statusCode])
-					delete(c.metricMap[subID][appID][apiID], statusCode)
-					histogram.Clear()
-				}
-				if len(c.metricMap[subID][appID][apiID]) == 0 {
-					delete(c.metricMap[subID][appID], apiID)
-				}
+func (c *collector) logMetric(msg string, metric *APIMetric) {
+	c.metricLogger.WithField("id", metric.EventID).Info(msg)
+}
+
+func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, metric *APIMetric) {
+	subID := metric.Subscription.ID
+	appID := metric.App.ID
+	apiID := metric.API.ID
+	statusCode := metric.StatusCode
+	if consumerAppMap, ok := c.metricMap[subID]; ok {
+		if apiMap, ok := consumerAppMap[appID]; ok {
+			if apiStatusMap, ok := apiMap[apiID]; ok {
+				c.storage.removeMetric(apiStatusMap[statusCode])
+				delete(c.metricMap[subID][appID][apiID], statusCode)
+				histogram.Clear()
 			}
-			if len(c.metricMap[subID][appID]) == 0 {
-				delete(c.metricMap[subID], appID)
+			if len(c.metricMap[subID][appID][apiID]) == 0 {
+				delete(c.metricMap[subID][appID], apiID)
 			}
 		}
-		if len(c.metricMap[subID]) == 0 {
-			delete(c.metricMap, subID)
+		if len(c.metricMap[subID][appID]) == 0 {
+			delete(c.metricMap[subID], appID)
 		}
-		c.logger.
-			WithField(startTimestamp, util.ConvertTimeToMillis(c.usageStartTime)).
-			WithField(endTimestamp, util.ConvertTimeToMillis(c.usageEndTime)).
-			WithField("api-name", metric.API.Name).
-			Info("Published metrics report for API")
 	}
+	if len(c.metricMap[subID]) == 0 {
+		delete(c.metricMap, subID)
+	}
+	c.logger.
+		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
+		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
+		WithField("api-name", metric.API.Name).
+		Info("Published metrics report for API")
 }
 
 func (c *collector) getStatusText(statusCode string) string {

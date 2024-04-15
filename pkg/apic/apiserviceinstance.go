@@ -102,6 +102,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 		Spec:  spec,
 		Owner: owner,
 	}
+	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
 
 	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	details := buildAgentDetailsSubResource(serviceBody, false, instDetails)
@@ -127,11 +128,50 @@ func (c *ServiceClient) updateAPIServiceInstance(
 		instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
 	}
 	instance.Owner = owner
+	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
 
 	return instance
+}
+
+func buildAPIServiceInstanceSourceSubResource(instance *management.APIServiceInstance, serviceBody *ServiceBody) *management.ApiServiceInstanceSource {
+	serviceBody.serviceContext.updateInstanceSource = false
+
+	source := instance.Source
+	if source == nil {
+		instance.Source = &management.ApiServiceInstanceSource{}
+		source = instance.Source
+	}
+
+	dataplaneType := serviceBody.GetDataplaneType()
+	if dataplaneType != "" {
+		if source.DataplaneType == nil {
+			source.DataplaneType = &management.ApiServiceInstanceSourceDataplaneType{}
+		}
+		if serviceBody.IsDesignDataplane() {
+			if source.DataplaneType.Design != dataplaneType.String() {
+				source.DataplaneType.Design = dataplaneType.String()
+				serviceBody.serviceContext.updateInstanceSource = true
+			}
+		} else if source.DataplaneType.Managed != dataplaneType.String() {
+			source.DataplaneType.Managed = dataplaneType.String()
+			serviceBody.serviceContext.updateInstanceSource = true
+		}
+	}
+
+	referencedInstance := serviceBody.GetReferenceInstanceName()
+	if referencedInstance != "" {
+		if source.References == nil {
+			source.References = &management.ApiServiceInstanceSourceReferences{}
+		}
+		if source.References.ApiServiceInstance != referencedInstance {
+			source.References.ApiServiceInstance = serviceBody.GetReferenceInstanceName()
+			serviceBody.serviceContext.updateInstanceSource = true
+		}
+	}
+	return nil
 }
 
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
@@ -159,6 +199,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	addSpecHashToResource(instance)
 
 	ri, err := c.CreateOrUpdateResource(instance)
+	if err == nil {
+		err = c.updateAPIServiceInstanceSubresources(ri, instance, serviceBody)
+	}
+
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -173,6 +217,19 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.instanceName = instance.Name
 
 	return err
+}
+
+func (c *ServiceClient) updateAPIServiceInstanceSubresources(ri apiv1.Interface, instance *management.APIServiceInstance, serviceBody *ServiceBody) error {
+	subResources := make(map[string]interface{})
+	if serviceBody.serviceContext.updateInstanceSource && instance.Source != nil {
+		subResources[management.ApiServiceInstanceSourceSubResourceName] = instance.Source
+	}
+
+	if len(subResources) > 0 {
+		inst, _ := ri.AsInstance()
+		return c.CreateSubResource(inst.ResourceMeta, subResources)
+	}
+	return nil
 }
 
 func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiServiceInstanceSpecEndpoint, error) {

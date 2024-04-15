@@ -39,6 +39,7 @@ type agentStatusUpdate struct {
 	currentActivityTime   time.Time
 	immediateStatusChange bool
 	typeOfStatusUpdate    string
+	prevStatus            string
 	logger                log.FieldLogger
 }
 
@@ -159,16 +160,21 @@ func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) (string, str
 	}
 
 	hcStatus, hcStatusDetail := su.getHealthcheckStatus(ctx)
+	entry := log.WithField("pool-status", status).
+		WithField("healthcheck-status", hcStatus).
+		WithField("healthcheck-status-detail", hcStatusDetail)
+
 	if hcStatus != AgentRunning {
-		log.
-			WithField("pool-status", status).
-			WithField("healthcheck-status", hcStatus).
-			WithField("healthcheck-status-detail", hcStatusDetail).
-			Info("agent not in running status")
+		entry.Info("agent not in running status")
 		status = hcStatus
 		statusDetail = hcStatusDetail
 	}
 
+	if su.prevStatus != AgentRunning && status == AgentRunning {
+		entry.Info("agent in running status")
+	}
+
+	su.prevStatus = status
 	return status, statusDetail
 }
 

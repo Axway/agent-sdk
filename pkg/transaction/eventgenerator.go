@@ -277,7 +277,7 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	if managedApp == nil {
 		e.logger.
 			WithField("app-name", appName).
-			Warn("could not get managed application by name, no consumer information attached")
+			Trace("could not get managed application by name, no consumer information attached")
 		return nil, nil
 	}
 	e.logger.

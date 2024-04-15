@@ -9,10 +9,11 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+const cancelMsg = "event cancelled, counts added at next publish"
+
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
 	beatPub.Batch
-
 	events        []beatPub.Event
 	histograms    map[string]metrics.Histogram
 	collector     *collector
@@ -34,21 +35,23 @@ func (b *EventBatch) AddEventWithoutHistogram(event beatPub.Event) {
 // Publish - connects to the traceability clients and sends this batch of events
 func (b *EventBatch) Publish() error {
 	b.batchLock()
-
 	return b.publish()
 }
 
 func (b *EventBatch) publish() error {
 	client, err := traceability.GetClient()
 	if err != nil {
+		go b.logEvents("rejected", b.events)
 		b.batchUnlock()
 		return err
 	}
 	err = client.Connect()
 	if err != nil {
+		go b.logEvents("rejected", b.events)
 		b.batchUnlock()
 		return err
 	}
+	go b.logEvents("publishing", b.events)
 	err = client.Publish(context.Background(), b)
 	if err != nil {
 		b.batchUnlock()
@@ -78,82 +81,63 @@ func (b *EventBatch) Events() []beatPub.Event {
 	return b.events
 }
 
-// ACK - all events have been acked, cleanup the counters
+// ACK - all events have been acknowledgeded, cleanup the counters
 func (b *EventBatch) ACK() {
-	for _, event := range b.events {
-		if data, found := event.Content.Fields[messageKey]; found {
-			v4Bytes := data.(string)
-			v4Event := make(map[string]interface{})
-			err := json.Unmarshal([]byte(v4Bytes), &v4Event)
-			if err != nil {
-				continue
-			}
-			eventType, ok := v4Event["event"]
-			if ok {
-				var v4Data V4Data
-				switch eventType.(string) {
-				case metricEvent:
-					v4Data = &APIMetric{}
-				}
-				if v4Data != nil {
-					buf, _ := json.Marshal(v4Event["data"])
-					json.Unmarshal(buf, v4Data)
-					eventID := event.Content.Meta[metricKey].(string)
-					b.collector.cleanupMetricCounter(b.histograms[eventID], v4Data)
-				}
-			}
-		}
-	}
+	b.ackEvents(b.events)
 	b.collector.metricStartTime = b.collector.metricEndTime
+	b.batchUnlock()
+}
+
+func (b *EventBatch) eventsNotAcked(events []beatPub.Event) {
+	go b.logEvents(cancelMsg, events)
 	b.batchUnlock()
 }
 
 // Drop - drop the entire batch
 func (b *EventBatch) Drop() {
-	b.batchUnlock()
+	b.eventsNotAcked(b.events)
 }
 
 // Retry - batch sent for retry, publish again
 func (b *EventBatch) Retry() {
-	b.retryEvents(b.events)
+	b.eventsNotAcked(b.events)
 }
 
 // Cancelled - batch has been cancelled
 func (b *EventBatch) Cancelled() {
-	b.batchUnlock()
-}
-
-func (b *EventBatch) retryEvents(events []beatPub.Event) {
-	retryEvents := make([]beatPub.Event, 0)
-	for _, event := range b.events {
-		if _, found := event.Content.Meta[metricRetries]; !found {
-			event.Content.Meta[metricRetries] = 0
-		}
-		count := event.Content.Meta[metricRetries].(int)
-		newCount := count + 1
-		if newCount <= 3 {
-			event.Content.Meta[metricRetries] = newCount
-			retryEvents = append(retryEvents, event)
-		}
-
-		// let the metric batch handle its own retries
-		if _, found := event.Content.Meta[retries]; found {
-			event.Content.Meta[retries] = 0
-		}
-	}
-	b.events = retryEvents
-	b.Publish()
+	b.eventsNotAcked(b.events)
 }
 
 // RetryEvents - certain events sent to retry
 func (b *EventBatch) RetryEvents(events []beatPub.Event) {
-	b.retryEvents(events)
+	b.ackEvents(getEventsToAck(events, b.events))
+	b.eventsNotAcked(events)
 }
 
 // CancelledEvents - events have been cancelled
 func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
-	b.events = events
-	b.publish()
+	b.ackEvents(getEventsToAck(events, b.events))
+	b.eventsNotAcked(events)
+}
+
+// Events - return the events in the batch
+func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
+	for _, event := range events {
+		metric := getMetricFromEvent(event)
+		if metric != nil {
+			b.collector.logMetric(status, metric)
+		}
+	}
+}
+
+func (b *EventBatch) ackEvents(events []beatPub.Event) {
+	for _, event := range events {
+		metric := getMetricFromEvent(event)
+		if metric != nil {
+			b.collector.logMetric("published", metric)
+			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
+		}
+	}
 }
 
 // NewEventBatch - creates a new batch
@@ -163,4 +147,52 @@ func NewEventBatch(c *collector) *EventBatch {
 		histograms:    make(map[string]metrics.Histogram),
 		haveBatchLock: false,
 	}
+}
+
+func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatPub.Event {
+	ackEvents := make([]beatPub.Event, 0)
+	for _, e := range events {
+		eID := getMetricFromEvent(e).EventID
+		found := false
+		for _, rE := range retryEvents {
+			rEID := getMetricFromEvent(rE).EventID
+			if rEID == eID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ackEvents = append(ackEvents, e)
+		}
+	}
+	return ackEvents
+}
+
+func getMetricFromEvent(event beatPub.Event) *APIMetric {
+	if data, found := event.Content.Fields[messageKey]; found {
+		v4Bytes := data.(string)
+		v4Event := make(map[string]interface{})
+		err := json.Unmarshal([]byte(v4Bytes), &v4Event)
+		if err != nil {
+			return nil
+		}
+		eventType, ok := v4Event["event"]
+		if !ok {
+			return nil
+		}
+		if eventType.(string) != metricEvent {
+			return nil
+		}
+		buf, err := json.Marshal(v4Event["data"])
+		if err != nil {
+			return nil
+		}
+		metric := &APIMetric{}
+		err = json.Unmarshal(buf, metric)
+		if err != nil {
+			return nil
+		}
+		return metric
+	}
+	return nil
 }

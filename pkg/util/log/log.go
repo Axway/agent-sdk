@@ -18,6 +18,11 @@ func Get() *logrus.Logger {
 	return log
 }
 
+// GetMetricLogger returns the metric logger
+func GetMetricLogger() *logrus.Logger {
+	return metric
+}
+
 var networkTraceIgnoreHeaders = map[string]interface{}{
 	"X-Axway-Tenant-Id": true,
 	"Authorization":     true,
