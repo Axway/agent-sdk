@@ -13,6 +13,6 @@ package management
 type DataplaneSpecApigeeMetricsFilter struct {
 	// The names of the APIs for which the metrics will be processed
 	FilteredAPIs []string `json:"filteredAPIs,omitempty"`
-	// The flag upon which is decided if the API metrics are filtered or not. Defaults to false
-	FilterAPIs bool `json:"filterAPIs,omitempty"`
+	// The flag upon which is decided if the API metrics are filtered or not. Defaults to true
+	FilterMetrics bool `json:"filterMetrics,omitempty"`
 }
