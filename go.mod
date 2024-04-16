@@ -29,7 +29,7 @@ require (
 	github.com/subosito/gotenv v1.4.0
 	github.com/tidwall/gjson v1.14.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.24.0
 	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.33.0
@@ -93,11 +93,11 @@ require (
 	go.elastic.co/fastjson v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
