@@ -70,6 +70,15 @@ func NewMetricFieldLogger() FieldLogger {
 	}
 }
 
+// NewFieldLoggerEntry returns a FieldLogger for standard logging, and logp logging.
+func NewFieldLoggerEntry(l *logrus.Logger, isLogP bool) FieldLogger {
+	entry := logrus.NewEntry(l)
+	return &logger{
+		entry:  entry,
+		noLogP: isLogP,
+	}
+}
+
 type logger struct {
 	entry  *logrus.Entry
 	noLogP bool
