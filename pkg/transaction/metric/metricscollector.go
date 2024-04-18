@@ -67,6 +67,7 @@ type collector struct {
 	orgGUID          string
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
+	mapLock          *sync.Mutex
 	registry         metrics.Registry
 	metricBatch      *EventBatch
 	metricMap        map[string]map[string]map[string]map[string]*APIMetric
@@ -158,6 +159,7 @@ func createMetricCollector() Collector {
 		metricStartTime:  now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
+		mapLock:          &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
@@ -328,11 +330,13 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	hAPIID := strings.ReplaceAll(apiID, ".", "#")
 	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + hAPIID + "." + statusCode)
 
+	c.mapLock.Lock()
 	appMap, ok := c.metricMap[subscriptionID]
 	if !ok {
 		appMap = make(map[string]map[string]map[string]*APIMetric)
 		c.metricMap[subscriptionID] = appMap
 	}
+	c.mapLock.Unlock()
 
 	apiMap, ok := appMap[appID]
 	if !ok {
@@ -681,6 +685,8 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 }
 
 func (c *collector) processMetric(metricName string, metric interface{}) {
+	c.mapLock.Lock()
+	defer c.mapLock.Unlock()
 	elements := strings.Split(metricName, ".")
 	if len(elements) == 5 {
 		subscriptionID := elements[1]
@@ -810,6 +816,8 @@ func (c *collector) logMetric(msg string, metric *APIMetric) {
 }
 
 func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, metric *APIMetric) {
+	c.mapLock.Lock()
+	defer c.mapLock.Unlock()
 	subID := metric.Subscription.ID
 	appID := metric.App.ID
 	apiID := metric.API.ID
