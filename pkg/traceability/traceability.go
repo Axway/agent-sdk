@@ -79,7 +79,6 @@ func getClient() (*Client, error) {
 
 // Client - struct
 type Client struct {
-	sync.Mutex
 	transportClient outputs.Client
 	logger          log.FieldLogger
 }
@@ -322,8 +321,6 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 
 // SetTransportClient - set the transport client
 func (client *Client) SetTransportClient(outputClient outputs.Client) {
-	client.Lock()
-	defer client.Unlock()
 	client.transportClient = outputClient
 }
 
@@ -334,9 +331,6 @@ func (client *Client) SetLogger(logger log.FieldLogger) {
 
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
-	client.Lock()
-	defer client.Unlock()
-
 	// do not attempt to establish a connection in offline mode
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
@@ -352,9 +346,6 @@ func (client *Client) Connect() error {
 
 // Close publish a single event to output.
 func (client *Client) Close() error {
-	client.Lock()
-	defer client.Unlock()
-
 	// do not attempt to close a connection in offline mode, it was never established
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
@@ -369,9 +360,6 @@ func (client *Client) Close() error {
 
 // Publish sends events to the clients sink.
 func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error {
-	client.Lock()
-	defer client.Unlock()
-
 	events := batch.Events()
 	if len(events) == 0 {
 		batch.ACK()
