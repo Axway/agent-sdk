@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -37,7 +37,6 @@ type HTTPClient struct {
 	tlsConfig        *transport.TLSConfig
 	compressionLevel int
 	proxyURL         *url.URL
-	observer         outputs.Observer
 	headers          map[string]string
 	beatInfo         beat.Info
 	logger           log.FieldLogger
@@ -59,17 +58,11 @@ type HTTPClientSettings struct {
 
 // Connection struct
 type Connection struct {
+	sync.Mutex
 	URL       string
 	http      *http.Client
 	connected bool
 	encoder   bodyEncoder
-}
-
-// Meta defines common event metadata to be stored in '@metadata'
-type httpEventMetadata struct {
-	Beat    string `json:"beat"`
-	Type    string `json:"type"`
-	Version string `json:"version"`
 }
 
 // NewHTTPClient instantiate a client.
@@ -114,12 +107,16 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 
 // Connect establishes a connection to the clients sink.
 func (client *HTTPClient) Connect() error {
+	client.Connection.Lock()
+	defer client.Connection.Unlock()
 	client.Connection.connected = true
 	return nil
 }
 
 // Close publish a single event to output.
 func (client *HTTPClient) Close() error {
+	client.Connection.Lock()
+	defer client.Connection.Unlock()
 	client.Connection.connected = false
 	return nil
 }
@@ -263,7 +260,7 @@ func (conn *Connection) execHTTPRequest(req *http.Request, headers map[string]st
 		conn.connected = false
 		return status, nil, fmt.Errorf("%v", resp.Status)
 	}
-	obj, err := ioutil.ReadAll(resp.Body)
+	obj, err := io.ReadAll(resp.Body)
 	if err != nil {
 		conn.connected = false
 		return status, nil, err
