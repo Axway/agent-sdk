@@ -9,7 +9,6 @@ import (
 	"path"
 	"reflect"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -82,16 +81,6 @@ type Client struct {
 	sync.Mutex
 	transportClient outputs.Client
 	logger          log.FieldLogger
-}
-
-type traceabilityAgentHealthChecker struct {
-	protocol string
-	host     string
-	proxyURL string
-	tlsCfg   *tlscommon.Config
-	timeout  time.Duration
-	// TBD. Remove in future when Jobs interface is complete
-	hcJob *traceabilityHealthCheck
 }
 
 func init() {
@@ -316,7 +305,12 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 		clients[i] = client
 	}
 
-	registerHealthCheckers(traceCfg)
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
+		err := registerHealthCheckers(traceCfg)
+		if err != nil {
+			return outputs.Group{}, err
+		}
+	}
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 
@@ -327,6 +321,13 @@ func (client *Client) SetTransportClient(outputClient outputs.Client) {
 	client.transportClient = outputClient
 }
 
+// SetTransportClient - set the transport client
+func (client *Client) getTransportClient() outputs.Client {
+	client.Lock()
+	defer client.Unlock()
+	return client.transportClient
+}
+
 // SetLogger - set the logger
 func (client *Client) SetLogger(logger log.FieldLogger) {
 	client.logger = logger
@@ -334,15 +335,12 @@ func (client *Client) SetLogger(logger log.FieldLogger) {
 
 // Connect establishes a connection to the clients sink.
 func (client *Client) Connect() error {
-	client.Lock()
-	defer client.Unlock()
-
 	// do not attempt to establish a connection in offline mode
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
 	}
 
-	networkClient := client.transportClient.(outputs.NetworkClient)
+	networkClient := client.getTransportClient().(outputs.NetworkClient)
 	err := networkClient.Connect()
 	if err != nil {
 		return err
@@ -352,15 +350,12 @@ func (client *Client) Connect() error {
 
 // Close publish a single event to output.
 func (client *Client) Close() error {
-	client.Lock()
-	defer client.Unlock()
-
 	// do not attempt to close a connection in offline mode, it was never established
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		return nil
 	}
 
-	err := client.transportClient.Close()
+	err := client.getTransportClient().Close()
 	if err != nil {
 		return err
 	}
@@ -369,9 +364,6 @@ func (client *Client) Close() error {
 
 // Publish sends events to the clients sink.
 func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error {
-	client.Lock()
-	defer client.Unlock()
-
 	events := batch.Events()
 	if len(events) == 0 {
 		batch.ACK()
@@ -404,7 +396,7 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 	logger = logger.WithField(countStr, len(events))
 	logger.Info("publishing events")
 
-	err := client.transportClient.Publish(ctx, batch)
+	err := client.getTransportClient().Publish(ctx, batch)
 	if err != nil {
 		logger.WithError(err).Error("failed to publish events")
 		return err
