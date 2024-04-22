@@ -305,7 +305,12 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 		clients[i] = client
 	}
 
-	registerHealthCheckers(traceCfg)
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
+		err := registerHealthCheckers(traceCfg)
+		if err != nil {
+			return outputs.Group{}, err
+		}
+	}
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 

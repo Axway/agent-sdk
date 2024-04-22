@@ -107,17 +107,13 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 
 // Connect establishes a connection to the clients sink.
 func (client *HTTPClient) Connect() error {
-	client.Connection.Lock()
-	defer client.Connection.Unlock()
-	client.Connection.connected = true
+	client.Connection.updateConnected(true)
 	return nil
 }
 
 // Close publish a single event to output.
 func (client *HTTPClient) Close() error {
-	client.Connection.Lock()
-	defer client.Connection.Unlock()
-	client.Connection.connected = false
+	client.Connection.updateConnected(false)
 	return nil
 }
 
@@ -159,7 +155,7 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) error {
 		return nil
 	}
 
-	if !client.connected {
+	if !client.isConnected() {
 		return ErrHTTPNotConnected
 	}
 
@@ -197,6 +193,18 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) error {
 	}
 
 	return nil
+}
+
+func (conn *Connection) isConnected() bool {
+	conn.Lock()
+	defer conn.Unlock()
+	return conn.connected
+}
+
+func (conn *Connection) updateConnected(update bool) {
+	conn.Lock()
+	defer conn.Unlock()
+	conn.connected = update
 }
 
 func (conn *Connection) request(body interface{}, headers map[string]string, eventTime time.Time) (int, []byte, error) {
@@ -250,19 +258,19 @@ func (conn *Connection) execHTTPRequest(req *http.Request, headers map[string]st
 
 	resp, err := conn.http.Do(req)
 	if err != nil {
-		conn.connected = false
+		conn.updateConnected(false)
 		return 0, nil, err
 	}
 	defer closing(resp.Body)
 
 	status := resp.StatusCode
 	if status >= 300 {
-		conn.connected = false
+		conn.updateConnected(false)
 		return status, nil, fmt.Errorf("%v", resp.Status)
 	}
 	obj, err := io.ReadAll(resp.Body)
 	if err != nil {
-		conn.connected = false
+		conn.updateConnected(false)
 		return status, nil, err
 	}
 	return status, obj, nil
