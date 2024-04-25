@@ -208,7 +208,7 @@ func (c *collector) Execute() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if healthcheck.GetStatus(traceability.HealthCheckEndpoint) != healthcheck.OK {
+	if !c.usagePublisher.offline && healthcheck.GetStatus(traceability.HealthCheckEndpoint) != healthcheck.OK {
 		c.logger.Warn("traceability is not connected, can not publish metrics at this time")
 		return nil
 	}
@@ -216,17 +216,22 @@ func (c *collector) Execute() error {
 	c.usageEndTime = now()
 	c.metricEndTime = now()
 	c.orgGUID = c.getOrgGUID()
+
+	usageMsg := "updating working usage report file"
+	if !c.usageConfig.IsOfflineMode() {
+		usageMsg = "caching usage event"
+		c.logger.
+			WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
+			WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
+			WithField(eventTypeStr, metricStr).
+			Debug("generating metric events")
+	}
+
 	c.logger.
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField(eventTypeStr, usageStr).
-		Debug("caching usage event")
-
-	c.logger.
-		WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
-		WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
-		WithField(eventTypeStr, metricStr).
-		Debug("generating metric event")
+		Debug(usageMsg)
 
 	defer c.cleanup()
 	c.generateEvents()
@@ -297,7 +302,7 @@ func (c *collector) updateUsage(count int64) {
 }
 
 func (c *collector) updateMetric(detail Detail) *APIMetric {
-	if !c.usageConfig.CanPublishMetric() {
+	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
 		return nil // no need to update metrics with publish off
 	}
 
@@ -591,7 +596,7 @@ func (c *collector) generateEvents() {
 	c.metricBatch = NewEventBatch(c)
 	c.registry.Each(c.processRegistry)
 
-	if len(c.metricBatch.events) == 0 {
+	if len(c.metricBatch.events) == 0 && !c.usageConfig.IsOfflineMode() {
 		c.logger.
 			WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
 			WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
