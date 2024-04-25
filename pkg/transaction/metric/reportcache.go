@@ -170,6 +170,8 @@ func (c *usageReportCache) addReport(event UsageEvent) error {
 
 // saveReport - creates a new file with the latest cached events then clears all reports from the cache, lock outside of this
 func (c *usageReportCache) saveReport() error {
+	c.reportCacheLock.Lock()
+	defer c.reportCacheLock.Unlock()
 	savedEvents := c.getEvents()
 
 	// no reports yet, skip creating the event
