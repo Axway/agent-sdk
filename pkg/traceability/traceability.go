@@ -369,8 +369,16 @@ func (client *Client) Publish(ctx context.Context, batch publisher.Batch) error 
 		batch.ACK()
 		return nil // nothing to do
 	}
-
 	_, isMetric := events[0].Content.Meta["metric"]
+
+	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+		if outputEventProcessor != nil && !isMetric {
+			outputEventProcessor.Process(events)
+		}
+		batch.ACK()
+		return nil
+	}
+
 	logger := client.logger.WithField(eventTypeStr, "metric")
 
 	if !isMetric {
