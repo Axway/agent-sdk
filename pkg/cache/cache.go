@@ -89,7 +89,7 @@ type cacheReply struct {
 type itemCache struct {
 	Items         map[string]*Item  `json:"cache"`
 	SecKeys       map[string]string `json:"secondaryKeys"`
-	cacheMutex    *sync.Mutex
+	startedMutex  *sync.Mutex
 	started       bool
 	actionChannel chan cacheAction
 	replyChannel  chan cacheReply
@@ -117,7 +117,7 @@ func New() Cache {
 	newCache := &itemCache{
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
-		cacheMutex:    &sync.Mutex{},
+		startedMutex:  &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -130,7 +130,7 @@ func Load(path string) Cache {
 	newCache := &itemCache{
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
-		cacheMutex:    &sync.Mutex{},
+		startedMutex:  &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -142,9 +142,9 @@ func Load(path string) Cache {
 // LoadFromBuffer - create a new cache object and loads the data from buffer
 func LoadFromBuffer(buffer []byte) Cache {
 	newCache := &itemCache{
-		Items:      make(map[string]*Item),
-		SecKeys:    make(map[string]string),
-		cacheMutex: &sync.Mutex{},
+		Items:        make(map[string]*Item),
+		SecKeys:      make(map[string]string),
+		startedMutex: &sync.Mutex{},
 	}
 	json.Unmarshal(buffer, &newCache)
 
@@ -155,14 +155,14 @@ func LoadFromBuffer(buffer []byte) Cache {
 }
 
 func (c *itemCache) isStarted() bool {
-	c.cacheMutex.Lock()
-	defer c.cacheMutex.Unlock()
+	c.startedMutex.Lock()
+	defer c.startedMutex.Unlock()
 	return c.started
 }
 
 func (c *itemCache) updateIsStarted(val bool) {
-	c.cacheMutex.Lock()
-	defer c.cacheMutex.Unlock()
+	c.startedMutex.Lock()
+	defer c.startedMutex.Unlock()
 	c.started = val
 }
 
