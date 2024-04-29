@@ -166,7 +166,7 @@ func TestGetItemsCache(t *testing.T) {
 
 	// GetByForeignKey
 	badForeignKey := "badForeignKey"
-	badItems, err := cache.GetItemsByForeignKey(badForeignKey)
+	badItems, _ := cache.GetItemsByForeignKey(badForeignKey)
 	assert.Nil(t, badItems, "No items were expected from GetItemsByForeignKey with a bad key")
 	items, err := cache.GetItemsByForeignKey(key3for)
 	assert.Nil(t, err, "There was an unexpected error getting items with GetItemsByForeignKey")
