@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -426,4 +427,140 @@ func TestItem(t *testing.T) {
 	assert.Equal(t, s.val, "test")
 	assert.Equal(t, sts.val, "test1")
 
+}
+
+func TestAsyncCalls(t *testing.T) {
+	// This test is to detect data race conditions, no asserts will take place
+	// create new cache for testing
+	cache := New()
+
+	load := func() {
+		cache.SetWithSecondaryKey("key1", "skey1", struct{}{})
+		cache.SetWithSecondaryKey("key2", "skey2", struct{}{})
+		cache.SetWithSecondaryKey("key3", "skey3", struct{}{})
+		cache.SetWithSecondaryKey("key4", "skey4", struct{}{})
+		cache.SetWithSecondaryKey("key5", "skey5", struct{}{})
+		cache.SetWithSecondaryKey("key6", "skey6", struct{}{})
+		cache.SetWithSecondaryKey("key7", "skey7", struct{}{})
+		cache.SetWithSecondaryKey("key8", "skey8", struct{}{})
+		cache.SetWithSecondaryKey("key9", "skey9", struct{}{})
+		cache.SetWithSecondaryKey("keya", "skeya", struct{}{})
+		cache.SetWithSecondaryKey("keyb", "skeyb", struct{}{})
+		cache.SetWithSecondaryKey("keyc", "skeyc", struct{}{})
+		cache.SetForeignKey("key1", "fkey1")
+		cache.SetForeignKey("key2", "fkey1")
+		cache.SetForeignKey("key3", "fkey1")
+		cache.SetForeignKey("key4", "fkey2")
+		cache.SetForeignKey("key5", "fkey2")
+		cache.SetForeignKey("key6", "fkey2")
+		cache.SetForeignKey("key7", "fkey3")
+		cache.SetForeignKey("key8", "fkey3")
+		cache.SetForeignKey("key9", "fkey3")
+		cache.SetForeignKey("keya", "fkey4")
+		cache.SetForeignKey("key8", "fkey4")
+		cache.SetForeignKey("keyc", "fkey4")
+	}
+	load()
+
+	// add several things to cache at once
+	go cache.Set("key1", struct{}{})
+	go cache.Set("key2", struct{}{})
+	go cache.Set("key3", struct{}{})
+	go cache.Set("key4", struct{}{})
+	go cache.Set("key5", struct{}{})
+
+	// attempt to update same key at once
+	go cache.Set("key1", struct{}{})
+	go cache.Set("key1", struct{}{})
+	go cache.Set("key1", struct{}{})
+	go cache.SetSecondaryKey("key2", "skey2")
+	go cache.SetSecondaryKey("key2", "skey2")
+	go cache.SetSecondaryKey("key2", "skey2")
+	go cache.SetForeignKey("key2", "fkey1")
+	go cache.SetForeignKey("key2", "fkey1")
+	go cache.SetForeignKey("key2", "fkey1")
+	go cache.SetWithSecondaryKey("key1", "skey1", struct{}{})
+	go cache.SetWithSecondaryKey("key2", "skey2", struct{}{})
+	go cache.SetWithSecondaryKey("key3", "skey3", struct{}{})
+	go cache.SetWithForeignKey("key1", "fkey1", struct{}{})
+	go cache.SetWithForeignKey("key2", "fkey1", struct{}{})
+	go cache.SetWithForeignKey("key3", "fkey1", struct{}{})
+
+	// attempt to get the same key at once
+	go cache.Get("key1")
+	go cache.GetItem("key1")
+	go cache.GetBySecondaryKey("skey1")
+	go cache.GetItemBySecondaryKey("skey1")
+	go cache.Get("key1")
+	go cache.GetItem("key1")
+	go cache.GetBySecondaryKey("skey1")
+	go cache.GetItemBySecondaryKey("skey1")
+	go cache.GetItemsByForeignKey("fkey1")
+	go cache.GetItemsByForeignKey("fkey1")
+	go cache.GetKeys()
+	go cache.GetForeignKeys()
+
+	// has item changed calls
+	go cache.HasItemChanged("key1", struct{}{})
+	go cache.HasItemChanged("key2", struct{}{})
+	go cache.HasItemChanged("key3", struct{}{})
+	go cache.HasItemBySecondaryKeyChanged("skey1", struct{}{})
+	go cache.HasItemBySecondaryKeyChanged("skey2", struct{}{})
+	go cache.HasItemBySecondaryKeyChanged("skey3", struct{}{})
+
+	// delete calls
+	go cache.Delete("key1")
+	go cache.Delete("key2")
+	go cache.Delete("key1")
+	go cache.Delete("key2")
+	go cache.DeleteBySecondaryKey("skey3")
+	go cache.DeleteBySecondaryKey("skey4")
+	go cache.DeleteBySecondaryKey("skey3")
+	go cache.DeleteBySecondaryKey("skey4")
+	go cache.DeleteSecondaryKey("skey5")
+	go cache.DeleteSecondaryKey("skey6")
+	go cache.DeleteSecondaryKey("skey5")
+	go cache.DeleteSecondaryKey("skey6")
+	go cache.DeleteForeignKey("fkey2")
+	go cache.DeleteForeignKey("fkey2")
+	go cache.DeleteItemsByForeignKey("fkey3")
+	go cache.DeleteItemsByForeignKey("fkey4")
+	go cache.DeleteItemsByForeignKey("fkey3")
+	go cache.DeleteItemsByForeignKey("fkey4")
+	go cache.DeleteItemsByForeignKey("fkey1")
+	go cache.DeleteItemsByForeignKey("fkey2")
+
+	// flush the cache
+	go cache.Flush()
+
+	// wait for all items to be deleted
+	time.Sleep(time.Second)
+	cache.Flush() // flush the cache before the next test
+
+	// save while all other actions
+	load()
+
+	go cache.Set("key1", struct{}{})
+	go cache.SetSecondaryKey("key2", "skey2")
+	go cache.SetForeignKey("key1", "fkey1")
+	go cache.SetWithSecondaryKey("key3", "skey3", struct{}{})
+	go cache.SetWithForeignKey("key4", "fkey2", struct{}{})
+	go cache.HasItemChanged("key3", struct{}{})
+	go cache.HasItemBySecondaryKeyChanged("skey1", struct{}{})
+	go cache.Get("key1")
+	go cache.GetItem("key1")
+	go cache.GetBySecondaryKey("skey1")
+	go cache.GetItemBySecondaryKey("skey1")
+	go cache.GetItemsByForeignKey("fkey1")
+	go cache.GetKeys()
+	go cache.GetForeignKeys()
+	go cache.Delete("key2")
+	go cache.DeleteBySecondaryKey("skey4")
+	go cache.DeleteSecondaryKey("skey5")
+	go cache.DeleteItemsByForeignKey("fkey3")
+	go cache.DeleteForeignKey("fkey2")
+	go cache.Save("./")
+
+	// wait for all calls to finish
+	time.Sleep(time.Second)
 }
