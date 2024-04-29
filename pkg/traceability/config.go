@@ -16,6 +16,12 @@ import (
 )
 
 // Config -
+type HostConfig struct {
+	Protocol string   `config:"protocol"`
+	Hosts    []string `config:"hosts"`
+}
+
+// Config -
 type Config struct {
 	Index             string            `config:"index"`
 	LoadBalance       bool              `config:"loadbalance"`
@@ -73,6 +79,7 @@ func DefaultConfig() *Config {
 		},
 		EscapeHTML: false,
 		Protocol:   "tcp",
+		TLS:        &tlscommon.Config{},
 		Redaction:  redaction.DefaultConfig(),
 		Sampling:   sampling.DefaultConfig(),
 	}
@@ -88,6 +95,11 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 
 	if err := cfg.Unpack(outputConfig); err != nil {
 		return nil, err
+	}
+
+	if len(outputConfig.Hosts) == 1 && outputConfig.Hosts[0] == "" {
+		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
+		outputConfig.Protocol = "tcp"
 	}
 
 	if outputConfig.Index == "" {
