@@ -12,9 +12,9 @@ func TestPubSub(t *testing.T) {
 	// CreateTopic
 	topic1 := "topic1"
 	data1 := "topic1 data1"
-	createpubsub, err := CreateTopic("niltopic")
+	_, err := CreateTopic("niltopic")
 	assert.Nil(t, err, "Unexpected error hit creating a topic with nil as the initial data")
-	createpubsub, err = CreateTopicWithInitData(topic1, data1)
+	createpubsub, err := CreateTopicWithInitData(topic1, data1)
 	assert.Nil(t, err, "Unexpected error hit in Create Topic")
 	assert.IsType(t, &cachePubSub{}, createpubsub, "Returned object not of cachePubSub type")
 	pubsub, err := CreateTopicWithInitData(topic1, data1)
@@ -38,7 +38,7 @@ func TestPubSub(t *testing.T) {
 	err = RemoveTopic("badtopicname")
 	assert.Len(t, topics, 2, "Expected the topics array length to not have changed")
 	assert.NotNil(t, err, "Expected an error to be returned from a bad topic name")
-	_, err = CreateTopic(removetopic)
+	CreateTopic(removetopic)
 	assert.Len(t, topics, 3, "Expected the topics array length to have grown")
 	globalCache.Delete(removetopic)
 	err = RemoveTopic(removetopic)
@@ -67,15 +67,12 @@ func TestPubSub(t *testing.T) {
 	dataChan := make(chan struct{})
 	go func() {
 		for {
-			select {
-			case data, ok := <-subChan:
-				if ok {
-					dataReceived = data.(string)
-					dataChan <- struct{}{}
-				} else {
-					return
-				}
+			data, ok := <-subChan
+			if !ok {
+				return
 			}
+			dataReceived = data.(string)
+			dataChan <- struct{}{}
 		}
 	}()
 
@@ -128,7 +125,7 @@ func TestPubSub(t *testing.T) {
 	// Publish and SubscribeWithCallback
 	topic3 := "topic3"
 	data3 := "topic3 data1"
-	pubsub3, err := CreateTopicWithInitData(topic3, data3)
+	pubsub3, _ := CreateTopicWithInitData(topic3, data3)
 
 	dataReceived = ""
 	cbCalled := make(chan struct{})
