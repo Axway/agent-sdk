@@ -371,7 +371,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
 	assert.Equal(t, "unknown", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
-	assert.Equal(t, 0, logEvent.TransactionSummary.Proxy.Revision)
+	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Product)
 	assert.Equal(t, "2222", logEvent.TransactionSummary.Product.ID)
