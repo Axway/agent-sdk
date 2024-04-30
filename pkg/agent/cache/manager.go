@@ -149,10 +149,7 @@ type cacheManager struct {
 	isCacheUpdated          bool
 	isPersistedCacheEnabled bool
 	migrators               []cacheMigrate
-	teamRefreshHandler      teamRefreshHandler
 }
-
-type cacheManagerOptions func(*cacheManager)
 
 // NewAgentCacheManager - Create a new agent cache manager
 func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Manager {
@@ -160,18 +157,6 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
-		apiMap:                  cache.New(),
-		instanceCountMap:        cache.New(),
-		instanceMap:             cache.New(),
-		categoryMap:             cache.New(),
-		managedApplicationMap:   cache.New(),
-		accessRequestMap:        cache.New(),
-		subscriptionMap:         cache.New(),
-		sequenceCache:           cache.New(),
-		watchResourceMap:        cache.New(),
-		teams:                   cache.New(),
-		ardMap:                  cache.New(),
-		crdMap:                  cache.New(),
 		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
@@ -183,17 +168,19 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 			m.migrateAccessRequest,
 			m.migrateInstanceCount,
 		}
-		m.initializePersistedCache(cfg)
 	}
+	m.initializeCache(cfg)
 
 	return m
 }
 
-func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
+func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 	c.cacheFilename = c.getCacheFileName(cfg)
 
 	cacheMap := cache.New()
-	cacheMap.Load(c.cacheFilename)
+	if c.isPersistedCacheEnabled {
+		cacheMap.Load(c.cacheFilename)
+	}
 
 	cacheKeys := map[string]func(cache.Cache){
 		apiServicesKey:         func(loaded cache.Cache) { c.apiMap = loaded },
@@ -226,7 +213,7 @@ func (c *cacheManager) initializePersistedCache(cfg config.CentralConfig) {
 	}
 
 	c.persistedCache = cacheMap
-	if util.IsNotTest() {
+	if c.isPersistedCacheEnabled && util.IsNotTest() {
 		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
 	}
 }

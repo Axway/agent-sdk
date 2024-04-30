@@ -630,12 +630,11 @@ func (c *collector) processRegistry(name string, metric interface{}) {
 }
 
 func (c *collector) generateUsageEvent(orgGUID string) {
-	if c.getOrRegisterCounter(transactionCountMetric).Count() != 0 || c.usageConfig.IsOfflineMode() {
-		c.generateLighthouseUsageEvent(orgGUID)
+	// skip generating a report if no usage when online
+	if c.getOrRegisterCounter(transactionCountMetric).Count() == 0 && !c.usageConfig.IsOfflineMode() {
+		return
 	}
-}
 
-func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	usageMap := map[string]int64{
 		fmt.Sprintf("%s.%s", cmd.GetBuildDataPlaneType(), lighthouseTransactions): c.getOrRegisterCounter(transactionCountMetric).Count(),
 	}
@@ -662,7 +661,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 		reportTime = c.usageEndTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)
 	}
 
-	lightHouseUsageEvent := UsageEvent{
+	usageEvent := UsageEvent{
 		OrgGUID:     orgGUID,
 		EnvID:       agent.GetCentralConfig().GetEnvironmentID(),
 		Timestamp:   ISO8601Time(c.usageEndTime),
@@ -682,7 +681,7 @@ func (c *collector) generateLighthouseUsageEvent(orgGUID string) {
 	}
 
 	queueItem := &usageEventQueueItem{
-		event:        lightHouseUsageEvent,
+		event:        usageEvent,
 		usageMetric:  c.getOrRegisterCounter(transactionCountMetric),
 		volumeMetric: c.getOrRegisterCounter(transactionVolumeMetric),
 	}

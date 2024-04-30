@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"time"
 
 	util "github.com/Axway/agent-sdk/pkg/util"
@@ -88,6 +89,8 @@ type cacheReply struct {
 type itemCache struct {
 	Items         map[string]*Item  `json:"cache"`
 	SecKeys       map[string]string `json:"secondaryKeys"`
+	startedMutex  *sync.Mutex
+	started       bool
 	actionChannel chan cacheAction
 	replyChannel  chan cacheReply
 }
@@ -114,6 +117,7 @@ func New() Cache {
 	newCache := &itemCache{
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
+		startedMutex:  &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -126,6 +130,7 @@ func Load(path string) Cache {
 	newCache := &itemCache{
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
+		startedMutex:  &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -137,8 +142,9 @@ func Load(path string) Cache {
 // LoadFromBuffer - create a new cache object and loads the data from buffer
 func LoadFromBuffer(buffer []byte) Cache {
 	newCache := &itemCache{
-		Items:   make(map[string]*Item),
-		SecKeys: make(map[string]string),
+		Items:        make(map[string]*Item),
+		SecKeys:      make(map[string]string),
+		startedMutex: &sync.Mutex{},
 	}
 	json.Unmarshal(buffer, &newCache)
 
@@ -148,8 +154,27 @@ func LoadFromBuffer(buffer []byte) Cache {
 	return newCache
 }
 
+func (c *itemCache) isStarted() bool {
+	c.startedMutex.Lock()
+	defer c.startedMutex.Unlock()
+	return c.started
+}
+
+func (c *itemCache) updateIsStarted(val bool) {
+	c.startedMutex.Lock()
+	defer c.startedMutex.Unlock()
+	c.started = val
+}
+
 // handleAction - handles all calls to the cache to prevent locking issues
 func (c *itemCache) handleAction() {
+	// make sure only one handleAction loop is running
+	if c.isStarted() {
+		return
+	}
+	c.updateIsStarted(true)
+	defer c.updateIsStarted(false)
+
 	actionMap := map[action]func(cacheAction) cacheReply{
 		getAction:                  c.get,
 		getKeysAction:              c.getKeys,
@@ -188,7 +213,7 @@ func (c *itemCache) hasItemChanged(thisAction cacheAction) (thisReply cacheReply
 	// Get the current item by key=
 	item, ok := c.Items[key]
 	if !ok {
-		thisReply.err = fmt.Errorf("Could not find item with key: %s", key)
+		thisReply.err = fmt.Errorf("could not find item with key: %s", key)
 		return
 	}
 
@@ -214,7 +239,7 @@ func (c *itemCache) get(thisAction cacheAction) (thisReply cacheReply) {
 
 	thisReply = cacheReply{
 		item: nil,
-		err:  fmt.Errorf("Could not find item with key: %s", key),
+		err:  fmt.Errorf("could not find item with key: %s", key),
 	}
 	if item, ok := c.Items[key]; ok {
 		replyItem := &Item{
@@ -271,16 +296,19 @@ func (c *itemCache) getForeignKeys(thisAction cacheAction) (thisReply cacheReply
 
 // getItemsByForeignKeys - Returns the Items with a particular Foreign key in cache
 func (c *itemCache) getItemsByForeignKeys(thisAction cacheAction) (thisReply cacheReply) {
-
+	var keys []string
 	var items []*Item
-	for _, item := range c.Items {
+
+	for key, item := range c.Items {
 		if item.ForeignKey == thisAction.forKey {
+			keys = append(keys, key)
 			items = append(items, item)
 		}
 	}
 
 	thisReply = cacheReply{
 		items: items,
+		keys:  keys,
 		err:   nil,
 	}
 	return
@@ -292,7 +320,7 @@ func (c *itemCache) findPrimaryKey(thisAction cacheAction) (thisReply cacheReply
 
 	thisReply = cacheReply{
 		key: "",
-		err: fmt.Errorf("Could not find secondary key: %s", secondaryKey),
+		err: fmt.Errorf("could not find secondary key: %s", secondaryKey),
 	}
 
 	if key, ok := c.SecKeys[secondaryKey]; ok {
@@ -348,14 +376,14 @@ func (c *itemCache) setSecondaryKey(thisAction cacheAction) (thisReply cacheRepl
 
 	// check that the secondary key given is not used as primary
 	if _, ok := c.Items[secondaryKey]; ok {
-		thisReply.err = fmt.Errorf("Can't use %s as a secondary key, it is already a primary key", secondaryKey)
+		thisReply.err = fmt.Errorf("can't use %s as a secondary key, it is already a primary key", secondaryKey)
 		return
 	}
 
 	item, ok := c.Items[key]
 	// Check that the key given is in the cache
 	if !ok {
-		thisReply.err = fmt.Errorf("Can't set secondary key, %s, for a key, %s, as %s is not a known key", secondaryKey, key, key)
+		thisReply.err = fmt.Errorf("can't set secondary key, %s, for a key, %s, as %s is not a known key", secondaryKey, key, key)
 		return
 	}
 
@@ -376,13 +404,13 @@ func (c *itemCache) setForeignKey(thisAction cacheAction) (thisReply cacheReply)
 	item, ok := c.Items[key]
 	// Check that the key given is in the cache
 	if !ok {
-		thisReply.err = fmt.Errorf("Can't set foreign key, %s, for a key, %s, as %s is not a known key", foreignKey, key, key)
+		thisReply.err = fmt.Errorf("can't set foreign key, %s, for a key, %s, as %s is not a known key", foreignKey, key, key)
 		return
 	}
 
 	// check that the foreign key given is not already a foreign key
 	if foreignKey == item.ForeignKey {
-		thisReply.err = fmt.Errorf("Can't use %s as a foreign key, it is already a foreign key for the item", foreignKey)
+		thisReply.err = fmt.Errorf("can't use %s as a foreign key, it is already a foreign key for the item", foreignKey)
 		return
 	}
 
@@ -400,7 +428,7 @@ func (c *itemCache) delete(thisAction cacheAction) (thisReply cacheReply) {
 
 	// Check that the key given is in the cache
 	if _, ok := c.Items[key]; !ok {
-		thisReply.err = fmt.Errorf("Cache item with key %s does not exist", key)
+		thisReply.err = fmt.Errorf("cache item with key %s does not exist", key)
 		return
 	}
 
@@ -428,7 +456,7 @@ func (c *itemCache) removeSecondaryKey(secondaryKey string) error {
 	// Check that the secondaryKey given is in the cache
 	key, ok := c.SecKeys[secondaryKey]
 	if !ok {
-		return fmt.Errorf("Cache item with secondary key %s does not exist", key)
+		return fmt.Errorf("cache item with secondary key %s does not exist", key)
 	}
 
 	delete(c.Items[key].SecondaryKeys, secondaryKey)
@@ -443,7 +471,7 @@ func (c *itemCache) deleteForeignKey(thisAction cacheAction) (thisReply cacheRep
 	item, ok := c.Items[key]
 	// Check that the key given is in the cache
 	if !ok {
-		thisReply.err = fmt.Errorf("Cache item with key %s does not exist", key)
+		thisReply.err = fmt.Errorf("cache item with key %s does not exist", key)
 		return
 	}
 
@@ -695,31 +723,27 @@ func (c *itemCache) DeleteBySecondaryKey(secondaryKey string) error {
 
 // DeleteItemsByForeignKey - Remove all the items which is found with this foreign key
 func (c *itemCache) DeleteItemsByForeignKey(foreignKey string) error {
-
 	getItemsForeignKeyReply := c.runAction(cacheAction{
 		action: getItemsByForeignKeyAction,
 		forKey: foreignKey,
 	})
-	if len(getItemsForeignKeyReply.items) == 0 {
-		return fmt.Errorf("No items found with foreign key: %s", foreignKey)
+	if len(getItemsForeignKeyReply.keys) == 0 {
+		return fmt.Errorf("no items found with foreign key: %s", foreignKey)
 	}
 
-	for key := range c.Items {
+	var lastErr error
+	for _, key := range getItemsForeignKeyReply.keys {
+		deleteReply := c.runAction(cacheAction{
+			action: deleteAction,
+			key:    key,
+		})
 
-		if c.Items[key].ForeignKey == foreignKey {
-			deleteReply := c.runAction(cacheAction{
-				action: deleteAction,
-				key:    key,
-			})
-
-			if deleteReply.err != nil {
-				return deleteReply.err
-			}
+		if deleteReply.err != nil {
+			lastErr = deleteReply.err
 		}
-
 	}
 
-	return nil
+	return lastErr
 
 }
 
