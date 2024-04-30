@@ -149,6 +149,11 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 	cacheKeys := storageCache.GetKeys()
 	for _, cacheKey := range cacheKeys {
 		if strings.Contains(cacheKey, metricKeyPrefix) {
+			if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
+				// delete metrics from cache in offline mode
+				storageCache.Delete(cacheKey)
+				continue
+			}
 			cacheItem, _ := storageCache.Get(cacheKey)
 
 			buffer, _ := json.Marshal(cacheItem)
