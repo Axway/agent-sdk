@@ -274,6 +274,9 @@ func (c *collector) AddAPIMetric(metric *APIMetric) {
 		return
 	}
 	c.updateUsage(metric.Count)
+	if c.metricBatch == nil {
+		c.metricBatch = NewEventBatch(c)
+	}
 	c.metricBatch.AddEventWithoutHistogram(pubEvent)
 }
 
