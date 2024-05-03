@@ -50,6 +50,7 @@ func ExitMetricInit() {
 
 // Collector - interface for collecting metrics
 type Collector interface {
+	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetric(apiMetric *APIMetric)
@@ -239,6 +240,12 @@ func (c *collector) Execute() error {
 	return nil
 }
 
+func (c *collector) InitializeBatch() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.metricBatch = NewEventBatch(c)
+}
+
 // AddMetric - add metric for API transaction to collection
 func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string) {
 	c.lock.Lock()
@@ -274,9 +281,6 @@ func (c *collector) AddAPIMetric(metric *APIMetric) {
 		return
 	}
 	c.updateUsage(metric.Count)
-	if c.metricBatch == nil {
-		c.metricBatch = NewEventBatch(c)
-	}
 	c.metricBatch.AddEventWithoutHistogram(pubEvent)
 }
 
