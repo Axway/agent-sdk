@@ -60,11 +60,11 @@ const (
 	deleteSecKeyAction
 	deleteForeignKeyAction
 	flushAction
-	saveAction
 	loadAction
 	getKeysAction
 	getForeignKeysAction
 	getItemsByForeignKeyAction
+	marshalAction
 )
 
 type cacheAction struct {
@@ -83,6 +83,7 @@ type cacheReply struct {
 	changed bool
 	keys    []string
 	items   []*Item
+	data    []byte
 }
 
 // itemCache
@@ -90,9 +91,21 @@ type itemCache struct {
 	Items         map[string]*Item  `json:"cache"`
 	SecKeys       map[string]string `json:"secondaryKeys"`
 	startedMutex  *sync.Mutex
+	saveMutex     *sync.Mutex
 	started       bool
 	actionChannel chan cacheAction
 	replyChannel  chan cacheReply
+}
+
+func (c *itemCache) MarshalJSON() ([]byte, error) {
+	marshalReply := c.runAction(cacheAction{
+		action: marshalAction,
+	})
+	if marshalReply.err != nil {
+		return nil, marshalReply.err
+	}
+
+	return marshalReply.data, nil
 }
 
 func init() {
@@ -118,6 +131,7 @@ func New() Cache {
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
 		startedMutex:  &sync.Mutex{},
+		saveMutex:     &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -131,6 +145,7 @@ func Load(path string) Cache {
 		Items:         make(map[string]*Item),
 		SecKeys:       make(map[string]string),
 		startedMutex:  &sync.Mutex{},
+		saveMutex:     &sync.Mutex{},
 		actionChannel: make(chan cacheAction),
 		replyChannel:  make(chan cacheReply),
 	}
@@ -145,6 +160,7 @@ func LoadFromBuffer(buffer []byte) Cache {
 		Items:        make(map[string]*Item),
 		SecKeys:      make(map[string]string),
 		startedMutex: &sync.Mutex{},
+		saveMutex:    &sync.Mutex{},
 	}
 	json.Unmarshal(buffer, &newCache)
 
@@ -189,7 +205,7 @@ func (c *itemCache) handleAction() {
 		deleteSecKeyAction:         c.deleteSecondaryKey,
 		deleteForeignKeyAction:     c.deleteForeignKey,
 		flushAction:                c.flush,
-		saveAction:                 c.save,
+		marshalAction:              c.marshal,
 		loadAction:                 c.load,
 	}
 
@@ -198,6 +214,42 @@ func (c *itemCache) handleAction() {
 		reply := actionMap[thisAction.action](thisAction)
 		c.replyChannel <- reply
 	}
+}
+
+func (c *itemCache) marshal(thisAction cacheAction) (thisReply cacheReply) {
+	thisReply = cacheReply{
+		err: nil,
+	}
+
+	itemBytes, err := json.Marshal(c.Items)
+	if err != nil {
+		thisReply.err = err
+		return
+	}
+
+	secKeysBytes, err := json.Marshal(c.SecKeys)
+	if err != nil {
+		thisReply.err = err
+		return
+	}
+
+	type alias struct {
+		Items   json.RawMessage `json:"cache"`
+		SecKeys json.RawMessage `json:"secondaryKeys"`
+	}
+
+	a := &alias{
+		Items:   json.RawMessage(itemBytes),
+		SecKeys: json.RawMessage(secKeysBytes),
+	}
+
+	cachedBytes, err := json.Marshal(a)
+	if err != nil {
+		thisReply.err = err
+		return
+	}
+	thisReply.data = cachedBytes
+	return
 }
 
 // check the current hash vs the newHash, return true if it has changed
@@ -487,32 +539,6 @@ func (c *itemCache) flush(thisAction cacheAction) (thisReply cacheReply) {
 	return
 }
 
-func (c *itemCache) save(thisAction cacheAction) (thisReply cacheReply) {
-	path := thisAction.path
-
-	thisReply = cacheReply{
-		err: nil,
-	}
-
-	file, err := os.Create(filepath.Clean(path))
-	if err != nil {
-		thisReply.err = err
-		return
-	}
-
-	cacheBytes, err := json.Marshal(c)
-	if err != nil {
-		file.Close()
-		thisReply.err = err
-		return
-	}
-
-	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
-	file.Close()
-	thisReply.err = err
-	return
-}
-
 func (c *itemCache) load(thisAction cacheAction) (thisReply cacheReply) {
 	path := thisAction.path
 
@@ -774,11 +800,25 @@ func (c *itemCache) Flush() {
 
 // Save - Save the data in this cache to file described by path
 func (c *itemCache) Save(path string) error {
-	saveReply := c.runAction(cacheAction{
-		action: saveAction,
-		path:   path,
-	})
-	return saveReply.err
+	c.saveMutex.Lock()
+	defer c.saveMutex.Unlock()
+
+	file, err := os.Create(filepath.Clean(path))
+	defer func() {
+		file.Close()
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	cacheBytes, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(file, bytes.NewReader(cacheBytes))
+	return err
 }
 
 // Load - Load the data from the file described by path to this cache
