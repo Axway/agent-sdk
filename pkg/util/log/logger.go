@@ -71,8 +71,8 @@ func NewMetricFieldLogger() FieldLogger {
 }
 
 // NewFieldLogger returns a FieldLogger for standard logging, and logp logging.
-func NewPublishedTransactionsLogger() FieldLogger {
-	entry := logrus.NewEntry(publishedTransactions)
+func NewUsageFieldLogger() FieldLogger {
+	entry := logrus.NewEntry(usage)
 	return &logger{
 		entry:  entry,
 		noLogP: true,

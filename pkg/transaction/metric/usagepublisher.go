@@ -22,14 +22,14 @@ import (
 )
 
 type usagePublisher struct {
-	apiClient                   api.Client
-	storage                     storageCache
-	report                      *usageReportCache
-	jobID                       string
-	ready                       bool
-	offline                     bool
-	logger                      log.FieldLogger
-	publishedTransactionsLogger log.FieldLogger
+	apiClient   api.Client
+	storage     storageCache
+	report      *usageReportCache
+	jobID       string
+	ready       bool
+	offline     bool
+	logger      log.FieldLogger
+	usageLogger log.FieldLogger
 }
 
 func (c *usagePublisher) publishEvent(event interface{}) error {
@@ -82,7 +82,7 @@ func (c *usagePublisher) publishToPlatformUsage(event UsageEvent) error {
 	}
 	if response.Code == 202 {
 		c.logger.WithField("statusCode", 202).Debugf("successful request with payload: %s", b.String())
-		c.publishedTransactionsLogger.WithFields(fields).Info("successfully published")
+		c.usageLogger.WithFields(fields).Info("successfully published")
 		return nil
 	} else if response.Code >= 500 {
 		err := fmt.Errorf("server error")
@@ -172,14 +172,14 @@ func newUsagePublisher(storage storageCache, report *usageReportCache) *usagePub
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
 			api.WithTimeout(centralCfg.GetClientTimeout()),
 			api.WithSingleURL()),
-		storage:                     storage,
-		report:                      report,
-		offline:                     agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
-		logger:                      log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
-		publishedTransactionsLogger: log.NewPublishedTransactionsLogger(),
+		storage:     storage,
+		report:      report,
+		offline:     agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
+		logger:      log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
+		usageLogger: log.NewUsageFieldLogger(),
 	}
 
-	publisher.publishedTransactionsLogger.Info("published transaction logger started")
+	publisher.usageLogger.Info("published transaction logger started")
 	publisher.registerReportJob()
 	return publisher
 }

@@ -10,20 +10,20 @@ import (
 )
 
 const (
-	defLevel                       = "info"
-	defFormat                      = "json"
-	defOutput                      = "stdout"
-	defMaskedVals                  = ""
-	defPath                        = "logs"
-	defMaxSize                     = 10485760
-	defMaxAge                      = 0
-	defMaxFiles                    = 7
-	defMetricName                  = "metrics.log"
-	defMetricMaxSize               = 10485760
-	defMetricMaxAge                = 0
-	defMetricMaxFiles              = 0
-	defPublishedTransactionsName   = "publishedtransactions.log"
-	defPublishedTransactionsMaxAge = 365
+	defLevel          = "info"
+	defFormat         = "json"
+	defOutput         = "stdout"
+	defMaskedVals     = ""
+	defPath           = "logs"
+	defMaxSize        = 10485760
+	defMaxAge         = 0
+	defMaxFiles       = 7
+	defMetricName     = "metrics.log"
+	defMetricMaxSize  = 10485760
+	defMetricMaxAge   = 0
+	defMetricMaxFiles = 0
+	defUsageName      = "usage.log"
+	defUsageMaxAge    = 365
 )
 
 func TestDefaultLogConfig(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDefaultLogConfig(t *testing.T) {
 			props := properties.NewProperties(rootCmd)
 			AddLogConfigProperties(props, tc.logName)
 			AddMetricLogConfigProperties(props, tc.agentType)
-			AddPublishedTransactionsConfigProperties(props, tc.agentType)
+			AddUsageConfigProperties(props, tc.agentType)
 
 			// Parse config
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
@@ -69,8 +69,8 @@ func TestDefaultLogConfig(t *testing.T) {
 				assert.Equal(t, defMetricMaxAge, props.IntPropertyValue(pathLogMetricsFileMaxAge))
 				assert.Equal(t, defMetricMaxFiles, props.IntPropertyValue(pathLogMetricsFileMaxBackups))
 
-				assert.Equal(t, defPublishedTransactionsName, props.StringPropertyValue(pathLogPublishedTransactionsFileName))
-				assert.Equal(t, defPublishedTransactionsMaxAge, props.IntPropertyValue(pathLogPublishedTransactionsFileMaxAge))
+				assert.Equal(t, defUsageName, props.StringPropertyValue(pathLogUsageFileName))
+				assert.Equal(t, defUsageMaxAge, props.IntPropertyValue(pathLogUsageFileMaxAge))
 			}
 		})
 	}
@@ -78,20 +78,20 @@ func TestDefaultLogConfig(t *testing.T) {
 
 func TestLogConfigValidations(t *testing.T) {
 	testCases := map[string]struct {
-		errInfo                      string
-		agentType                    AgentType
-		metricsEnabled               bool
-		publishedTransactionsEnabled bool
-		level                        string
-		format                       string
-		output                       string
-		maxSize                      int
-		maxBackups                   int
-		maxAge                       int
-		metricMaxSize                int
-		metricMaxBackups             int
-		metricMaxAge                 int
-		publishedTransactionsMaxAge  int
+		errInfo          string
+		agentType        AgentType
+		metricsEnabled   bool
+		usageEnabled     bool
+		level            string
+		format           string
+		output           string
+		maxSize          int
+		maxBackups       int
+		maxAge           int
+		metricMaxSize    int
+		metricMaxBackups int
+		metricMaxAge     int
+		usageMaxAge      int
 	}{
 		"expect err, bad log level": {
 			errInfo: "log.level",
@@ -139,11 +139,11 @@ func TestLogConfigValidations(t *testing.T) {
 			metricMaxAge:   -1,
 		},
 		"expect err, traceability agent, bad published transactions log age": {
-			agentType:                    TraceabilityAgent,
-			publishedTransactionsEnabled: true,
-			metricsEnabled:               true,
-			errInfo:                      "log.publishedtransactionsfile.cleanbackupsevery",
-			publishedTransactionsMaxAge:  -1,
+			agentType:      TraceabilityAgent,
+			usageEnabled:   true,
+			metricsEnabled: true,
+			errInfo:        "log.usagefile.cleanbackupsevery",
+			usageMaxAge:    -1,
 		},
 	}
 	for name, tc := range testCases {
@@ -178,8 +178,8 @@ func TestLogConfigValidations(t *testing.T) {
 			if tc.metricMaxAge == 0 {
 				tc.metricMaxAge = defMetricMaxAge
 			}
-			if tc.publishedTransactionsMaxAge == 0 {
-				tc.publishedTransactionsMaxAge = defPublishedTransactionsMaxAge
+			if tc.usageMaxAge == 0 {
+				tc.usageMaxAge = defUsageMaxAge
 			}
 
 			log.GlobalLoggerConfig = log.LoggerConfig{}
@@ -201,10 +201,10 @@ func TestLogConfigValidations(t *testing.T) {
 				props.AddIntProperty(pathLogMetricsFileMaxAge, tc.metricMaxAge, "")
 			}
 
-			if tc.agentType == TraceabilityAgent && tc.publishedTransactionsEnabled {
-				props.AddBoolProperty(pathLogPublishedTransactionsFileEnabled, true, "")
-				props.AddStringProperty(pathLogPublishedTransactionsFileName, "publishedtransactions.log", "")
-				props.AddIntProperty(pathLogPublishedTransactionsFileMaxAge, tc.publishedTransactionsMaxAge, "")
+			if tc.agentType == TraceabilityAgent && tc.usageEnabled {
+				props.AddBoolProperty(pathLogUsageFileEnabled, true, "")
+				props.AddStringProperty(pathLogUsageFileName, "usage.log", "")
+				props.AddIntProperty(pathLogUsageFileMaxAge, tc.usageMaxAge, "")
 			}
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
 			if tc.errInfo != "" {

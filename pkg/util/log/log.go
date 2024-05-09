@@ -24,7 +24,7 @@ func GetMetricLogger() *logrus.Logger {
 }
 
 func GetPublishedTransactionLogger() *logrus.Logger {
-	return publishedTransactions
+	return usage
 }
 
 var networkTraceIgnoreHeaders = map[string]interface{}{
