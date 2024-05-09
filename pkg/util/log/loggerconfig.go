@@ -37,19 +37,30 @@ func init() {
 				},
 			},
 		},
+		publishedTransactionsCfg: rotatefilehook.RotateFileConfig{
+			Level: logrus.InfoLevel,
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			},
+		},
 		initialized: false,
 	}
 }
 
 // LoggerConfig - is a builder used to setup the logging for an agent
 type LoggerConfig struct {
-	err           error
-	output        LoggingOutput
-	path          string
-	cfg           rotatefilehook.RotateFileConfig
-	metricCfg     rotatefilehook.RotateFileConfig
-	initialized   bool
-	metricEnabled bool
+	err                          error
+	output                       LoggingOutput
+	path                         string
+	cfg                          rotatefilehook.RotateFileConfig
+	metricCfg                    rotatefilehook.RotateFileConfig
+	publishedTransactionsCfg     rotatefilehook.RotateFileConfig
+	initialized                  bool
+	metricEnabled                bool
+	publishedTransactionsEnabled bool
 }
 
 // Apply - applies the config changes to the logger
@@ -67,6 +78,12 @@ func (b *LoggerConfig) Apply() error {
 			return err
 		}
 		if err := b.validate0orGreater("log.metricfile.cleanbackupsevery", b.metricCfg.MaxAge); err != nil {
+			return err
+		}
+	}
+
+	if b.publishedTransactionsEnabled {
+		if err := b.validate0orGreater("log.publishedtransactionsfile.cleanbackupsevery", b.publishedTransactionsCfg.MaxAge); err != nil {
 			return err
 		}
 	}
@@ -103,6 +120,13 @@ func (b *LoggerConfig) Apply() error {
 		if !isTest && b.metricEnabled {
 			b.metricCfg.Filename = path.Join(b.path, "audit", b.metricCfg.Filename)
 			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
+			metric.AddHook(rotateMetricHook)
+			metric.SetOutput(io.Discard) // discard logging to stderr
+		}
+
+		if !isTest && b.publishedTransactionsEnabled {
+			b.publishedTransactionsCfg.Filename = path.Join(b.path, "audit", b.publishedTransactionsCfg.Filename)
+			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.publishedTransactionsCfg)
 			metric.AddHook(rotateMetricHook)
 			metric.SetOutput(io.Discard) // discard logging to stderr
 		}
@@ -187,10 +211,16 @@ func (b *LoggerConfig) Path(path string) *LoggerConfig {
 	return b
 }
 
-// Path -
 func (b *LoggerConfig) Metrics(enabled bool) *LoggerConfig {
 	if b.err == nil {
 		b.metricEnabled = enabled
+	}
+	return b
+}
+
+func (b *LoggerConfig) PublishedTransactions(enabled bool) *LoggerConfig {
+	if b.err == nil {
+		b.publishedTransactionsEnabled = enabled
 	}
 	return b
 }
@@ -264,6 +294,20 @@ func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
 		b.metricCfg.MaxAge = maxAge
+	}
+	return b
+}
+
+func (b *LoggerConfig) PublishedTransactionsFilename(filename string) *LoggerConfig {
+	if b.err == nil {
+		b.metricCfg.Filename = filename
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxPublishedTransactionAge(maxAge int) *LoggerConfig {
+	if b.err == nil {
+		b.publishedTransactionsCfg.MaxAge = maxAge
 	}
 	return b
 }

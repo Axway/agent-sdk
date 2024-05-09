@@ -10,18 +10,20 @@ import (
 )
 
 const (
-	defLevel          = "info"
-	defFormat         = "json"
-	defOutput         = "stdout"
-	defMaskedVals     = ""
-	defPath           = "logs"
-	defMaxSize        = 10485760
-	defMaxAge         = 0
-	defMaxFiles       = 7
-	defMetricName     = "metrics.log"
-	defMetricMaxSize  = 10485760
-	defMetricMaxAge   = 0
-	defMetricMaxFiles = 0
+	defLevel                       = "info"
+	defFormat                      = "json"
+	defOutput                      = "stdout"
+	defMaskedVals                  = ""
+	defPath                        = "logs"
+	defMaxSize                     = 10485760
+	defMaxAge                      = 0
+	defMaxFiles                    = 7
+	defMetricName                  = "metrics.log"
+	defMetricMaxSize               = 10485760
+	defMetricMaxAge                = 0
+	defMetricMaxFiles              = 0
+	defPublishedTransactionsName   = "publishedtransactions.log"
+	defPublishedTransactionsMaxAge = 365
 )
 
 func TestDefaultLogConfig(t *testing.T) {
@@ -44,6 +46,7 @@ func TestDefaultLogConfig(t *testing.T) {
 			props := properties.NewProperties(rootCmd)
 			AddLogConfigProperties(props, tc.logName)
 			AddMetricLogConfigProperties(props, tc.agentType)
+			AddPublishedTransactionsConfigProperties(props, tc.agentType)
 
 			// Parse config
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
@@ -65,6 +68,9 @@ func TestDefaultLogConfig(t *testing.T) {
 				assert.Equal(t, defMetricMaxSize, props.IntPropertyValue(pathLogMetricsFileMaxSize))
 				assert.Equal(t, defMetricMaxAge, props.IntPropertyValue(pathLogMetricsFileMaxAge))
 				assert.Equal(t, defMetricMaxFiles, props.IntPropertyValue(pathLogMetricsFileMaxBackups))
+
+				assert.Equal(t, defPublishedTransactionsName, props.StringPropertyValue(pathLogPublishedTransactionsFileName))
+				assert.Equal(t, defPublishedTransactionsMaxAge, props.IntPropertyValue(pathLogPublishedTransactionsFileMaxAge))
 			}
 		})
 	}
@@ -72,18 +78,20 @@ func TestDefaultLogConfig(t *testing.T) {
 
 func TestLogConfigValidations(t *testing.T) {
 	testCases := map[string]struct {
-		errInfo          string
-		agentType        AgentType
-		metricsEnabled   bool
-		level            string
-		format           string
-		output           string
-		maxSize          int
-		maxBackups       int
-		maxAge           int
-		metricMaxSize    int
-		metricMaxBackups int
-		metricMaxAge     int
+		errInfo                      string
+		agentType                    AgentType
+		metricsEnabled               bool
+		publishedTransactionsEnabled bool
+		level                        string
+		format                       string
+		output                       string
+		maxSize                      int
+		maxBackups                   int
+		maxAge                       int
+		metricMaxSize                int
+		metricMaxBackups             int
+		metricMaxAge                 int
+		publishedTransactionsMaxAge  int
 	}{
 		"expect err, bad log level": {
 			errInfo: "log.level",
@@ -130,6 +138,13 @@ func TestLogConfigValidations(t *testing.T) {
 			errInfo:        "log.metricfile.cleanbackupsevery",
 			metricMaxAge:   -1,
 		},
+		"expect err, traceability agent, bad published transactions log age": {
+			agentType:                    TraceabilityAgent,
+			publishedTransactionsEnabled: true,
+			metricsEnabled:               true,
+			errInfo:                      "log.publishedTransactions.cleanbackupsevery",
+			publishedTransactionsMaxAge:  -1,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -163,6 +178,9 @@ func TestLogConfigValidations(t *testing.T) {
 			if tc.metricMaxAge == 0 {
 				tc.metricMaxAge = defMetricMaxAge
 			}
+			if tc.publishedTransactionsMaxAge == 0 {
+				tc.publishedTransactionsMaxAge = defPublishedTransactionsMaxAge
+			}
 
 			log.GlobalLoggerConfig = log.LoggerConfig{}
 			props := properties.NewProperties(&cobra.Command{})
@@ -183,6 +201,11 @@ func TestLogConfigValidations(t *testing.T) {
 				props.AddIntProperty(pathLogMetricsFileMaxAge, tc.metricMaxAge, "")
 			}
 
+			if tc.agentType == TraceabilityAgent && tc.publishedTransactionsEnabled {
+				props.AddBoolProperty(pathLogPublishedTransactionsFileEnabled, true, "")
+				props.AddStringProperty(pathLogPublishedTransactionsFileName, "publishedtransactions.log", "")
+				props.AddIntProperty(pathLogPublishedTransactionsFileMaxAge, tc.publishedTransactionsMaxAge, "")
+			}
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
 			if tc.errInfo != "" {
 				if !assert.NotNil(t, err) {

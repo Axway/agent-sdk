@@ -118,6 +118,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	config.AddMetricLogConfigProperties(c.props, agentType)
+	config.AddPublishedTransactionsConfigProperties(c.props, agentType)
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)

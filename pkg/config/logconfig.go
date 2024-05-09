@@ -16,17 +16,19 @@ import (
 type LogConfig interface {
 	SetLevel(level string)
 	GetMetricConfig() LogFileConfiguration
+	GetPublishedTransactionsConfig() LogFileConfiguration
 }
 
 // LogConfiguration -
 type LogConfiguration struct {
 	LogConfig
-	Level        string               `config:"level"`
-	Format       string               `config:"format"`
-	Output       string               `config:"output"`
-	File         LogFileConfiguration `config:"file"`
-	MetricFile   LogFileConfiguration `config:"metricfile"`
-	MaskedValues string               `config:"maskedvalues"`
+	Level                     string               `config:"level"`
+	Format                    string               `config:"format"`
+	Output                    string               `config:"output"`
+	File                      LogFileConfiguration `config:"file"`
+	MetricFile                LogFileConfiguration `config:"metricfile"`
+	PublishedTransactionsFile LogFileConfiguration `config:"publishedtransactionsfile"`
+	MaskedValues              string               `config:"maskedvalues"`
 }
 
 func (l *LogConfiguration) setupLogger(agentType AgentType) error {
@@ -43,11 +45,18 @@ func (l *LogConfiguration) setupLogger(agentType AgentType) error {
 		MaxMetricSize(l.MetricFile.MaxSize).
 		MaxMetricBackups(l.MetricFile.MaxBackups).
 		MaxMetricAge(l.MetricFile.MaxAge).
+		PublishedTransactions(agentType == TraceabilityAgent && l.PublishedTransactionsFile.Enabled).
+		PublishedTransactionsFilename(l.PublishedTransactionsFile.Name).
+		MaxPublishedTransactionAge(l.PublishedTransactionsFile.MaxAge).
 		Apply()
 }
 
 func (l *LogConfiguration) GetMetricConfig() LogFileConfiguration {
 	return l.MetricFile
+}
+
+func (l *LogConfiguration) GetPublishedTransactionsConfig() LogFileConfiguration {
+	return l.PublishedTransactionsFile
 }
 
 // LogFileConfiguration - setup the logging configuration for file output
@@ -61,20 +70,23 @@ type LogFileConfiguration struct {
 }
 
 const (
-	pathLogLevel                 = "log.level"
-	pathLogFormat                = "log.format"
-	pathLogOutput                = "log.output"
-	pathLogMaskedValues          = "log.maskedValues"
-	pathLogFileName              = "log.file.name"
-	pathLogFilePath              = "log.file.path"
-	pathLogFileMaxSize           = "log.file.rotateeverybytes"
-	pathLogFileMaxAge            = "log.file.cleanbackups"
-	pathLogFileMaxBackups        = "log.file.keepfiles"
-	pathLogMetricsFileEnabled    = "log.metricfile.enabled"
-	pathLogMetricsFileName       = "log.metricfile.name"
-	pathLogMetricsFileMaxSize    = "log.metricfile.rotateeverybytes"
-	pathLogMetricsFileMaxAge     = "log.metricfile.cleanbackups"
-	pathLogMetricsFileMaxBackups = "log.metricfile.keepfiles"
+	pathLogLevel                            = "log.level"
+	pathLogFormat                           = "log.format"
+	pathLogOutput                           = "log.output"
+	pathLogMaskedValues                     = "log.maskedValues"
+	pathLogFileName                         = "log.file.name"
+	pathLogFilePath                         = "log.file.path"
+	pathLogFileMaxSize                      = "log.file.rotateeverybytes"
+	pathLogFileMaxAge                       = "log.file.cleanbackups"
+	pathLogFileMaxBackups                   = "log.file.keepfiles"
+	pathLogMetricsFileEnabled               = "log.metricfile.enabled"
+	pathLogMetricsFileName                  = "log.metricfile.name"
+	pathLogMetricsFileMaxSize               = "log.metricfile.rotateeverybytes"
+	pathLogMetricsFileMaxAge                = "log.metricfile.cleanbackups"
+	pathLogMetricsFileMaxBackups            = "log.metricfile.keepfiles"
+	pathLogPublishedTransactionsFileEnabled = "log.publishedtransactionsfile.enabled"
+	pathLogPublishedTransactionsFileName    = "log.publishedtransactionsfile.name"
+	pathLogPublishedTransactionsFileMaxAge  = "log.publishedtransactionsfile.cleanbackupsevery"
 )
 
 // AddLogConfigProperties - Adds the command properties needed for Log Config
@@ -105,6 +117,16 @@ func AddMetricLogConfigProperties(props properties.Properties, agentType AgentTy
 	props.AddIntProperty(pathLogMetricsFileMaxBackups, 0, "The maximum number of backups to keep of metrics log files (default: unlimited)")
 }
 
+func AddPublishedTransactionsConfigProperties(props properties.Properties, agentType AgentType) {
+	if agentType == DiscoveryAgent {
+		return
+	}
+
+	props.AddBoolProperty(pathLogPublishedTransactionsFileEnabled, true, "Set to false to disable published transactions file logging")
+	props.AddStringProperty(pathLogPublishedTransactionsFileName, "publishedtransactions.log", "Name of the published transaction log files")
+	props.AddIntProperty(pathLogPublishedTransactionsFileMaxAge, 365, "The maximum number of days, 24 hour periods, to keep the published transactions log file backups")
+}
+
 // ParseAndSetupLogConfig - Parses the Log Config and setups the logger
 func ParseAndSetupLogConfig(props properties.Properties, agentType AgentType) (LogConfig, error) {
 	cfg := &LogConfiguration{
@@ -129,6 +151,12 @@ func ParseAndSetupLogConfig(props properties.Properties, agentType AgentType) (L
 			MaxSize:    props.IntPropertyValue(pathLogMetricsFileMaxSize),
 			MaxBackups: props.IntPropertyValue(pathLogMetricsFileMaxBackups),
 			MaxAge:     props.IntPropertyValue(pathLogMetricsFileMaxAge),
+		}
+		cfg.PublishedTransactionsFile = LogFileConfiguration{
+			Enabled: props.BoolPropertyValue(pathLogPublishedTransactionsFileEnabled),
+			Name:    props.StringPropertyValue(pathLogPublishedTransactionsFileName),
+			Path:    filepath.Join(cfg.File.Path, "publishedTransactions"),
+			MaxAge:  props.IntPropertyValue(pathLogPublishedTransactionsFileMaxAge),
 		}
 	}
 
