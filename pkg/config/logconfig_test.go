@@ -142,7 +142,7 @@ func TestLogConfigValidations(t *testing.T) {
 			agentType:                    TraceabilityAgent,
 			publishedTransactionsEnabled: true,
 			metricsEnabled:               true,
-			errInfo:                      "log.publishedTransactions.cleanbackupsevery",
+			errInfo:                      "log.publishedtransactionsfile.cleanbackupsevery",
 			publishedTransactionsMaxAge:  -1,
 		},
 	}
