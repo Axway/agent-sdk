@@ -83,6 +83,12 @@ func (b *LoggerConfig) Apply() error {
 	}
 
 	if b.usageEnabled {
+		if err := b.validateSize("log.usagefile.rotateeverybytes", b.usageCfg.MaxSize); err != nil {
+			return err
+		}
+		if err := b.validate0orGreater("log.usagefile.keepfiles", b.usageCfg.MaxBackups); err != nil {
+			return err
+		}
 		if err := b.validate0orGreater("log.usagefile.cleanbackupsevery", b.usageCfg.MaxAge); err != nil {
 			return err
 		}
@@ -300,12 +306,26 @@ func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 
 func (b *LoggerConfig) UsageFilename(filename string) *LoggerConfig {
 	if b.err == nil {
-		b.metricCfg.Filename = filename
+		b.usageCfg.Filename = filename
 	}
 	return b
 }
 
-func (b *LoggerConfig) MaxPublishedTransactionAge(maxAge int) *LoggerConfig {
+func (b *LoggerConfig) MaxUsageSize(maxSize int) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.MaxSize = maxSize
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxUsageBackups(maxBackups int) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.MaxBackups = maxBackups
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxUsageAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
 		b.usageCfg.MaxAge = maxAge
 	}

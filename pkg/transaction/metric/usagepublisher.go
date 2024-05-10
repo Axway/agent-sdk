@@ -179,7 +179,7 @@ func newUsagePublisher(storage storageCache, report *usageReportCache) *usagePub
 		usageLogger: log.NewUsageFieldLogger(),
 	}
 
-	publisher.usageLogger.Info("published transaction logger started")
+	publisher.usageLogger.Info("usage logger started")
 	publisher.registerReportJob()
 	return publisher
 }

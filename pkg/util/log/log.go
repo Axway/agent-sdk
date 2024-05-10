@@ -23,7 +23,7 @@ func GetMetricLogger() *logrus.Logger {
 	return metric
 }
 
-func GetPublishedTransactionLogger() *logrus.Logger {
+func GetUsageLogger() *logrus.Logger {
 	return usage
 }
 
