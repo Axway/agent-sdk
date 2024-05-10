@@ -37,6 +37,15 @@ func init() {
 				},
 			},
 		},
+		usageCfg: rotatefilehook.RotateFileConfig{
+			Level: logrus.InfoLevel,
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339,
+				FieldMap: logrus.FieldMap{
+					logrus.FieldKeyMsg: "message",
+				},
+			},
+		},
 		initialized: false,
 	}
 }
@@ -48,8 +57,10 @@ type LoggerConfig struct {
 	path          string
 	cfg           rotatefilehook.RotateFileConfig
 	metricCfg     rotatefilehook.RotateFileConfig
+	usageCfg      rotatefilehook.RotateFileConfig
 	initialized   bool
 	metricEnabled bool
+	usageEnabled  bool
 }
 
 // Apply - applies the config changes to the logger
@@ -67,6 +78,18 @@ func (b *LoggerConfig) Apply() error {
 			return err
 		}
 		if err := b.validate0orGreater("log.metricfile.cleanbackupsevery", b.metricCfg.MaxAge); err != nil {
+			return err
+		}
+	}
+
+	if b.usageEnabled {
+		if err := b.validateSize("log.usagefile.rotateeverybytes", b.usageCfg.MaxSize); err != nil {
+			return err
+		}
+		if err := b.validate0orGreater("log.usagefile.keepfiles", b.usageCfg.MaxBackups); err != nil {
+			return err
+		}
+		if err := b.validate0orGreater("log.usagefile.cleanbackupsevery", b.usageCfg.MaxAge); err != nil {
 			return err
 		}
 	}
@@ -103,6 +126,13 @@ func (b *LoggerConfig) Apply() error {
 		if !isTest && b.metricEnabled {
 			b.metricCfg.Filename = path.Join(b.path, "audit", b.metricCfg.Filename)
 			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.metricCfg)
+			metric.AddHook(rotateMetricHook)
+			metric.SetOutput(io.Discard) // discard logging to stderr
+		}
+
+		if !isTest && b.usageEnabled {
+			b.usageCfg.Filename = path.Join(b.path, "audit", b.usageCfg.Filename)
+			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.usageCfg)
 			metric.AddHook(rotateMetricHook)
 			metric.SetOutput(io.Discard) // discard logging to stderr
 		}
@@ -187,10 +217,16 @@ func (b *LoggerConfig) Path(path string) *LoggerConfig {
 	return b
 }
 
-// Path -
 func (b *LoggerConfig) Metrics(enabled bool) *LoggerConfig {
 	if b.err == nil {
 		b.metricEnabled = enabled
+	}
+	return b
+}
+
+func (b *LoggerConfig) Usage(enabled bool) *LoggerConfig {
+	if b.err == nil {
+		b.usageEnabled = enabled
 	}
 	return b
 }
@@ -264,6 +300,34 @@ func (b *LoggerConfig) MaxMetricBackups(maxBackups int) *LoggerConfig {
 func (b *LoggerConfig) MaxMetricAge(maxAge int) *LoggerConfig {
 	if b.err == nil {
 		b.metricCfg.MaxAge = maxAge
+	}
+	return b
+}
+
+func (b *LoggerConfig) UsageFilename(filename string) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.Filename = filename
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxUsageSize(maxSize int) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.MaxSize = maxSize
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxUsageBackups(maxBackups int) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.MaxBackups = maxBackups
+	}
+	return b
+}
+
+func (b *LoggerConfig) MaxUsageAge(maxAge int) *LoggerConfig {
+	if b.err == nil {
+		b.usageCfg.MaxAge = maxAge
 	}
 	return b
 }

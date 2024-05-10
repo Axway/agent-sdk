@@ -16,6 +16,7 @@ import (
 type LogConfig interface {
 	SetLevel(level string)
 	GetMetricConfig() LogFileConfiguration
+	GetUsageConfig() LogFileConfiguration
 }
 
 // LogConfiguration -
@@ -26,6 +27,7 @@ type LogConfiguration struct {
 	Output       string               `config:"output"`
 	File         LogFileConfiguration `config:"file"`
 	MetricFile   LogFileConfiguration `config:"metricfile"`
+	UsageFile    LogFileConfiguration `config:"usagefile"`
 	MaskedValues string               `config:"maskedvalues"`
 }
 
@@ -43,11 +45,20 @@ func (l *LogConfiguration) setupLogger(agentType AgentType) error {
 		MaxMetricSize(l.MetricFile.MaxSize).
 		MaxMetricBackups(l.MetricFile.MaxBackups).
 		MaxMetricAge(l.MetricFile.MaxAge).
+		Usage(agentType == TraceabilityAgent && l.UsageFile.Enabled).
+		UsageFilename(l.UsageFile.Name).
+		MaxUsageSize(l.UsageFile.MaxSize).
+		MaxUsageBackups(l.UsageFile.MaxBackups).
+		MaxUsageAge(l.UsageFile.MaxAge).
 		Apply()
 }
 
 func (l *LogConfiguration) GetMetricConfig() LogFileConfiguration {
 	return l.MetricFile
+}
+
+func (l *LogConfiguration) GetUsagefileConfig() LogFileConfiguration {
+	return l.UsageFile
 }
 
 // LogFileConfiguration - setup the logging configuration for file output
@@ -75,6 +86,11 @@ const (
 	pathLogMetricsFileMaxSize    = "log.metricfile.rotateeverybytes"
 	pathLogMetricsFileMaxAge     = "log.metricfile.cleanbackups"
 	pathLogMetricsFileMaxBackups = "log.metricfile.keepfiles"
+	pathLogUsageFileEnabled      = "log.usagefile.enabled"
+	pathLogUsageFileName         = "log.usagefile.name"
+	pathLogUsageFileMaxSize      = "log.usagefile.rotateeverybytes"
+	pathLogUsageFileMaxAge       = "log.usagefile.cleanbackupsevery"
+	pathLogUsageFileMaxBackups   = "log.usagefile.keepfiles"
 )
 
 // AddLogConfigProperties - Adds the command properties needed for Log Config
@@ -100,9 +116,21 @@ func AddMetricLogConfigProperties(props properties.Properties, agentType AgentTy
 	// Metric log file options
 	props.AddBoolProperty(pathLogMetricsFileEnabled, true, "Set to false to disable metrics file logging")
 	props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "Name of the metric log files")
-	props.AddIntProperty(pathLogMetricsFileMaxSize, 10485760, "The maximum size of a metrics log file, in bytes  (default: 10485760 - 10 MB)")
+	props.AddIntProperty(pathLogMetricsFileMaxSize, 10485760, "The maximum size of a metrics log file, in bytes (default: 10485760 - 10 MB)")
 	props.AddIntProperty(pathLogMetricsFileMaxAge, 0, "The maximum number of days, 24 hour periods, to keep the metrics log file backups")
 	props.AddIntProperty(pathLogMetricsFileMaxBackups, 0, "The maximum number of backups to keep of metrics log files (default: unlimited)")
+}
+
+func AddUsageConfigProperties(props properties.Properties, agentType AgentType) {
+	if agentType == DiscoveryAgent {
+		return
+	}
+
+	props.AddBoolProperty(pathLogUsageFileEnabled, true, "Set to false to disable usage file logging")
+	props.AddStringProperty(pathLogUsageFileName, "usage.log", "Name of the usage log files")
+	props.AddIntProperty(pathLogUsageFileMaxSize, 10485760, "The maximum size of a usage log file, in bytes (default: 10485760 - 10 MB)")
+	props.AddIntProperty(pathLogUsageFileMaxAge, 365, "The maximum number of days, 24 hour periods, to keep the usage log file backups")
+	props.AddIntProperty(pathLogUsageFileMaxBackups, 0, "The maximum number of backups to keep of metrics log files (default: unlimited)")
 }
 
 // ParseAndSetupLogConfig - Parses the Log Config and setups the logger
@@ -129,6 +157,14 @@ func ParseAndSetupLogConfig(props properties.Properties, agentType AgentType) (L
 			MaxSize:    props.IntPropertyValue(pathLogMetricsFileMaxSize),
 			MaxBackups: props.IntPropertyValue(pathLogMetricsFileMaxBackups),
 			MaxAge:     props.IntPropertyValue(pathLogMetricsFileMaxAge),
+		}
+		cfg.UsageFile = LogFileConfiguration{
+			Enabled:    props.BoolPropertyValue(pathLogUsageFileEnabled),
+			Name:       props.StringPropertyValue(pathLogUsageFileName),
+			Path:       filepath.Join(cfg.File.Path, "usage"),
+			MaxSize:    props.IntPropertyValue(pathLogUsageFileMaxSize),
+			MaxBackups: props.IntPropertyValue(pathLogUsageFileMaxBackups),
+			MaxAge:     props.IntPropertyValue(pathLogUsageFileMaxAge),
 		}
 	}
 

@@ -70,6 +70,15 @@ func NewMetricFieldLogger() FieldLogger {
 	}
 }
 
+// NewFieldLogger returns a FieldLogger for standard logging, and logp logging.
+func NewUsageFieldLogger() FieldLogger {
+	entry := logrus.NewEntry(usage)
+	return &logger{
+		entry:  entry,
+		noLogP: true,
+	}
+}
+
 // NewFieldLoggerEntry returns a FieldLogger for standard logging, and logp logging.
 func NewFieldLoggerEntry(l *logrus.Logger, isLogP bool) FieldLogger {
 	entry := logrus.NewEntry(l)
