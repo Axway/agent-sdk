@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -498,6 +499,57 @@ func TestMetricCollector(t *testing.T) {
 			s.resetConfig()
 		})
 	}
+}
+
+func TestConcurrentMetricCollectorEvents(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+
+	// this test has no assertions it is to ensure concurrent map writs do not occur while collecting metrics
+	apiDetails := []models.APIDetails{apiDetails1, apiDetails2}
+
+	appDetails1 := models.AppDetails{ID: "111", Name: "app1"}
+	appDetails2 := models.AppDetails{ID: "111", Name: "app1"}
+	appDetails := []models.AppDetails{appDetails1, appDetails2}
+
+	codes := []string{"200", "201", "202", "400", "401", "403", "404", "500"}
+
+	details := []Detail{}
+
+	// load a bunch of different api details
+	for _, api := range apiDetails {
+		for _, app := range appDetails {
+			for _, code := range codes {
+				details = append(details, Detail{APIDetails: api, AppDetails: app, StatusCode: code})
+			}
+		}
+	}
+
+	// add all metrics via go routines
+	wg := sync.WaitGroup{}
+	wg.Add(len(details))
+
+	for _, d := range details {
+		go func(dets Detail) {
+			defer wg.Done()
+			metricCollector.AddMetricDetail(dets)
+		}(d)
+	}
+
+	wg.Wait()
 }
 
 func TestMetricCollectorUsageAggregation(t *testing.T) {
