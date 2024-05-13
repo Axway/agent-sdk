@@ -68,10 +68,10 @@ type collector struct {
 	orgGUID          string
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
-	mapLock          *sync.Mutex
 	registry         metrics.Registry
 	metricBatch      *EventBatch
 	metricMap        map[string]map[string]map[string]map[string]*APIMetric
+	metricMapLock    *sync.Mutex
 	publishItemQueue []publishQueueItem
 	jobID            string
 	usagePublisher   *usagePublisher
@@ -160,7 +160,7 @@ func createMetricCollector() Collector {
 		metricStartTime:  now().Add(-1 * time.Minute),
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
-		mapLock:          &sync.Mutex{},
+		metricMapLock:    &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
@@ -342,30 +342,21 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 	hAPIID := strings.ReplaceAll(apiID, ".", "#")
 	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + hAPIID + "." + statusCode)
 
-	c.mapLock.Lock()
-	appMap, ok := c.metricMap[subscriptionID]
-	if !ok {
-		appMap = make(map[string]map[string]map[string]*APIMetric)
-		c.metricMap[subscriptionID] = appMap
+	c.metricMapLock.Lock()
+	defer c.metricMapLock.Unlock()
+	if _, ok := c.metricMap[subscriptionID]; !ok {
+		c.metricMap[subscriptionID] = make(map[string]map[string]map[string]*APIMetric)
 	}
-	c.mapLock.Unlock()
-
-	apiMap, ok := appMap[appID]
-	if !ok {
-		apiMap = make(map[string]map[string]*APIMetric)
-		appMap[appID] = apiMap
+	if _, ok := c.metricMap[subscriptionID][appID]; !ok {
+		c.metricMap[subscriptionID][appID] = make(map[string]map[string]*APIMetric)
 	}
-
-	statusMap, ok := apiMap[apiID]
-	if !ok {
-		statusMap = make(map[string]*APIMetric)
-		apiMap[apiID] = statusMap
+	if _, ok := c.metricMap[subscriptionID][appID][apiID]; !ok {
+		c.metricMap[subscriptionID][appID][apiID] = make(map[string]*APIMetric)
 	}
-
-	if _, ok := statusMap[statusCode]; !ok {
+	if _, ok := c.metricMap[subscriptionID][appID][apiID][statusCode]; !ok {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
-		statusMap[statusCode] = &APIMetric{
+		c.metricMap[subscriptionID][appID][apiID][statusCode] = &APIMetric{
 			Subscription:  c.createSubscriptionDetail(subRef),
 			App:           appDetail,
 			Product:       c.getProduct(accessRequest, c.logger),
@@ -379,10 +370,10 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 			EventID:       uuid.NewString(),
 		}
 	}
-	histogram.Update(detail.Duration)
-	c.storage.updateMetric(histogram, statusMap[statusCode])
 
-	return statusMap[statusCode]
+	histogram.Update(detail.Duration)
+	c.storage.updateMetric(histogram, c.metricMap[subscriptionID][appID][apiID][statusCode])
+	return c.metricMap[subscriptionID][appID][apiID][statusCode]
 }
 
 // getAccessRequest -
@@ -696,8 +687,8 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 }
 
 func (c *collector) processMetric(metricName string, metric interface{}) {
-	c.mapLock.Lock()
-	defer c.mapLock.Unlock()
+	c.metricMapLock.Lock()
+	defer c.metricMapLock.Unlock()
 	elements := strings.Split(metricName, ".")
 	if len(elements) == 5 {
 		subscriptionID := elements[1]
@@ -827,8 +818,8 @@ func (c *collector) logMetric(msg string, metric *APIMetric) {
 }
 
 func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, metric *APIMetric) {
-	c.mapLock.Lock()
-	defer c.mapLock.Unlock()
+	c.metricMapLock.Lock()
+	defer c.metricMapLock.Unlock()
 	subID := metric.Subscription.ID
 	appID := metric.App.ID
 	apiID := metric.API.ID
