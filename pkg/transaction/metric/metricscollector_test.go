@@ -502,6 +502,7 @@ func TestMetricCollector(t *testing.T) {
 }
 
 func TestConcurrentMetricCollectorEvents(t *testing.T) {
+	// this test has no assertions it is to ensure concurrent map writs do not occur while collecting metrics
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
 	defer s.closeServer()
@@ -514,18 +515,37 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
-
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
 
-	// this test has no assertions it is to ensure concurrent map writs do not occur while collecting metrics
-	apiDetails := []models.APIDetails{apiDetails1, apiDetails2}
+	apiDetails := []models.APIDetails{
+		{ID: "000", Name: "000", Revision: 1, TeamID: teamID},
+		{ID: "111", Name: "111", Revision: 1, TeamID: teamID},
+		{ID: "222", Name: "222", Revision: 1, TeamID: teamID},
+		{ID: "333", Name: "333", Revision: 1, TeamID: teamID},
+		{ID: "444", Name: "444", Revision: 1, TeamID: teamID},
+		{ID: "555", Name: "555", Revision: 1, TeamID: teamID},
+		{ID: "666", Name: "666", Revision: 1, TeamID: teamID},
+		{ID: "777", Name: "777", Revision: 1, TeamID: teamID},
+		{ID: "888", Name: "888", Revision: 1, TeamID: teamID},
+		{ID: "999", Name: "999", Revision: 1, TeamID: teamID},
+	}
+	appDetails := []models.AppDetails{
+		{ID: "000", Name: "app0"},
+		{ID: "111", Name: "app1"},
+		{ID: "222", Name: "app2"},
+		{ID: "333", Name: "app3"},
+		{ID: "444", Name: "app4"},
+		{ID: "555", Name: "app5"},
+		{ID: "666", Name: "app6"},
+		{ID: "777", Name: "app7"},
+		{ID: "888", Name: "app8"},
+		{ID: "999", Name: "app9"},
+	}
 
-	appDetails1 := models.AppDetails{ID: "111", Name: "app1"}
-	appDetails2 := models.AppDetails{ID: "111", Name: "app1"}
-	appDetails := []models.AppDetails{appDetails1, appDetails2}
-
-	codes := []string{"200", "201", "202", "400", "401", "403", "404", "500"}
+	codes := []string{"200", "201", "202", "204", "205", "206", "300", "301", "400", "401", "403", "404", "500"}
 
 	details := []Detail{}
 
@@ -540,13 +560,16 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 
 	// add all metrics via go routines
 	wg := sync.WaitGroup{}
-	wg.Add(len(details))
+	transactionCount := 100
+	wg.Add(len(details) * transactionCount)
 
-	for _, d := range details {
-		go func(dets Detail) {
-			defer wg.Done()
-			metricCollector.AddMetricDetail(dets)
-		}(d)
+	for j := range details {
+		for i := 0; i < transactionCount; i++ {
+			go func(dets Detail) {
+				defer wg.Done()
+				metricCollector.AddMetricDetail(dets)
+			}(details[j])
+		}
 	}
 
 	wg.Wait()
