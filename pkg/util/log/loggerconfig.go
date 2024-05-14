@@ -132,9 +132,9 @@ func (b *LoggerConfig) Apply() error {
 
 		if !isTest && b.usageEnabled {
 			b.usageCfg.Filename = path.Join(b.path, "audit", b.usageCfg.Filename)
-			rotateMetricHook, _ := rotatefilehook.NewRotateFileHook(b.usageCfg)
-			metric.AddHook(rotateMetricHook)
-			metric.SetOutput(io.Discard) // discard logging to stderr
+			rotateUsageHook, _ := rotatefilehook.NewRotateFileHook(b.usageCfg)
+			usage.AddHook(rotateUsageHook)
+			usage.SetOutput(io.Discard) // discard logging to stderr
 		}
 
 		// Set to initialized if this is not a test
