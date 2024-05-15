@@ -9,7 +9,7 @@
 
 package management
 
-// SpecDiscoverySpecTargets struct for SpecDiscoverySpecTargets
+// SpecDiscoverySpecTargets  (management.v1alpha1.SpecDiscovery)
 type SpecDiscoverySpecTargets struct {
 	ExactPaths     []SpecDiscoverySpecTargetsExactPaths     `json:"exactPaths,omitempty"`
 	FromAnnotation []SpecDiscoverySpecTargetsFromAnnotation `json:"fromAnnotation,omitempty"`

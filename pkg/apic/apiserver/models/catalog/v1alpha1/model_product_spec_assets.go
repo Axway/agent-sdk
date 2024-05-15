@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpecAssets struct for ProductSpecAssets
+// ProductSpecAssets  (catalog.v1alpha1.Product)
 type ProductSpecAssets struct {
 	Name    string             `json:"name"`
 	Filters ProductSpecFilters `json:"filters,omitempty"`

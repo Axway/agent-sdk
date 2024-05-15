@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceBillingPaymentTypeStripeCustomer struct for SubscriptionInvoiceBillingPaymentTypeStripeCustomer
+// SubscriptionInvoiceBillingPaymentTypeStripeCustomer Customer information from Stripe billing system.
 type SubscriptionInvoiceBillingPaymentTypeStripeCustomer struct {
 	Id string `json:"id"`
 }

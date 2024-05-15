@@ -9,11 +9,12 @@
 
 package management
 
-// ApiServiceInstanceSpec struct for ApiServiceInstanceSpec
+// ApiServiceInstanceSpec  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSpec struct {
-	ApiServiceRevision           string   `json:"apiServiceRevision"`
+	ApiServiceRevision           string   `json:"apiServiceRevision,omitempty"`
 	AccessRequestDefinition      string   `json:"accessRequestDefinition,omitempty"`
 	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
-	// A list of locations where the api is deployed.
-	Endpoint []ApiServiceInstanceSpecEndpoint `json:"endpoint"`
+	// A list of locations where the api is deployed. If \"mock\" property is set, then the mock endpoints will be assigned by the system.
+	Endpoint []ApiServiceInstanceSpecEndpoint `json:"endpoint,omitempty"`
+	Mock     ApiServiceInstanceSpecMock       `json:"mock,omitempty"`
 }

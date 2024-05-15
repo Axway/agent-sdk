@@ -9,11 +9,11 @@
 
 package catalog
 
-// SubscriptionInvoiceMarketplaceResourceOwner Owner of the Subscription Invoice.
+// SubscriptionInvoiceMarketplaceResourceOwner Owner of the Subscription Invoice. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`
 	// Id of the owner of the resource.
-	Id           string                                          `json:"id,omitempty"`
-	Organization ApplicationMarketplaceResourceOwnerOrganization `json:"organization"`
+	Id           string                                                  `json:"id,omitempty"`
+	Organization SubscriptionInvoiceMarketplaceResourceOwnerOrganization `json:"organization"`
 }

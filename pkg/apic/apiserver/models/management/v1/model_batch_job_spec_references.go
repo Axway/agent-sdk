@@ -9,7 +9,7 @@
 
 package management
 
-// BatchJobSpecReferences struct for BatchJobSpecReferences
+// BatchJobSpecReferences  (management.v1.BatchJob)
 type BatchJobSpecReferences struct {
 	Kind string `json:"kind,omitempty"`
 	Name string `json:"name,omitempty"`

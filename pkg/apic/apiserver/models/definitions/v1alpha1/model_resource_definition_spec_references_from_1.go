@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecReferencesFrom1 struct for ResourceDefinitionSpecReferencesFrom1
+// ResourceDefinitionSpecReferencesFrom1  (definitions.v1alpha1.ResourceDefinition)
 type ResourceDefinitionSpecReferencesFrom1 struct {
 	// Defines the subResource referencing this resource. Omit for non subResource references.
 	SubResourceName string `json:"subResourceName,omitempty"`

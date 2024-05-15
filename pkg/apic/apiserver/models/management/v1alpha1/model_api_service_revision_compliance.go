@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceRevisionCompliance struct for ApiServiceRevisionCompliance
+// ApiServiceRevisionCompliance  (management.v1alpha1.APIServiceRevision)
 type ApiServiceRevisionCompliance struct {
 	// GENERATE: The following code has been modified after code generation
 	Design ApiServiceRevisionComplianceLintingStatus `json:"design,omitempty"`

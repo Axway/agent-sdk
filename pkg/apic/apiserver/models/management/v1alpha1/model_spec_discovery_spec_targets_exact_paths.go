@@ -9,10 +9,10 @@
 
 package management
 
-// SpecDiscoverySpecTargetsExactPaths struct for SpecDiscoverySpecTargetsExactPaths
+// SpecDiscoverySpecTargetsExactPaths  (management.v1alpha1.SpecDiscovery)
 type SpecDiscoverySpecTargetsExactPaths struct {
 	// path to api definition
 	Path string `json:"path,omitempty"`
-	// headers to add to the query
+	// headers to add to the query (management.v1alpha1.SpecDiscovery)
 	Headers map[string]string `json:"headers,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionJobSpec struct for SubscriptionJobSpec
+// SubscriptionJobSpec  (catalog.v1alpha1.SubscriptionJob)
 type SubscriptionJobSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	Action      interface{}                    `json:"action"`

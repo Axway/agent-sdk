@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanReferencesProduct struct for ProductPlanReferencesProduct
+// ProductPlanReferencesProduct  (catalog.v1alpha1.ProductPlan)
 type ProductPlanReferencesProduct struct {
 	// The latest active Product Release that corresponds to the Product referenced in the Plan.
 	Release string `json:"release,omitempty"`

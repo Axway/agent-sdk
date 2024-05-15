@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusSourceResource The resource that triggered the Asset Mapping.
+// AssetMappingStatusSourceResource The resource that triggered the Asset Mapping. (management.v1alpha1.AssetMapping)
 type AssetMappingStatusSourceResource struct {
 	ApiService           AssetMappingStatusSourceResourceApiService           `json:"apiService,omitempty"`
 	ApiServiceRevision   AssetMappingStatusSourceResourceApiServiceRevision   `json:"apiServiceRevision,omitempty"`
