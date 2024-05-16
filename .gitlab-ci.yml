@@ -111,6 +111,7 @@ fetch-iriusrisk:on-schedule:
   extends: .only-never-rule
 
 twistlock:
+  dependencies: []
   extends: .only-never-rule
 
 twistlock:on-schedule:
