@@ -175,10 +175,9 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 }
 
 func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
-	c.cacheFilename = c.getCacheFileName(cfg)
-
 	cacheMap := cache.New()
 	if c.isPersistedCacheEnabled {
+		c.cacheFilename = c.getCacheFileName(cfg)
 		cacheMap.Load(c.cacheFilename)
 	}
 
