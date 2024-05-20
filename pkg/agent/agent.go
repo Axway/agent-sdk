@@ -140,6 +140,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	setCentralConfig(centralCfg)
 
+	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
+	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		return fmt.Errorf("Please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously.")
+	}
+
 	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 		// Offline mode does not need more initialization
 		return nil
