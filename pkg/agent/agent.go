@@ -133,21 +133,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
-	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
-	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously.")
-	}
-
-	// Only create the api map cache if it does not already exist
-	if agent.cacheManager == nil {
-		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
-	}
-
-	setCentralConfig(centralCfg)
-
-	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		// Offline mode does not need more initialization
-		return nil
+	err = validateCacheConfigs(agentFeaturesCfg, centralCfg)
+	if err != nil {
+		return err
 	}
 
 	singleEntryFilter := []string{
@@ -181,6 +169,27 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	agent.isInitialized = true
+	return nil
+}
+
+func validateCacheConfigs(agentFeaturesCfg config.AgentFeaturesConfig, centralCfg config.CentralConfig) error {
+	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
+	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
+	}
+
+	// Only create the api map cache if it does not already exist
+	if agent.cacheManager == nil {
+		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
+	}
+
+	setCentralConfig(centralCfg)
+
+	if centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		// Offline mode does not need more initialization
+		return nil
+	}
+
 	return nil
 }
 
