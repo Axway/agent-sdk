@@ -9,8 +9,8 @@
 
 package management
 
-// AssetMappingTemplateSpecApiServiceRevisionApiServiceInstance struct for AssetMappingTemplateSpecApiServiceRevisionApiServiceInstance
+// AssetMappingTemplateSpecApiServiceRevisionApiServiceInstance  (management.v1alpha1.AssetMappingTemplate)
 type AssetMappingTemplateSpecApiServiceRevisionApiServiceInstance struct {
-	// Attributes used to filter the APIServiceInstances for the API Service on which the template applies.
+	// Attributes used to filter the APIServiceInstances for the API Service on which the template applies. (management.v1alpha1.AssetMappingTemplate)
 	Attributes map[string]string `json:"attributes,omitempty"`
 }

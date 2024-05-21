@@ -21,9 +21,9 @@ type DataplaneSpecAzure struct {
 	// The name of the azure API management
 	ApimServiceName string `json:"apimServiceName"`
 	// The event hub processes and stores events, data, or telemetry produced by distributed software or devices
-	EventHubName string `json:"eventHubName"`
+	EventHubName string `json:"eventHubName,omitempty"`
 	// The event hub namespace is a management container for event hubs or topics
-	EventHubNamespace string `json:"eventHubNamespace"`
+	EventHubNamespace string `json:"eventHubNamespace,omitempty"`
 	// Consumer groups enable consuming applications to each have a separate view of the event stream. They read the stream independently at their own pace and with their own offsets.
-	EventHubConsumerGroup string `json:"eventHubConsumerGroup"`
+	EventHubConsumerGroup string `json:"eventHubConsumerGroup,omitempty"`
 }

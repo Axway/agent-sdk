@@ -9,7 +9,7 @@
 
 package management
 
-// ResourceHookSpecScope Resource scope trigger details.
+// ResourceHookSpecScope Resource scope trigger details. (management.v1alpha1.ResourceHook)
 type ResourceHookSpecScope struct {
 	// Value for the Kind of the scope of the resource. Use \"*\" for any.
 	Kind string `json:"kind"`

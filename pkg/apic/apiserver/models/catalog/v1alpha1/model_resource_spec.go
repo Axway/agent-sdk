@@ -9,7 +9,7 @@
 
 package catalog
 
-// ResourceSpec struct for ResourceSpec
+// ResourceSpec  (catalog.v1alpha1.Resource)
 type ResourceSpec struct {
 	// Resource description.
 	Description string `json:"description,omitempty"`

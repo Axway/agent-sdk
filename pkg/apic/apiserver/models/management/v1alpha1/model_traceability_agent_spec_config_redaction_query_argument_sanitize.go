@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize struct for TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize
+// TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigRedactionQueryArgumentSanitize struct {
 	KeyMatch   string `json:"keyMatch"`
 	ValueMatch string `json:"valueMatch"`

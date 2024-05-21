@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingJobResultLocation The location of the linting result.
+// ApiSpecLintingJobResultLocation The location of the linting result. (management.v1.APISpecLintingJob)
 type ApiSpecLintingJobResultLocation struct {
 	// The 1-based line number in the API Specification File.
 	Line int32 `json:"line"`

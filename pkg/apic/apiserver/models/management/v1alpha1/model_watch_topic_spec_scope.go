@@ -9,7 +9,7 @@
 
 package management
 
-// WatchTopicSpecScope Resource scope filter details.
+// WatchTopicSpecScope Resource scope filter details. (management.v1alpha1.WatchTopic)
 type WatchTopicSpecScope struct {
 	// Value for the Kind of the scope of the resource. Use \"*\" for any.
 	Kind string `json:"kind"`

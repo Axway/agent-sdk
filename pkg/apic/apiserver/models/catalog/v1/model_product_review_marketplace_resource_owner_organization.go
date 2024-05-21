@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReviewMarketplaceResourceOwnerOrganization Organization details.
+// ProductReviewMarketplaceResourceOwnerOrganization Organization details. (catalog.v1.ProductReview)
 type ProductReviewMarketplaceResourceOwnerOrganization struct {
 	// Id of the organization.
 	Id string `json:"id"`

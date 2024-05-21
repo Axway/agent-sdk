@@ -9,7 +9,7 @@
 
 package management
 
-// DiscoveryAgentSpec struct for DiscoveryAgentSpec
+// DiscoveryAgentSpec  (management.v1alpha1.DiscoveryAgent)
 type DiscoveryAgentSpec struct {
 	// The dataplane type that this agent connects to
 	DataplaneType string                    `json:"dataplaneType"`

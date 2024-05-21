@@ -9,8 +9,8 @@
 
 package catalog
 
-// SecretSpec struct for SecretSpec
+// SecretSpec  (catalog.v1alpha1.Secret)
 type SecretSpec struct {
-	// Key value pairs. The value will be stored encrypted.
+	// Key value pairs. The value will be stored encrypted. (catalog.v1alpha1.Secret)
 	Data map[string]string `json:"data,omitempty"`
 }

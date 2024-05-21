@@ -9,7 +9,7 @@
 
 package catalog
 
-// WebhookSpecAuthSecret struct for WebhookSpecAuthSecret
+// WebhookSpecAuthSecret  (catalog.v1alpha1.Webhook)
 type WebhookSpecAuthSecret struct {
 	// Secret name to be used as a reference. If the secret is removed, the reference gets removed and the webhook invocation will be done with no Authorization header.
 	Name string `json:"name,omitempty"`
