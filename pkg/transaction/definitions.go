@@ -1,6 +1,9 @@
 package transaction
 
-import "github.com/Axway/agent-sdk/pkg/transaction/models"
+import (
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/Axway/agent-sdk/pkg/transaction/util"
+)
 
 // TypeTransactionSummary - Transaction summary type
 const TypeTransactionSummary = "transactionSummary"
@@ -9,10 +12,10 @@ const TypeTransactionSummary = "transactionSummary"
 const TypeTransactionEvent = "transactionEvent"
 
 // SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
-const SummaryEventProxyIDPrefix = "remoteApiId_"
+const SummaryEventProxyIDPrefix = util.SummaryEventProxyIDPrefix
 
 // SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
-const SummaryEventApplicationIDPrefix = "remoteAppId_"
+const SummaryEventApplicationIDPrefix = util.SummaryEventApplicationIDPrefix
 
 // TxEventStatus - Type def for transaction event status
 type TxEventStatus string
