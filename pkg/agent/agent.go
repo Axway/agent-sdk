@@ -133,6 +133,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
+	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
+	}
+
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
