@@ -16,5 +16,8 @@ type ApiServiceInstanceSpec struct {
 	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
 	// A list of locations where the api is deployed. If \"mock\" property is set, then the mock endpoints will be assigned by the system.
 	Endpoint []ApiServiceInstanceSpecEndpoint `json:"endpoint,omitempty"`
-	Mock     ApiServiceInstanceSpecMock       `json:"mock,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Mock     ApiServiceInstanceSpecMock       `json:"mock,omitempty"`
+	Mock *ApiServiceInstanceSpecMock `json:"mock,omitempty"`
 }
