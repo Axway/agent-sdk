@@ -79,7 +79,6 @@ func DefaultConfig() *Config {
 		},
 		EscapeHTML: false,
 		Protocol:   "tcp",
-		TLS:        &tlscommon.Config{},
 		Redaction:  redaction.DefaultConfig(),
 		Sampling:   sampling.DefaultConfig(),
 	}
