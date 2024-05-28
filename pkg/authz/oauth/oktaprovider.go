@@ -26,6 +26,10 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 	for _, grantTypes := range clientRequest.GrantTypes {
 		if grantTypes != GrantTypeClientCredentials {
 			appType = oktaAppTypeWeb
+		} else {
+			if len(clientRequest.ResponseTypes) == 0 {
+				clientRequest.ResponseTypes = []string{AuthResponseToken}
+			}
 		}
 	}
 	clientRequest.extraProperties[oktaApplicationType] = appType

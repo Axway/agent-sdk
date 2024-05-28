@@ -15,6 +15,11 @@ type Encryptor interface {
 	Encrypt(str string) (string, error)
 }
 
+// Decryptor is an interface for Decrypting strings
+type Decryptor interface {
+	Decrypt(str string) (string, error)
+}
+
 // encryptor implements the Encryptor interface
 type encryptor struct {
 	alg  string

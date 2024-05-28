@@ -243,9 +243,22 @@ func (b *clientBuilder) setTLSClientAuthProperties() error {
 }
 
 func (b *clientBuilder) Build() (ClientMetadata, error) {
+	responseTypes := make(map[string]string)
 	for _, grantType := range b.idpClientMetadata.GrantTypes {
 		if _, ok := grantTypeWithRedirects[grantType]; ok && len(b.idpClientMetadata.RedirectURIs) == 0 {
 			return nil, fmt.Errorf("invalid client metadata redirect uri should be set for %s grant type", grantType)
+		}
+		switch grantType {
+		case GrantTypeAuthorizationCode:
+			responseTypes[AuthResponseCode] = AuthResponseCode
+		case GrantTypeImplicit:
+			responseTypes[AuthResponseToken] = AuthResponseToken
+		}
+	}
+	b.idpClientMetadata.ResponseTypes = make([]string, 0)
+	if len(responseTypes) > 0 {
+		for responseTypes := range responseTypes {
+			b.idpClientMetadata.ResponseTypes = append(b.idpClientMetadata.ResponseTypes, responseTypes)
 		}
 	}
 
