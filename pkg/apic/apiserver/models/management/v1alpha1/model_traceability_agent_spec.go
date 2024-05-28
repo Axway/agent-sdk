@@ -9,10 +9,10 @@
 
 package management
 
-// TraceabilityAgentSpec struct for TraceabilityAgentSpec
+// TraceabilityAgentSpec  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpec struct {
 	// The dataplane type that this agent connects to
-	DataplaneType string                      `json:"dataplaneType"`
-	Config        TraceabilityAgentSpecConfig `json:"config"`
-	Logging       DiscoveryAgentSpecLogging   `json:"logging,omitempty"`
+	DataplaneType string                       `json:"dataplaneType"`
+	Config        TraceabilityAgentSpecConfig  `json:"config"`
+	Logging       TraceabilityAgentSpecLogging `json:"logging,omitempty"`
 }

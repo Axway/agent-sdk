@@ -9,11 +9,11 @@
 
 package catalog
 
-// CredentialSpec struct for CredentialSpec
+// CredentialSpec  (catalog.v1alpha1.Credential)
 type CredentialSpec struct {
 	// Reference to Credential Request Definition resource
 	CredentialRequestDefinition string `json:"credentialRequestDefinition"`
-	// data matching the credential request definition schema.
+	// data matching the credential request definition schema. (catalog.v1alpha1.Credential)
 	Data  map[string]interface{} `json:"data"`
 	State CredentialSpecState    `json:"state,omitempty"`
 }

@@ -9,8 +9,9 @@
 
 package catalog
 
-// SubscriptionInvoiceSpec struct for SubscriptionInvoiceSpec
+// SubscriptionInvoiceSpec  (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceSpec struct {
+	Cost   SubscriptionInvoiceSpecCost     `json:"cost,omitempty"`
 	Period SubscriptionInvoiceSpecPeriod   `json:"period,omitempty"`
 	Quotas []SubscriptionInvoiceSpecQuotas `json:"quotas,omitempty"`
 }

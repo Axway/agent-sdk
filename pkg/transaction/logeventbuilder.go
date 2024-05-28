@@ -624,6 +624,10 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 		}
 	}
 
+	if b.logEvent.TransactionSummary.Proxy.Revision == 0 {
+		b.logEvent.TransactionSummary.Proxy.Revision = 1
+	}
+
 	err := b.validateLogEvent()
 	if err != nil {
 		return nil, err

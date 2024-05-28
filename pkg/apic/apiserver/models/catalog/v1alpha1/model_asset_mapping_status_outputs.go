@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatusOutputs struct for AssetMappingStatusOutputs
+// AssetMappingStatusOutputs  (catalog.v1alpha1.AssetMapping)
 type AssetMappingStatusOutputs struct {
 	Resource AssetMappingStatusResource `json:"resource,omitempty"`
 }

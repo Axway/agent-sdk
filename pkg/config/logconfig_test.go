@@ -22,6 +22,10 @@ const (
 	defMetricMaxSize  = 10485760
 	defMetricMaxAge   = 0
 	defMetricMaxFiles = 0
+	defUsageName      = "usage.log"
+	defUsageMaxSize   = 10485760
+	defUsageMaxAge    = 365
+	defUsageMaxFiles  = 0
 )
 
 func TestDefaultLogConfig(t *testing.T) {
@@ -44,6 +48,7 @@ func TestDefaultLogConfig(t *testing.T) {
 			props := properties.NewProperties(rootCmd)
 			AddLogConfigProperties(props, tc.logName)
 			AddMetricLogConfigProperties(props, tc.agentType)
+			AddUsageConfigProperties(props, tc.agentType)
 
 			// Parse config
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
@@ -65,6 +70,11 @@ func TestDefaultLogConfig(t *testing.T) {
 				assert.Equal(t, defMetricMaxSize, props.IntPropertyValue(pathLogMetricsFileMaxSize))
 				assert.Equal(t, defMetricMaxAge, props.IntPropertyValue(pathLogMetricsFileMaxAge))
 				assert.Equal(t, defMetricMaxFiles, props.IntPropertyValue(pathLogMetricsFileMaxBackups))
+
+				assert.Equal(t, defUsageName, props.StringPropertyValue(pathLogUsageFileName))
+				assert.Equal(t, defUsageMaxSize, props.IntPropertyValue(pathLogUsageFileMaxSize))
+				assert.Equal(t, defUsageMaxAge, props.IntPropertyValue(pathLogUsageFileMaxAge))
+				assert.Equal(t, defUsageMaxFiles, props.IntPropertyValue(pathLogUsageFileMaxBackups))
 			}
 		})
 	}
@@ -75,6 +85,7 @@ func TestLogConfigValidations(t *testing.T) {
 		errInfo          string
 		agentType        AgentType
 		metricsEnabled   bool
+		usageEnabled     bool
 		level            string
 		format           string
 		output           string
@@ -84,6 +95,9 @@ func TestLogConfigValidations(t *testing.T) {
 		metricMaxSize    int
 		metricMaxBackups int
 		metricMaxAge     int
+		usageMaxSize     int
+		usageMaxBackups  int
+		usageMaxAge      int
 	}{
 		"expect err, bad log level": {
 			errInfo: "log.level",
@@ -111,6 +125,7 @@ func TestLogConfigValidations(t *testing.T) {
 		},
 		"success": {
 			metricsEnabled: true,
+			usageEnabled:   true,
 		},
 		"expect err, traceability agent, bad metric log size": {
 			agentType:      TraceabilityAgent,
@@ -129,6 +144,27 @@ func TestLogConfigValidations(t *testing.T) {
 			metricsEnabled: true,
 			errInfo:        "log.metricfile.cleanbackupsevery",
 			metricMaxAge:   -1,
+		},
+		"expect err, traceability agent, bad usage log size": {
+			agentType:      TraceabilityAgent,
+			metricsEnabled: true,
+			usageEnabled:   true,
+			errInfo:        "log.usagefile.rotateeverybytes",
+			usageMaxSize:   1,
+		},
+		"expect err, traceability agent, bad usage log backups": {
+			agentType:       TraceabilityAgent,
+			usageEnabled:    true,
+			metricsEnabled:  true,
+			errInfo:         "log.usagefile.keepfiles",
+			usageMaxBackups: -1,
+		},
+		"expect err, traceability agent, bad usage log age": {
+			agentType:      TraceabilityAgent,
+			usageEnabled:   true,
+			metricsEnabled: true,
+			errInfo:        "log.usagefile.cleanbackupsevery",
+			usageMaxAge:    -1,
 		},
 	}
 	for name, tc := range testCases {
@@ -163,6 +199,15 @@ func TestLogConfigValidations(t *testing.T) {
 			if tc.metricMaxAge == 0 {
 				tc.metricMaxAge = defMetricMaxAge
 			}
+			if tc.usageMaxSize == 0 {
+				tc.usageMaxSize = defUsageMaxSize
+			}
+			if tc.usageMaxBackups == 0 {
+				tc.usageMaxBackups = defUsageMaxFiles
+			}
+			if tc.usageMaxAge == 0 {
+				tc.usageMaxAge = defUsageMaxAge
+			}
 
 			log.GlobalLoggerConfig = log.LoggerConfig{}
 			props := properties.NewProperties(&cobra.Command{})
@@ -183,6 +228,13 @@ func TestLogConfigValidations(t *testing.T) {
 				props.AddIntProperty(pathLogMetricsFileMaxAge, tc.metricMaxAge, "")
 			}
 
+			if tc.agentType == TraceabilityAgent && tc.usageEnabled {
+				props.AddBoolProperty(pathLogUsageFileEnabled, true, "")
+				props.AddStringProperty(pathLogUsageFileName, "usage.log", "")
+				props.AddIntProperty(pathLogUsageFileMaxSize, tc.usageMaxSize, "")
+				props.AddIntProperty(pathLogUsageFileMaxBackups, tc.usageMaxBackups, "")
+				props.AddIntProperty(pathLogUsageFileMaxAge, tc.usageMaxAge, "")
+			}
 			_, err := ParseAndSetupLogConfig(props, tc.agentType)
 			if tc.errInfo != "" {
 				if !assert.NotNil(t, err) {

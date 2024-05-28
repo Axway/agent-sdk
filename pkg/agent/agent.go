@@ -133,6 +133,11 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
+	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
+	}
+
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
@@ -274,10 +279,13 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
 	}
 	crdName := idp.GetIDPName() + " " + provisioning.OAuthIDPCRD
-
+	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
+	if err != nil {
+		return err
+	}
 	crd, err := NewOAuthCredentialRequestBuilder(
 		WithCRDName(crdName),
-		WithCRDTitle(idp.GetIDPTitle()),
+		WithCRDForIDP(provider, provider.GetSupportedScopes()),
 		WithCRDOAuthSecret(),
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),

@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecSubResources Describes the subresources that the current resource might have.
+// ResourceDefinitionSpecSubResources Describes the subresources that the current resource might have. (definitions.v1alpha1.ResourceDefinition)
 type ResourceDefinitionSpecSubResources struct {
 	Names []string `json:"names,omitempty"`
 }

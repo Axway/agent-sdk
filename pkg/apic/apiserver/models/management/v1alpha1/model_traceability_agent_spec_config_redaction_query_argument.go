@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigRedactionQueryArgument The allowed and sanitization setup of query arguments in transactional data
+// TraceabilityAgentSpecConfigRedactionQueryArgument The allowed and sanitization setup of query arguments in transactional data (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigRedactionQueryArgument struct {
 	// The regular expressions for query arguments that, when matched, will be saved for Business and Consumer Insights
 	Show []string `json:"show,omitempty"`

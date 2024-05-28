@@ -614,6 +614,9 @@ func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
 			}
 		}
 	}
+	if len(requiredProperties) > 0 {
+		sort.Strings(requiredProperties)
+	}
 
 	def.Properties = p.properties
 	def.RequiredProperties = requiredProperties

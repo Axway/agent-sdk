@@ -2,6 +2,7 @@ package provisioning
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -158,7 +159,7 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 			required = append(required, key)
 		}
 	}
-
+	sort.Strings(required)
 	schema := &jsonSchema{
 		SubscriptionName:  s.name,
 		SchemaType:        "object",

@@ -12,9 +12,9 @@ package catalog
 // GENERATE: The following code has been modified after code generation
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-// CredentialMarketplaceResource The Marketplace Credential resource details.
+// CredentialMarketplaceResource The Marketplace Credential resource details. (catalog.v1alpha1.Credential)
 type CredentialMarketplaceResource struct {
-	Metadata ApplicationMarketplaceResourceMetadata `json:"metadata"`
+	Metadata CredentialMarketplaceResourceMetadata `json:"metadata"`
 	// GENERATE: The following code has been modified after code generation
 	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

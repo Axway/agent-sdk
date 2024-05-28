@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReleaseReferences struct for ProductReleaseReferences
+// ProductReleaseReferences  (catalog.v1alpha1.ProductRelease)
 type ProductReleaseReferences struct {
 	// Computed DocumentResources used in all ProductRelease's Documents articles.
 	DocumentResources []string `json:"documentResources,omitempty"`

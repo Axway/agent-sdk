@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
@@ -21,13 +22,14 @@ import (
 )
 
 type usagePublisher struct {
-	apiClient api.Client
-	storage   storageCache
-	report    *usageReportCache
-	jobID     string
-	ready     bool
-	offline   bool
-	logger    log.FieldLogger
+	apiClient   api.Client
+	storage     storageCache
+	report      *usageReportCache
+	jobID       string
+	ready       bool
+	offline     bool
+	logger      log.FieldLogger
+	usageLogger log.FieldLogger
 }
 
 func (c *usagePublisher) publishEvent(event interface{}) error {
@@ -48,7 +50,7 @@ func (c *usagePublisher) publishToPlatformUsage(event UsageEvent) error {
 		return err
 	}
 
-	event = aggregateReports(event)
+	event, startTime := aggregateReports(event)
 	b, contentType, err := c.createMultipartFormData(event)
 	if err != nil {
 		return err
@@ -72,8 +74,15 @@ func (c *usagePublisher) publishToPlatformUsage(event UsageEvent) error {
 		return err
 	}
 
+	fields := logrus.Fields{
+		"date": startTime,
+	}
+	for usageKey, usageVal := range event.Report[startTime].Usage {
+		fields[usageKey] = usageVal
+	}
 	if response.Code == 202 {
 		c.logger.WithField("statusCode", 202).Debugf("successful request with payload: %s", b.String())
+		c.usageLogger.WithFields(fields).Info("successfully published")
 		return nil
 	} else if response.Code >= 500 {
 		err := fmt.Errorf("server error")
@@ -116,7 +125,7 @@ func (c *usagePublisher) createMultipartFormData(event UsageEvent) (b bytes.Buff
 	return
 }
 
-func aggregateReports(event UsageEvent) UsageEvent {
+func aggregateReports(event UsageEvent) (UsageEvent, string) {
 
 	// order all the keys, this will be used to find first and last timestamp
 	orderedKeys := make([]string, 0, len(event.Report))
@@ -145,7 +154,7 @@ func aggregateReports(event UsageEvent) UsageEvent {
 	endTime := now()
 	event.Granularity = int(endTime.Sub(startTime).Milliseconds())
 	event.Timestamp = ISO8601Time(endTime)
-	return event
+	return event, orderedKeys[0]
 }
 
 // createFilePart - adds the file part to the request
@@ -163,12 +172,14 @@ func newUsagePublisher(storage storageCache, report *usageReportCache) *usagePub
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
 			api.WithTimeout(centralCfg.GetClientTimeout()),
 			api.WithSingleURL()),
-		storage: storage,
-		report:  report,
-		offline: agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
-		logger:  log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
+		storage:     storage,
+		report:      report,
+		offline:     agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
+		logger:      log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
+		usageLogger: log.NewUsageFieldLogger(),
 	}
 
+	publisher.usageLogger.Info("usage logger started")
 	publisher.registerReportJob()
 	return publisher
 }

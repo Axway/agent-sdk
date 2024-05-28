@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -498,6 +499,80 @@ func TestMetricCollector(t *testing.T) {
 			s.resetConfig()
 		})
 	}
+}
+
+func TestConcurrentMetricCollectorEvents(t *testing.T) {
+	// this test has no assertions it is to ensure concurrent map writs do not occur while collecting metrics
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	apiDetails := []models.APIDetails{
+		{ID: "000", Name: "000", Revision: 1, TeamID: teamID},
+		{ID: "111", Name: "111", Revision: 1, TeamID: teamID},
+		{ID: "222", Name: "222", Revision: 1, TeamID: teamID},
+		{ID: "333", Name: "333", Revision: 1, TeamID: teamID},
+		{ID: "444", Name: "444", Revision: 1, TeamID: teamID},
+		{ID: "555", Name: "555", Revision: 1, TeamID: teamID},
+		{ID: "666", Name: "666", Revision: 1, TeamID: teamID},
+		{ID: "777", Name: "777", Revision: 1, TeamID: teamID},
+		{ID: "888", Name: "888", Revision: 1, TeamID: teamID},
+		{ID: "999", Name: "999", Revision: 1, TeamID: teamID},
+	}
+	appDetails := []models.AppDetails{
+		{ID: "000", Name: "app0"},
+		{ID: "111", Name: "app1"},
+		{ID: "222", Name: "app2"},
+		{ID: "333", Name: "app3"},
+		{ID: "444", Name: "app4"},
+		{ID: "555", Name: "app5"},
+		{ID: "666", Name: "app6"},
+		{ID: "777", Name: "app7"},
+		{ID: "888", Name: "app8"},
+		{ID: "999", Name: "app9"},
+	}
+
+	codes := []string{"200", "201", "202", "204", "205", "206", "300", "301", "400", "401", "403", "404", "500"}
+
+	details := []Detail{}
+
+	// load a bunch of different api details
+	for _, api := range apiDetails {
+		for _, app := range appDetails {
+			for _, code := range codes {
+				details = append(details, Detail{APIDetails: api, AppDetails: app, StatusCode: code})
+			}
+		}
+	}
+
+	// add all metrics via go routines
+	wg := sync.WaitGroup{}
+	transactionCount := 100
+	wg.Add(len(details) * transactionCount)
+
+	for j := range details {
+		for i := 0; i < transactionCount; i++ {
+			go func(dets Detail) {
+				defer wg.Done()
+				metricCollector.AddMetricDetail(dets)
+			}(details[j])
+		}
+	}
+
+	wg.Wait()
 }
 
 func TestMetricCollectorUsageAggregation(t *testing.T) {

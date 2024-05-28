@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpecUsageProducts struct for DocumentResourceSpecUsageProducts
+// DocumentResourceSpecUsageProducts  (catalog.v1alpha1.DocumentResource)
 type DocumentResourceSpecUsageProducts struct {
 	// Defines if the DocumentResource is available to be used in Products.
 	Available bool `json:"available"`

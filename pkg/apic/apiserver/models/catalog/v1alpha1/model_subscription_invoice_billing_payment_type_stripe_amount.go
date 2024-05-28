@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceBillingPaymentTypeStripeAmount struct for SubscriptionInvoiceBillingPaymentTypeStripeAmount
+// SubscriptionInvoiceBillingPaymentTypeStripeAmount Amount billed in Stripe.
 type SubscriptionInvoiceBillingPaymentTypeStripeAmount struct {
 	// Currency for the billed amount.
 	Currency string `json:"currency"`

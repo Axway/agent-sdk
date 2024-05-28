@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionApproval struct for SubscriptionApproval
+// SubscriptionApproval  (catalog.v1alpha1.Subscription)
 type SubscriptionApproval struct {
 	State string `json:"state"`
 	// Reason for the state.

@@ -29,13 +29,13 @@ func CreateTopic(topic string) (notification.PubSub, error) {
 func CreateTopicWithInitData(topic string, initData interface{}) (notification.PubSub, error) {
 	_, err := globalCache.Get(topic)
 	if err == nil {
-		return nil, fmt.Errorf("Could not create a PubSub topic, name in cache already used")
+		return nil, fmt.Errorf("could not create a PubSub topic, name in cache already used")
 	}
 	globalCache.Set(topic, initData)
 	channel := make(chan interface{})
 	notifier, err := notification.RegisterNotifier(topic, channel)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create a PubSub: %s", err.Error())
+		return nil, fmt.Errorf("could not create a PubSub: %s", err.Error())
 	}
 	notifier.Start() // Start the notifier to listen for data on the channel
 	newCachePubSub := &cachePubSub{
@@ -50,13 +50,13 @@ func CreateTopicWithInitData(topic string, initData interface{}) (notification.P
 // RemoveTopic - removes a PubSub topic and cleans up it's cache
 func RemoveTopic(topic string) error {
 	if _, ok := topics[topic]; !ok {
-		return fmt.Errorf("Can't remove topic %s, this topic is unknown", topic)
+		return fmt.Errorf("can't remove topic %s, this topic is unknown", topic)
 	}
 
 	// Clean the cache
 	var cacheErr error
 	if err := globalCache.Delete(topic); err != nil {
-		cacheErr = fmt.Errorf("Hit error deleting the cache item for topic %s: %s", topic, err.Error())
+		cacheErr = fmt.Errorf("hit error deleting the cache item for topic %s: %s", topic, err.Error())
 	}
 
 	// Stop the notifier and remove the topic from the topics map
@@ -69,7 +69,7 @@ func RemoveTopic(topic string) error {
 func GetPubSub(topic string) (notification.PubSub, error) {
 	cPubSub, ok := topics[topic]
 	if !ok {
-		return nil, fmt.Errorf("Could not find topic: %s", topic)
+		return nil, fmt.Errorf("could not find topic: %s", topic)
 	}
 
 	return cPubSub, nil

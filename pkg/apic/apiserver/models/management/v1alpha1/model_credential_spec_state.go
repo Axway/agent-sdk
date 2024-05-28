@@ -9,7 +9,7 @@
 
 package management
 
-// CredentialSpecState Desired state of the Credential.
+// CredentialSpecState Desired state of the Credential. (management.v1alpha1.Credential)
 type CredentialSpecState struct {
 	Name string `json:"name"`
 	// Additional info on the desired state.

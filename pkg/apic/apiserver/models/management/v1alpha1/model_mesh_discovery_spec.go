@@ -9,7 +9,7 @@
 
 package management
 
-// MeshDiscoverySpec struct for MeshDiscoverySpec
+// MeshDiscoverySpec  (management.v1alpha1.MeshDiscovery)
 type MeshDiscoverySpec struct {
 	// Target environment.
 	EnvironmentRef string `json:"environmentRef"`
