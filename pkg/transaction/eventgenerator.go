@@ -429,8 +429,6 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		ID: unknown,
 	}
 
-	apisvc := unknown
-
 	if accessRequest == nil || managedApp == nil {
 		log.Trace("access request or managed app is nil. Setting default values to unknown")
 		return summaryEvent
@@ -470,17 +468,12 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		WithField("asset-resource-name", summaryEvent.AssetResource.Name).
 		Trace("asset resource information")
 
-	if accessRequest == nil {
-		log.Debug("could not get api service details, setting apiservice to unknown")
-	} else {
-		apisvc = accessRequest.Spec.ApiServiceInstance
-	}
 	api := &models.APIDetails{
 		ID:                 summaryEvent.Proxy.ID,
 		Name:               summaryEvent.Proxy.Name,
 		Revision:           summaryEvent.Proxy.Revision,
 		TeamID:             summaryEvent.Team.ID,
-		APIServiceInstance: apisvc,
+		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
 	}
 	summaryEvent.API = api
 	log.
@@ -488,7 +481,7 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		WithField("proxy-name", summaryEvent.Proxy.Name).
 		WithField("proxy-revision", summaryEvent.Proxy.Revision).
 		WithField("proxy-team-id", summaryEvent.Team.ID).
-		WithField("apiservice", apisvc).
+		WithField("apiservice", accessRequest.Spec.ApiServiceInstance).
 		Trace("api details information")
 
 	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())

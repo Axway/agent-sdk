@@ -47,11 +47,11 @@ func (p *ramlProcessor) GetDescription() string {
 func (p *ramlProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	baseUri := p.ramlDef["baseUri"]
 	if baseUri == nil {
-		return nil, fmt.Errorf("No baseUri provided")
+		return nil, fmt.Errorf("no baseUri provided")
 	}
 
 	if params := p.ramlDef["baseUriParameters"]; params != nil {
-		return nil, fmt.Errorf("Not implemented error")
+		return nil, fmt.Errorf("not implemented error")
 	}
 
 	return p.uriToEndpoints(baseUri.(string), p.getProtocols())

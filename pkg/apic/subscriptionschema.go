@@ -139,7 +139,7 @@ func (ss *subscriptionSchema) mapStringInterface() (map[string]interface{}, erro
 	}
 
 	var stringMap map[string]interface{}
-	json.Unmarshal(schemaBuffer, &stringMap)
+	err = json.Unmarshal(schemaBuffer, &stringMap)
 	if err != nil {
 		return nil, err
 	}

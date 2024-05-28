@@ -234,7 +234,6 @@ func (c *ServiceClient) updateAPIServiceInstanceSubresources(ri apiv1.Interface,
 
 func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiServiceInstanceSpecEndpoint, error) {
 	endPoints := make([]management.ApiServiceInstanceSpecEndpoint, 0)
-	var err error
 
 	// To set your own endpoints call AddServiceEndpoint/SetServiceEndpoint on the ServiceBodyBuilder.
 	// Any endpoints provided from the ServiceBodyBuilder will override the endpoints found in the spec.
@@ -252,10 +251,6 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 		}
 	} else {
 		log.Debug("Processing API service instance with no endpoint")
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return endPoints, nil
