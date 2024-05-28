@@ -141,8 +141,10 @@ func makeTraceabilityAgent(
 		WithPackage("sdk.traceability").
 		WithComponent("makeTraceabilityAgent")
 
+	var err error
+
 	logger.Trace("reading config")
-	traceCfg, err := readConfig(libbeatCfg, beat)
+	traceCfg, err = readConfig(libbeatCfg, beat)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		logger.WithError(err).Error("reading config")
