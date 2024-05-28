@@ -14,6 +14,6 @@ type DataplaneSpecAws struct {
 	Type string `json:"type"`
 	// The ARN of the cloud watch log resource that AWS API Gateway will be configured to send API Access data to
 	AccessLogARN string `json:"accessLogARN,omitempty"`
-	// If false, the agent will only perform the access logging from AWS CloudWatch
+	// If true, the discovery agent will enable full transaction logging for discovered API stages
 	FullTransactionLogging bool `json:"fullTransactionLogging,omitempty"`
 }

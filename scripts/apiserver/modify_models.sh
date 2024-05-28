@@ -177,6 +177,21 @@ $SED -i "/ApiServiceInstanceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInsta
 go fmt ${MODEL_PATH}/APIServiceInstance.go
 
 ######################
+# For model_api_service_instance_spec.go, we want to turn "Mock ApiServiceInstanceSpecMock `json:"mock,omitempty"`" into
+# Mock     *ApiServiceInstanceSpecMock `json:"mock,omitempty"`"
+######################
+SEARCH="\s*Mock\s*ApiServiceInstanceSpecMock.*"
+REPLACE="Mock *ApiServiceInstanceSpecMock \`json:\"mock,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_api_service_instance_spec.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_api_service_instance_spec.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceSpecMock\s/a ${REPLACE}" ${MODEL_PATH}/model_api_service_instance_spec.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_api_service_instance_spec.go
+
+######################
 # For model_api_service_instance_source.go, we want to turn "DataplaneType ApiServiceInstanceSourceDataplaneType `json:"dataplaneType,omitempty"`" into
 # DataplaneType *ApiServiceInstanceSourceDataplaneType `json:"dataplaneType,omitempty"`"
 ######################
