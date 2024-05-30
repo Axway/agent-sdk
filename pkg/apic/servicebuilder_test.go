@@ -45,7 +45,7 @@ func TestServiceBodySetters(t *testing.T) {
 	}
 
 	serviceBuilder := NewServiceBodyBuilder()
-	sb, err := serviceBuilder.
+	serviceBuilder = serviceBuilder.
 		SetTitle("sbtitle").
 		SetAPIName("testAPI").
 		SetID("1234").
@@ -81,9 +81,11 @@ func TestServiceBodySetters(t *testing.T) {
 		SetServiceAgentDetails(svcDetails).
 		SetInstanceAgentDetails(instDetails).
 		SetRevisionAgentDetails(revDetails).
-		SetServiceEndpoints(ep).
 		SetReferenceServiceName("refSvc", "refEnv").
-		SetReferenceInstanceName("refInstance", "refEnv").
+		SetReferenceInstanceName("refInstance", "refEnv")
+
+	sb, err := serviceBuilder.
+		SetServiceEndpoints(ep).
 		Build()
 
 	assert.Nil(t, err)
@@ -141,6 +143,15 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.NotNil(t, sb)
 	assert.Equal(t, GitHub, sb.dataplaneType)
 	assert.Equal(t, true, sb.isDesignDataplane)
+
+	// invalid service body path
+	ep[0].BasePath = "#/basepath"
+	sb, err = serviceBuilder.
+		SetServiceEndpoints(ep).
+		Build()
+
+	assert.NotNil(t, err)
+	assert.NotNil(t, sb)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {
