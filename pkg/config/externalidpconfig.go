@@ -18,32 +18,34 @@ const (
 	TLSClientAuth           = "tls_client_auth"
 	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
 
-	propInsecureSkipVerify    = "insecureSkipVerify"
-	propUseCachedToken        = "useCachedToken"
-	pathExternalIDP           = "agentFeatures.idp"
-	fldName                   = "name"
-	fldTitle                  = "title"
-	fldType                   = "type"
-	fldMetadataURL            = "metadataUrl"
-	fldExtraProperties        = "extraProperties"
-	fldScope                  = "scope"
-	fldGrantType              = "grantType"
-	fldAuthMethod             = "authMethod"
-	fldAuthResponseType       = "authResponseType"
-	fldAuthType               = "auth.type"
-	fldAuthAccessToken        = "auth.accessToken"
-	fldAuthClientID           = "auth.clientId"
-	fldAuthClientSecret       = "auth.clientSecret"
-	fldAuthClientScope        = "auth.clientScope"
-	fldAuthPrivateKey         = "auth.privateKey"
-	fldAuthPublicKey          = "auth.publicKey"
-	fldAuthKeyPassword        = "auth.keyPassword"
-	fldAuthTokenSigningMethod = "auth.tokenSigningMethod"
-	fldAuthUseCachedToken     = "auth." + propUseCachedToken
-	fldSSLInsecureSkipVerify  = "ssl." + propInsecureSkipVerify
-	fldSSLRootCACertPath      = "ssl.rootCACertPath"
-	fldSSLClientCertPath      = "ssl.clientCertPath"
-	fldSSLClientKeyPath       = "ssl.clientKeyPath"
+	propInsecureSkipVerify      = "insecureSkipVerify"
+	propUseCachedToken          = "useCachedToken"
+	propUseRegistrationToken    = "useRegistrationToken"
+	pathExternalIDP             = "agentFeatures.idp"
+	fldName                     = "name"
+	fldTitle                    = "title"
+	fldType                     = "type"
+	fldMetadataURL              = "metadataUrl"
+	fldExtraProperties          = "extraProperties"
+	fldScope                    = "scope"
+	fldGrantType                = "grantType"
+	fldAuthMethod               = "authMethod"
+	fldAuthResponseType         = "authResponseType"
+	fldAuthType                 = "auth.type"
+	fldAuthAccessToken          = "auth.accessToken"
+	fldAuthClientID             = "auth.clientId"
+	fldAuthClientSecret         = "auth.clientSecret"
+	fldAuthClientScope          = "auth.clientScope"
+	fldAuthPrivateKey           = "auth.privateKey"
+	fldAuthPublicKey            = "auth.publicKey"
+	fldAuthKeyPassword          = "auth.keyPassword"
+	fldAuthTokenSigningMethod   = "auth.tokenSigningMethod"
+	fldAuthUseCachedToken       = "auth." + propUseCachedToken
+	fldAuthUseRegistrationToken = "auth." + propUseRegistrationToken
+	fldSSLInsecureSkipVerify    = "ssl." + propInsecureSkipVerify
+	fldSSLRootCACertPath        = "ssl.rootCACertPath"
+	fldSSLClientCertPath        = "ssl.clientCertPath"
+	fldSSLClientKeyPath         = "ssl.clientKeyPath"
 )
 
 var configProperties = []string{
@@ -70,6 +72,7 @@ var configProperties = []string{
 	fldAuthKeyPassword,
 	fldAuthTokenSigningMethod,
 	fldAuthUseCachedToken,
+	fldAuthUseRegistrationToken,
 }
 
 var validIDPAuthType = map[string]bool{
@@ -156,6 +159,8 @@ type IDPAuthConfig interface {
 	GetTokenSigningMethod() string
 	// UseTokenCache() - return flag to indicate if the auth client to get new token on each request
 	UseTokenCache() bool
+	// UseRegistrationAccessToken - return flag to indicate if the auth client to use registration access token
+	UseRegistrationAccessToken() bool
 }
 
 // IDPConfig - interface for IdP provider config
@@ -188,16 +193,17 @@ type IDPConfig interface {
 
 // IDPAuthConfiguration - Structure to hold the IdP provider auth config
 type IDPAuthConfiguration struct {
-	Type               string `json:"type,omitempty"`
-	AccessToken        string `json:"accessToken,omitempty"`
-	ClientID           string `json:"clientId,omitempty"`
-	ClientSecret       string `json:"clientSecret,omitempty"`
-	ClientScope        string `json:"clientScope,omitempty"`
-	PrivateKey         string `json:"privateKey,omitempty"`
-	PublicKey          string `json:"publicKey,omitempty"`
-	KeyPwd             string `json:"keyPassword,omitempty"`
-	TokenSigningMethod string `json:"tokenSigningMethod,omitempty"`
-	UseCachedToken     bool   `json:"-"`
+	Type                 string `json:"type,omitempty"`
+	AccessToken          string `json:"accessToken,omitempty"`
+	ClientID             string `json:"clientId,omitempty"`
+	ClientSecret         string `json:"clientSecret,omitempty"`
+	ClientScope          string `json:"clientScope,omitempty"`
+	PrivateKey           string `json:"privateKey,omitempty"`
+	PublicKey            string `json:"publicKey,omitempty"`
+	KeyPwd               string `json:"keyPassword,omitempty"`
+	TokenSigningMethod   string `json:"tokenSigningMethod,omitempty"`
+	UseCachedToken       bool   `json:"-"`
+	UseRegistrationToken bool   `json:"-"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -336,6 +342,11 @@ func (i *IDPAuthConfiguration) UseTokenCache() bool {
 	return i.UseCachedToken
 }
 
+// UseRegistrationAccessToken - return flag to indicate if the auth client to use registration access token
+func (i *IDPAuthConfiguration) UseRegistrationAccessToken() bool {
+	return i.UseRegistrationToken
+}
+
 // UnmarshalJSON - custom unmarshaler for IDPAuthConfiguration struct
 func (i *IDPAuthConfiguration) UnmarshalJSON(data []byte) error {
 	type Alias IDPAuthConfiguration // Create an intermittent type to unmarshal the base attributes
@@ -353,7 +364,11 @@ func (i *IDPAuthConfiguration) UnmarshalJSON(data []byte) error {
 	if v, ok := b[propUseCachedToken]; ok {
 		i.UseCachedToken = (v == "true")
 	}
-
+	// Default to use not use registration access token
+	i.UseRegistrationToken = false
+	if v, ok := b[propUseRegistrationToken]; ok {
+		i.UseRegistrationToken = (v == "true")
+	}
 	return nil
 }
 

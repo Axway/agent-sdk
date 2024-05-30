@@ -101,7 +101,7 @@ func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceIn
 
 		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
 
-		mig.UpdateService(context.Background(), svc)
+		mig.Migrate(context.Background(), svc)
 
 		// Mark marketplace migration completed here in provisioning
 		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
