@@ -117,3 +117,6 @@ twistlock:
 
 twistlock:on-schedule:
   extends: .only-never-rule
+  # need this rule to override base only-never-rule
+  rules:
+    - when: never
