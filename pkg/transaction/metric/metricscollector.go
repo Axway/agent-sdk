@@ -53,6 +53,7 @@ type Collector interface {
 	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddMetricDetail(metricDetail Detail)
+	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
 	Publish()
 	ShutdownPublish()
@@ -259,7 +260,23 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
-	c.updateMetric(metricDetail)
+	c.createOrUpdateMetric(metricDetail)
+}
+
+// AddMetricDetailSet - add metric details for several response codes and transactions
+func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
+	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
+		return
+	}
+
+	newMetric, _ := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	// update the new metric with all the necessary details
+	newMetric.Count = detail.Count
+	newMetric.Response = detail.Response
+	newMetric.StartTime = time.UnixMilli(detail.Observation.Start)
+	newMetric.Observation = detail.Observation
+
+	c.AddAPIMetric(newMetric)
 }
 
 // AddAPIMetric - add api metric for API transaction
@@ -308,18 +325,9 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) updateMetric(detail Detail) *APIMetric {
-	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
-		return nil // no need to update metrics with publish off
-	}
-
-	cacheManager := agent.GetCacheManager()
-
-	// Lookup Access Request and Managed App
-	apiID := detail.APIDetails.ID
-
+func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []string) {
 	// Go get the access request and managed app
-	accessRequest, managedApp := c.getAccessRequestAndManagedApp(cacheManager, detail)
+	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
 	// Update consumer details
 	subRef := v1.Reference{
@@ -333,51 +341,58 @@ func (c *collector) updateMetric(detail Detail) *APIMetric {
 		}
 	}
 
-	subscriptionID := subRef.ID
 	appDetail := c.createAppDetail(managedApp)
-	appID := appDetail.ID
 
-	statusCode := detail.StatusCode
+	// consumer, subscriptionID, appID, apiID, status
+	histogramKeyParts := []string{"consumer", subRef.ID, appDetail.ID, strings.ReplaceAll(detail.APIDetails.ID, ".", "#"), detail.StatusCode}
 
-	hAPIID := strings.ReplaceAll(apiID, ".", "#")
-	histogram := c.getOrRegisterHistogram("consumer." + subscriptionID + "." + appID + "." + hAPIID + "." + statusCode)
+	return &APIMetric{
+		Subscription:  c.createSubscriptionDetail(subRef),
+		App:           appDetail,
+		Product:       c.getProduct(accessRequest, c.logger),
+		API:           c.createAPIDetail(detail.APIDetails, accessRequest),
+		AssetResource: c.getAssetResource(accessRequest, c.logger),
+		ProductPlan:   c.getProductPlan(accessRequest, c.logger),
+		Quota:         c.getQuota(accessRequest, c.logger),
+		StatusCode:    detail.StatusCode,
+		Status:        c.getStatusText(detail.StatusCode),
+		StartTime:     now(),
+		EventID:       uuid.NewString(),
+	}, histogramKeyParts
+}
+
+func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
+	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
+		return nil // no need to update metrics with publish off
+	}
+
+	metric, keyParts := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	histogram := c.getOrRegisterHistogram(strings.Join(keyParts, "."))
 
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
-	if _, ok := c.metricMap[subscriptionID]; !ok {
-		c.metricMap[subscriptionID] = make(map[string]map[string]map[string]*APIMetric)
+	if _, ok := c.metricMap[keyParts[1]]; !ok {
+		c.metricMap[keyParts[1]] = make(map[string]map[string]map[string]*APIMetric)
 	}
-	if _, ok := c.metricMap[subscriptionID][appID]; !ok {
-		c.metricMap[subscriptionID][appID] = make(map[string]map[string]*APIMetric)
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
+		c.metricMap[keyParts[1]][keyParts[2]] = make(map[string]map[string]*APIMetric)
 	}
-	if _, ok := c.metricMap[subscriptionID][appID][apiID]; !ok {
-		c.metricMap[subscriptionID][appID][apiID] = make(map[string]*APIMetric)
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
+		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]] = make(map[string]*APIMetric)
 	}
-	if _, ok := c.metricMap[subscriptionID][appID][apiID][statusCode]; !ok {
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
 		// First api metric for sub+app+api+statuscode,
 		// setup the start time to be used for reporting metric event
-		c.metricMap[subscriptionID][appID][apiID][statusCode] = &APIMetric{
-			Subscription:  c.createSubscriptionDetail(subRef),
-			App:           appDetail,
-			Product:       c.getProduct(accessRequest, c.logger),
-			API:           c.createAPIDetail(detail.APIDetails, accessRequest),
-			AssetResource: c.getAssetResource(accessRequest, c.logger),
-			ProductPlan:   c.getProductPlan(accessRequest, c.logger),
-			Quota:         c.getQuota(accessRequest, c.logger),
-			StatusCode:    statusCode,
-			Status:        c.getStatusText(statusCode),
-			StartTime:     now(),
-			EventID:       uuid.NewString(),
-		}
+		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]] = metric
 	}
 
 	histogram.Update(detail.Duration)
-	c.storage.updateMetric(histogram, c.metricMap[subscriptionID][appID][apiID][statusCode])
-	return c.metricMap[subscriptionID][appID][apiID][statusCode]
+	c.storage.updateMetric(histogram, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
+	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
 }
 
 // getAccessRequest -
-func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail Detail) (*management.AccessRequest, *v1.ResourceInstance) {
+func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail TransactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
 	if detail.AppDetails.Name == "" {
 		return nil, nil
 	}
