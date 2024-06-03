@@ -47,6 +47,11 @@ func GetGlobalSamplingPercentage() (float64, error) {
 	return agentSamples.config.Percentage, nil
 }
 
+// GetGlobalSampling -
+func GetGlobalSampling() Sampling {
+	return agentSamples.config
+}
+
 func getSamplingPercentageConfig(percentage float64, offlineMode bool) (float64, error) {
 	if offlineMode {
 		// In offline mode sampling is always 0

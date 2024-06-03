@@ -2,6 +2,7 @@ package apic
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -11,6 +12,12 @@ const (
 	maxDescriptionLength = 350
 	strEllipsis          = "..."
 )
+
+var pathRe *regexp.Regexp
+
+func init() {
+	pathRe, _ = regexp.Compile("^/")
+}
 
 // ServiceBuilder - Interface to build the service body
 type ServiceBuilder interface {
@@ -314,6 +321,13 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 			return b.serviceBody, fmt.Errorf("failed to create endpoints for '%s': %s", b.serviceBody.APIName, err)
 		}
 		b.serviceBody.Endpoints = endPoints
+	}
+
+	// check all endpoints paths are valid
+	for _, ep := range b.serviceBody.Endpoints {
+		if !pathRe.MatchString(ep.BasePath) {
+			return b.serviceBody, fmt.Errorf("path did not validate against '^/' for '%s'", ep.BasePath)
+		}
 	}
 
 	var i interface{} = specProcessor

@@ -382,3 +382,48 @@ func TestConvertToDomainNameCompliant(t *testing.T) {
 	name = ConvertToDomainNameCompliant("A..bc.Def")
 	assert.Equal(t, "a--bc.def", name)
 }
+
+func TestGCMEcryptor(t *testing.T) {
+	cases := []struct {
+		name             string
+		data             string
+		encKey           []byte
+		decryptKey       []byte
+		expectDecryptErr bool
+	}{
+		{
+			name:             "decrypt with different key",
+			data:             "test-data",
+			encKey:           []byte("enc-key"),
+			decryptKey:       []byte("decrypt-key"),
+			expectDecryptErr: true,
+		},
+		{
+			name:       "decrypt with same key",
+			data:       "test-data",
+			encKey:     []byte("key"),
+			decryptKey: []byte("key"),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			enc, err := NewGCMEncryptor(tc.encKey)
+			assert.Nil(t, err)
+			assert.NotNil(t, enc)
+			encStr, err := enc.Encrypt(tc.data)
+			assert.Nil(t, err)
+			assert.NotNil(t, encStr)
+
+			dc, err := NewGCMDecryptor(tc.decryptKey)
+			assert.Nil(t, err)
+			assert.NotNil(t, dc)
+			str, err := dc.Decrypt(encStr)
+			if tc.expectDecryptErr {
+				assert.NotNil(t, err)
+				return
+			}
+			assert.Nil(t, err)
+			assert.Equal(t, tc.data, str)
+		})
+	}
+}

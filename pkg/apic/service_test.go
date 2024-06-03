@@ -6,8 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var methods = [5]string{"get", "post", "put", "patch", "delete"} // RestAPI methods
-
 func TestSanitizeAPIName(t *testing.T) {
 	name := sanitizeAPIName("Abc.Def")
 	assert.Equal(t, "abc.def", name)

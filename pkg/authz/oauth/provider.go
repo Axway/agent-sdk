@@ -28,7 +28,7 @@ type Provider interface {
 	GetSupportedTokenAuthMethods() []string
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
-	UnregisterClient(clientID string) error
+	UnregisterClient(clientID, accessToken string) error
 }
 
 type provider struct {
@@ -322,6 +322,10 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 	if response.Code == http.StatusCreated || response.Code == http.StatusOK {
 		clientRes := &clientMetadata{}
 		err = json.Unmarshal(response.Body, clientRes)
+		if !p.cfg.GetAuthConfig().UseRegistrationAccessToken() {
+			clientRes.RegistrationAccessToken = ""
+		}
+
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
 			WithField("client-name", clientReq.GetClientName()).
@@ -373,44 +377,52 @@ func (p *provider) applyClientDefaults(clientRequest *clientMetadata) {
 	if clientRequest.TokenEndpointAuthMethod == "" {
 		clientRequest.TokenEndpointAuthMethod = p.cfg.GetAuthMethod()
 	}
-
-	if len(clientRequest.ResponseTypes) == 0 {
-		defaultAuthResponseType := p.cfg.GetAuthResponseType()
-		if defaultAuthResponseType == "" {
-			defaultAuthResponseType = AuthResponseToken
-		}
-		clientRequest.ResponseTypes = []string{defaultAuthResponseType}
-	}
 }
 
 func (p *provider) preProcessResponseType(clientRequest *clientMetadata) {
 	for _, grantTypes := range clientRequest.GrantTypes {
-		if grantTypes == GrantTypeAuthorizationCode {
-			if !p.hasCodeResponseMethod(clientRequest) {
-				clientRequest.ResponseTypes = []string{AuthResponseCode}
+		switch grantTypes {
+		case GrantTypeAuthorizationCode:
+			if !hasResponseType(clientRequest, AuthResponseCode) {
+				addResponseType(clientRequest, AuthResponseCode)
+			}
+		case GrantTypeImplicit:
+			if !hasResponseType(clientRequest, AuthResponseToken) {
+				addResponseType(clientRequest, AuthResponseToken)
 			}
 		}
 	}
 }
 
-func (p *provider) hasCodeResponseMethod(clientRequest *clientMetadata) bool {
-	for _, authResponseMethod := range clientRequest.ResponseTypes {
-		if authResponseMethod == AuthResponseCode {
+func hasResponseType(clientRequest *clientMetadata, responseType string) bool {
+	for _, clientResponseType := range clientRequest.ResponseTypes {
+		if clientResponseType == responseType {
 			return true
 		}
 	}
 	return false
 }
 
-// UnregisterClient - removes the OAuth client from IDP
-func (p *provider) UnregisterClient(clientID string) error {
-	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
-	token, err := p.getClientToken()
-	if err != nil {
-		return err
+func addResponseType(clientRequest *clientMetadata, responseType string) {
+	if clientRequest.ResponseTypes == nil {
+		clientRequest.ResponseTypes = make([]string, 0)
 	}
+	clientRequest.ResponseTypes = append(clientRequest.ResponseTypes, responseType)
+}
+
+// UnregisterClient - removes the OAuth client from IDP
+func (p *provider) UnregisterClient(clientID, accessToken string) error {
+	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
+	if accessToken == "" {
+		token, err := p.getClientToken()
+		if err != nil {
+			return err
+		}
+		accessToken = token
+	}
+
 	header := map[string]string{
-		hdrAuthorization: authPrefix + " " + token,
+		hdrAuthorization: authPrefix + " " + accessToken,
 		hdrContentType:   mimeApplicationJSON,
 	}
 

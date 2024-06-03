@@ -49,6 +49,7 @@ const (
 	Apigee       DataplaneType = "Apigee"
 	Istio        DataplaneType = "Istio"
 	Mulesoft     DataplaneType = "Mulesoft"
+	APIConnect   DataplaneType = "APIConnect"
 	Kong         DataplaneType = "Kong"
 	Kafka        DataplaneType = "Kafka"
 	GitHub       DataplaneType = "GitHub"

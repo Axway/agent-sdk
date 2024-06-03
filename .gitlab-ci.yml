@@ -50,6 +50,7 @@ include:
 
 stages:
   - test
+  - qa-test
   - sonar-preview
   - sonar-publish
   - security-scans
@@ -109,6 +110,9 @@ fetch-iriusrisk:
 
 fetch-iriusrisk:on-schedule:
   extends: .only-never-rule
+  # need this rule to override base only-never-rule
+  rules:
+    - when: never
 
 twistlock:
   dependencies: []
@@ -116,3 +120,6 @@ twistlock:
 
 twistlock:on-schedule:
   extends: .only-never-rule
+  # need this rule to override base only-never-rule
+  rules:
+    - when: never

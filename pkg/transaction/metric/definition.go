@@ -25,14 +25,29 @@ const (
 	unknown                 = "unknown"
 )
 
+type TransactionContext struct {
+	APIDetails models.APIDetails
+	AppDetails models.AppDetails
+	StatusCode string
+}
+
 // Detail - holds the details for computing metrics
 // for API and consumer subscriptions
 type Detail struct {
 	APIDetails models.APIDetails
+	AppDetails models.AppDetails
 	StatusCode string
 	Duration   int64
 	Bytes      int64
-	AppDetails models.AppDetails
+}
+
+type MetricDetail struct {
+	APIDetails  models.APIDetails
+	AppDetails  models.AppDetails
+	StatusCode  string
+	Count       int64
+	Response    ResponseMetrics
+	Observation ObservationDetails
 }
 
 // ResponseMetrics - Holds metrics API response

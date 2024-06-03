@@ -25,6 +25,7 @@ const (
 	OauthTLSAuthSANEmail     = "tlsClientAuthSanEmail"
 	OauthTLSAuthSANIP        = "tlsClientAuthSanIP"
 	OauthTLSAuthSANURI       = "tlsClientAuthSanURI"
+	OauthRegistrationToken   = "registration"
 
 	IDPTokenURL = "idpTokenURL"
 

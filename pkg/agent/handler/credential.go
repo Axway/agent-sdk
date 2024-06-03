@@ -188,7 +188,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 		return
 	}
 
-	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), provData, 0, crd)
+	provCreds, err := h.newProvCreds(cred, app, provData, 0, crd)
 
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
@@ -201,7 +201,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
 }
 
-func (*credentials) deprovisionPreProcess(ctx context.Context, cred *management.Credential) map[string]interface{} {
+func (*credentials) deprovisionPreProcess(_ context.Context, cred *management.Credential) map[string]interface{} {
 	var provData map[string]interface{}
 	if cred.Data != nil {
 		if m, ok := cred.Data.(map[string]interface{}); ok {
@@ -216,9 +216,11 @@ func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCred
 		if provCreds.IsIDPCredential() {
 			err := h.unregisterIDPClientCredential(provCreds)
 			if err != nil {
-				logger.WithError(err).Error("error deprovisioning credential request from IDP")
-				h.onError(ctx, cred, err)
-				return
+				logger.
+					WithError(err).
+					WithField("client_id", provCreds.idpCredData.GetClientID()).
+					WithField("provider", provCreds.GetIDPProvider().GetName()).
+					Warn("error deprovisioning credential request from IDP, please ask administrator to remove the client from IdP")
 			}
 		}
 
@@ -253,7 +255,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), nil, 0, crd)
+	provCreds, err := h.newProvCreds(cred, app, nil, 0, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -304,7 +306,7 @@ func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.
 func (h *credentials) provisionPostProcess(status prov.RequestStatus, credentialData prov.Credential, app *management.ManagedApplication, crd *management.CredentialRequestDefinition, provCreds *provCreds, cred *management.Credential) {
 	var err error
 	data := map[string]interface{}{}
-
+	idpAgentDetails := make(map[string]string)
 	if status.GetStatus() == prov.Success {
 		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
 		if credentialData != nil {
@@ -319,7 +321,9 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 					sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
 				)
 			}
-
+			if provCreds.IsIDPCredential() {
+				idpAgentDetails, err = encryptRegistrationToken(provCreds.idpCredData, sec.EncryptionKey)
+			}
 			if err != nil {
 				status = prov.NewRequestStatusBuilder().
 					SetMessage(fmt.Sprintf("error encrypting credential: %s", err.Error())).
@@ -346,7 +350,7 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 		}
 	}
 
-	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties())
+	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties(), idpAgentDetails)
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
 	h.processCredentialLevelSuccess(provCreds, cred)
@@ -389,7 +393,7 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 	}
 
 	for _, action := range actions {
-		provCreds, err := h.newProvCreds(cred, util.GetAgentDetails(app), provData, action, crd)
+		provCreds, err := h.newProvCreds(cred, app, provData, action, crd)
 		if err != nil {
 			logger.WithError(err).Error("error preparing credential request")
 			h.onError(ctx, cred, err)
@@ -422,7 +426,7 @@ func (h *credentials) onError(_ context.Context, cred *management.Credential, er
 	}
 }
 
-func (h *credentials) getManagedApp(ctx context.Context, cred *management.Credential) (*management.ManagedApplication, error) {
+func (h *credentials) getManagedApp(_ context.Context, cred *management.Credential) (*management.ManagedApplication, error) {
 	app := management.NewManagedApplication(cred.Spec.ManagedApplication, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(app.GetSelfLink())
 	if err != nil {
@@ -434,7 +438,7 @@ func (h *credentials) getManagedApp(ctx context.Context, cred *management.Creden
 	return app, err
 }
 
-func (h *credentials) getCRD(ctx context.Context, cred *management.Credential) (*management.CredentialRequestDefinition, error) {
+func (h *credentials) getCRD(_ context.Context, cred *management.Credential) (*management.CredentialRequestDefinition, error) {
 	crd := management.NewCredentialRequestDefinition(cred.Spec.CredentialRequestDefinition, cred.Metadata.Scope.Name)
 	ri, err := h.client.GetResource(crd.GetSelfLink())
 	if err != nil {
@@ -489,6 +493,7 @@ func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
 		return err
 	}
 
+	cr.idpCredData.registrationAccessToken = resClientMetadata.GetRegistrationAccessToken()
 	cr.idpCredData.clientID = resClientMetadata.GetClientID()
 	cr.idpCredData.clientSecret = resClientMetadata.GetClientSecret()
 	return nil
@@ -496,7 +501,7 @@ func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
 
 func (h *credentials) unregisterIDPClientCredential(cr *provCreds) error {
 	p := cr.GetIDPProvider()
-	err := p.UnregisterClient(cr.idpCredData.GetClientID())
+	err := p.UnregisterClient(cr.idpCredData.GetClientID(), cr.idpCredData.registrationAccessToken)
 	if err != nil {
 		return err
 	}
@@ -551,28 +556,29 @@ type provCreds struct {
 }
 
 type idpCredData struct {
-	clientID              string
-	clientSecret          string
-	scopes                []string
-	grantTypes            []string
-	tokenAuthMethod       string
-	responseTypes         []string
-	redirectURLs          []string
-	jwksURI               string
-	publicKey             string
-	certificate           string
-	certificateMetadata   string
-	tlsClientAuthSanDNS   string
-	tlsClientAuthSanEmail string
-	tlsClientAuthSanIP    string
-	tlsClientAuthSanURI   string
+	clientID                string
+	clientSecret            string
+	scopes                  []string
+	grantTypes              []string
+	tokenAuthMethod         string
+	responseTypes           []string
+	redirectURLs            []string
+	jwksURI                 string
+	publicKey               string
+	certificate             string
+	certificateMetadata     string
+	tlsClientAuthSanDNS     string
+	tlsClientAuthSanEmail   string
+	tlsClientAuthSanIP      string
+	tlsClientAuthSanURI     string
+	registrationAccessToken string
 }
 
-func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[string]interface{}, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
+func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{
-		appDetails:  appDetails,
+		appDetails:  util.GetAgentDetails(app),
 		credDetails: credDetails,
 		credType:    cr.Spec.CredentialRequestDefinition,
 		credData:    cr.Spec.Data,
@@ -604,14 +610,15 @@ func (h *credentials) newProvCreds(cr *management.Credential, appDetails map[str
 			return nil, fmt.Errorf("IDP provider not found for credential request")
 		}
 		provCred.idpProvider = p
-		provCred.idpCredData = newIDPCredData(p, provCred.credData, provData)
+		provCred.idpCredData = newIDPCredData(app, provCred.credData, provData, credDetails)
 	}
 
 	return provCred, nil
 }
 
 // newIDPCredData - reads the idp client metadata from credential request
-func newIDPCredData(p oauth.Provider, credData, provData map[string]interface{}) *idpCredData {
+func newIDPCredData(app *management.ManagedApplication,
+	credData, provData, credDetails map[string]interface{}) *idpCredData {
 	cd := &idpCredData{}
 
 	if provData != nil {
@@ -629,6 +636,7 @@ func newIDPCredData(p oauth.Provider, credData, provData map[string]interface{})
 	cd.tlsClientAuthSanEmail = util.GetStringFromMapInterface(prov.OauthTLSAuthSANEmail, credData)
 	cd.tlsClientAuthSanIP = util.GetStringFromMapInterface(prov.OauthTLSAuthSANIP, credData)
 	cd.tlsClientAuthSanURI = util.GetStringFromMapInterface(prov.OauthTLSAuthSANURI, credData)
+	decryptRegistrationToken(cd, credDetails, app.Spec.Security.EncryptionKey)
 
 	return cd
 }
@@ -845,4 +853,39 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 	}
 
 	return data
+}
+
+func encryptRegistrationToken(idpData *idpCredData, key string) (map[string]string, error) {
+	agentDetail := make(map[string]string)
+	if idpData.registrationAccessToken != "" {
+		enc, err := util.NewGCMEncryptor([]byte(key))
+		if err != nil {
+			return agentDetail, err
+		}
+
+		ert, err := enc.Encrypt(idpData.registrationAccessToken)
+		if err != nil {
+			return agentDetail, err
+		}
+
+		agentDetail[prov.OauthRegistrationToken] = ert
+	}
+	return agentDetail, nil
+}
+
+func decryptRegistrationToken(idpData *idpCredData, credDetails map[string]interface{}, key string) error {
+	accessToken := util.GetStringFromMapInterface(prov.OauthRegistrationToken, credDetails)
+	if accessToken != "" {
+		dc, err := util.NewGCMDecryptor([]byte(key))
+		if err != nil {
+			return err
+		}
+
+		decrypted, err := dc.Decrypt(accessToken)
+		if err != nil {
+			return err
+		}
+		idpData.registrationAccessToken = decrypted
+	}
+	return nil
 }

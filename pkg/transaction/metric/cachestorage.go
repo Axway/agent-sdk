@@ -168,7 +168,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 					StatusCode: cm.StatusCode,
 					Duration:   duration,
 				}
-				metric = c.collector.updateMetric(metricDetail)
+				metric = c.collector.createOrUpdateMetric(metricDetail)
 			}
 
 			newKey := c.getKey(metric)
