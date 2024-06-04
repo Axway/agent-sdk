@@ -116,15 +116,6 @@ fetch-iriusrisk:on-schedule:
     - when: never
 
 twistlock:
-  extends: .only-never-rule
-  dependencies:
-
-twistlock:on-schedule:
-  extends: .only-never-rule
-  # need this rule to override base only-never-rule
-  rules:
-    - when: never
-twistlock:
   dependencies: []
   extends: .only-never-rule
 
