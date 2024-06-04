@@ -134,20 +134,22 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 }
 
 type crdBuilderOptions struct {
-	name        string
-	title       string
-	renewable   bool
-	suspendable bool
-	provProps   []provisioning.PropertyBuilder
-	reqProps    []provisioning.PropertyBuilder
+	name         string
+	title        string
+	renewable    bool
+	suspendable  bool
+	provProps    []provisioning.PropertyBuilder
+	reqProps     []provisioning.PropertyBuilder
+	registerFunc provisioning.RegisterCredentialRequestDefinition
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
-		renewable: false,
-		provProps: make([]provisioning.PropertyBuilder, 0),
-		reqProps:  make([]provisioning.PropertyBuilder, 0),
+		renewable:    false,
+		provProps:    make([]provisioning.PropertyBuilder, 0),
+		reqProps:     make([]provisioning.PropertyBuilder, 0),
+		registerFunc: createOrUpdateCredentialRequestDefinition,
 	}
 	for _, o := range options {
 		o(thisCred)
@@ -163,7 +165,7 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		reqSchema.AddProperty(props)
 	}
 
-	builder := provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
+	builder := provisioning.NewCRDBuilder(thisCred.registerFunc).
 		SetName(thisCred.name).
 		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
@@ -224,6 +226,13 @@ func WithCRDProvisionSchemaProperty(prop provisioning.PropertyBuilder) func(c *c
 func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.reqProps = append(c.reqProps, prop)
+	}
+}
+
+// WithCRDRegisterFunc - use the provided registration function for creating CRD
+func WithCRDRegisterFunc(registerFunc provisioning.RegisterCredentialRequestDefinition) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.registerFunc = registerFunc
 	}
 }
 
