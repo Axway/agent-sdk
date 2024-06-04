@@ -919,7 +919,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
-	regionValue := props.StringPropertyValue(pathRegion)
 	region := US
 	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; ok {
 		region = r
@@ -948,6 +947,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
+		RegionSettings:            regSet,
+		Region:                    region,
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
@@ -985,14 +986,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
-
-	// Check to see if original variable central.region is set
-	if regionValue != "" {
-		cfg.RegionSettings = regSet
-		cfg.Region = region
-		cfg.Auth.RegionSettings = regSet
-	}
-
 	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
 	cfg.isSingleURLSet = set
@@ -1016,7 +1009,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
-
 	return cfg, nil
 }
 
