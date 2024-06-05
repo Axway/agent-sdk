@@ -40,6 +40,7 @@ include:
     ref: $SCURITY_LATEST
     file:
       - "/.gitlab-ci-fortify.yml"
+      - "/.gitlab-ci-twistlock.yml"
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
@@ -116,10 +117,9 @@ fetch-iriusrisk:on-schedule:
 
 twistlock:
   dependencies: []
-  extends: .only-never-rule
+  rules:
+    - when: never
 
 twistlock:on-schedule:
-  extends: .only-never-rule
-  # need this rule to override base only-never-rule
   rules:
     - when: never
