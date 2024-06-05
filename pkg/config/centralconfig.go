@@ -18,6 +18,7 @@ import (
 
 const urlCutSet = " /"
 
+// Region -
 type Region int
 
 const (
@@ -255,6 +256,7 @@ type CentralConfiguration struct {
 	environmentID             string
 	teamID                    string
 	isSingleURLSet            bool
+	isRegionSet               bool
 	isAxwayManaged            bool
 	isMarketplaceSubs         bool
 	WatchResourceFilters      []ResourceFilter
@@ -654,7 +656,10 @@ func (c *CentralConfiguration) GetCacheStorageInterval() time.Duration {
 // GetSingleURL - Returns the Alternate base URL
 func (c *CentralConfiguration) GetSingleURL() string {
 	if c.SingleURL == "" && !c.isSingleURLSet {
-		return c.RegionSettings.SingleURL
+		if c.isRegionSet {
+			return c.RegionSettings.SingleURL
+		}
+
 	}
 	return c.SingleURL
 }
@@ -919,14 +924,24 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
-	region := US
-	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; ok {
-		region = r
-	}
-	regSet := regionalSettingsMap[region]
 
 	// check if CENTRAL_SINGLEURL is explicitly empty
 	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
+
+	// check to see if CENTRAL_REGION is set
+	_, regionSet := os.LookupEnv("CENTRAL_REGION")
+
+	region := US
+	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; !ok {
+		// CENTRAL_REGION variable is not set.  Bypass and short circuit any singleURL logic
+		set = false
+		regionSet = false
+	} else {
+		// CENTRAL_REGION variable is set. Use set value
+		region = r
+	}
+
+	regSet := regionalSettingsMap[region]
 
 	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
@@ -989,6 +1004,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
 	cfg.isSingleURLSet = set
+	cfg.isRegionSet = regionSet
 	cfg.PlatformURL = strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
