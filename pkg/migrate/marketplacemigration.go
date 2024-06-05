@@ -17,6 +17,7 @@ import (
 )
 
 // TODO - this file should be able to be removed once Unified Catalog support has been removed
+
 // Migrator interface for performing a migration on a ResourceInstance
 type Migrator interface {
 	Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
