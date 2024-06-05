@@ -572,9 +572,10 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 			"managedappHandler",
 			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
 		)
+		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, GetAuthProviderRegistry()),
+			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
 		)
 	}
 }
