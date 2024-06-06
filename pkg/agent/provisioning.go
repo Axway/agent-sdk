@@ -169,8 +169,11 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		SetName(thisCred.name).
 		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
-		SetRequestSchema(reqSchema).
-		SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
+		SetRequestSchema(reqSchema)
+
+	if agent.cfg != nil {
+		builder.SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
+	}
 
 	if thisCred.renewable {
 		builder.IsRenewable()
@@ -180,7 +183,7 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		builder.IsSuspendable()
 	}
 
-	if agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
+	if agent.cfg != nil && agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
 		builder.SetDeprovisionExpired()
 	}
 

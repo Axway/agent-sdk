@@ -33,7 +33,7 @@ type provisioner struct {
 
 type ProvisionerOption func(p *provisioner)
 
-func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *management.ManagedApplication, credential *management.Credential) (Provisioner, error) {
+func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *management.ManagedApplication, credential *management.Credential, opts ...oauth.ConfigOption) (Provisioner, error) {
 	p := &provisioner{
 		app:            app,
 		credential:     credential,
@@ -42,7 +42,7 @@ func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *man
 	}
 	idpTokenURL, ok := p.credential.Spec.Data[IDPTokenURL].(string)
 	if ok && idpRegistry != nil {
-		idpProvider, err := idpRegistry.GetProviderByTokenEndpoint(ctx, idpTokenURL)
+		idpProvider, err := idpRegistry.GetProviderByTokenEndpoint(ctx, idpTokenURL, opts...)
 		if err != nil {
 			return nil, err
 		}
