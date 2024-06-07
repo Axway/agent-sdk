@@ -325,7 +325,7 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 
 	// check all endpoints paths are valid
 	for _, ep := range b.serviceBody.Endpoints {
-		if !pathRe.MatchString(ep.BasePath) {
+		if ep.BasePath != "" && !pathRe.MatchString(ep.BasePath) {
 			return b.serviceBody, fmt.Errorf("path did not validate against '^/' for '%s'", ep.BasePath)
 		}
 	}
