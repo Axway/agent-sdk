@@ -941,8 +941,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		region = r
 	}
 
-	regSet := regionalSettingsMap[region]
-
 	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
 		usageReporting = ParseUsageReportingConfig(props)
@@ -960,10 +958,19 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	proxyURL := props.StringPropertyValue(pathProxyURL)
+	authCfg := &AuthConfiguration{
+		URL:        strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
+		Realm:      props.StringPropertyValue(pathAuthRealm),
+		ClientID:   props.StringPropertyValue(pathAuthClientID),
+		PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
+		PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
+		KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
+		Timeout:    props.DurationPropertyValue(pathAuthTimeout),
+	}
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
-		RegionSettings:            regSet,
 		Region:                    region,
+		URL:                       strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
@@ -974,16 +981,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
-		Auth: &AuthConfiguration{
-			RegionSettings: regSet,
-			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
-			Realm:          props.StringPropertyValue(pathAuthRealm),
-			ClientID:       props.StringPropertyValue(pathAuthClientID),
-			PrivateKey:     props.StringPropertyValue(pathAuthPrivateKey),
-			PublicKey:      props.StringPropertyValue(pathAuthPublicKey),
-			KeyPwd:         props.StringPropertyValue(pathAuthKeyPassword),
-			Timeout:        props.DurationPropertyValue(pathAuthTimeout),
-		},
+		Auth:                      authCfg,
 		TLS: &TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
@@ -1001,7 +999,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
-	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
 	cfg.isSingleURLSet = set
 	cfg.isRegionSet = regionSet
@@ -1025,6 +1022,18 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
+
+	if regionSet {
+		regSet := regionalSettingsMap[region]
+		cfg.RegionSettings = regSet
+		authCfg.RegionSettings = regSet
+
+		cfg.URL = regSet.CentralURL
+		cfg.PlatformURL = regSet.PlatformURL
+		authCfg.URL = regSet.AuthURL
+		cfg.APICDeployment = regSet.Deployment
+	}
+
 	return cfg, nil
 }
 
