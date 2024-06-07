@@ -152,6 +152,15 @@ func TestServiceBodySetters(t *testing.T) {
 
 	assert.NotNil(t, err)
 	assert.NotNil(t, sb)
+
+	// valid service body with empty path
+	ep[0].BasePath = ""
+	sb, err = serviceBuilder.
+		SetServiceEndpoints(ep).
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
 }
 
 func TestServiceBodyWithParseError(t *testing.T) {
