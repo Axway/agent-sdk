@@ -96,8 +96,7 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 		return nil, err
 	}
 
-	if len(outputConfig.Hosts) == 1 && outputConfig.Hosts[0] == "" {
-		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
+	if len(outputConfig.Hosts) == 1 && agent.GetCentralConfig().GetTraceabilityHost() != "" {
 		outputConfig.Protocol = "tcp"
 	}
 

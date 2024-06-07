@@ -410,7 +410,10 @@ func (c *CentralConfiguration) GetURL() string {
 
 // GetTraceabilityHost - Returns the central traceability host
 func (c *CentralConfiguration) GetTraceabilityHost() string {
-	return c.RegionSettings.TraceabilityHost
+	if c.isRegionSet {
+		return c.RegionSettings.TraceabilityHost
+	}
+	return ""
 }
 
 // GetProxyURL - Returns the central Proxy URL
