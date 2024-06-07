@@ -970,7 +970,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
 		Region:                    region,
-		URL:                       strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
+		URL:                       strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet),
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
