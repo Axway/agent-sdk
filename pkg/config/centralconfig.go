@@ -18,7 +18,6 @@ import (
 
 const urlCutSet = " /"
 
-// Region -
 type Region int
 
 const (
@@ -927,22 +926,17 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
+	region := US
+	regionSet := false
+	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; ok {
+		region = r
+		regionSet = true
+	}
+
+	regSet := regionalSettingsMap[region]
 
 	// check if CENTRAL_SINGLEURL is explicitly empty
 	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
-
-	// check to see if CENTRAL_REGION is set
-	_, regionSet := os.LookupEnv("CENTRAL_REGION")
-
-	region := US
-	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; !ok {
-		// CENTRAL_REGION variable is not set.  Bypass and short circuit any singleURL logic
-		set = false
-		regionSet = false
-	} else {
-		// CENTRAL_REGION variable is set. Use set value
-		region = r
-	}
 
 	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
@@ -961,19 +955,11 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 
 	proxyURL := props.StringPropertyValue(pathProxyURL)
-	authCfg := &AuthConfiguration{
-		URL:        strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
-		Realm:      props.StringPropertyValue(pathAuthRealm),
-		ClientID:   props.StringPropertyValue(pathAuthClientID),
-		PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
-		PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
-		KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
-		Timeout:    props.DurationPropertyValue(pathAuthTimeout),
-	}
+
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
+		RegionSettings:            regSet,
 		Region:                    region,
-		URL:                       strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet),
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
@@ -984,7 +970,16 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
-		Auth:                      authCfg,
+		Auth: &AuthConfiguration{
+			RegionSettings: regSet,
+			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
+			Realm:          props.StringPropertyValue(pathAuthRealm),
+			ClientID:       props.StringPropertyValue(pathAuthClientID),
+			PrivateKey:     props.StringPropertyValue(pathAuthPrivateKey),
+			PublicKey:      props.StringPropertyValue(pathAuthPublicKey),
+			KeyPwd:         props.StringPropertyValue(pathAuthKeyPassword),
+			Timeout:        props.DurationPropertyValue(pathAuthTimeout),
+		},
 		TLS: &TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
 			InsecureSkipVerify: props.BoolPropertyValue(pathSSLInsecureSkipVerify),
@@ -1002,6 +997,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
 		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
 	}
+	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
 	cfg.isSingleURLSet = set
 	cfg.isRegionSet = regionSet
@@ -1025,15 +1021,17 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
-
 	if regionSet {
 		regSet := regionalSettingsMap[region]
 		cfg.RegionSettings = regSet
-		authCfg.RegionSettings = regSet
+		authCfg, ok := cfg.Auth.(*AuthConfiguration)
+		if ok {
+			authCfg.RegionSettings = regSet
+			authCfg.URL = regSet.AuthURL
+		}
 
 		cfg.URL = regSet.CentralURL
 		cfg.PlatformURL = regSet.PlatformURL
-		authCfg.URL = regSet.AuthURL
 		cfg.APICDeployment = regSet.Deployment
 	}
 
