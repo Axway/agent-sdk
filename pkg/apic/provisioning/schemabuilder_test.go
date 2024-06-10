@@ -1,6 +1,7 @@
 package provisioning
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -142,4 +143,37 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	for _, item := range propertyOrder1 {
 		assert.NotEqual(t, item.(string), "name5")
 	}
+}
+
+func TestSchemaBuilderWithDependenciesProperties(t *testing.T) {
+	// set dependent property - dependent property definition error
+	_, err := NewSchemaBuilder().
+		SetName("sch").
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("dep").
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"}).
+			AddDependency("a", NewSchemaPropertyBuilder().
+				SetName("dep"))).
+		Build()
+
+	assert.NotNil(t, err)
+
+	// set dependent property - good path
+	s, err := NewSchemaBuilder().
+		SetName("sch").
+		AddProperty(NewSchemaPropertyBuilder().
+			SetName("prop").
+			IsString().
+			SetEnumValues([]string{"a", "b", "c"}).
+			AddDependency("a", NewSchemaPropertyBuilder().
+				SetName("a-prop").
+				IsString())).
+		Build()
+	assert.Nil(t, err)
+	schema := &jsonSchema{}
+	buf, _ := json.Marshal(s)
+	json.Unmarshal(buf, schema)
+	assert.NotNil(t, schema.Dependencies)
+
 }

@@ -256,24 +256,10 @@ func WithCRDForIDP(p oauth.Provider, scopes []string) func(c *crdBuilderOptions)
 
 		setIDPClientSecretSchemaProperty(c)
 		setIDPTokenURLSchemaProperty(p, c)
-		setIDPScopesSchemaProperty(p, scopes, c)
+		setIDPScopesSchemaProperty(scopes, c)
 		setIDPGrantTypesSchemaProperty(p, c)
-		tokenAuthMethods := setIDPTokenAuthMethodSchemaProperty(p, c)
-		setIDPRedirectURIsSchemaProperty(p, c)
-
-		usePrivateKeyJWTAuth := idpUsesPrivateKeyJWTAuth(tokenAuthMethods)
-		useTLSClientAuth := idpUsesTLSClientAuth(tokenAuthMethods)
-		if usePrivateKeyJWTAuth || useTLSClientAuth {
-			setIDPJWKSURISchemaProperty(p, c)
-		}
-
-		if usePrivateKeyJWTAuth {
-			setIDPJWKSSchemaProperty(p, c)
-		}
-
-		if useTLSClientAuth {
-			setIDPTLSClientAuthSchemaProperty(p, c)
-		}
+		setIDPTokenAuthMethodSchemaProperty(p, c)
+		setIDPRedirectURIsSchemaProperty(c)
 	}
 }
 
@@ -297,7 +283,7 @@ func setIDPTokenURLSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 			SetDefaultValue(p.GetTokenEndpoint()))
 }
 
-func setIDPScopesSchemaProperty(p oauth.Provider, scopes []string, c *crdBuilderOptions) {
+func setIDPScopesSchemaProperty(scopes []string, c *crdBuilderOptions) {
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthScopes).
@@ -348,17 +334,28 @@ func setIDPTokenAuthMethodSchemaProperty(p oauth.Provider, c *crdBuilderOptions)
 	tokenAuthMethods, defaultTokenMethod := removeUnsupportedTypes(
 		p.GetSupportedTokenAuthMethods(), supportedIDPTokenAuthMethods, config.ClientSecretBasic)
 
-	c.reqProps = append(c.reqProps,
-		provisioning.NewSchemaPropertyBuilder().
-			SetName(provisioning.OauthTokenAuthMethod).
-			SetLabel("Token Auth Method").
-			IsString().
-			SetDefaultValue(defaultTokenMethod).
-			SetEnumValues(tokenAuthMethods))
+	tmBuilder := provisioning.NewSchemaPropertyBuilder().
+		SetName(provisioning.OauthTokenAuthMethod).
+		SetLabel("Token Auth Method").
+		IsString().
+		SetDefaultValue(defaultTokenMethod).
+		SetEnumValues(tokenAuthMethods)
+
+	if idpUsesPrivateKeyJWTAuth(tokenAuthMethods) {
+		setIDPJWKSURISchemaProperty(config.PrivateKeyJWT, tmBuilder)
+		setIDPJWKSSchemaProperty(config.PrivateKeyJWT, tmBuilder)
+	}
+
+	if idpUsesTLSClientAuth(tokenAuthMethods) {
+		setIDPJWKSURISchemaProperty(config.TLSClientAuth, tmBuilder)
+		setIDPTLSClientAuthSchemaProperty(tmBuilder)
+	}
+
+	c.reqProps = append(c.reqProps, tmBuilder)
 	return tokenAuthMethods
 }
 
-func setIDPRedirectURIsSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
+func setIDPRedirectURIsSchemaProperty(c *crdBuilderOptions) {
 	c.reqProps = append(c.reqProps,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthRedirectURIs).
@@ -370,52 +367,66 @@ func setIDPRedirectURIsSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
 					IsString()))
 }
 
-func setIDPJWKSURISchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	c.reqProps = append(c.reqProps,
+func setIDPJWKSURISchemaProperty(depValue string, propBuilder provisioning.StringPropertyBuilder) {
+	propBuilder.AddDependency(
+		depValue,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthJwksURI).
 			SetLabel("JWKS URI").
 			IsString())
 }
 
-func setIDPJWKSSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	c.reqProps = append(c.reqProps,
+func setIDPJWKSSchemaProperty(depValue string, propBuilder provisioning.StringPropertyBuilder) {
+	propBuilder.AddDependency(
+		depValue,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthJwks).
 			SetLabel("Public Key").
 			IsString())
-
 }
 
-func setIDPTLSClientAuthSchemaProperty(p oauth.Provider, c *crdBuilderOptions) {
-	c.reqProps = append(c.reqProps,
+func setIDPTLSClientAuthSchemaProperty(propBuilder provisioning.StringPropertyBuilder) {
+	propBuilder.AddDependency(
+		config.TLSClientAuth,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthCertificate).
 			SetLabel("Public Certificate").
 			IsString())
-	c.reqProps = append(c.reqProps,
-		provisioning.NewSchemaPropertyBuilder().
-			SetName(provisioning.OauthCertificateMetadata).
-			SetLabel("Certificate Metadata").
-			IsString().
-			SetDefaultValue(oauth.TLSClientAuthSubjectDN).
-			SetEnumValues(tlsAuthCertificateMetadata))
-	c.reqProps = append(c.reqProps,
+
+	certMetadataBuilder := provisioning.NewSchemaPropertyBuilder().
+		SetName(provisioning.OauthCertificateMetadata).
+		SetLabel("Certificate Metadata").
+		IsString().
+		SetDefaultValue(oauth.TLSClientAuthSubjectDN).
+		SetEnumValues(tlsAuthCertificateMetadata)
+
+	propBuilder.AddDependency(
+		config.TLSClientAuth,
+		certMetadataBuilder,
+	)
+	certMetadataBuilder.AddDependency(
+		oauth.TLSClientAuthSanDNS,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTLSAuthSANDNS).
 			SetLabel("Certificate Subject Alternative Name, DNS").
 			IsString())
-	c.reqProps = append(c.reqProps,
+
+	certMetadataBuilder.AddDependency(
+		oauth.TLSClientAuthSanEmail,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTLSAuthSANEmail).
 			SetLabel("Certificate Subject Alternative Name, Email").
 			IsString())
-	c.reqProps = append(c.reqProps,
+
+	certMetadataBuilder.AddDependency(
+		oauth.TLSClientAuthSanIP,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTLSAuthSANIP).
 			SetLabel("Certificate Subject Alternative Name, IP address").
 			IsString())
-	c.reqProps = append(c.reqProps,
+
+	certMetadataBuilder.AddDependency(
+		oauth.TLSClientAuthSanURI,
 		provisioning.NewSchemaPropertyBuilder().
 			SetName(provisioning.OauthTLSAuthSANURI).
 			SetLabel("Certificate Subject Alternative Name, URI").
