@@ -160,12 +160,6 @@ func makeTraceabilityAgent(
 
 	hosts, err := outputs.ReadHostList(libbeatCfg)
 
-	traceHost := agent.GetCentralConfig().GetTraceabilityHost()
-	if traceHost != "" {
-		hosts = []string{traceHost}
-
-	}
-
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		logger.WithError(err).Error("reading hosts")
