@@ -36,6 +36,8 @@ type provider struct {
 	cfg                corecfg.IDPConfig
 	metadataURL        string
 	extraProperties    map[string]string
+	requestHeaders     map[string]string
+	queryParameters    map[string]string
 	apiClient          coreapi.Client
 	authServerMetadata *AuthorizationServerMetadata
 	authClient         AuthClient
@@ -67,6 +69,8 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		metadataURL:     idp.GetMetadataURL(),
 		cfg:             idp,
 		extraProperties: idp.GetExtraProperties(),
+		requestHeaders:  idp.GetRequestHeaders(),
+		queryParameters: idp.GetQueryParams(),
 		apiClient:       apiClient,
 		idpType:         idpType,
 	}
@@ -137,18 +141,24 @@ func (p *provider) createAuthClient() (AuthClient, error) {
 func (p *provider) createClientSecretPostAuthClient() (AuthClient, error) {
 	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
+		WithRequestHeaders(p.cfg.GetAuthConfig().GetRequestHeaders()),
+		WithQueryParams(p.cfg.GetAuthConfig().GetQueryParams()),
 		WithClientSecretPostAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
 }
 
 func (p *provider) createClientSecretBasicAuthClient() (AuthClient, error) {
 	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
+		WithRequestHeaders(p.cfg.GetAuthConfig().GetRequestHeaders()),
+		WithQueryParams(p.cfg.GetAuthConfig().GetQueryParams()),
 		WithClientSecretBasicAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientSecret(), p.cfg.GetAuthConfig().GetClientScope()))
 }
 
 func (p *provider) createClientSecretJWTAuthClient() (AuthClient, error) {
 	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
+		WithRequestHeaders(p.cfg.GetAuthConfig().GetRequestHeaders()),
+		WithQueryParams(p.cfg.GetAuthConfig().GetQueryParams()),
 		WithClientSecretJwtAuth(
 			p.cfg.GetAuthConfig().GetClientID(),
 			p.cfg.GetAuthConfig().GetClientSecret(),
@@ -176,6 +186,8 @@ func (p *provider) createPrivateKeyJWTAuthClient() (AuthClient, error) {
 	}
 	return NewAuthClient(p.GetTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
+		WithRequestHeaders(p.cfg.GetAuthConfig().GetRequestHeaders()),
+		WithQueryParams(p.cfg.GetAuthConfig().GetQueryParams()),
 		WithKeyPairAuth(
 			p.cfg.GetAuthConfig().GetClientID(),
 			p.cfg.GetAuthConfig().GetClientID(),
@@ -191,6 +203,8 @@ func (p *provider) createPrivateKeyJWTAuthClient() (AuthClient, error) {
 func (p *provider) createTLSAuthClient() (AuthClient, error) {
 	return NewAuthClient(p.GetMTLSTokenEndpoint(), p.apiClient,
 		WithServerName(p.cfg.GetIDPName()),
+		WithRequestHeaders(p.cfg.GetAuthConfig().GetRequestHeaders()),
+		WithQueryParams(p.cfg.GetAuthConfig().GetQueryParams()),
 		WithTLSClientAuth(p.cfg.GetAuthConfig().GetClientID(), p.cfg.GetAuthConfig().GetClientScope()))
 }
 
@@ -275,13 +289,23 @@ func (p *provider) GetSupportedResponseMethod() []string {
 	return []string{""}
 }
 
-func (p *provider) getClientRegistraionEndpoint() string {
+func (p *provider) getClientRegistrationEndpoint() string {
 	registrationEndpoint := p.authServerMetadata.RegistrationEndpoint
 	if p.useTLSAuth() &&
 		p.authServerMetadata.MTLSEndPointAlias != nil && p.authServerMetadata.MTLSEndPointAlias.RegistrationEndpoint != "" {
 		registrationEndpoint = p.authServerMetadata.MTLSEndPointAlias.RegistrationEndpoint
 	}
 	return registrationEndpoint
+}
+
+func (p *provider) prepareHeaders(authPrefix, token string) map[string]string {
+	headers := make(map[string]string)
+	for key, value := range p.requestHeaders {
+		headers[key] = value
+	}
+	headers[hdrAuthorization] = authPrefix + " " + token
+	headers[hdrContentType] = mimeApplicationJSON
+	return headers
 }
 
 // RegisterClient - register the OAuth client with IDP
@@ -302,16 +326,12 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		return nil, err
 	}
 
-	header := map[string]string{
-		hdrAuthorization: authPrefix + " " + token,
-		hdrContentType:   mimeApplicationJSON,
-	}
-
 	request := coreapi.Request{
-		Method:  coreapi.POST,
-		URL:     p.getClientRegistraionEndpoint(),
-		Headers: header,
-		Body:    clientBuffer,
+		Method:      coreapi.POST,
+		URL:         p.getClientRegistrationEndpoint(),
+		QueryParams: p.queryParameters,
+		Headers:     p.prepareHeaders(authPrefix, token),
+		Body:        clientBuffer,
 	}
 
 	response, err := p.apiClient.Send(request)
@@ -421,15 +441,11 @@ func (p *provider) UnregisterClient(clientID, accessToken string) error {
 		accessToken = token
 	}
 
-	header := map[string]string{
-		hdrAuthorization: authPrefix + " " + accessToken,
-		hdrContentType:   mimeApplicationJSON,
-	}
-
 	request := coreapi.Request{
-		Method:  coreapi.DELETE,
-		URL:     p.getClientRegistraionEndpoint() + "/" + clientID,
-		Headers: header,
+		Method:      coreapi.DELETE,
+		URL:         p.getClientRegistrationEndpoint() + "/" + clientID,
+		QueryParams: p.queryParameters,
+		Headers:     p.prepareHeaders(authPrefix, accessToken),
 	}
 
 	response, err := p.apiClient.Send(request)

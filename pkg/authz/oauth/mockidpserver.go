@@ -23,7 +23,10 @@ type MockIDPServer interface {
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
 	GetTokenRequestHeaders() http.Header
+	GetTokenQueryParams() url.Values
 	GetTokenRequestValues() url.Values
+	GetRequestHeaders() http.Header
+	GetQueryParams() url.Values
 	Close()
 }
 
@@ -36,7 +39,10 @@ type mockIDPServer struct {
 	serverMetadata       *AuthorizationServerMetadata
 	server               *httptest.Server
 	tokenReqHeaders      http.Header
+	tokenQueryParams     url.Values
 	tokenReqValues       url.Values
+	reqHeaders           http.Header
+	reqQueryParam        url.Values
 }
 
 // NewMockIDPServer - creates a new mock IDP server for tests
@@ -72,6 +78,7 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 	}
 	if strings.Contains(req.RequestURI, "/token") {
 		m.tokenReqHeaders = req.Header
+		m.tokenQueryParams = req.URL.Query()
 		m.tokenReqValues = nil
 		reqBuf, _ := io.ReadAll(req.Body)
 		if len(reqBuf) != 0 {
@@ -100,6 +107,8 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 		resp.Write(buf)
 	}
 	if strings.Contains(req.RequestURI, "/register") {
+		m.reqHeaders = req.Header
+		m.reqQueryParam = req.URL.Query()
 		defer func() {
 			m.registerResponseCode = http.StatusCreated
 		}()
@@ -165,10 +174,21 @@ func (m *mockIDPServer) GetTokenRequestHeaders() http.Header {
 	return m.tokenReqHeaders
 }
 
+func (m *mockIDPServer) GetTokenQueryParams() url.Values {
+	return m.tokenQueryParams
+}
+
 func (m *mockIDPServer) GetTokenRequestValues() url.Values {
 	return m.tokenReqValues
 }
 
+func (m *mockIDPServer) GetRequestHeaders() http.Header {
+	return m.reqHeaders
+}
+
+func (m *mockIDPServer) GetQueryParams() url.Values {
+	return m.reqQueryParam
+}
 func (m *mockIDPServer) Close() {
 	m.server.Close()
 }

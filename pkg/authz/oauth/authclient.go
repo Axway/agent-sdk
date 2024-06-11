@@ -25,6 +25,8 @@ type AuthClientOption func(*authClientOptions)
 
 type authClientOptions struct {
 	serverName    string
+	headers       map[string]string
+	queryParams   map[string]string
 	authenticator authenticator
 }
 
@@ -77,6 +79,20 @@ func NewAuthClient(tokenURL string, apiClient api.Client, opts ...AuthClientOpti
 func WithServerName(serverName string) AuthClientOption {
 	return func(opt *authClientOptions) {
 		opt.serverName = serverName
+	}
+}
+
+// WithRequestHeaders - sets up the additional request headers in auth client
+func WithRequestHeaders(hdr map[string]string) AuthClientOption {
+	return func(opt *authClientOptions) {
+		opt.headers = hdr
+	}
+}
+
+// WithQueryParams - sets up the additional query params in auth client
+func WithQueryParams(queryParams map[string]string) AuthClientOption {
+	return func(opt *authClientOptions) {
+		opt.queryParams = queryParams
 	}
 }
 
@@ -219,14 +235,18 @@ func (c *authClient) postAuthForm(data url.Values, headers map[string]string) (r
 	reqHeaders := map[string]string{
 		hdrContentType: mimeApplicationFormURLEncoded,
 	}
+	for name, value := range c.options.headers {
+		reqHeaders[name] = value
+	}
 	for name, value := range headers {
 		reqHeaders[name] = value
 	}
 	req := api.Request{
-		Method:  api.POST,
-		URL:     c.tokenURL,
-		Body:    []byte(data.Encode()),
-		Headers: reqHeaders,
+		Method:      api.POST,
+		URL:         c.tokenURL,
+		Body:        []byte(data.Encode()),
+		Headers:     reqHeaders,
+		QueryParams: c.options.queryParams,
 	}
 	return c.apiClient.Send(req)
 }
