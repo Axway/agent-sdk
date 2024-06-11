@@ -39,28 +39,25 @@ type schemaBuilder struct {
 	propertyOrder    []string
 	uniqueKeys       []string
 	properties       map[string]propertyDefinition
-	dependencies     map[string]*oneOfPropertyDefinitions
 	schemaVersion    string
 	propertyOrderSet bool
 }
 
 // jsonSchema - the schema generated from the builder
 type jsonSchema struct {
-	SubscriptionName  string                               `json:"-"`
-	SchemaType        string                               `json:"type"`
-	SchemaVersion     string                               `json:"$schema"`
-	SchemaDescription string                               `json:"description"`
-	Properties        map[string]propertyDefinition        `json:"properties"`
-	Dependencies      map[string]*oneOfPropertyDefinitions `json:"dependencies,omitempty"`
-	PropertyOrder     []string                             `json:"x-axway-order,omitempty"`
-	Required          []string                             `json:"required,omitempty"`
+	SubscriptionName  string                        `json:"-"`
+	SchemaType        string                        `json:"type"`
+	SchemaVersion     string                        `json:"$schema"`
+	SchemaDescription string                        `json:"description"`
+	Properties        map[string]propertyDefinition `json:"properties"`
+	PropertyOrder     []string                      `json:"x-axway-order,omitempty"`
+	Required          []string                      `json:"required,omitempty"`
 }
 
 // NewSchemaBuilder - Creates a new subscription schema builder
 func NewSchemaBuilder() SchemaBuilder {
 	return &schemaBuilder{
 		properties:       make(map[string]propertyDefinition, 0),
-		dependencies:     make(map[string]*oneOfPropertyDefinitions),
 		uniqueKeys:       make([]string, 0),
 		propertyOrder:    make([]string, 0),
 		propertyOrderSet: false,
@@ -97,14 +94,6 @@ func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 		// If property order wasn't set, add property as they come in
 		if !s.propertyOrderSet {
 			s.propertyOrder = append(s.propertyOrder, prop.Name)
-		}
-
-		dep, err := property.BuildDependencies()
-		if err != nil {
-			s.err = err
-		}
-		if dep != nil {
-			s.dependencies[prop.Name] = dep
 		}
 	} else {
 		s.err = err
@@ -177,7 +166,6 @@ func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 		SchemaVersion:     s.schemaVersion,
 		SchemaDescription: s.description,
 		Properties:        s.properties,
-		Dependencies:      s.dependencies,
 		PropertyOrder:     s.propertyOrder,
 		Required:          required,
 	}
