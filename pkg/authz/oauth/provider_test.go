@@ -15,6 +15,10 @@ func TestProvider(t *testing.T) {
 	cases := []struct {
 		name                       string
 		idpType                    string
+		authHeader                 map[string]string
+		authQueryParams            map[string]string
+		headers                    map[string]string
+		queryParams                map[string]string
 		clientRequest              *clientMetadata
 		expectedClient             *clientMetadata
 		metadataResponseCode       int
@@ -93,8 +97,12 @@ func TestProvider(t *testing.T) {
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
 		{
-			name:    "successful client_credential",
-			idpType: "generic",
+			name:            "successful client_credential",
+			idpType:         "generic",
+			authHeader:      map[string]string{"authHdr": "authHrdVal"},
+			authQueryParams: map[string]string{"authParam": "authParamVal"},
+			headers:         map[string]string{"hdr": "hrdVal"},
+			queryParams:     map[string]string{"param": "paramVal"},
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
 				RedirectURIs: []string{"http://localhost"},
@@ -126,15 +134,19 @@ func TestProvider(t *testing.T) {
 				Name: "test",
 				Type: tc.idpType,
 				AuthConfig: &config.IDPAuthConfiguration{
-					Type:         config.Client,
-					ClientID:     "test",
-					ClientSecret: "test",
+					Type:           config.Client,
+					ClientID:       "test",
+					ClientSecret:   "test",
+					RequestHeaders: tc.authHeader,
+					QueryParams:    tc.authQueryParams,
 				},
 				GrantType:       GrantTypeClientCredentials,
 				ClientScopes:    "read,write",
 				AuthMethod:      config.ClientSecretBasic,
 				MetadataURL:     s.GetMetadataURL(),
 				ExtraProperties: config.ExtraProperties{"key": "value"},
+				RequestHeaders:  tc.headers,
+				QueryParams:     tc.queryParams,
 			}
 
 			s.SetMetadataResponseCode(tc.metadataResponseCode)
@@ -169,15 +181,18 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, strings.Join(tc.expectedClient.GetScopes(), ","), strings.Join(cr.GetScopes(), ","))
 			assert.Equal(t, tc.expectedClient.GetJwksURI(), cr.GetJwksURI())
 			assert.Equal(t, len(tc.expectedClient.GetExtraProperties()), len(cr.GetExtraProperties()))
-
 			s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
 			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken())
 			if tc.expectUnRegistrationErr {
 				assert.NotNil(t, err)
 				return
 			}
+			assertHeaders(t, tc.authHeader, s.GetTokenRequestHeaders())
+			assertQueryParams(t, tc.authQueryParams, s.GetTokenQueryParams())
+			assertHeaders(t, tc.headers, s.GetRequestHeaders())
+			assertQueryParams(t, tc.queryParams, s.GetQueryParams())
+
 			assert.Nil(t, err)
 		})
 	}
-
 }

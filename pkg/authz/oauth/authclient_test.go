@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -12,6 +13,20 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
+
+func assertHeaders(t *testing.T, expected map[string]string, actual http.Header) {
+	for key, val := range expected {
+		actualVal := actual.Get(key)
+		assert.Equal(t, val, actualVal)
+	}
+}
+
+func assertQueryParams(t *testing.T, expected map[string]string, actual url.Values) {
+	for key, val := range expected {
+		actualVal := actual.Get(key)
+		assert.Equal(t, val, actualVal)
+	}
+}
 
 func TestResponseDecode(t *testing.T) {
 	fixture := `
@@ -133,6 +148,8 @@ func TestAuthClientTypes(t *testing.T) {
 		name                             string
 		tokenReqWithAuthorization        bool
 		typedAuthOpt                     AuthClientOption
+		headers                          map[string]string
+		queryParams                      map[string]string
 		expectedTokenReqClientID         string
 		expectedTokenReqClientSecret     string
 		expectedTokenReqClientAssertType string
@@ -140,6 +157,8 @@ func TestAuthClientTypes(t *testing.T) {
 	}{
 		{
 			name:                      "test",
+			headers:                   map[string]string{"hdr": "val"},
+			queryParams:               map[string]string{"param": "param-val"},
 			typedAuthOpt:              WithClientSecretBasicAuth("test-id", "test-secret", "test-scope"),
 			tokenReqWithAuthorization: true,
 			expectedTokenReqScope:     "test-scope",
@@ -174,7 +193,12 @@ func TestAuthClientTypes(t *testing.T) {
 	for _, tc := range cases {
 		s.SetTokenResponse("token", 3*time.Second, http.StatusOK)
 		apiClient := api.NewClientWithTimeout(config.NewTLSConfig(), "", time.Second)
-		opts := []AuthClientOption{WithServerName("testServer"), tc.typedAuthOpt}
+		opts := []AuthClientOption{
+			WithServerName("testServer"),
+			tc.typedAuthOpt,
+			WithRequestHeaders(tc.headers),
+			WithQueryParams(tc.queryParams),
+		}
 		ac, err := NewAuthClient(s.GetTokenURL(), apiClient, opts...)
 
 		assert.Nil(t, err)
@@ -205,5 +229,7 @@ func TestAuthClientTypes(t *testing.T) {
 		tokenScope := tokenReqValues.Get("scope")
 		assert.Equal(t, tc.expectedTokenReqScope, tokenScope)
 
+		assertHeaders(t, tc.headers, s.GetTokenRequestHeaders())
+		assertQueryParams(t, tc.queryParams, s.GetTokenQueryParams())
 	}
 }

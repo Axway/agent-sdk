@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -27,11 +28,15 @@ const (
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
 	fldExtraProperties          = "extraProperties"
+	fldRequestHeaders           = "requestHeaders"
+	fldQueryParams              = "queryParams"
 	fldScope                    = "scope"
 	fldGrantType                = "grantType"
 	fldAuthMethod               = "authMethod"
 	fldAuthResponseType         = "authResponseType"
 	fldAuthType                 = "auth.type"
+	fldAuthRequestHeaders       = "auth.requestHeaders"
+	fldAuthQueryParams          = "auth.queryParams"
 	fldAuthAccessToken          = "auth.accessToken"
 	fldAuthClientID             = "auth.clientId"
 	fldAuthClientSecret         = "auth.clientSecret"
@@ -54,11 +59,15 @@ var configProperties = []string{
 	fldType,
 	fldMetadataURL,
 	fldExtraProperties,
+	fldRequestHeaders,
+	fldQueryParams,
 	fldScope,
 	fldGrantType,
 	fldAuthMethod,
 	fldAuthResponseType,
 	fldAuthType,
+	fldAuthRequestHeaders,
+	fldAuthQueryParams,
 	fldAuthAccessToken,
 	fldAuthClientID,
 	fldAuthClientSecret,
@@ -123,15 +132,39 @@ type ExtraProperties map[string]string
 
 // UnmarshalJSON - deserializes extra properties from env config
 func (e *ExtraProperties) UnmarshalJSON(data []byte) error {
+	ep := map[string]string(*e)
+	return parseKeyValuePairs(ep, data)
+}
+
+// IDPRequestHeaders - additional request headers for calls to IdP
+type IDPRequestHeaders map[string]string
+
+// UnmarshalJSON - deserializes request header from env config
+func (e *IDPRequestHeaders) UnmarshalJSON(data []byte) error {
+	headers := map[string]string(*e)
+	return parseKeyValuePairs(headers, data)
+}
+
+// IDPQueryParams - additional query params for calls to IdP
+type IDPQueryParams map[string]string
+
+// UnmarshalJSON - deserializes query parameters from env config
+func (e *IDPQueryParams) UnmarshalJSON(data []byte) error {
+	qp := map[string]string(*e)
+	return parseKeyValuePairs(qp, data)
+}
+
+func parseKeyValuePairs(kv map[string]string, data []byte) error {
 	m := make(map[string]string)
 	buf, _ := strconv.Unquote(string(data))
-	json.Unmarshal([]byte(buf), &m)
-
-	em := map[string]string(*e)
-	for key, val := range m {
-		em[key] = val
+	err := json.Unmarshal([]byte(buf), &m)
+	if err != nil {
+		return err
 	}
 
+	for key, val := range m {
+		kv[key] = val
+	}
 	return nil
 }
 
@@ -161,6 +194,10 @@ type IDPAuthConfig interface {
 	UseTokenCache() bool
 	// UseRegistrationAccessToken - return flag to indicate if the auth client to use registration access token
 	UseRegistrationAccessToken() bool
+	// GetRequestHeaders - set of additional request headers to be applied when registering the client
+	GetRequestHeaders() map[string]string
+	// GetQueryParams - set of additional query parameters to be applied when registering the client
+	GetQueryParams() map[string]string
 }
 
 // IDPConfig - interface for IdP provider config
@@ -185,6 +222,10 @@ type IDPConfig interface {
 	GetAuthResponseType() string
 	// GetExtraProperties - set of additional properties to be applied when registering the client
 	GetExtraProperties() map[string]string
+	// GetRequestHeaders - set of additional request headers to be applied when registering the client
+	GetRequestHeaders() map[string]string
+	// GetQueryParams - set of additional query parameters to be applied when registering the client
+	GetQueryParams() map[string]string
 	// GetTLSConfig - tls config for IDP connection
 	GetTLSConfig() TLSConfig
 	// validate - Validates the IDP configuration
@@ -193,32 +234,36 @@ type IDPConfig interface {
 
 // IDPAuthConfiguration - Structure to hold the IdP provider auth config
 type IDPAuthConfiguration struct {
-	Type                 string `json:"type,omitempty"`
-	AccessToken          string `json:"accessToken,omitempty"`
-	ClientID             string `json:"clientId,omitempty"`
-	ClientSecret         string `json:"clientSecret,omitempty"`
-	ClientScope          string `json:"clientScope,omitempty"`
-	PrivateKey           string `json:"privateKey,omitempty"`
-	PublicKey            string `json:"publicKey,omitempty"`
-	KeyPwd               string `json:"keyPassword,omitempty"`
-	TokenSigningMethod   string `json:"tokenSigningMethod,omitempty"`
-	UseCachedToken       bool   `json:"-"`
-	UseRegistrationToken bool   `json:"-"`
+	Type                 string            `json:"type,omitempty"`
+	RequestHeaders       IDPRequestHeaders `json:"requestHeaders,omitempty"`
+	QueryParams          IDPQueryParams    `json:"queryParams,omitempty"`
+	AccessToken          string            `json:"accessToken,omitempty"`
+	ClientID             string            `json:"clientId,omitempty"`
+	ClientSecret         string            `json:"clientSecret,omitempty"`
+	ClientScope          string            `json:"clientScope,omitempty"`
+	PrivateKey           string            `json:"privateKey,omitempty"`
+	PublicKey            string            `json:"publicKey,omitempty"`
+	KeyPwd               string            `json:"keyPassword,omitempty"`
+	TokenSigningMethod   string            `json:"tokenSigningMethod,omitempty"`
+	UseCachedToken       bool              `json:"-"`
+	UseRegistrationToken bool              `json:"-"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
 type IDPConfiguration struct {
-	Name             string          `json:"name,omitempty"`
-	Title            string          `json:"title,omitempty"`
-	Type             string          `json:"type,omitempty"`
-	MetadataURL      string          `json:"metadataUrl,omitempty"`
-	AuthConfig       IDPAuthConfig   `json:"auth,omitempty"`
-	ClientScopes     string          `json:"scope,omitempty"`
-	GrantType        string          `json:"grantType,omitempty"`
-	AuthMethod       string          `json:"authMethod,omitempty"`
-	AuthResponseType string          `json:"authResponseType,omitempty"`
-	ExtraProperties  ExtraProperties `json:"extraProperties,omitempty"`
-	TLSConfig        TLSConfig       `json:"ssl,omitempty"`
+	Name             string            `json:"name,omitempty"`
+	Title            string            `json:"title,omitempty"`
+	Type             string            `json:"type,omitempty"`
+	MetadataURL      string            `json:"metadataUrl,omitempty"`
+	AuthConfig       IDPAuthConfig     `json:"auth,omitempty"`
+	ClientScopes     string            `json:"scope,omitempty"`
+	GrantType        string            `json:"grantType,omitempty"`
+	AuthMethod       string            `json:"authMethod,omitempty"`
+	AuthResponseType string            `json:"authResponseType,omitempty"`
+	ExtraProperties  ExtraProperties   `json:"extraProperties,omitempty"`
+	RequestHeaders   IDPRequestHeaders `json:"requestHeaders,omitempty"`
+	QueryParams      IDPQueryParams    `json:"queryParams,omitempty"`
+	TLSConfig        TLSConfig         `json:"ssl,omitempty"`
 }
 
 // GetIDPName - for the identity provider
@@ -249,6 +294,16 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 // GetExtraProperties - set of additional properties to be applied when registering the client
 func (i *IDPConfiguration) GetExtraProperties() map[string]string {
 	return i.ExtraProperties
+}
+
+// GetRequestHeaders - set of additional request headers to be applied when registering the client
+func (i *IDPConfiguration) GetRequestHeaders() map[string]string {
+	return i.RequestHeaders
+}
+
+// GetQueryParams - set of additional query params to be applied when registering the client
+func (i *IDPConfiguration) GetQueryParams() map[string]string {
+	return i.QueryParams
 }
 
 // GetClientScopes - default list of scopes that are included in the client metadata request to IDP
@@ -295,6 +350,16 @@ func (i *IDPConfiguration) validate() {
 // GetType - type of authentication mechanism to use "accessToken" or "client"
 func (i *IDPAuthConfiguration) GetType() string {
 	return i.Type
+}
+
+// GetRequestHeaders - set of additional request headers to be applied when registering the client
+func (i *IDPAuthConfiguration) GetRequestHeaders() map[string]string {
+	return i.RequestHeaders
+}
+
+// GetQueryParams - set of additional query params to be applied when registering the client
+func (i *IDPAuthConfiguration) GetQueryParams() map[string]string {
+	return i.QueryParams
 }
 
 // GetAccessToken - token(initial access token/Admin API Token etc) to be used by Agent SDK to authenticate with IdP
@@ -473,8 +538,13 @@ func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, err
 
 	for _, envIdpCfg := range envIDPCfgList {
 		idpCfg := &IDPConfiguration{
-			AuthConfig:       &IDPAuthConfiguration{},
+			AuthConfig: &IDPAuthConfiguration{
+				RequestHeaders: make(IDPRequestHeaders),
+				QueryParams:    make(IDPQueryParams),
+			},
 			ExtraProperties:  make(ExtraProperties),
+			RequestHeaders:   make(IDPRequestHeaders),
+			QueryParams:      make(IDPQueryParams),
 			ClientScopes:     "resource.READ resource.WRITE",
 			GrantType:        "client_credentials",
 			AuthMethod:       "client_secret_basic",
@@ -482,7 +552,10 @@ func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, err
 		}
 
 		buf, _ := json.Marshal(envIdpCfg)
-		json.Unmarshal(buf, idpCfg)
+		err := json.Unmarshal(buf, idpCfg)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing idp configuration, %s", err)
+		}
 		if entry, ok := envIdpCfg["ssl"]; ok && entry != nil {
 			idpCfg.TLSConfig = parseExternalIDPTLSConfig(entry)
 		}
