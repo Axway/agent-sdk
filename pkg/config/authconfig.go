@@ -28,6 +28,7 @@ type AuthConfig interface {
 // AuthConfiguration -
 type AuthConfiguration struct {
 	AuthConfig
+	RegionSettings regionalSettings
 	URL            string        `config:"url"`
 	Realm          string        `config:"realm"`
 	ClientID       string        `config:"clientId"`
@@ -60,9 +61,9 @@ func newTestAuthConfig() AuthConfig {
 }
 
 func (a *AuthConfiguration) validate() {
-	if a.URL == "" {
+	if a.GetURL() == "" {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
-	} else if _, err := url.ParseRequestURI(a.URL); err != nil {
+	} else if _, err := url.ParseRequestURI(a.GetURL()); err != nil {
 		exception.Throw(ErrBadConfig.FormatError(pathAuthURL))
 	}
 
@@ -99,6 +100,12 @@ func validateAuthFileConfig(configKeyName, authFile, dataEnvVar, errMsg string) 
 		}
 	}
 }
+func (a *AuthConfiguration) GetURL() string {
+	if a.URL == "" {
+		return a.RegionSettings.AuthURL
+	}
+	return a.URL
+}
 
 func (a *AuthConfiguration) validatePrivateKey() {
 	validateAuthFileConfig(pathAuthPrivateKey, a.GetPrivateKey(), "CENTRAL_AUTH_PRIVATEKEY_DATA", "private key")
@@ -110,10 +117,10 @@ func (a *AuthConfiguration) validatePublicKey() {
 
 // GetTokenURL - Returns the token URL
 func (a *AuthConfiguration) GetTokenURL() string {
-	if a.URL == "" || a.Realm == "" {
+	if a.GetURL() == "" || a.Realm == "" {
 		return ""
 	}
-	return a.URL + "/realms/" + a.Realm + tokenEndpoint
+	return a.GetURL() + "/realms/" + a.Realm + tokenEndpoint
 }
 
 // GetRealm - Returns the token audience URL
@@ -123,10 +130,10 @@ func (a *AuthConfiguration) GetRealm() string {
 
 // GetAudience - Returns the token audience URL
 func (a *AuthConfiguration) GetAudience() string {
-	if a.URL == "" || a.Realm == "" {
+	if a.GetURL() == "" || a.Realm == "" {
 		return ""
 	}
-	return a.URL + "/realms/" + a.Realm
+	return a.GetURL() + "/realms/" + a.Realm
 }
 
 // GetClientID - Returns the token audience URL

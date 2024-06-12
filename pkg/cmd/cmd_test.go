@@ -98,8 +98,8 @@ type configWithNoValidation struct {
 func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
-	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
 	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
 	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.team", "centralTeam", "", "Team name for creating catalog")
@@ -107,7 +107,7 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.word", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "Amplify Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
@@ -120,15 +120,15 @@ func TestRootCmdFlags(t *testing.T) {
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
-	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "prod", "Amplify Central")
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "https://apicentral.axway.com", "URL of Amplify Central")
-	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "https://platform.axway.com", "URL of the platform")
+	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "", "Amplify Central")       // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
 	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
 	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
 	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "https://login.axway.com/auth", "Amplify Central authentication URL")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
 	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
 	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
 	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
@@ -283,6 +283,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+	os.Setenv("CENTRAL_PLATFORMURL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")

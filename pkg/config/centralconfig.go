@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +17,66 @@ import (
 )
 
 const urlCutSet = " /"
+
+type Region int
+
+const (
+	US Region = iota + 1
+	EU
+	AP
+)
+
+var regionNamesMap = map[Region]string{
+	US: "US",
+	EU: "EU",
+	AP: "AP",
+}
+
+var nameToRegionMap = map[string]Region{
+	"US": US,
+	"EU": EU,
+	"AP": AP,
+}
+
+func (r Region) ToString() string {
+	return regionNamesMap[r]
+}
+
+type regionalSettings struct {
+	SingleURL        string
+	CentralURL       string
+	AuthURL          string
+	PlatformURL      string
+	TraceabilityHost string
+	Deployment       string
+}
+
+var regionalSettingsMap = map[Region]regionalSettings{
+	US: {
+		SingleURL:        "https://ingestion.platform.axway.com",
+		CentralURL:       "https://apicentral.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "ingestion.datasearch.axway.com:5044",
+		Deployment:       "prod",
+	},
+	EU: {
+		SingleURL:        "https://ingestion-eu.platform.axway.com",
+		CentralURL:       "https://central.eu-fr.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "ingestion.visibility.eu-fr.axway.com:5044",
+		Deployment:       "prod-eu",
+	},
+	AP: {
+		SingleURL:        "https://ingestion-ap-sg.platform.axway.com",
+		CentralURL:       "https://central.ap-sg.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "ingestion.visibility.ap-sg.axway.com:5044",
+		Deployment:       "prod-ap",
+	},
+}
 
 // AgentType - Defines the type of agent
 type AgentType int
@@ -89,6 +150,7 @@ type IResourceConfigCallback interface {
 // CentralConfig - Interface to get central Config
 type CentralConfig interface {
 	GetAgentType() AgentType
+	GetRegion() Region
 	GetTenantID() string
 	GetAPICDeployment() string
 	GetEnvironmentID() string
@@ -101,6 +163,7 @@ type CentralConfig interface {
 	GetTeamID() string
 	SetTeamID(teamID string)
 	GetURL() string
+	GetTraceabilityHost() string
 	GetPlatformURL() string
 	GetCatalogItemsURL() string
 	GetAPIServerURL() string
@@ -159,6 +222,8 @@ type CentralConfiguration struct {
 	CentralConfig
 	IConfigValidator
 	AgentType                 AgentType
+	RegionSettings            regionalSettings
+	Region                    Region               `config:"region"`
 	TenantID                  string               `config:"organizationID"`
 	TeamName                  string               `config:"team"`
 	APICDeployment            string               `config:"deployment"`
@@ -189,6 +254,8 @@ type CentralConfiguration struct {
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
+	isSingleURLSet            bool
+	isRegionSet               bool
 	isAxwayManaged            bool
 	isMarketplaceSubs         bool
 	WatchResourceFilters      []ResourceFilter
@@ -207,6 +274,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 	platformURL := "https://platform.axway.com"
 	return &CentralConfiguration{
 		AgentType:                 agentType,
+		Region:                    US,
 		TeamName:                  "",
 		APIServerVersion:          "v1alpha1",
 		Auth:                      newAuthConfig(),
@@ -232,6 +300,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config := NewCentralConfig(agentType).(*CentralConfiguration)
 	config.TenantID = "1234567890"
+	config.Region = US
 	config.URL = "https://central.com"
 	config.PlatformURL = "https://platform.axway.com"
 	config.Environment = "environment"
@@ -246,12 +315,20 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 
 // GetPlatformURL - Returns the central base URL
 func (c *CentralConfiguration) GetPlatformURL() string {
+	if c.PlatformURL == "" {
+		return c.RegionSettings.PlatformURL
+	}
 	return c.PlatformURL
 }
 
 // GetAgentType - Returns the agent type
 func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
+}
+
+// GetAgentType - Returns the agent type
+func (c *CentralConfiguration) GetRegion() Region {
+	return c.Region
 }
 
 // GetTenantID - Returns the tenant ID
@@ -261,6 +338,9 @@ func (c *CentralConfiguration) GetTenantID() string {
 
 // GetAPICDeployment - Returns the Central deployment type 'prod', 'preprod', team ('beano')
 func (c *CentralConfiguration) GetAPICDeployment() string {
+	if c.APICDeployment == "" {
+		return c.RegionSettings.Deployment
+	}
 	return c.APICDeployment
 }
 
@@ -321,7 +401,18 @@ func (c *CentralConfiguration) SetTeamID(teamID string) {
 
 // GetURL - Returns the central base URL
 func (c *CentralConfiguration) GetURL() string {
+	if c.URL == "" {
+		return c.RegionSettings.CentralURL
+	}
 	return c.URL
+}
+
+// GetTraceabilityHost - Returns the central traceability host
+func (c *CentralConfiguration) GetTraceabilityHost() string {
+	if c.isRegionSet {
+		return c.RegionSettings.TraceabilityHost
+	}
+	return ""
 }
 
 // GetProxyURL - Returns the central Proxy URL
@@ -331,7 +422,7 @@ func (c *CentralConfiguration) GetProxyURL() string {
 
 // GetCatalogItemsURL - Returns the unifiedcatalog URL for catalog items API
 func (c *CentralConfiguration) GetCatalogItemsURL() string {
-	return c.URL + "/api/unifiedCatalog/v1/catalogItems"
+	return c.GetURL() + "/api/unifiedCatalog/v1/catalogItems"
 }
 
 // GetAccessRequestsURL - Returns the accessrequest URL for access request API
@@ -341,12 +432,12 @@ func (c *CentralConfiguration) GetAccessRequestsURL() string {
 
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
-	return c.URL + "/apis/management/" + c.APIServerVersion + "/environments/"
+	return c.GetURL() + "/apis/management/" + c.APIServerVersion + "/environments/"
 }
 
 // GetAPIServerCatalogURL - Returns the base path for the API server for catalog resources
 func (c *CentralConfiguration) GetAPIServerCatalogURL() string {
-	return c.URL + "/apis/catalog/" + c.APIServerVersion
+	return c.GetURL() + "/apis/catalog/" + c.APIServerVersion
 }
 
 // GetEnvironmentURL - Returns the APIServer URL for services API
@@ -411,7 +502,7 @@ func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
 
 // GetSubscriptionURL - Returns the unifiedcatalog URL for subscriptions list
 func (c *CentralConfiguration) GetSubscriptionURL() string {
-	return c.URL + "/api/unifiedCatalog/v1/subscriptions"
+	return c.GetURL() + "/api/unifiedCatalog/v1/subscriptions"
 }
 
 // GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
@@ -524,7 +615,7 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	// Some paths in DA are checking usage reporting .  So return an empty usage reporting config if nil
 	// Find All References to see DA scenarios checking for this config
 	if c.UsageReporting == nil {
-		return NewUsageReporting(c.PlatformURL)
+		return NewUsageReporting(c.GetPlatformURL())
 	}
 	return c.UsageReporting
 }
@@ -566,6 +657,12 @@ func (c *CentralConfiguration) GetCacheStorageInterval() time.Duration {
 
 // GetSingleURL - Returns the Alternate base URL
 func (c *CentralConfiguration) GetSingleURL() string {
+	if c.SingleURL == "" && !c.isSingleURLSet {
+		if c.isRegionSet {
+			return c.RegionSettings.SingleURL
+		}
+
+	}
 	return c.SingleURL
 }
 
@@ -610,6 +707,7 @@ func (c *CentralConfiguration) SetWatchResourceFilters(filters []ResourceFilter)
 }
 
 const (
+	pathRegion                    = "central.region"
 	pathTenantID                  = "central.organizationID"
 	pathURL                       = "central.url"
 	pathPlatformURL               = "central.platformURL"
@@ -779,14 +877,14 @@ func (c *CentralConfiguration) validateOfflineConfig() {
 // AddCentralConfigProperties - Adds the command properties needed for Central Config
 func AddCentralConfigProperties(props properties.Properties, agentType AgentType) {
 	props.AddStringProperty(pathTenantID, "", "Tenant ID for the owner of the environment")
-	props.AddStringProperty(pathURL, "https://apicentral.axway.com", "URL of Amplify Central")
+	props.AddStringProperty(pathURL, "", "URL of Amplify Central")
 	props.AddStringProperty(pathTeam, "", "Team name for creating catalog")
-	props.AddStringProperty(pathPlatformURL, "https://platform.axway.com", "URL of the platform")
+	props.AddStringProperty(pathPlatformURL, "", "URL of the platform")
 	props.AddStringProperty(pathSingleURL, "", "Alternate Connection for Agent if using static IP")
 	props.AddStringProperty(pathAuthPrivateKey, "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthPublicKey, "/etc/public_key", "Path to the public key for Amplify Central Authentication")
 	props.AddStringProperty(pathAuthKeyPassword, "", "Path to the password file required by the private key for Amplify Central Authentication")
-	props.AddStringProperty(pathAuthURL, "https://login.axway.com/auth", "Amplify Central authentication URL")
+	props.AddStringProperty(pathAuthURL, "", "Amplify Central authentication URL")
 	props.AddStringProperty(pathAuthRealm, "Broker", "Amplify Central authentication Realm")
 	props.AddStringProperty(pathAuthClientID, "", "Client ID for the service account")
 	props.AddDurationProperty(pathAuthTimeout, 10*time.Second, "Timeout waiting for AxwayID response", properties.WithLowerLimit(10*time.Second))
@@ -816,7 +914,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
-		props.AddStringProperty(pathDeployment, "prod", "Amplify Central")
+		props.AddStringProperty(pathDeployment, "", "Amplify Central")
 		AddUsageReportingProperties(props)
 	} else {
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
@@ -828,6 +926,18 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 
 // ParseCentralConfig - Parses the Central Config values from the command line
 func ParseCentralConfig(props properties.Properties, agentType AgentType) (CentralConfig, error) {
+	region := US
+	regionSet := false
+	if r, ok := nameToRegionMap[props.StringPropertyValue(pathRegion)]; ok {
+		region = r
+		regionSet = true
+	}
+
+	regSet := regionalSettingsMap[region]
+
+	// check if CENTRAL_SINGLEURL is explicitly empty
+	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
+
 	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
 		usageReporting = ParseUsageReportingConfig(props)
@@ -843,9 +953,13 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			return cfg, nil
 		}
 	}
+
 	proxyURL := props.StringPropertyValue(pathProxyURL)
+
 	cfg := &CentralConfiguration{
 		AgentType:                 agentType,
+		RegionSettings:            regSet,
+		Region:                    region,
 		TenantID:                  props.StringPropertyValue(pathTenantID),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
@@ -857,13 +971,14 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		Auth: &AuthConfiguration{
-			URL:        strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
-			Realm:      props.StringPropertyValue(pathAuthRealm),
-			ClientID:   props.StringPropertyValue(pathAuthClientID),
-			PrivateKey: props.StringPropertyValue(pathAuthPrivateKey),
-			PublicKey:  props.StringPropertyValue(pathAuthPublicKey),
-			KeyPwd:     props.StringPropertyValue(pathAuthKeyPassword),
-			Timeout:    props.DurationPropertyValue(pathAuthTimeout),
+			RegionSettings: regSet,
+			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
+			Realm:          props.StringPropertyValue(pathAuthRealm),
+			ClientID:       props.StringPropertyValue(pathAuthClientID),
+			PrivateKey:     props.StringPropertyValue(pathAuthPrivateKey),
+			PublicKey:      props.StringPropertyValue(pathAuthPublicKey),
+			KeyPwd:         props.StringPropertyValue(pathAuthKeyPassword),
+			Timeout:        props.DurationPropertyValue(pathAuthTimeout),
 		},
 		TLS: &TLSConfiguration{
 			NextProtos:         props.StringSlicePropertyValue(pathSSLNextProtos),
@@ -884,6 +999,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	}
 	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)
+	cfg.isSingleURLSet = set
+	cfg.isRegionSet = regionSet
 	cfg.PlatformURL = strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
@@ -904,6 +1021,20 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
+	if regionSet {
+		regSet := regionalSettingsMap[region]
+		cfg.RegionSettings = regSet
+		authCfg, ok := cfg.Auth.(*AuthConfiguration)
+		if ok {
+			authCfg.RegionSettings = regSet
+			authCfg.URL = regSet.AuthURL
+		}
+
+		cfg.URL = regSet.CentralURL
+		cfg.PlatformURL = regSet.PlatformURL
+		cfg.APICDeployment = regSet.Deployment
+	}
+
 	return cfg, nil
 }
 

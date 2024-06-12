@@ -142,20 +142,33 @@ func makeTraceabilityAgent(
 		WithComponent("makeTraceabilityAgent")
 
 	var err error
+
+	logger.Trace("reading config")
 	traceCfg, err = readConfig(libbeatCfg, beat)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
+		logger.WithError(err).Error("reading config")
+		return outputs.Fail(err)
+	}
+	logger = logger.WithField("config", traceCfg)
+
+	if err := libbeatCfg.Merge(HostConfig{Hosts: traceCfg.Hosts, Protocol: traceCfg.Protocol}); err != nil {
+		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
+		logger.WithError(err).Error("merging host config")
 		return outputs.Fail(err)
 	}
 
 	hosts, err := outputs.ReadHostList(libbeatCfg)
+
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
+		logger.WithError(err).Error("reading hosts")
 		return outputs.Fail(err)
 	}
+	logger = logger.WithField("hosts", hosts)
 
 	var transportGroup outputs.Group
-	logger.Tracef("initializing traceability client using config: %+v, host: %+v", traceCfg, hosts)
+	logger.Tracef("initializing traceability client")
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 	if !isSingleEntry && IsHTTPTransport() {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
@@ -181,6 +194,7 @@ func makeTraceabilityAgent(
 				}
 				err := proxCfg.Validate()
 				if err != nil {
+					logger.WithError(err).Error("validating proxy config")
 					outputs.Fail(err)
 				}
 			}
@@ -195,6 +209,7 @@ func makeTraceabilityAgent(
 	}
 
 	if err != nil {
+		logger.WithError(err).Error("creating traceability client")
 		return outputs.Fail(err)
 	}
 
@@ -204,11 +219,10 @@ func makeTraceabilityAgent(
 	}
 	clients := make([]outputs.Client, 0)
 
-	logger = logger.WithField("component", "Client")
 	for _, client := range transportGroup.Clients {
 		outputClient := &Client{
 			transportClient: client,
-			logger:          logger,
+			logger:          logger.WithComponent("traceabilityClient").WithPackage("sdk.traceability"),
 		}
 		clients = append(clients, outputClient)
 		addClient(outputClient)
