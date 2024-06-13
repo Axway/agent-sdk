@@ -312,6 +312,9 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	b.serviceBody.ResourceType = specProcessor.GetResourceType()
 	b.serviceBody.specHash = fmt.Sprintf("%v", specParser.specHash)
 	b.serviceBody.specVersion = specProcessor.GetVersion()
+	if b.serviceBody.specVersion == "" {
+		b.serviceBody.specVersion = b.serviceBody.Version
+	}
 
 	// Check if the type is unstructured to gather more info
 
