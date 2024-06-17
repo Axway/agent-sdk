@@ -11,7 +11,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util/wsdl"
 	"github.com/emicklei/proto"
-	"gopkg.in/yaml.v3"
+	"github.com/invopop/yaml"
 )
 
 const (
@@ -119,8 +119,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	err := json.Unmarshal(s.resourceSpec, &specDef)
 	if err != nil {
 		contentType = mimeApplicationYAML
-		err := yaml.Unmarshal(s.resourceSpec, &specDef)
-		if err != nil {
+		if err := yaml.Unmarshal(s.resourceSpec, &specDef); err != nil {
 			return nil, err
 		}
 	}
@@ -133,6 +132,8 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 			return s.parseOAS3Spec()
 		}
 		if strings.HasPrefix(openapi, "2.") {
+			specDef["swagger"] = specDef["openapi"]
+			s.resourceSpec, _ = json.Marshal(specDef)
 			return s.parseOAS2Spec()
 		}
 		return nil, errors.New("invalid openapi specification")
@@ -142,6 +143,9 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 	if ok {
 		swagger := specType.(string)
 		if swagger == "2.0" {
+			if contentType == mimeApplicationYAML {
+				s.resourceSpec, _ = json.Marshal(specDef)
+			}
 			return s.parseOAS2Spec()
 		}
 		return nil, errors.New("invalid swagger 2.0 specification")
@@ -178,21 +182,10 @@ func (s *SpecResourceParser) parseGraphQLSpec() (SpecProcessor, error) {
 }
 
 func (s *SpecResourceParser) parseOAS2Spec() (SpecProcessor, error) {
-	swaggerObj := &oas2Swagger{}
-	// lowercase the byte array to ensure keys we care about are parsed
-	contentType := mimeApplicationJSON
-	err := json.Unmarshal(s.resourceSpec, swaggerObj)
+	swaggerObj, err := oas.ParseOAS2(s.resourceSpec)
 	if err != nil {
-		contentType = mimeApplicationYAML
-		err := yaml.Unmarshal(s.resourceSpec, swaggerObj)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
-	if swaggerObj.Info.Title == "" {
-		return nil, errors.New("invalid openapi 2.0 specification")
-	}
-	s.resourceContentType = contentType
 	return newOas2Processor(swaggerObj), nil
 }
 
