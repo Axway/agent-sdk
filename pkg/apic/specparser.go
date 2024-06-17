@@ -132,6 +132,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 			return s.parseOAS3Spec()
 		}
 		if strings.HasPrefix(openapi, "2.") {
+			// convert to json for parsing into openapi2.T type
 			specDef["swagger"] = specDef["openapi"]
 			s.resourceSpec, _ = json.Marshal(specDef)
 			return s.parseOAS2Spec()
@@ -144,6 +145,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 		swagger := specType.(string)
 		if swagger == "2.0" {
 			if contentType == mimeApplicationYAML {
+				// convert to json for parsing into openapi2.T type
 				s.resourceSpec, _ = json.Marshal(specDef)
 			}
 			return s.parseOAS2Spec()
