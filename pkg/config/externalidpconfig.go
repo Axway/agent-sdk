@@ -263,7 +263,7 @@ type IDPConfiguration struct {
 	ExtraProperties  ExtraProperties   `json:"extraProperties,omitempty"`
 	RequestHeaders   IDPRequestHeaders `json:"requestHeaders,omitempty"`
 	QueryParams      IDPQueryParams    `json:"queryParams,omitempty"`
-	TLSConfig        TLSConfig         `json:"ssl,omitempty"`
+	TLSConfig        TLSConfig         `json:"-"`
 }
 
 // GetIDPName - for the identity provider
