@@ -9,7 +9,7 @@ require (
 	github.com/emicklei/proto v1.9.2
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gabriel-vasile/mimetype v1.4.0
-	github.com/getkin/kin-openapi v0.76.0
+	github.com/getkin/kin-openapi v0.125.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
@@ -106,7 +106,6 @@ require (
 
 replace (
 	github.com/Shopify/sarama => github.com/elastic/sarama v1.19.1-0.20210823122811-11c3ef800752
-	github.com/getkin/kin-openapi => github.com/getkin/kin-openapi v0.67.0
 )
 
 retract ( // errored versions
