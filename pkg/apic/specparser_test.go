@@ -87,6 +87,11 @@ func TestSpecDiscovery(t *testing.T) {
 			expectedType: Oas2,
 		},
 		{
+			name:         "No input type OAS2 swagger Spec yaml",
+			inputFile:    "./testdata/petstore-swagger2.yaml",
+			expectedType: Oas2,
+		},
+		{
 			name:         "No input type WSDL Spec",
 			inputFile:    "./testdata/weather.xml",
 			expectedType: Wsdl,

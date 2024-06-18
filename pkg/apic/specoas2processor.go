@@ -23,13 +23,13 @@ const (
 
 // oas2SpecProcessor parses and validates an OAS2 spec, and exposes methods to modify the content of the spec.
 type oas2SpecProcessor struct {
-	spec         *oas2Swagger
+	spec         *openapi2.T
 	scopes       map[string]string
 	authPolicies []string
 	apiKeyInfo   []APIKeyInfo
 }
 
-func newOas2Processor(oas2Spec *oas2Swagger) *oas2SpecProcessor {
+func newOas2Processor(oas2Spec *openapi2.T) *oas2SpecProcessor {
 	return &oas2SpecProcessor{spec: oas2Spec}
 }
 
