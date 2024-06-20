@@ -52,11 +52,7 @@ func GetGlobalSampling() Sampling {
 	return agentSamples.config
 }
 
-func getSamplingPercentageConfig(percentage float64, offlineMode bool) (float64, error) {
-	if offlineMode {
-		// In offline mode sampling is always 0
-		return 0, nil
-	}
+func getSamplingPercentageConfig(percentage float64) (float64, error) {
 	maxAllowedSampling := float64(maximumSamplingRate)
 	if !strings.HasPrefix(agent.GetCentralConfig().GetAPICDeployment(), "prod") {
 		if val := os.Getenv(qaSamplingPercentageEnvVar); val != "" {
@@ -81,9 +77,19 @@ func getSamplingPercentageConfig(percentage float64, offlineMode bool) (float64,
 // SetupSampling - set up the global sampling for use by traceability
 func SetupSampling(cfg Sampling, offlineMode bool) error {
 	var err error
-	cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage, offlineMode)
-	cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
-	cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
+
+	if offlineMode {
+		cfg = Sampling{
+			Percentage:      0,
+			PerAPI:          false,
+			PerSub:          false,
+			ReportAllErrors: false,
+		}
+	} else {
+		cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage)
+		cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
+		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
+	}
 
 	agentSamples = &sample{
 		config:        cfg,

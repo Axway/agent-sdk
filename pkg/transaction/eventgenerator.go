@@ -34,7 +34,6 @@ type EventGenerator interface {
 type Generator struct {
 	shouldAddFields                bool
 	shouldUseTrafficForAggregation bool
-	collector                      metric.Collector
 	logger                         log.FieldLogger
 }
 
@@ -157,7 +156,6 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return e.handleTransactionEvents(detailEvents, eventTime, metaData, eventFields, privateData)
 	}
 
-	// Add this to sample or not
 	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {
 		return events, err
@@ -374,7 +372,7 @@ func (e *Generator) healthcheck(name string) *hc.Status {
 func (e *Generator) createEventData(message []byte, eventFields common.MapStr) (eventData map[string]interface{}, err error) {
 	eventData = make(map[string]interface{})
 	// Copy event fields if specified
-	if eventFields != nil && len(eventFields) > 0 {
+	if len(eventFields) > 0 {
 		for key, value := range eventFields {
 			// Ignore message field as it gets added with this method
 			if key != "message" {
