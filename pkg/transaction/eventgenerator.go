@@ -30,16 +30,18 @@ type EventGenerator interface {
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 }
 
+type EventGeneratorOpt func(*Generator)
+
 // Generator - Create the events to be published to Condor
 type Generator struct {
 	shouldAddFields                bool
 	shouldUseTrafficForAggregation bool
-	collector                      metric.Collector
+	isOffline                      bool
 	logger                         log.FieldLogger
 }
 
 // NewEventGenerator - Create a new event generator
-func NewEventGenerator() EventGenerator {
+func NewEventGenerator(opts ...EventGeneratorOpt) EventGenerator {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.transaction.eventgenerator").
 		WithComponent("eventgenerator")
@@ -48,9 +50,20 @@ func NewEventGenerator() EventGenerator {
 		shouldUseTrafficForAggregation: true,
 		logger:                         logger,
 	}
+
+	for _, o := range opts {
+		o(eventGen)
+	}
+
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
 	return eventGen
+}
+
+func WithOfflineModeSetting(isOffline bool) EventGeneratorOpt {
+	return func(g *Generator) {
+		g.isOffline = isOffline
+	}
 }
 
 // SetUseTrafficForAggregation - set the flag to use traffic events for aggregation.
@@ -157,8 +170,11 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return e.handleTransactionEvents(detailEvents, eventTime, metaData, eventFields, privateData)
 	}
 
-	// Add this to sample or not
-	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
+	shouldSample := false
+	if !e.isOffline { // do not set sampling when offline
+		// Add this to sample or not
+		shouldSample, err = sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
+	}
 	if err != nil {
 		return events, err
 	}
