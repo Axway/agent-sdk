@@ -30,18 +30,15 @@ type EventGenerator interface {
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 }
 
-type EventGeneratorOpt func(*Generator)
-
 // Generator - Create the events to be published to Condor
 type Generator struct {
 	shouldAddFields                bool
 	shouldUseTrafficForAggregation bool
-	isOffline                      bool
 	logger                         log.FieldLogger
 }
 
 // NewEventGenerator - Create a new event generator
-func NewEventGenerator(opts ...EventGeneratorOpt) EventGenerator {
+func NewEventGenerator() EventGenerator {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.transaction.eventgenerator").
 		WithComponent("eventgenerator")
@@ -50,20 +47,9 @@ func NewEventGenerator(opts ...EventGeneratorOpt) EventGenerator {
 		shouldUseTrafficForAggregation: true,
 		logger:                         logger,
 	}
-
-	for _, o := range opts {
-		o(eventGen)
-	}
-
 	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
 	return eventGen
-}
-
-func WithOfflineModeSetting(isOffline bool) EventGeneratorOpt {
-	return func(g *Generator) {
-		g.isOffline = isOffline
-	}
 }
 
 // SetUseTrafficForAggregation - set the flag to use traffic events for aggregation.
@@ -170,11 +156,7 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		return e.handleTransactionEvents(detailEvents, eventTime, metaData, eventFields, privateData)
 	}
 
-	shouldSample := false
-	if !e.isOffline { // do not set sampling when offline
-		// Add this to sample or not
-		shouldSample, err = sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
-	}
+	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
 	if err != nil {
 		return events, err
 	}
@@ -390,7 +372,7 @@ func (e *Generator) healthcheck(name string) *hc.Status {
 func (e *Generator) createEventData(message []byte, eventFields common.MapStr) (eventData map[string]interface{}, err error) {
 	eventData = make(map[string]interface{})
 	// Copy event fields if specified
-	if eventFields != nil && len(eventFields) > 0 {
+	if len(eventFields) > 0 {
 		for key, value := range eventFields {
 			// Ignore message field as it gets added with this method
 			if key != "message" {
