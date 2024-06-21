@@ -195,7 +195,7 @@ const filterFields = (resource) => {
 	]);
 
 	for (key in properties) {
-		if (!commonFields.has(key)) {
+		if (!commonFields.has(key) && !key.includes("languages")) {
 			fields[key] = properties[key];
 		}
 	}
