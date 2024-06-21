@@ -62,6 +62,14 @@ func TestProviderRegistry(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, p)
 
+	p, err = providerReg.GetProviderByMetadataURL(idpServer.GetMetadataURL())
+	assert.Nil(t, err)
+	assert.NotNil(t, p)
+
+	p, err = providerReg.GetProviderByMetadataURL("invalid-auth-url")
+	assert.NotNil(t, err)
+	assert.Nil(t, p)
+
 	pr, _ := providerReg.(*providerRegistry)
 	pr.providerMap.Set("test1", "")
 	pr.providerMap.SetSecondaryKey("test1", "issuer:test1")

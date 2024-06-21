@@ -14,6 +14,7 @@ const (
 	tokenEpKeyPrefix     = "tokenEp:"
 	mtlsTokenEpKeyPrefix = "mtlsTokenEp:"
 	authEpKeyPrefix      = "authEp:"
+	metadataURLKeyPrefix = "metadataUrl:"
 )
 
 // ProviderRegistry - interface for provider registry
@@ -28,6 +29,8 @@ type ProviderRegistry interface {
 	GetProviderByTokenEndpoint(tokenEndpoint string) (Provider, error)
 	// GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
 	GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error)
+	// GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
+	GetProviderByMetadataURL(metadataURL string) (Provider, error)
 }
 
 type providerRegistry struct {
@@ -69,6 +72,7 @@ func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecf
 	r.providerMap.Set(name, p)
 	r.providerMap.SetSecondaryKey(name, issuerKeyPrefix+issuer)
 	r.providerMap.SetSecondaryKey(name, tokenEpKeyPrefix+tokenEndpoint)
+	r.providerMap.SetSecondaryKey(name, metadataURLKeyPrefix+idp.GetMetadataURL())
 	if mtlsTokenEndpoint != "" {
 		r.providerMap.SetSecondaryKey(name, mtlsTokenEpKeyPrefix+mtlsTokenEndpoint)
 	}
@@ -108,6 +112,11 @@ func (r *providerRegistry) GetProviderByTokenEndpoint(tokenEndpoint string) (Pro
 // GetProviderByAuthorizationEndpoint - returns the provider from registry based on the IDP authorization endpoint
 func (r *providerRegistry) GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error) {
 	return r.getProviderBySecondaryKey(authEpKeyPrefix + authEndpoint)
+}
+
+// GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
+func (r *providerRegistry) GetProviderByMetadataURL(metadataURL string) (Provider, error) {
+	return r.getProviderBySecondaryKey(metadataURLKeyPrefix + metadataURL)
 }
 
 func (r *providerRegistry) getProviderBySecondaryKey(key string) (Provider, error) {
