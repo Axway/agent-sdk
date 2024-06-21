@@ -29,6 +29,7 @@ var (
 const (
 	PublishedProductResourceName              = "publishedproducts"
 	PublishedProductReferencesSubResourceName = "references"
+	PublishedProductStatusSubResourceName     = "status"
 )
 
 func PublishedProductGVK() apiv1.GroupVersionKind {
@@ -46,6 +47,8 @@ type PublishedProduct struct {
 	Owner      *apiv1.Owner               `json:"owner"`
 	References PublishedProductReferences `json:"references"`
 	Spec       PublishedProductSpec       `json:"spec"`
+	// Status     PublishedProductStatus     `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // NewPublishedProduct creates an empty *PublishedProduct
@@ -133,6 +136,7 @@ func (res *PublishedProduct) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -171,6 +175,22 @@ func (res *PublishedProduct) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "status")
+		// err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}
