@@ -14,6 +14,11 @@ const (
 	DataTypeObject  = "object"
 )
 
+// oneOfPropertyDefinitions - used for items of propertyDefinition
+type oneOfPropertyDefinitions struct {
+	OneOf []*propertyDefinition `json:"oneOf,omitempty"`
+}
+
 // anyOfPropertyDefinitions - used for items of propertyDefinition
 type anyOfPropertyDefinitions struct {
 	AnyOf []propertyDefinition `json:"anyOf,omitempty"`
@@ -27,26 +32,27 @@ type PropertyDefinition interface {
 
 // propertyDefinition -
 type propertyDefinition struct {
-	Type               string                        `json:"type"`
-	Title              string                        `json:"title"`
-	Description        string                        `json:"description,omitempty"`
-	Enum               []string                      `json:"enum,omitempty"`
-	DefaultValue       interface{}                   `json:"default,omitempty"`
-	ReadOnly           bool                          `json:"readOnly,omitempty"`
-	Format             string                        `json:"format,omitempty"`
-	Properties         map[string]propertyDefinition `json:"properties,omitempty"`
-	RequiredProperties []string                      `json:"required,omitempty"`
-	Items              *anyOfPropertyDefinitions     `json:"items,omitempty"`    // We use a pointer to avoid generating an empty struct if not set
-	MinItems           *uint                         `json:"minItems,omitempty"` // We use a pointer to differentiate the "blank value" from a chosen 0 min value
-	MaxItems           *uint                         `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a chosen 0 min value
-	Minimum            *float64                      `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
-	Maximum            *float64                      `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
-	IsEncrypted        bool                          `json:"x-axway-encrypted,omitempty"`
-	Widget             string                        `json:"x-axway-widget,omitempty"`
-	IsCopyable         bool                          `json:"x-axway-copyable,omitempty"`
-	UniqueItems        bool                          `json:"uniqueItems,omitempty"`
-	Name               string                        `json:"-"`
-	Required           bool                          `json:"-"`
+	Type               string                               `json:"type,omitempty"`
+	Title              string                               `json:"title,omitempty"`
+	Description        string                               `json:"description,omitempty"`
+	Enum               []string                             `json:"enum,omitempty"`
+	DefaultValue       interface{}                          `json:"default,omitempty"`
+	ReadOnly           bool                                 `json:"readOnly,omitempty"`
+	Format             string                               `json:"format,omitempty"`
+	Properties         map[string]propertyDefinition        `json:"properties,omitempty"`
+	RequiredProperties []string                             `json:"required,omitempty"`
+	Dependencies       map[string]*oneOfPropertyDefinitions `json:"dependencies,omitempty"`
+	Items              *anyOfPropertyDefinitions            `json:"items,omitempty"`    // We use a pointer to avoid generating an empty struct if not set
+	MinItems           *uint                                `json:"minItems,omitempty"` // We use a pointer to differentiate the "blank value" from a chosen 0 min value
+	MaxItems           *uint                                `json:"maxItems,omitempty"` // We use a pointer to differentiate the "blank value" from a chosen 0 min value
+	Minimum            *float64                             `json:"minimum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 min value
+	Maximum            *float64                             `json:"maximum,omitempty"`  // We use a pointer to differentiate the "blank value" from a chosen 0 max value
+	IsEncrypted        bool                                 `json:"x-axway-encrypted,omitempty"`
+	Widget             string                               `json:"x-axway-widget,omitempty"`
+	IsCopyable         bool                                 `json:"x-axway-copyable,omitempty"`
+	UniqueItems        bool                                 `json:"uniqueItems,omitempty"`
+	Name               string                               `json:"-"`
+	Required           bool                                 `json:"-"`
 }
 
 func (p *propertyDefinition) GetType() string {
@@ -71,6 +77,8 @@ func (p *propertyDefinition) GetEnums() []string {
 type PropertyBuilder interface {
 	// Build - builds the property, this is called automatically by the schema builder
 	Build() (*propertyDefinition, error)
+	// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+	BuildDependencies() (*oneOfPropertyDefinitions, error)
 }
 
 // TypePropertyBuilder - common methods related to type property builders
@@ -118,6 +126,8 @@ type StringPropertyBuilder interface {
 	SetDefaultValue(value string) StringPropertyBuilder
 	// SetAsTextArea - Set value to be rendered as a textarea box within the UI
 	SetAsTextArea() StringPropertyBuilder
+	// AddDependency - Add property dependencies
+	AddDependency(value string, property PropertyBuilder) StringPropertyBuilder
 	PropertyBuilder
 }
 
@@ -298,6 +308,7 @@ type stringSchemaProperty struct {
 	enums          []string
 	widget         string
 	defaultValue   string
+	dependencies   map[string][]PropertyBuilder
 	StringPropertyBuilder
 }
 
@@ -370,9 +381,20 @@ func (p *stringSchemaProperty) IsCopyable() StringPropertyBuilder {
 	return p
 }
 
+func (p *stringSchemaProperty) AddDependency(value string, property PropertyBuilder) StringPropertyBuilder {
+	if p.dependencies == nil {
+		p.dependencies = map[string][]PropertyBuilder{}
+	}
+	_, ok := p.dependencies[value]
+	if !ok {
+		p.dependencies[value] = make([]PropertyBuilder, 0)
+	}
+	p.dependencies[value] = append(p.dependencies[value], property)
+	return p
+}
+
 // Build - create a string propertyDefinition for use in the subscription schema builder
 func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
-
 	def, err = p.schemaProperty.Build()
 	if err != nil {
 		return
@@ -417,6 +439,68 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def.Widget = p.widget
 
 	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *stringSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	if len(p.dependencies) > 0 {
+		deps := &oneOfPropertyDefinitions{
+			OneOf: make([]*propertyDefinition, 0),
+		}
+		noDep := make(map[string]bool)
+		for _, enum := range p.enums {
+			props, ok := p.dependencies[enum]
+			if !ok {
+				noDep[enum] = true
+				continue
+			}
+
+			depDef, err := p.buildDependenciesDef(enum, props)
+			if err != nil {
+				return nil, err
+			}
+			deps.OneOf = append(deps.OneOf, depDef)
+		}
+		if len(noDep) > 0 {
+			for enum := range noDep {
+				depDef := &propertyDefinition{
+					Properties: make(map[string]propertyDefinition),
+				}
+				depDef.Properties[p.schemaProperty.name] = propertyDefinition{Enum: []string{enum}}
+				deps.OneOf = append(deps.OneOf, depDef)
+			}
+		}
+
+		return deps, nil
+	}
+	return nil, nil
+}
+
+func (p *stringSchemaProperty) buildDependenciesDef(val string, props []PropertyBuilder) (*propertyDefinition, error) {
+	depDef := &propertyDefinition{
+		Properties:   make(map[string]propertyDefinition),
+		Dependencies: make(map[string]*oneOfPropertyDefinitions),
+	}
+	// value match property
+	depDef.Properties[p.schemaProperty.name] = propertyDefinition{Enum: []string{val}}
+
+	for _, prop := range props {
+		dp, err := prop.Build()
+		if err != nil {
+			return nil, err
+		}
+
+		depDef.Properties[dp.Name] = *dp
+		dep, err := prop.BuildDependencies()
+		if err != nil {
+			return nil, err
+		}
+
+		if dep != nil {
+			depDef.Dependencies[dp.Name] = dep
+		}
+	}
+	return depDef, nil
 }
 
 /**
@@ -473,6 +557,11 @@ func (p *numberSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def.Minimum = p.minValue
 	def.Maximum = p.maxValue
 	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *numberSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
 }
 
 /**
@@ -575,6 +664,11 @@ func (p *arraySchemaProperty) Build() (def *propertyDefinition, err error) {
 	return def, err
 }
 
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *arraySchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
+}
+
 /**
   object property datatype builder
 */
@@ -621,4 +715,9 @@ func (p *objectSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def.Properties = p.properties
 	def.RequiredProperties = requiredProperties
 	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *objectSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
 }

@@ -47,6 +47,42 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	//assert.NotNil(t, err)
 	//assert.Nil(t, prop)
 
+	// No datatype in dependent property
+	builder := NewSchemaPropertyBuilder().
+		SetName("name").
+		IsString().
+		SetEnumValues([]string{"a", "b"}).
+		AddDependency("a", NewSchemaPropertyBuilder().
+			SetName("noDataType"))
+
+	prop, err = builder.Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, prop)
+
+	dep, err := builder.BuildDependencies()
+	assert.NotNil(t, err)
+	assert.Nil(t, dep)
+
+	// No datatype in child dependent property
+	builder = NewSchemaPropertyBuilder().
+		SetName("name").
+		IsString().
+		SetEnumValues([]string{"a", "b"}).
+		AddDependency("a", NewSchemaPropertyBuilder().
+			SetName("child").
+			IsString().
+			SetEnumValues([]string{"c", "d"}).
+			AddDependency("c", NewSchemaPropertyBuilder().
+				SetName("child")))
+
+	prop, err = builder.Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, prop)
+
+	dep, err = builder.BuildDependencies()
+	assert.NotNil(t, err)
+	assert.Nil(t, dep)
+
 	// good path, no enums
 	prop, err = NewSchemaPropertyBuilder().
 		SetName("name").
@@ -134,9 +170,10 @@ func getUintPointer(value uint) *uint {
 
 func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 	tests := []struct {
-		name        string
-		builder     PropertyBuilder
-		expectedDef propertyDefinition
+		name                 string
+		builder              PropertyBuilder
+		expectedDef          propertyDefinition
+		expectedDependencies *oneOfPropertyDefinitions
 	}{
 		{"Minimal String property",
 			NewSchemaPropertyBuilder().
@@ -147,7 +184,119 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Name:  "TheName",
 				Title: "The Label",
 				Type:  DataTypeString,
-			}},
+			},
+			nil},
+		{"String property with dependencies",
+			NewSchemaPropertyBuilder().
+				SetName("TheName").
+				SetLabel("The Label").
+				IsString().
+				SetEnumValues([]string{"a", "b", "c"}).
+				AddDependency("a", NewSchemaPropertyBuilder().
+					SetName("TheDependent").
+					SetLabel("The Dependent").IsString()),
+			propertyDefinition{
+				Name:  "TheName",
+				Title: "The Label",
+				Type:  DataTypeString,
+				Enum:  []string{"a", "b", "c"},
+			},
+			&oneOfPropertyDefinitions{
+				OneOf: []*propertyDefinition{
+					{
+						Properties: map[string]propertyDefinition{
+							"TheName": {
+								Enum: []string{"a"},
+							},
+							"TheDependent": {
+								Type:  DataTypeString,
+								Name:  "TheDependent",
+								Title: "The Dependent",
+							},
+						},
+					},
+					{
+						Properties: map[string]propertyDefinition{
+							"TheName": {
+								Enum: []string{"b"},
+							},
+						},
+					},
+					{
+						Properties: map[string]propertyDefinition{
+							"TheName": {
+								Enum: []string{"c"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{"String child property with dependencies",
+			NewSchemaPropertyBuilder().
+				SetName("TheName").
+				SetLabel("The Label").
+				IsString().
+				SetEnumValues([]string{"a", "b"}).
+				AddDependency("a", NewSchemaPropertyBuilder().
+					SetName("TheChild").
+					SetLabel("The Child").
+					IsString().
+					SetEnumValues([]string{"a", "b"}).
+					AddDependency("a", NewSchemaPropertyBuilder().
+						SetName("TheDependent").
+						SetLabel("The Dependent").
+						IsString()),
+				),
+			propertyDefinition{
+				Name:  "TheName",
+				Title: "The Label",
+				Type:  DataTypeString,
+				Enum:  []string{"a", "b"},
+			},
+			&oneOfPropertyDefinitions{
+				OneOf: []*propertyDefinition{
+					{
+						Properties: map[string]propertyDefinition{
+							"TheName": {
+								Enum: []string{"a"},
+							},
+							"TheChild": {
+								Type:  DataTypeString,
+								Name:  "TheChild",
+								Title: "The Child",
+								Enum:  []string{"a", "b"},
+							},
+						},
+						Dependencies: map[string]*oneOfPropertyDefinitions{
+							"TheChild": {
+								OneOf: []*propertyDefinition{
+									{
+										Properties: map[string]propertyDefinition{
+											"TheChild": {
+												Enum: []string{"a"},
+											},
+											"TheDependent": {
+												Type:  DataTypeString,
+												Name:  "TheDependent",
+												Title: "The Dependent",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Properties: map[string]propertyDefinition{
+							"TheName": {
+								Enum: []string{"b"},
+							},
+						},
+					},
+				},
+			},
+		},
 		{"Full String property with unsorted enum and first value",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -175,7 +324,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "c", "a", "b", "addedValue"},
 				DefaultValue: "a",
-			}},
+			},
+			nil},
 		{"Full String property with sorted enum and first value",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -204,7 +354,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "a", "addedValue", "b", "c"},
 				DefaultValue: "a",
-			}},
+			},
+			nil},
 		{"Minimal Number property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -214,7 +365,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Name:  "TheName",
 				Title: "The Label",
 				Type:  DataTypeNumber,
-			}},
+			},
+			nil},
 		{"Full Number property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -238,7 +390,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Minimum:      getFloat64Pointer(0.0),
 				Maximum:      getFloat64Pointer(100.5),
 				DefaultValue: getFloat64Pointer(50.5),
-			}},
+			},
+			nil},
 		{"Minimal Integer property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -248,7 +401,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Name:  "TheName",
 				Title: "The Label",
 				Type:  DataTypeInteger,
-			}},
+			},
+			nil},
 		{"Full Integer property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -272,7 +426,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Minimum:      getFloat64Pointer(0),
 				Maximum:      getFloat64Pointer(100),
 				DefaultValue: getFloat64Pointer(50),
-			}},
+			},
+			nil},
 		{"Minimal Array property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -282,7 +437,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Name:  "TheName",
 				Title: "The Label",
 				Type:  DataTypeArray,
-			}},
+			},
+			nil},
 		{"Full Array property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -318,7 +474,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				MinItems:    getUintPointer(0),
 				MaxItems:    getUintPointer(1),
 				UniqueItems: true,
-			}},
+			},
+			nil},
 		{"Minimal Object property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -326,7 +483,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 			propertyDefinition{
 				Name: "TheName",
 				Type: DataTypeObject,
-			}},
+			},
+			nil},
 		{"Full Object property",
 			NewSchemaPropertyBuilder().
 				SetName("TheName").
@@ -360,14 +518,56 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				RequiredProperties: []string{
 					"PropertyName",
 				},
-			}},
+			},
+			nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			def, err := tt.builder.Build()
 			assert.Nil(t, err)
 			assert.Equal(t, tt.expectedDef, *def)
+			deps, err := tt.builder.BuildDependencies()
+			assert.Nil(t, err)
+			assertDependencies(t, def.Name, tt.expectedDependencies, deps)
 		})
+	}
+}
+
+func assertDependencies(t *testing.T, propName string, expectedDependencies, deps *oneOfPropertyDefinitions) {
+	if expectedDependencies == nil {
+		assert.Nil(t, deps)
+		return
+	}
+	assert.NotNil(t, deps)
+	for index, expectedDepDef := range expectedDependencies.OneOf {
+		depDef := deps.OneOf[index]
+		expectedEnumDepProps := make(map[string]propertyDefinition)
+		enumDepProps := make(map[string]propertyDefinition)
+		for name, expectedProperty := range expectedDepDef.Properties {
+			assert.Contains(t, depDef.Properties, name)
+			if expectedProperty.Name == propName {
+				expectedEnumDepProps[expectedProperty.Enum[0]] = expectedProperty
+			}
+		}
+
+		for _, expectedProperty := range depDef.Properties {
+			if expectedProperty.Name == propName {
+				enumDepProps[expectedProperty.Enum[0]] = expectedProperty
+			}
+		}
+		assert.Equal(t, len(enumDepProps), len(expectedEnumDepProps))
+		for enum, expectedProperty := range expectedEnumDepProps {
+			depProp := enumDepProps[enum]
+			assert.Equal(t, expectedProperty, depProp)
+		}
+		if expectedDepDef.Dependencies != nil {
+			assert.NotNil(t, depDef.Dependencies)
+		}
+		for name, expectedChildDependencies := range expectedDepDef.Dependencies {
+			childDeps, ok := depDef.Dependencies[name]
+			assert.True(t, ok)
+			assertDependencies(t, expectedDepDef.Name, expectedChildDependencies, childDeps)
+		}
 	}
 }
 
