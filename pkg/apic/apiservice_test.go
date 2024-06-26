@@ -326,7 +326,11 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+			FileName: "./testdata/servicerevision.json", // for call to get the serviceRevision count
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // for call to get the serviceRevision count based on name
 			RespCode: http.StatusOK,
 		},
 		{
@@ -669,7 +673,11 @@ func TestUnstructuredConsumerInstanceData(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
+			FileName: "./testdata/servicerevision.json", // this for call to get the serviceRevision count
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: "./testdata/servicerevision.json", // this for call to check if a specific revision name exists
 			RespCode: http.StatusOK,
 		},
 		{
