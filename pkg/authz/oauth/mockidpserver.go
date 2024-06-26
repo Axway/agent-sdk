@@ -19,6 +19,7 @@ type MockIDPServer interface {
 	GetIssuer() string
 	GetTokenURL() string
 	GetAuthEndpoint() string
+	GetRegistrationEndpoint() string
 	SetMetadataResponseCode(statusCode int)
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
