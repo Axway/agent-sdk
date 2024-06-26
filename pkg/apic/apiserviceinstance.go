@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -185,7 +185,7 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	instance := c.buildAPIServiceInstance(serviceBody, getRevisionPrefix(serviceBody), endpoints)
 
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		prevInst, err := c.getLastInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
+		prevInst, err := c.getInstance(serviceBody, c.createAPIServerURL(instance.GetKindLink()))
 		if err != nil {
 			return err
 		}
@@ -256,27 +256,32 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 	return endPoints, nil
 }
 
-func (c *ServiceClient) getLastInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
-	// start from latest revision, find first instance
-	for i := serviceBody.serviceContext.revisionCount; i > 0; i-- {
-		revName := getRevisionPrefix(serviceBody)
-		if i > 1 {
-			revName += "." + strconv.Itoa(i)
-		}
-		queryParams := map[string]string{
-			"query": "metadata.references.name==" + revName,
-		}
-
-		instances, err := c.GetAPIServiceInstances(queryParams, url)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(instances) > 0 {
-			return instances[0], nil
-		}
-		c.logger.Debug("no instances were returned")
+func (c *ServiceClient) getInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
+	queryParams := map[string]string{
+		"query": "metadata.references.name==" + serviceBody.serviceContext.revisionName,
 	}
+	instances, err := c.GetAPIServiceInstances(queryParams, url)
+	if err != nil {
+		return nil, err
+	}
+	if len(instances) == 1 {
+		// return only instance
+		return instances[0], nil
+	}
+
+	// check the instance for the stage agent details
+	for _, i := range instances {
+		stage, err := util.GetAgentDetailsValue(i, defs.AttrExternalAPIStage)
+		if err != nil {
+			continue
+		}
+		if stage == serviceBody.Stage {
+			// found the stage match
+			return i, nil
+		}
+	}
+
+	// if no instance found
 	return nil, nil
 }
 
