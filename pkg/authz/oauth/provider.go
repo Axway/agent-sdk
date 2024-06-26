@@ -29,6 +29,7 @@ type Provider interface {
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
 	UnregisterClient(clientID, accessToken string) error
+	GetConfig() corecfg.IDPConfig
 }
 
 type provider struct {
@@ -475,4 +476,8 @@ func (p *provider) getClientToken() (string, error) {
 		return p.authClient.FetchToken(useTokenCache)
 	}
 	return p.cfg.GetAuthConfig().GetAccessToken(), nil
+}
+
+func (p *provider) GetConfig() corecfg.IDPConfig {
+	return p.cfg
 }
