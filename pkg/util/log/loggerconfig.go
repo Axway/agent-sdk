@@ -80,6 +80,7 @@ func (b *LoggerConfig) Apply() error {
 		if err := b.validate0orGreater("log.metricfile.cleanbackupsevery", b.metricCfg.MaxAge); err != nil {
 			return err
 		}
+		b.metricCfg.MaxSize = ConvertMaxSize(b.metricCfg.MaxSize)
 	}
 
 	if b.usageEnabled {
@@ -92,6 +93,7 @@ func (b *LoggerConfig) Apply() error {
 		if err := b.validate0orGreater("log.usagefile.cleanbackupsevery", b.usageCfg.MaxAge); err != nil {
 			return err
 		}
+		b.usageCfg.MaxSize = ConvertMaxSize(b.usageCfg.MaxSize)
 	}
 
 	// update the log logger
@@ -249,7 +251,7 @@ func (b *LoggerConfig) validate0orGreater(path string, maxBackups int) error {
 func (b *LoggerConfig) MaxSize(maxSize int) *LoggerConfig {
 	if b.err == nil {
 		b.err = b.validateSize("log.file.rotateeverybytes", maxSize)
-		b.cfg.MaxSize = int(float64(maxSize) / 1024 / 1024)
+		b.cfg.MaxSize = ConvertMaxSize(maxSize)
 	}
 	return b
 }
@@ -330,4 +332,9 @@ func (b *LoggerConfig) MaxUsageAge(maxAge int) *LoggerConfig {
 		b.usageCfg.MaxAge = maxAge
 	}
 	return b
+}
+
+// ConvertMaxSize - takes max size in bytes and returns in megabytes for the rotate file hook
+func ConvertMaxSize(maxSize int) int {
+	return int(maxSize / 1024 / 1024)
 }
