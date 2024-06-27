@@ -28,5 +28,7 @@ type IdentityProviderSpec struct {
 	// The list of additional metadata properties that will be set when registering the client in Identity provider
 	// GENERATE: The following code has been modified after code generation
 	AdditionalClientProperties []IdentityProviderSpecKeyValuePair `json:"additionalClientProperties,omitempty"`
-	Auth                       IdentityProviderSpecAuth           `json:"auth"`
+	// Defines the timeout interval in seconds for Identity provider http client. Defaults to 30 seconds
+	ClientTimeout int32                    `json:"clientTimeout,omitempty"`
+	Auth          IdentityProviderSpecAuth `json:"auth"`
 }
