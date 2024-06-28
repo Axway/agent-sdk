@@ -156,8 +156,13 @@ func (e *IDPQueryParams) UnmarshalJSON(data []byte) error {
 
 func parseKeyValuePairs(kv map[string]string, data []byte) error {
 	m := make(map[string]string)
-	buf, _ := strconv.Unquote(string(data))
-	err := json.Unmarshal([]byte(buf), &m)
+	// try parsing the data as json string, ground agent config setup as json string
+	buf, err := strconv.Unquote(string(data))
+	if err != nil {
+		// parse as json map in case data is not json string
+		buf = string(data)
+	}
+	err = json.Unmarshal([]byte(buf), &m)
 	if err != nil {
 		return err
 	}
@@ -334,7 +339,13 @@ func (i *IDPConfiguration) GetTLSConfig() TLSConfig {
 // UnmarshalJSON - custom unmarshaler for IDPConfiguration struct
 func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
 	type Alias IDPConfiguration
-	i.AuthConfig = &IDPAuthConfiguration{}
+	i.RequestHeaders = make(IDPRequestHeaders)
+	i.QueryParams = make(IDPQueryParams)
+
+	i.AuthConfig = &IDPAuthConfiguration{
+		RequestHeaders: make(IDPRequestHeaders),
+		QueryParams:    make(IDPQueryParams),
+	}
 	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(i)}); err != nil {
 		return err
 	}

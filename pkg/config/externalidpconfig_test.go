@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 
@@ -93,11 +92,15 @@ func TestExternalIDPConfig(t *testing.T) {
 		{
 			name: "client auth config with valid client config in IDP config",
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":              "test",
-				"AGENTFEATURES_IDP_METADATAURL_1":       "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":         "client",
-				"AGENTFEATURES_IDP_AUTH_CLIENTID_1":     "client-id",
-				"AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1": "client-secret",
+				"AGENTFEATURES_IDP_NAME_1":                "test",
+				"AGENTFEATURES_IDP_METADATAURL_1":         "test",
+				"AGENTFEATURES_IDP_REQUESTHEADERS_1":      "{\"hdr\":\"value\"}",
+				"AGENTFEATURES_IDP_QUERYPARAMS_1":         "{\"param\":\"value\"}",
+				"AGENTFEATURES_IDP_AUTH_TYPE_1":           "client",
+				"AGENTFEATURES_IDP_AUTH_CLIENTID_1":       "client-id",
+				"AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1":   "client-secret",
+				"AGENTFEATURES_IDP_AUTH_REQUESTHEADERS_1": "{\"authhdr\":\"value\"}",
+				"AGENTFEATURES_IDP_AUTH_QUERYPARAMS_1":    "{\"authparam\":\"value\"}",
 			},
 			hasError: false,
 		},
@@ -127,17 +130,20 @@ func TestExternalIDPConfig(t *testing.T) {
 					buf, err := json.Marshal(idp)
 					assert.Nil(t, err)
 					assert.NotNil(t, buf)
-					fmt.Println(string(buf))
 					parsedIdP := &IDPConfiguration{}
 					err = json.Unmarshal(buf, &parsedIdP)
 					assert.Nil(t, err)
 					assert.Equal(t, idp.GetIDPName(), parsedIdP.GetIDPName())
 					assert.Equal(t, idp.GetIDPType(), parsedIdP.GetIDPType())
 					assert.Equal(t, idp.GetMetadataURL(), parsedIdP.GetMetadataURL())
+					assert.Equal(t, len(idp.GetRequestHeaders()), len(parsedIdP.GetRequestHeaders()))
+					assert.Equal(t, len(idp.GetQueryParams()), len(parsedIdP.GetQueryParams()))
 					assert.Equal(t, idp.GetAuthConfig().GetType(), parsedIdP.GetAuthConfig().GetType())
 					assert.Equal(t, idp.GetAuthConfig().GetAccessToken(), parsedIdP.GetAuthConfig().GetAccessToken())
 					assert.Equal(t, idp.GetAuthConfig().GetClientID(), parsedIdP.GetAuthConfig().GetClientID())
 					assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIdP.GetAuthConfig().GetClientSecret())
+					assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIdP.GetAuthConfig().GetRequestHeaders()))
+					assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIdP.GetAuthConfig().GetQueryParams()))
 
 				}
 
