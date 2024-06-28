@@ -37,14 +37,14 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 	log := getLoggerFromContext(ctx).
 		WithComponent("apiServiceHandler").
 		WithField("action", action).
-		WithField("apiName", resource.Name).
-		WithField("apiID", resource.Metadata.ID)
+		WithField("resource", resource.Name).
+		WithField("resourceID", resource.Metadata.ID)
 
 	id, err := util.GetAgentDetailsValue(resource, definitions.AttrExternalAPIID)
 	if err != nil {
 		log.WithError(err).Error("could not find the external API ID on the API Service")
 	}
-	log = log.WithField(definitions.AttrExternalAPIID, id)
+	log = log.WithField("apiID", id)
 
 	defer log.Trace("finished processing request")
 
