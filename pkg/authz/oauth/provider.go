@@ -29,6 +29,8 @@ type Provider interface {
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
 	UnregisterClient(clientID, accessToken string) error
+	GetConfig() corecfg.IDPConfig
+	GetMetadata() *AuthorizationServerMetadata
 }
 
 type provider struct {
@@ -49,11 +51,26 @@ type typedIDP interface {
 	preProcessClientRequest(clientRequest *clientMetadata)
 }
 
+type providerOptions struct {
+	authServerMetadata *AuthorizationServerMetadata
+}
+
+func WithAuthServerMetadata(metadata *AuthorizationServerMetadata) func(*providerOptions) {
+	return func(p *providerOptions) {
+		p.authServerMetadata = metadata
+	}
+}
+
 // NewProvider - create a new IdP provider
-func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) (Provider, error) {
+func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration, opts ...func(*providerOptions)) (Provider, error) {
 	logger := log.NewFieldLogger().
 		WithComponent("provider").
 		WithPackage("sdk.agent.authz.oauth")
+
+	pOpts := &providerOptions{}
+	for _, opt := range opts {
+		opt(pOpts)
+	}
 
 	apiClient := coreapi.NewClient(tlsCfg, proxyURL, coreapi.WithTimeout(clientTimeout))
 	var idpType typedIDP
@@ -65,34 +82,39 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	}
 
 	p := &provider{
-		logger:          logger,
-		metadataURL:     idp.GetMetadataURL(),
-		cfg:             idp,
-		extraProperties: idp.GetExtraProperties(),
-		requestHeaders:  idp.GetRequestHeaders(),
-		queryParameters: idp.GetQueryParams(),
-		apiClient:       apiClient,
-		idpType:         idpType,
+		logger:             logger,
+		metadataURL:        idp.GetMetadataURL(),
+		cfg:                idp,
+		extraProperties:    idp.GetExtraProperties(),
+		requestHeaders:     idp.GetRequestHeaders(),
+		queryParameters:    idp.GetQueryParams(),
+		apiClient:          apiClient,
+		idpType:            idpType,
+		authServerMetadata: pOpts.authServerMetadata,
 	}
 
-	metadata, err := p.fetchMetadata()
-	if err != nil {
-		p.logger.
-			WithField("name", p.cfg.GetIDPName()).
-			WithField("type", p.cfg.GetIDPType()).
-			WithField("metadata-url", p.metadataURL).
-			WithError(err).
-			Error("unable to fetch OAuth authorization server metadata")
-		return nil, err
+	if p.authServerMetadata == nil {
+		metadata, err := p.fetchMetadata()
+		if err != nil {
+			p.logger.
+				WithField("name", p.cfg.GetIDPName()).
+				WithField("type", p.cfg.GetIDPType()).
+				WithField("metadata-url", p.metadataURL).
+				WithError(err).
+				Error("unable to fetch OAuth authorization server metadata")
+			return nil, err
+		}
+
+		p.authServerMetadata = metadata
 	}
 
-	p.authServerMetadata = metadata
 	// No OAuth client is needed to request token for access token based authentication to IdP
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
-		p.authClient, err = p.createAuthClient()
+		authClient, err := p.createAuthClient()
 		if err != nil {
 			return nil, err
 		}
+		p.authClient = authClient
 	}
 	return p, nil
 }
@@ -475,4 +497,12 @@ func (p *provider) getClientToken() (string, error) {
 		return p.authClient.FetchToken(useTokenCache)
 	}
 	return p.cfg.GetAuthConfig().GetAccessToken(), nil
+}
+
+func (p *provider) GetConfig() corecfg.IDPConfig {
+	return p.cfg
+}
+
+func (p *provider) GetMetadata() *AuthorizationServerMetadata {
+	return p.authServerMetadata
 }

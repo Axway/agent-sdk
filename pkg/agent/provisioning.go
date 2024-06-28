@@ -134,21 +134,31 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 }
 
 type crdBuilderOptions struct {
-	name        string
-	title       string
-	renewable   bool
-	suspendable bool
-	provProps   []provisioning.PropertyBuilder
-	reqProps    []provisioning.PropertyBuilder
+	name               string
+	title              string
+	renewable          bool
+	suspendable        bool
+	deprovisionExpired bool
+	expirationDays     int
+	provProps          []provisioning.PropertyBuilder
+	reqProps           []provisioning.PropertyBuilder
+	registerFunc       provisioning.RegisterCredentialRequestDefinition
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
-		renewable: false,
-		provProps: make([]provisioning.PropertyBuilder, 0),
-		reqProps:  make([]provisioning.PropertyBuilder, 0),
+		renewable:    false,
+		provProps:    make([]provisioning.PropertyBuilder, 0),
+		reqProps:     make([]provisioning.PropertyBuilder, 0),
+		registerFunc: createOrUpdateCredentialRequestDefinition,
 	}
+
+	if agent.cfg != nil {
+		thisCred.expirationDays = agent.cfg.GetCredentialConfig().GetExpirationDays()
+		thisCred.deprovisionExpired = agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired()
+	}
+
 	for _, o := range options {
 		o(thisCred)
 	}
@@ -163,12 +173,12 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		reqSchema.AddProperty(props)
 	}
 
-	builder := provisioning.NewCRDBuilder(createOrUpdateCredentialRequestDefinition).
+	builder := provisioning.NewCRDBuilder(thisCred.registerFunc).
 		SetName(thisCred.name).
 		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
 		SetRequestSchema(reqSchema).
-		SetExpirationDays(agent.cfg.GetCredentialConfig().GetExpirationDays())
+		SetExpirationDays(thisCred.expirationDays)
 
 	if thisCred.renewable {
 		builder.IsRenewable()
@@ -178,7 +188,7 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		builder.IsSuspendable()
 	}
 
-	if agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired() {
+	if thisCred.deprovisionExpired {
 		builder.SetDeprovisionExpired()
 	}
 
@@ -192,24 +202,38 @@ func WithCRDName(name string) func(c *crdBuilderOptions) {
 	}
 }
 
-// WithCRDName - set another name for the CRD
+// WithCRDTitle - set the title for the CRD
 func WithCRDTitle(title string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.title = title
 	}
 }
 
-// WithCRDIsRenewable - set another name for the CRD
+// WithCRDIsRenewable - set the flag for renewable credential
 func WithCRDIsRenewable() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.renewable = true
 	}
 }
 
-// WithCRDIsSuspendable - set another name for the CRD
+// WithCRDIsSuspendable - set the flag for suspendable credential
 func WithCRDIsSuspendable() func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.suspendable = true
+	}
+}
+
+// WithCRDExpirationDays - set the expiration days
+func WithCRDExpirationDays(expirationDays int) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.expirationDays = expirationDays
+	}
+}
+
+// WithCRDDeprovisionExpired - set the flag for deprovisioning expired credential
+func WithCRDDeprovisionExpired() func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.deprovisionExpired = true
 	}
 }
 
@@ -224,6 +248,13 @@ func WithCRDProvisionSchemaProperty(prop provisioning.PropertyBuilder) func(c *c
 func WithCRDRequestSchemaProperty(prop provisioning.PropertyBuilder) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.reqProps = append(c.reqProps, prop)
+	}
+}
+
+// WithCRDRegisterFunc - use the provided registration function for creating CRD
+func WithCRDRegisterFunc(registerFunc provisioning.RegisterCredentialRequestDefinition) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.registerFunc = registerFunc
 	}
 }
 
@@ -574,9 +605,10 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 			"managedappHandler",
 			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
 		)
+		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, GetAuthProviderRegistry()),
+			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
 		)
 	}
 }

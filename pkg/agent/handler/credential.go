@@ -12,8 +12,8 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning/idp"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -36,14 +36,14 @@ type credentials struct {
 	prov                credProv
 	client              client
 	encryptSchema       encryptSchemaFunc
-	idpProviderRegistry oauth.ProviderRegistry
+	idpProviderRegistry oauth.IdPRegistry
 }
 
 // encryptSchemaFunc func signature for encryptSchema
 type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
-func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.ProviderRegistry) Handler {
+func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.IdPRegistry) Handler {
 	return &credentials{
 		prov:                prov,
 		client:              client,
@@ -214,11 +214,11 @@ func (*credentials) deprovisionPreProcess(_ context.Context, cred *management.Cr
 func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
 	if status.GetStatus() == prov.Success {
 		if provCreds.IsIDPCredential() {
-			err := h.unregisterIDPClientCredential(provCreds)
+			err := provCreds.idpProvisioner.UnregisterClient()
 			if err != nil {
 				logger.
 					WithError(err).
-					WithField("client_id", provCreds.idpCredData.GetClientID()).
+					WithField("client_id", provCreds.idpProvisioner.GetIDPCredentialData().GetClientID()).
 					WithField("provider", provCreds.GetIDPProvider().GetName()).
 					Warn("error deprovisioning credential request from IDP, please ask administrator to remove the client from IdP")
 			}
@@ -263,7 +263,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	}
 
 	if provCreds.IsIDPCredential() {
-		err := h.registerIDPClientCredential(provCreds)
+		err := provCreds.idpProvisioner.RegisterClient()
 		if err != nil {
 			logger.WithError(err).Error("error provisioning credential request with IDP")
 			h.onError(ctx, cred, err)
@@ -322,7 +322,7 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 				)
 			}
 			if provCreds.IsIDPCredential() {
-				idpAgentDetails, err = encryptRegistrationToken(provCreds.idpCredData, sec.EncryptionKey)
+				idpAgentDetails, err = provCreds.idpProvisioner.GetAgentDetails()
 			}
 			if err != nil {
 				status = prov.NewRequestStatusBuilder().
@@ -401,7 +401,7 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 		}
 
 		if action != prov.Suspend && provCreds.IsIDPCredential() {
-			err := h.registerIDPClientCredential(provCreds)
+			err := provCreds.idpProvisioner.RegisterClient()
 			if err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
 				h.onError(ctx, cred, err)
@@ -450,66 +450,6 @@ func (h *credentials) getCRD(_ context.Context, cred *management.Credential) (*m
 	return crd, err
 }
 
-func formattedJWKS(jwks string) string {
-	formattedJWKS := strings.ReplaceAll(jwks, "----- ", "-----\n")
-	return strings.ReplaceAll(formattedJWKS, " -----", "\n-----")
-}
-
-func (h *credentials) registerIDPClientCredential(cr *provCreds) error {
-	p := cr.GetIDPProvider()
-	idpCredData := cr.GetIDPCredentialData()
-
-	// prepare external client metadata from CRD data
-	builder := oauth.NewClientMetadataBuilder().
-		SetClientName(cr.GetName()).
-		SetScopes(idpCredData.GetScopes()).
-		SetGrantTypes(idpCredData.GetGrantTypes()).
-		SetTokenEndpointAuthMethod(idpCredData.GetTokenEndpointAuthMethod()).
-		SetResponseType(idpCredData.GetResponseTypes()).
-		SetRedirectURIs(idpCredData.GetRedirectURIs())
-
-	if idpCredData.GetTokenEndpointAuthMethod() == config.PrivateKeyJWT {
-		builder.SetJWKS([]byte(formattedJWKS(idpCredData.GetPublicKey()))).
-			SetJWKSURI(idpCredData.GetJwksURI())
-	}
-
-	if idpCredData.GetTokenEndpointAuthMethod() == config.TLSClientAuth || idpCredData.GetTokenEndpointAuthMethod() == config.SelfSignedTLSClientAuth {
-		builder.SetJWKS([]byte(formattedJWKS(idpCredData.GetCertificate()))).
-			SetCertificateMetadata(idpCredData.GetCertificateMetadata()).
-			SetTLSClientAuthSanDNS(idpCredData.GetTLSClientAuthSanDNS()).
-			SetTLSClientAuthSanEmail(idpCredData.GetTLSClientAuthSanEmail()).
-			SetTLSClientAuthSanIP(idpCredData.GetTLSClientAuthSanIP()).
-			SetTLSClientAuthSanURI(idpCredData.GetTLSClientAuthSanURI())
-	}
-
-	clientMetadata, err := builder.Build()
-	if err != nil {
-		return err
-	}
-
-	// provision external client
-	resClientMetadata, err := p.RegisterClient(clientMetadata)
-	if err != nil {
-		return err
-	}
-
-	cr.idpCredData.registrationAccessToken = resClientMetadata.GetRegistrationAccessToken()
-	cr.idpCredData.clientID = resClientMetadata.GetClientID()
-	cr.idpCredData.clientSecret = resClientMetadata.GetClientSecret()
-	return nil
-}
-
-func (h *credentials) unregisterIDPClientCredential(cr *provCreds) error {
-	p := cr.GetIDPProvider()
-	err := p.UnregisterClient(cr.idpCredData.GetClientID(), cr.idpCredData.registrationAccessToken)
-	if err != nil {
-		return err
-	}
-
-	cr.idpCredData.clientID = cr.idpCredData.GetClientID()
-	return nil
-}
-
 func (h *credentials) getProvisionedCredentialData(provCreds *provCreds, credentialData prov.Credential) prov.Credential {
 	if provCreds.IsIDPCredential() {
 		return prov.NewCredentialBuilder().SetOAuthIDAndSecret(
@@ -548,30 +488,10 @@ type provCreds struct {
 	credData          map[string]interface{}
 	credDetails       map[string]interface{}
 	appDetails        map[string]interface{}
-	idpProvider       oauth.Provider
-	idpCredData       *idpCredData
+	idpProvisioner    idp.Provisioner
 	credSchema        map[string]interface{}
 	credProvSchema    map[string]interface{}
 	credSchemaDetails map[string]interface{}
-}
-
-type idpCredData struct {
-	clientID                string
-	clientSecret            string
-	scopes                  []string
-	grantTypes              []string
-	tokenAuthMethod         string
-	responseTypes           []string
-	redirectURLs            []string
-	jwksURI                 string
-	publicKey               string
-	certificate             string
-	certificateMetadata     string
-	tlsClientAuthSanDNS     string
-	tlsClientAuthSanEmail   string
-	tlsClientAuthSanIP      string
-	tlsClientAuthSanURI     string
-	registrationAccessToken string
 }
 
 func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
@@ -602,43 +522,12 @@ func (h *credentials) newProvCreds(cr *management.Credential, app *management.Ma
 		}
 		provCred.credSchemaDetails = credSchemaDetails
 	}
-
-	// Setup external credential request data to be used for provisioning
-	if idpTokenURL, ok := provCred.credData[prov.IDPTokenURL].(string); ok && h.idpProviderRegistry != nil {
-		p, err := h.idpProviderRegistry.GetProviderByTokenEndpoint(idpTokenURL)
-		if err != nil {
-			return nil, fmt.Errorf("IDP provider not found for credential request")
-		}
-		provCred.idpProvider = p
-		provCred.idpCredData = newIDPCredData(app, provCred.credData, provData, credDetails)
+	idpProvisioner, err := idp.NewProvisioner(context.Background(), h.idpProviderRegistry, app, cr)
+	if err != nil {
+		return nil, fmt.Errorf("IDP provider not found for credential request")
 	}
-
+	provCred.idpProvisioner = idpProvisioner
 	return provCred, nil
-}
-
-// newIDPCredData - reads the idp client metadata from credential request
-func newIDPCredData(app *management.ManagedApplication,
-	credData, provData, credDetails map[string]interface{}) *idpCredData {
-	cd := &idpCredData{}
-
-	if provData != nil {
-		cd.clientID = util.GetStringFromMapInterface(prov.OauthClientID, provData)
-	}
-	cd.scopes = util.GetStringArrayFromMapInterface(prov.OauthScopes, credData)
-	cd.grantTypes = []string{util.GetStringFromMapInterface(prov.OauthGrantType, credData)}
-	cd.redirectURLs = util.GetStringArrayFromMapInterface(prov.OauthRedirectURIs, credData)
-	cd.tokenAuthMethod = util.GetStringFromMapInterface(prov.OauthTokenAuthMethod, credData)
-	cd.publicKey = util.GetStringFromMapInterface(prov.OauthJwks, credData)
-	cd.jwksURI = util.GetStringFromMapInterface(prov.OauthJwksURI, credData)
-	cd.certificate = util.GetStringFromMapInterface(prov.OauthCertificate, credData)
-	cd.certificateMetadata = util.GetStringFromMapInterface(prov.OauthCertificateMetadata, credData)
-	cd.tlsClientAuthSanDNS = util.GetStringFromMapInterface(prov.OauthTLSAuthSANDNS, credData)
-	cd.tlsClientAuthSanEmail = util.GetStringFromMapInterface(prov.OauthTLSAuthSANEmail, credData)
-	cd.tlsClientAuthSanIP = util.GetStringFromMapInterface(prov.OauthTLSAuthSANIP, credData)
-	cd.tlsClientAuthSanURI = util.GetStringFromMapInterface(prov.OauthTLSAuthSANURI, credData)
-	decryptRegistrationToken(cd, credDetails, app.Spec.Security.EncryptionKey)
-
-	return cd
 }
 
 // GetApplicationName gets the name of the managed application
@@ -697,17 +586,17 @@ func (c provCreds) GetCredentialSchemaDetailsValue(key string) interface{} {
 
 // IsIDPCredential returns boolean indicating if the credential request is for IDP provider
 func (c provCreds) IsIDPCredential() bool {
-	return c.idpProvider != nil
+	return c.idpProvisioner.IsIDPCredential()
 }
 
 // GetIDPProvider returns the interface for IDP provider if the credential request is for IDP provider
 func (c provCreds) GetIDPProvider() oauth.Provider {
-	return c.idpProvider
+	return c.idpProvisioner.GetIDPProvider()
 }
 
 // GetIDPCredentialData returns the credential data for IDP from the request
 func (c provCreds) GetIDPCredentialData() prov.IDPCredentialData {
-	return c.idpCredData
+	return c.idpProvisioner.GetIDPCredentialData()
 }
 
 // GetCredentialDetailsValue returns a value found on the 'x-agent-details' sub resource of the Credentials.
@@ -726,81 +615,6 @@ func (c provCreds) GetApplicationDetailsValue(key string) string {
 	}
 
 	return util.ToString(c.appDetails[key])
-}
-
-// GetClientID - returns client ID
-func (c *idpCredData) GetClientID() string {
-	return c.clientID
-}
-
-// GetClientSecret - returns client secret
-func (c *idpCredData) GetClientSecret() string {
-	return c.clientSecret
-}
-
-// GetScopes - returns client scopes
-func (c *idpCredData) GetScopes() []string {
-	return c.scopes
-}
-
-// GetGrantTypes - returns grant types
-func (c *idpCredData) GetGrantTypes() []string {
-	return c.grantTypes
-}
-
-// GetTokenEndpointAuthMethod - returns token auth method
-func (c *idpCredData) GetTokenEndpointAuthMethod() string {
-	return c.tokenAuthMethod
-}
-
-// GetResponseTypes - returns token response type
-func (c *idpCredData) GetResponseTypes() []string {
-	return c.responseTypes
-}
-
-// GetRedirectURIs - Returns redirect urls
-func (c *idpCredData) GetRedirectURIs() []string {
-	return c.redirectURLs
-}
-
-// GetJwksURI - returns JWKS uri
-func (c *idpCredData) GetJwksURI() string {
-	return c.jwksURI
-}
-
-// GetPublicKey - returns the public key
-func (c *idpCredData) GetPublicKey() string {
-	return c.publicKey
-}
-
-// GetCertificate - returns the certificate
-func (c *idpCredData) GetCertificate() string {
-	return c.certificate
-}
-
-// GetCertificateMetadata - returns the certificate metadata property
-func (c *idpCredData) GetCertificateMetadata() string {
-	return c.certificateMetadata
-}
-
-// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
-func (c *idpCredData) GetTLSClientAuthSanDNS() string {
-	return c.tlsClientAuthSanDNS
-}
-
-// GetTLSClientAuthSanDNS - returns the value for tls_client_auth_san_dns
-func (c *idpCredData) GetTLSClientAuthSanEmail() string {
-	return c.tlsClientAuthSanEmail
-}
-
-// GetTLSClientAuthSanIP - returns the value for tls_client_auth_san_ip
-func (c *idpCredData) GetTLSClientAuthSanIP() string {
-	return c.tlsClientAuthSanIP
-}
-
-// GetTLSClientAuthSanURI - returns the value for tls_client_auth_san_uri
-func (c *idpCredData) GetTLSClientAuthSanURI() string {
-	return c.tlsClientAuthSanURI
 }
 
 // encryptSchema schema is the json schema. credData is the data that contains data to encrypt based on the key, alg and hash.
@@ -853,39 +667,4 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 	}
 
 	return data
-}
-
-func encryptRegistrationToken(idpData *idpCredData, key string) (map[string]string, error) {
-	agentDetail := make(map[string]string)
-	if idpData.registrationAccessToken != "" {
-		enc, err := util.NewGCMEncryptor([]byte(key))
-		if err != nil {
-			return agentDetail, err
-		}
-
-		ert, err := enc.Encrypt(idpData.registrationAccessToken)
-		if err != nil {
-			return agentDetail, err
-		}
-
-		agentDetail[prov.OauthRegistrationToken] = ert
-	}
-	return agentDetail, nil
-}
-
-func decryptRegistrationToken(idpData *idpCredData, credDetails map[string]interface{}, key string) error {
-	accessToken := util.GetStringFromMapInterface(prov.OauthRegistrationToken, credDetails)
-	if accessToken != "" {
-		dc, err := util.NewGCMDecryptor([]byte(key))
-		if err != nil {
-			return err
-		}
-
-		decrypted, err := dc.Decrypt(accessToken)
-		if err != nil {
-			return err
-		}
-		idpData.registrationAccessToken = decrypted
-	}
-	return nil
 }

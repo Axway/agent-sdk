@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -540,8 +541,8 @@ func TestIDPCredentialProvisioning(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			idpConfig := createIDPConfig(s)
-			idpProviderRegistry := oauth.NewProviderRegistry()
-			idpProviderRegistry.RegisterProvider(idpConfig, config.NewTLSConfig(), "", 30*time.Second)
+			idpProviderRegistry := oauth.NewIdpRegistry()
+			idpProviderRegistry.RegisterProvider(context.Background(), idpConfig, config.NewTLSConfig(), "", 30*time.Second)
 
 			cred := credential
 			cred.Status.Level = prov.Pending.String()
@@ -627,8 +628,8 @@ func TestIDPCredentialDeprovisioning(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			idpConfig := createIDPConfig(s)
-			idpProviderRegistry := oauth.NewProviderRegistry()
-			idpProviderRegistry.RegisterProvider(idpConfig, config.NewTLSConfig(), "", 30*time.Second)
+			idpProviderRegistry := oauth.NewIdpRegistry()
+			idpProviderRegistry.RegisterProvider(context.Background(), idpConfig, config.NewTLSConfig(), "", 30*time.Second)
 
 			cred := credential
 			cred.Status.Level = prov.Success.String()

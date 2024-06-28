@@ -27,6 +27,7 @@ func TestProvider(t *testing.T) {
 		expectMetadataErr          bool
 		expectRegistrationErr      bool
 		expectUnRegistrationErr    bool
+		authServerMetadata         *AuthorizationServerMetadata
 	}{
 		{
 			name:                 "IDP metadata bad request",
@@ -125,6 +126,31 @@ func TestProvider(t *testing.T) {
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
+		{
+			name:    "provider with existing auth server metadata",
+			idpType: "generic",
+			clientRequest: &clientMetadata{
+				ClientName:   "test",
+				RedirectURIs: []string{"http://localhost"},
+				JwksURI:      "http://jwks",
+				GrantTypes:   []string{GrantTypeClientCredentials},
+			},
+			expectedClient: &clientMetadata{
+				ClientName:              "test",
+				RedirectURIs:            []string{"http://localhost"},
+				JwksURI:                 "http://jwks",
+				GrantTypes:              []string{GrantTypeClientCredentials},
+				TokenEndpointAuthMethod: config.ClientSecretBasic,
+				ResponseTypes:           []string{},
+				Scope:                   []string{"read", "write"},
+				extraProperties: map[string]string{
+					"key": "value",
+				},
+			},
+			authServerMetadata:         &AuthorizationServerMetadata{},
+			registrationResponseCode:   http.StatusCreated,
+			unRegistrationResponseCode: http.StatusNoContent,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -150,7 +176,15 @@ func TestProvider(t *testing.T) {
 			}
 
 			s.SetMetadataResponseCode(tc.metadataResponseCode)
-			p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 30*time.Second)
+			var opts []func(*providerOptions)
+			if tc.authServerMetadata != nil {
+				tc.authServerMetadata.TokenEndpoint = s.GetTokenURL()
+				tc.authServerMetadata.RegistrationEndpoint = s.GetRegistrationEndpoint()
+				opts = []func(*providerOptions){
+					WithAuthServerMetadata(tc.authServerMetadata),
+				}
+			}
+			p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 30*time.Second, opts...)
 			if tc.expectMetadataErr {
 				assert.NotNil(t, err)
 				assert.Nil(t, p)
@@ -159,6 +193,11 @@ func TestProvider(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.NotNil(t, p)
+			if tc.authServerMetadata != nil {
+				authMetadata := p.GetMetadata()
+				assert.Equal(t, tc.authServerMetadata.TokenEndpoint, authMetadata.TokenEndpoint)
+				assert.Equal(t, tc.authServerMetadata.RegistrationEndpoint, authMetadata.RegistrationEndpoint)
+			}
 
 			s.SetRegistrationResponseCode(tc.registrationResponseCode)
 			cr, err := p.RegisterClient(tc.clientRequest)
