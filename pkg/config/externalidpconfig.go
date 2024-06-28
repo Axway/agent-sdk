@@ -331,6 +331,50 @@ func (i *IDPConfiguration) GetTLSConfig() TLSConfig {
 	return i.TLSConfig
 }
 
+// UnmarshalJSON - custom unmarshaler for IDPConfiguration struct
+func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
+	type Alias IDPConfiguration
+	i.AuthConfig = &IDPAuthConfiguration{}
+	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(i)}); err != nil {
+		return err
+	}
+
+	var allFields interface{}
+	json.Unmarshal(data, &allFields)
+	b := allFields.(map[string]interface{})
+
+	if v, ok := b["auth"]; ok {
+		buf, _ := json.Marshal(v)
+		json.Unmarshal(buf, i.AuthConfig)
+	}
+
+	return nil
+}
+
+// MarshalJSON - custom marshaler for IDPConfiguration struct
+func (i *IDPConfiguration) MarshalJSON() ([]byte, error) {
+	type Alias IDPConfiguration
+
+	idp, err := json.Marshal(&struct{ *Alias }{Alias: (*Alias)(i)})
+	if err != nil {
+		return nil, err
+	}
+	var allFields interface{}
+	json.Unmarshal(idp, &allFields)
+	b := allFields.(map[string]interface{})
+
+	idpAuthCfg, err := json.Marshal(i.AuthConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[string]interface{})
+	json.Unmarshal(idpAuthCfg, &m)
+	b["auth"] = m
+
+	return json.Marshal(b)
+}
+
 // validate - Validates the IDP configuration
 func (i *IDPConfiguration) validate() {
 	if i.Name == "" {

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -120,6 +122,25 @@ func TestExternalIDPConfig(t *testing.T) {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
+				idpCfgs := cfg.GetExternalIDPConfig()
+				for _, idp := range idpCfgs.GetIDPList() {
+					buf, err := json.Marshal(idp)
+					assert.Nil(t, err)
+					assert.NotNil(t, buf)
+					fmt.Println(string(buf))
+					parsedIdP := &IDPConfiguration{}
+					err = json.Unmarshal(buf, &parsedIdP)
+					assert.Nil(t, err)
+					assert.Equal(t, idp.GetIDPName(), parsedIdP.GetIDPName())
+					assert.Equal(t, idp.GetIDPType(), parsedIdP.GetIDPType())
+					assert.Equal(t, idp.GetMetadataURL(), parsedIdP.GetMetadataURL())
+					assert.Equal(t, idp.GetAuthConfig().GetType(), parsedIdP.GetAuthConfig().GetType())
+					assert.Equal(t, idp.GetAuthConfig().GetAccessToken(), parsedIdP.GetAuthConfig().GetAccessToken())
+					assert.Equal(t, idp.GetAuthConfig().GetClientID(), parsedIdP.GetAuthConfig().GetClientID())
+					assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIdP.GetAuthConfig().GetClientSecret())
+
+				}
+
 			}
 		})
 	}

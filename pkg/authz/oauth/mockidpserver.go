@@ -19,9 +19,11 @@ type MockIDPServer interface {
 	GetIssuer() string
 	GetTokenURL() string
 	GetAuthEndpoint() string
+	GetRegistrationEndpoint() string
 	SetMetadataResponseCode(statusCode int)
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
+	SetUseRegistrationAccessToken(useRegistrationAccessToken bool)
 	GetTokenRequestHeaders() http.Header
 	GetTokenQueryParams() url.Values
 	GetTokenRequestValues() url.Values
@@ -31,18 +33,19 @@ type MockIDPServer interface {
 }
 
 type mockIDPServer struct {
-	metadataResponseCode int
-	tokenResponseCode    int
-	registerResponseCode int
-	accessToken          string
-	tokenExpiry          time.Duration
-	serverMetadata       *AuthorizationServerMetadata
-	server               *httptest.Server
-	tokenReqHeaders      http.Header
-	tokenQueryParams     url.Values
-	tokenReqValues       url.Values
-	reqHeaders           http.Header
-	reqQueryParam        url.Values
+	metadataResponseCode       int
+	tokenResponseCode          int
+	registerResponseCode       int
+	useRegistrationAccessToken bool
+	accessToken                string
+	tokenExpiry                time.Duration
+	serverMetadata             *AuthorizationServerMetadata
+	server                     *httptest.Server
+	tokenReqHeaders            http.Header
+	tokenQueryParams           url.Values
+	tokenReqValues             url.Values
+	reqHeaders                 http.Header
+	reqQueryParam              url.Values
 }
 
 // NewMockIDPServer - creates a new mock IDP server for tests
@@ -123,6 +126,9 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 			json.Unmarshal(clientBuf, cl)
 			cl.ClientID = uuid.New().String()
 			cl.ClientSecret = uuid.New().String()
+			if m.useRegistrationAccessToken {
+				cl.RegistrationAccessToken = uuid.New().String()
+			}
 			clientBuf, _ = json.Marshal(cl)
 			resp.Write(clientBuf)
 		}
@@ -168,6 +174,10 @@ func (m *mockIDPServer) SetTokenResponse(accessToken string, expiry time.Duratio
 
 func (m *mockIDPServer) SetRegistrationResponseCode(statusCode int) {
 	m.registerResponseCode = statusCode
+}
+
+func (m *mockIDPServer) SetUseRegistrationAccessToken(useRegistrationAccessToken bool) {
+	m.useRegistrationAccessToken = useRegistrationAccessToken
 }
 
 func (m *mockIDPServer) GetTokenRequestHeaders() http.Header {
