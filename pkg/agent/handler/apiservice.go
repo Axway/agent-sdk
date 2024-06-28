@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -35,29 +34,29 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 		return nil
 	}
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
-		return h.agentCacheManager.AddAPIService(resource)
+	log := getLoggerFromContext(ctx).
+		WithComponent("apiServiceHandler").
+		WithField("action", action).
+		WithField("apiName", resource.Name).
+		WithField("apiID", resource.Metadata.ID)
+
+	id, err := util.GetAgentDetailsValue(resource, definitions.AttrExternalAPIID)
+	if err != nil {
+		log.WithError(err).Error("could not find the external API ID on the API Service")
 	}
+	log = log.WithField(definitions.AttrExternalAPIID, id)
 
-	if action == proto.Event_DELETED {
-		// external api id is not available on the resource for a delete event.
-		// retrieve all keys and match the metadata id to see which resource needs to be deleted from the cache.
-		keys := h.agentCacheManager.GetAPIServiceKeys()
-		for _, k := range keys {
-			svc := h.agentCacheManager.GetAPIServiceWithAPIID(k)
+	defer log.Trace("finished processing request")
 
-			if svc != nil && svc.Metadata.ID == resource.Metadata.ID {
-				id, err := util.GetAgentDetailsValue(svc, definitions.AttrExternalAPIID)
-				if err != nil {
-					return fmt.Errorf(
-						"%s not found on api service %s. %s", definitions.AttrExternalAPIID, resource.Name, err,
-					)
-				}
-				h.agentCacheManager.DeleteAPIService(id)
-				break
-			}
+	if action != proto.Event_DELETED {
+		log.Debug("adding or updating api service in cache")
+		err := h.agentCacheManager.AddAPIService(resource)
+		if err != nil {
+			log.WithError(err).Error("could not handle api service event")
 		}
+		return err
 	}
 
-	return nil
+	// remove the service from the cache by name
+	return h.agentCacheManager.DeleteAPIService(resource.Name)
 }
