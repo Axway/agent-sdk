@@ -47,11 +47,10 @@ func (h *watchResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, r
 		return nil
 	}
 
-	if action == proto.Event_DELETED {
-		h.agentCacheManager.DeleteWatchResource(resource.Group, resource.Kind, resource.Metadata.ID)
-	} else {
+	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddWatchResource(resource)
+		return nil
 	}
 
-	return nil
+	return h.agentCacheManager.DeleteWatchResource(resource.Group, resource.Kind, resource.Metadata.ID)
 }

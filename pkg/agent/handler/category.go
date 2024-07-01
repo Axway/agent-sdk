@@ -26,13 +26,10 @@ func (c *categoryHandler) Handle(ctx context.Context, _ *proto.EventMeta, resour
 		return nil
 	}
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+	if action != proto.Event_DELETED {
 		c.agentCacheManager.AddCategory(resource)
+		return nil
 	}
 
-	if action == proto.Event_DELETED {
-		return c.agentCacheManager.DeleteCategory(resource.Name)
-	}
-
-	return nil
+	return c.agentCacheManager.DeleteCategory(resource.Name)
 }

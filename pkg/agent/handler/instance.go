@@ -32,14 +32,10 @@ func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resour
 		return nil
 	}
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED || action == proto.Event_SUBRESOURCEUPDATED {
+	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddAPIServiceInstance(resource)
+		return nil
 	}
 
-	if action == proto.Event_DELETED {
-		key := resource.Metadata.ID
-		return h.agentCacheManager.DeleteAPIServiceInstance(key)
-	}
-
-	return nil
+	return h.agentCacheManager.DeleteAPIServiceInstance(resource.Metadata.ID)
 }
