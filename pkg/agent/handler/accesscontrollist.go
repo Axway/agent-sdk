@@ -27,13 +27,10 @@ func (h *aclHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *a
 		return nil
 	}
 
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+	if action != proto.Event_DELETED {
 		h.agentCacheManager.SetAccessControlList(resource)
+		return nil
 	}
 
-	if action == proto.Event_DELETED {
-		return h.agentCacheManager.DeleteAccessControlList()
-	}
-
-	return nil
+	return h.agentCacheManager.DeleteAccessControlList()
 }
