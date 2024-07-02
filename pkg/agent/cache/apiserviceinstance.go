@@ -13,6 +13,7 @@ func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 	c.logger.
 		WithField("resource", resource.Name).
+		WithField("apiID", resource.Metadata.ID).
 		Trace("AddAPIServiceInstance")
 
 	cachedRI, _ := c.GetAPIServiceInstanceByID(resource.Metadata.ID)
