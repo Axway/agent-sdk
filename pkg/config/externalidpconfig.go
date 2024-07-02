@@ -341,6 +341,7 @@ func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
 	type Alias IDPConfiguration
 	i.RequestHeaders = make(IDPRequestHeaders)
 	i.QueryParams = make(IDPQueryParams)
+	i.ExtraProperties = make(ExtraProperties)
 
 	i.AuthConfig = &IDPAuthConfiguration{
 		RequestHeaders: make(IDPRequestHeaders),
