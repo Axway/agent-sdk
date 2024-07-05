@@ -153,40 +153,42 @@ func (p *oas3SpecProcessor) parseURLsIntoEndpoints(defaultURL string, allURLs []
 }
 
 func (p *oas3SpecProcessor) ParseAuthInfo() {
-	authPolicies := []string{}
-	keyInfo := []APIKeyInfo{}
-	scopes := make(map[string]string)
+	p.authPolicies = []string{}
+	p.apiKeyInfo = []APIKeyInfo{}
+	p.scopes = make(map[string]string)
+
+	if p.spec.Components == nil {
+		return
+	}
 	for _, scheme := range p.spec.Components.SecuritySchemes {
 		switch scheme.Value.Type {
 		case oasSecurityHttp:
 			if scheme.Value.Scheme == oasSecurityBasic {
-				authPolicies = append(authPolicies, Basic)
+				p.authPolicies = append(p.authPolicies, Basic)
 			}
 		case oasSecurityAPIKey:
-			authPolicies = append(authPolicies, Apikey)
-			keyInfo = append(keyInfo, APIKeyInfo{
+			p.authPolicies = append(p.authPolicies, Apikey)
+			p.apiKeyInfo = append(p.apiKeyInfo, APIKeyInfo{
 				Location: scheme.Value.In,
 				Name:     scheme.Value.Name,
 			})
 		case oasSecurityOauth:
-			authPolicies = append(authPolicies, Oauth)
+			p.authPolicies = append(p.authPolicies, Oauth)
 			if scheme.Value.Flows != nil {
 				if scheme.Value.Flows.ClientCredentials != nil {
-					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.ClientCredentials.Scopes)
+					p.scopes = util.MergeMapStringString(p.scopes, scheme.Value.Flows.ClientCredentials.Scopes)
 				}
 				if scheme.Value.Flows.Implicit != nil {
-					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.Implicit.Scopes)
+					p.scopes = util.MergeMapStringString(p.scopes, scheme.Value.Flows.Implicit.Scopes)
 				}
 				if scheme.Value.Flows.AuthorizationCode != nil {
-					scopes = util.MergeMapStringString(scopes, scheme.Value.Flows.AuthorizationCode.Scopes)
+					p.scopes = util.MergeMapStringString(p.scopes, scheme.Value.Flows.AuthorizationCode.Scopes)
 				}
 			}
 		}
 	}
-	p.authPolicies = util.RemoveDuplicateValuesFromStringSlice(authPolicies)
+	p.authPolicies = util.RemoveDuplicateValuesFromStringSlice(p.authPolicies)
 	sort.Strings(p.authPolicies)
-	p.apiKeyInfo = keyInfo
-	p.scopes = scopes
 }
 
 func (p *oas3SpecProcessor) GetAuthPolicies() []string {
