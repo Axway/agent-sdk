@@ -97,7 +97,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		metadata, err := p.fetchMetadata()
 		if err != nil {
 			p.logger.
-				WithField("name", p.cfg.GetIDPName()).
+				WithField("provider", p.cfg.GetIDPName()).
 				WithField("type", p.cfg.GetIDPType()).
 				WithField("metadata-url", p.metadataURL).
 				WithError(err).
@@ -371,6 +371,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
 			WithField("client-name", clientReq.GetClientName()).
+			WithField("client-id", clientReq.GetClientName()).
 			WithField("grant-type", clientReq.GetGrantTypes()).
 			WithField("token-auth-method", clientReq.GetTokenEndpointAuthMethod()).
 			WithField("response-type", clientReq.GetResponseTypes()).
@@ -381,6 +382,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 
 	err = fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
 	p.logger.
+		WithField("provider", p.cfg.GetIDPName()).
 		WithField("client-name", clientReq.GetClientName()).
 		WithField("grant-type", clientReq.GetGrantTypes()).
 		WithField("token-auth-method", clientReq.GetTokenEndpointAuthMethod()).
@@ -479,14 +481,14 @@ func (p *provider) UnregisterClient(clientID, accessToken string) error {
 		err := fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
-			WithField("client-name", clientID).
+			WithField("client-id", clientID).
 			Error(err.Error())
 		return err
 	}
 
 	p.logger.
 		WithField("provider", p.cfg.GetIDPName()).
-		WithField("client-name", clientID).
+		WithField("client-id", clientID).
 		Info("unregistered client")
 	return nil
 }
