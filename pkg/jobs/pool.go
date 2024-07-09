@@ -70,7 +70,7 @@ func (p *Pool) setBackoff(backoff *backoff) {
 func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
 	defer p.jobsMapLock.Unlock()
-	if len(p.jobs) > 0 && p.GetStatus() == PoolStatusInitializing.String() {
+	if len(p.jobs) == 0 && p.GetStatus() == PoolStatusInitializing.String() {
 		// start routine to check all job status funcs and catch any failures
 		go p.jobChecker()
 		// start the pool watcher
