@@ -11,8 +11,6 @@ package management
 
 // IdentityProviderSpec  (management.v1alpha1.IdentityProvider)
 type IdentityProviderSpec struct {
-	// The dataplane resource associated to this Identity provider
-	Dataplane string `json:"dataplane"`
 	// The metadata URL for Identity provider
 	MetadataUrl string `json:"metadataUrl"`
 	// The type of Identity provider
@@ -29,6 +27,5 @@ type IdentityProviderSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	AdditionalClientProperties []IdentityProviderSpecKeyValuePair `json:"additionalClientProperties,omitempty"`
 	// Defines the timeout interval in seconds for Identity provider http client. Defaults to 30 seconds
-	ClientTimeout int32                    `json:"clientTimeout,omitempty"`
-	Auth          IdentityProviderSpecAuth `json:"auth"`
+	ClientTimeout int32 `json:"clientTimeout,omitempty"`
 }
