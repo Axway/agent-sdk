@@ -26,6 +26,7 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.9.0
 	github.com/subosito/gotenv v1.4.0
+	github.com/swaggest/go-asyncapi v0.8.0
 	github.com/tidwall/gjson v1.14.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	golang.org/x/net v0.24.0
