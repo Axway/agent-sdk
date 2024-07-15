@@ -9,8 +9,8 @@
 
 package management
 
-// IdentityProviderSpecAccessToken The configuration for access token based authentication with Identity provider
-type IdentityProviderSpecAccessToken struct {
+// IdentityProviderSecretSpecAccessToken The configuration for access token based authentication with Identity provider
+type IdentityProviderSecretSpecAccessToken struct {
 	Type string `json:"type"`
 	// The access token to be used for authentication with Identity provider
 	Token string `json:"token"`

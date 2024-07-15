@@ -23,11 +23,12 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	IdentityProviderScopes = []string{"Environment"}
+	IdentityProviderScopes = []string{""}
 )
 
 const (
-	IdentityProviderResourceName = "identityproviders"
+	IdentityProviderResourceName            = "identityproviders"
+	IdentityProviderSecuritySubResourceName = "security"
 )
 
 func IdentityProviderGVK() apiv1.GroupVersionKind {
@@ -42,22 +43,17 @@ func init() {
 // IdentityProvider Resource
 type IdentityProvider struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner         `json:"owner"`
-	Spec  IdentityProviderSpec `json:"spec"`
+	Owner    *apiv1.Owner             `json:"owner"`
+	Security IdentityProviderSecurity `json:"security"`
+	Spec     IdentityProviderSpec     `json:"spec"`
 }
 
 // NewIdentityProvider creates an empty *IdentityProvider
-func NewIdentityProvider(name, scopeName string) *IdentityProvider {
+func NewIdentityProvider(name string) *IdentityProvider {
 	return &IdentityProvider{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
 			GroupVersionKind: _IdentityProviderGVK,
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
-					Name: scopeName,
-					Kind: IdentityProviderScopes[0],
-				},
-			},
 		},
 	}
 }
@@ -129,6 +125,7 @@ func (res *IdentityProvider) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["security"] = res.Security
 	out["spec"] = res.Spec
 
 	return json.Marshal(out)
@@ -157,6 +154,20 @@ func (res *IdentityProvider) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Security
+	if v, ok := aux.SubResources["security"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "security")
+		err = json.Unmarshal(sr, &res.Security)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

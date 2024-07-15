@@ -13,4 +13,6 @@ package management
 type EnvironmentReferences struct {
 	// The list of referenced managed Environments
 	ManagedEnvironments []string `json:"managedEnvironments,omitempty"`
+	// The list of referenced identity providers
+	IdentityProviders []EnvironmentReferencesIdentityProviders `json:"identityProviders,omitempty"`
 }

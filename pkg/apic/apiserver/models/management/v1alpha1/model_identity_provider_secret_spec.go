@@ -9,16 +9,16 @@
 
 package management
 
-// IdentityProviderSpecAuth The authentication config to communicate with identity provider (management.v1alpha1.IdentityProvider)
-type IdentityProviderSpecAuth struct {
+// IdentityProviderSecretSpec  (management.v1alpha1.IdentityProviderSecret)
+type IdentityProviderSecretSpec struct {
 	// The authentication type
 	Type string `json:"type"`
 	// GENERATE: The following code has been modified after code generation
 	Config interface{} `json:"config"`
 	// The list of request headers to be sent in the call to get token from Identity provider
 	// GENERATE: The following code has been modified after code generation
-	RequestHeaders []IdentityProviderSpecKeyValuePair `json:"requestHeaders,omitempty"`
+	RequestHeaders []IdentityProviderSecretSpecKeyValuePair `json:"requestHeaders,omitempty"`
 	// The list of query parameters to be sent in the call to get token from Identity provider
 	// GENERATE: The following code has been modified after code generation
-	QueryParameters []IdentityProviderSpecKeyValuePair `json:"queryParameters,omitempty"`
+	QueryParameters []IdentityProviderSecretSpecKeyValuePair `json:"queryParameters,omitempty"`
 }

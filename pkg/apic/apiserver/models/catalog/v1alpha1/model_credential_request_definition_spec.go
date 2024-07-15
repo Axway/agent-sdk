@@ -14,4 +14,6 @@ type CredentialRequestDefinitionSpec struct {
 	// JSON Schema draft \\#7 for describing the fields needed to provision Credentials of that type. (catalog.v1alpha1.CredentialRequestDefinition)
 	Schema    map[string]interface{}                   `json:"schema"`
 	Provision CredentialRequestDefinitionSpecProvision `json:"provision"`
+	// The name of the IdentityProvider.
+	IdentityProvider string `json:"identityProvider,omitempty"`
 }

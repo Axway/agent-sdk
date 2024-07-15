@@ -9,8 +9,8 @@
 
 package management
 
-// IdentityProviderSpecClientSecret The configuration for client/secret based authentication with Identity provider
-type IdentityProviderSpecClientSecret struct {
+// IdentityProviderSecretSpecClientSecret The configuration for client/secret based authentication with Identity provider
+type IdentityProviderSecretSpecClientSecret struct {
 	Type string `json:"type"`
 	// The client/secret authentication method to be used to acquire token from Identity provider
 	AuthMethod string `json:"authMethod,omitempty"`

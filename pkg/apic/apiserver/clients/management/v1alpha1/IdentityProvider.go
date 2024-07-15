@@ -52,63 +52,16 @@ type IdentityProviderClient struct {
 	client v1.Scoped
 }
 
-// UnscopedIdentityProviderClient - rest client for IdentityProvider resources that do not have a defined scope
-type UnscopedIdentityProviderClient struct {
-	client v1.Unscoped
-}
-
-// NewIdentityProviderClient - creates a client that is not scoped to any resource
-func NewIdentityProviderClient(c v1.Base) (*UnscopedIdentityProviderClient, error) {
+// NewIdentityProviderClient - creates a client scoped to a particular resource
+func NewIdentityProviderClient(c v1.Base) (*IdentityProviderClient, error) {
 
 	client, err := c.ForKind(m.IdentityProviderGVK())
 	if err != nil {
 		return nil, err
 	}
 
-	return &UnscopedIdentityProviderClient{client}, nil
+	return &IdentityProviderClient{client}, nil
 
-}
-
-// WithScope - sets the resource scope for the client
-func (c *UnscopedIdentityProviderClient) WithScope(scope string) *IdentityProviderClient {
-	return &IdentityProviderClient{
-		c.client.WithScope(scope),
-	}
-}
-
-// Get - gets a resource by name
-func (c *UnscopedIdentityProviderClient) Get(name string) (*m.IdentityProvider, error) {
-	ri, err := c.client.Get(name)
-	if err != nil {
-		return nil, err
-	}
-
-	service := &m.IdentityProvider{}
-	service.FromInstance(ri)
-
-	return service, nil
-}
-
-// Update - updates a resource
-func (c *UnscopedIdentityProviderClient) Update(res *m.IdentityProvider, opts ...v1.UpdateOption) (*m.IdentityProvider, error) {
-	ri, err := res.AsInstance()
-	if err != nil {
-		return nil, err
-	}
-	resource, err := c.client.Update(ri, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	updated := &m.IdentityProvider{}
-
-	// Updates the resource in place
-	err = updated.FromInstance(resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return updated, nil
 }
 
 // List - gets a list of resources
