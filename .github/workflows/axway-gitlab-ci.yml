@@ -27,6 +27,6 @@ jobs:
       env:
         GITLAB_HOSTNAME: "git.ecd.axway.org"
         GITLAB_USERNAME: "vchauhan"
-        GITLAB_PASSWORD: ${{ secrets.GITLAB_TOKEN }}
+        GITLAB_PASSWORD: ${{ secrets.GITLAB_MIRROR_TOKEN }}
         GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
