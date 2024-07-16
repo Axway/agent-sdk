@@ -26,4 +26,6 @@ type DataplaneSpecAzure struct {
 	EventHubNamespace string `json:"eventHubNamespace,omitempty"`
 	// Consumer groups enable consuming applications to each have a separate view of the event stream. They read the stream independently at their own pace and with their own offsets.
 	EventHubConsumerGroup string `json:"eventHubConsumerGroup,omitempty"`
+	// Dictates the operation mode for the discovery agent
+	Mode string `json:"mode,omitempty"`
 }
