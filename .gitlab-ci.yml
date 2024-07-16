@@ -31,7 +31,7 @@ include:
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
     ref: $BEANO_CICD_LATEST
-    # the order of these include files is important
+    # the order of these include files is impordddtant
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
