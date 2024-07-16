@@ -156,8 +156,13 @@ func (e *IDPQueryParams) UnmarshalJSON(data []byte) error {
 
 func parseKeyValuePairs(kv map[string]string, data []byte) error {
 	m := make(map[string]string)
-	buf, _ := strconv.Unquote(string(data))
-	err := json.Unmarshal([]byte(buf), &m)
+	// try parsing the data as json string, ground agent config setup as json string
+	buf, err := strconv.Unquote(string(data))
+	if err != nil {
+		// parse as json map in case data is not json string
+		buf = string(data)
+	}
+	err = json.Unmarshal([]byte(buf), &m)
 	if err != nil {
 		return err
 	}
@@ -329,6 +334,57 @@ func (i *IDPConfiguration) GetAuthResponseType() string {
 // GetTLSConfig - tls config for IDP connection
 func (i *IDPConfiguration) GetTLSConfig() TLSConfig {
 	return i.TLSConfig
+}
+
+// UnmarshalJSON - custom unmarshaler for IDPConfiguration struct
+func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
+	type Alias IDPConfiguration
+	i.RequestHeaders = make(IDPRequestHeaders)
+	i.QueryParams = make(IDPQueryParams)
+	i.ExtraProperties = make(ExtraProperties)
+
+	i.AuthConfig = &IDPAuthConfiguration{
+		RequestHeaders: make(IDPRequestHeaders),
+		QueryParams:    make(IDPQueryParams),
+	}
+	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(i)}); err != nil {
+		return err
+	}
+
+	var allFields interface{}
+	json.Unmarshal(data, &allFields)
+	b := allFields.(map[string]interface{})
+
+	if v, ok := b["auth"]; ok {
+		buf, _ := json.Marshal(v)
+		json.Unmarshal(buf, i.AuthConfig)
+	}
+
+	return nil
+}
+
+// MarshalJSON - custom marshaler for IDPConfiguration struct
+func (i *IDPConfiguration) MarshalJSON() ([]byte, error) {
+	type Alias IDPConfiguration
+
+	idp, err := json.Marshal(&struct{ *Alias }{Alias: (*Alias)(i)})
+	if err != nil {
+		return nil, err
+	}
+	var allFields interface{}
+	json.Unmarshal(idp, &allFields)
+	b := allFields.(map[string]interface{})
+
+	idpAuthCfg, err := json.Marshal(i.AuthConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[string]interface{})
+	json.Unmarshal(idpAuthCfg, &m)
+	b["auth"] = m
+
+	return json.Marshal(b)
 }
 
 // validate - Validates the IDP configuration

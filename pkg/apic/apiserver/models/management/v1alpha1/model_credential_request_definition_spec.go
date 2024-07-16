@@ -8,4 +8,6 @@ type CredentialRequestDefinitionSpec struct {
 	Schema       map[string]interface{}                       `json:"schema"`
 	Provision    *CredentialRequestDefinitionSpecProvision    `json:"provision,omitempty"`
 	Webhooks     []CredentialRequestDefinitionSpecWebhook     `json:"webhooks,omitempty"`
+	// The name of the IdentityProvider.
+	IdentityProvider string `json:"identityProvider,omitempty"`
 }

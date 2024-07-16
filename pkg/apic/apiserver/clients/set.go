@@ -45,6 +45,8 @@ type Set struct {
 	AccessRequestManagementV1alpha1                  *management_v1alpha1.UnscopedAccessRequestClient
 	ManagedApplicationManagementV1alpha1             *management_v1alpha1.UnscopedManagedApplicationClient
 	CredentialManagementV1alpha1                     *management_v1alpha1.UnscopedCredentialClient
+	IdentityProviderManagementV1alpha1               *management_v1alpha1.IdentityProviderClient
+	IdentityProviderSecretManagementV1alpha1         *management_v1alpha1.UnscopedIdentityProviderSecretClient
 	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
 	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
 	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
@@ -238,6 +240,14 @@ func New(b cAPIV1.Base) *Set {
 	s.CredentialManagementV1alpha1, err = management_v1alpha1.NewCredentialClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Credential: %s", err))
+	}
+	s.IdentityProviderManagementV1alpha1, err = management_v1alpha1.NewIdentityProviderClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.IdentityProvider: %s", err))
+	}
+	s.IdentityProviderSecretManagementV1alpha1, err = management_v1alpha1.NewIdentityProviderSecretClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.IdentityProviderSecret: %s", err))
 	}
 	s.AssetMappingManagementV1alpha1, err = management_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {

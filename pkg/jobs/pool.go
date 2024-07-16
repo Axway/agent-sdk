@@ -49,11 +49,6 @@ func newPool() *Pool {
 	}
 	newPool.SetStatus(PoolStatusInitializing)
 
-	// start routine to check all job status funcs and catch any failures
-	go newPool.jobChecker()
-	// start the pool watcher
-	go newPool.watchJobs()
-
 	return &newPool
 }
 
@@ -75,6 +70,13 @@ func (p *Pool) setBackoff(backoff *backoff) {
 func (p *Pool) recordJob(job JobExecution) string {
 	p.jobsMapLock.Lock()
 	defer p.jobsMapLock.Unlock()
+	if len(p.jobs) == 0 && p.GetStatus() == PoolStatusInitializing.String() {
+		// start routine to check all job status funcs and catch any failures
+		go p.jobChecker()
+		// start the pool watcher
+		go p.watchJobs()
+	}
+
 	p.logger.
 		WithField("job-id", job.GetID()).
 		WithField("job-name", job.GetName()).
