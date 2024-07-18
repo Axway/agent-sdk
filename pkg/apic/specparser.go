@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/oas"
 
@@ -26,6 +27,15 @@ type SpecProcessor interface {
 	GetDescription() string
 	GetSpecBytes() []byte
 	GetResourceType() string
+}
+
+type AsyncSpecProcessor interface {
+	GetID() string
+	GetTitle() string
+	GetVersion() string
+	GetEndpoints() ([]management.ApiServiceInstanceSpecEndpoint, error)
+	GetResourceType() string
+	GetSpecBytes() []byte
 }
 
 // OasSpecProcessor -
