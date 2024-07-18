@@ -31,6 +31,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// DELETE when in prod
+
 // AgentStatus - status for Agent resource
 const (
 	AgentRunning   = "running"
