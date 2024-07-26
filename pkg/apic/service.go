@@ -27,8 +27,7 @@ const (
 )
 
 const (
-	apiServerPageSize = 20
-	tenMB             = 10485760
+	tenMB = 10485760
 )
 
 // PublishService - processes the API to create/update apiservice, revision, instance and consumer instance

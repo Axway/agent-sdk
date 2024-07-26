@@ -55,13 +55,14 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, UR
 
 // GetAPIV1ResourceInstances - return apiv1 Resource instance with the default page size
 func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
-	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, apiServerPageSize)
+	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, c.cfg.GetPageSize())
 }
 
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
 func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
+	retries := 3
 
 	resourceInstance := make([]*apiv1.ResourceInstance, 0)
 
@@ -82,8 +83,18 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 		response, err := c.ExecuteAPI(coreapi.GET, url, query, nil)
 
-		if err != nil {
-			log.Debugf("Error while retrieving ResourceInstance: %s", err.Error())
+		if err != nil && retries > 0 && strings.Contains(err.Error(), "context deadline exceeded") {
+			// in case of context deadline, lets reduce the page size and restart retrieving the resources
+			page = 1
+			resourceInstance = make([]*apiv1.ResourceInstance, 0)
+			ogPageSize := pageSize
+			pageSize = pageSize / 2
+			c.logger.WithError(err).WithField("pageSize", ogPageSize).WithField("newPageSize", pageSize).
+				Debug("error while retrieving ResourceInstance, retrying with a smaller page size")
+			retries--
+			continue
+		} else if err != nil {
+			c.logger.WithError(err).Debug("error while retrieving ResourceInstance")
 			return nil, err
 		}
 
