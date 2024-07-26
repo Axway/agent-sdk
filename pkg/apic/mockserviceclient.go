@@ -42,6 +42,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		TenantID:     "112456",
 		Environment:  "testenvironment",
 		PollInterval: 1 * time.Second,
+		PageSize:     100,
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",

@@ -79,7 +79,7 @@ func (m *MarketplaceMigration) UpdateService(ctx context.Context, ri *apiv1.Reso
 	q := map[string]string{
 		"query": queryFuncByMetadataID(ri.Metadata.ID),
 	}
-	apiSvcInsts, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, instURL, 100)
+	apiSvcInsts, err := m.client.GetAPIV1ResourceInstances(q, instURL)
 	if err != nil {
 		return err
 	}

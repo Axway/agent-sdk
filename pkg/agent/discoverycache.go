@@ -15,10 +15,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-const (
-	apiServerPageSize = 100
-)
-
 type discoveryCache struct {
 	centralURL               string
 	migrator                 migrate.Migrator
@@ -31,7 +27,7 @@ type discoveryCache struct {
 }
 
 type resourceClient interface {
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 }
 
 // discoverFunc is the func definition for discovering resources to cache
@@ -234,7 +230,7 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		resources, err := dc.client.GetAPIV1ResourceInstancesWithPageSize(nil, ri.GetKindLink(), apiServerPageSize)
+		resources, err := dc.client.GetAPIV1ResourceInstances(nil, ri.GetKindLink())
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}

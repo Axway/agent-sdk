@@ -22,7 +22,7 @@ type APIClient interface {
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
-	GetAPIV1ResourceInstancesWithPageSize(map[string]string, string, int) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstances(map[string]string, string) ([]*apiv1.ResourceInstance, error)
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.

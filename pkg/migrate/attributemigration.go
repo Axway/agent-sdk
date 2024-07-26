@@ -44,7 +44,7 @@ func RemoveTagPattern(tags ...string) {
 
 type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
@@ -175,7 +175,7 @@ func (m *AttributeMigration) updateCI(ri *apiv1.ResourceInstance) error {
 }
 
 func (m *AttributeMigration) migrate(resourceURL string, query map[string]string) error {
-	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(query, resourceURL, 100)
+	resources, err := m.client.GetAPIV1ResourceInstances(query, resourceURL)
 	if err != nil {
 		return err
 	}

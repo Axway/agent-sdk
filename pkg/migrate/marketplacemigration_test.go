@@ -152,7 +152,7 @@ func (m *mockMPMigClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte)
 	return nil, nil
 }
 
-func (m *mockMPMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, url string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockMPMigClient) GetAPIV1ResourceInstances(_ map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
 	if strings.Contains(url, "instances") {
 		return m.instances, nil
 	}

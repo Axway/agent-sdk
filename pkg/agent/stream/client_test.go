@@ -170,7 +170,7 @@ func (m mockAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
 	return m.deleteErr
 }
 
-func (m *mockAPIClient) GetAPIV1ResourceInstancesWithPageSize(map[string]string, string, int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockAPIClient) GetAPIV1ResourceInstances(map[string]string, string) ([]*apiv1.ResourceInstance, error) {
 	m.pagedCalled = true
 	return m.paged, m.pagedErr
 }

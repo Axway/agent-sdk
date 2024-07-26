@@ -130,7 +130,7 @@ type mockAttrMigClient struct {
 	expectedTags    int
 }
 
-func (m *mockAttrMigClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, _ string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) GetAPIV1ResourceInstances(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 	return m.res, nil
 }
 

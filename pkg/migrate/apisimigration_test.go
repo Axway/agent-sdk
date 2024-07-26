@@ -124,7 +124,7 @@ func (m *mockAPISIMigClient) ExecuteAPI(method, url string, queryParam map[strin
 	return nil, nil
 }
 
-func (m *mockAPISIMigClient) GetAPIV1ResourceInstancesWithPageSize(query map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+func (m *mockAPISIMigClient) GetAPIV1ResourceInstances(query map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
 	m.Lock()
 	defer m.Unlock()
 	if m.instanceReturned {

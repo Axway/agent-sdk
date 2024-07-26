@@ -69,7 +69,7 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 	return &Config{
 		ClientTimeout:    cfg.GetClientTimeout(),
 		Host:             hostname,
-		PageSize:         100,
+		PageSize:         cfg.GetPageSize(),
 		Port:             uint32(port),
 		Protocol:         parsed.Scheme,
 		ProxyURL:         cfg.GetProxyURL(),
