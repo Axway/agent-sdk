@@ -976,6 +976,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		APIValidationCronSchedule: props.StringPropertyValue(pathAPIValidationCronSchedule),
 		JobExecutionTimeout:       props.DurationPropertyValue(pathJobTimeout),
 		ClientTimeout:             props.DurationPropertyValue(pathClientTimeout),
+		PageSize:                  props.IntPropertyValue(pathPageSize),
 		APIServiceRevisionPattern: props.StringPropertyValue(pathAPIServiceRevisionPattern),
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
