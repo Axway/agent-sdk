@@ -9,7 +9,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // GetAPIServiceRevisions - management.APIServiceRevision
@@ -66,6 +65,8 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 	resourceInstance := make([]*apiv1.ResourceInstance, 0)
 
+	log := c.logger.WithField("endpoint", url)
+	log.Trace("retrieving all resources from endpoint")
 	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
 		url = c.createAPIServerURL(url)
 	}
@@ -75,6 +76,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(pageSize),
 		}
+		log := log.WithField("page", page).WithField("pageSize", pageSize)
 
 		// Add query params for getting revisions for the service and use the latest one as last reference
 		for key, value := range queryParams {
@@ -87,14 +89,12 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			// in case of context deadline, lets reduce the page size and restart retrieving the resources
 			page = 1
 			resourceInstance = make([]*apiv1.ResourceInstance, 0)
-			ogPageSize := pageSize
 			pageSize = pageSize / 2
-			c.logger.WithError(err).WithField("pageSize", ogPageSize).WithField("newPageSize", pageSize).
-				Debug("error while retrieving ResourceInstance, retrying with a smaller page size")
+			log.WithError(err).WithField("newPageSize", pageSize).Debug("error while retrieving resources, retrying with smaller page size")
 			retries--
 			continue
 		} else if err != nil {
-			c.logger.WithError(err).Debug("error while retrieving ResourceInstance")
+			log.WithError(err).Debug("error while retrieving resources")
 			return nil, err
 		}
 
@@ -106,7 +106,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 		if len(resourceInstancePage) < pageSize {
 			morePages = false
 		} else {
-			log.Trace("More resource instance pages exist.  Continue retrieval of resource instances.")
+			log.Trace("continue retrieving resources from next page")
 		}
 
 		page++
