@@ -143,6 +143,8 @@ type ServiceClient struct {
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
 	logger                             log.FieldLogger
+	pageSizes                          map[string]int
+	pageSizeMutex                      *sync.Mutex
 }
 
 // APIServerInfoProperty -

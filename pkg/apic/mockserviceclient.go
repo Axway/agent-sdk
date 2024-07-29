@@ -2,6 +2,7 @@ package apic
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -61,6 +62,8 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		DefaultSubscriptionApprovalWebhook: webhook,
 		DefaultSubscriptionSchema:          NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
 		logger:                             log.NewFieldLogger(),
+		pageSizes:                          map[string]int{},
+		pageSizeMutex:                      &sync.Mutex{},
 	}
 	svcClient.subscriptionMgr = newSubscriptionManager(svcClient)
 	return svcClient, apiClient

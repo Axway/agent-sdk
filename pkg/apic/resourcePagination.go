@@ -57,6 +57,19 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, c.cfg.GetPageSize())
 }
 
+func (c *ServiceClient) getPageSize(url string) (int, bool) {
+	c.pageSizeMutex.Lock()
+	defer c.pageSizeMutex.Unlock()
+	size, ok := c.pageSizes[url]
+	return size, ok
+}
+
+func (c *ServiceClient) setPageSize(url string, size int) {
+	c.pageSizeMutex.Lock()
+	defer c.pageSizeMutex.Unlock()
+	c.pageSizes[url] = size
+}
+
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
 func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
@@ -69,6 +82,11 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 	log.Trace("retrieving all resources from endpoint")
 	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
 		url = c.createAPIServerURL(url)
+	}
+
+	// update page size if this endpoint used an adjusted page size before
+	if size, ok := c.getPageSize(url); ok {
+		pageSize = size
 	}
 
 	for morePages {
@@ -92,6 +110,9 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			pageSize = pageSize / 2
 			log.WithError(err).WithField("newPageSize", pageSize).Debug("error while retrieving resources, retrying with smaller page size")
 			retries--
+
+			// update the page size map so this endpoint uses the same size next time
+			c.setPageSize(url, pageSize)
 			continue
 		} else if err != nil {
 			log.WithError(err).Debug("error while retrieving resources")
