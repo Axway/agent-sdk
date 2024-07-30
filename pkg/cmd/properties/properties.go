@@ -42,7 +42,7 @@ type Properties interface {
 	AddStringPersistentFlag(name string, defaultVal string, description string)
 	AddStringFlag(name string, description string)
 	AddDurationProperty(name string, defaultVal time.Duration, description string, options ...DurationOpt)
-	AddIntProperty(name string, defaultVal int, description string)
+	AddIntProperty(name string, defaultVal int, description string, options ...IntOpt)
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
 	AddStringSliceProperty(name string, defaultVal []string, description string)
@@ -95,6 +95,28 @@ func WithUpperLimit(upper time.Duration) DurationOpt {
 func WithQAOverride() DurationOpt {
 	return func(d *durationOpts) {
 		d.qaOverride = true
+	}
+}
+
+type intOpts struct {
+	lower int
+	upper int
+}
+
+// DurationOpt are duration range options passed into AddDurationProperty
+type IntOpt func(prop *intOpts)
+
+// WithLowerLimitInt - lower limit of the int range
+func WithLowerLimitInt(lower int) IntOpt {
+	return func(d *intOpts) {
+		d.lower = lower
+	}
+}
+
+// WithUpperLimitInt - upper limit of the int range
+func WithUpperLimitInt(upper int) IntOpt {
+	return func(d *intOpts) {
+		d.upper = upper
 	}
 }
 
@@ -244,6 +266,33 @@ func (p *properties) AddDurationProperty(name string, defaultVal time.Duration, 
 	}
 }
 
+func (p *properties) configureUpperAndLowerLimitsInt(defaultVal int, limits *intOpts, flagName string) {
+	lowerLimitFlag := fmt.Sprintf(lowerLimitName, flagName)
+	upperLimitFlag := fmt.Sprintf(upperLimitName, flagName)
+
+	// set lower limit
+	if limits.lower > -1 {
+		if defaultVal < limits.lower {
+			panic(fmt.Errorf("default value (%v) can not be smaller than lower limit (%v) for %s", defaultVal, limits.lower, flagName))
+		}
+		p.rootCmd.Flags().Int(lowerLimitFlag, limits.lower, fmt.Sprintf("lower limit flag for configuration %s", flagName))
+		p.rootCmd.Flags().MarkHidden(lowerLimitFlag)
+	}
+
+	// set upper limit if greater than zero
+	if limits.upper > -1 {
+		p.rootCmd.Flags().Int(upperLimitFlag, limits.upper, fmt.Sprintf("upper limit flag for configuration %s", flagName))
+		p.rootCmd.Flags().MarkHidden(upperLimitFlag)
+		// check for valid upper and lower limits
+		if limits.upper < limits.lower {
+			panic(fmt.Errorf("upper limit (%v) can not be smaller than lower limit (%v) for %s", limits.upper, limits.lower, flagName))
+		}
+		if defaultVal > limits.upper {
+			panic(fmt.Errorf("default value (%v) can not be larger than upper limit (%v) for %s", defaultVal, limits.upper, flagName))
+		}
+	}
+}
+
 func (p *properties) configureUpperAndLowerLimits(defaultVal time.Duration, limits *durationOpts, flagName string) {
 	lowerLimitFlag := fmt.Sprintf(lowerLimitName, flagName)
 	upperLimitFlag := fmt.Sprintf(upperLimitName, flagName)
@@ -252,26 +301,39 @@ func (p *properties) configureUpperAndLowerLimits(defaultVal time.Duration, limi
 	if defaultVal < limits.lower {
 		panic(fmt.Errorf("default value (%s) can not be smaller than lower limit (%s) for %s", defaultVal, limits.lower, flagName))
 	}
-	p.rootCmd.Flags().Duration(lowerLimitFlag, limits.lower, "value %s is lower than the supported lower limit (%s) for configuration %s")
+	p.rootCmd.Flags().Duration(lowerLimitFlag, limits.lower, fmt.Sprintf("lower limit flag for configuration %s", flagName))
 	p.rootCmd.Flags().MarkHidden(lowerLimitFlag)
 
 	// set upper limit if greater than zero
 	if limits.upper > 0 {
-		p.rootCmd.Flags().Duration(upperLimitFlag, limits.upper, "value %s is higher than the supported higher limit (%s) for configuration %s")
+		p.rootCmd.Flags().Duration(upperLimitFlag, limits.upper, fmt.Sprintf("upper limit flag for configuration %s", flagName))
 		p.rootCmd.Flags().MarkHidden(upperLimitFlag)
 		// check for valid upper and lower limits
 		if limits.upper < limits.lower {
-			panic(fmt.Errorf("upper limit (%s) can not be smaller than lower limit (%s) for %s", limits.upper, limits.lower, flagName))
+			panic(fmt.Errorf("upper limit (%v) can not be smaller than lower limit (%v) for %s", limits.upper, limits.lower, flagName))
 		}
 		if defaultVal > limits.upper {
-			panic(fmt.Errorf("default value (%s) can not be larger than upper limit (%s) for %s", defaultVal, limits.upper, flagName))
+			panic(fmt.Errorf("default value (%v) can not be larger than upper limit (%v) for %s", defaultVal, limits.upper, flagName))
 		}
 	}
 }
 
-func (p *properties) AddIntProperty(name string, defaultVal int, description string) {
+func (p *properties) AddIntProperty(name string, defaultVal int, description string, options ...IntOpt) {
 	if p.rootCmd != nil {
 		flagName := p.nameToFlagName(name)
+
+		opts := &intOpts{
+			lower: -1,
+			upper: -1,
+		}
+
+		// validate if WithLowerLimit and WithUpperLimit were called
+		for _, option := range options {
+			option(opts)
+		}
+
+		p.configureUpperAndLowerLimitsInt(defaultVal, opts, flagName)
+
 		p.rootCmd.Flags().Int(flagName, defaultVal, description)
 		p.bindOrPanic(name, p.rootCmd.Flags().Lookup(flagName))
 		p.rootCmd.Flags().MarkHidden(flagName)

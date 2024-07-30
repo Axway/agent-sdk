@@ -47,7 +47,7 @@ func (m *migration) getRI(url string) (*v1.ResourceInstance, error) {
 }
 
 func (m *migration) getAllRI(url string, q map[string]string) ([]*v1.ResourceInstance, error) {
-	resources, err := m.client.GetAPIV1ResourceInstancesWithPageSize(q, url, 100)
+	resources, err := m.client.GetAPIV1ResourceInstances(q, url)
 	if err != nil {
 		return nil, fmt.Errorf("error while retrieving all ResourceInstances: %s", err)
 	}

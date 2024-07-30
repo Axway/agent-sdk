@@ -36,7 +36,7 @@ func (m mockArdMigClient) ExecuteAPI(method, url string, queryParam map[string]s
 	return nil, nil
 }
 
-func (m mockArdMigClient) GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+func (m mockArdMigClient) GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
 

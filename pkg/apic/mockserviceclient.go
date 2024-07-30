@@ -2,6 +2,7 @@ package apic
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	cache2 "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -42,6 +43,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		TenantID:     "112456",
 		Environment:  "testenvironment",
 		PollInterval: 1 * time.Second,
+		PageSize:     100,
 		Auth: &corecfg.AuthConfiguration{
 			URL:      "http://localhost:8888",
 			Realm:    "Broker",
@@ -60,6 +62,8 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		DefaultSubscriptionApprovalWebhook: webhook,
 		DefaultSubscriptionSchema:          NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix),
 		logger:                             log.NewFieldLogger(),
+		pageSizes:                          map[string]int{},
+		pageSizeMutex:                      &sync.Mutex{},
 	}
 	svcClient.subscriptionMgr = newSubscriptionManager(svcClient)
 	return svcClient, apiClient

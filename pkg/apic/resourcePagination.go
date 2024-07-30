@@ -9,7 +9,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // GetAPIServiceRevisions - management.APIServiceRevision
@@ -55,18 +54,39 @@ func (c *ServiceClient) GetAPIServiceInstances(queryParams map[string]string, UR
 
 // GetAPIV1ResourceInstances - return apiv1 Resource instance with the default page size
 func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
-	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, apiServerPageSize)
+	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, c.cfg.GetPageSize())
+}
+
+func (c *ServiceClient) getPageSize(url string) (int, bool) {
+	c.pageSizeMutex.Lock()
+	defer c.pageSizeMutex.Unlock()
+	size, ok := c.pageSizes[url]
+	return size, ok
+}
+
+func (c *ServiceClient) setPageSize(url string, size int) {
+	c.pageSizeMutex.Lock()
+	defer c.pageSizeMutex.Unlock()
+	c.pageSizes[url] = size
 }
 
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
 func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
 	morePages := true
 	page := 1
+	retries := 3
 
 	resourceInstance := make([]*apiv1.ResourceInstance, 0)
 
+	log := c.logger.WithField("endpoint", url)
+	log.Trace("retrieving all resources from endpoint")
 	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
 		url = c.createAPIServerURL(url)
+	}
+
+	// update page size if this endpoint used an adjusted page size before
+	if size, ok := c.getPageSize(url); ok {
+		pageSize = size
 	}
 
 	for morePages {
@@ -74,6 +94,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			"page":     strconv.Itoa(page),
 			"pageSize": strconv.Itoa(pageSize),
 		}
+		log := log.WithField("page", page).WithField("pageSize", pageSize)
 
 		// Add query params for getting revisions for the service and use the latest one as last reference
 		for key, value := range queryParams {
@@ -82,8 +103,19 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 		response, err := c.ExecuteAPI(coreapi.GET, url, query, nil)
 
-		if err != nil {
-			log.Debugf("Error while retrieving ResourceInstance: %s", err.Error())
+		if err != nil && retries > 0 && strings.Contains(err.Error(), "context deadline exceeded") {
+			// in case of context deadline, lets reduce the page size and restart retrieving the resources
+			page = 1
+			resourceInstance = make([]*apiv1.ResourceInstance, 0)
+			pageSize = pageSize / 2
+			log.WithError(err).WithField("newPageSize", pageSize).Debug("error while retrieving resources, retrying with smaller page size")
+			retries--
+
+			// update the page size map so this endpoint uses the same size next time
+			c.setPageSize(url, pageSize)
+			continue
+		} else if err != nil {
+			log.WithError(err).Debug("error while retrieving resources")
 			return nil, err
 		}
 
@@ -95,7 +127,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 		if len(resourceInstancePage) < pageSize {
 			morePages = false
 		} else {
-			log.Trace("More resource instance pages exist.  Continue retrieval of resource instances.")
+			log.Trace("continue retrieving resources from next page")
 		}
 
 		page++

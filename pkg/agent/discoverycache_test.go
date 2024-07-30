@@ -187,7 +187,7 @@ type mockRIClient struct {
 	err         error
 }
 
-func (m mockRIClient) GetAPIV1ResourceInstancesWithPageSize(_ map[string]string, URL string, _ int) ([]*apiv1.ResourceInstance, error) {
+func (m mockRIClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	fmt.Println(URL)
 	if strings.Contains(URL, "apiservices") {
 		return m.svcs, m.err
