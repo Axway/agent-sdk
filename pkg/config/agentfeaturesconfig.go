@@ -13,6 +13,7 @@ type AgentFeaturesConfig interface {
 	MarketplaceProvisioningEnabled() bool
 	GetExternalIDPConfig() ExternalIDPConfig
 	AgentStatusUpdatesEnabled() bool
+	SetPersistentCache(enable bool)
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -38,6 +39,10 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      true,
 	}
+}
+
+func (c *AgentFeaturesConfiguration) SetPersistentCache(enable bool) {
+	c.PersistCache = enable
 }
 
 // ConnectionToCentralEnabled - True if the agent is a standard agent that connects to Central
@@ -109,7 +114,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		ConnectToCentral:        props.BoolPropertyValueOrTrue(pathConnectToCentral),
 		ProcessSystemSignals:    props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
 		VersionChecker:          props.BoolPropertyValueOrTrue(pathVersionChecker),
-		PersistCache:            true,
+		PersistCache:            props.BoolPropertyValueOrTrue(pathPersistCache),
 		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
 	}
