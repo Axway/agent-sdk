@@ -123,7 +123,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return err
 	}
 	agent.agentFeaturesCfg = agentFeaturesCfg
-	centralCfg.SetIsMarketplaceSubsEnabled(agentFeaturesCfg.MarketplaceProvisioningEnabled())
+	centralCfg.SetIsMarketplaceSubsEnabled(true)
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
@@ -133,10 +133,15 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
-	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
-	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
-	}
+	// TODO - UC deprecation, phase 2
+	// this check is no longer valid.
+	// Persistent cache is being force to true.  And we check isOffline mode downstream, returning nil since we don't need any other initialization
+	// Remove this once phase 2 on deprecating UC is underway
+
+	// // check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
+	// if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
+	// 	return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
+	// }
 
 	// Only create the api map cache if it does not already exist
 	if agent.cacheManager == nil {
@@ -385,8 +390,8 @@ func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
 		ConnectToCentral:        true,
 		ProcessSystemSignals:    true,
 		VersionChecker:          true,
-		PersistCache:            false,
-		MarketplaceProvisioning: tOpts.marketplace,
+		PersistCache:            true,
+		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      true,
 	}
 }
