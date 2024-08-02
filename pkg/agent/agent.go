@@ -123,7 +123,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return err
 	}
 	agent.agentFeaturesCfg = agentFeaturesCfg
-	centralCfg.SetIsMarketplaceSubsEnabled(agentFeaturesCfg.MarketplaceProvisioningEnabled())
+	centralCfg.SetIsMarketplaceSubsEnabled(true)
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
@@ -135,7 +135,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// check to confirm usagereporting.offline and agentfeatures.persistcache are not both set to true
 	if agentFeaturesCfg.PersistCacheEnabled() && centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		return fmt.Errorf("please check your configurations - central.usagereporting.offline and agentFeatures.persistCache cannot be set to TRUE simultaneously")
+		agentFeaturesCfg.SetPersistentCache(false)
 	}
 
 	// Only create the api map cache if it does not already exist
@@ -385,8 +385,8 @@ func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
 		ConnectToCentral:        true,
 		ProcessSystemSignals:    true,
 		VersionChecker:          true,
-		PersistCache:            false,
-		MarketplaceProvisioning: tOpts.marketplace,
+		PersistCache:            true,
+		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      true,
 	}
 }

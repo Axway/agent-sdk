@@ -13,6 +13,7 @@ type AgentFeaturesConfig interface {
 	MarketplaceProvisioningEnabled() bool
 	GetExternalIDPConfig() ExternalIDPConfig
 	AgentStatusUpdatesEnabled() bool
+	SetPersistentCache(enable bool)
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -34,10 +35,14 @@ func NewAgentFeaturesConfiguration() AgentFeaturesConfig {
 		ConnectToCentral:        true,
 		ProcessSystemSignals:    true,
 		VersionChecker:          true,
-		PersistCache:            false,
-		MarketplaceProvisioning: false,
+		PersistCache:            true,
+		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      true,
 	}
+}
+
+func (c *AgentFeaturesConfiguration) SetPersistentCache(enable bool) {
+	c.PersistCache = enable
 }
 
 // ConnectionToCentralEnabled - True if the agent is a standard agent that connects to Central
@@ -97,8 +102,8 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathConnectToCentral, true, "Controls whether the agent SDK connects to Central or not")
 	props.AddBoolProperty(pathProcessSystemSignals, true, "Controls whether the agent SDK processes system signals or not")
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
-	props.AddBoolProperty(pathPersistCache, false, "Controls whether the agent SDK will persist agent cache or not")
-	props.AddBoolProperty(pathMarketplaceProvisioning, false, "Controls whether the agent should handle Marketplace Subscriptions or not")
+	props.AddBoolProperty(pathPersistCache, true, "Controls whether the agent SDK will persist agent cache or not")
+	props.AddBoolProperty(pathMarketplaceProvisioning, true, "Controls whether the agent should handle Marketplace Subscriptions or not")
 	props.AddBoolProperty(pathAgentStatusUpdates, true, "Controls whether the agent should manage the status update or not")
 	addExternalIDPProperties(props)
 }
@@ -110,7 +115,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		ProcessSystemSignals:    props.BoolPropertyValueOrTrue(pathProcessSystemSignals),
 		VersionChecker:          props.BoolPropertyValueOrTrue(pathVersionChecker),
 		PersistCache:            props.BoolPropertyValueOrTrue(pathPersistCache),
-		MarketplaceProvisioning: props.BoolPropertyValueOrTrue(pathMarketplaceProvisioning),
+		MarketplaceProvisioning: true,
 		AgentStatusUpdates:      props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
 	}
 	externalIDPCfg, err := parseExternalIDPConfig(props)

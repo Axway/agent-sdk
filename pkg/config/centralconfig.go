@@ -293,9 +293,11 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		UsageReporting:            NewUsageReporting(platformURL),
 		JobExecutionTimeout:       5 * time.Minute,
 		CacheStorageInterval:      10 * time.Second,
-		GRPCCfg:                   GRPCConfig{},
-		MigrationSettings:         newMigrationConfig(),
-		CredentialConfig:          newCredentialConfig(),
+		GRPCCfg: GRPCConfig{
+			Enabled: true,
+		},
+		MigrationSettings: newMigrationConfig(),
+		CredentialConfig:  newCredentialConfig(),
 	}
 }
 

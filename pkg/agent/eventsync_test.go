@@ -67,7 +67,7 @@ func TestEventSync_streamMode(t *testing.T) {
 		ConnectToCentral:        true,
 		ProcessSystemSignals:    true,
 		VersionChecker:          false,
-		PersistCache:            false,
+		PersistCache:            true,
 		MarketplaceProvisioning: true,
 	}
 
