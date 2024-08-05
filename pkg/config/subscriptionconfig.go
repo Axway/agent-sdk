@@ -133,7 +133,7 @@ type EmailTemplate struct {
 // AddSubscriptionConfigProperties -
 func AddSubscriptionConfigProperties(props properties.Properties) {
 	// subscriptions enabled
-	props.AddBoolProperty(pathSubscriptionsDisablePolling, false, "Set to true to disable polling for subscriptions on the agent")
+	props.AddBoolProperty(pathSubscriptionsDisablePolling, true, "Set to true to disable polling for subscriptions on the agent")
 
 	// subscription approvals
 	props.AddStringProperty(pathSubscriptionsApprovalMode, ManualApproval, "The mode to use for approving subscriptions for Amplify Central (manual, webhook, auto)")
@@ -176,7 +176,7 @@ func ParseSubscriptionConfig(props properties.Properties) SubscriptionConfig {
 	}
 
 	cfg := &SubscriptionConfiguration{
-		DisablePolling: props.BoolPropertyValue(pathSubscriptionsDisablePolling),
+		DisablePolling: true,
 		Approval: &ApprovalConfig{
 			SubscriptionApprovalMode: props.StringPropertyValue(pathSubscriptionsApprovalMode),
 			SubscriptionApprovalWebhook: &WebhookConfiguration{
