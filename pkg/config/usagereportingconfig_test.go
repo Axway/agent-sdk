@@ -4,7 +4,6 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
@@ -27,9 +26,7 @@ func validateUsageReporting(cfg UsageReportingConfig) (err error) {
 type expected struct {
 	url                string
 	publish            bool
-	metric             bool
 	subscriptionMetric bool
-	interval           time.Duration
 	offline            bool
 	schedule           string
 	reportSchedule     string
@@ -39,21 +36,17 @@ type expected struct {
 
 var defaultExpected = expected{
 	publish:            true,
-	metric:             true,
 	subscriptionMetric: false,
-	interval:           15 * time.Minute,
 	offline:            false,
 	schedule:           "@hourly",
 	reportSchedule:     "@monthly",
-	granularity:        int((15 * time.Minute).Milliseconds()),
+	granularity:        0,
 	qaVars:             false,
 }
 
 func validateconfig(t *testing.T, expVals expected, cfg UsageReportingConfig) {
 	assert.Equal(t, expVals.url, cfg.GetURL())
-	assert.Equal(t, expVals.publish, cfg.CanPublishUsage())
-	assert.Equal(t, expVals.metric, cfg.CanPublishMetric())
-	assert.Equal(t, expVals.interval, cfg.GetInterval())
+	assert.Equal(t, expVals.publish, cfg.CanPublish())
 	assert.Equal(t, expVals.offline, cfg.IsOfflineMode())
 	assert.Equal(t, expVals.schedule, cfg.GetSchedule())
 	assert.Equal(t, expVals.reportSchedule, cfg.GetReportSchedule())
@@ -69,20 +62,13 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	props := properties.NewProperties(rootCmd)
 	AddUsageReportingProperties(props)
 
-	// Test Interval old env vars
-	os.Setenv(oldUsageReportingIntervalEnvVar, "30m")
 	expected := defaultExpected
-	expected.interval = 30 * time.Minute
-	expected.granularity = int((30 * time.Minute).Milliseconds())
 
 	cfg := ParseUsageReportingConfig(props)
 	assert.NotNil(t, cfg)
 	err := validateUsageReporting(cfg)
 	assert.Nil(t, err)
 	validateconfig(t, expected, cfg)
-
-	// Test Interval new env vars
-	os.Setenv(newUsageReportingIntervalEnvVar, defaultExpected.interval.String())
 
 	expected = defaultExpected
 	cfg = ParseUsageReportingConfig(props)
@@ -115,16 +101,12 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	// Test PublishMetric old env vars
 	os.Setenv(oldUsageReportingPublishMetricEnvVar, "true")
 	expected = defaultExpected
-	expected.metric = true
 
 	cfg = ParseUsageReportingConfig(props)
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
 	validateconfig(t, expected, cfg)
-
-	// Test PublishMetric new env vars
-	os.Setenv(newUsageReportingPublishMetricEnvVar, strconv.FormatBool(defaultExpected.metric))
 
 	expected = defaultExpected
 	cfg = ParseUsageReportingConfig(props)
@@ -151,13 +133,6 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	assert.Nil(t, err)
 
 	validateconfig(t, defaultExpected, cfg)
-
-	// invalid Interval
-	currentInterval := cfg.GetInterval()
-	cfg.(*UsageReportingConfiguration).Interval = time.Millisecond
-	err = validateUsageReporting(cfg)
-	assert.NotNil(t, err)
-	cfg.(*UsageReportingConfiguration).Interval = currentInterval
 
 	// invalid UsageSchedule
 	currentUsageSchedule := cfg.GetUsageSchedule()

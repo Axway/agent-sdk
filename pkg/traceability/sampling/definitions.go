@@ -5,7 +5,7 @@ package sampling
 const (
 	SampleKey           = "sample"
 	countMax            = 100
-	defaultSamplingRate = 1
+	defaultSamplingRate = 0
 	maximumSamplingRate = 10
 	globalCounter       = "global"
 )

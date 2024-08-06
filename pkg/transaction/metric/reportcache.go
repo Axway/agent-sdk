@@ -79,7 +79,7 @@ func (c *usageReportCache) getEvents() UsageEvent {
 
 // loadEvents - locks the cache before getting the events
 func (c *usageReportCache) loadEvents() UsageEvent {
-	if !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+	if !agent.GetCentralConfig().GetUsageReportingConfig().CanPublish() {
 		return UsageEvent{Report: map[string]UsageReport{}}
 	}
 	c.reportCacheLock.Lock()
@@ -100,7 +100,7 @@ func (c *usageReportCache) setEvents(lighthouseEvent UsageEvent) {
 
 // updateEvents - locks the cache before setting the new light house events in the cache
 func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
-	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublish() {
 		return
 	}
 

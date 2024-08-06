@@ -14,12 +14,8 @@ import (
 
 const (
 	// DEPRECATE remove old and new env vars as well as checks below
-	oldUsageReportingPublishEnvVar       = "CENTRAL_PUBLISHUSAGE"
-	oldUsageReportingPublishMetricEnvVar = "CENTRAL_PUBLISHMETRIC"
-	oldUsageReportingIntervalEnvVar      = "CENTRAL_EVENTAGGREGATIONINTERVAL"
-	newUsageReportingPublishEnvVar       = "CENTRAL_USAGEREPORTING_PUBLISH"
-	newUsageReportingPublishMetricEnvVar = "CENTRAL_USAGEREPORTING_PUBLISHMETRIC"
-	newUsageReportingIntervalEnvVar      = "CENTRAL_USAGEREPORTING_INTERVAL"
+	oldUsageReportingPublishEnvVar = "CENTRAL_PUBLISHUSAGE"
+	newUsageReportingPublishEnvVar = "CENTRAL_USAGEREPORTING_PUBLISH"
 
 	// QA EnvVars
 	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
@@ -28,9 +24,7 @@ const (
 
 	// Config paths
 	pathUsageReportingPublish       = "central.usagereporting.publish"
-	pathUsageReportingPublishMetric = "central.usagereporting.publishMetric"
 	pathUsageReportingUsageSchedule = "central.usagereporting.usageSchedule"
-	pathUsageReportingInterval      = "central.usagereporting.interval"
 	pathUsageReportingOffline       = "central.usagereporting.offline"
 	pathUsageReportingSchedule      = "central.usagereporting.offlineSchedule"
 )
@@ -38,9 +32,7 @@ const (
 // UsageReportingConfig - Interface to get usage reporting config
 type UsageReportingConfig interface {
 	GetURL() string
-	CanPublishUsage() bool
-	CanPublishMetric() bool
-	GetInterval() time.Duration
+	CanPublish() bool
 	GetReportInterval() time.Duration
 	GetUsageSchedule() string
 	IsOfflineMode() bool
@@ -54,12 +46,10 @@ type UsageReportingConfig interface {
 // UsageReportingConfiguration - structure to hold all usage reporting settings
 type UsageReportingConfiguration struct {
 	UsageReportingConfig
-	Publish           bool          `config:"publish"`
-	PublishMetric     bool          `config:"publishMetric"`
-	Interval          time.Duration `config:"interval"`
-	UsageSchedule     string        `config:"usageSchedule"`
-	Offline           bool          `config:"offline"`
-	Schedule          string        `config:"offlineSchedule"`
+	Publish           bool   `config:"publish"`
+	UsageSchedule     string `config:"usageSchedule"`
+	Offline           bool   `config:"offline"`
+	Schedule          string `config:"offlineSchedule"`
 	URL               string
 	reportSchedule    string
 	reportGranularity int
@@ -71,27 +61,11 @@ func NewUsageReporting(platformURL string) UsageReportingConfig {
 	return &UsageReportingConfiguration{
 		URL:            platformURL,
 		Publish:        true,
-		PublishMetric:  true,
-		Interval:       15 * time.Minute,
 		UsageSchedule:  "@daily",
 		Offline:        false,
 		Schedule:       "@hourly",
 		reportSchedule: "@monthly",
 		qaVars:         false,
-	}
-}
-
-func (u *UsageReportingConfiguration) validateInterval() {
-	if val := os.Getenv(newUsageReportingIntervalEnvVar); val != "" {
-		return // this env var is set use what has been parsed
-	}
-
-	// check if the old env var had a value
-	if val := os.Getenv(oldUsageReportingIntervalEnvVar); val != "" {
-		if value, err := time.ParseDuration(val); err == nil {
-			log.DeprecationWarningReplace(oldUsageReportingIntervalEnvVar, newUsageReportingIntervalEnvVar)
-			u.Interval = value
-		}
 	}
 }
 
@@ -110,30 +84,9 @@ func (u *UsageReportingConfiguration) validatePublish() {
 	}
 }
 
-func (u *UsageReportingConfiguration) validatePublishMetric() {
-	if val := os.Getenv(newUsageReportingPublishMetricEnvVar); val != "" {
-		return // this env var is set use what has been parsed
-	}
-
-	// check if the old env var had a value
-	if val := os.Getenv(oldUsageReportingPublishMetricEnvVar); val != "" {
-		if value, err := strconv.ParseBool(val); err == nil {
-			log.DeprecationWarningReplace(oldUsageReportingPublishMetricEnvVar, newUsageReportingPublishMetricEnvVar)
-			u.PublishMetric = value
-		}
-	}
-}
-
 // Validate -
 func (u *UsageReportingConfiguration) Validate() {
-	u.validateInterval() // DEPRECATE
-	eventAgg := u.Interval
-	if eventAgg < 60*time.Second {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingInterval))
-	}
-
-	u.validatePublish() // DEPRECATE
-	u.validatePublishMetric()
+	u.validatePublish()
 
 	if !u.Offline {
 		u.validateUsageSchedule()
@@ -222,19 +175,9 @@ func (u *UsageReportingConfiguration) GetURL() string {
 	return u.URL
 }
 
-// CanPublishUsage - Returns the publish boolean
-func (u *UsageReportingConfiguration) CanPublishUsage() bool {
+// CanPublish - Returns the publish boolean
+func (u *UsageReportingConfiguration) CanPublish() bool {
 	return u.Publish
-}
-
-// CanPublishMetric - Returns the publish metric boolean
-func (u *UsageReportingConfiguration) CanPublishMetric() bool {
-	return u.PublishMetric
-}
-
-// GetInterval - Returns the publish interval
-func (u *UsageReportingConfiguration) GetInterval() time.Duration {
-	return u.Interval
 }
 
 // IsOfflineMode - Returns the offline boolean
@@ -259,9 +202,6 @@ func (u *UsageReportingConfiguration) GetReportSchedule() string {
 
 // GetReportGranularity - Returns the granularity used in the offline reports
 func (u *UsageReportingConfiguration) GetReportGranularity() int {
-	if u.reportGranularity == 0 {
-		return int(u.Interval.Milliseconds())
-	}
 	return u.reportGranularity
 }
 
@@ -273,8 +213,6 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 // AddUsageReportingProperties - Adds the command properties needed for Usage Reporting Settings
 func AddUsageReportingProperties(props properties.Properties) {
 	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
-	props.AddBoolProperty(pathUsageReportingPublishMetric, true, "Indicates if the agent can publish metric events to Amplify platform. Default to true")
-	props.AddDurationProperty(pathUsageReportingInterval, 15*time.Minute, "The time interval at which usage and metric events will be generated", properties.WithLowerLimit(5*time.Minute))
 	props.AddStringProperty(pathUsageReportingUsageSchedule, "@daily", "The schedule at usage events are sent to the platform")
 	props.AddBoolProperty(pathUsageReportingOffline, false, "Turn this on to save the usage events to disk for manual upload")
 	props.AddStringProperty(pathUsageReportingSchedule, "@hourly", "The schedule at which usage events are generated, for offline mode only")
@@ -288,8 +226,6 @@ func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig
 
 	// update the config
 	cfg.Publish = props.BoolPropertyValue(pathUsageReportingPublish)
-	cfg.PublishMetric = props.BoolPropertyValue(pathUsageReportingPublishMetric)
-	cfg.Interval = props.DurationPropertyValue(pathUsageReportingInterval)
 	cfg.UsageSchedule = props.StringPropertyValue(pathUsageReportingUsageSchedule)
 	cfg.Offline = props.BoolPropertyValue(pathUsageReportingOffline)
 	cfg.Schedule = props.StringPropertyValue(pathUsageReportingSchedule)

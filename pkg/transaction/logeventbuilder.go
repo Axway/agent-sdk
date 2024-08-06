@@ -150,7 +150,7 @@ func NewTransactionSummaryBuilder() SummaryBuilder {
 		txSummaryBuilder.logEvent.EnvironmentID = cfg.GetEnvironmentID()
 		txSummaryBuilder.logEvent.APICDeployment = cfg.GetAPICDeployment()
 		txSummaryBuilder.logEvent.TransactionSummary.IsInMetricEvent =
-			cfg.GetUsageReportingConfig().CanPublishMetric()
+			cfg.GetMetricReportingConfig().CanPublish()
 	}
 	return txSummaryBuilder
 }

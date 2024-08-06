@@ -25,7 +25,7 @@ type Sampling struct {
 	Percentage      float64 `config:"percentage"`
 	PerAPI          bool    `config:"per_api"`
 	PerSub          bool    `config:"per_subscription"`
-	ReportAllErrors bool    `config:"reportAllErrors" yaml:"reportAllErrors"`
+	OnlyErrors      bool    `config:"onlyErrors" yaml:"onlyErrors"`
 	countMax        int
 	shouldSampleMax int
 }
@@ -36,7 +36,7 @@ func DefaultConfig() Sampling {
 		Percentage:      defaultSamplingRate,
 		PerAPI:          true,
 		PerSub:          true,
-		ReportAllErrors: true,
+		OnlyErrors:      false,
 		countMax:        countMax,
 		shouldSampleMax: defaultSamplingRate,
 	}
@@ -80,10 +80,10 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 
 	if offlineMode {
 		cfg = Sampling{
-			Percentage:      0,
-			PerAPI:          false,
-			PerSub:          false,
-			ReportAllErrors: false,
+			Percentage: 0,
+			PerAPI:     false,
+			PerSub:     false,
+			OnlyErrors: false,
 		}
 	} else {
 		cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage)

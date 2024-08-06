@@ -50,7 +50,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.ClientID = "serviceaccount_1234"
 	authCfg.PrivateKey = "../transaction/testdata/private_key.pem"
 	authCfg.PublicKey = "../transaction/testdata/public_key"
-	cfg.GetUsageReportingConfig().(*config.UsageReportingConfiguration).Interval = 30 * time.Second
+	cfg.GetMetricReportingConfig().(*config.MetricReportingConfiguration).Schedule = "* * * * *" // every minute
 	cfg.GetUsageReportingConfig().(*config.UsageReportingConfiguration).Offline = false
 	return cfg
 }
