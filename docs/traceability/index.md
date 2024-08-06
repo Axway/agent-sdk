@@ -74,10 +74,10 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.ssl.minVersion                 | CENTRAL_SSL_MINVERSION                 | String value for the minimum SSL/TLS version that is acceptable. If zero, empty TLS 1.0 is taken as the minimum. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                                                                      |
 | central.ssl.maxVersion                 | CENTRAL_SSL_MAXVERSION                 | String value for the maximum SSL/TLS version that is acceptable. If empty, then the maximum version supported by this package is used, which is currently TLS 1.3. Allowed values are: TLS1.0, TLS1.1, TLS1.2, TLS1.3.                                                                                                    |
 | central.proxyURL                       | CENTRAL_PROXYURL                       | The URL for the proxy for Amplify Central`<http://username:password@hostname:port>`. If empty, no proxy is defined.                                                                                                                                                                                                       |
+| central.metricReporting.publish        | CENTRAL_METRICREPORTING_PUBLISH        | Enables/disables the sending of metric events to Amplify (default: `true`)                                                                                                                                                                                                                           |
+| central.metricReporting.schedule       | CENTRAL_METRICREPORTING_SCHEDULE       | The frequency schedule in which the agent sends metric events to Amplify Central (default: `@hourly`)                                                                                                                                                                                                                        |
 | central.usageReporting.url             | CENTRAL_USAGEREPORTING_URL             | The Lighthouse URL the agent publishes usage reports. See [Traceability usage reporting](#traceability-usage-reporting)                                                                                                                                                                                                   |
 | central.usageReporting.publish         | CENTRAL_USAGEREPORTING_PUBLISH         | Enables/disables the sending of usage events to Amplify (default: `true`)                                                                                                                                                                                                                                                 |
-| central.usageReporting.publishMetric   | CENTRAL_USAGEREPORTING_PUBLISHMETRIC   | Enables/disables the sending of metric events to Amplify (default: `true`)                                                                                                                                                                                                                                                |
-| central.usageReporting.interval        | CENTRAL_USAGEREPORTING_INTERVAL        | The frequency in which the agent published activity to Amplify Central (default: `15m`)                                                                                                                                                                                                                                   |
 | central.usageReporting.offline         | CENTRAL_USAGEREPORTING_OFFLINE         | Enables/disables the sending of usage events to lighthouse or saving to disk (default: `false`)                                                                                                                                                                                                                           |
 | central.usageReporting.offlineschedule | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE | The frequency schedule that the agent collects activity for the offline reports (default: `@hourly`)                                                                                                                                                                                                                      |
 | central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
@@ -979,18 +979,25 @@ By default all transaction data is sent to Amplify.
 
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
-| YAML property   | Variable name                         | Description                                                                                       				 |
-|-----------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
-| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-10. Decimals allowed. Any value above will default it to 1) that are sent to Amplify     |
-| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event 				 |
-| reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                       				 |
+| YAML property   | Variable name                         | Description                                                                                                                   |
+|-----------------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-10. Decimals allowed. Any value above will default it to 1) that are sent to Amplify      |
+| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event                             |
+| onlyErrors      | TRACEABILITY_SAMPLING_ONLYERRORS      | Defines if only error transaction events are sent to Amplify                                                                  |
 
 
 ### Traceability usage reporting
 
 The Amplify Agents SDK has the ability to track API usages and report them back to the Amplify platform.
 
-By default usage reporting is on but can be configured using the following information.
+By default metric and usage reporting is on but can be configured using the following information.
+
+Below is the list of the metric reporting configuration properties, all of these properties are children of [[agent type]].central.metricReporting in the yaml.
+
+| YAML property   | Variable name                          | Default                            | Description                                                                                                                                                 |
+|-----------------|----------------------------------------|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| publish         | CENTRAL_METRICREPORTING_PUBLISH        | `true`                             | Defines if individual API Metrics will be published to Amplify                                                                                              |
+| schedule        | CENTRAL_METRICREPORTING_SCHEDULE       | `@hourly`                          | Defines the schedule, in the default online mode, that metric events are sent to Amplify                                                                    |
 
 Below is the list of the usage reporting configuration properties, all of these properties are children of [[agent type]].central.usageReporting in the yaml.
 
@@ -998,8 +1005,6 @@ Below is the list of the usage reporting configuration properties, all of these 
 |-----------------|----------------------------------------|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | url                         | CENTRAL_USAGEREPORTING_URL                         | https://lighthouse.admin.axway.com  | Defines the url on the Amplify platform that usage events are sent to                                                                                        |
 | publish                     | CENTRAL_USAGEREPORTING_PUBLISH                     | `true`                              | Defines if API usage numbers will be published to Amplify                                                                                                      |
-| publishMetric               | CENTRAL_USAGEREPORTING_PUBLISHMETRIC               | `true`                              | Defines if individual API Metrics will be published to Amplify                                                                                            |
-| interval                    | CENTRAL_USAGEREPORTING_INTERVAL                    | _15m_                               | Defines the interval, in the default online mode, that usage data is sent to Amplify                                                                        |
 | offline                     | CENTRAL_USAGEREPORTING_OFFLINE                     | `false`                             | Defines if the agent is working in offline mode for generating usage reports, see [Offline usage reporting](#offline-usage-reporting)                           |
 | offlineSchedule             | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE             | `@hourly`                           | Defines the schedule in which the usage numbers are determined when in offline mode, see [Defining a schedule](../../pkg/jobs/README.md#defining-a-schedule)    |
 
