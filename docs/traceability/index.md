@@ -80,11 +80,11 @@ Below is the list of Central configuration properties in YAML and their correspo
 | central.usageReporting.interval        | CENTRAL_USAGEREPORTING_INTERVAL        | The frequency in which the agent published activity to Amplify Central (default: `15m`)                                                                                                                                                                                                                                   |
 | central.usageReporting.offline         | CENTRAL_USAGEREPORTING_OFFLINE         | Enables/disables the sending of usage events to lighthouse or saving to disk (default: `false`)                                                                                                                                                                                                                           |
 | central.usageReporting.offlineschedule | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE | The frequency schedule that the agent collects activity for the offline reports (default: `@hourly`)                                                                                                                                                                                                                      |
-| central.grpc.enabled           | CENTRAL_GRPC_ENABLED           | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                         |
-| central.grpc.host              | CENTRAL_GRPC_HOST              | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                      |
-| central.grpc.port              | CENTRAL_GRPC_PORT              | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                           |
-| central.cacheStoragePath       | CENTRAL_CACHESTORAGEPATH       | The file path the agent will use to persist internal cache (default value: ./data)                                                                 |
-| central.cacheStorageInterval   | CENTRAL_CACHESTORAGEINTERVAL   | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)          |
+| central.grpc.enabled                   | CENTRAL_GRPC_ENABLED                   | Controls whether an agent uses a gRPC based stream connection to manage its internal cache. (Default value = false)                                                                                                                                                                                                       |
+| central.grpc.host                      | CENTRAL_GRPC_HOST                      | The host name of the gRPC based Amplify Central watch service (default value: uses the host from central.url config)                                                                                                                                                                                                      |
+| central.grpc.port                      | CENTRAL_GRPC_PORT                      | The port of the gRPC based Amplify Central watch service (default value: uses the port from central.url config)                                                                                                                                                                                                           |
+| central.cacheStoragePath               | CENTRAL_CACHESTORAGEPATH               | The file path the agent will use to persist internal cache (default value: ./data)                                                                                                                                                                                                                                        |
+| central.cacheStorageInterval           | CENTRAL_CACHESTORAGEINTERVAL           | The interval the agent will use to periodically check if the internal agent cache needs to be persisted (default value : 30 seconds)                                                                                                                                                                                      |
 
 
 The following is a sample of Central configuration in YAML
@@ -119,14 +119,12 @@ type CentralConfig interface {
 
  GetURL() string
  GetPlatformURL() string
- GetCatalogItemsURL() string
  GetAPIServerURL() string
  GetEnvironmentURL() string
  GetServicesURL() string
  GetRevisionsURL() string
  GetInstancesURL() string
  DeleteServicesURL() string
- GetConsumerInstancesURL() string
  GetAPIServerSubscriptionDefinitionURL() string
  GetAPIServerWebhooksURL() string
  GetAPIServerSecretsURL() string
@@ -134,11 +132,6 @@ type CentralConfig interface {
  GetSubscriptionURL() string
  GetSubscriptionConfig() SubscriptionConfig
 
- GetCatalogItemSubscriptionsURL(string) string
- GetCatalogItemSubscriptionStatesURL(string, string) string
- GetCatalogItemSubscriptionPropertiesURL(string, string) string
- GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
-    GetCatalogItemByIDURL(catalogItemID string) string
 
  GetAuthConfig() AuthConfig
  GetTLSConfig() TLSConfig
@@ -979,11 +972,11 @@ By default all transaction data is sent to Amplify.
 
 Below is the list of the sampling configuration properties in a YAML and their corresponding environment variables that can be set to override the config in YAML.  All of these are children of output.traceability.sampling
 
-| YAML property   | Variable name                         | Description                                                                                       				 |
-|-----------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
-| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-10. Decimals allowed. Any value above will default it to 1) that are sent to Amplify     |
-| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event 				 |
-| reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                       				 |
+| YAML property   | Variable name                         | Description                                                                                                              |
+|-----------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| percentage      | TRACEABILITY_SAMPLING_PERCENTAGE      | Defines the percentage of events (0-10. Decimals allowed. Any value above will default it to 1) that are sent to Amplify |
+| per_api         | TRACEABILITY_SAMPLING_PER_API         | Defines if the percentage above is applied to all events or separate based on API ID in the event                        |
+| reportAllErrors | TRACEABILITY_SAMPLING_REPORTALLERRORS | Defines if all error transaction events are sent to Amplify                                                              |
 
 
 ### Traceability usage reporting
@@ -996,12 +989,12 @@ Below is the list of the usage reporting configuration properties, all of these 
 
 | YAML property   | Variable name                          | Default                            | Description                                                                                                                                                  |
 |-----------------|----------------------------------------|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| url                         | CENTRAL_USAGEREPORTING_URL                         | https://lighthouse.admin.axway.com  | Defines the url on the Amplify platform that usage events are sent to                                                                                        |
-| publish                     | CENTRAL_USAGEREPORTING_PUBLISH                     | `true`                              | Defines if API usage numbers will be published to Amplify                                                                                                      |
-| publishMetric               | CENTRAL_USAGEREPORTING_PUBLISHMETRIC               | `true`                              | Defines if individual API Metrics will be published to Amplify                                                                                            |
-| interval                    | CENTRAL_USAGEREPORTING_INTERVAL                    | _15m_                               | Defines the interval, in the default online mode, that usage data is sent to Amplify                                                                        |
-| offline                     | CENTRAL_USAGEREPORTING_OFFLINE                     | `false`                             | Defines if the agent is working in offline mode for generating usage reports, see [Offline usage reporting](#offline-usage-reporting)                           |
-| offlineSchedule             | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE             | `@hourly`                           | Defines the schedule in which the usage numbers are determined when in offline mode, see [Defining a schedule](../../pkg/jobs/README.md#defining-a-schedule)    |
+| url             | CENTRAL_USAGEREPORTING_URL             | https://lighthouse.admin.axway.com | Defines the url on the Amplify platform that usage events are sent to                                                                                        |
+| publish         | CENTRAL_USAGEREPORTING_PUBLISH         | `true`                             | Defines if API usage numbers will be published to Amplify                                                                                                    |
+| publishMetric   | CENTRAL_USAGEREPORTING_PUBLISHMETRIC   | `true`                             | Defines if individual API Metrics will be published to Amplify                                                                                               |
+| interval        | CENTRAL_USAGEREPORTING_INTERVAL        | _15m_                              | Defines the interval, in the default online mode, that usage data is sent to Amplify                                                                         |
+| offline         | CENTRAL_USAGEREPORTING_OFFLINE         | `false`                            | Defines if the agent is working in offline mode for generating usage reports, see [Offline usage reporting](#offline-usage-reporting)                        |
+| offlineSchedule | CENTRAL_USAGEREPORTING_OFFLINESCHEDULE | `@hourly`                          | Defines the schedule in which the usage numbers are determined when in offline mode, see [Defining a schedule](../../pkg/jobs/README.md#defining-a-schedule) |
 
 #### Offline usage reporting
 

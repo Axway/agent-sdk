@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -89,7 +88,7 @@ func TestCRDHandler(t *testing.T) {
 					},
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: catalog.CategoryGVK().Kind,
+							Kind: management.APIServiceInstanceGVK().Kind,
 						},
 					},
 				},

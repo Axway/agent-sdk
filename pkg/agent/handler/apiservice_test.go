@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -106,7 +105,7 @@ func TestNewAPISvcHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{
 					GroupVersionKind: apiv1.GroupVersionKind{
 						GroupKind: apiv1.GroupKind{
-							Kind: catalog.CategoryGVK().Kind,
+							Kind: management.APIServiceInstanceGVK().Kind,
 						},
 					},
 					SubResources: map[string]interface{}{},

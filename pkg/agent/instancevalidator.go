@@ -151,7 +151,7 @@ func (j *instanceValidator) deleteService(logger log.FieldLogger, ri *apiV1.Reso
 	logger = logger.WithField("serviceTitle", ri.Title)
 	logger.Infof("API Service no longer has a service instance; deleting the API Service")
 
-	// deleting the service will delete all associated resources, including the consumerInstance
+	// deleting the service will delete all associated resources
 	err := agent.apicClient.DeleteServiceByName(ri.Name)
 	if err != nil {
 		logger.WithError(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title)).Error("deleting service")

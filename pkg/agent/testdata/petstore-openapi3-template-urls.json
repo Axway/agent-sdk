@@ -960,9 +960,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "category": {
-            "$ref": "#/components/schemas/Category"
-          },
           "name": {
             "type": "string",
             "example": "doggie"
