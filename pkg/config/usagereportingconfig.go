@@ -22,7 +22,7 @@ const (
 	// QA EnvVars
 	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
 	qaUsageReportingOfflineScheduleEnvVar = "QA_CENTRAL_USAGEREPORTING_OFFLINEREPORTSCHEDULE"
-	qaUsageReportingUsageScheduleEnvVar   = "QA_CENTRAL_USAGEREPORTING_USAGESCHEDULE"
+	qaUsageReportingUsageScheduleEnvVar   = "QA_CENTRAL_USAGEREPORTING_SCHEDULE"
 
 	// Config paths
 	pathUsageReportingPublish         = "central.usagereporting.publish"
