@@ -183,7 +183,7 @@ func createMetricCollector() Collector {
 		if !metricCollector.usageConfig.IsOfflineMode() {
 			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.metricConfig.GetSchedule(), "Metric Collector")
 		} else {
-			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.usageConfig.GetSchedule(), "Metric Collector")
+			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.usageConfig.GetOfflineSchedule(), "Metric Collector")
 		}
 		if err != nil {
 			panic(err)

@@ -27,8 +27,9 @@ type expected struct {
 	url                string
 	publish            bool
 	subscriptionMetric bool
-	offline            bool
 	schedule           string
+	offline            bool
+	offlineSchedule    string
 	reportSchedule     string
 	granularity        int
 	qaVars             bool
@@ -37,8 +38,9 @@ type expected struct {
 var defaultExpected = expected{
 	publish:            true,
 	subscriptionMetric: false,
+	schedule:           "@daily",
 	offline:            false,
-	schedule:           "@hourly",
+	offlineSchedule:    "@hourly",
 	reportSchedule:     "@monthly",
 	granularity:        0,
 	qaVars:             false,
@@ -47,8 +49,9 @@ var defaultExpected = expected{
 func validateconfig(t *testing.T, expVals expected, cfg UsageReportingConfig) {
 	assert.Equal(t, expVals.url, cfg.GetURL())
 	assert.Equal(t, expVals.publish, cfg.CanPublish())
-	assert.Equal(t, expVals.offline, cfg.IsOfflineMode())
 	assert.Equal(t, expVals.schedule, cfg.GetSchedule())
+	assert.Equal(t, expVals.offline, cfg.IsOfflineMode())
+	assert.Equal(t, expVals.offlineSchedule, cfg.GetOfflineSchedule())
 	assert.Equal(t, expVals.reportSchedule, cfg.GetReportSchedule())
 	assert.Equal(t, expVals.granularity, cfg.GetReportGranularity())
 	assert.Equal(t, expVals.qaVars, cfg.UsingQAVars())
@@ -135,18 +138,36 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	validateconfig(t, defaultExpected, cfg)
 
 	// invalid UsageSchedule
-	currentUsageSchedule := cfg.GetUsageSchedule()
-	cfg.(*UsageReportingConfiguration).UsageSchedule = "*/1511 * * * *"
+	currentUsageSchedule := cfg.GetSchedule()
+	cfg.(*UsageReportingConfiguration).Schedule = "*/1511 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.NotNil(t, err)
-	cfg.(*UsageReportingConfiguration).UsageSchedule = "0,15,30,45,55 * * * *"
+	cfg.(*UsageReportingConfiguration).Schedule = "0,15,30,45,55 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.NotNil(t, err)
-	cfg.(*UsageReportingConfiguration).UsageSchedule = currentUsageSchedule
+	cfg.(*UsageReportingConfiguration).Schedule = currentUsageSchedule
+
+	// invalid old UsageSchedule override
+	os.Setenv(oldUsageReportingScheduleEnvVar, "*/1 * * *")
+	err = validateUsageReporting(cfg)
+	assert.NotNil(t, err)
+
+	// invalid old UsageSchedule override
+	os.Setenv(oldUsageReportingScheduleEnvVar, "*/1 * * * *")
+	err = validateUsageReporting(cfg)
+	assert.NotNil(t, err)
+
+	// old UsageSchedule override
+	expected := defaultExpected
+	expected.schedule = "0 */5 * * *"
+	os.Setenv(oldUsageReportingScheduleEnvVar, "0 */5 * * *")
+	err = validateUsageReporting(cfg)
+	assert.Nil(t, err)
+	validateconfig(t, expected, cfg)
 
 	// QA UsageSchedule override
 	os.Setenv(qaUsageReportingUsageScheduleEnvVar, "*/1 * * * *")
-	cfg.(*UsageReportingConfiguration).UsageSchedule = "*/1 * * * *"
+	cfg.(*UsageReportingConfiguration).Schedule = "*/1 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
 
@@ -156,15 +177,15 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	assert.Nil(t, err)
 
 	// invalid Schedule
-	currentSchedule := cfg.GetSchedule()
-	cfg.(*UsageReportingConfiguration).Schedule = "*/1511 * * * *"
+	currentSchedule := cfg.GetOfflineSchedule()
+	cfg.(*UsageReportingConfiguration).OfflineSchedule = "*/1511 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.NotNil(t, err)
-	cfg.(*UsageReportingConfiguration).Schedule = currentSchedule
+	cfg.(*UsageReportingConfiguration).OfflineSchedule = currentSchedule
 
 	// QA Schedule override
 	os.Setenv(qaUsageReportingScheduleEnvVar, "*/1 * * * *")
-	cfg.(*UsageReportingConfiguration).Schedule = "*/1 * * * *"
+	cfg.(*UsageReportingConfiguration).OfflineSchedule = "*/1 * * * *"
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
 

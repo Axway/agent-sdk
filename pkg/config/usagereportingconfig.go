@@ -14,8 +14,10 @@ import (
 
 const (
 	// DEPRECATE remove old and new env vars as well as checks below
-	oldUsageReportingPublishEnvVar = "CENTRAL_PUBLISHUSAGE"
-	newUsageReportingPublishEnvVar = "CENTRAL_USAGEREPORTING_PUBLISH"
+	oldUsageReportingPublishEnvVar  = "CENTRAL_PUBLISHUSAGE"
+	newUsageReportingPublishEnvVar  = "CENTRAL_USAGEREPORTING_PUBLISH"
+	oldUsageReportingScheduleEnvVar = "CENTRAL_USAGEREPORTING_USAGESCHEDULE"
+	newUsageReportingScheduleEnvVar = "CENTRAL_USAGEREPORTING_SCHEDULE"
 
 	// QA EnvVars
 	qaUsageReportingScheduleEnvVar        = "QA_CENTRAL_USAGEREPORTING_OFFLINESCHEDULE"
@@ -23,10 +25,10 @@ const (
 	qaUsageReportingUsageScheduleEnvVar   = "QA_CENTRAL_USAGEREPORTING_USAGESCHEDULE"
 
 	// Config paths
-	pathUsageReportingPublish       = "central.usagereporting.publish"
-	pathUsageReportingUsageSchedule = "central.usagereporting.usageSchedule"
-	pathUsageReportingOffline       = "central.usagereporting.offline"
-	pathUsageReportingSchedule      = "central.usagereporting.offlineSchedule"
+	pathUsageReportingPublish         = "central.usagereporting.publish"
+	pathUsageReportingSchedule        = "central.usagereporting.schedule"
+	pathUsageReportingOffline         = "central.usagereporting.offline"
+	pathUsageReportingOfflineSchedule = "central.usagereporting.offlineSchedule"
 )
 
 // UsageReportingConfig - Interface to get usage reporting config
@@ -34,9 +36,9 @@ type UsageReportingConfig interface {
 	GetURL() string
 	CanPublish() bool
 	GetReportInterval() time.Duration
-	GetUsageSchedule() string
-	IsOfflineMode() bool
 	GetSchedule() string
+	IsOfflineMode() bool
+	GetOfflineSchedule() string
 	GetReportSchedule() string
 	GetReportGranularity() int
 	UsingQAVars() bool
@@ -47,9 +49,9 @@ type UsageReportingConfig interface {
 type UsageReportingConfiguration struct {
 	UsageReportingConfig
 	Publish           bool   `config:"publish"`
-	UsageSchedule     string `config:"usageSchedule"`
+	Schedule          string `config:"schedule"`
 	Offline           bool   `config:"offline"`
-	Schedule          string `config:"offlineSchedule"`
+	OfflineSchedule   string `config:"offlineSchedule"`
 	URL               string
 	reportSchedule    string
 	reportGranularity int
@@ -59,13 +61,13 @@ type UsageReportingConfiguration struct {
 // NewUsageReporting - Creates the default usage reporting config
 func NewUsageReporting(platformURL string) UsageReportingConfig {
 	return &UsageReportingConfiguration{
-		URL:            platformURL,
-		Publish:        true,
-		UsageSchedule:  "@daily",
-		Offline:        false,
-		Schedule:       "@hourly",
-		reportSchedule: "@monthly",
-		qaVars:         false,
+		URL:             platformURL,
+		Publish:         true,
+		Schedule:        "@daily",
+		Offline:         false,
+		OfflineSchedule: "@hourly",
+		reportSchedule:  "@monthly",
+		qaVars:          false,
 	}
 }
 
@@ -101,35 +103,42 @@ func (u *UsageReportingConfiguration) validateUsageSchedule() {
 		if _, err := cronexpr.Parse(val); err != nil {
 			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingUsageScheduleEnvVar, val)
 		} else {
-			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingUsageScheduleEnvVar, val, u.UsageSchedule)
-			u.UsageSchedule = val
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingUsageScheduleEnvVar, val, u.Schedule)
+			u.Schedule = val
 			u.qaVars = true
 		}
 		return
 	}
 
+	if val := os.Getenv(newUsageReportingScheduleEnvVar); val == "" {
+		if val = os.Getenv(oldUsageReportingScheduleEnvVar); val != "" {
+			log.DeprecationWarningReplace(oldUsageReportingScheduleEnvVar, newUsageReportingScheduleEnvVar)
+			u.Schedule = val
+		}
+	}
+
 	// Check the cron expressions
-	cron, err := cronexpr.Parse(u.UsageSchedule)
+	cron, err := cronexpr.Parse(u.Schedule)
 	if err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
 	}
 	checks := 5
 	nextRuns := cron.NextN(time.Now(), uint(checks))
 	if len(nextRuns) != checks {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
 	}
 	for i := 1; i < checks-1; i++ {
 		delta := nextRuns[i].Sub(nextRuns[i-1])
 		if delta < time.Hour {
-			log.Tracef("%s must be at 1 hour apart", pathUsageReportingUsageSchedule)
-			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingUsageSchedule))
+			log.Tracef("%s must be at 1 hour apart", pathUsageReportingSchedule)
+			exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
 		}
 	}
 }
 
 func (u *UsageReportingConfiguration) validateOffline() {
-	if _, err := cronexpr.Parse(u.Schedule); err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+	if _, err := cronexpr.Parse(u.OfflineSchedule); err != nil {
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingOfflineSchedule))
 	}
 
 	// reporting is offline, lets read the QA env vars
@@ -137,8 +146,8 @@ func (u *UsageReportingConfiguration) validateOffline() {
 		if _, err := cronexpr.Parse(val); err != nil {
 			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaUsageReportingScheduleEnvVar, val)
 		} else {
-			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingScheduleEnvVar, val, u.Schedule)
-			u.Schedule = val
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaUsageReportingScheduleEnvVar, val, u.OfflineSchedule)
+			u.OfflineSchedule = val
 			u.qaVars = true
 		}
 	}
@@ -154,19 +163,19 @@ func (u *UsageReportingConfiguration) validateOffline() {
 	}
 
 	// Check the cron expressions
-	cron, err := cronexpr.Parse(u.Schedule)
+	cron, err := cronexpr.Parse(u.OfflineSchedule)
 	if err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingOfflineSchedule))
 	}
 	nextTwoRuns := cron.NextN(time.Now(), 2)
 	if len(nextTwoRuns) != 2 {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingOfflineSchedule))
 	}
 	u.reportGranularity = int(nextTwoRuns[1].Sub(nextTwoRuns[0]).Milliseconds())
 
 	// if no QA env vars are set then validate the schedule is at least hourly
 	if nextTwoRuns[1].Sub(nextTwoRuns[0]) < time.Hour && !u.qaVars {
-		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingSchedule))
+		exception.Throw(ErrBadConfig.FormatError(pathUsageReportingOfflineSchedule))
 	}
 }
 
@@ -186,13 +195,13 @@ func (u *UsageReportingConfiguration) IsOfflineMode() bool {
 }
 
 // GetSchedule - Returns the schedule string
-func (u *UsageReportingConfiguration) GetSchedule() string {
-	return u.Schedule
+func (u *UsageReportingConfiguration) GetOfflineSchedule() string {
+	return u.OfflineSchedule
 }
 
-// GetUsageSchedule - Returns the schedule string for publishing reports
-func (u *UsageReportingConfiguration) GetUsageSchedule() string {
-	return u.UsageSchedule
+// GetSchedule - Returns the schedule string for publishing reports
+func (u *UsageReportingConfiguration) GetSchedule() string {
+	return u.Schedule
 }
 
 // GetReportSchedule - Returns the offline schedule string for creating reports
@@ -213,9 +222,9 @@ func (u *UsageReportingConfiguration) UsingQAVars() bool {
 // AddUsageReportingProperties - Adds the command properties needed for Usage Reporting Settings
 func AddUsageReportingProperties(props properties.Properties) {
 	props.AddBoolProperty(pathUsageReportingPublish, true, "Indicates if the agent can publish usage events to Amplify platform. Default to true")
-	props.AddStringProperty(pathUsageReportingUsageSchedule, "@daily", "The schedule at usage events are sent to the platform")
+	props.AddStringProperty(pathUsageReportingSchedule, "@daily", "The schedule at usage events are sent to the platform")
 	props.AddBoolProperty(pathUsageReportingOffline, false, "Turn this on to save the usage events to disk for manual upload")
-	props.AddStringProperty(pathUsageReportingSchedule, "@hourly", "The schedule at which usage events are generated, for offline mode only")
+	props.AddStringProperty(pathUsageReportingOfflineSchedule, "@hourly", "The schedule at which usage events are generated, for offline mode only")
 }
 
 // ParseUsageReportingConfig - Parses the Usage Reporting Config values from the command line
@@ -226,9 +235,9 @@ func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig
 
 	// update the config
 	cfg.Publish = props.BoolPropertyValue(pathUsageReportingPublish)
-	cfg.UsageSchedule = props.StringPropertyValue(pathUsageReportingUsageSchedule)
-	cfg.Offline = props.BoolPropertyValue(pathUsageReportingOffline)
 	cfg.Schedule = props.StringPropertyValue(pathUsageReportingSchedule)
+	cfg.Offline = props.BoolPropertyValue(pathUsageReportingOffline)
+	cfg.OfflineSchedule = props.StringPropertyValue(pathUsageReportingOfflineSchedule)
 
 	return cfg
 }
