@@ -3,6 +3,8 @@ package agent
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -47,6 +49,12 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 	agent.cacheManager.AddAPIService(svc)
 	agent.cacheManager.AddAPIServiceInstance(instance)
 	return svc, instance
+}
+
+func setupAPICClient(mockResponse []api.MockResponse) {
+	client, httpClient := apic.GetTestServiceClient()
+	httpClient.SetResponses(mockResponse)
+	agent.apicClient = client
 }
 
 func setupAPIValidator(apiValidation bool) {
