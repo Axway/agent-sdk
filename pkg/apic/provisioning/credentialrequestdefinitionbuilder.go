@@ -32,8 +32,6 @@ type CredentialRequestBuilder interface {
 	SetTitle(title string) CredentialRequestBuilder
 	SetRequestSchema(schema SchemaBuilder) CredentialRequestBuilder
 	SetProvisionSchema(schema SchemaBuilder) CredentialRequestBuilder
-	SetWebhooks(webhooks []string) CredentialRequestBuilder
-	AddWebhook(webhook string) CredentialRequestBuilder
 	AddXAgentDetails(key string, value interface{}) CredentialRequestBuilder
 	IsRenewable() CredentialRequestBuilder
 	IsSuspendable() CredentialRequestBuilder

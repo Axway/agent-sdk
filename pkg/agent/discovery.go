@@ -126,15 +126,14 @@ func PublishingUnlock() {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-			var err error
-			_, err = publishAccessRequestDefinition(&serviceBody)
-			if err != nil {
-				return err
-			}
+
+		var err error
+		_, err = publishAccessRequestDefinition(&serviceBody)
+		if err != nil {
+			return err
 		}
 
-		_, err := agent.apicClient.PublishService(&serviceBody)
+		_, err = agent.apicClient.PublishService(&serviceBody)
 		if err != nil {
 			return err
 		}

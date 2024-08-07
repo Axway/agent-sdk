@@ -27,10 +27,6 @@ const (
 	GraphQL       = "graphql-sdl"
 	Raml          = "RAML"
 
-	SubscriptionSchemaNameSuffix      = ".authsubscription"
-	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
-	DefaultSubscriptionWebhookAuthKey = "webhookAuthKey"
-
 	FieldsKey = "fields"
 	QueryKey  = "query"
 
@@ -97,7 +93,6 @@ type serviceContext struct {
 	revisionName         string
 	revisionCount        int
 	instanceName         string
-	consumerInstanceName string
 	updateServiceSource  bool
 	updateInstanceSource bool
 }
@@ -133,18 +128,15 @@ type UnstructuredProperties struct {
 
 // ServiceClient -
 type ServiceClient struct {
-	tokenRequester                     auth.TokenGetter
-	cfg                                corecfg.CentralConfig
-	apiClient                          coreapi.Client
-	DefaultSubscriptionSchema          SubscriptionSchema
-	caches                             cache2.Manager
-	subscriptionSchemaCache            cache.Cache
-	subscriptionMgr                    SubscriptionManager
-	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
-	subscriptionRegistrationLock       sync.Mutex
-	logger                             log.FieldLogger
-	pageSizes                          map[string]int
-	pageSizeMutex                      *sync.Mutex
+	tokenRequester               auth.TokenGetter
+	cfg                          corecfg.CentralConfig
+	apiClient                    coreapi.Client
+	caches                       cache2.Manager
+	subscriptionSchemaCache      cache.Cache
+	subscriptionRegistrationLock sync.Mutex
+	logger                       log.FieldLogger
+	pageSizes                    map[string]int
+	pageSizeMutex                *sync.Mutex
 }
 
 // APIServerInfoProperty -
@@ -155,6 +147,5 @@ type APIServerInfoProperty struct {
 
 // APIServerInfo -
 type APIServerInfo struct {
-	ConsumerInstance APIServerInfoProperty `json:"consumerInstance,omitempty"`
-	Environment      APIServerInfoProperty `json:"environment,omitempty"`
+	Environment APIServerInfoProperty `json:"environment,omitempty"`
 }

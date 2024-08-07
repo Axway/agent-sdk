@@ -1008,7 +1008,6 @@ var crd = &management.CredentialRequestDefinition{
 				"properties": map[string]interface{}{},
 			},
 		},
-		Webhooks: nil,
 	},
 }
 

@@ -24,9 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -75,7 +73,6 @@ type agentData struct {
 	isInitialized              bool
 
 	provisioner          provisioning.Provisioning
-	marketplaceMigration migrate.Migrator
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
@@ -123,7 +120,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		return err
 	}
 	agent.agentFeaturesCfg = agentFeaturesCfg
-	centralCfg.SetIsMarketplaceSubsEnabled(true)
 
 	// validate the central config
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
@@ -230,10 +226,6 @@ func handleInitialization() error {
 
 		startTeamACLCache()
 
-		err := registerSubscriptionWebhook(agent.cfg.GetAgentType(), agent.apicClient)
-		if err != nil {
-			return errors.Wrap(errors.ErrRegisterSubscriptionWebhook, err.Error())
-		}
 	}
 
 	return nil
@@ -366,8 +358,7 @@ func checkRunningAgent() error {
 type TestOpt func(*testOpts)
 
 type testOpts struct {
-	marketplace bool
-	agentType   config.AgentType
+	agentType config.AgentType
 }
 
 // InitializeForTest - Initialize for test
@@ -382,18 +373,11 @@ func InitializeForTest(apicClient apic.Client, opts ...TestOpt) {
 	}
 	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
-		ConnectToCentral:        true,
-		ProcessSystemSignals:    true,
-		VersionChecker:          true,
-		PersistCache:            true,
-		MarketplaceProvisioning: true,
-		AgentStatusUpdates:      true,
-	}
-}
-
-func TestWithMarketplace() func(*testOpts) {
-	return func(o *testOpts) {
-		o.marketplace = true
+		ConnectToCentral:     true,
+		ProcessSystemSignals: true,
+		VersionChecker:       true,
+		PersistCache:         true,
+		AgentStatusUpdates:   true,
 	}
 }
 
@@ -445,13 +429,6 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 // RegisterShutdownHandler - Registers shutdown handler
 func RegisterShutdownHandler(handler ShutdownHandler) {
 	agent.agentShutdownHandler = handler
-}
-
-func registerSubscriptionWebhook(at config.AgentType, client apic.Client) error {
-	if at == config.DiscoveryAgent {
-		return client.RegisterSubscriptionWebhook()
-	}
-	return nil
 }
 
 func startTeamACLCache() {
@@ -688,7 +665,7 @@ func newHandlers() []handler.Handler {
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		handlers = append(
 			handlers,
-			handler.NewCategoryHandler(agent.cacheManager),
+
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),

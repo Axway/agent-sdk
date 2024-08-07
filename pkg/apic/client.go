@@ -15,7 +15,6 @@ import (
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -62,34 +61,15 @@ const (
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth, Basic}
 
-// SubscriptionProcessor - callback method type to process subscriptions
-type SubscriptionProcessor func(subscription Subscription)
-
-// SubscriptionValidator - callback method type to validate subscription for processing
-type SubscriptionValidator func(subscription Subscription) bool
-
 // Client - interface
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
 	SetConfig(cfg corecfg.CentralConfig)
 	PublishService(serviceBody *ServiceBody) (*management.APIService, error)
-	RegisterSubscriptionWebhook() error
-	RegisterSubscriptionSchema(schema SubscriptionSchema, update bool) error
-	UpdateSubscriptionSchema(schema SubscriptionSchema) error
-	GetSubscriptionManager() SubscriptionManager
-	GetCatalogItemIDForConsumerInstance(instanceID string) (string, error)
 	DeleteAPIServiceInstance(name string) error
-	DeleteConsumerInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetConsumerInstanceByID(id string) (*management.ConsumerInstance, error)
-	GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*management.ConsumerInstance, error)
-	UpdateConsumerInstanceSubscriptionDefinition(externalAPIID, subscriptionDefinitionName string) error
 	GetUserEmailAddress(ID string) (string, error)
 	GetUserName(ID string) (string, error)
-	GetSubscriptionsForCatalogItem(states []string, catalogItemID string) ([]CentralSubscription, error)
-	GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error)
-	UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, schema SubscriptionSchema) error
-	GetCatalogItemName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
 	GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error)
@@ -100,8 +80,6 @@ type Client interface {
 	GetAPIServiceByName(name string) (*management.APIService, error)
 	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByName(name string) (*management.APIServiceRevision, error)
-	CreateCategory(name string) (*catalog.Category, error)
-	GetOrCreateCategory(category string) string
 	GetEnvironment() (*management.Environment, error)
 	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
 	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
@@ -112,7 +90,6 @@ type Client interface {
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
-	IsMarketplaceSubsEnabled() bool
 
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
@@ -147,11 +124,6 @@ func (c *ServiceClient) createAPIServerURL(link string) string {
 	return fmt.Sprintf("%s/apis%s", c.cfg.GetURL(), link)
 }
 
-// IsMarketplaceSubsEnabled -
-func (c *ServiceClient) IsMarketplaceSubsEnabled() bool {
-	return c.cfg.IsMarketplaceSubsEnabled()
-}
-
 // getTeamFromCache -
 func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
 	var team *defs.PlatformTeam
@@ -171,55 +143,17 @@ func (c *ServiceClient) getTeamFromCache(name string) (string, bool) {
 	return team.ID, true
 }
 
-// GetOrCreateCategory - Returns the value on published proxy
-func (c *ServiceClient) GetOrCreateCategory(title string) string {
-	category := c.caches.GetCategoryWithTitle(title)
-	if category == nil {
-		if !corecfg.IsCategoryAutocreationEnabled() {
-			c.logger.Warnf("Category auto creation is disabled: agent is not allowed to create %s category", title)
-			return ""
-		}
-
-		// create the category and add it to the cache
-		newCategory, err := c.CreateCategory(title)
-		if err != nil {
-			c.logger.Errorf(errors.Wrap(ErrCategoryCreate, err.Error()).FormatError(title).Error())
-			return ""
-		}
-		category, err = newCategory.AsInstance()
-		if err == nil {
-			c.caches.AddCategory(category)
-		}
-	}
-
-	return category.Name
-}
-
 // initClient - config change handler
 func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.cfg = cfg
 	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
 		coreapi.WithTimeout(cfg.GetClientTimeout()), coreapi.WithSingleURL())
-	c.DefaultSubscriptionSchema = NewSubscriptionSchema(cfg.GetEnvironmentName() + SubscriptionSchemaNameSuffix)
 
 	err := c.setTeamCache()
 	if err != nil {
 		c.logger.Error(err)
 	}
 
-	// set the default webhook if one has been configured
-	if cfg.GetSubscriptionConfig() != nil {
-		webCfg := cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-		if webCfg != nil && webCfg.IsConfigured() {
-			c.DefaultSubscriptionApprovalWebhook = webCfg
-		}
-
-		if c.subscriptionMgr == nil {
-			c.subscriptionMgr = newSubscriptionManager(c)
-		} else {
-			c.subscriptionMgr.OnConfigChange(c)
-		}
-	}
 }
 
 // SetTokenGetter - sets the token getter
@@ -320,16 +254,6 @@ func (c *ServiceClient) createHeader() (map[string]string, error) {
 	headers[HdrAuthorization] = BearerTokenPrefix + token
 	headers[HdrContentType] = ContentTypeJson
 	return headers, nil
-}
-
-// GetSubscriptionManager -
-func (c *ServiceClient) GetSubscriptionManager() SubscriptionManager {
-	return c.subscriptionMgr
-}
-
-// SetSubscriptionManager -
-func (c *ServiceClient) SetSubscriptionManager(mgr SubscriptionManager) {
-	c.subscriptionMgr = mgr
 }
 
 // Healthcheck - verify connection to the platform

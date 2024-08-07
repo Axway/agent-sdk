@@ -64,11 +64,10 @@ func TestEventSync_streamMode(t *testing.T) {
 	}
 	err := Initialize(cfg)
 	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
-		ConnectToCentral:        true,
-		ProcessSystemSignals:    true,
-		VersionChecker:          false,
-		PersistCache:            true,
-		MarketplaceProvisioning: true,
+		ConnectToCentral:     true,
+		ProcessSystemSignals: true,
+		VersionChecker:       false,
+		PersistCache:         true,
 	}
 
 	cfg.AgentName = "Test-DA"

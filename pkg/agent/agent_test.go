@@ -2,7 +2,6 @@ package agent
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/apic/mock"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -385,21 +383,6 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 
 	// Assert no api client
 	assert.Nil(t, agent.apicClient)
-}
-
-func Test_registerSubscriptionWebhook(t *testing.T) {
-	err := registerSubscriptionWebhook(config.DiscoveryAgent, &mock.Client{})
-	assert.Nil(t, err)
-
-	err = registerSubscriptionWebhook(config.DiscoveryAgent, &mock.Client{
-		RegisterSubscriptionWebhookMock: func() error {
-			return fmt.Errorf("error")
-		},
-	})
-	assert.NotNil(t, err)
-
-	err = registerSubscriptionWebhook(config.TraceabilityAgent, &mock.Client{})
-	assert.Nil(t, err)
 }
 
 func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {

@@ -60,14 +60,6 @@ type Manager interface {
 	DeleteAllAPIServiceInstance()
 	ListAPIServiceInstances() []*v1.ResourceInstance
 
-	// Category cache related methods
-	AddCategory(resource *v1.ResourceInstance)
-	GetCategoryCache() cache.Cache
-	GetCategoryKeys() []string
-	GetCategory(name string) *v1.ResourceInstance
-	GetCategoryWithTitle(title string) *v1.ResourceInstance
-	DeleteCategory(name string) error
-
 	// Team and ACL related cache methods
 	GetTeamCache() cache.Cache
 	AddTeam(team *defs.PlatformTeam)
@@ -132,7 +124,6 @@ type cacheManager struct {
 	apiMap                  cache.Cache
 	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
-	categoryMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
@@ -184,7 +175,6 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 	cacheKeys := map[string]func(cache.Cache){
 		apiServicesKey:         func(loaded cache.Cache) { c.apiMap = loaded },
 		apiServiceInstancesKey: func(loaded cache.Cache) { c.instanceMap = loaded },
-		categoriesKey:          func(loaded cache.Cache) { c.categoryMap = loaded },
 		instanceCountKey:       func(loaded cache.Cache) { c.instanceCountMap = loaded },
 		credReqDefKey:          func(loaded cache.Cache) { c.crdMap = loaded },
 		accReqDefKey:           func(loaded cache.Cache) { c.ardMap = loaded },
@@ -344,7 +334,6 @@ func (c *cacheManager) Flush() {
 	c.accessRequestMap.Flush()
 	c.apiMap.Flush()
 	c.ardMap.Flush()
-	c.categoryMap.Flush()
 	c.crdMap.Flush()
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()

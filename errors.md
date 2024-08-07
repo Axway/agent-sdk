@@ -9,7 +9,6 @@
 | 1001 | initialization error checking for dependencies to respond, possibly network or settings                     | pkg/util/errors/ErrInitServicesNotReady          |
 | 1004 | error starting periodic or immediate status update                                                          | pkg/util/ErrStartingAgentStatusUpdate            |
 | 1005 | error starting agent                                                                                        | pkg/util/ErrStartingVersionChecker               |
-| 1006 | error registering subscription webhook                                                                      | pkg/util/ErrRegisterSubscriptionWebhook          |
 | 1007 | error indicating failure to connect to Amplify Central over gRPC                                            | pkg/util/ErrGrpcConnection                       |
 | 1008 | error indicating the harvester client is not connected to Amplify Central                                   | pkg/util/ErrHarvesterConnection                  |
 |      | 1100-1299 - for apic package errors                                                                         |                                                  |

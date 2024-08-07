@@ -1,14 +1,11 @@
 package agent
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -52,12 +49,6 @@ func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v
 	return svc, instance
 }
 
-func setupAPICClient(mockResponse []api.MockResponse) {
-	client, httpClient := apic.GetTestServiceClient()
-	httpClient.SetResponses(mockResponse)
-	agent.apicClient = client
-}
-
 func setupAPIValidator(apiValidation bool) {
 	setAPIValidator(func(apiID, stageName string) bool {
 		return apiValidation
@@ -82,17 +73,7 @@ func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
 	// Setup
 	instanceValidator := newInstanceValidator()
 	setupCache("12345", "test")
-	setupAPICClient([]api.MockResponse{
-		{
-			RespCode: http.StatusOK, // get instance finalizers
-		},
-		{
-			RespCode: http.StatusNoContent, // delete instance
-		},
-		{
-			RespCode: http.StatusNoContent, // delete service
-		},
-	})
+
 	setupAPIValidator(false)
 	instanceValidator.Execute()
 	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
@@ -123,14 +104,7 @@ func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
 		},
 	}
 	agent.cacheManager.AddAPIServiceInstance(instance)
-	setupAPICClient([]api.MockResponse{
-		{
-			RespCode: http.StatusOK, // get finalizers
-		},
-		{
-			RespCode: http.StatusNoContent, // delete instance
-		},
-	})
+
 	setAPIValidator(func(apiID, stageName string) bool {
 		return apiID != "12345"
 	})

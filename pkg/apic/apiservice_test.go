@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,11 +14,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
-
-var testCategories = []string{"CategoryA", "CategoryB", "CategoryC"}
 
 var serviceBody = ServiceBody{
 	APIName:          "daleapi",
@@ -27,7 +23,6 @@ var serviceBody = ServiceBody{
 	Image:            "abcde",
 	ImageContentType: "image/jpeg",
 	ResourceType:     Oas2,
-	categoryTitles:   testCategories,
 	RestAPIID:        "12345",
 }
 
@@ -73,27 +68,10 @@ func TestCreateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
 			RespCode: http.StatusOK,
 		},
 	})
-
-	// Setup category cache
-	for _, category := range testCategories {
-		newID := uuid.New().String()
-		categoryInstance := &apiv1.ResourceInstance{
-			ResourceMeta: apiv1.ResourceMeta{
-				Name:  newID,
-				Title: category,
-			},
-			Spec: map[string]interface{}{},
-		}
-		client.caches.GetCategoryCache().SetWithSecondaryKey(newID, category, categoryInstance)
-	}
 
 	// Test oas2 object
 	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json") // OAS2
@@ -186,10 +164,6 @@ func TestCreateService(t *testing.T) {
 		{
 			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
 			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			RespCode: http.StatusRequestTimeout,
 		},
 		{
 			RespCode: http.StatusOK, // this for call to rollback
@@ -290,14 +264,6 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance subresource
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: "./testdata/apiservice.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
@@ -351,18 +317,6 @@ func TestUpdateService(t *testing.T) {
 		},
 		{
 			FileName: "./testdata/serviceinstance.json", // for call to update the serviceinstance subresource
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // for call to update the consumerInstance subresource
 			RespCode: http.StatusOK,
 		},
 	})
@@ -421,52 +375,6 @@ func Test_processRevision(t *testing.T) {
 	assert.NotEqual(t, "", cloneServiceBody.serviceContext.revisionName)
 }
 
-func TestDeleteConsumerInstance(t *testing.T) {
-	client, httpClient := GetTestServiceClient()
-	httpClient.ResponseCode = http.StatusRequestTimeout
-	err := client.DeleteConsumerInstance("12345")
-	assert.NotNil(t, err)
-	assert.Contains(t, "[Error Code 1120] - error making a request to Amplify: status - 408", err.Error())
-
-	httpClient.ResponseCode = http.StatusNoContent
-	err = client.DeleteConsumerInstance("12345")
-	assert.Nil(t, err)
-
-	httpClient.ResponseCode = http.StatusOK
-	err = client.DeleteConsumerInstance("12345")
-	assert.Nil(t, err)
-}
-
-func TestGetConsumerInstancesByExternalAPIID(t *testing.T) {
-	client, httpClient := GetTestServiceClient()
-
-	// bad
-	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusBadRequest)
-	instances, err := client.GetConsumerInstancesByExternalAPIID("12345")
-	assert.NotNil(t, err)
-	assert.Nil(t, instances)
-
-	// not found
-	httpClient.SetResponse("./testdata/empty-list.json", http.StatusOK)
-	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
-	assert.NotNil(t, err)
-	assert.Nil(t, instances)
-
-	// good
-	ri := &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{
-		GroupVersionKind: apiv1.GroupVersionKind{},
-		Name:             "name",
-		Title:            "title",
-	}}
-	util.SetAgentDetailsKey(ri, defs.AttrExternalAPIID, "12345")
-	client.caches.AddAPIService(ri)
-
-	httpClient.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
-	instances, err = client.GetConsumerInstancesByExternalAPIID("12345")
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(instances))
-}
-
 func TestDeleteServiceByAPIID(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 	httpClient.ResponseCode = http.StatusRequestTimeout
@@ -495,253 +403,6 @@ func TestDeleteServiceByAPIID(t *testing.T) {
 	client.caches.AddAPIService(ri)
 	err = client.DeleteServiceByName("12345")
 	assert.Nil(t, err)
-}
-
-func TestGetConsumerInstanceByID(t *testing.T) {
-	client, httpClient := GetTestServiceClient()
-
-	// bad
-	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusBadRequest)
-	instance, err := client.GetConsumerInstanceByID("")
-	assert.NotNil(t, err)
-	assert.Nil(t, instance)
-
-	// not found
-	httpClient.SetResponse("./testdata/instancenotfound.json", http.StatusOK)
-	instance, err = client.GetConsumerInstanceByID("e4ecaab773dbc4850173e45f35b8026g")
-	assert.NotNil(t, err)
-	assert.Nil(t, instance)
-
-	// good
-	httpClient.SetResponse("./testdata/consumerinstancelist.json", http.StatusOK)
-	instance, err = client.GetConsumerInstanceByID("e4ecaab773dbc4850173e45f35b8026f")
-	assert.Nil(t, err)
-	assert.Equal(t, "daleapi", instance.Name)
-}
-
-func TestRegisterSubscriptionWebhook(t *testing.T) {
-	client, httpClient := GetTestServiceClient()
-
-	// go right
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			RespCode: http.StatusCreated, // for call to createSecret
-		},
-		{
-			RespCode: http.StatusCreated, // for call to createWebhook
-		},
-	})
-
-	err := client.RegisterSubscriptionWebhook()
-	assert.Nil(t, err)
-
-	// go wrong
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			RespCode: http.StatusConflict, // for call to createSecret
-		},
-		{
-			RespCode: http.StatusOK, // for call to update the secret
-		},
-		{
-			RespCode: http.StatusRequestTimeout, // for call to createWebhook
-		},
-	})
-
-	err = client.RegisterSubscriptionWebhook()
-	assert.NotNil(t, err)
-
-	// go right
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			RespCode: http.StatusConflict, // for call to createSecret
-		},
-		{
-			RespCode: http.StatusOK, // for call to update the secret
-		},
-		{
-			RespCode: http.StatusCreated, // for call to createWebhook
-		},
-	})
-
-	err = client.RegisterSubscriptionWebhook()
-	assert.Nil(t, err)
-
-	// go right
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			RespCode: http.StatusCreated, // for call to createSecret
-		},
-		{
-			RespCode: http.StatusConflict, // for call to createWebhook
-		},
-		{
-			RespCode: http.StatusOK, // for call to update the webhook
-		},
-	})
-
-	err = client.RegisterSubscriptionWebhook()
-	assert.Nil(t, err)
-}
-
-func TestUnstructuredConsumerInstanceData(t *testing.T) {
-	// test the consumer instance handling unstrucutred data
-	client, httpClient := GetTestServiceClient()
-	serviceBody.AuthPolicy = "pass-through"
-
-	// this should be a full go right path
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusCreated,
-		},
-	})
-
-	// Test thrift object
-	const filename = "multiplication.thrift"
-	thriftFile, _ := os.Open("./testdata/" + filename) // OAS2
-	thriftBytes, _ := io.ReadAll(thriftFile)
-	thriftFile.Close() // close now, no need to wait until the test is finished
-
-	assetType := "Apache Thrift"
-	contentType := "application/vnd.apache.thrift.compact"
-	cloneServiceBody := serviceBody
-	cloneServiceBody.ResourceType = Unstructured
-	cloneServiceBody.SpecDefinition = thriftBytes
-	cloneServiceBody.UnstructuredProps = &UnstructuredProperties{
-		AssetType:   assetType,
-		Filename:    filename,
-		ContentType: contentType,
-	}
-
-	apiSvc, err := client.PublishService(&cloneServiceBody)
-	assert.Nil(t, err)
-	assert.NotNil(t, apiSvc)
-
-	// Get second to last request as consumerinstance
-	var consInst management.ConsumerInstance
-	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-3].Body, &consInst)
-	assert.Nil(t, err)
-
-	// Only asset type set, label and asset type are equal
-	assert.Equal(t, assetType, consInst.Spec.UnstructuredDataProperties.Type)
-	assert.Equal(t, assetType, consInst.Spec.UnstructuredDataProperties.Label)
-	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
-	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
-
-	fmt.Println("*************************")
-	// this should be a full go right path
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // this for call to get the serviceRevision count
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // this for call to check if a specific revision name exists
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/servicerevision.json", // this for call to create the serviceRevision
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/serviceinstance.json", // this for call to create the serviceInstance
-			RespCode: http.StatusCreated,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/consumerinstance.json", // this for call to create the consumerInstance
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/agent-details-sr.json", // this for call to create the service
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: "./testdata/apiservice.json", // this for call to create the service
-			RespCode: http.StatusCreated,
-		},
-	})
-
-	label := "Apache Thrift"
-	cloneServiceBody = serviceBody
-	cloneServiceBody.ResourceType = Unstructured
-	cloneServiceBody.SpecDefinition = thriftBytes
-	cloneServiceBody.UnstructuredProps = &UnstructuredProperties{
-		Label:       label,
-		Filename:    filename,
-		ContentType: contentType,
-	}
-
-	apiSvc, err = client.PublishService(&cloneServiceBody)
-	assert.Nil(t, err)
-	assert.NotNil(t, apiSvc)
-
-	// Get last request as consumerinstance
-	consInst = management.ConsumerInstance{}
-	err = json.Unmarshal(httpClient.Requests[len(httpClient.Requests)-3].Body, &consInst)
-	assert.Nil(t, err)
-
-	// Only label type set, label and asset type are equal
-	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Type)
-	assert.Equal(t, label, consInst.Spec.UnstructuredDataProperties.Label)
-	assert.Equal(t, contentType, consInst.Spec.UnstructuredDataProperties.ContentType)
-	assert.Equal(t, filename, consInst.Spec.UnstructuredDataProperties.FileName)
 }
 
 func TestServiceClient_buildAPIService(t *testing.T) {

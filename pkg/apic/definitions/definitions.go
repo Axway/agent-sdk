@@ -37,7 +37,6 @@ const (
 	MarketplaceSubResource           = "marketplace"
 	ReferencesSubResource            = "references"
 	Subscription                     = "Subscription"
-	MarketplaceMigration             = "marketplace-migration"
 	InstanceMigration                = "instance-migration"
 )
 

@@ -22,7 +22,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 	tests := []struct {
 		agentType       config.AgentType
 		name            string
-		mpEnabled       bool
 		svcCount        int
 		managedAppCount int
 		accessReqCount  int
@@ -33,7 +32,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 		{
 			name:            "should fetch resources based on the watch topic",
 			agentType:       config.DiscoveryAgent,
-			mpEnabled:       true,
 			svcCount:        2,
 			managedAppCount: 2,
 			accessReqCount:  2,
@@ -43,7 +41,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 		{
 			name:            "should fetch resources and perform a migration",
 			agentType:       config.DiscoveryAgent,
-			mpEnabled:       true,
 			svcCount:        2,
 			managedAppCount: 2,
 			accessReqCount:  2,
@@ -54,7 +51,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 		{
 			name:            "should fetch resources based on the watch topic with marketplace disabled",
 			agentType:       config.TraceabilityAgent,
-			mpEnabled:       false,
 			svcCount:        2,
 			managedAppCount: 0,
 			accessReqCount:  0,
@@ -98,7 +94,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			}
 
 			opts := []discoveryOpt{
-				withMpEnabled(tc.mpEnabled),
 				withAdditionalDiscoverFuncs(func() error {
 					return nil
 				}),

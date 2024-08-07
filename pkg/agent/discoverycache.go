@@ -20,7 +20,6 @@ type discoveryCache struct {
 	migrator                 migrate.Migrator
 	logger                   log.FieldLogger
 	handlers                 []handler.Handler
-	isMpEnabled              bool
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
@@ -45,12 +44,6 @@ func withAdditionalDiscoverFuncs(funcs ...discoverFunc) discoveryOpt {
 func withMigration(mig migrate.Migrator) discoveryOpt {
 	return func(dc *discoveryCache) {
 		dc.migrator = mig
-	}
-}
-
-func withMpEnabled(isEnabled bool) discoveryOpt {
-	return func(dc *discoveryCache) {
-		dc.isMpEnabled = isEnabled
 	}
 }
 
@@ -96,12 +89,11 @@ func (dc *discoveryCache) execute() error {
 
 	// Now do the marketplace discovery funcs as the other functions have completed
 	// AccessRequest cache need the APIServiceInstance cache to be fully loaded.
-	if dc.isMpEnabled {
-		marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncs()
-		err := dc.executeDiscoveryFuncs(marketplaceDiscoveryFuncs)
-		if err != nil {
-			return err
-		}
+
+	marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncs()
+	err = dc.executeDiscoveryFuncs(marketplaceDiscoveryFuncs)
+	if err != nil {
+		return err
 	}
 
 	dc.logger.Debug("cache has been updated")

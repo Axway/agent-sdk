@@ -50,13 +50,10 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 							NewSchemaPropertyBuilder().
 								SetName("prop").
 								IsString())).
-				SetWebhooks([]string{"webhook1", "webhook2"}).
 				IsRenewable().
 				IsSuspendable().
 				SetExpirationDays(90).
-				SetDeprovisionExpired().
-				AddWebhook("webhook3")
-
+				SetDeprovisionExpired()
 			if tt.wantErr {
 				builder = builder.SetProvisionSchema(nil)
 			}
