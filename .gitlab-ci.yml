@@ -123,3 +123,7 @@ twistlock:
 twistlock:on-schedule:
   rules:
     - when: never
+
+unit_tests:
+  script:
+    - echo "done"
