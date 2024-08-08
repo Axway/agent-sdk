@@ -13,8 +13,9 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
-  FORTIFY_INCLUDE: "**/pkg/util/**/*.go"
-  FORTIFY_EXCLUDE: "**/samples/**:**/*_test.go:**/models/**:**/clients/catalog/**:**/clients/management/**"
+  FORTIFY_INCLUDE: "**/apic/**/*.go"
+  # FORTIFY_EXCLUDE: "**/samples/**:**/*_test.go:**/models/**:**/clients/catalog/**:**/clients/management/**"
+  FORTIFY_EXCLUDE: "**/models/**/*:**/clients/catalog/**/*:**/clients/management/**/*"
 
   # Blackduck
   BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
