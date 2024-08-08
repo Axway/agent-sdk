@@ -13,7 +13,7 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
-  FORTIFY_INCLUDE: "**/pkg/filter/*.go"
+  FORTIFY_INCLUDE: "**/pkg/harvester/*.go"
   FORTIFY_EXCLUDE: "**/samples/**:**/*_test.go:**/models/**:**/clients/catalog/**:**/clients/management/**"
 
   # Blackduck
