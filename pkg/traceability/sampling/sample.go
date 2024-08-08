@@ -17,9 +17,9 @@ type sample struct {
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	hasFailedStatus := details.Status == "Failure"
-	// sample the transaction if reportAllErrors is set to `true` and the transaction summary's status is an error
-	if hasFailedStatus && s.config.ReportAllErrors {
-		return true
+	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
+	if !hasFailedStatus && s.config.OnlyErrors {
+		return false
 	}
 
 	sampleGlobal := s.shouldSampleWithCounter(globalCounter)

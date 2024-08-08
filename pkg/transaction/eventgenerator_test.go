@@ -32,6 +32,7 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			APIServerVersion:          "v1alpha1",
 			SubscriptionConfiguration: corecfg.NewSubscriptionConfig(),
 			UsageReporting:            corecfg.NewUsageReporting("https://platform.xxx.com"),
+			MetricReporting:           corecfg.NewMetricReporting(),
 			ReportActivityFrequency:   2 * time.Minute,
 			APIValidationCronSchedule: "@daily",
 			ClientTimeout:             1 * time.Minute,

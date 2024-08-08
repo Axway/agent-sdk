@@ -62,7 +62,8 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	authCfg.PublicKey = "../../transaction/testdata/public_key"
 	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
 	usgCfg.Publish = true
-	usgCfg.PublishMetric = true
+	metricCfg := cfg.MetricReporting.(*config.MetricReportingConfiguration)
+	metricCfg.Publish = true
 	return cfg
 }
 
@@ -274,7 +275,7 @@ func TestMetricCollector(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
@@ -511,7 +512,7 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
@@ -584,7 +585,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).PublishMetric = true
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)

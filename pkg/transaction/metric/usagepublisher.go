@@ -193,7 +193,7 @@ func (c *usagePublisher) registerReportJob() {
 		return // skip setting up the job in test
 	}
 
-	schedule := agent.GetCentralConfig().GetUsageReportingConfig().GetUsageSchedule()
+	schedule := agent.GetCentralConfig().GetUsageReportingConfig().GetSchedule()
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		schedule = agent.GetCentralConfig().GetUsageReportingConfig().GetReportSchedule()
 	}

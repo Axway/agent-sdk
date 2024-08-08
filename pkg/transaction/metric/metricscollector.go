@@ -78,6 +78,7 @@ type collector struct {
 	usagePublisher   *usagePublisher
 	storage          storageCache
 	reports          *usageReportCache
+	metricConfig     config.MetricReportingConfig
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
 	metricLogger     log.FieldLogger
@@ -165,6 +166,7 @@ func createMetricCollector() Collector {
 		registry:         metrics.NewRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
+		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		logger:           logger,
 		metricLogger:     log.NewMetricFieldLogger(),
@@ -179,9 +181,9 @@ func createMetricCollector() Collector {
 	if util.IsNotTest() {
 		var err error
 		if !metricCollector.usageConfig.IsOfflineMode() {
-			metricCollector.jobID, err = jobs.RegisterIntervalJobWithName(metricCollector, metricCollector.usageConfig.GetInterval(), "Metric Collector")
+			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.metricConfig.GetSchedule(), "Metric Collector")
 		} else {
-			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.usageConfig.GetSchedule(), "Metric Collector")
+			metricCollector.jobID, err = jobs.RegisterScheduledJobWithName(metricCollector, metricCollector.usageConfig.GetOfflineSchedule(), "Metric Collector")
 		}
 		if err != nil {
 			panic(err)
@@ -265,7 +267,7 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 
 // AddMetricDetailSet - add metric details for several response codes and transactions
 func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
-	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
 
@@ -362,7 +364,7 @@ func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []strin
 }
 
 func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
-	if !c.usageConfig.CanPublishMetric() || c.usageConfig.IsOfflineMode() {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return nil // no need to update metrics with publish off
 	}
 
@@ -617,7 +619,7 @@ func (c *collector) generateEvents() {
 			Info("no metric events generated as no transactions recorded")
 	}
 
-	if c.usageConfig.CanPublishMetric() {
+	if c.metricConfig.CanPublish() {
 		err := c.metricBatch.Publish()
 		if err != nil {
 			c.logger.WithError(err).Errorf("could not send metric event, data is kept and will be added to the next trigger interval")
@@ -628,7 +630,7 @@ func (c *collector) generateEvents() {
 func (c *collector) processRegistry(name string, metric interface{}) {
 	switch {
 	case name == transactionCountMetric:
-		if c.usageConfig.CanPublishUsage() {
+		if c.usageConfig.CanPublish() {
 			c.generateUsageEvent(c.orgGUID)
 		} else {
 			c.logger.Info("Publishing the usage event is turned off")
@@ -669,6 +671,11 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 	}
 
 	granularity := c.usageConfig.GetReportGranularity()
+	// for offline usage reporting granularity computed with offline schedule
+	if granularity == 0 {
+		granularity = c.metricConfig.GetReportGranularity()
+	}
+
 	reportTime := c.usageStartTime.Format(ISO8601)
 	if c.usageConfig.IsOfflineMode() {
 		reportTime = c.usageEndTime.Add(time.Duration(-1*granularity) * time.Millisecond).Format(ISO8601)

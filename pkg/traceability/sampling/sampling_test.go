@@ -30,7 +30,7 @@ func TestSamplingConfig(t *testing.T) {
 			errExpected: false,
 			config:      DefaultConfig(),
 			expectedConfig: Sampling{
-				Percentage: 1,
+				Percentage: 0,
 			},
 		},
 		{
@@ -94,8 +94,8 @@ func TestSamplingConfig(t *testing.T) {
 			name:        "Good Config, Report All Errors",
 			errExpected: false,
 			config: Sampling{
-				Percentage:      10,
-				ReportAllErrors: true,
+				Percentage: 10,
+				OnlyErrors: true,
 			},
 			expectedConfig: Sampling{
 				Percentage: 10,
@@ -127,19 +127,22 @@ func TestSamplingConfig(t *testing.T) {
 }
 
 func TestShouldSample(t *testing.T) {
+	type transactionCount struct {
+		successCount int
+		errorCount   int
+	}
 	testCases := []struct {
-		name             string
-		apiTransactions  map[string]int
-		testTransactions int
-		expectedSampled  int
-		config           Sampling
-		subIDs           map[string]string
+		name            string
+		apiTransactions map[string]transactionCount
+		expectedSampled int
+		config          Sampling
+		subIDs          map[string]string
 	}{
 		{
 			name: "Maximum Transactions",
-			apiTransactions: map[string]int{
-				"id1": 1000,
-				"id2": 1000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
 			},
 			expectedSampled: 200,
 			config: Sampling{
@@ -149,20 +152,20 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "Default config transactions",
-			apiTransactions: map[string]int{
-				"id1": 1000,
-				"id2": 1000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
 			},
-			expectedSampled: 20,
+			expectedSampled: 0,
 			config:          DefaultConfig(),
 		},
 		{
 			name: "5% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 50,
-				"id2": 50,
-				"id3": 50,
-				"id4": 50,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 50},
+				"id2": {successCount: 50},
+				"id3": {successCount: 50},
+				"id4": {successCount: 50},
 			}, // Total = 200
 			expectedSampled: 10,
 			config: Sampling{
@@ -172,9 +175,9 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "10% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 1000,
-				"id2": 1000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
 			},
 			expectedSampled: 200,
 			config: Sampling{
@@ -184,8 +187,8 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "0.55% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 10000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 10000},
 			},
 			expectedSampled: 55,
 			config: Sampling{
@@ -195,10 +198,10 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "9.99% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 10000,
-				"id2": 10000,
-				"id3": 10000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 10000},
+				"id2": {successCount: 10000},
+				"id3": {successCount: 10000},
 			},
 			expectedSampled: 30000 * 999 / 10000,
 			config: Sampling{
@@ -208,8 +211,8 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "0.0006% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 2000000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 2000000},
 			},
 			expectedSampled: 12,
 			config: Sampling{
@@ -219,9 +222,9 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "1% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 1000,
-				"id2": 1000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
 			},
 			expectedSampled: 20,
 			config: Sampling{
@@ -231,9 +234,9 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "0% of Transactions when per api is disabled",
-			apiTransactions: map[string]int{
-				"id1": 1000,
-				"id2": 1000,
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
 			},
 			expectedSampled: 0,
 			config: Sampling{
@@ -243,11 +246,11 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "5% per API of Transactions when per api is enabled",
-			apiTransactions: map[string]int{
-				"id1": 50, // expect 50
-				"id2": 50, // expect 50
-				"id3": 50, // expect 50
-				"id4": 50, // expect 50
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 50}, // expect 50
+				"id2": {successCount: 50}, // expect 50
+				"id3": {successCount: 50}, // expect 50
+				"id4": {successCount: 50}, // expect 50
 			},
 			expectedSampled: 20,
 			config: Sampling{
@@ -257,11 +260,11 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "5% of subscription transactions when per api and per sub are enabled",
-			apiTransactions: map[string]int{
-				"id1": 50, // expect 50
-				"id2": 50, // expect 50
-				"id3": 50, // expect 50
-				"id4": 50, // expect 50
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 50}, // expect 50
+				"id2": {successCount: 50}, // expect 50
+				"id3": {successCount: 50}, // expect 50
+				"id4": {successCount: 50}, // expect 50
 			},
 			subIDs: map[string]string{
 				"id1": "sub1",
@@ -278,11 +281,11 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "5% of subscription transactions when per api is disabled and per sub is enabled",
-			apiTransactions: map[string]int{
-				"id1": 50, // expect 50
-				"id2": 50, // expect 50
-				"id3": 50, // expect 50
-				"id4": 50, // expect 50
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 50}, // expect 50
+				"id2": {successCount: 50}, // expect 50
+				"id3": {successCount: 50}, // expect 50
+				"id4": {successCount: 50}, // expect 50
 			},
 			subIDs: map[string]string{
 				"id1": "sub1",
@@ -299,11 +302,11 @@ func TestShouldSample(t *testing.T) {
 		},
 		{
 			name: "5% of per API transactions when per api and per sub are enabled, but no subID is found",
-			apiTransactions: map[string]int{
-				"id1": 50, // expect 50
-				"id2": 50, // expect 50
-				"id3": 50, // expect 50
-				"id4": 50, // expect 50
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 50}, // expect 50
+				"id2": {successCount: 50}, // expect 50
+				"id3": {successCount: 50}, // expect 50
+				"id4": {successCount: 50}, // expect 50
 			},
 			subIDs:          map[string]string{},
 			expectedSampled: 20,
@@ -311,6 +314,29 @@ func TestShouldSample(t *testing.T) {
 				Percentage: 5,
 				PerAPI:     true,
 				PerSub:     true,
+			},
+		},
+		{
+			name: "only errors to be sampled",
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 500, errorCount: 500},
+				"id2": {successCount: 500, errorCount: 500},
+			},
+			expectedSampled: 100,
+			config: Sampling{
+				Percentage: 10,
+				OnlyErrors: true,
+			},
+		},
+		{
+			name: "errors and success to be sampled",
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 500, errorCount: 500},
+				"id2": {successCount: 500, errorCount: 500},
+			},
+			expectedSampled: 200,
+			config: Sampling{
+				Percentage: 10,
 			},
 		},
 	}
@@ -335,11 +361,11 @@ func TestShouldSample(t *testing.T) {
 					subID = test.subIDs[apiID]
 				}
 
-				go func(wg *sync.WaitGroup, id, subID string, calls int) {
+				go func(wg *sync.WaitGroup, id, subID string, calls transactionCount) {
 					defer wg.Done()
-					for i := 0; i < calls; i++ {
+					sampleFunc := func(id, subID string, status string) {
 						testDetails := TransactionDetails{
-							Status: "Success", // this does not matter at the moment
+							Status: status,
 							APIID:  id,
 							SubID:  subID,
 						}
@@ -350,6 +376,12 @@ func TestShouldSample(t *testing.T) {
 							sampleCounterLock.Unlock()
 						}
 						assert.Nil(t, err)
+					}
+					for i := 0; i < calls.successCount; i++ {
+						sampleFunc(id, subID, "Success")
+					}
+					for i := 0; i < calls.errorCount; i++ {
+						sampleFunc(id, subID, "Failure")
 					}
 				}(&waitGroup, apiID, subID, numCalls)
 			}

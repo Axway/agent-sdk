@@ -203,6 +203,7 @@ type CentralConfig interface {
 	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
+	GetMetricReportingConfig() MetricReportingConfig
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -224,35 +225,36 @@ type CentralConfiguration struct {
 	IConfigValidator
 	AgentType                 AgentType
 	RegionSettings            regionalSettings
-	Region                    Region               `config:"region"`
-	TenantID                  string               `config:"organizationID"`
-	TeamName                  string               `config:"team"`
-	APICDeployment            string               `config:"deployment"`
-	Environment               string               `config:"environment"`
-	EnvironmentID             string               `config:"environmentID"`
-	AgentName                 string               `config:"agentName"`
-	URL                       string               `config:"url"`
-	SingleURL                 string               `config:"platformSingleURL"`
-	PlatformURL               string               `config:"platformURL"`
-	APIServerVersion          string               `config:"apiServerVersion"`
-	TagsToPublish             string               `config:"additionalTags"`
-	AppendEnvironmentToTitle  bool                 `config:"appendEnvironmentToTitle"`
-	MigrationSettings         MigrationConfig      `config:"migration"`
-	Auth                      AuthConfig           `config:"auth"`
-	TLS                       TLSConfig            `config:"ssl"`
-	PollInterval              time.Duration        `config:"pollInterval"`
-	ReportActivityFrequency   time.Duration        `config:"reportActivityFrequency"`
-	ClientTimeout             time.Duration        `config:"clientTimeout"`
-	PageSize                  int                  `config:"pageSize"`
-	APIValidationCronSchedule string               `config:"apiValidationCronSchedule"`
-	APIServiceRevisionPattern string               `config:"apiServiceRevisionPattern"`
-	ProxyURL                  string               `config:"proxyUrl"`
-	SubscriptionConfiguration SubscriptionConfig   `config:"subscriptions"`
-	UsageReporting            UsageReportingConfig `config:"usageReporting"`
-	GRPCCfg                   GRPCConfig           `config:"grpc"`
-	CacheStoragePath          string               `config:"cacheStoragePath"`
-	CacheStorageInterval      time.Duration        `config:"cacheStorageInterval"`
-	CredentialConfig          CredentialConfig     `config:"credential"`
+	Region                    Region                `config:"region"`
+	TenantID                  string                `config:"organizationID"`
+	TeamName                  string                `config:"team"`
+	APICDeployment            string                `config:"deployment"`
+	Environment               string                `config:"environment"`
+	EnvironmentID             string                `config:"environmentID"`
+	AgentName                 string                `config:"agentName"`
+	URL                       string                `config:"url"`
+	SingleURL                 string                `config:"platformSingleURL"`
+	PlatformURL               string                `config:"platformURL"`
+	APIServerVersion          string                `config:"apiServerVersion"`
+	TagsToPublish             string                `config:"additionalTags"`
+	AppendEnvironmentToTitle  bool                  `config:"appendEnvironmentToTitle"`
+	MigrationSettings         MigrationConfig       `config:"migration"`
+	Auth                      AuthConfig            `config:"auth"`
+	TLS                       TLSConfig             `config:"ssl"`
+	PollInterval              time.Duration         `config:"pollInterval"`
+	ReportActivityFrequency   time.Duration         `config:"reportActivityFrequency"`
+	ClientTimeout             time.Duration         `config:"clientTimeout"`
+	PageSize                  int                   `config:"pageSize"`
+	APIValidationCronSchedule string                `config:"apiValidationCronSchedule"`
+	APIServiceRevisionPattern string                `config:"apiServiceRevisionPattern"`
+	ProxyURL                  string                `config:"proxyUrl"`
+	SubscriptionConfiguration SubscriptionConfig    `config:"subscriptions"`
+	UsageReporting            UsageReportingConfig  `config:"usageReporting"`
+	MetricReporting           MetricReportingConfig `config:"metricReporting"`
+	GRPCCfg                   GRPCConfig            `config:"grpc"`
+	CacheStoragePath          string                `config:"cacheStoragePath"`
+	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
+	CredentialConfig          CredentialConfig      `config:"credential"`
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
@@ -291,6 +293,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		ReportActivityFrequency:   5 * time.Minute,
 		APIValidationCronSchedule: "@daily",
 		UsageReporting:            NewUsageReporting(platformURL),
+		MetricReporting:           NewMetricReporting(),
 		JobExecutionTimeout:       5 * time.Minute,
 		CacheStorageInterval:      10 * time.Second,
 		GRPCCfg: GRPCConfig{
@@ -630,6 +633,16 @@ func (c *CentralConfiguration) GetUsageReportingConfig() UsageReportingConfig {
 	return c.UsageReporting
 }
 
+// GetMetricReportingConfig -
+func (c *CentralConfiguration) GetMetricReportingConfig() MetricReportingConfig {
+	// Some paths in DA are checking usage reporting .  So return an empty usage reporting config if nil
+	// Find All References to see DA scenarios checking for this config
+	if c.MetricReporting == nil {
+		return NewMetricReporting()
+	}
+	return c.MetricReporting
+}
+
 // GetCredentialConfig -
 func (c *CentralConfiguration) GetCredentialConfig() CredentialConfig {
 	return c.CredentialConfig
@@ -778,6 +791,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 
 			if supportsTraceability(c.AgentType) {
+				c.GetMetricReportingConfig().Validate()
 				c.GetUsageReportingConfig().Validate()
 			}
 		},
@@ -927,6 +941,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
 		props.AddStringProperty(pathDeployment, "", "Amplify Central")
+		AddMetricReportingProperties(props)
 		AddUsageReportingProperties(props)
 	} else {
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
@@ -950,15 +965,18 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	// check if CENTRAL_SINGLEURL is explicitly empty
 	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
 
+	var metricReporting MetricReportingConfig
 	var usageReporting UsageReportingConfig
 	if supportsTraceability(agentType) {
+		metricReporting = ParseMetricReportingConfig(props)
 		usageReporting = ParseUsageReportingConfig(props)
 		if usageReporting.IsOfflineMode() {
 			// Check if this is offline usage reporting only
 			cfg := &CentralConfiguration{
-				AgentName:      props.StringPropertyValue(pathAgentName),
-				AgentType:      agentType,
-				UsageReporting: usageReporting,
+				AgentName:       props.StringPropertyValue(pathAgentName),
+				AgentType:       agentType,
+				UsageReporting:  usageReporting,
+				MetricReporting: metricReporting,
 			}
 			// only need the environment ID in offline mode
 			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
@@ -1021,6 +1039,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if supportsTraceability(agentType) {
 		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
 		cfg.UsageReporting = usageReporting
+		cfg.MetricReporting = metricReporting
 	} else {
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)

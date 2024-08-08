@@ -112,7 +112,7 @@ func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 }
 
 func (c *cacheStorage) updateUsage(usageCount int) {
-	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublish() {
 		return
 	}
 
@@ -125,7 +125,7 @@ func (c *cacheStorage) updateUsage(usageCount int) {
 
 func (c *cacheStorage) updateVolume(bytes int64) {
 	if !c.isInitialized || !agent.GetCentralConfig().IsAxwayManaged() ||
-		!agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+		!agent.GetCentralConfig().GetUsageReportingConfig().CanPublish() {
 		// NOT initialized or NOT axway managed or can NOT publish usage
 		return
 	}
@@ -136,7 +136,7 @@ func (c *cacheStorage) updateVolume(bytes int64) {
 }
 
 func (c *cacheStorage) updateAppUsage(usageCount int, appID string) {
-	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublishUsage() {
+	if !c.isInitialized || !agent.GetCentralConfig().GetUsageReportingConfig().CanPublish() {
 		return
 	}
 
