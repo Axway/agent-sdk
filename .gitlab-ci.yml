@@ -13,7 +13,7 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
-  FORTIFY_INCLUDE: "**/watchmanager/**/*.go"
+  FORTIFY_INCLUDE: "**/migrate/**/*.go"
   FORTIFY_EXCLUDE: "**/samples/**/*:**/*_test.go:**/models/**/*:**/mock/**/*:**/*mock*:**/apic/apiserver/clients/catalog/**/*:**/apic/apiserver/clients/definitions/**/*:**/apic/apiserver/clients/management/**/*:"
 
   # Blackduck
