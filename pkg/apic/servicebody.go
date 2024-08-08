@@ -117,6 +117,9 @@ func (s *ServiceBody) GetAccessRequestDefinition() *management.AccessRequestDefi
 }
 
 func (s *ServiceBody) createAccessRequestDefinition() error {
+	if !s.uniqueARD {
+		return nil
+	}
 	oauthScopes := make([]string, 0)
 	for scope := range s.GetScopes() {
 		oauthScopes = append(oauthScopes, scope)
