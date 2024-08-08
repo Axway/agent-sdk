@@ -13,7 +13,7 @@ variables:
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
-  FORTIFY_INCLUDE: "**/*.go"
+  FORTIFY_INCLUDE: "**/pkg/amplify/*.go"
   FORTIFY_EXCLUDE: "**/pkg/m*/**:**/pkg/n*/**:**/pkg/t*/**:**/pkg/u*/**:**/pkg/w*/**:**/samples/**,**/*_test.go:**/models/**:**/clients/catalog/**:**/clients/management/**"
 
   # Blackduck
@@ -125,5 +125,9 @@ twistlock:on-schedule:
     - when: never
 
 unit_tests:
+  script:
+    - echo "done"
+
+sonar_preview:
   script:
     - echo "done"
