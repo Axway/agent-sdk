@@ -791,6 +791,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 
 			if supportsTraceability(c.AgentType) {
+				c.GetMetricReportingConfig().Validate()
 				c.GetUsageReportingConfig().Validate()
 			}
 		},
