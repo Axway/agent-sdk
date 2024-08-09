@@ -3,6 +3,7 @@ package apic
 import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // APIKeyInfo -
@@ -64,6 +65,7 @@ type ServiceBody struct {
 	isDesignDataplane         bool
 	referencedServiceName     string
 	referencedInstanceName    string
+	logger                    log.FieldLogger
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body
@@ -118,6 +120,7 @@ func (s *ServiceBody) GetAccessRequestDefinition() *management.AccessRequestDefi
 
 func (s *ServiceBody) createAccessRequestDefinition() error {
 	if !s.uniqueARD {
+		s.logger.WithField("ardName", s.ardName).Debug("skipping registering new ARD")
 		return nil
 	}
 	oauthScopes := make([]string, 0)
