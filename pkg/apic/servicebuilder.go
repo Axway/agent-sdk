@@ -6,6 +6,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -97,6 +98,7 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			InstanceAgentDetails:      make(map[string]interface{}),
 			RevisionAgentDetails:      make(map[string]interface{}),
 			requestDefinitionsAllowed: true,
+			logger:                    log.NewFieldLogger().WithPackage("sdk.apic").WithComponent("serviceBuilder"),
 		},
 	}
 }
