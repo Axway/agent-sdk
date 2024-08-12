@@ -63,7 +63,6 @@ func TestServiceBodySetters(t *testing.T) {
 		SetStatus(UnpublishedStatus).
 		SetState(PublishedStatus).
 		SetSubscriptionName("testsubscription").
-		SetAPISpec([]byte{}).
 		AddServiceEndpoint("https", "test.com", 443, "/test").
 		SetImage("image").
 		SetImageContentType("image/jpeg").
@@ -82,7 +81,8 @@ func TestServiceBodySetters(t *testing.T) {
 		SetInstanceAgentDetails(instDetails).
 		SetRevisionAgentDetails(revDetails).
 		SetReferenceServiceName("refSvc", "refEnv").
-		SetReferenceInstanceName("refInstance", "refEnv")
+		SetReferenceInstanceName("refInstance", "refEnv").
+		SetIgnoreSpecBasedCreds(true)
 
 	sb, err := serviceBuilder.
 		SetServiceEndpoints(ep).
@@ -134,6 +134,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, false, sb.isDesignDataplane)
 	assert.Equal(t, "refEnv/refSvc", sb.GetReferencedServiceName())
 	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
+	assert.Equal(t, true, sb.ignoreSpecBasesCreds)
 
 	sb, err = serviceBuilder.
 		SetSourceDataplaneType(GitHub, true).

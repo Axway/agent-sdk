@@ -56,6 +56,7 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
+	ignoreSpecBasesCreds      bool
 	specHash                  string
 	specVersion               string
 	accessRequestDefinition   *management.AccessRequestDefinition
@@ -72,6 +73,10 @@ type ServiceBody struct {
 func (s *ServiceBody) SetAccessRequestDefinitionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
+}
+
+func (s *ServiceBody) SetIgnoreSpecBasedCreds(ignore bool) {
+	s.ignoreSpecBasesCreds = ignore
 }
 
 // GetAuthPolicies - returns the array of all auth policies in the ServiceBody
@@ -119,7 +124,7 @@ func (s *ServiceBody) GetAccessRequestDefinition() *management.AccessRequestDefi
 }
 
 func (s *ServiceBody) createAccessRequestDefinition() error {
-	if !s.uniqueARD {
+	if s.ignoreSpecBasesCreds {
 		s.logger.WithField("ardName", s.ardName).Debug("skipping registering new ARD")
 		return nil
 	}

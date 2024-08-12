@@ -52,6 +52,7 @@ type ServiceBuilder interface {
 	SetCredentialRequestDefinitions(credentialRequestDefNames []string) ServiceBuilder
 	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
 	SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder
+	SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -335,48 +336,58 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 	}
 
-	var i interface{} = specProcessor
-	if val, ok := i.(OasSpecProcessor); ok {
-		val.ParseAuthInfo()
-
-		// get the auth policy from the spec
-		b.serviceBody.authPolicies = val.GetAuthPolicies()
-
-		// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
-		if len(b.serviceBody.authPolicies) > 0 {
-			b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
-		}
-
-		// get the apikey info
-		b.serviceBody.apiKeyInfo = val.GetAPIKeyInfo()
-
-		// get oauth scopes
-		b.serviceBody.scopes = val.GetOAuthScopes()
-
-		// if the spec has multiple then use the oauth ard
-		err := b.serviceBody.createAccessRequestDefinition()
-		if err != nil {
-			return b.serviceBody, err
-		}
-
-		// only set ard name based on spec if not already set, use first auth we find
-		if b.serviceBody.ardName == "" {
-			for _, p := range b.serviceBody.authPolicies {
-				if p == Basic {
-					b.serviceBody.ardName = provisioning.BasicAuthARD
-					break
-				}
-				if p == Apikey {
-					b.serviceBody.ardName = provisioning.APIKeyARD
-					break
-				}
-			}
-		}
-	}
-
 	if b.serviceBody.dataplaneType == "" {
 		b.serviceBody.dataplaneType = "Unidentified"
 	}
+
+	var i interface{} = specProcessor
+	val, ok := i.(OasSpecProcessor)
+	if !ok {
+		return b.serviceBody, nil
+	}
+
+	val.ParseAuthInfo()
+
+	// get the auth policy from the spec
+	b.serviceBody.authPolicies = val.GetAuthPolicies()
+
+	// use the first auth policy in the list as the AuthPolicy for determining if subscriptions are enabled
+	if len(b.serviceBody.authPolicies) > 0 {
+		b.serviceBody.AuthPolicy = b.serviceBody.authPolicies[0]
+	}
+
+	// get the apikey info
+	b.serviceBody.apiKeyInfo = val.GetAPIKeyInfo()
+
+	// get oauth scopes
+	b.serviceBody.scopes = val.GetOAuthScopes()
+
+	// if the spec has multiple then use the oauth ard
+	err = b.serviceBody.createAccessRequestDefinition()
+	if err != nil {
+		return b.serviceBody, err
+	}
+
+	// only set ard name based on spec if not already set, use first auth we find
+	if b.serviceBody.ardName != "" {
+		return b.serviceBody, nil
+	}
+
+	if b.serviceBody.ignoreSpecBasesCreds {
+		return b.serviceBody, nil
+	}
+
+	for _, p := range b.serviceBody.authPolicies {
+		if p == Basic {
+			b.serviceBody.ardName = provisioning.BasicAuthARD
+			break
+		}
+		if p == Apikey {
+			b.serviceBody.ardName = provisioning.APIKeyARD
+			break
+		}
+	}
+
 	return b.serviceBody, nil
 }
 
@@ -396,6 +407,11 @@ func (b *serviceBodyBuilder) AddCredentialRequestDefinition(credentialRequestDef
 func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder {
 	b.serviceBody.ardName = accessRequestDefName
 	b.serviceBody.uniqueARD = isUnique
+	return b
+}
+
+func (b *serviceBodyBuilder) SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder {
+	b.serviceBody.ignoreSpecBasesCreds = ignore
 	return b
 }
 
