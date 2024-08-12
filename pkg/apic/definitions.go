@@ -55,6 +55,7 @@ const (
 	GitHub       DataplaneType = "GitHub"
 	GitLab       DataplaneType = "GitLab"
 	SwaggerHub   DataplaneType = "SwaggerHub"
+	WebMethods   DataplaneType = "WebMethods"
 	Unidentified DataplaneType = "Unidentified"
 	Unclassified DataplaneType = "Unclassified"
 )
