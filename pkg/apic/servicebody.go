@@ -3,6 +3,7 @@ package apic
 import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // APIKeyInfo -
@@ -55,6 +56,7 @@ type ServiceBody struct {
 	credentialRequestPolicies []string
 	ardName                   string
 	uniqueARD                 bool
+	ignoreSpecBasesCreds      bool
 	specHash                  string
 	specVersion               string
 	accessRequestDefinition   *management.AccessRequestDefinition
@@ -64,12 +66,17 @@ type ServiceBody struct {
 	isDesignDataplane         bool
 	referencedServiceName     string
 	referencedInstanceName    string
+	logger                    log.FieldLogger
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body
 func (s *ServiceBody) SetAccessRequestDefinitionName(ardName string, isUnique bool) {
 	s.ardName = ardName
 	s.uniqueARD = isUnique
+}
+
+func (s *ServiceBody) SetIgnoreSpecBasedCreds(ignore bool) {
+	s.ignoreSpecBasesCreds = ignore
 }
 
 // GetAuthPolicies - returns the array of all auth policies in the ServiceBody
@@ -89,7 +96,7 @@ func (s *ServiceBody) GetScopes() map[string]string {
 
 // GetCredentialRequestDefinitions - returns the array of all credential request policies
 func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
-	if len(s.credentialRequestPolicies) > 0 {
+	if len(s.credentialRequestPolicies) > 0 || s.ignoreSpecBasesCreds {
 		return s.credentialRequestPolicies
 	}
 	for _, policy := range s.authPolicies {
@@ -117,6 +124,10 @@ func (s *ServiceBody) GetAccessRequestDefinition() *management.AccessRequestDefi
 }
 
 func (s *ServiceBody) createAccessRequestDefinition() error {
+	if s.ignoreSpecBasesCreds {
+		s.logger.WithField("ardName", s.ardName).Debug("skipping registering new ARD")
+		return nil
+	}
 	oauthScopes := make([]string, 0)
 	for scope := range s.GetScopes() {
 		oauthScopes = append(oauthScopes, scope)
