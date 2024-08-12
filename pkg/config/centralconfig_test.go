@@ -67,7 +67,6 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 
 	centralConfig.APIServerVersion = "v1alpha1"
 
-	assert.Equal(t, centralConfig.URL+"/api/unifiedCatalog/v1/catalogItems", cfg.GetCatalogItemsURL())
 	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
 
 	centralConfig.PollInterval = 0
@@ -84,7 +83,6 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 
 	// validate mp and DOSA
 	authCfg.ClientID = "DOSA_aaaa"
-	centralConfig.isMarketplaceSubs = true
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1406] - using a DOSA_* service account with Marketplace Provisioning is unsupported", err.Error())

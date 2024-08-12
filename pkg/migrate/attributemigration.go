@@ -77,8 +77,7 @@ func NewAttributeMigration(client client, cfg config.CentralConfig) *AttributeMi
 }
 
 // Migrate - receives an APIService as a ResourceInstance, and checks if an attribute migration should be performed.
-// If a migration should occur, then the APIService, Instances, Revisions, and ConsumerInstances
-// that refer to the APIService will all have their attributes updated.
+// If a migration should occur, then the APIService, Instances, and Revisions, that refer to the APIService will all have their attributes updated.
 func (m *AttributeMigration) Migrate(_ context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	if ri.Kind != management.APIServiceGVK().Kind {
 		return ri, nil
@@ -95,7 +94,6 @@ func (m *AttributeMigration) Migrate(_ context.Context, ri *apiv1.ResourceInstan
 	funcs := []migrateFunc{
 		m.updateSvc,
 		m.updateInst,
-		m.updateCI,
 	}
 
 	errCh := make(chan error, len(funcs))
@@ -160,18 +158,6 @@ func (m *AttributeMigration) updateInst(ri *apiv1.ResourceInstance) error {
 	}
 
 	return nil
-}
-
-// updateCI gets a list of consumer instances for the service and updates their attributes.
-func (m *AttributeMigration) updateCI(ri *apiv1.ResourceInstance) error {
-	m.riMutex.Lock()
-	defer m.riMutex.Unlock()
-	url := m.cfg.GetConsumerInstancesURL()
-	q := map[string]string{
-		"query": queryFuncByMetadataID(ri.Metadata.ID),
-	}
-
-	return m.migrate(url, q)
 }
 
 func (m *AttributeMigration) migrate(resourceURL string, query map[string]string) error {

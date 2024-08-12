@@ -13,10 +13,7 @@ func TestDefaultAgentFeaturesConfig(t *testing.T) {
 	assert.True(t, agentFeaturesConfig.ProcessSystemSignalsEnabled())
 	assert.True(t, agentFeaturesConfig.VersionCheckerEnabled())
 
-	// TODO - UC deprecation, phase 2
-	// Can be removed at the start of UC deprecation, phase 2
 	assert.True(t, agentFeaturesConfig.PersistCacheEnabled())
-	assert.True(t, agentFeaturesConfig.MarketplaceProvisioningEnabled())
 
 	cfgValidator, ok := cfg.(IConfigValidator)
 	assert.NotNil(t, cfgValidator)

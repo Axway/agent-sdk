@@ -7,6 +7,11 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+// Migrator interface for performing a migration on a ResourceInstance
+type Migrator interface {
+	Migrate(ctx context.Context, ri *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error)
+}
+
 type migrateAll struct {
 	migrations []Migrator
 	logger     log.FieldLogger

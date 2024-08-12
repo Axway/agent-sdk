@@ -59,7 +59,6 @@ type ServiceBuilder interface {
 	SetUnstructuredLabel(label string) ServiceBuilder
 	SetUnstructuredFilename(filename string) ServiceBuilder
 	SetTeamName(teamName string) ServiceBuilder
-	SetCategories(categories []string) ServiceBuilder
 	SetServiceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetInstanceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetRevisionAgentDetails(attr map[string]interface{}) ServiceBuilder
@@ -92,8 +91,6 @@ func NewServiceBodyBuilder() ServiceBuilder {
 			StageDescriptor:           "Stage",
 			Endpoints:                 make([]EndpointDefinition, 0),
 			UnstructuredProps:         &UnstructuredProperties{},
-			categoryTitles:            make([]string, 0),
-			categoryNames:             make([]string, 0),
 			credentialRequestPolicies: make([]string, 0),
 			ServiceAgentDetails:       make(map[string]interface{}),
 			InstanceAgentDetails:      make(map[string]interface{}),
@@ -290,11 +287,6 @@ func (b *serviceBodyBuilder) SetUnstructuredFilename(filename string) ServiceBui
 
 func (b *serviceBodyBuilder) SetTeamName(teamName string) ServiceBuilder {
 	b.serviceBody.TeamName = teamName
-	return b
-}
-
-func (b *serviceBodyBuilder) SetCategories(categories []string) ServiceBuilder {
-	b.serviceBody.categoryTitles = categories
 	return b
 }
 

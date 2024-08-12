@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -54,20 +53,6 @@ func createAPIServiceInstanceWithVersion(id, apiID, stage, version string) *v1.R
 			SubResources: map[string]interface{}{
 				defs.XAgentDetails: sub,
 			},
-		},
-	}
-}
-
-func createCategory(name, title string) *v1.ResourceInstance {
-	return &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{
-				Audit: v1.AuditMetadata{
-					CreateTimestamp: v1.Time(time.Now()),
-				},
-			},
-			Name:  name,
-			Title: title,
 		},
 	}
 }
@@ -201,61 +186,8 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	assert.ElementsMatch(t, []string{}, m.GetAPIServiceInstanceKeys())
 }
 
-// add category
-// get category with name
-// get category with title
-// get category with invalid name
-// delete category
-func TestCategoryCache(t *testing.T) {
-	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	assert.NotNil(t, m)
-
-	categoryCache := m.GetCategoryCache()
-	assert.NotNil(t, categoryCache)
-
-	assert.Equal(t, []string{}, m.GetCategoryKeys())
-
-	category1 := createCategory("c1", "category 1")
-	category1a := createCategory("c1-1", "category 1")
-	category2 := createCategory("c2", "category 2")
-
-	m.AddCategory(category1)
-	assert.ElementsMatch(t, []string{"c1"}, m.GetCategoryKeys())
-	m.AddCategory(category2)
-	assert.ElementsMatch(t, []string{"c1", "c2"}, m.GetCategoryKeys())
-
-	// validate logic for secondary key winner is oldest created category
-	category1a.Metadata.Audit.CreateTimestamp = v1.Time(time.Now().Add(time.Hour))
-	m.AddCategory(category1a)
-	cachedCategory := m.GetCategoryWithTitle("category 1")
-	assert.Equal(t, "c1", cachedCategory.Name, "Expected the older category to be returned by GetCategoryWithTitle")
-	category1a.Metadata.Audit.CreateTimestamp = v1.Time(time.Now().Add(-time.Hour))
-	m.AddCategory(category1a)
-	cachedCategory = m.GetCategoryWithTitle("category 1")
-	assert.Equal(t, "c1-1", cachedCategory.Name, "Expected the older category to be returned by GetCategoryWithTitle")
-
-	cachedCategory = m.GetCategory("c1")
-	assert.Equal(t, category1, cachedCategory)
-
-	cachedCategory = m.GetCategoryWithTitle("category 2")
-	assert.Equal(t, category2, cachedCategory)
-
-	err := m.DeleteCategory("c1")
-	assert.Nil(t, err)
-	err = m.DeleteCategory("c1-1")
-	assert.Nil(t, err)
-	assert.ElementsMatch(t, []string{"c2"}, m.GetCategoryKeys())
-
-	cachedCategory = m.GetCategory("c1")
-	assert.Nil(t, cachedCategory)
-
-	err = m.DeleteCategory("c1")
-	assert.NotNil(t, err)
-}
-
 // add sequence
 // get sequence
-// delete category
 func TestSequenceCache(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
@@ -283,9 +215,6 @@ func TestCachePersistenc(t *testing.T) {
 	instance1 := createAPIServiceInstance("id1", "apiID", "stage")
 	m.AddAPIServiceInstance(instance1)
 
-	category1 := createCategory("c1", "category 1")
-	m.AddCategory(category1)
-
 	m.AddSequence("watch1", 1)
 
 	defer func() {
@@ -310,10 +239,6 @@ func TestCachePersistenc(t *testing.T) {
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, m.GetAPIServiceInstanceKeys(), m2.GetAPIServiceInstanceKeys())
 	assertResourceInstance(t, instance1, persistedInstance)
-
-	persistedCategory := m2.GetCategory("c1")
-	assert.ElementsMatch(t, m.GetCategoryKeys(), m2.GetCategoryKeys())
-	assertResourceInstance(t, category1, persistedCategory)
 
 	persistedSeq := m2.GetSequence("watch1")
 	assert.Equal(t, int64(1), persistedSeq)

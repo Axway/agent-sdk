@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -10,12 +9,10 @@ import (
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	unifiedcatalog "github.com/Axway/agent-sdk/pkg/apic/unifiedcatalog/models"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 )
 
@@ -30,7 +27,7 @@ const (
 	tenMB = 10485760
 )
 
-// PublishService - processes the API to create/update apiservice, revision, instance and consumer instance
+// PublishService - processes the API to create/update apiservice, revision, instance
 func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.APIService, error) {
 	logger := c.logger.WithField("serviceName", serviceBody.NameToPush).WithField("apiID", serviceBody.RestAPIID)
 	if serviceBody.PrimaryKey != "" {
@@ -79,17 +76,6 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 		return nil, err
 	}
 
-	// TODO - consumer instance not needed after deprecation of unified catalog
-	if !c.cfg.IsMarketplaceSubsEnabled() {
-		// ConsumerInstanceProcessor
-		logger.Trace("processing consumer instance")
-		err = c.processConsumerInstance(serviceBody)
-		if err != nil {
-			logger.WithError(err).Error("processing consumer instance")
-			return nil, err
-		}
-	}
-
 	logger.Trace("adding spec hashes to service")
 	serviceBody.specHashes[serviceBody.specHash] = serviceBody.serviceContext.revisionName
 	details := util.GetAgentDetails(apiSvc)
@@ -120,39 +106,6 @@ func (c *ServiceClient) DeleteServiceByName(name string) error {
 	return nil
 }
 
-// RegisterSubscriptionWebhook - Adds a new Subscription webhook. There is a single webhook
-// per environment
-func (c *ServiceClient) RegisterSubscriptionWebhook() error {
-	// if the default is already set up, do nothing
-	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	if webhookCfg == nil || !webhookCfg.IsConfigured() {
-		return nil
-	}
-
-	// create the secret
-	err := c.createSecret()
-	if err != nil {
-		return utilerrors.Wrap(ErrCreateSecret, err.Error())
-	}
-
-	err = c.createWebhook()
-	if err != nil {
-		return utilerrors.Wrap(ErrCreateWebhook, err.Error())
-	}
-
-	return nil
-}
-
-// GetCatalogItemIDForConsumerInstance -
-func (c *ServiceClient) GetCatalogItemIDForConsumerInstance(id string) (string, error) {
-	return c.getCatalogItemIDForConsumerInstance(id)
-}
-
-// DeleteConsumerInstance -
-func (c *ServiceClient) DeleteConsumerInstance(name string) error {
-	return c.deleteConsumerInstance(name)
-}
-
 // DeleteAPIServiceInstance deletes an api service instance in central by name
 func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetInstancesURL()+"/"+name, nil)
@@ -160,32 +113,6 @@ func (c *ServiceClient) DeleteAPIServiceInstance(name string) error {
 		return err
 	}
 	return nil
-}
-
-// GetConsumerInstanceByID -
-func (c *ServiceClient) GetConsumerInstanceByID(consumerInstanceID string) (*management.ConsumerInstance, error) {
-	return c.getConsumerInstanceByID(consumerInstanceID)
-}
-
-// GetConsumerInstancesByExternalAPIID - DEPRECATED
-func (c *ServiceClient) GetConsumerInstancesByExternalAPIID(externalAPIID string) ([]*management.ConsumerInstance, error) {
-	log.DeprecationWarningReplace("GetConsumerInstancesByExternalAPIID", "")
-	return c.getConsumerInstancesByExternalAPIID(externalAPIID)
-}
-
-// GetSubscriptionsForCatalogItem -
-func (c *ServiceClient) GetSubscriptionsForCatalogItem(states []string, instanceID string) ([]CentralSubscription, error) {
-	return c.getSubscriptionsForCatalogItem(states, instanceID)
-}
-
-// GetSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) GetSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string) (SubscriptionSchema, error) {
-	return c.getSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey)
-}
-
-// UpdateSubscriptionDefinitionPropertiesForCatalogItem -
-func (c *ServiceClient) UpdateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey string, subscriptionSchema SubscriptionSchema) error {
-	return c.updateSubscriptionDefinitionPropertiesForCatalogItem(catalogItemID, propertyKey, subscriptionSchema)
 }
 
 // postApiServiceUpdate - called after APIService was created or updated.
@@ -287,175 +214,4 @@ func (c *ServiceClient) executeAPIServiceAPI(method, url string, buffer []byte) 
 	ri := &v1.ResourceInstance{}
 	json.Unmarshal(response.Body, ri)
 	return ri, nil
-}
-
-// create the on-and-only secret for the environment
-func (c *ServiceClient) createSecret() error {
-	s := c.DefaultSubscriptionApprovalWebhook.GetSecret()
-	spec := management.SecretSpec{
-		Data: map[string]string{DefaultSubscriptionWebhookAuthKey: base64.StdEncoding.EncodeToString([]byte(s))},
-	}
-
-	secret := management.Secret{
-		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
-		Spec:         spec,
-	}
-
-	buffer, err := json.Marshal(secret)
-	if err != nil {
-		return err
-	}
-
-	headers, err := c.createHeader()
-	if err != nil {
-		return err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.POST,
-		URL:     c.cfg.GetAPIServerSecretsURL(),
-		Headers: headers,
-		Body:    buffer,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return err
-	}
-	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
-		responseErr := readResponseErrors(response.Code, response.Body)
-		return utilerrors.Wrap(ErrRequestQuery, responseErr)
-	}
-	if response.Code == http.StatusConflict {
-		request = coreapi.Request{
-			Method:  coreapi.PUT,
-			URL:     c.cfg.GetAPIServerSecretsURL() + "/" + DefaultSubscriptionWebhookName,
-			Headers: headers,
-			Body:    buffer,
-		}
-
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return err
-		}
-		if response.Code != http.StatusOK {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-	}
-
-	return nil
-}
-
-// create the on-and-only subscription approval webhook for the environment
-func (c *ServiceClient) createWebhook() error {
-	webhookCfg := c.cfg.GetSubscriptionConfig().GetSubscriptionApprovalWebhookConfig()
-	specSecret := management.WebhookSpecAuthSecret{
-		Name: DefaultSubscriptionWebhookName,
-		Key:  DefaultSubscriptionWebhookAuthKey,
-	}
-	authSpec := management.WebhookSpecAuth{
-		Secret: specSecret,
-	}
-	webSpec := management.WebhookSpec{
-		Auth:    authSpec,
-		Enabled: true,
-		Url:     webhookCfg.GetURL(),
-		Headers: webhookCfg.GetWebhookHeaders(),
-	}
-
-	webhook := management.Webhook{
-		ResourceMeta: v1.ResourceMeta{Name: DefaultSubscriptionWebhookName},
-		Spec:         webSpec,
-	}
-
-	buffer, err := json.Marshal(webhook)
-	if err != nil {
-		return err
-	}
-
-	headers, err := c.createHeader()
-	if err != nil {
-		return err
-	}
-
-	request := coreapi.Request{
-		Method:  coreapi.POST,
-		URL:     c.cfg.GetAPIServerWebhooksURL(),
-		Headers: headers,
-		Body:    buffer,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return err
-	}
-	if !(response.Code == http.StatusCreated || response.Code == http.StatusConflict) {
-		responseErr := readResponseErrors(response.Code, response.Body)
-		return utilerrors.Wrap(ErrRequestQuery, responseErr)
-	}
-	if response.Code == http.StatusConflict {
-		request = coreapi.Request{
-			Method:  coreapi.PUT,
-			URL:     c.cfg.GetAPIServerWebhooksURL() + "/" + DefaultSubscriptionWebhookName,
-			Headers: headers,
-			Body:    buffer,
-		}
-
-		response, err := c.apiClient.Send(request)
-		if err != nil {
-			return err
-		}
-		if response.Code != http.StatusOK {
-			responseErr := readResponseErrors(response.Code, response.Body)
-			return utilerrors.Wrap(ErrRequestQuery, responseErr)
-		}
-	}
-
-	return nil
-}
-
-// getCatalogItemAPIServerInfoProperty -
-func (c *ServiceClient) getCatalogItemAPIServerInfoProperty(catalogID, subscriptionID string) (*APIServerInfo, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	subscriptionRelationshipsURL := c.cfg.GetCatalogItemSubscriptionRelationshipURL(catalogID, subscriptionID)
-
-	request := coreapi.Request{
-		Method:  coreapi.GET,
-		URL:     subscriptionRelationshipsURL,
-		Headers: headers,
-	}
-
-	response, err := c.apiClient.Send(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.Code != http.StatusOK {
-		responseErr := readResponseErrors(response.Code, response.Body)
-		return nil, utilerrors.Wrap(ErrRequestQuery, responseErr)
-	}
-
-	relationships := make([]unifiedcatalog.EntityRelationship, 0)
-	json.Unmarshal(response.Body, &relationships)
-	apiserverInfo := new(APIServerInfo)
-	for _, relationship := range relationships {
-		if relationship.Key == "apiServerInfo" {
-			switch relationship.Type {
-			case "API_SERVER_CONSUMER_INSTANCE_ID":
-				apiserverInfo.ConsumerInstance.ID = relationship.Value
-			case "API_SERVER_CONSUMER_INSTANCE_NAME":
-				apiserverInfo.ConsumerInstance.Name = relationship.Value
-			case "API_SERVER_ENVIRONMENT_ID":
-				apiserverInfo.Environment.ID = relationship.Value
-			case "API_SERVER_ENVIRONMENT_NAME":
-				apiserverInfo.Environment.Name = relationship.Value
-			}
-		}
-	}
-
-	return apiserverInfo, nil
 }

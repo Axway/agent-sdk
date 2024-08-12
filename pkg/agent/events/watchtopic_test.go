@@ -61,13 +61,8 @@ func TestCreateWatchTopic(t *testing.T) {
 }
 
 type mockWatchTopicFeatures struct {
-	isMPSEnabled bool
-	agentType    config.AgentType
-	filterList   []config.ResourceFilter
-}
-
-func (m *mockWatchTopicFeatures) IsMarketplaceSubsEnabled() bool {
-	return m.isMPSEnabled
+	agentType  config.AgentType
+	filterList []config.ResourceFilter
 }
 
 func (m *mockWatchTopicFeatures) GetAgentType() config.AgentType {
@@ -94,7 +89,7 @@ func Test_parseWatchTopic(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			features := &mockWatchTopicFeatures{isMPSEnabled: tc.isMPSEnabled}
+			features := &mockWatchTopicFeatures{}
 
 			wt, err := parseWatchTopicTemplate(NewDiscoveryWatchTopic("name", "scope", management.DiscoveryAgentGVK().GroupKind, features))
 			assert.Nil(t, err)
@@ -186,7 +181,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
-			features := &mockWatchTopicFeatures{isMPSEnabled: true, agentType: tc.agentType, filterList: tc.filterList}
+			features := &mockWatchTopicFeatures{agentType: tc.agentType, filterList: tc.filterList}
 
 			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, features)
 			if tc.hasErr == true {
