@@ -96,7 +96,7 @@ func (s *ServiceBody) GetScopes() map[string]string {
 
 // GetCredentialRequestDefinitions - returns the array of all credential request policies
 func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
-	if len(s.credentialRequestPolicies) > 0 {
+	if len(s.credentialRequestPolicies) > 0 || s.ignoreSpecBasesCreds {
 		return s.credentialRequestPolicies
 	}
 	for _, policy := range s.authPolicies {
