@@ -62,7 +62,6 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 }
 
 func (c *ServiceClient) setMigrationFlags(svcDetails map[string]interface{}) {
-	svcDetails[defs.InstanceMigration] = defs.MigrationCompleted
 	svcDetails[defs.MarketplaceMigration] = defs.MigrationCompleted
 }
 

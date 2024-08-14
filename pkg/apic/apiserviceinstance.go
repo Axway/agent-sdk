@@ -78,10 +78,8 @@ func (c *ServiceClient) buildAPIServiceInstance(
 	endpoints []management.ApiServiceInstanceSpecEndpoint,
 ) *management.APIServiceInstance {
 
-	spec := buildAPIServiceInstanceSpec(serviceBody, endpoints)
-
 	c.checkAccessRequestDefinition(serviceBody)
-	spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
+	spec := buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
 
 	owner, _ := c.getOwnerObject(serviceBody, false) // owner, _ := at this point, we don't need to validate error on getOwnerObject.  This is used for subresource status update
 	instance := &management.APIServiceInstance{
@@ -121,7 +119,6 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
 	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
-	instance.Spec = buildAPIServiceInstanceSpec(serviceBody, endpoints)
 
 	c.checkAccessRequestDefinition(serviceBody)
 	instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
