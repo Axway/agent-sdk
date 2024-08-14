@@ -31,7 +31,6 @@ var tlsAuthCertificateMetadata = []string{
 	oauth.TLSClientAuthSanURI,
 }
 
-// credential request definitions
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
@@ -49,6 +48,7 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 		existingRI, _ = agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 	}
 
+	// if not existing, go ahead and add the request definition
 	if existingRI == nil {
 		switch ri.Kind {
 		case management.AccessRequestDefinitionGVK().Kind:
