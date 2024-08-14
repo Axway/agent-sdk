@@ -15,16 +15,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func buildAPIServiceInstanceSpec(
-	serviceBody *ServiceBody,
-	endpoints []management.ApiServiceInstanceSpecEndpoint,
-) management.ApiServiceInstanceSpec {
-	return management.ApiServiceInstanceSpec{
-		ApiServiceRevision: serviceBody.serviceContext.revisionName,
-		Endpoint:           endpoints,
-	}
-}
-
 func buildAPIServiceInstanceMarketplaceSpec(
 	serviceBody *ServiceBody,
 	endpoints []management.ApiServiceInstanceSpecEndpoint,
