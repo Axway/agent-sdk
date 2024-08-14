@@ -34,13 +34,28 @@ var tlsAuthCertificateMetadata = []string{
 // credential request definitions
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
-	if agent.agentFeaturesCfg == nil {
-		return nil, nil
-	}
 
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
+	}
+
+	var existingRI *v1.ResourceInstance
+
+	switch ri.Kind {
+	case management.AccessRequestDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
+	case management.CredentialRequestDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
+	}
+
+	if existingRI == nil {
+		switch ri.Kind {
+		case management.AccessRequestDefinitionGVK().Kind:
+			agent.cacheManager.AddAccessRequestDefinition(ri)
+		case management.CredentialRequestDefinitionGVK().Kind:
+			agent.cacheManager.AddCredentialRequestDefinition(ri)
+		}
 	}
 
 	return ri, nil
