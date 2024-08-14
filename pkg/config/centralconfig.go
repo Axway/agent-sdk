@@ -172,12 +172,8 @@ type CentralConfig interface {
 	GetRevisionsURL() string
 	GetInstancesURL() string
 	DeleteServicesURL() string
-	GetAPIServerSubscriptionDefinitionURL() string
 	GetAPIServerAccessRequestDefinitionURL() string
-	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
-	GetCategoriesURL() string
-	GetSubscriptionURL() string
 	GetAccessRequestsURL() string
 	GetAccessRequestURL(string) string
 	GetAccessRequestStateURL(string) string
@@ -444,19 +440,9 @@ func (c *CentralConfiguration) DeleteServicesURL() string {
 	return c.GetEnvironmentURL() + "/apiservices"
 }
 
-// GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
-	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
-}
-
 // GetAPIServerAccessRequestDefinitionURL - Returns the APIServer URL for access request definitions
 func (c *CentralConfiguration) GetAPIServerAccessRequestDefinitionURL() string {
 	return c.GetEnvironmentURL() + "/accessrequestdefinitions"
-}
-
-// GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
-func (c *CentralConfiguration) GetAPIServerWebhooksURL() string {
-	return c.GetEnvironmentURL() + "/webhooks"
 }
 
 // GetAPIServerSecretsURL - Returns the APIServer URL for secrets

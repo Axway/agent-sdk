@@ -124,11 +124,7 @@ type CentralConfig interface {
  GetRevisionsURL() string
  GetInstancesURL() string
  DeleteServicesURL() string
- GetAPIServerSubscriptionDefinitionURL() string
- GetAPIServerWebhooksURL() string
  GetAPIServerSecretsURL() string
-
- GetSubscriptionURL() string
  GetSubscriptionConfig() SubscriptionConfig
 
  GetAuthConfig() AuthConfig

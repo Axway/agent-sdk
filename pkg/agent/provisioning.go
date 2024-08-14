@@ -31,6 +31,16 @@ var tlsAuthCertificateMetadata = []string{
 	oauth.TLSClientAuthSanURI,
 }
 
+// createOrUpdateCredentialRequestDefinition -
+func createOrUpdateCredentialRequestDefinition(data *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
+	}
+	err = data.FromInstance(ri)
+	return data, err
+}
+
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
@@ -61,16 +71,6 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	return ri, nil
 }
 
-// createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data)
-	if ri == nil || err != nil {
-		return nil, err
-	}
-	err = data.FromInstance(ri)
-	return data, err
-}
-
 type crdBuilderOptions struct {
 	name               string
 	title              string
@@ -83,7 +83,7 @@ type crdBuilderOptions struct {
 	registerFunc       provisioning.RegisterCredentialRequestDefinition
 }
 
-// NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
+// NewCredentialRequestBuilder - called by the agents to build and register a new credential request definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
 		renewable:    false,
