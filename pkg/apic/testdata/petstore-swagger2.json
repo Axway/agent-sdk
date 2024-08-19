@@ -873,6 +873,24 @@
     }
   },
   "definitions": {
+    "Category": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "xml": {
+        "name": "Category"
+      }
+    },
     "Pet": {
       "type": "object",
       "required": [

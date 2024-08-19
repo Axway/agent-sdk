@@ -873,6 +873,24 @@
     }
   },
   "definitions": {
+    "Category": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "xml": {
+        "name": "Category"
+      }
+    },
     "Pet": {
       "type": "object",
       "required": [
@@ -883,6 +901,9 @@
         "id": {
           "type": "integer",
           "format": "int64"
+        },
+        "category": {
+          "$ref": "#/definitions/Category"
         },
         "name": {
           "type": "string",
