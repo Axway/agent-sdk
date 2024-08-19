@@ -43,21 +43,32 @@ const (
 type DataplaneType string
 
 const (
-	APIM         DataplaneType = "APIM"
-	AWS          DataplaneType = "AWS"
-	Azure        DataplaneType = "Azure"
-	Apigee       DataplaneType = "Apigee"
-	Istio        DataplaneType = "Istio"
-	Mulesoft     DataplaneType = "Mulesoft"
-	APIConnect   DataplaneType = "APIConnect"
-	Kong         DataplaneType = "Kong"
-	Kafka        DataplaneType = "Kafka"
-	GitHub       DataplaneType = "GitHub"
-	GitLab       DataplaneType = "GitLab"
-	SwaggerHub   DataplaneType = "SwaggerHub"
-	WebMethods   DataplaneType = "WebMethods"
-	Unidentified DataplaneType = "Unidentified"
+	// Discovery only
+	GitHub     DataplaneType = "GitHub"
+	GitLab     DataplaneType = "GitLab"
+	SwaggerHub DataplaneType = "SwaggerHub"
+
+	// Discovery and Traceability
+	APIConnect DataplaneType = "APIConnect"
+	Apigee     DataplaneType = "Apigee"
+	APIM       DataplaneType = "APIM"
+	AWS        DataplaneType = "AWS"
+	Azure      DataplaneType = "Azure"
+	Istio      DataplaneType = "Istio" // Reports as APIMG
+	Kafka      DataplaneType = "Kafka"
+	WebMethods DataplaneType = "WebMethods"
+
+	// AgentSDK Metrics
+	Kong     DataplaneType = "Kong"
+	Mulesoft DataplaneType = "Mulesoft"
+
+	// Compliance
+	Graylog   DataplaneType = "Graylog"
+	Traceable DataplaneType = "Traceable"
+
+	// Other
 	Unclassified DataplaneType = "Unclassified"
+	Unidentified DataplaneType = "Unidentified"
 )
 
 func (t DataplaneType) String() string {
