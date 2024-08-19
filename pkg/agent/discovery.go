@@ -126,20 +126,20 @@ func PublishingUnlock() {
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
 	if agent.apicClient != nil {
-		if agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-			var err error
-			_, err = publishAccessRequestDefinition(&serviceBody)
-			if err != nil {
-				return err
-			}
-		}
 
-		_, err := agent.apicClient.PublishService(&serviceBody)
+		var err error
+		_, err = publishAccessRequestDefinition(&serviceBody)
 		if err != nil {
 			return err
 		}
-		log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
 	}
+
+	_, err := agent.apicClient.PublishService(&serviceBody)
+	if err != nil {
+		return err
+	}
+	log.Infof("Published API %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, agent.cfg.GetEnvironmentName())
+
 	return nil
 }
 

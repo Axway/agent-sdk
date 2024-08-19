@@ -49,7 +49,6 @@ func TestAPIServiceMarshal(t *testing.T) {
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
-			Categories:  []string{"cat1", "cat2"},
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
@@ -107,7 +106,6 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
-			Categories:  []string{"cat1", "cat2"},
 		},
 		Status: &v1.ResourceStatus{
 			Level: "Error",
@@ -184,7 +182,6 @@ func TestAPIServiceAsInstance(t *testing.T) {
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
-			Categories:  []string{"cat1", "cat2"},
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",
@@ -264,7 +261,6 @@ func TestAPIServiceFromInstance(t *testing.T) {
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
-			Categories:  []string{"cat1", "cat2"},
 			Icon: m.ApiServiceSpecIcon{
 				ContentType: "image/png",
 				Data:        "data",

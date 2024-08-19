@@ -76,7 +76,6 @@ func TestServiceBodySetters(t *testing.T) {
 		SetUnstructuredLabel("Label").
 		SetUnstructuredType("Type").
 		SetTeamName("00000").
-		SetCategories([]string{"CategoryA", "CategoryB", "CategoryC"}).
 		SetServiceAgentDetails(svcDetails).
 		SetInstanceAgentDetails(instDetails).
 		SetRevisionAgentDetails(revDetails).
@@ -123,7 +122,6 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "Label", sb.UnstructuredProps.Label)
 	assert.Equal(t, "Type", sb.UnstructuredProps.AssetType)
 	assert.Equal(t, "00000", sb.TeamName)
-	assert.Equal(t, []string{"CategoryA", "CategoryB", "CategoryC"}, sb.categoryTitles)
 	assert.Equal(t, ep, sb.Endpoints)
 	assert.Equal(t, revAttr, sb.RevisionAttributes)
 	assert.Equal(t, instAttr, sb.InstanceAttributes)

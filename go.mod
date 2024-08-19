@@ -4,11 +4,8 @@ go 1.21
 
 require (
 	github.com/elastic/beats/v7 v7.17.23
-	github.com/emersion/go-sasl v0.0.0-20211008083017-0b9dcfb154ac
-	github.com/emersion/go-smtp v0.15.0
 	github.com/emicklei/proto v1.9.2
 	github.com/fsnotify/fsnotify v1.5.4
-	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/getkin/kin-openapi v0.127.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
@@ -27,7 +24,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/subosito/gotenv v1.4.0
 	github.com/swaggest/go-asyncapi v0.8.0
-	github.com/tidwall/gjson v1.14.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 	golang.org/x/net v0.28.0
 	golang.org/x/text v0.17.0
@@ -87,8 +83,6 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
 	go.elastic.co/apm v1.15.0 // indirect
 	go.elastic.co/ecszap v1.0.3 // indirect
 	go.elastic.co/fastjson v1.3.0 // indirect

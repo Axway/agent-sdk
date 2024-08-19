@@ -68,7 +68,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 
 	logger.Trace("validating api service instances on dataplane")
 
-	// Validate the API on dataplane.  If API is not valid, mark the consumer instance as "DELETED"
+	// Validate the API on dataplane.
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
 		logger := logger.WithField("instanceCacheID", key)
 		logger.Tracef("validating")
@@ -96,9 +96,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		if externalPrimaryKey != "" {
 			logger = logger.WithField("externalPrimaryKey", externalPrimaryKey)
 		}
-		// Check if the consumer instance was published by agent, i.e. following attributes are set
-		// - externalAPIID should not be empty
-		// - externalAPIStage could be empty for dataplanes that do not support it
+
 		logger.Trace("validating API Instance on dataplane")
 		apiValidator := getAPIValidator()
 		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
@@ -151,7 +149,6 @@ func (j *instanceValidator) deleteService(logger log.FieldLogger, ri *apiV1.Reso
 	logger = logger.WithField("serviceTitle", ri.Title)
 	logger.Infof("API Service no longer has a service instance; deleting the API Service")
 
-	// deleting the service will delete all associated resources, including the consumerInstance
 	err := agent.apicClient.DeleteServiceByName(ri.Name)
 	if err != nil {
 		logger.WithError(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title)).Error("deleting service")

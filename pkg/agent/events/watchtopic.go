@@ -12,7 +12,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
@@ -26,7 +25,6 @@ var agentTypesMap = map[config.AgentType]string{
 }
 
 type watchTopicFeatures interface {
-	IsMarketplaceSubsEnabled() bool
 	GetAgentType() config.AgentType
 	GetWatchResourceFilters() []config.ResourceFilter
 }
@@ -239,21 +237,17 @@ type WatchTopicValues struct {
 func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
-		{GroupKind: catalog.CategoryGVK().GroupKind, EventTypes: all},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.AccessControlListGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
+		{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 	}
-	if features.IsMarketplaceSubsEnabled() {
-		kinds = append(kinds, []kindValues{
-			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
-			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
-			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
-			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-			{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
-		}...)
-	}
+
 	return WatchTopicValues{
 		Name:        name,
 		Title:       name,
@@ -268,13 +262,10 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 	}
-	if features.IsMarketplaceSubsEnabled() {
-		kinds = append(kinds, []kindValues{
-			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-		}...)
-	}
+
 	return WatchTopicValues{
 		Name:        name,
 		Title:       name,
@@ -289,16 +280,13 @@ func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
+		{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
+		{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
+		{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
 	}
-	if features.IsMarketplaceSubsEnabled() {
-		kinds = append(kinds, []kindValues{
-			{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-			{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-			{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		}...)
-	}
+
 	return WatchTopicValues{
 		Name:        name,
 		Title:       name,

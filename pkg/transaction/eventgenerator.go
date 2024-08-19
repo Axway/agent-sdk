@@ -211,7 +211,7 @@ func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime t
 
 func (e *Generator) processTxnSummary(summaryEvent LogEvent) error {
 	// only process if there is a central client and marketplace subs are enabled
-	if agent.GetCentralClient() == nil || !agent.GetCentralClient().IsMarketplaceSubsEnabled() {
+	if agent.GetCentralClient() == nil {
 		return nil
 	}
 	if summaryEvent.TransactionSummary != nil {

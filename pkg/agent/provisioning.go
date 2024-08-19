@@ -1,18 +1,13 @@
 package agent
 
 import (
-	"context"
-
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/migrate"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 var supportedIDPGrantTypes = map[string]bool{
@@ -36,27 +31,24 @@ var tlsAuthCertificateMetadata = []string{
 	oauth.TLSClientAuthSanURI,
 }
 
-// credential request definitions
-// createOrUpdateDefinition -
-func createOrUpdateDefinition(data v1.Interface, marketplaceMigration migrate.Migrator) (*v1.ResourceInstance, error) {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
-		return nil, nil
+// createOrUpdateCredentialRequestDefinition -
+func createOrUpdateCredentialRequestDefinition(data *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
 	}
+	err = data.FromInstance(ri)
+	return data, err
+}
+
+// createOrUpdateDefinition -
+func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
 	}
 
-	if runMarketplaceMigration(ri, marketplaceMigration) {
-		migrateMarketPlace(marketplaceMigration, ri)
-	}
-
-	return ri, nil
-}
-
-func runMarketplaceMigration(ri *v1.ResourceInstance, marketplaceMigration migrate.Migrator) bool {
-	// check if the KIND and ID combo have an item in the cache
 	var existingRI *v1.ResourceInstance
 
 	switch ri.Kind {
@@ -66,71 +58,17 @@ func runMarketplaceMigration(ri *v1.ResourceInstance, marketplaceMigration migra
 		existingRI, _ = agent.cacheManager.GetCredentialRequestDefinitionByName(ri.Name)
 	}
 
-	return existingRI == nil && marketplaceMigration != nil
-}
-
-// migrateMarketPlace -
-func migrateMarketPlace(marketplaceMigration migrate.Migrator, ri *v1.ResourceInstance) (*v1.ResourceInstance, error) {
-	switch ri.Kind {
-	case management.AccessRequestDefinitionGVK().Kind:
-		agent.cacheManager.AddAccessRequestDefinition(ri)
-	case management.CredentialRequestDefinitionGVK().Kind:
-		agent.cacheManager.AddCredentialRequestDefinition(ri)
-	}
-
-	apiSvcResources := make([]*v1.ResourceInstance, 0)
-
-	cache := agent.cacheManager.GetAPIServiceCache()
-
-	for _, key := range cache.GetKeys() {
-		item, _ := cache.Get(key)
-		if item == nil {
-			continue
-		}
-
-		svc, ok := item.(*v1.ResourceInstance)
-		if ok {
-			apiSvcResources = append(apiSvcResources, svc)
+	// if not existing, go ahead and add the request definition
+	if existingRI == nil {
+		switch ri.Kind {
+		case management.AccessRequestDefinitionGVK().Kind:
+			agent.cacheManager.AddAccessRequestDefinition(ri)
+		case management.CredentialRequestDefinitionGVK().Kind:
+			agent.cacheManager.AddCredentialRequestDefinition(ri)
 		}
 	}
 
-	for _, svc := range apiSvcResources {
-		var err error
-
-		mig := marketplaceMigration.(*migrate.MarketplaceMigration)
-
-		logger.Tracef("update apiserviceinstances with request definition %s: %s", ri.Kind, ri.Name)
-
-		mig.Migrate(context.Background(), svc)
-
-		// Mark marketplace migration completed here in provisioning
-		util.SetAgentDetailsKey(svc, definitions.MarketplaceMigration, definitions.MigrationCompleted)
-		ri, err = GetCentralClient().UpdateResourceInstance(svc)
-		if err != nil {
-			return nil, err
-		}
-		//update sub resources
-		inst, err := svc.AsInstance()
-		if xagentdetails, found := inst.SubResources[definitions.XAgentDetails]; found && err == nil {
-			err = GetCentralClient().CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: xagentdetails})
-			if err != nil {
-				return nil, err
-			}
-			log.Debugf("updated x-agent-details with marketplace-migration: completed")
-		}
-
-	}
 	return ri, nil
-}
-
-// createOrUpdateCredentialRequestDefinition -
-func createOrUpdateCredentialRequestDefinition(data *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
-	if ri == nil || err != nil {
-		return nil, err
-	}
-	err = data.FromInstance(ri)
-	return data, err
 }
 
 type crdBuilderOptions struct {
@@ -145,7 +83,7 @@ type crdBuilderOptions struct {
 	registerFunc       provisioning.RegisterCredentialRequestDefinition
 }
 
-// NewCredentialRequestBuilder - called by the agents to build and register a new credential reqest definition
+// NewCredentialRequestBuilder - called by the agents to build and register a new credential request definition
 func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	thisCred := &crdBuilderOptions{
 		renewable:    false,
@@ -564,7 +502,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
-	ri, err := createOrUpdateDefinition(data, agent.marketplaceMigration)
+	ri, err := createOrUpdateDefinition(data)
 	if ri == nil || err != nil {
 		return nil, err
 	}
@@ -591,7 +529,7 @@ func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 
 // RegisterProvisioner - allow the agent to register a provisioner
 func RegisterProvisioner(provisioner provisioning.Provisioning) {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.MarketplaceProvisioningEnabled() {
+	if agent.agentFeaturesCfg == nil {
 		return
 	}
 	agent.provisioner = provisioner

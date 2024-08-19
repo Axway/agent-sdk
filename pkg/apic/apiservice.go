@@ -62,11 +62,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 }
 
 func (c *ServiceClient) setMigrationFlags(svcDetails map[string]interface{}) {
-	svcDetails[defs.InstanceMigration] = defs.MigrationCompleted
-
-	if c.cfg.IsMarketplaceSubsEnabled() {
-		svcDetails[defs.MarketplaceMigration] = defs.MigrationCompleted
-	}
+	svcDetails[defs.MarketplaceMigration] = defs.MigrationCompleted
 }
 
 func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (*apiv1.Owner, error) {

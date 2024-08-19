@@ -26,14 +26,10 @@ var (
 	ErrCreateSecret                        = errors.New(1145, "unable to create secret")
 	ErrAccessRequestSubscriptionSchemaResp = errors.Newf(1146, "unexpected response code (%d) when creating an access request subscription schema in Amplify Central")
 
-	ErrGetSubscriptionDefProperties       = errors.New(1155, "error getting subscription definition properties in Amplify Central")
-	ErrUpdateSubscriptionDefProperties    = errors.New(1156, "error updating subscription definition properties in Amplify Central")
-	ErrGetCatalogItemServerInfoProperties = errors.New(1157, "error getting catalog item API server info properties")
-	ErrSubscriptionManagerDown            = errors.New(1158, "subscription manager is not running")
+	ErrGetSubscriptionDefProperties    = errors.New(1155, "error getting subscription definition properties in Amplify Central")
+	ErrUpdateSubscriptionDefProperties = errors.New(1156, "error updating subscription definition properties in Amplify Central")
+	ErrSubscriptionManagerDown         = errors.New(1158, "subscription manager is not running")
 
 	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")
-
-	// Category
-	ErrCategoryCreate = errors.Newf(1164, "error creating category %s")
 )

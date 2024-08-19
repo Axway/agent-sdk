@@ -26,7 +26,6 @@ The Amplify Central Discovery Agents can be used for discovering APIs managed by
     - [Sample of published API server resources](#sample-of-published-api-server-resources)
   - [Subscriptions](#subscriptions)
   - [Marketplace Provisioning](#marketplace-provisioning)
-  - [Validating ConsumerInstance](#validating-consumerinstance)
   - [Registering handler for API Server events](#registering-handler-for-api-server-events)
     - [Example](#example)
   - [Building the Agent](#building-the-agent)
@@ -41,7 +40,7 @@ Below is the list of Central configuration properties in YAML and their correspo
 
 
 | YAML property                  | Variable name                  | Description                                                                                                                                                                                                                                                                                                              |
-| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|--------------------------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | central.url                    | CENTRAL_URL                    | The URL to the Amplify Central instance being used for Agents (default value: US =`<https://apicentral.axway.com>` / EU = `https://central.eu-fr.axway.com`)                                                                                                                                                             |
 | central.organizationID         | CENTRAL_ORGANIZATIONID         | The Organization ID from Amplify Central. Locate this at Platform > User > Organization.                                                                                                                                                                                                                                 |
 | central.team                   | CENTRAL_TEAM                   | The name of the team in Amplify Central that all APIs will be linked to. Locate this at Amplify Central > Access > Team Assets.(default to`Default Team`)                                                                                                                                                                |
@@ -95,26 +94,14 @@ type CentralConfig interface {
 
  GetURL() string
  GetPlatformURL() string
- GetCatalogItemsURL() string
  GetAPIServerURL() string
  GetEnvironmentURL() string
  GetServicesURL() string
  GetRevisionsURL() string
  GetInstancesURL() string
  DeleteServicesURL() string
- GetConsumerInstancesURL() string
- GetAPIServerSubscriptionDefinitionURL() string
- GetAPIServerWebhooksURL() string
  GetAPIServerSecretsURL() string
-
- GetSubscriptionURL() string
  GetSubscriptionConfig() SubscriptionConfig
-
- GetCatalogItemSubscriptionsURL(string) string
- GetCatalogItemSubscriptionStatesURL(string, string) string
- GetCatalogItemSubscriptionPropertiesURL(string, string) string
- GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
- GetCatalogItemByIDURL(catalogItemID string) string
 
  GetAuthConfig() AuthConfig
  GetTLSConfig() TLSConfig
@@ -388,10 +375,10 @@ The agent can discover APIs in external API Gateway based on the capability it p
 
 
 | API Service property | Description                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | ID                   | ID of the API.                                                                                                                             |
 | PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                                |
-| Title                | Name of the API that will be used as Amplify Central Catalog name.                                                                         |
+| Title                | Friendly name of the API that will be used as Amplify Central product name.                                                                |
 | Description:         | A brief summary about the API.                                                                                                             |
 | Version:             | Version of the API.                                                                                                                        |
 | URL:                 | Endpoint for the API service.                                                                                                              |
@@ -416,10 +403,10 @@ Along with the above properties the following properties are on the ServiceBodyB
 
 
 | API Service property    | Description                              | Default (not set)   |
-| ----------------------- | ---------------------------------------- | ------------------- |
+|-------------------------|------------------------------------------|---------------------|
 | UnstructuredAssetType   | Type of asset for the unstructured data. | Asset               |
 | UnstructuredContentType | Content type for this data.              | parse based on spec |
-| UnstructuredLabel       | Label to display int he catalog item.    | Asset               |
+| UnstructuredLabel       | Label to display in the asset item.      | Asset               |
 | UnstructuredFilename:   | Filename of the file to download.        | APIName             |
 
 The builder will use these properties when set, or use the default if not.
@@ -493,9 +480,8 @@ The Agent can use the service body definition built by earlier set up and call t
 - APIService: Resource representing an Amplify Central API Service.
 - APIServiceRevision: Resource representing an Amplify Central API Service Revision
 - APIServiceInstance: Resource representing the deployed instance of the revision
-- ConsumerInstance: Represents the resources holding information about publishing assets to Amplify Unified Catalog
 
-When *PublishAPI* is called for the first time for the discovered API, each of the above mentioned resources gets created with generated names. On subsequent calls to the method for the same discovered API, the *APIService* and *ConsumerInstance* resources are updated, while a new resource for *APIServiceRevision* is created to represent the updated revision of the API. For update, the *APIServiceInstance* resources is updated unless the endpoint in the service definitions are changed which triggers a creation of a new *APIServiceInstance* resource.
+When *PublishAPI* is called for the first time for the discovered API, each of the above mentioned resources gets created with generated names. On subsequent calls to the method for the same discovered API, the *APIService* resources are updated, while a new resource for *APIServiceRevision* is created to represent the updated revision of the API. For update, the *APIServiceInstance* resources is updated unless the endpoint in the service definitions are changed which triggers a creation of a new *APIServiceInstance* resource.
 
 The *PublishAPI* method while creating/updating the API server resources set the following attributes.
 
@@ -580,30 +566,6 @@ spec:
 
 ---
 
-group: management
-apiVersion: v1alpha1
-kind: ConsumerInstance
-name: 37260bb8-203b-11eb-bac3-3af9d38d3457
-title: musicalinstrumentsapi-azure (Azure)
-metadata:
-  id: e4fcb2ab75906c6201759dee1c2e00ed
-  ...
-attributes:
-  createdBy: AzureDiscoveryAgent
-  externalAPIID: ...DISCOVERED-API-ID...
-  externalAPIName: musicalinstrumentsapi-azure
-spec:
-  name: musicalinstrumentsapi-azure (Azure)
-  state: PUBLISHED
-  status: PUBLISHED
-  version: 0.0.1
-  visibility: RESTRICTED
-  description: This is a sample Musical Instruments API.
-  subscription:
-    autoSubscribe: false
-    ...
-  apiServiceInstance: 37260bb8-203b-11eb-bac3-3af9d38d3457.1
-
 ```
 
 ## Subscriptions
@@ -614,13 +576,7 @@ See [Subscriptions](./subscriptions.md)
 
 See [Provisioning](./provisioning.md)
 
-## Validating ConsumerInstance
-
-Amplify Central *ConsumerInstance* resources hold information about the assets published to Amplify Unified Catalog. In order to keep these assets in sync with the associated discovered API, a background job runs to validate each *ConsumerInstance*. If the resource is no longer valid, it is an indication that the API has likely been removed and the resource can be cleaned up.
-
-It is the responsibility of the individual agent to determine the validity of the *ConsumerInstance*. The Amplify Agents SDK provides a mechanism for the discovery agent to register an API validator for this purpose. The agent implementation can call *RegisterAPIValidator* method in the *agent* package and provide a callback method. The Amplify Agents SDK will periodically call this method in the agent, thereby allowing the agent to determine the validity of the API and keep the resources in sync. Note that if an agent does not register an API validator, the consumer instance will never be validated and will always be considered synced with API. The ConsumerInstance resource will never be removed.
-
-Below is the example of registering the API validator callback and sample validator implementation
+## Registering API Validator
 
 ```
 func run() error {
@@ -633,9 +589,9 @@ func (a *Agent) validateAPI(apiID, stageName string) bool {
 }
 ```
 
-Returning true from the validator will indicate that the *ConsumerInstance* is still valid. The Amplify Agents SDK will not remove the resource. Returning false will indicate to the Amplify Agents SDK that the resource should be removed, thereby keeping the resources and the APIs in sync.
 
 ## Registering handler for API Server events
+
 The Agent SDK maintains a cache of API server resources for its internal processing. These caches are populated by fetching the API server resource using an API call. The API call is performed at a regular interval. With the support for streaming API server resource events over gRPC, the Agent SDK does not require periodic API calls. The SDK will instead use the gRPC based watch service to receive events on API server resources. The Agent SDK creates a gRPC connection with the service and subscribes to the service based on a WatchTopic resource in the API server. The Agent SDK initialization creates the WatchTopic resource which defines the filters based on the type of agent, and the type of API server resources it needs for its internal processing.
 
 When running in gRPC mode to watch for API server resource events, the agent specific implementation can choose to register an event handler to receive the API server resource event based on a watch topic filter that the Agent SDK registers.

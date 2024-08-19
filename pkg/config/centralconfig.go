@@ -165,7 +165,6 @@ type CentralConfig interface {
 	GetURL() string
 	GetTraceabilityHost() string
 	GetPlatformURL() string
-	GetCatalogItemsURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
 	GetEnvironmentACLsURL() string
@@ -173,22 +172,11 @@ type CentralConfig interface {
 	GetRevisionsURL() string
 	GetInstancesURL() string
 	DeleteServicesURL() string
-	GetConsumerInstancesURL() string
-	GetAPIServerSubscriptionDefinitionURL() string
 	GetAPIServerAccessRequestDefinitionURL() string
-	GetAPIServerWebhooksURL() string
 	GetAPIServerSecretsURL() string
-	GetCategoriesURL() string
-	GetSubscriptionURL() string
-	GetSubscriptionConfig() SubscriptionConfig
 	GetAccessRequestsURL() string
 	GetAccessRequestURL(string) string
 	GetAccessRequestStateURL(string) string
-	GetCatalogItemSubscriptionsURL(string) string
-	GetCatalogItemSubscriptionStatesURL(string, string) string
-	GetCatalogItemSubscriptionPropertiesURL(string, string) string
-	GetCatalogItemSubscriptionRelationshipURL(string, string) string
-	GetCatalogItemSubscriptionDefinitionPropertiesURL(string) string
 	GetAuthConfig() AuthConfig
 	GetTLSConfig() TLSConfig
 	GetTagsToPublish() string
@@ -200,7 +188,6 @@ type CentralConfig interface {
 	GetClientTimeout() time.Duration
 	GetPageSize() int
 	GetAPIServiceRevisionPattern() string
-	GetCatalogItemByIDURL(catalogItemID string) string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
 	GetMetricReportingConfig() MetricReportingConfig
@@ -210,8 +197,6 @@ type CentralConfig interface {
 	IsGRPCInsecure() bool
 	GetCacheStoragePath() string
 	GetCacheStorageInterval() time.Duration
-	SetIsMarketplaceSubsEnabled(enabled bool)
-	IsMarketplaceSubsEnabled() bool
 	GetSingleURL() string
 	GetMigrationSettings() MigrationConfig
 	GetWatchResourceFilters() []ResourceFilter
@@ -248,7 +233,6 @@ type CentralConfiguration struct {
 	APIValidationCronSchedule string                `config:"apiValidationCronSchedule"`
 	APIServiceRevisionPattern string                `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string                `config:"proxyUrl"`
-	SubscriptionConfiguration SubscriptionConfig    `config:"subscriptions"`
 	UsageReporting            UsageReportingConfig  `config:"usageReporting"`
 	MetricReporting           MetricReportingConfig `config:"metricReporting"`
 	GRPCCfg                   GRPCConfig            `config:"grpc"`
@@ -261,7 +245,6 @@ type CentralConfiguration struct {
 	isSingleURLSet            bool
 	isRegionSet               bool
 	isAxwayManaged            bool
-	isMarketplaceSubs         bool
 	WatchResourceFilters      []ResourceFilter
 }
 
@@ -288,7 +271,6 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PageSize:                  100,
 		PlatformURL:               platformURL,
 		SingleURL:                 "",
-		SubscriptionConfiguration: NewSubscriptionConfig(),
 		AppendEnvironmentToTitle:  true,
 		ReportActivityFrequency:   5 * time.Minute,
 		APIValidationCronSchedule: "@daily",
@@ -334,7 +316,7 @@ func (c *CentralConfiguration) GetAgentType() AgentType {
 	return c.AgentType
 }
 
-// GetAgentType - Returns the agent type
+// GetRegion - Returns the region
 func (c *CentralConfiguration) GetRegion() Region {
 	return c.Region
 }
@@ -360,16 +342,6 @@ func (c *CentralConfiguration) GetEnvironmentID() string {
 // SetEnvironmentID - Sets the environment ID
 func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 	c.environmentID = environmentID
-}
-
-// SetIsMarketplaceSubsEnabled - Sets the isMarketplaceSubs boolean
-func (c *CentralConfiguration) SetIsMarketplaceSubsEnabled(enabled bool) {
-	c.isMarketplaceSubs = enabled
-}
-
-// IsMarketplaceSubsEnabled - Returns the isMarketplaceSubs boolean
-func (c *CentralConfiguration) IsMarketplaceSubsEnabled() bool {
-	return c.isMarketplaceSubs
 }
 
 // IsAxwayManaged - Returns the environment ID
@@ -428,11 +400,6 @@ func (c *CentralConfiguration) GetProxyURL() string {
 	return c.ProxyURL
 }
 
-// GetCatalogItemsURL - Returns the unifiedcatalog URL for catalog items API
-func (c *CentralConfiguration) GetCatalogItemsURL() string {
-	return c.GetURL() + "/api/unifiedCatalog/v1/catalogItems"
-}
-
 // GetAccessRequestsURL - Returns the accessrequest URL for access request API
 func (c *CentralConfiguration) GetAccessRequestsURL() string {
 	return c.GetEnvironmentURL() + "/accessrequests"
@@ -441,11 +408,6 @@ func (c *CentralConfiguration) GetAccessRequestsURL() string {
 // GetAPIServerURL - Returns the base path for the API server
 func (c *CentralConfiguration) GetAPIServerURL() string {
 	return c.GetURL() + "/apis/management/" + c.APIServerVersion + "/environments/"
-}
-
-// GetAPIServerCatalogURL - Returns the base path for the API server for catalog resources
-func (c *CentralConfiguration) GetAPIServerCatalogURL() string {
-	return c.GetURL() + "/apis/catalog/" + c.APIServerVersion
 }
 
 // GetEnvironmentURL - Returns the APIServer URL for services API
@@ -478,49 +440,14 @@ func (c *CentralConfiguration) DeleteServicesURL() string {
 	return c.GetEnvironmentURL() + "/apiservices"
 }
 
-// GetConsumerInstancesURL - Returns the APIServer URL for services API consumer instances
-func (c *CentralConfiguration) GetConsumerInstancesURL() string {
-	return c.GetEnvironmentURL() + "/consumerinstances"
-}
-
-// GetAPIServerSubscriptionDefinitionURL - Returns the APIServer URL for services API instances
-func (c *CentralConfiguration) GetAPIServerSubscriptionDefinitionURL() string {
-	return c.GetEnvironmentURL() + "/consumersubscriptiondefs"
-}
-
 // GetAPIServerAccessRequestDefinitionURL - Returns the APIServer URL for access request definitions
 func (c *CentralConfiguration) GetAPIServerAccessRequestDefinitionURL() string {
 	return c.GetEnvironmentURL() + "/accessrequestdefinitions"
 }
 
-// GetCategoriesURL - Returns the Categories URL
-func (c *CentralConfiguration) GetCategoriesURL() string {
-	return c.GetAPIServerCatalogURL() + "/categories"
-}
-
-// GetAPIServerWebhooksURL - Returns the APIServer URL for webhooks instances
-func (c *CentralConfiguration) GetAPIServerWebhooksURL() string {
-	return c.GetEnvironmentURL() + "/webhooks"
-}
-
 // GetAPIServerSecretsURL - Returns the APIServer URL for secrets
 func (c *CentralConfiguration) GetAPIServerSecretsURL() string {
 	return c.GetEnvironmentURL() + "/secrets"
-}
-
-// GetSubscriptionURL - Returns the unifiedcatalog URL for subscriptions list
-func (c *CentralConfiguration) GetSubscriptionURL() string {
-	return c.GetURL() + "/api/unifiedCatalog/v1/subscriptions"
-}
-
-// GetCatalogItemSubscriptionsURL - Returns the unifiedcatalog URL for catalog item subscriptions
-func (c *CentralConfiguration) GetCatalogItemSubscriptionsURL(catalogItemID string) string {
-	return fmt.Sprintf("%s/%s/subscriptions", c.GetCatalogItemsURL(), catalogItemID)
-}
-
-// GetCatalogItemSubscriptionStatesURL - Returns the unifiedcatalog URL for catalog item subscription states
-func (c *CentralConfiguration) GetCatalogItemSubscriptionStatesURL(catalogItemID, subscriptionID string) string {
-	return fmt.Sprintf("%s/%s/states", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
 }
 
 // GetAccessRequestURL - Returns the access request URL for catalog item subscription states
@@ -531,26 +458,6 @@ func (c *CentralConfiguration) GetAccessRequestURL(accessRequestName string) str
 // GetAccessRequestStateURL - Returns the access request URL to update the state
 func (c *CentralConfiguration) GetAccessRequestStateURL(accessRequestName string) string {
 	return fmt.Sprintf("%s/state", c.GetAccessRequestURL(accessRequestName))
-}
-
-// GetCatalogItemSubscriptionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription properties
-func (c *CentralConfiguration) GetCatalogItemSubscriptionPropertiesURL(catalogItemID, subscriptionID string) string {
-	return fmt.Sprintf("%s/%s/properties", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
-}
-
-// GetAccessRequestSubscriptionPropertiesURL - Returns the access request URL for subscription properties
-func (c *CentralConfiguration) GetAccessRequestSubscriptionPropertiesURL(accessRequestName string) string {
-	return fmt.Sprintf("%s/%s", c.GetAccessRequestsURL(), accessRequestName)
-}
-
-// GetCatalogItemSubscriptionRelationshipURL - Returns the relationships URL for catalog item subscription
-func (c *CentralConfiguration) GetCatalogItemSubscriptionRelationshipURL(catalogItemID, subscriptionID string) string {
-	return fmt.Sprintf("%s/%s/relationships", c.GetCatalogItemSubscriptionsURL(catalogItemID), subscriptionID)
-}
-
-// GetCatalogItemSubscriptionDefinitionPropertiesURL - Returns the unifiedcatalog URL for catalog item subscription definition properties
-func (c *CentralConfiguration) GetCatalogItemSubscriptionDefinitionPropertiesURL(catalogItemID string) string {
-	return fmt.Sprintf("%s/%s/%s/properties", c.GetCatalogItemsURL(), catalogItemID, "subscriptionDefinition")
 }
 
 // GetAuthConfig - Returns the Auth Config
@@ -568,19 +475,9 @@ func (c *CentralConfiguration) GetTLSConfig() TLSConfig {
 	return c.TLS
 }
 
-// GetSubscriptionConfig - Returns the Config for the subscription webhook
-func (c *CentralConfiguration) GetSubscriptionConfig() SubscriptionConfig {
-	return c.SubscriptionConfiguration
-}
-
 // GetTagsToPublish - Returns tags to publish
 func (c *CentralConfiguration) GetTagsToPublish() string {
 	return c.TagsToPublish
-}
-
-// GetCatalogItemByIDURL - Returns URL to get catalog item by id
-func (c *CentralConfiguration) GetCatalogItemByIDURL(catalogItemID string) string {
-	return c.GetCatalogItemsURL() + "/" + catalogItemID
 }
 
 // GetPollInterval - Returns the interval for polling subscriptions
@@ -786,7 +683,7 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			c.Auth.validate()
 
 			// Check that platform service account is used with market place provisioning
-			if c.IsMarketplaceSubsEnabled() && strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
+			if strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
 				exception.Throw(ErrServiceAccount)
 			}
 
@@ -946,7 +843,6 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	} else {
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
-		AddSubscriptionConfigProperties(props)
 		AddMigrationConfigProperties(props)
 	}
 }
@@ -1044,9 +940,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
-		// set the notifications
-		subscriptionConfig := ParseSubscriptionConfig(props)
-		cfg.SubscriptionConfiguration = subscriptionConfig
 		cfg.MigrationSettings = ParseMigrationConfig(props)
 		cfg.CredentialConfig = newCredentialConfig()
 	}

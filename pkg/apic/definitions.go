@@ -109,7 +109,6 @@ type serviceContext struct {
 	revisionName         string
 	revisionCount        int
 	instanceName         string
-	consumerInstanceName string
 	updateServiceSource  bool
 	updateInstanceSource bool
 }
@@ -148,10 +147,8 @@ type ServiceClient struct {
 	tokenRequester                     auth.TokenGetter
 	cfg                                corecfg.CentralConfig
 	apiClient                          coreapi.Client
-	DefaultSubscriptionSchema          SubscriptionSchema
 	caches                             cache2.Manager
 	subscriptionSchemaCache            cache.Cache
-	subscriptionMgr                    SubscriptionManager
 	DefaultSubscriptionApprovalWebhook corecfg.WebhookConfig
 	subscriptionRegistrationLock       sync.Mutex
 	logger                             log.FieldLogger
@@ -167,6 +164,5 @@ type APIServerInfoProperty struct {
 
 // APIServerInfo -
 type APIServerInfo struct {
-	ConsumerInstance APIServerInfoProperty `json:"consumerInstance,omitempty"`
-	Environment      APIServerInfoProperty `json:"environment,omitempty"`
+	Environment APIServerInfoProperty `json:"environment,omitempty"`
 }

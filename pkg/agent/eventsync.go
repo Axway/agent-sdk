@@ -18,7 +18,6 @@ import (
 
 // EventSync struct for syncing events from central
 type EventSync struct {
-	mpEnabled      bool
 	watchTopic     *management.WatchTopic
 	sequence       events.SequenceProvider
 	harvester      harvester.Harvest
@@ -32,9 +31,6 @@ func NewEventSync() (*EventSync, error) {
 	// Make sure only DA and Governance agents run migration processes
 	runMigrations := agent.cfg.GetAgentType() != config.TraceabilityAgent
 
-	// Check if marketplace is enabled
-	isMpEnabled := agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.MarketplaceProvisioningEnabled()
-
 	if runMigrations {
 		// add attribute migration to migrations
 		attributeMigration := migrate.NewAttributeMigration(agent.apicClient, agent.cfg)
@@ -43,19 +39,12 @@ func NewEventSync() (*EventSync, error) {
 		instanceMigration := migrate.NewInstanceMigration(agent.apicClient, agent.cfg)
 		migrations = append(migrations, attributeMigration, ardMigration, apisiMigration, instanceMigration)
 
-		if isMpEnabled {
-			// add marketplace migration to migrations
-			marketplaceMigration := migrate.NewMarketplaceMigration(agent.apicClient, agent.cfg, agent.cacheManager)
-			agent.marketplaceMigration = marketplaceMigration
-			migrations = append(migrations, marketplaceMigration)
-		}
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)
 
 	opts := []discoveryOpt{
 		withMigration(mig),
-		withMpEnabled(isMpEnabled),
 	}
 
 	if agent.agentResourceManager != nil {
@@ -80,7 +69,6 @@ func NewEventSync() (*EventSync, error) {
 	)
 
 	return &EventSync{
-		mpEnabled:      isMpEnabled,
 		watchTopic:     wt,
 		sequence:       sequence,
 		harvester:      hClient,
