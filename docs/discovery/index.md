@@ -378,7 +378,7 @@ The agent can discover APIs in external API Gateway based on the capability it p
 |----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | ID                   | ID of the API.                                                                                                                             |
 | PrimaryKey           | Optional PrimaryKey that will be used, in place of the ID, to identify APIs on the Gateway.                                                |
-| Title                | Name of the API that will be used as Amplify Central product name.                                                                         |
+| Title                | Friendly name of the API that will be used as Amplify Central product name.                                                                |
 | Description:         | A brief summary about the API.                                                                                                             |
 | Version:             | Version of the API.                                                                                                                        |
 | URL:                 | Endpoint for the API service.                                                                                                              |

@@ -240,16 +240,13 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.AccessControlListGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-	}
-
-	kinds = append(kinds, []kindValues{
 		{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
 		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
 		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
 		{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
-	}...)
+	}
 
 	return WatchTopicValues{
 		Name:        name,
@@ -265,12 +262,9 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-	}
-
-	kinds = append(kinds, []kindValues{
 		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-	}...)
+	}
 
 	return WatchTopicValues{
 		Name:        name,
