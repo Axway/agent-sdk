@@ -43,6 +43,11 @@ const (
 type DataplaneType string
 
 const (
+	// Discovery only
+	GitHub     DataplaneType = "GitHub"
+	GitLab     DataplaneType = "GitLab"
+	SwaggerHub DataplaneType = "SwaggerHub"
+
 	// Discovery and Traceability
 	APIM       DataplaneType = "APIM"
 	AWS        DataplaneType = "AWS"
@@ -57,18 +62,13 @@ const (
 	Kafka    DataplaneType = "Kafka"
 	Mulesoft DataplaneType = "Mulesoft"
 
-	// Discovery only
-	GitHub     DataplaneType = "GitHub"
-	GitLab     DataplaneType = "GitLab"
-	SwaggerHub DataplaneType = "SwaggerHub"
+	// Compliance
+	Graylog   DataplaneType = "Graylog"
+	Traceable DataplaneType = "Traceable"
 
 	// Other
 	Unidentified DataplaneType = "Unidentified"
 	Unclassified DataplaneType = "Unclassified"
-
-	// Compliance
-	Graylog   DataplaneType = "Graylog"
-	Traceable DataplaneType = "Traceable"
 )
 
 func (t DataplaneType) String() string {
