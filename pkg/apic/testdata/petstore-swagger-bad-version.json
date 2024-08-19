@@ -880,9 +880,6 @@
           "type": "integer",
           "format": "int64"
         },
-        "category": {
-          "$ref": "#/definitions/Category"
-        },
         "name": {
           "type": "string"
         }

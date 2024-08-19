@@ -876,9 +876,6 @@
     "Category": {
       "type": "object",
       "properties": {
-        "category": {
-          "$ref": "#/definitions/Category"
-        },
         "id": {
           "type": "integer",
           "format": "int64"
@@ -901,6 +898,9 @@
         "id": {
           "type": "integer",
           "format": "int64"
+        },
+        "category": {
+          "$ref": "#/definitions/Category"
         },
         "name": {
           "type": "string",
