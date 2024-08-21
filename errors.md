@@ -20,13 +20,6 @@
 | 1130 | request to get authentication token failed, possibly network or CENTAL_AUTH config                          | pkg/apic/ErrAuthenticationCall                   |
 | 1131 | token retrieved but was invalid on request to Amplify Central, likely CENTRAL_AUTH config                   | pkg/apic/ErrAuthentication                       |
 | 1139 | couldn't find a subscriber email address based on the ID in the subscription event                          | pkg/apic/ErrNoAddressFound                       |
-| 1140 | couldn't contact Amplify Central for subscription, possible network error                                   | pkg/apic/ErrSubscriptionQuery                    |
-| 1141 | couldn't get subscription data from Amplify Central, check network and CENTRAL_AUTH                         | pkg/apic/ErrSubscriptionResp                     |
-| 1142 | couldn't create or update subscription schema data, possible Network error                                  | pkg/apic/ErrSubscriptionSchemaCreate             |
-| 1143 | unexpected response when managing subscription schema on Amplify Central, check network and CENTRAL_AUTH    | pkg/apic/ErrSubscriptionSchemaResp               |
-| 1144 | unable to create webhook                                                                                    | pkg/apic/ErrCreateWebhook                        |
-| 1145 | unable to create secret                                                                                     | pkg/apic/ErrCreateSecret                         |
-| 1146 | unexpected response code (%d) when creating an access request subscription schema                           | pkg/apic/ErrAccessRequestSubscriptionSchemaResp  |
 | 1147 | error parsing filter in configuration. Syntax error                                                         | pkg/filter/ErrFilterConfiguration                |
 | 1148 | error parsing filter in configuration. Unrecognized expression                                              | pkg/filter/ErrFilterExpression                   |
 | 1149 | error parsing filter in configuration                                                                       | pkg/filter/ErrFilterGeneralParse                 |
@@ -35,9 +28,6 @@
 | 1152 | error parsing filter in configuration. Invalid selector expression                                          | pkg/filter/ErrFilterSelectorExpr                 |
 | 1153 | error parsing filter in configuration. Invalid operator                                                     | pkg/filter/ErrFilterOperator                     |
 | 1154 | error parsing filter in configuration. Unrecognized condition                                               | pkg/filter/ErrFilterCondition                    |
-| 1155 | error getting subscription definition properties in Amplify Central                                         | pkg/apic/ErrGetSubscriptionDefProperties         |
-| 1156 | error updating subscription definition properties in Amplify Central                                        | pkg/apic/ErrUpdateSubscriptionDefProperties      |
-| 1158 | subscription manager is not in a running state                                                              | pkg/apic/ErrSubscriptionManagerDown              |
 | 1160 | error getting endpoints for the API specification                                                           | pkg/apic/ErrSetSpecEndPoints                     |
 | 1163 | error retrieving API Service resource instances                                                             | pkg/agent/ErrUnableToGetAPIV1Resources           |
 |      | 1300-1399 - for subscription notification errors                                                            |                                                  |

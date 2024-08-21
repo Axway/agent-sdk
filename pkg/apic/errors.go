@@ -16,19 +16,6 @@ var (
 // Errors hit when calling different Amplify APIs
 var (
 	ErrNoAddressFound = errors.Newf(1139, "could not find the subscriber (%s) email address")
-	// Subscription APIs
-	ErrSubscriptionQuery        = errors.New(1140, "error connecting to Amplify Central for subscriptions")
-	ErrSubscriptionResp         = errors.Newf(1141, "unexpected response code (%d) from Amplify Central for subscription")
-	ErrSubscriptionSchemaCreate = errors.New(1142, "error creating/updating subscription schema in Amplify Central")
-	ErrSubscriptionSchemaResp   = errors.Newf(1143, "unexpected response code (%d) when creating a subscription schema in Amplify Central")
-	// APIs related to webhooks
-	ErrCreateWebhook                       = errors.New(1144, "unable to create webhook")
-	ErrCreateSecret                        = errors.New(1145, "unable to create secret")
-	ErrAccessRequestSubscriptionSchemaResp = errors.Newf(1146, "unexpected response code (%d) when creating an access request subscription schema in Amplify Central")
-
-	ErrGetSubscriptionDefProperties    = errors.New(1155, "error getting subscription definition properties in Amplify Central")
-	ErrUpdateSubscriptionDefProperties = errors.New(1156, "error updating subscription definition properties in Amplify Central")
-	ErrSubscriptionManagerDown         = errors.New(1158, "subscription manager is not running")
 
 	// Service body builder
 	ErrSetSpecEndPoints = errors.New(1160, "error getting endpoints for the API specification")
