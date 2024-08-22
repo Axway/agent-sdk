@@ -68,7 +68,10 @@ func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecRes
 // Parse -
 func (s *SpecResourceParser) Parse() error {
 	if s.resourceSpecType == "" {
-		s.discoverSpecTypeAndCreateProcessor()
+		err := s.discoverSpecTypeAndCreateProcessor()
+		if err != nil {
+			return err
+		}
 	} else {
 		err := s.createProcessorWithResourceType()
 		if err != nil {
@@ -86,14 +89,27 @@ func (s *SpecResourceParser) getResourceContentType() string {
 	return s.resourceContentType
 }
 
-func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() {
-	s.specProcessor, _ = s.discoverYAMLAndJSONSpec()
+func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() error {
+	specProcessor, err := s.discoverYAMLAndJSONSpec()
+	if err != nil {
+		return err
+	}
+
+	s.specProcessor = specProcessor
+
 	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseWSDLSpec()
+		s.specProcessor, err = s.parseWSDLSpec()
+		if err != nil {
+			return err
+		}
 	}
 	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseProtobufSpec()
+		s.specProcessor, err = s.parseProtobufSpec()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *SpecResourceParser) createProcessorWithResourceType() error {
