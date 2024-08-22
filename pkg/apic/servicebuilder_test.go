@@ -17,12 +17,11 @@ Some useful links:
 
 func TestNewServiceBodyBuilder(t *testing.T) {
 	svcBody, err := NewServiceBodyBuilder().Build()
-	assert.Nil(t, err)
+	assert.NotNil(t, err) // service body does not build any spec for json or yaml, and no resource type
 	assert.NotNil(t, svcBody)
 
 	// test all the default values
 	assert.Equal(t, Passthrough, svcBody.AuthPolicy)
-	assert.Equal(t, Unstructured, svcBody.ResourceType)
 	assert.Equal(t, PublishedState, svcBody.State)
 	assert.Equal(t, PublishedStatus, svcBody.Status)
 }

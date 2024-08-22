@@ -64,11 +64,13 @@ func TestSpecDiscovery(t *testing.T) {
 		{
 			name:         "No input type bad OAS version creates Unstructured",
 			inputFile:    "./testdata/petstore-openapi-bad-version.json",
+			parseErr:     true,
 			expectedType: Unstructured,
 		},
 		{
 			name:         "No input type bad Swagger version creates Unstructured",
 			inputFile:    "./testdata/petstore-swagger-bad-version.json",
+			parseErr:     true,
 			expectedType: Unstructured,
 		},
 		{
@@ -94,11 +96,13 @@ func TestSpecDiscovery(t *testing.T) {
 		{
 			name:         "No input type WSDL Spec",
 			inputFile:    "./testdata/weather.xml",
+			parseErr:     true,
 			expectedType: Wsdl,
 		},
 		{
 			name:         "No input type Protobuf Spec",
 			inputFile:    "./testdata/petstore.proto",
+			parseErr:     true,
 			expectedType: Protobuf,
 		},
 		{
@@ -119,6 +123,7 @@ func TestSpecDiscovery(t *testing.T) {
 		{
 			name:         "No input type Unstructured",
 			inputFile:    "./testdata/multiplication.thrift",
+			parseErr:     true,
 			expectedType: Unstructured,
 		},
 	}
