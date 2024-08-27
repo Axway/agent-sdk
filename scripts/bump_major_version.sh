@@ -82,6 +82,8 @@ update_imports() {
 
     find . -type f -name "*.go" -exec sed -i -e "s/${OLD_SDK_PATH}/${NEW_SDK_PATH}/g" {} \;
     sed -i -e "s/${OLD_SDK_PATH}/${NEW_SDK_PATH}/g" .csr-profile.json
+
+    go mod tidy
 }
 
 main() {
