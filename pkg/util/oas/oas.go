@@ -16,7 +16,7 @@ func ParseOAS2(spec []byte) (*openapi2.T, error) {
 	swaggerObj := &openapi2.T{}
 	err := json.Unmarshal(spec, swaggerObj)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("unable to parse OAS2 specification")
 	}
 
 	if !strings.Contains(swaggerObj.Swagger, "2.") {
@@ -35,7 +35,7 @@ func ParseOAS2(spec []byte) (*openapi2.T, error) {
 func ParseOAS3(spec []byte) (*openapi3.T, error) {
 	oas3Obj, err := openapi3.NewLoader().LoadFromData(spec)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("unable to parse OAS3 specification")
 	}
 	if !strings.Contains(oas3Obj.OpenAPI, "3.") {
 		return nil, fmt.Errorf(oasParseError("3", ("'openapi' key is invalid.")))
