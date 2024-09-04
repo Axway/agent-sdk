@@ -154,13 +154,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
 	api.SetConfigAgent(
-		centralCfg.GetEnvironmentName(),
-		centralCfg.IsUsingGRPC(),
-		isRunningInDockerContainer(),
-		centralCfg.GetAgentName(),
+		GetUserAgent(),
 		centralCfg.GetSingleURL(),
-		singleEntryFilter,
-	)
+		singleEntryFilter)
 
 	if agentFeaturesCfg.ConnectionToCentralEnabled() {
 		err = handleCentralConfig(centralCfg)
@@ -489,6 +485,25 @@ func GetCentralConfig() config.CentralConfig {
 	agentMutex.Lock()
 	defer agentMutex.Unlock()
 	return agent.cfg
+}
+
+func GetUserAgent() string {
+	envName := ""
+	agentName := ""
+	isGRPC := false
+	if agent.cfg != nil {
+		envName = agent.cfg.GetEnvironmentName()
+		agentName = agent.cfg.GetAgentName()
+		isGRPC = agent.cfg.IsUsingGRPC()
+	}
+	return util.FormatUserAgent(
+		config.AgentTypeName,
+		config.AgentVersion,
+		config.SDKVersion,
+		envName,
+		agentName,
+		isRunningInDockerContainer(),
+		isGRPC)
 }
 
 // setCentralConfig - Sets the central config
