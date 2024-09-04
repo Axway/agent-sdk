@@ -20,6 +20,10 @@ const (
 	mimeApplicationYAML = "application/yaml"
 )
 
+const (
+	UnknownYamlJson = "unknown yaml or json based specification"
+)
+
 // SpecProcessor -
 type SpecProcessor interface {
 	GetVersion() string
@@ -91,7 +95,8 @@ func (s *SpecResourceParser) getResourceContentType() string {
 
 func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() error {
 	specProcessor, err := s.discoverYAMLAndJSONSpec()
-	if err != nil {
+	// check error to see if its an unknown yaml or json.  If it is, continue on for wsdl and protobuf processing
+	if err != nil && err.Error() != UnknownYamlJson {
 		return err
 	}
 
@@ -194,7 +199,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 		return newRamlProcessor(specDef, s.resourceSpec), nil
 	}
 
-	return nil, errors.New("unknown yaml or json based specification")
+	return nil, errors.New(UnknownYamlJson)
 }
 
 func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
