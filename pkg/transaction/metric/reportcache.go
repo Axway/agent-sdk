@@ -18,10 +18,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/gorhill/cronexpr"
 )
 
 const (
 	eventsKey                 = "lighthouse_events"
+	lastPublishTimestampKey   = "timestamp"
 	offlineCacheFileName      = "agent-report-working.json"
 	offlineReportSuffix       = "usage_report.json"
 	offlineReportDateFormat   = "2006_01_02"
@@ -108,6 +110,31 @@ func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
 	defer c.reportCacheLock.Unlock()
 
 	c.setEvents(lighthouseEvent)
+}
+
+func (c *usageReportCache) setLastPublishTimestamp(lastPublishTimestamp time.Time) {
+	c.reportCacheLock.Lock()
+	defer c.reportCacheLock.Unlock()
+
+	c.reportCache.Set(lastPublishTimestampKey, lastPublishTimestamp.String())
+	c.reportCache.Save(c.cacheFilePath)
+}
+
+func (c *usageReportCache) getLastPublishTimestamp() time.Time {
+	c.reportCacheLock.Lock()
+	defer c.reportCacheLock.Unlock()
+
+	value, err := c.reportCache.Get(lastPublishTimestampKey)
+	if err != nil {
+		return time.Time{}
+	}
+
+	lastPublishTime, err := time.Parse(time.RFC3339, value.(string))
+	if err != nil {
+		return time.Time{}
+	}
+
+	return lastPublishTime
 }
 
 func (c *usageReportCache) generateReportPath(timestamp ISO8601Time, index int) string {
@@ -233,7 +260,31 @@ func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) 
 		return nil
 	}
 
+	// update the publish time
+	lastPublishTime := time.Now()
+	c.setLastPublishTimestamp(lastPublishTime)
+
 	savedEvents.Report = make(map[string]UsageReport)
 	c.setEvents(savedEvents)
 	return nil
+}
+
+func (c *usageReportCache) shouldPublish(schedule string) bool {
+	currentTime := time.Now()
+	lastPublishTimestamp := c.getLastPublishTimestamp()
+	// if the last publish was made more than a day ago, publish
+	if time.Duration(currentTime.Sub(lastPublishTimestamp).Hours()) >= 24*time.Hour {
+		return true
+	}
+
+	cronSchedule, err := cronexpr.Parse(schedule)
+	if err != nil {
+		return false
+	}
+	// publish if last scheduled time is past
+	if cronSchedule.Next(lastPublishTimestamp).Before(currentTime) {
+		return true
+	}
+
+	return false
 }
