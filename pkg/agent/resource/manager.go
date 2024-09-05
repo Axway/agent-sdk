@@ -321,7 +321,7 @@ func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error
 			agentRes = da
 			update = true
 		}
-	} else if a.agentResource.Kind == management.DiscoveryAgentGVK().Kind {
+	} else if a.agentResource.Kind == management.TraceabilityAgentGVK().Kind {
 		ta := management.NewTraceabilityAgent("", "")
 		ta.FromInstance(a.agentResource)
 		if ta.Spec.DataplaneType == "" {

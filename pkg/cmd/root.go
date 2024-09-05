@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/apic"
 	"github.com/Axway/agent-sdk/pkg/cmd/agentsync"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
@@ -76,7 +77,11 @@ type agentRootCommand struct {
 func init() {
 	config.AgentTypeName = BuildAgentName
 	config.AgentVersion = BuildVersion + "-" + BuildCommitSha
-	config.AgentDataPlaneType = BuildDataPlaneType
+	config.AgentDataPlaneType = apic.Unidentified.String()
+	if BuildDataPlaneType != "" {
+		config.AgentDataPlaneType = BuildDataPlaneType
+	}
+
 	config.SDKVersion = SDKBuildVersion
 	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
 	rand.Seed(time.Now().UnixNano())
