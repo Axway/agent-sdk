@@ -113,9 +113,6 @@ func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
 }
 
 func (c *usageReportCache) setLastPublishTimestamp(lastPublishTimestamp time.Time) {
-	c.reportCacheLock.Lock()
-	defer c.reportCacheLock.Unlock()
-
 	c.reportCache.Set(lastPublishTimestampKey, lastPublishTimestamp.String())
 	c.reportCache.Save(c.cacheFilePath)
 }
@@ -272,8 +269,10 @@ func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) 
 func (c *usageReportCache) shouldPublish(schedule string) bool {
 	currentTime := time.Now()
 	lastPublishTimestamp := c.getLastPublishTimestamp()
+
 	// if the last publish was made more than a day ago, publish
-	if time.Duration(currentTime.Sub(lastPublishTimestamp).Hours()) >= 24*time.Hour {
+	elapsedTimeSinceLastPublish := currentTime.Sub(lastPublishTimestamp)
+	if lastPublishTimestamp.IsZero() || elapsedTimeSinceLastPublish >= 24*time.Hour {
 		return true
 	}
 
