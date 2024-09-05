@@ -48,6 +48,9 @@ func initFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("auth.client_id")
 
 	cmd.Flags().Bool("insecure", false, "Do not verify the server cert on TLS connection")
+	cmd.Flags().Bool("use_harvester", true, "Use harvester to sync events")
+	cmd.Flags().String("harvester_host", "", "The Harvester Host")
+	cmd.Flags().Uint32("harvester_port", 0, "The Harvester port")
 	cmd.Flags().String("log_level", "info", "log level")
 	cmd.Flags().String("log_format", "json", "line or json")
 }

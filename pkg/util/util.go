@@ -546,3 +546,18 @@ func OrderedKeys[T any](input map[string]T) []string {
 
 	return keys
 }
+
+func FormatUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isDocker, isGRPC bool) string {
+	ua := ""
+	if agentType != "" && version != "" && sdkVersion != "" {
+		deploymentType := "binary"
+		if isDocker {
+			deploymentType = "docker"
+		}
+		ua = fmt.Sprintf("%s/%s SDK/%s %s %s %s", agentType, version, sdkVersion, environmentName, agentName, deploymentType)
+		if isGRPC {
+			ua = fmt.Sprintf("%s reactive", ua)
+		}
+	}
+	return ua
+}

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -65,12 +64,9 @@ type httpClient struct {
 }
 
 type configAgent struct {
-	agentName         string
-	environmentName   string
-	isDocker          bool
-	isGRPC            bool
 	singleURL         string
 	singleEntryFilter []string
+	userAgent         string
 }
 
 var cfgAgent *configAgent
@@ -82,13 +78,10 @@ func init() {
 }
 
 // SetConfigAgent -
-func SetConfigAgent(env string, isGRPC, isDocker bool, agentName, singleURL string, singleEntryFilter []string) {
+func SetConfigAgent(userAgent, singleURL string, singleEntryFilter []string) {
 	cfgAgentMutex.Lock()
 	defer cfgAgentMutex.Unlock()
-	cfgAgent.environmentName = env
-	cfgAgent.isGRPC = isGRPC
-	cfgAgent.isDocker = isDocker
-	cfgAgent.agentName = agentName
+	cfgAgent.userAgent = userAgent
 	cfgAgent.singleURL = singleURL
 	if cfgAgent.singleEntryFilter != nil {
 		cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, singleEntryFilter...)
@@ -268,15 +261,7 @@ func (c *httpClient) prepareAPIRequest(ctx context.Context, request Request) (*h
 	if !hasUserAgentHeader {
 		cfgAgentMutex.Lock()
 		defer cfgAgentMutex.Unlock()
-		deploymentType := "binary"
-		if cfgAgent.isDocker {
-			deploymentType = "docker"
-		}
-		ua := fmt.Sprintf("%s/%s SDK/%s %s %s %s", config.AgentTypeName, config.AgentVersion, config.SDKVersion, cfgAgent.environmentName, cfgAgent.agentName, deploymentType)
-		if cfgAgent.isGRPC {
-			ua = fmt.Sprintf("%s reactive", ua)
-		}
-		req.Header.Set("User-Agent", ua)
+		req.Header.Set("User-Agent", cfgAgent.userAgent)
 	}
 	return req, err
 }
