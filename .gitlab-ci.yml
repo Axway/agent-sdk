@@ -41,6 +41,7 @@ include:
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-twistlock.yml"
+      - "/.gitlab-ci-iriusrisk.yml"
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
