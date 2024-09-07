@@ -312,26 +312,23 @@ func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error
 	var agentRes v1.Interface
 	logger := a.logger.WithField("scope", a.agentResource.Metadata.Scope).WithField("kind", a.agentResource.Kind).WithField("name", a.agentResource.Name)
 
-	update := false
+	curType := apic.Unidentified.String()
 	if a.agentResource.Kind == management.DiscoveryAgentGVK().Kind {
 		da := management.NewDiscoveryAgent("", "")
 		da.FromInstance(a.agentResource)
-		if da.Spec.DataplaneType == "" {
-			da.Spec.DataplaneType = config.AgentDataPlaneType
-			agentRes = da
-			update = true
-		}
+		curType = da.Spec.DataplaneType
+		da.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = da
 	} else if a.agentResource.Kind == management.TraceabilityAgentGVK().Kind {
 		ta := management.NewTraceabilityAgent("", "")
 		ta.FromInstance(a.agentResource)
-		if ta.Spec.DataplaneType == "" {
-			ta.Spec.DataplaneType = config.AgentDataPlaneType
-			agentRes = ta
-			update = true
-		}
+		curType = ta.Spec.DataplaneType
+		ta.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = ta
 	}
 
-	if !update {
+	// nothing to update
+	if curType == config.AgentDataPlaneType {
 		return a.agentResource, nil
 	}
 
