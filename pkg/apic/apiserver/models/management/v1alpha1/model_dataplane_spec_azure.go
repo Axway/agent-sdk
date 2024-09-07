@@ -19,13 +19,13 @@ type DataplaneSpecAzure struct {
 	// The subscriptionId is the ID given to the subscription tied to the tenant
 	SubscriptionId string `json:"subscriptionId"`
 	// The name of the azure API management
-	ApimServiceName string `json:"apimServiceName"`
+	ApimServiceName string `json:"apimServiceName,omitempty"`
 	// The event hub processes and stores events, data, or telemetry produced by distributed software or devices
 	EventHubName string `json:"eventHubName,omitempty"`
 	// The event hub namespace is a management container for event hubs or topics
 	EventHubNamespace string `json:"eventHubNamespace,omitempty"`
 	// Consumer groups enable consuming applications to each have a separate view of the event stream. They read the stream independently at their own pace and with their own offsets.
 	EventHubConsumerGroup string `json:"eventHubConsumerGroup,omitempty"`
-	// Dictates the operation mode for the discovery agent
+	// Dictates the operation mode for the discovery agent. Possible options are APIM (default, when there is no mode property or mode is empty) and EventHub.
 	Mode string `json:"mode,omitempty"`
 }

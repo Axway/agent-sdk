@@ -21,34 +21,6 @@ if [[ "$OS" == "Darwin" ]] ; then
 fi
 
 
-######################
-# For model_consumer_instance_spec_subscription.go, we want to remove 'omitempty' from AutoSubscribe
-######################
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# add in the new line we want
-$SED -i "/AutoSubscribe/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-# reformat the code
-go fmt ${MODEL_PATH}/model_consumer_instance_spec_subscription.go
-
-
-######################
-# For model_consumer_instance_spec.go, we want to turn 	"Icon ConsumerInstanceSpecIcon `json:"icon,omitempty"`" into
-# "Icon *ConsumerInstanceSpecIcon `json:"icon,omitempty"`"
-######################
-SEARCH="\s*Icon\s*ConsumerInstanceSpecIcon.*"
-REPLACE="Icon *ConsumerInstanceSpecIcon \`json:\"icon,omitempty\"\`"
-# add a comment to the code
-$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_consumer_instance_spec.go
-# comment out the line we're changing
-$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_consumer_instance_spec.go
-# add in the new line we want
-$SED -i "/ConsumerInstanceSpecIcon/a ${REPLACE}" ${MODEL_PATH}/model_consumer_instance_spec.go
-# reformat the code
-go fmt ${MODEL_PATH}/model_consumer_instance_spec.go
-
 
 ######################
 # For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
@@ -258,7 +230,6 @@ MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
     ! -name 'model_*.go' \
     ! -name 'AmplifyRuntimeConfig.go' \
     ! -name 'AssetMapping.go' \
-    ! -name 'ConsumerInstance.go' \
     ! -name 'DiscoveryAgent.go' \
     ! -name 'GovernanceAgent.go' \
     ! -name 'TraceabilityAgent.go'`
