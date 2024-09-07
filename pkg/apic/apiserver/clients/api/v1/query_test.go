@@ -54,13 +54,13 @@ func TestRSQL(t *testing.T) {
 		},
 		{
 			"by reference",
-			Reference(management.ResourceDiscoveryGVK(), "my-rd-pods"),
-			`metadata.references.name==my-rd-pods;metadata.references.kind==ResourceDiscovery`,
+			Reference(management.APIServiceGVK(), "my-rd-pods"),
+			`metadata.references.name==my-rd-pods;metadata.references.kind==APIService`,
 		},
 		{
 			"by reference or attribute",
-			Or(AttrIn("a", "v1", "v2"), Reference(management.ResourceDiscoveryGVK(), "my-rd-svc")),
-			`(attributes.a=in=("v1","v2"),metadata.references.name==my-rd-svc;metadata.references.kind==ResourceDiscovery)`,
+			Or(AttrIn("a", "v1", "v2"), Reference(management.APIServiceGVK(), "my-rd-svc")),
+			`(attributes.a=in=("v1","v2"),metadata.references.name==my-rd-svc;metadata.references.kind==APIService)`,
 		},
 	}
 

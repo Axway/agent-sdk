@@ -15,7 +15,7 @@ import (
 func TestFakeUnscoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.K8SClusterGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -24,11 +24,11 @@ func TestFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	k8sClient, err := cb.ForKind(management.K8SClusterGVK())
+	apisClient, err := cb.ForKind(management.APIServiceGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	k8s, err := k8sClient.Get("muhName")
+	k8s, err := apisClient.Get("muhName")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -38,7 +38,7 @@ func TestFakeUnscoped(t *testing.T) {
 func TestAddFakeUnscoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.K8SClusterGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -47,14 +47,14 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	k8sClient, err := cb.ForKind(management.K8SClusterGVK())
+	apisClient, err := cb.ForKind(management.APIServiceGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	_, err = k8sClient.Create(&apiv1.ResourceInstance{
+	_, err = apisClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.K8SClusterGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			Name:             "muhName",
 		},
 		Spec: map[string]interface{}{},
@@ -63,9 +63,9 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: expected error")
 	}
 
-	_, err = k8sClient.Create(&apiv1.ResourceInstance{
+	_, err = apisClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.K8SClusterGVK(),
+			GroupVersionKind: management.APIServiceGVK(),
 			Name:             "muhSecondName",
 		},
 		Spec: map[string]interface{}{},
@@ -79,14 +79,14 @@ func TestFakeScoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: management.K8SClusterGVK(),
+				GroupVersionKind: management.APIServiceGVK(),
 				Name:             "muhName",
 			},
 			Spec: map[string]interface{}{},
 		},
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: management.K8SResourceGVK(),
+				GroupVersionKind: management.APIServiceGVK(),
 				Name:             "muhResource",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
@@ -101,7 +101,7 @@ func TestFakeScoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	noScope, err := cb.ForKind(management.K8SResourceGVK())
+	noScope, err := cb.ForKind(management.APIServiceGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -113,7 +113,7 @@ func TestFakeScoped(t *testing.T) {
 	ri, err := noScope.WithScope("muhName").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: management.K8SResourceGVK(),
+				GroupVersionKind: management.APIServiceGVK(),
 				Name:             "muhResource",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
