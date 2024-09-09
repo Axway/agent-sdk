@@ -27,7 +27,7 @@ var (
 )
 
 const (
-	ComponentResourceName = "versions"
+	ComponentResourceName = "components"
 )
 
 func ComponentGVK() apiv1.GroupVersionKind {
