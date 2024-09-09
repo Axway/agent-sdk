@@ -15,8 +15,8 @@ import (
 func TestFakeUnscoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.APIServiceGVK(),
-			Name:             "muhName",
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "environment",
 		},
 		Spec: map[string]interface{}{},
 	})
@@ -24,11 +24,11 @@ func TestFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	apisClient, err := cb.ForKind(management.APIServiceGVK())
+	envClient, err := cb.ForKind(management.EnvironmentGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	k8s, err := apisClient.Get("muhName")
+	k8s, err := envClient.Get("environment")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
@@ -38,8 +38,8 @@ func TestFakeUnscoped(t *testing.T) {
 func TestAddFakeUnscoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.APIServiceGVK(),
-			Name:             "muhName",
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "environment",
 		},
 		Spec: map[string]interface{}{},
 	})
@@ -47,15 +47,15 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	apisClient, err := cb.ForKind(management.APIServiceGVK())
+	envClient, err := cb.ForKind(management.EnvironmentGVK())
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	_, err = apisClient.Create(&apiv1.ResourceInstance{
+	_, err = envClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.APIServiceGVK(),
-			Name:             "muhName",
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "environment",
 		},
 		Spec: map[string]interface{}{},
 	})
@@ -63,10 +63,10 @@ func TestAddFakeUnscoped(t *testing.T) {
 		t.Fatal("Failed due to: expected error")
 	}
 
-	_, err = apisClient.Create(&apiv1.ResourceInstance{
+	_, err = envClient.Create(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.APIServiceGVK(),
-			Name:             "muhSecondName",
+			GroupVersionKind: management.EnvironmentGVK(),
+			Name:             "secondEnvironment",
 		},
 		Spec: map[string]interface{}{},
 	})
@@ -79,18 +79,18 @@ func TestFakeScoped(t *testing.T) {
 	cb, err := v1.NewFakeClient(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
-				GroupVersionKind: management.APIServiceGVK(),
-				Name:             "muhName",
+				GroupVersionKind: management.EnvironmentGVK(),
+				Name:             "environment",
 			},
 			Spec: map[string]interface{}{},
 		},
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.APIServiceGVK(),
-				Name:             "muhResource",
+				Name:             "apiService",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
-						Name: "muhName",
+						Name: "environment",
 					},
 				},
 			},
@@ -105,19 +105,19 @@ func TestFakeScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
-	_, err = noScope.WithScope("muhName").Get("muhResource")
+	_, err = noScope.WithScope("environment").Get("apiService")
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	ri, err := noScope.WithScope("muhName").Update(
+	ri, err := noScope.WithScope("environment").Update(
 		&apiv1.ResourceInstance{
 			ResourceMeta: apiv1.ResourceMeta{
 				GroupVersionKind: management.APIServiceGVK(),
-				Name:             "muhResource",
+				Name:             "apiService",
 				Metadata: apiv1.Metadata{
 					Scope: apiv1.MetadataScope{
-						Name: "muhName",
+						Name: "environment",
 					},
 				},
 				Attributes: map[string]string{"attribute": "value"},
