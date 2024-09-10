@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -94,27 +95,38 @@ func (s *SpecResourceParser) getResourceContentType() string {
 }
 
 func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() error {
-	specProcessor, err := s.discoverYAMLAndJSONSpec()
-	// check error to see if its an unknown yaml or json.  If it is, continue on for wsdl and protobuf processing
-	if err != nil && err.Error() != UnknownYamlJson {
-		return err
+	errs := []error{}
+	var err error
+	s.specProcessor, err = s.discoverYAMLAndJSONSpec()
+	if err == nil {
+		return nil
 	}
-
-	s.specProcessor = specProcessor
+	errs = append(errs, err)
 
 	if s.specProcessor == nil {
 		s.specProcessor, err = s.parseWSDLSpec()
-		if err != nil {
-			return err
+		if err == nil {
+			return nil
 		}
+		errs = append(errs, err)
 	}
 	if s.specProcessor == nil {
 		s.specProcessor, err = s.parseProtobufSpec()
-		if err != nil {
-			return err
+		if err == nil {
+			return nil
 		}
+		errs = append(errs, err)
 	}
-	return nil
+
+	errString := ""
+	for i, err := range errs {
+		if i > 0 {
+			errString += ": "
+		}
+		errString += err.Error()
+	}
+	return fmt.Errorf("could not determine spec type from file: %s", errString)
+
 }
 
 func (s *SpecResourceParser) createProcessorWithResourceType() error {

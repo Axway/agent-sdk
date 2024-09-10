@@ -96,13 +96,13 @@ func TestSpecDiscovery(t *testing.T) {
 		{
 			name:         "No input type WSDL Spec",
 			inputFile:    "./testdata/weather.xml",
-			parseErr:     true,
+			parseErr:     false,
 			expectedType: Wsdl,
 		},
 		{
 			name:         "No input type Protobuf Spec",
 			inputFile:    "./testdata/petstore.proto",
-			parseErr:     true,
+			parseErr:     false,
 			expectedType: Protobuf,
 		},
 		{
