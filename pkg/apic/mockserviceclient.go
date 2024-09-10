@@ -34,6 +34,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 			Realm:    "Broker",
 			ClientID: "dummy",
 		},
+		CredentialConfig: &corecfg.CredentialConfiguration{},
 	}
 
 	apiClient := &api.MockHTTPClient{ResponseCode: http.StatusOK}
