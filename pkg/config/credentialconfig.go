@@ -1,7 +1,16 @@
 package config
 
+import "errors"
+
+var supportedOAuthMethods = map[string]bool{
+	"oauth-secret":     true,
+	"oauth-public-key": true,
+}
+
 // SubscriptionConfig - Interface to get subscription config
 type CredentialConfig interface {
+	SetAllowedOAuthMethods(allowedMethods []string)
+	GetAllowedOAuthMethods() []string
 	ShouldDeprovisionExpired() bool
 	SetShouldDeprovisionExpired(deprovisionExpired bool)
 	GetExpirationDays() int
@@ -10,16 +19,28 @@ type CredentialConfig interface {
 
 // NotificationConfig -
 type CredentialConfiguration struct {
-	ExpirationDays      int  `config:"expirationDays"`
-	DeprovisionOnExpire bool `config:"deprovisionOnExpire"`
+	AllowedOAuthMethods []string `config:"allowedOAuthMethods"`
+	ExpirationDays      int      `config:"expirationDays"`
+	DeprovisionOnExpire bool     `config:"deprovisionOnExpire"`
 }
 
 // newCredentialConfig - Creates the default credential config
 func newCredentialConfig() CredentialConfig {
 	return &CredentialConfiguration{
+		AllowedOAuthMethods: make([]string, 0),
 		ExpirationDays:      0,
 		DeprovisionOnExpire: false,
 	}
+}
+
+// SetAllowedOAuthMethods -
+func (s *CredentialConfiguration) SetAllowedOAuthMethods(allowedOAuthMethods []string) {
+	s.AllowedOAuthMethods = allowedOAuthMethods
+}
+
+// GetAllowedOAuthMethods -
+func (s *CredentialConfiguration) GetAllowedOAuthMethods() []string {
+	return s.AllowedOAuthMethods
 }
 
 // ExpireAction -
@@ -44,6 +65,11 @@ func (s *CredentialConfiguration) SetExpirationDays(expirationDays int) {
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
 func (s *CredentialConfiguration) ValidateCfg() error {
+	for _, method := range s.AllowedOAuthMethods {
+		if _, ok := supportedOAuthMethods[method]; !ok {
+			return errors.New("credential type in allowed method configuration is not supported")
+		}
+	}
 	// TODO - validate time to live
 	return nil
 }
