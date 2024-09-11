@@ -695,8 +695,10 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 			},
 		},
 		Meta: map[string]interface{}{
-			"AgentName":    agent.GetCentralConfig().GetAgentName(),
-			"AgentVersion": cmd.BuildVersion,
+			"AgentName":       agent.GetCentralConfig().GetAgentName(),
+			"AgentVersion":    cmd.BuildVersion,
+			"AgentType":       agent.GetCentralConfig().GetAgentType().ToString(),
+			"AgentSDKVersion": config.SDKVersion,
 		},
 	}
 
