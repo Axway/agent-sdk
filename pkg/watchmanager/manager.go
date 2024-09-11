@@ -86,6 +86,7 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 		chainStreamClientInterceptor(
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
+		grpc.WithUserAgent(m.cfg.UserAgent),
 	}
 
 	m.logger.
@@ -93,7 +94,7 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 		WithField("port", m.cfg.Port).
 		Infof("connecting to watch service")
 
-	return grpc.Dial(address, grpcDialOptions...)
+	return grpc.NewClient(address, grpcDialOptions...)
 }
 
 func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {

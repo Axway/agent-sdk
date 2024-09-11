@@ -20,6 +20,10 @@ func createDiscoveryAgentRes(id, name, dataplane, teamID string) *v1.ResourceIns
 			Name: name,
 			Metadata: v1.Metadata{
 				ID: id,
+				Scope: v1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
+					Name: "env",
+				},
 			},
 		},
 		Spec: management.DiscoveryAgentSpec{
@@ -76,6 +80,10 @@ func TestNewManager(t *testing.T) {
 				return buffer, nil
 			}
 			return json.Marshal(resource)
+		},
+		GetResourceMock: func(url string) (*v1.ResourceInstance, error) {
+			ri, _ := resource.AsInstance()
+			return ri, nil
 		},
 	}
 	agentResChangeHandlerCall := 0

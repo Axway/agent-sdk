@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -54,6 +53,7 @@ type HTTPClientSettings struct {
 	CompressionLevel int
 	Observer         outputs.Observer
 	Headers          map[string]string
+	UserAgent        string
 }
 
 // Connection struct
@@ -63,6 +63,7 @@ type Connection struct {
 	http      *http.Client
 	connected bool
 	encoder   bodyEncoder
+	userAgent string
 }
 
 // NewHTTPClient instantiate a client.
@@ -93,7 +94,8 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 				},
 				Timeout: s.Timeout,
 			},
-			encoder: encoder,
+			encoder:   encoder,
+			userAgent: s.UserAgent,
 		},
 		compressionLevel: compression,
 		proxyURL:         s.Proxy,
@@ -242,7 +244,7 @@ func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTim
 
 	header.Add("Authorization", "Bearer "+token)
 	header.Add("Capture-Org-ID", agent.GetCentralConfig().GetTenantID())
-	header.Add("User-Agent", config.AgentTypeName+"/"+config.AgentVersion)
+	header.Add("User-Agent", conn.userAgent)
 	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().Unix(), 10))
 
 	if body != nil {

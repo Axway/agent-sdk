@@ -192,7 +192,7 @@ func TestNewSingleEntryClient(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			SetConfigAgent("", false, false, "", tc.singleURL, tc.singleEntryFilter)
+			SetConfigAgent("", tc.singleURL, tc.singleEntryFilter)
 			c := NewSingleEntryClient(tc.tls, tc.proxyURL, defaultTimeout)
 			hc, ok := c.(*httpClient)
 			assert.True(t, ok)
@@ -285,7 +285,15 @@ func TestSend(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			SetConfigAgent(tc.envName, tc.isGRPC, tc.isDocker, tc.agentName, httpServer.server.URL, []string{"http://test"})
+			ua := util.FormatUserAgent(
+				config.AgentTypeName,
+				config.AgentVersion,
+				config.SDKVersion,
+				tc.envName,
+				tc.agentName,
+				tc.isDocker,
+				tc.isGRPC)
+			SetConfigAgent(ua, httpServer.server.URL, []string{"http://test"})
 			httpServer.reset()
 			httpServer.respBody = tc.respBody
 			httpServer.respCode = tc.respCode

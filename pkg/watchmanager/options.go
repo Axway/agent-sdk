@@ -17,6 +17,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/sirupsen/logrus"
@@ -128,8 +129,7 @@ func withTLSConfig(tlsCfg *tls.Config) grpc.DialOption {
 	if tlsCfg != nil {
 		return grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg))
 	}
-
-	return grpc.WithInsecure()
+	return grpc.WithTransportCredentials(insecure.NewCredentials())
 }
 
 // withKeepaliveParams sets the set keepalive parameters on the client-side

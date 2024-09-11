@@ -171,7 +171,7 @@ func makeTraceabilityAgent(
 	logger.Tracef("initializing traceability client")
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 	if !isSingleEntry && IsHTTPTransport() {
-		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts)
+		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts, agent.GetUserAgent())
 	} else {
 		// For Single entry point register dialer factory for sni scheme and set the
 		// proxy url with sni scheme. When libbeat will register its dialer and sees
@@ -284,7 +284,7 @@ func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (p
 	return dialer, nil
 }
 
-func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string) (outputs.Group, error) {
+func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string, userAgent string) (outputs.Group, error) {
 	tls, err := tlscommon.LoadTLSConfig(traceCfg.TLS)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
@@ -310,6 +310,7 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 			Timeout:          traceCfg.Timeout,
 			CompressionLevel: traceCfg.CompressionLevel,
 			Observer:         observer,
+			UserAgent:        userAgent,
 		})
 
 		if err != nil {
