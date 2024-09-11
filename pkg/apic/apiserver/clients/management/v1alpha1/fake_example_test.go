@@ -13,8 +13,8 @@ func TestExampleFake(t *testing.T) {
 	// can be started with a set of initial resources
 	cb, err := cv1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: aMgmgt.K8SClusterGVK(),
-			Name:             "muhCluster",
+			GroupVersionKind: aMgmgt.EnvironmentGVK(),
+			Name:             "environment",
 		},
 		Spec: map[string]interface{}{},
 	})
@@ -23,22 +23,22 @@ func TestExampleFake(t *testing.T) {
 	}
 
 	// can use a typed client with it
-	// here creating a client for K8SResource
-	k8sResClient, err := cMgmgt.NewK8SResourceClient(cb)
+	// here creating a client for Environments
+	apisClient, err := cMgmgt.NewAPIServiceClient(cb)
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
 	// K8SResource is scoped under K8SCluster so I need to use WithScope
-	created, err := k8sResClient.WithScope("muhCluster").Create(&aMgmgt.K8SResource{
+	created, err := apisClient.WithScope("environment").Create(&aMgmgt.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name: "muhName",
 			Attributes: map[string]string{
 				"attr": "val",
 			},
 		},
-		Spec: aMgmgt.K8SResourceSpec{
-			ResourceSpec: map[string]interface{}{},
+		Spec: aMgmgt.ApiServiceSpec{
+			Description: "",
 		},
 	})
 	if err != nil {
@@ -46,7 +46,7 @@ func TestExampleFake(t *testing.T) {
 	}
 
 	// then I can list it
-	list, err := k8sResClient.WithScope("muhCluster").List(cv1.WithQuery(cv1.AttrIn("attr", "val")))
+	list, err := apisClient.WithScope("environment").List(cv1.WithQuery(cv1.AttrIn("attr", "val")))
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}
@@ -58,13 +58,13 @@ func TestExampleFake(t *testing.T) {
 	// update the resource and clear attributes
 	created.Attributes = map[string]string{}
 	// K8SResource is scoped under K8SCluster so I need to use WithScope
-	_, err = k8sResClient.WithScope("muhCluster").Update(created)
+	_, err = apisClient.WithScope("environment").Update(created)
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}
 
 	// the list won't contain the resource anymore
-	list, err = k8sResClient.WithScope("muhCluster").List(cv1.WithQuery(cv1.AttrIn("attr", "val")))
+	list, err = apisClient.WithScope("environment").List(cv1.WithQuery(cv1.AttrIn("attr", "val")))
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}
@@ -78,45 +78,45 @@ func TestExampleFakeUpdate(t *testing.T) {
 	// can be started with a set of initial resources
 	cb, err := cv1.NewFakeClient(&apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: aMgmgt.K8SClusterGVK(),
-			Name:             "muhCluster",
+			GroupVersionKind: aMgmgt.EnvironmentGVK(),
+			Name:             "environment",
 		},
 		Spec: map[string]interface{}{},
-	}, &aMgmgt.K8SResource{
+	}, &aMgmgt.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{Name: "muhCluster"},
+				Scope: apiv1.MetadataScope{Name: "environment"},
 			},
-			GroupVersionKind: aMgmgt.K8SClusterGVK(),
+			GroupVersionKind: aMgmgt.EnvironmentGVK(),
 			Name:             "myresource",
 			Tags:             []string{"existing"},
 		},
-		Spec: aMgmgt.K8SResourceSpec{},
+		Spec: aMgmgt.ApiServiceSpec{},
 	})
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
 	// can use a typed client with it
-	// here creating a client for K8SResour ce
-	k8sResClient, err := cMgmgt.NewK8SResourceClient(cb)
+	// here creating a client for K8SResource
+	apisResClient, err := cMgmgt.NewAPIServiceClient(cb)
 	if err != nil {
 		t.Fatal("Failed due to: ", err)
 	}
 
-	update := &aMgmgt.K8SResource{
+	update := &aMgmgt.APIService{
 		ResourceMeta: apiv1.ResourceMeta{
 			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{Name: "muhCluster"},
+				Scope: apiv1.MetadataScope{Name: "environment"},
 			},
-			GroupVersionKind: aMgmgt.K8SClusterGVK(),
+			GroupVersionKind: aMgmgt.APIServiceGVK(),
 			Name:             "myresource",
 			Tags:             []string{"update"},
 		},
-		Spec: aMgmgt.K8SResourceSpec{},
+		Spec: aMgmgt.ApiServiceSpec{},
 	}
 	// K8SResource is scoped under K8SCluster so I need to use WithScope
-	_, err = k8sResClient.WithScope("muhCluster").Update(
+	_, err = apisResClient.WithScope("environment").Update(
 		update,
 		cMgmgt.APIServiceMerge(func(p, n *aMgmgt.APIService) (*aMgmgt.APIService, error) {
 			n.Tags = append(n.Tags, p.Tags...)
@@ -128,7 +128,7 @@ func TestExampleFakeUpdate(t *testing.T) {
 	}
 
 	// the list won't contain the resource anymore
-	list, err := k8sResClient.WithScope("muhCluster").List(cv1.WithQuery(cv1.AllTags("existing", "update")))
+	list, err := apisResClient.WithScope("environment").List(cv1.WithQuery(cv1.AllTags("existing", "update")))
 	if err != nil {
 		t.Fatalf("Failed due to: %s", err)
 	}

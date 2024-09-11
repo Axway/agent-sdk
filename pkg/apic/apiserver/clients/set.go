@@ -16,108 +16,98 @@ import (
 )
 
 type Set struct {
-	WatchTopicManagementV1alpha1                     *management_v1alpha1.WatchTopicClient
-	DiscoveryAgentManagementV1alpha1                 *management_v1alpha1.UnscopedDiscoveryAgentClient
-	DataplaneManagementV1alpha1                      *management_v1alpha1.UnscopedDataplaneClient
-	DataplaneSecretManagementV1alpha1                *management_v1alpha1.UnscopedDataplaneSecretClient
-	TraceabilityAgentManagementV1alpha1              *management_v1alpha1.UnscopedTraceabilityAgentClient
-	EnvironmentManagementV1alpha1                    *management_v1alpha1.EnvironmentClient
-	APIServiceManagementV1alpha1                     *management_v1alpha1.UnscopedAPIServiceClient
-	APIServiceRevisionManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceRevisionClient
-	APIServiceInstanceManagementV1alpha1             *management_v1alpha1.UnscopedAPIServiceInstanceClient
-	APISpecLintingJobManagementV1alpha1              *management_v1alpha1.UnscopedAPISpecLintingJobClient
-	APISpecLintingRulesetManagementV1alpha1          *management_v1alpha1.APISpecLintingRulesetClient
-	ConsumerInstanceManagementV1alpha1               *management_v1alpha1.UnscopedConsumerInstanceClient
-	ConsumerSubscriptionDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedConsumerSubscriptionDefinitionClient
-	IntegrationManagementV1alpha1                    *management_v1alpha1.IntegrationClient
-	ResourceHookManagementV1alpha1                   *management_v1alpha1.UnscopedResourceHookClient
-	K8SClusterManagementV1alpha1                     *management_v1alpha1.K8SClusterClient
-	K8SResourceManagementV1alpha1                    *management_v1alpha1.UnscopedK8SResourceClient
-	ResourceDiscoveryManagementV1alpha1              *management_v1alpha1.UnscopedResourceDiscoveryClient
-	MeshManagementV1alpha1                           *management_v1alpha1.MeshClient
-	SpecDiscoveryManagementV1alpha1                  *management_v1alpha1.UnscopedSpecDiscoveryClient
-	APISpecManagementV1alpha1                        *management_v1alpha1.UnscopedAPISpecClient
-	MeshWorkloadManagementV1alpha1                   *management_v1alpha1.UnscopedMeshWorkloadClient
-	MeshServiceManagementV1alpha1                    *management_v1alpha1.UnscopedMeshServiceClient
-	MeshDiscoveryManagementV1alpha1                  *management_v1alpha1.UnscopedMeshDiscoveryClient
-	AssetMappingTemplateManagementV1alpha1           *management_v1alpha1.UnscopedAssetMappingTemplateClient
-	AccessRequestDefinitionManagementV1alpha1        *management_v1alpha1.UnscopedAccessRequestDefinitionClient
-	AccessRequestManagementV1alpha1                  *management_v1alpha1.UnscopedAccessRequestClient
-	ManagedApplicationManagementV1alpha1             *management_v1alpha1.UnscopedManagedApplicationClient
-	CredentialManagementV1alpha1                     *management_v1alpha1.UnscopedCredentialClient
-	IdentityProviderManagementV1alpha1               *management_v1alpha1.IdentityProviderClient
-	IdentityProviderSecretManagementV1alpha1         *management_v1alpha1.UnscopedIdentityProviderSecretClient
-	AssetMappingManagementV1alpha1                   *management_v1alpha1.UnscopedAssetMappingClient
-	WebhookManagementV1alpha1                        *management_v1alpha1.UnscopedWebhookClient
-	CredentialRequestDefinitionManagementV1alpha1    *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
-	BatchJobManagementV1alpha1                       *management_v1alpha1.UnscopedBatchJobClient
-	SecretManagementV1alpha1                         *management_v1alpha1.UnscopedSecretClient
-	AccessControlListManagementV1alpha1              *management_v1alpha1.UnscopedAccessControlListClient
-	APISpecLintingJobManagementV1                    *management_v1.UnscopedAPISpecLintingJobClient
-	APISpecLintingRulesetManagementV1                *management_v1.APISpecLintingRulesetClient
-	BatchJobManagementV1                             *management_v1.UnscopedBatchJobClient
-	StageCatalogV1alpha1                             *catalog_v1alpha1.StageClient
-	AssetCatalogV1alpha1                             *catalog_v1alpha1.AssetClient
-	AssetReleaseCatalogV1alpha1                      *catalog_v1alpha1.AssetReleaseClient
-	CategoryCatalogV1alpha1                          *catalog_v1alpha1.CategoryClient
-	AuthorizationProfileCatalogV1alpha1              *catalog_v1alpha1.AuthorizationProfileClient
-	ApplicationCatalogV1alpha1                       *catalog_v1alpha1.ApplicationClient
-	CredentialCatalogV1alpha1                        *catalog_v1alpha1.UnscopedCredentialClient
-	SubscriptionCatalogV1alpha1                      *catalog_v1alpha1.SubscriptionClient
-	SubscriptionJobCatalogV1alpha1                   *catalog_v1alpha1.UnscopedSubscriptionJobClient
-	SubscriptionInvoiceCatalogV1alpha1               *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
-	DocumentResourceCatalogV1alpha1                  *catalog_v1alpha1.DocumentResourceClient
-	MarketplaceCatalogV1alpha1                       *catalog_v1alpha1.MarketplaceClient
-	PublishedProductCatalogV1alpha1                  *catalog_v1alpha1.UnscopedPublishedProductClient
-	ProductVisibilityCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductVisibilityClient
-	ConsumerProductVisibilityCatalogV1alpha1         *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
-	CategoryVisibilityCatalogV1alpha1                *catalog_v1alpha1.UnscopedCategoryVisibilityClient
-	PublishedDocumentResourceCatalogV1alpha1         *catalog_v1alpha1.UnscopedPublishedDocumentResourceClient
-	PublishedStageCatalogV1alpha1                    *catalog_v1alpha1.UnscopedPublishedStageClient
-	StageVisibilityCatalogV1alpha1                   *catalog_v1alpha1.UnscopedStageVisibilityClient
-	ConsumerStageVisibilityCatalogV1alpha1           *catalog_v1alpha1.UnscopedConsumerStageVisibilityClient
-	AssistedSearchCatalogV1alpha1                    *catalog_v1alpha1.UnscopedAssistedSearchClient
-	SupportContactCatalogV1alpha1                    *catalog_v1alpha1.SupportContactClient
-	ProductCatalogV1alpha1                           *catalog_v1alpha1.ProductClient
-	ProductReleaseCatalogV1alpha1                    *catalog_v1alpha1.ProductReleaseClient
-	ProductPlanUnitCatalogV1alpha1                   *catalog_v1alpha1.ProductPlanUnitClient
-	ProductPlanCatalogV1alpha1                       *catalog_v1alpha1.ProductPlanClient
-	SubscriptionRequestDefinitionCatalogV1alpha1     *catalog_v1alpha1.SubscriptionRequestDefinitionClient
-	ProductPlanJobCatalogV1alpha1                    *catalog_v1alpha1.UnscopedProductPlanJobClient
-	QuotaCatalogV1alpha1                             *catalog_v1alpha1.UnscopedQuotaClient
-	ProductReviewCatalogV1alpha1                     *catalog_v1alpha1.UnscopedProductReviewClient
-	AssetMappingCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetMappingClient
-	AssetResourceCatalogV1alpha1                     *catalog_v1alpha1.UnscopedAssetResourceClient
-	AssetRequestDefinitionCatalogV1alpha1            *catalog_v1alpha1.UnscopedAssetRequestDefinitionClient
-	AssetRequestCatalogV1alpha1                      *catalog_v1alpha1.UnscopedAssetRequestClient
-	DocumentCatalogV1alpha1                          *catalog_v1alpha1.UnscopedDocumentClient
-	ResourceCatalogV1alpha1                          *catalog_v1alpha1.UnscopedResourceClient
-	ProductOverviewCatalogV1alpha1                   *catalog_v1alpha1.UnscopedProductOverviewClient
-	WebhookCatalogV1alpha1                           *catalog_v1alpha1.UnscopedWebhookClient
-	ReleaseTagCatalogV1alpha1                        *catalog_v1alpha1.UnscopedReleaseTagClient
-	CredentialRequestDefinitionCatalogV1alpha1       *catalog_v1alpha1.UnscopedCredentialRequestDefinitionClient
-	SecretCatalogV1alpha1                            *catalog_v1alpha1.UnscopedSecretClient
-	AccessControlListCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAccessControlListClient
-	CategoryCatalogV1                                *catalog_v1.CategoryClient
-	DocumentResourceCatalogV1                        *catalog_v1.DocumentResourceClient
-	MarketplaceCatalogV1                             *catalog_v1.MarketplaceClient
-	CategoryVisibilityCatalogV1                      *catalog_v1.UnscopedCategoryVisibilityClient
-	PublishedDocumentResourceCatalogV1               *catalog_v1.UnscopedPublishedDocumentResourceClient
-	PublishedStageCatalogV1                          *catalog_v1.UnscopedPublishedStageClient
-	SupportContactCatalogV1                          *catalog_v1.SupportContactClient
-	ProductCatalogV1                                 *catalog_v1.ProductClient
-	ProductReleaseCatalogV1                          *catalog_v1.ProductReleaseClient
-	SubscriptionRequestDefinitionCatalogV1           *catalog_v1.SubscriptionRequestDefinitionClient
-	QuotaCatalogV1                                   *catalog_v1.UnscopedQuotaClient
-	ProductReviewCatalogV1                           *catalog_v1.UnscopedProductReviewClient
-	DocumentCatalogV1                                *catalog_v1.UnscopedDocumentClient
-	ResourceCatalogV1                                *catalog_v1.UnscopedResourceClient
-	ProductOverviewCatalogV1                         *catalog_v1.UnscopedProductOverviewClient
-	ResourceGroupDefinitionsV1alpha1                 *definitions_v1alpha1.ResourceGroupClient
-	ResourceDefinitionDefinitionsV1alpha1            *definitions_v1alpha1.UnscopedResourceDefinitionClient
-	ResourceDefinitionVersionDefinitionsV1alpha1     *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
-	CommandLineInterfaceDefinitionsV1alpha1          *definitions_v1alpha1.UnscopedCommandLineInterfaceClient
-	AccessControlListDefinitionsV1alpha1             *definitions_v1alpha1.UnscopedAccessControlListClient
+	WatchTopicManagementV1alpha1                  *management_v1alpha1.WatchTopicClient
+	DiscoveryAgentManagementV1alpha1              *management_v1alpha1.UnscopedDiscoveryAgentClient
+	DataplaneManagementV1alpha1                   *management_v1alpha1.UnscopedDataplaneClient
+	DataplaneSecretManagementV1alpha1             *management_v1alpha1.UnscopedDataplaneSecretClient
+	TraceabilityAgentManagementV1alpha1           *management_v1alpha1.UnscopedTraceabilityAgentClient
+	EnvironmentManagementV1alpha1                 *management_v1alpha1.EnvironmentClient
+	APIServiceManagementV1alpha1                  *management_v1alpha1.UnscopedAPIServiceClient
+	APIServiceRevisionManagementV1alpha1          *management_v1alpha1.UnscopedAPIServiceRevisionClient
+	APIServiceInstanceManagementV1alpha1          *management_v1alpha1.UnscopedAPIServiceInstanceClient
+	APISpecLintingJobManagementV1alpha1           *management_v1alpha1.UnscopedAPISpecLintingJobClient
+	APISpecLintingRulesetManagementV1alpha1       *management_v1alpha1.APISpecLintingRulesetClient
+	IntegrationManagementV1alpha1                 *management_v1alpha1.IntegrationClient
+	ResourceHookManagementV1alpha1                *management_v1alpha1.UnscopedResourceHookClient
+	AssetMappingTemplateManagementV1alpha1        *management_v1alpha1.UnscopedAssetMappingTemplateClient
+	AccessRequestDefinitionManagementV1alpha1     *management_v1alpha1.UnscopedAccessRequestDefinitionClient
+	AccessRequestManagementV1alpha1               *management_v1alpha1.UnscopedAccessRequestClient
+	ManagedApplicationManagementV1alpha1          *management_v1alpha1.UnscopedManagedApplicationClient
+	CredentialManagementV1alpha1                  *management_v1alpha1.UnscopedCredentialClient
+	IdentityProviderManagementV1alpha1            *management_v1alpha1.IdentityProviderClient
+	IdentityProviderSecretManagementV1alpha1      *management_v1alpha1.UnscopedIdentityProviderSecretClient
+	AssetMappingManagementV1alpha1                *management_v1alpha1.UnscopedAssetMappingClient
+	WebhookManagementV1alpha1                     *management_v1alpha1.UnscopedWebhookClient
+	CredentialRequestDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedCredentialRequestDefinitionClient
+	BatchJobManagementV1alpha1                    *management_v1alpha1.UnscopedBatchJobClient
+	SecretManagementV1alpha1                      *management_v1alpha1.UnscopedSecretClient
+	AccessControlListManagementV1alpha1           *management_v1alpha1.UnscopedAccessControlListClient
+	APISpecLintingJobManagementV1                 *management_v1.UnscopedAPISpecLintingJobClient
+	APISpecLintingRulesetManagementV1             *management_v1.APISpecLintingRulesetClient
+	BatchJobManagementV1                          *management_v1.UnscopedBatchJobClient
+	StageCatalogV1alpha1                          *catalog_v1alpha1.StageClient
+	AssetCatalogV1alpha1                          *catalog_v1alpha1.AssetClient
+	AssetReleaseCatalogV1alpha1                   *catalog_v1alpha1.AssetReleaseClient
+	CategoryCatalogV1alpha1                       *catalog_v1alpha1.CategoryClient
+	AuthorizationProfileCatalogV1alpha1           *catalog_v1alpha1.AuthorizationProfileClient
+	ApplicationCatalogV1alpha1                    *catalog_v1alpha1.ApplicationClient
+	CredentialCatalogV1alpha1                     *catalog_v1alpha1.UnscopedCredentialClient
+	SubscriptionCatalogV1alpha1                   *catalog_v1alpha1.SubscriptionClient
+	SubscriptionJobCatalogV1alpha1                *catalog_v1alpha1.UnscopedSubscriptionJobClient
+	SubscriptionInvoiceCatalogV1alpha1            *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
+	DocumentResourceCatalogV1alpha1               *catalog_v1alpha1.DocumentResourceClient
+	MarketplaceCatalogV1alpha1                    *catalog_v1alpha1.MarketplaceClient
+	PublishedProductCatalogV1alpha1               *catalog_v1alpha1.UnscopedPublishedProductClient
+	ProductVisibilityCatalogV1alpha1              *catalog_v1alpha1.UnscopedProductVisibilityClient
+	ConsumerProductVisibilityCatalogV1alpha1      *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
+	CategoryVisibilityCatalogV1alpha1             *catalog_v1alpha1.UnscopedCategoryVisibilityClient
+	PublishedDocumentResourceCatalogV1alpha1      *catalog_v1alpha1.UnscopedPublishedDocumentResourceClient
+	PublishedStageCatalogV1alpha1                 *catalog_v1alpha1.UnscopedPublishedStageClient
+	StageVisibilityCatalogV1alpha1                *catalog_v1alpha1.UnscopedStageVisibilityClient
+	ConsumerStageVisibilityCatalogV1alpha1        *catalog_v1alpha1.UnscopedConsumerStageVisibilityClient
+	AssistedSearchCatalogV1alpha1                 *catalog_v1alpha1.UnscopedAssistedSearchClient
+	SupportContactCatalogV1alpha1                 *catalog_v1alpha1.SupportContactClient
+	ProductCatalogV1alpha1                        *catalog_v1alpha1.ProductClient
+	ProductReleaseCatalogV1alpha1                 *catalog_v1alpha1.ProductReleaseClient
+	ProductPlanUnitCatalogV1alpha1                *catalog_v1alpha1.ProductPlanUnitClient
+	ProductPlanCatalogV1alpha1                    *catalog_v1alpha1.ProductPlanClient
+	SubscriptionRequestDefinitionCatalogV1alpha1  *catalog_v1alpha1.SubscriptionRequestDefinitionClient
+	ProductPlanJobCatalogV1alpha1                 *catalog_v1alpha1.UnscopedProductPlanJobClient
+	QuotaCatalogV1alpha1                          *catalog_v1alpha1.UnscopedQuotaClient
+	ProductReviewCatalogV1alpha1                  *catalog_v1alpha1.UnscopedProductReviewClient
+	AssetMappingCatalogV1alpha1                   *catalog_v1alpha1.UnscopedAssetMappingClient
+	AssetResourceCatalogV1alpha1                  *catalog_v1alpha1.UnscopedAssetResourceClient
+	AssetRequestDefinitionCatalogV1alpha1         *catalog_v1alpha1.UnscopedAssetRequestDefinitionClient
+	AssetRequestCatalogV1alpha1                   *catalog_v1alpha1.UnscopedAssetRequestClient
+	DocumentCatalogV1alpha1                       *catalog_v1alpha1.UnscopedDocumentClient
+	ResourceCatalogV1alpha1                       *catalog_v1alpha1.UnscopedResourceClient
+	ProductOverviewCatalogV1alpha1                *catalog_v1alpha1.UnscopedProductOverviewClient
+	WebhookCatalogV1alpha1                        *catalog_v1alpha1.UnscopedWebhookClient
+	ReleaseTagCatalogV1alpha1                     *catalog_v1alpha1.UnscopedReleaseTagClient
+	CredentialRequestDefinitionCatalogV1alpha1    *catalog_v1alpha1.UnscopedCredentialRequestDefinitionClient
+	SecretCatalogV1alpha1                         *catalog_v1alpha1.UnscopedSecretClient
+	AccessControlListCatalogV1alpha1              *catalog_v1alpha1.UnscopedAccessControlListClient
+	CategoryCatalogV1                             *catalog_v1.CategoryClient
+	DocumentResourceCatalogV1                     *catalog_v1.DocumentResourceClient
+	MarketplaceCatalogV1                          *catalog_v1.MarketplaceClient
+	CategoryVisibilityCatalogV1                   *catalog_v1.UnscopedCategoryVisibilityClient
+	PublishedDocumentResourceCatalogV1            *catalog_v1.UnscopedPublishedDocumentResourceClient
+	PublishedStageCatalogV1                       *catalog_v1.UnscopedPublishedStageClient
+	SupportContactCatalogV1                       *catalog_v1.SupportContactClient
+	ProductCatalogV1                              *catalog_v1.ProductClient
+	ProductReleaseCatalogV1                       *catalog_v1.ProductReleaseClient
+	SubscriptionRequestDefinitionCatalogV1        *catalog_v1.SubscriptionRequestDefinitionClient
+	QuotaCatalogV1                                *catalog_v1.UnscopedQuotaClient
+	ProductReviewCatalogV1                        *catalog_v1.UnscopedProductReviewClient
+	DocumentCatalogV1                             *catalog_v1.UnscopedDocumentClient
+	ResourceCatalogV1                             *catalog_v1.UnscopedResourceClient
+	ProductOverviewCatalogV1                      *catalog_v1.UnscopedProductOverviewClient
+	ResourceGroupDefinitionsV1alpha1              *definitions_v1alpha1.ResourceGroupClient
+	ResourceDefinitionDefinitionsV1alpha1         *definitions_v1alpha1.UnscopedResourceDefinitionClient
+	ResourceDefinitionVersionDefinitionsV1alpha1  *definitions_v1alpha1.UnscopedResourceDefinitionVersionClient
+	CommandLineInterfaceDefinitionsV1alpha1       *definitions_v1alpha1.UnscopedCommandLineInterfaceClient
+	ComponentDefinitionsV1alpha1                  *definitions_v1alpha1.ComponentClient
+	AccessControlListDefinitionsV1alpha1          *definitions_v1alpha1.UnscopedAccessControlListClient
 }
 
 func New(b cAPIV1.Base) *Set {
@@ -169,14 +159,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpecLintingRuleset: %s", err))
 	}
-	s.ConsumerInstanceManagementV1alpha1, err = management_v1alpha1.NewConsumerInstanceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ConsumerInstance: %s", err))
-	}
-	s.ConsumerSubscriptionDefinitionManagementV1alpha1, err = management_v1alpha1.NewConsumerSubscriptionDefinitionClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ConsumerSubscriptionDefinition: %s", err))
-	}
 	s.IntegrationManagementV1alpha1, err = management_v1alpha1.NewIntegrationClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Integration: %s", err))
@@ -184,42 +166,6 @@ func New(b cAPIV1.Base) *Set {
 	s.ResourceHookManagementV1alpha1, err = management_v1alpha1.NewResourceHookClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ResourceHook: %s", err))
-	}
-	s.K8SClusterManagementV1alpha1, err = management_v1alpha1.NewK8SClusterClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.K8SCluster: %s", err))
-	}
-	s.K8SResourceManagementV1alpha1, err = management_v1alpha1.NewK8SResourceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.K8SResource: %s", err))
-	}
-	s.ResourceDiscoveryManagementV1alpha1, err = management_v1alpha1.NewResourceDiscoveryClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ResourceDiscovery: %s", err))
-	}
-	s.MeshManagementV1alpha1, err = management_v1alpha1.NewMeshClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Mesh: %s", err))
-	}
-	s.SpecDiscoveryManagementV1alpha1, err = management_v1alpha1.NewSpecDiscoveryClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.SpecDiscovery: %s", err))
-	}
-	s.APISpecManagementV1alpha1, err = management_v1alpha1.NewAPISpecClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.APISpec: %s", err))
-	}
-	s.MeshWorkloadManagementV1alpha1, err = management_v1alpha1.NewMeshWorkloadClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshWorkload: %s", err))
-	}
-	s.MeshServiceManagementV1alpha1, err = management_v1alpha1.NewMeshServiceClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshService: %s", err))
-	}
-	s.MeshDiscoveryManagementV1alpha1, err = management_v1alpha1.NewMeshDiscoveryClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.MeshDiscovery: %s", err))
 	}
 	s.AssetMappingTemplateManagementV1alpha1, err = management_v1alpha1.NewAssetMappingTemplateClient(b)
 	if err != nil {
@@ -528,6 +474,10 @@ func New(b cAPIV1.Base) *Set {
 	s.CommandLineInterfaceDefinitionsV1alpha1, err = definitions_v1alpha1.NewCommandLineInterfaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.CommandLineInterface: %s", err))
+	}
+	s.ComponentDefinitionsV1alpha1, err = definitions_v1alpha1.NewComponentClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/definitions/v1alpha1.Component: %s", err))
 	}
 	s.AccessControlListDefinitionsV1alpha1, err = definitions_v1alpha1.NewAccessControlListClient(b)
 	if err != nil {
