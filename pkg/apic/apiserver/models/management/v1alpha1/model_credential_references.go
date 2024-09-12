@@ -13,4 +13,6 @@ package management
 type CredentialReferences struct {
 	// Name of the catalog Application for which the initial Credential was generated
 	Application string `json:"application,omitempty"`
+	// Name of the catalog Credential that generated this Credential.
+	Credential string `json:"credential,omitempty"`
 }

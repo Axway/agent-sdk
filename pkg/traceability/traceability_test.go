@@ -91,8 +91,9 @@ func createEvent(msgValue string) []publisher.Event {
 }
 
 type mockHTTPServer struct {
-	serverMessages []map[string]interface{}
-	responseStatus int
+	serverMessages   []map[string]interface{}
+	responseStatus   int
+	requestUserAgent string
 
 	server *httptest.Server
 }
@@ -110,6 +111,7 @@ func newMockHTTPServer() *mockHTTPServer {
 					resp.WriteHeader(mockServer.responseStatus)
 					return
 				}
+				mockServer.requestUserAgent = req.Header.Get("User-Agent")
 				mockServer.ResetMessages()
 				var body []byte
 				contentEncoding := req.Header["Content-Encoding"]
@@ -137,6 +139,10 @@ func (s *mockHTTPServer) ResetMessages() {
 
 func (s *mockHTTPServer) GetMessages() []map[string]interface{} {
 	return s.serverMessages
+}
+
+func (s *mockHTTPServer) GetUserAgent() string {
+	return s.requestUserAgent
 }
 
 func (s *mockHTTPServer) Close() {
@@ -263,7 +269,7 @@ func TestCreateLogstashClientWithSingleEntry(t *testing.T) {
 	assert.Equal(t, "sni://"+traceCfg.Hosts[0], transportProxy)
 }
 
-func TestCreateHTTPClientt(t *testing.T) {
+func TestCreateHTTPClient(t *testing.T) {
 	logstashClientCreateCalled = false
 	cfg := createCentralCfg("http://localhost:8888", "v7")
 	agent.Initialize(cfg)
@@ -319,6 +325,9 @@ func TestCreateHTTPClientt(t *testing.T) {
 func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	s := newMockHTTPServer()
 	defer s.Close()
+	config.AgentTypeName = "TraceabilityAgent"
+	config.AgentVersion = "0.0.1-abc"
+	config.SDKVersion = "0.0.1"
 
 	cfg := createCentralCfg(s.server.URL, "v7")
 	agent.Initialize(cfg)
@@ -341,6 +350,8 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 
 	assert.Nil(t, err)
 	publishedMessages := s.GetMessages()
+	reqUA := s.GetUserAgent()
+	assert.NotEmpty(t, reqUA)
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
 	event := publishedMessages[0]

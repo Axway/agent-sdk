@@ -27,6 +27,13 @@ func WithCacheManager(cache agentcache.Manager) StreamerOpt {
 	}
 }
 
+// WithUserAgent sets the userAgent for gRPC stream
+func WithUserAgent(userAgent string) StreamerOpt {
+	return func(client *StreamerClient) {
+		client.watchCfg.UserAgent = userAgent
+	}
+}
+
 // WithHarvester configures the streaming client to use harvester for syncing initial events
 func WithHarvester(hClient harvester.Harvest, sequence events.SequenceProvider) StreamerOpt {
 	return func(client *StreamerClient) {

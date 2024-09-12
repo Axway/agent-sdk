@@ -41,6 +41,7 @@ include:
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-twistlock.yml"
+      - "/.gitlab-ci-iriusrisk.yml"
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
@@ -48,6 +49,7 @@ include:
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/csrjobs.yml"
+      - "/gitlabci/csrjobsformirror.yml"
 
 stages:
   - test
@@ -87,39 +89,3 @@ trigger-azure-discovery-agent:
   before_script:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
-
-# overridden from csrjobs.yml because mirror repos like this one don't get merge events. So, we need to run them on branches
-blackduck-rapid:
-  rules:
-    - !reference [.mirror-branch-csr-rules, rules]
-
-fortify:
-  rules:
-    - !reference [.mirror-branch-csr-rules, rules]
-
-fetch-fortify:
-  rules:
-    - !reference [.mirror-branch-csr-rules, rules]
-
-run-csr:
-  rules:
-    - !reference [.mirror-branch-csr-rules, rules]
-
-# overridden from csrjobs.yml to not run these jobs ever
-fetch-iriusrisk:
-  extends: .only-never-rule
-
-fetch-iriusrisk:on-schedule:
-  extends: .only-never-rule
-  # need this rule to override base only-never-rule
-  rules:
-    - when: never
-
-twistlock:
-  dependencies: []
-  rules:
-    - when: never
-
-twistlock:on-schedule:
-  rules:
-    - when: never

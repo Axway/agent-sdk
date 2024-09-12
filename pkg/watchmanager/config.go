@@ -10,6 +10,7 @@ type Config struct {
 	Port        uint32
 	TenantID    string
 	TokenGetter TokenGetter
+	UserAgent   string
 }
 
 func (c *Config) validateCfg() error {

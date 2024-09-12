@@ -93,7 +93,7 @@ func (s *ServiceBody) GetScopes() map[string]string {
 }
 
 // GetCredentialRequestDefinitions - returns the array of all credential request policies
-func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
+func (s *ServiceBody) GetCredentialRequestDefinitions(allowedOAuthMethods []string) []string {
 	if len(s.credentialRequestPolicies) > 0 || s.ignoreSpecBasesCreds {
 		return s.credentialRequestPolicies
 	}
@@ -105,7 +105,11 @@ func (s *ServiceBody) GetCredentialRequestDefinitions() []string {
 			s.credentialRequestPolicies = append(s.credentialRequestPolicies, provisioning.APIKeyCRD)
 		}
 		if policy == Oauth {
-			s.credentialRequestPolicies = append(s.credentialRequestPolicies, []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}...)
+			oauthCRDs := []string{provisioning.OAuthPublicKeyCRD, provisioning.OAuthSecretCRD}
+			if len(allowedOAuthMethods) > 0 {
+				oauthCRDs = allowedOAuthMethods
+			}
+			s.credentialRequestPolicies = append(s.credentialRequestPolicies, oauthCRDs...)
 		}
 	}
 	return s.credentialRequestPolicies

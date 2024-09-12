@@ -9,6 +9,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	"github.com/sirupsen/logrus"
 
@@ -87,8 +88,21 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		watchOptions = append(watchOptions, wm.WithTLSConfig(defaultTLSConfig()))
 	}
 
+	harvesterHost := config.HarvesterHost
+	harvesterPort := config.HarvesterPort
+	harvesterProtocol := config.HarvesterProtocol
+	if harvesterProtocol == "" {
+		harvesterProtocol = "https"
+	}
+
+	if harvesterHost == "" {
+		harvesterHost = config.Host
+		harvesterPort = config.Port
+	}
+
+	harvesterUrl := fmt.Sprintf("%s://%s:%d", harvesterProtocol, harvesterHost, harvesterPort)
 	ccfg := &corecfg.CentralConfiguration{
-		URL:           fmt.Sprintf("https://%s:%d", config.Host, config.Port),
+		URL:           harvesterUrl,
 		ClientTimeout: 30 * time.Second,
 		ProxyURL:      "",
 		TenantID:      config.TenantID,
@@ -111,19 +125,23 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 	}
 	sm := getSequenceManager()
 	ta := auth.NewPlatformTokenGetterWithCentralConfig(ccfg)
-	hCfg := harvester.NewConfig(ccfg, ta, sm)
-	hClient := harvester.NewClient(hCfg)
-	seqID, err := hClient.ReceiveSyncEvents(config.TopicSelfLink, 0, nil)
-	if err != nil {
-		return nil, err
+	if config.UseHarvester {
+		hCfg := harvester.NewConfig(ccfg, ta, sm)
+		hClient := harvester.NewClient(hCfg)
+		seqID, err := hClient.ReceiveSyncEvents(config.TopicSelfLink, 0, nil)
+		if err != nil {
+			return nil, err
+		}
+		sm.SetSequence(seqID)
+		watchOptions = append(watchOptions, wm.WithHarvester(hClient, sm))
 	}
-	sm.SetSequence(seqID)
-	watchOptions = append(watchOptions, wm.WithHarvester(hClient, sm))
+
 	cfg := &wm.Config{
 		Host:        ccfg.GRPCCfg.Host,
 		Port:        uint32(ccfg.GRPCCfg.Port),
 		TenantID:    config.TenantID,
 		TokenGetter: ta.GetToken,
+		UserAgent:   util.FormatUserAgent("SampleClient", "0.0.1-sha1", "0.0.1", "testenvironment", "testagent", false, true),
 	}
 
 	w, err := wm.New(cfg, watchOptions...)

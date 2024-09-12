@@ -194,6 +194,7 @@ func (es *EventSync) startStreamMode() error {
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
 		stream.WithCacheManager(agent.cacheManager),
+		stream.WithUserAgent(GetUserAgent()),
 	)
 
 	if err != nil {

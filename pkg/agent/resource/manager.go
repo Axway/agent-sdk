@@ -40,6 +40,7 @@ type executeAPIClient interface {
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 	GetResource(url string) (*v1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 }
 
 type agentResourceManager struct {
@@ -118,6 +119,8 @@ func (a *agentResourceManager) FetchAgentResource() error {
 		} else {
 			return err
 		}
+	} else {
+		a.checkAgentResource()
 	}
 
 	a.onResourceChange()
@@ -149,7 +152,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	}
 
 	// See if we need to rebuildCache
-	timeToRebuild, err := a.shouldRebuildCache()
+	timeToRebuild, _ := a.shouldRebuildCache()
 	if timeToRebuild && a.rebuildCache != nil {
 		a.rebuildCache.RebuildCache()
 	}
@@ -162,7 +165,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		subResources[definitions.XAgentDetails] = agentInstance.SubResources[definitions.XAgentDetails]
 	}
 
-	err = a.apicClient.CreateSubResource(agentInstance.ResourceMeta, subResources)
+	err := a.apicClient.CreateSubResource(agentInstance.ResourceMeta, subResources)
 	return err
 }
 
@@ -275,9 +278,13 @@ func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 	var agentRes v1.Interface
 	switch a.cfg.GetAgentType() {
 	case config.DiscoveryAgent:
-		agentRes = management.NewDiscoveryAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
+		res := management.NewDiscoveryAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
+		res.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = res
 	case config.TraceabilityAgent:
-		agentRes = management.NewTraceabilityAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
+		res := management.NewTraceabilityAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
+		res.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = res
 	}
 	var agentInstance *v1.ResourceInstance
 	if agentRes != nil {
@@ -298,6 +305,35 @@ func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, erro
 		WithField("name", agentRes.Name).
 		Info("creating agent resource")
 	return a.apicClient.CreateResourceInstance(agentRes)
+}
+
+// GetAgentResource - returns the agent resource
+func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error) {
+	var agentRes v1.Interface
+	logger := a.logger.WithField("scope", a.agentResource.Metadata.Scope).WithField("kind", a.agentResource.Kind).WithField("name", a.agentResource.Name)
+
+	currDataplaneType := apic.Unidentified.String()
+	if a.agentResource.Kind == management.DiscoveryAgentGVK().Kind {
+		da := management.NewDiscoveryAgent("", "")
+		da.FromInstance(a.agentResource)
+		currDataplaneType = da.Spec.DataplaneType
+		da.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = da
+	} else if a.agentResource.Kind == management.TraceabilityAgentGVK().Kind {
+		ta := management.NewTraceabilityAgent("", "")
+		ta.FromInstance(a.agentResource)
+		currDataplaneType = ta.Spec.DataplaneType
+		ta.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = ta
+	}
+
+	// nothing to update
+	if currDataplaneType == config.AgentDataPlaneType {
+		return a.agentResource, nil
+	}
+
+	logger.Info("updating agent resource")
+	return a.apicClient.UpdateResourceInstance(agentRes)
 }
 
 // GetAgentResource - returns the agent resource
