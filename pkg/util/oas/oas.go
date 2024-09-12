@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -16,6 +17,7 @@ func ParseOAS2(spec []byte) (*openapi2.T, error) {
 	swaggerObj := &openapi2.T{}
 	err := json.Unmarshal(spec, swaggerObj)
 	if err != nil {
+		log.Error("unable to parse OAS2 specification")
 		return nil, err
 	}
 
@@ -35,6 +37,7 @@ func ParseOAS2(spec []byte) (*openapi2.T, error) {
 func ParseOAS3(spec []byte) (*openapi3.T, error) {
 	oas3Obj, err := openapi3.NewLoader().LoadFromData(spec)
 	if err != nil {
+		log.Error("unable to parse OAS3 specification")
 		return nil, err
 	}
 	if !strings.Contains(oas3Obj.OpenAPI, "3.") {

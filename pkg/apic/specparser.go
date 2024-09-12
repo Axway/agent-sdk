@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -18,6 +19,10 @@ import (
 const (
 	mimeApplicationJSON = "application/json"
 	mimeApplicationYAML = "application/yaml"
+)
+
+const (
+	UnknownYamlJson = "unknown yaml or json based specification"
 )
 
 // SpecProcessor -
@@ -68,7 +73,10 @@ func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecRes
 // Parse -
 func (s *SpecResourceParser) Parse() error {
 	if s.resourceSpecType == "" {
-		s.discoverSpecTypeAndCreateProcessor()
+		err := s.discoverSpecTypeAndCreateProcessor()
+		if err != nil {
+			return err
+		}
 	} else {
 		err := s.createProcessorWithResourceType()
 		if err != nil {
@@ -86,14 +94,39 @@ func (s *SpecResourceParser) getResourceContentType() string {
 	return s.resourceContentType
 }
 
-func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() {
-	s.specProcessor, _ = s.discoverYAMLAndJSONSpec()
+func (s *SpecResourceParser) discoverSpecTypeAndCreateProcessor() error {
+	errs := []error{}
+	var err error
+	s.specProcessor, err = s.discoverYAMLAndJSONSpec()
+	if err == nil {
+		return nil
+	}
+	errs = append(errs, err)
+
 	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseWSDLSpec()
+		s.specProcessor, err = s.parseWSDLSpec()
+		if err == nil {
+			return nil
+		}
+		errs = append(errs, err)
 	}
 	if s.specProcessor == nil {
-		s.specProcessor, _ = s.parseProtobufSpec()
+		s.specProcessor, err = s.parseProtobufSpec()
+		if err == nil {
+			return nil
+		}
+		errs = append(errs, err)
 	}
+
+	errString := ""
+	for i, err := range errs {
+		if i > 0 {
+			errString += ": "
+		}
+		errString += err.Error()
+	}
+	return fmt.Errorf("could not determine spec type from file: %s", errString)
+
 }
 
 func (s *SpecResourceParser) createProcessorWithResourceType() error {
@@ -178,7 +211,7 @@ func (s *SpecResourceParser) discoverYAMLAndJSONSpec() (SpecProcessor, error) {
 		return newRamlProcessor(specDef, s.resourceSpec), nil
 	}
 
-	return nil, errors.New("unknown yaml or json based specification")
+	return nil, errors.New(UnknownYamlJson)
 }
 
 func (s *SpecResourceParser) parseWSDLSpec() (SpecProcessor, error) {
