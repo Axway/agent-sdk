@@ -29,7 +29,12 @@ func buildAPIServiceInstanceMarketplaceSpec(
 }
 
 func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBody) []string {
-	crds := serviceBody.GetCredentialRequestDefinitions()
+	allowedOAuthMethods := make([]string, 0)
+	if c.cfg != nil && c.cfg.GetCredentialConfig() != nil {
+		allowedOAuthMethods = c.cfg.GetCredentialConfig().GetAllowedOAuthMethods()
+	}
+
+	crds := serviceBody.GetCredentialRequestDefinitions(allowedOAuthMethods)
 
 	// remove any crd not in the cache
 	knownCRDs := make([]string, 0)

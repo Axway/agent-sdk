@@ -13,6 +13,6 @@ package catalog
 type DocumentSpecDocumentResourceRef struct {
 	Kind string `json:"kind"`
 	Name string `json:"name,omitempty"`
-	// Title for the article.
-	Title string `json:"title"`
+	// Title for the article. Marketplace will source/use the title from the linked DocumentResource.
+	Title string `json:"title,omitempty"`
 }

@@ -15,5 +15,5 @@ type TraceabilityAgentSpecConfigSampling struct {
 	// GENERATE: The following code has been modified after code generation
 	Percentage float64 `json:"percentage"`
 	// When set to true will send transactional data for every errored transaction for Business and Consumer Insights
-	AllErrors bool `json:"allErrors"`
+	OnlyErrors bool `json:"onlyErrors"`
 }

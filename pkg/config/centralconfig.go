@@ -667,6 +667,7 @@ const (
 	pathGRPCInsecure              = "central.grpc.insecure"
 	pathCacheStoragePath          = "central.cacheStoragePath"
 	pathCacheStorageInterval      = "central.cacheStorageInterval"
+	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -834,6 +835,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddBoolProperty(pathGRPCInsecure, false, "Controls whether an agent uses a gRPC connection with TLS")
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
+	props.AddStringSliceProperty(pathCredentialsOAuthMethods, []string{}, "Allowed OAuth credential types")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
@@ -942,6 +944,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
 		cfg.MigrationSettings = ParseMigrationConfig(props)
 		cfg.CredentialConfig = newCredentialConfig()
+		cfg.CredentialConfig.SetAllowedOAuthMethods(props.StringSlicePropertyValue(pathCredentialsOAuthMethods))
 	}
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
