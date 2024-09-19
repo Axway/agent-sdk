@@ -113,7 +113,7 @@ func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
 }
 
 func (c *usageReportCache) setLastPublishTimestamp(lastPublishTimestamp time.Time) {
-	c.reportCache.Set(lastPublishTimestampKey, lastPublishTimestamp.String())
+	c.reportCache.Set(lastPublishTimestampKey, lastPublishTimestamp)
 	c.reportCache.Save(c.cacheFilePath)
 }
 
@@ -121,12 +121,7 @@ func (c *usageReportCache) getLastPublishTimestamp() time.Time {
 	c.reportCacheLock.Lock()
 	defer c.reportCacheLock.Unlock()
 
-	value, err := c.reportCache.Get(lastPublishTimestampKey)
-	if err != nil {
-		return time.Time{}
-	}
-
-	lastPublishTime, err := time.Parse(time.RFC3339, value.(string))
+	lastPublishTime, err := parseTimeFromCache(c.reportCache, lastPublishTimestampKey)
 	if err != nil {
 		return time.Time{}
 	}
