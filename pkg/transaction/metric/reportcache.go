@@ -30,6 +30,8 @@ const (
 	qaOfflineReportDateFormat = "2006_01_02_15_04"
 )
 
+type currentTimeFunc func() time.Time
+
 type usageReportCache struct {
 	jobs.Job
 	logger                  log.FieldLogger
@@ -38,6 +40,7 @@ type usageReportCache struct {
 	reportCacheLock         sync.Mutex
 	isInitialized           bool
 	offlineReportDateFormat string
+	currTimeFunc            currentTimeFunc
 }
 
 func newReportCache() *usageReportCache {
@@ -48,6 +51,7 @@ func newReportCache() *usageReportCache {
 		reportCache:             cache.New(),
 		isInitialized:           false,
 		offlineReportDateFormat: offlineReportDateFormat,
+		currTimeFunc:            time.Now,
 	}
 	if agent.GetCentralConfig().GetUsageReportingConfig().UsingQAVars() {
 		reportManager.offlineReportDateFormat = qaOfflineReportDateFormat
@@ -262,7 +266,7 @@ func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) 
 }
 
 func (c *usageReportCache) shouldPublish(schedule string) bool {
-	currentTime := time.Now()
+	currentTime := c.currTimeFunc()
 	lastPublishTimestamp := c.getLastPublishTimestamp()
 
 	// if the last publish was made more than a day ago, publish
@@ -276,7 +280,8 @@ func (c *usageReportCache) shouldPublish(schedule string) bool {
 		return false
 	}
 	// publish if last scheduled time is past
-	if cronSchedule.Next(lastPublishTimestamp).Before(currentTime) {
+	nextPublishTime := cronSchedule.Next(lastPublishTimestamp)
+	if nextPublishTime.Before(currentTime) {
 		return true
 	}
 
