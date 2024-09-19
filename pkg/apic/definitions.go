@@ -47,6 +47,7 @@ const (
 	GitHub     DataplaneType = "GitHub"
 	GitLab     DataplaneType = "GitLab"
 	SwaggerHub DataplaneType = "SwaggerHub"
+	Backstage  DataplaneType = "Backstage"
 
 	// Discovery and Traceability
 	APIConnect DataplaneType = "APIConnect"
