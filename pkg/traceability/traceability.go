@@ -145,6 +145,21 @@ func makeTraceabilityAgent(
 
 	logger.Trace("reading config")
 	traceCfg, err = readConfig(libbeatCfg, beat)
+
+	defer func() {
+		if err != nil {
+			// skip hc register if err hit making agent
+			return
+		}
+
+		if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
+			err := registerHealthCheckers(traceCfg)
+			if err != nil {
+				logger.WithError(err).Error("could not register healthcheck")
+			}
+		}
+	}()
+
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		logger.WithError(err).Error("reading config")
@@ -205,7 +220,7 @@ func makeTraceabilityAgent(
 			// single entry dialer to receive the target address
 			os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
 		}
-		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg, traceCfg)
+		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg)
 	}
 
 	if err != nil {
@@ -235,19 +250,10 @@ func makeLogstashClient(indexManager outputs.IndexManager,
 	beat beat.Info,
 	observer outputs.Observer,
 	libbeatCfg *common.Config,
-	traceCfg *Config,
 ) (outputs.Group, error) {
 	factory := outputs.FindFactory("logstash")
 	if factory == nil {
 		return outputs.Group{}, nil
-	}
-
-	// only run the health check if in online mode
-	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
-		err := registerHealthCheckers(traceCfg)
-		if err != nil {
-			return outputs.Group{}, err
-		}
 	}
 	group, err := factory(indexManager, beat, observer, libbeatCfg)
 	return group, err
@@ -320,12 +326,6 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 		clients[i] = client
 	}
 
-	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
-		err := registerHealthCheckers(traceCfg)
-		if err != nil {
-			return outputs.Group{}, err
-		}
-	}
 	return outputs.SuccessNet(traceCfg.LoadBalance, traceCfg.BulkMaxSize, traceCfg.MaxRetries, clients)
 }
 
