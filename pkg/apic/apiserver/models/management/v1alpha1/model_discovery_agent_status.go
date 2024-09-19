@@ -20,6 +20,8 @@ import (
 type DiscoveryAgentStatus struct {
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`
+	// * current - Current version is the latest available * available - New version available to update to * outdated - Version in use is no longer supported * retracted - Version in use has a known issue, update immediately
+	UpdateState string `json:"updateState,omitempty"`
 	// Latest available version for the agent revision.
 	LatestAvailableVersion string `json:"latestAvailableVersion,omitempty"`
 	// Agent status:  * running - Passed all health checks.  Up and running  * stopped - Agent is not running  * failed - Failed health checks  * unhealthy - Agent is running with health check failure
