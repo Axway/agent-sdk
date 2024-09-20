@@ -46,7 +46,7 @@ var (
 	traceStatus = healthcheck.OK
 )
 
-func getYesterdayTime() time.Time {
+func getFutureTime() time.Time {
 	return time.Now().Add(10 * time.Minute)
 }
 
@@ -633,7 +633,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
-			metricCollector.usagePublisher.report.currTimeFunc = getYesterdayTime
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			mockReports := generateMockReports(test.transactionsPerReport)
 			b, _ := json.Marshal(mockReports)
@@ -688,7 +688,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
-			metricCollector.usagePublisher.report.currTimeFunc = getYesterdayTime
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
@@ -712,7 +712,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
-			metricCollector.usagePublisher.report.currTimeFunc = getYesterdayTime
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
@@ -734,7 +734,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
-			metricCollector.usagePublisher.report.currTimeFunc = getYesterdayTime
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.Execute()
 			// Validate only no usage report sent as no previous or new transactions
