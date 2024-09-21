@@ -14,6 +14,8 @@ type TraceabilityAgentSpecConfigSampling struct {
 	// The percentage of transactions that the agent will save the full transaction details for. Valid values(decimals included) are 0 to 10
 	// GENERATE: The following code has been modified after code generation
 	Percentage float64 `json:"percentage"`
-	// When set to true will send transactional data for every errored transaction for Business and Consumer Insights
-	OnlyErrors bool `json:"onlyErrors"`
+	// Property is not used anymore. Set onlyErrors to true will allow the agent to sample only the error transactions for Business and Consumer Insights
+	AllErrors bool `json:"allErrors,omitempty"`
+	// Allows the agent to sample only the error transactions for Business and Consumer Insights
+	OnlyErrors bool `json:"onlyErrors,omitempty"`
 }
