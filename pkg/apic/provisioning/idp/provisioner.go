@@ -21,6 +21,7 @@ type Provisioner interface {
 	RegisterClient() error
 	UnregisterClient() error
 	GetAgentDetails() (map[string]string, error)
+	Validate() error
 }
 
 type provisioner struct {
@@ -169,6 +170,14 @@ func (p *provisioner) GetAgentDetails() (map[string]string, error) {
 		return nil, err
 	}
 	return p.createAgentDetails(registrationToken), nil
+}
+
+func (p *provisioner) Validate() error {
+	if !p.IsIDPCredential() {
+		return nil
+	}
+
+	return p.idpProvider.Validate()
 }
 
 func (p *provisioner) encryptRegistrationToken() (string, error) {
