@@ -29,6 +29,7 @@ var (
 const (
 	IdentityProviderResourceName            = "identityproviders"
 	IdentityProviderSecuritySubResourceName = "security"
+	IdentityProviderStatusSubResourceName   = "status"
 )
 
 func IdentityProviderGVK() apiv1.GroupVersionKind {
@@ -46,6 +47,8 @@ type IdentityProvider struct {
 	Owner    *apiv1.Owner             `json:"owner"`
 	Security IdentityProviderSecurity `json:"security"`
 	Spec     IdentityProviderSpec     `json:"spec"`
+	// Status   IdentityProviderStatus   `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // NewIdentityProvider creates an empty *IdentityProvider
@@ -127,6 +130,7 @@ func (res *IdentityProvider) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["security"] = res.Security
 	out["spec"] = res.Spec
+	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
@@ -165,6 +169,22 @@ func (res *IdentityProvider) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "security")
 		err = json.Unmarshal(sr, &res.Security)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Status
+	if v, ok := aux.SubResources["status"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "status")
+		// err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}
