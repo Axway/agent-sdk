@@ -2,6 +2,12 @@ package filter
 
 import (
 	"reflect"
+	"strings"
+)
+
+const (
+	filterTypeAttr = "attr"
+	filterTypeTag  = "tag"
 )
 
 // Data - Interface representing the data for filter evaluation
@@ -24,6 +30,7 @@ func NewFilterData(tags interface{}, attr interface{}) Data {
 	// Todo address other types
 	if vTags.Kind() == reflect.Map {
 		for _, key := range vTags.MapKeys() {
+			tagKey := strings.ReplaceAll(key.String(), Dash, DashPlaceHolder)
 			value := vTags.MapIndex(key)
 			vInterface := reflect.ValueOf(value.Interface())
 			if vInterface.Kind() == reflect.Ptr {
@@ -31,10 +38,10 @@ func NewFilterData(tags interface{}, attr interface{}) Data {
 			}
 			if vInterface.Kind() == reflect.String {
 				keyValue := vInterface.String()
-				tagsMap[key.String()] = keyValue
+				tagsMap[tagKey] = keyValue
 			}
 			if vInterface.Kind() == reflect.Slice {
-				tagsMap[key.String()] = parseStringSliceFilterData(vInterface)
+				tagsMap[tagKey] = parseStringSliceFilterData(vInterface)
 			}
 		}
 	}
@@ -62,15 +69,14 @@ func parseStringSliceFilterData(v reflect.Value) string {
 func (ad *AgentFilterData) GetKeys(ftype string) []string {
 	keys := make([]string, 0)
 	var m map[string]string
-	if ftype == "attr" {
+	if ftype == filterTypeAttr {
 		m = ad.attr
 	} else {
 		m = ad.tags
 	}
-	if m != nil {
-		for k := range m {
-			keys = append(keys, k)
-		}
+
+	for k := range m {
+		keys = append(keys, k)
 	}
 	return keys
 }
@@ -79,15 +85,13 @@ func (ad *AgentFilterData) GetKeys(ftype string) []string {
 func (ad *AgentFilterData) GetValues(ftype string) []string {
 	values := make([]string, 0)
 	var m map[string]string
-	if ftype == "attr" {
+	if ftype == filterTypeAttr {
 		m = ad.attr
 	} else {
 		m = ad.tags
 	}
-	if m != nil {
-		for _, v := range m {
-			values = append(values, v)
-		}
+	for _, v := range m {
+		values = append(values, v)
 	}
 	return values
 }
@@ -95,7 +99,7 @@ func (ad *AgentFilterData) GetValues(ftype string) []string {
 // GetValue - Returns the value for map entry based on the filter data type
 func (ad *AgentFilterData) GetValue(ftype, fName string) (val string, ok bool) {
 	var m map[string]string
-	if ftype == "attr" {
+	if ftype == filterTypeAttr {
 		m = ad.attr
 	} else {
 		m = ad.tags

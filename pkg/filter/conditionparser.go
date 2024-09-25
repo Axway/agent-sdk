@@ -4,9 +4,15 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strings"
 
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
+)
+
+var (
+	dashMatchReg   = regexp.MustCompile(`tag\.MatchRegEx\("(\w+-)+\w+"\)`)
+	dashTagNameReg = regexp.MustCompile(`tag\.(\w+-)+\w+`)
 )
 
 // ConditionParser - Represents the filter condition parser
@@ -24,12 +30,23 @@ func NewConditionParser() *ConditionParser {
 
 // Parse - parses the AST tree to filter condition
 func (f *ConditionParser) Parse(filterConfig string) ([]Condition, error) {
-	parsedConditions, err := f.parseCondition(strings.TrimSpace(filterConfig))
+	parsedConditions, err := f.parseCondition(strings.TrimSpace(f.preProcessCondition(filterConfig)))
 	if err != nil {
 		return nil, err
 	}
 
 	return parsedConditions, nil
+}
+
+func (f *ConditionParser) preProcessCondition(filterCondition string) string {
+	filterCondition = applyDashPlaceholder(dashMatchReg, filterCondition)
+	return applyDashPlaceholder(dashTagNameReg, filterCondition)
+}
+
+func applyDashPlaceholder(re *regexp.Regexp, filterCondition string) string {
+	return re.ReplaceAllStringFunc(filterCondition, func(s string) string {
+		return strings.ReplaceAll(s, Dash, DashPlaceHolder)
+	})
 }
 
 func (f *ConditionParser) parseCondition(filterCodition string) ([]Condition, error) {
@@ -119,7 +136,7 @@ func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 
 	var callArguments []interface{}
 	if expr.Args != nil {
-		callArguments, err = f.parseCallArguments(callType, expr.Args)
+		callArguments, err = f.parseCallArguments(expr.Args)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +154,7 @@ func (f *ConditionParser) parseCallExpr(expr *ast.CallExpr) (CallExpr, error) {
 	return callExpr, nil
 }
 
-func (f *ConditionParser) parseCallArguments(callType CallType, args []ast.Expr) ([]interface{}, error) {
+func (f *ConditionParser) parseCallArguments(args []ast.Expr) ([]interface{}, error) {
 	argsList := make([]interface{}, 0)
 	for _, argExpr := range args {
 		literal, ok := argExpr.(*ast.BasicLit)
@@ -153,7 +170,7 @@ func (f *ConditionParser) parseCallArguments(callType CallType, args []ast.Expr)
 func (f *ConditionParser) parseSelector(selector string) (selectorType, selectorPath string, err error) {
 	selectorType = selector[0:strings.Index(selector, ".")]
 	selectorPath = selector[strings.Index(selector, ".")+1:]
-	if selectorType != "tag" && selectorType != "attr" {
+	if selectorType != filterTypeTag && selectorType != filterTypeAttr {
 		err = ErrFilterSelectorType
 	}
 	return

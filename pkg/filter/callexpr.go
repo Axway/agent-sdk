@@ -34,15 +34,15 @@ type CallExpr interface {
 // NewCallExpr - Factory method for creating CallExpr
 func newCallExpr(callType CallType, filterType, name string, arguments []interface{}) (callExpr CallExpr, err error) {
 	if (callType == ANY || callType == EXISTS) && len(arguments) != 0 {
-		return nil, errors.New("Syntax Error, unrecognized argument(s)")
+		return nil, errors.New("syntax error, unrecognized argument(s)")
 	}
 
 	if callType == CONTAINS || callType == MATCHREGEX {
 		if len(arguments) == 0 {
-			return nil, errors.New("Syntax Error, missing argument")
+			return nil, errors.New("syntax error, missing argument")
 		}
 		if len(arguments) != 1 {
-			return nil, errors.New("Syntax Error, unrecognized argument(s)")
+			return nil, errors.New("syntax error, unrecognized argument(s)")
 		}
 	}
 	callTypeSupported := false
@@ -54,7 +54,7 @@ func newCallExpr(callType CallType, filterType, name string, arguments []interfa
 	}
 
 	if !callTypeSupported {
-		return nil, errors.New("Syntax Error, unsupported condition")
+		return nil, errors.New("syntax error, unsupported condition")
 	}
 
 	switch callType {
@@ -77,7 +77,7 @@ func newCallExpr(callType CallType, filterType, name string, arguments []interfa
 func GetCallType(callTypeString string) (callType CallType, err error) {
 	callType, ok := callTypeMap[strings.ToLower(callTypeString)]
 	if !ok {
-		err = errors.New("Unsupported call")
+		err = errors.New("unsupported call")
 	}
 	return
 }
