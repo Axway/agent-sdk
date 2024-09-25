@@ -71,6 +71,7 @@ func TestSimpleFilter(t *testing.T) {
 	assertFilter(t, "tag.name1.MatchRegEx(\"(val){1}\") != true", filterDataWithStringArrary, false)
 
 	assertFilter(t, "tag.MatchRegEx(\"name-test\") == true", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.MatchRegEx(\"name-t.*\") == true", filterDataWithStringArrary, true)
 	assertFilter(t, "tag.MatchRegEx(\"name-test-multi-dash\")", filterDataWithStringArrary, true)
 	assertFilter(t, "tag.MatchRegEx(\"name-test-2\")", filterDataWithStringArrary, false)
 	assertFilter(t, "tag.MatchRegEx(\"name-test-2\") == false", filterDataWithStringArrary, true)

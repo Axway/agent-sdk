@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	dashMatchReg   = regexp.MustCompile(`tag\.MatchRegEx\("(\w+-)+\w+"\)`)
+	dashMatchReg   = regexp.MustCompile(`tag\.MatchRegEx\("([\w+\.\*]+-)+[\w+\.\*]+"\)`)
 	dashTagNameReg = regexp.MustCompile(`tag\.(\w+-)+\w+`)
 )
 
