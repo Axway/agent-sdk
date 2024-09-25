@@ -27,9 +27,10 @@ var (
 )
 
 const (
-	DiscoveryAgentResourceName             = "discoveryagents"
-	DiscoveryAgentDataplaneSubResourceName = "dataplane"
-	DiscoveryAgentStatusSubResourceName    = "status"
+	DiscoveryAgentResourceName              = "discoveryagents"
+	DiscoveryAgentAgentstateSubResourceName = "agentstate"
+	DiscoveryAgentDataplaneSubResourceName  = "dataplane"
+	DiscoveryAgentStatusSubResourceName     = "status"
 )
 
 func DiscoveryAgentGVK() apiv1.GroupVersionKind {
@@ -44,10 +45,11 @@ func init() {
 // DiscoveryAgent Resource
 type DiscoveryAgent struct {
 	apiv1.ResourceMeta
-	Dataplane DiscoveryAgentDataplane `json:"dataplane"`
-	Owner     *apiv1.Owner            `json:"owner"`
-	Spec      DiscoveryAgentSpec      `json:"spec"`
-	Status    DiscoveryAgentStatus    `json:"status"`
+	Agentstate DiscoveryAgentAgentstate `json:"agentstate"`
+	Dataplane  DiscoveryAgentDataplane  `json:"dataplane"`
+	Owner      *apiv1.Owner             `json:"owner"`
+	Spec       DiscoveryAgentSpec       `json:"spec"`
+	Status     DiscoveryAgentStatus     `json:"status"`
 }
 
 // NewDiscoveryAgent creates an empty *DiscoveryAgent
@@ -132,6 +134,7 @@ func (res *DiscoveryAgent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["agentstate"] = res.Agentstate
 	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -163,6 +166,20 @@ func (res *DiscoveryAgent) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Agentstate
+	if v, ok := aux.SubResources["agentstate"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "agentstate")
+		err = json.Unmarshal(sr, &res.Agentstate)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Dataplane
