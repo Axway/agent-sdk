@@ -31,6 +31,14 @@ func (e *MatchRegExExpr) GetType() CallType {
 
 // Execute - Returns true if the regular expression in argument matches the value for specified filter data
 func (e *MatchRegExExpr) Execute(data Data) (interface{}, error) {
+	if e.Name == "" {
+		for _, key := range data.GetKeys(e.FilterType) {
+			if e.Arg.MatchString(key) {
+				return true, nil
+			}
+		}
+	}
+
 	valueToMatch, ok := data.GetValue(e.FilterType, e.Name)
 	if !ok {
 		return false, nil

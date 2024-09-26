@@ -26,10 +26,12 @@ var filterDataWithStringPointer = map[string]*string{
 }
 
 var filterDataWithStringArrary = map[string][]string{
-	"name1": {name1Val, "v 1", "v-1"},
-	"name2": {name2Val, "v 2", "v-2"},
-	"name3": {name3Val, "v 3", "v-3"},
-	"name4": {name4Val, "v 4", "v-4"},
+	"name-test":            {name1Val, "v 1", "v-1"},
+	"name-test-multi-dash": {name1Val, "v 1", "v-1"},
+	"name1":                {name1Val, "v 1", "v-1"},
+	"name2":                {name2Val, "v 2", "v-2"},
+	"name3":                {name3Val, "v 3", "v-3"},
+	"name4":                {name4Val, "v 4", "v-4"},
 }
 
 func TestSimpleFilter(t *testing.T) {
@@ -67,6 +69,17 @@ func TestSimpleFilter(t *testing.T) {
 
 	assertFilter(t, "tag.name1.MatchRegEx(\"(val){1}\") == true", filterDataWithStringArrary, true)
 	assertFilter(t, "tag.name1.MatchRegEx(\"(val){1}\") != true", filterDataWithStringArrary, false)
+
+	assertFilter(t, "tag.MatchRegEx(\"name-test\") == true", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.MatchRegEx(\"name-t.*\") == true", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.MatchRegEx(\"name-test-multi-dash\")", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.MatchRegEx(\"name-test-2\")", filterDataWithStringArrary, false)
+	assertFilter(t, "tag.MatchRegEx(\"name-test-2\") == false", filterDataWithStringArrary, true)
+
+	assertFilter(t, "tag.name-test.Exists()", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.name-test-multi-dash.Exists()", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.name-test-2.Exists()", filterDataWithStringArrary, false)
+	assertFilter(t, "tag.name-test-2.Exists() == false", filterDataWithStringArrary, true)
 }
 
 func TestCompoundFilter(t *testing.T) {
@@ -101,6 +114,13 @@ func TestCompoundFilter(t *testing.T) {
 
 	assertFilter(t, "tag.Any() == \"value 1,v 1,v-1\" && tag.name2.Exists() && tag.name3.Contains(\"v-3\") && tag.name4.MatchRegEx(\"(val){1}\")", filterDataWithStringArrary, true)
 	assertFilter(t, "tag.Any() == \"someotherval\" || tag.name2.Exists() && tag.name3.Contains(\"v-3\") || tag.name4.MatchRegEx(\"(val){1}\")", filterDataWithStringArrary, true)
+
+	assertFilter(t, "tag.MatchRegEx(\"name-test-multi-dash\") && tag.MatchRegEx(\"name-test-2\") == false", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.name-test.Exists() && tag.MatchRegEx(\"name-test-multi-dash\")", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.name-test-2.Exists() && tag.MatchRegEx(\"name-test-multi-dash\")", filterDataWithStringArrary, false)
+	assertFilter(t, "tag.name-test-multi-dash.Exists() == true && tag.MatchRegEx(\"name-test-2\") == false", filterDataWithStringArrary, true)
+	assertFilter(t, "tag.name-test-2.Exists() == false && tag.MatchRegEx(\"name-test-multi-dash\")", filterDataWithStringArrary, true)
+
 }
 
 func assertFilter(t *testing.T, filterConfig string, filterData interface{}, expectedResult bool) {
@@ -131,17 +151,17 @@ func TestFilterParsingError(t *testing.T) {
 	assertFilterSyntaxErr(t, "tag.name1 == ", "Syntax error: expected ';', found 'EOF'")
 
 	// Call Expression Sytax Error
-	assertFilterSyntaxErr(t, "tag.Match(\"something\")", "Unsupported call")
+	assertFilterSyntaxErr(t, "tag.Match(\"something\")", "unsupported call")
 
 	// Additional arguments
-	assertFilterSyntaxErr(t, "tag.Any(\"something\") == \"something\"", "Syntax Error, unrecognized argument(s)")
-	assertFilterSyntaxErr(t, "tag.name.Exists(\"something\")", "Syntax Error, unrecognized argument(s)")
-	assertFilterSyntaxErr(t, "tag.name.Contains(\"one\", \"two\")", "Syntax Error, unrecognized argument(s)")
-	assertFilterSyntaxErr(t, "tag.name.MatchRegEx(\"one\", \"two\")", "Syntax Error, unrecognized argument(s)")
+	assertFilterSyntaxErr(t, "tag.Any(\"something\") == \"something\"", "syntax error, unrecognized argument(s)")
+	assertFilterSyntaxErr(t, "tag.name.Exists(\"something\")", "syntax error, unrecognized argument(s)")
+	assertFilterSyntaxErr(t, "tag.name.Contains(\"one\", \"two\")", "syntax error, unrecognized argument(s)")
+	assertFilterSyntaxErr(t, "tag.name.MatchRegEx(\"one\", \"two\")", "syntax error, unrecognized argument(s)")
 
 	// Missing arguments
-	assertFilterSyntaxErr(t, "tag.name.Contains()", "Syntax Error, missing argument")
-	assertFilterSyntaxErr(t, "tag.name.MatchRegEx()", "Syntax Error, missing argument")
+	assertFilterSyntaxErr(t, "tag.name.Contains()", "syntax error, missing argument")
+	assertFilterSyntaxErr(t, "tag.name.MatchRegEx()", "syntax error, missing argument")
 
 	// Invalid Regular expression
 	assertFilterSyntaxErr(t, "tag.name.MatchRegEx(\".*[\")", "Invalid regular expression")
