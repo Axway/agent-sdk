@@ -775,7 +775,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	updateRI := true
 	updateAgentDetails := true
 
-	if err == nil && existingRI != nil {
+	if err == nil && existingRI != nil && existingRI.Metadata.Scope.Name == data.Metadata.Scope.Name {
 		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
