@@ -12,8 +12,10 @@ package definitions
 // ComponentSpec  (definitions.v1alpha1.Component)
 type ComponentSpec struct {
 	// The component type
-	Type      string                `json:"type,omitempty"`
-	Latest    ComponentSpecLatest   `json:"latest"`
-	Supported []ComponentSpecLatest `json:"supported,omitempty"`
-	Retracted []string              `json:"retracted,omitempty"`
+	Type   string              `json:"type,omitempty"`
+	Latest ComponentSpecLatest `json:"latest"`
+	// All versions supported for this component
+	Supported []ComponentSpecSupported `json:"supported,omitempty"`
+	// An array of version numbers that have been retracted and should not be used
+	Retracted []string `json:"retracted,omitempty"`
 }

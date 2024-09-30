@@ -27,9 +27,10 @@ var (
 )
 
 const (
-	TraceabilityAgentResourceName             = "traceabilityagents"
-	TraceabilityAgentDataplaneSubResourceName = "dataplane"
-	TraceabilityAgentStatusSubResourceName    = "status"
+	TraceabilityAgentResourceName              = "traceabilityagents"
+	TraceabilityAgentAgentstateSubResourceName = "agentstate"
+	TraceabilityAgentDataplaneSubResourceName  = "dataplane"
+	TraceabilityAgentStatusSubResourceName     = "status"
 )
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
@@ -44,10 +45,11 @@ func init() {
 // TraceabilityAgent Resource
 type TraceabilityAgent struct {
 	apiv1.ResourceMeta
-	Dataplane TraceabilityAgentDataplane `json:"dataplane"`
-	Owner     *apiv1.Owner               `json:"owner"`
-	Spec      TraceabilityAgentSpec      `json:"spec"`
-	Status    TraceabilityAgentStatus    `json:"status"`
+	Agentstate TraceabilityAgentAgentstate `json:"agentstate"`
+	Dataplane  TraceabilityAgentDataplane  `json:"dataplane"`
+	Owner      *apiv1.Owner                `json:"owner"`
+	Spec       TraceabilityAgentSpec       `json:"spec"`
+	Status     TraceabilityAgentStatus     `json:"status"`
 }
 
 // NewTraceabilityAgent creates an empty *TraceabilityAgent
@@ -132,6 +134,7 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["agentstate"] = res.Agentstate
 	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
@@ -163,6 +166,20 @@ func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Agentstate
+	if v, ok := aux.SubResources["agentstate"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "agentstate")
+		err = json.Unmarshal(sr, &res.Agentstate)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Dataplane
