@@ -86,7 +86,10 @@ func (p *PollClient) Start() error {
 	if p.onStreamConnection != nil {
 		p.onStreamConnection()
 	}
+
+	p.mutex.Lock()
 	p.initialized = true
+	p.mutex.Unlock()
 
 	select {
 	case err := <-listenCh:
