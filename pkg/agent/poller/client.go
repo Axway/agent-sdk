@@ -1,7 +1,6 @@
 package poller
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -27,6 +26,7 @@ type PollClient struct {
 	newPollManager     newPollExecutorFunc
 	harvesterConfig    harvesterConfig
 	mutex              sync.RWMutex
+	initialized        bool
 }
 
 type harvesterConfig struct {
@@ -74,22 +74,19 @@ func (p *PollClient) Start() error {
 		p.handlers...,
 	)
 
-	poller := p.newPollManager(
+	p.poller = p.newPollManager(
 		p.interval,
 		withOnStop(p.onClientStop),
 		withHarvester(p.harvesterConfig),
 	)
-	p.poller = poller
-
 	p.mutex.Unlock()
-
 	listenCh := p.listener.Listen()
-
 	p.poller.RegisterWatch(eventCh, eventErrorCh)
 
 	if p.onStreamConnection != nil {
 		p.onStreamConnection()
 	}
+	p.initialized = true
 
 	select {
 	case err := <-listenCh:
@@ -103,11 +100,10 @@ func (p *PollClient) Start() error {
 func (p *PollClient) Status() error {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	if p.poller == nil || p.listener == nil {
-		return fmt.Errorf("harvester polling client is not ready")
-	}
-	if ok := p.poller.Status(); !ok {
-		return errors.ErrHarvesterConnection
+	if p.initialized {
+		if ok := p.poller.Status(); !ok {
+			return errors.ErrHarvesterConnection
+		}
 	}
 
 	return nil
