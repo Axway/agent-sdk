@@ -46,6 +46,10 @@ var (
 	traceStatus = healthcheck.OK
 )
 
+func getFutureTime() time.Time {
+	return time.Now().Add(10 * time.Minute)
+}
+
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 
 	cfg := config.NewCentralConfig(config.TraceabilityAgent).(*config.CentralConfiguration)
@@ -64,6 +68,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	usgCfg.Publish = true
 	metricCfg := cfg.MetricReporting.(*config.MetricReportingConfiguration)
 	metricCfg.Publish = true
+	// metricCfg.Schedule = "1 * * * * * *"
 	return cfg
 }
 
@@ -627,6 +632,9 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			setupMockClient(0)
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
+			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
+
 			mockReports := generateMockReports(test.transactionsPerReport)
 			b, _ := json.Marshal(mockReports)
 			metricCollector.reports.reportCache.Set("lighthouse_events", string(b))
@@ -679,6 +687,8 @@ func TestMetricCollectorCache(t *testing.T) {
 			traceability.SetDataDirPath(".")
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
+			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
@@ -701,6 +711,8 @@ func TestMetricCollectorCache(t *testing.T) {
 			// Recreate the collector that loads the stored metrics, so 3 transactions
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
+			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
 			metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
@@ -721,6 +733,8 @@ func TestMetricCollectorCache(t *testing.T) {
 			// Recreate the collector that loads the stored metrics, 0 transactions
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
+			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.Execute()
 			// Validate only no usage report sent as no previous or new transactions

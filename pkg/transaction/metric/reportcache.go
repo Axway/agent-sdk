@@ -18,15 +18,19 @@ import (
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/gorhill/cronexpr"
 )
 
 const (
 	eventsKey                 = "lighthouse_events"
+	lastPublishTimestampKey   = "timestamp"
 	offlineCacheFileName      = "agent-report-working.json"
 	offlineReportSuffix       = "usage_report.json"
 	offlineReportDateFormat   = "2006_01_02"
 	qaOfflineReportDateFormat = "2006_01_02_15_04"
 )
+
+type currentTimeFunc func() time.Time
 
 type usageReportCache struct {
 	jobs.Job
@@ -36,6 +40,7 @@ type usageReportCache struct {
 	reportCacheLock         sync.Mutex
 	isInitialized           bool
 	offlineReportDateFormat string
+	currTimeFunc            currentTimeFunc
 }
 
 func newReportCache() *usageReportCache {
@@ -46,6 +51,7 @@ func newReportCache() *usageReportCache {
 		reportCache:             cache.New(),
 		isInitialized:           false,
 		offlineReportDateFormat: offlineReportDateFormat,
+		currTimeFunc:            time.Now,
 	}
 	if agent.GetCentralConfig().GetUsageReportingConfig().UsingQAVars() {
 		reportManager.offlineReportDateFormat = qaOfflineReportDateFormat
@@ -108,6 +114,23 @@ func (c *usageReportCache) updateEvents(lighthouseEvent UsageEvent) {
 	defer c.reportCacheLock.Unlock()
 
 	c.setEvents(lighthouseEvent)
+}
+
+func (c *usageReportCache) setLastPublishTimestamp(lastPublishTimestamp time.Time) {
+	c.reportCache.Set(lastPublishTimestampKey, lastPublishTimestamp)
+	c.reportCache.Save(c.cacheFilePath)
+}
+
+func (c *usageReportCache) getLastPublishTimestamp() time.Time {
+	c.reportCacheLock.Lock()
+	defer c.reportCacheLock.Unlock()
+
+	lastPublishTime, err := parseTimeFromCache(c.reportCache, lastPublishTimestampKey)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return lastPublishTime
 }
 
 func (c *usageReportCache) generateReportPath(timestamp ISO8601Time, index int) string {
@@ -233,7 +256,34 @@ func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) 
 		return nil
 	}
 
+	// update the publish time
+	lastPublishTime := time.Now()
+	c.setLastPublishTimestamp(lastPublishTime)
+
 	savedEvents.Report = make(map[string]UsageReport)
 	c.setEvents(savedEvents)
 	return nil
+}
+
+func (c *usageReportCache) shouldPublish(schedule string) bool {
+	currentTime := c.currTimeFunc()
+	lastPublishTimestamp := c.getLastPublishTimestamp()
+
+	// if the last publish was made more than a day ago, publish
+	elapsedTimeSinceLastPublish := currentTime.Sub(lastPublishTimestamp)
+	if lastPublishTimestamp.IsZero() || elapsedTimeSinceLastPublish >= 24*time.Hour {
+		return true
+	}
+
+	cronSchedule, err := cronexpr.Parse(schedule)
+	if err != nil {
+		return false
+	}
+	// publish if last scheduled time is past
+	nextPublishTime := cronSchedule.Next(lastPublishTimestamp)
+	if nextPublishTime.Before(currentTime) {
+		return true
+	}
+
+	return false
 }

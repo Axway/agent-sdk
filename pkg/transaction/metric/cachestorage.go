@@ -84,13 +84,13 @@ func (c *cacheStorage) initialize() {
 
 func (c *cacheStorage) loadUsage(storageCache cache.Cache) {
 	// update the collector usage start time
-	usageStartTime, err := c.parseTimeFromCache(storageCache, usageStartTimeKey)
+	usageStartTime, err := parseTimeFromCache(storageCache, usageStartTimeKey)
 	if err == nil && !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// do not load this start time when offline
 		c.collector.usageStartTime = usageStartTime
 	}
 	// update the collector metric start time
-	metricStartTime, err := c.parseTimeFromCache(storageCache, metricStartTimeKey)
+	metricStartTime, err := parseTimeFromCache(storageCache, metricStartTimeKey)
 	if err == nil && !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		// do not load this start time when offline
 		c.collector.metricStartTime = metricStartTime
@@ -254,7 +254,7 @@ func (c *cacheStorage) storeCacheJob() {
 	}
 }
 
-func (c *cacheStorage) parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
+func parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
 	resultTime := now()
 	item, err := storage.Get(key)
 	if err != nil {

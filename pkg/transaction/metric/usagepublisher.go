@@ -26,6 +26,7 @@ type usagePublisher struct {
 	storage     storageCache
 	report      *usageReportCache
 	jobID       string
+	schedule    string
 	ready       bool
 	offline     bool
 	logger      log.FieldLogger
@@ -197,10 +198,11 @@ func (c *usagePublisher) registerReportJob() {
 	if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 		schedule = agent.GetCentralConfig().GetUsageReportingConfig().GetReportSchedule()
 	}
+	c.schedule = schedule
 
 	// start the job according to the cron schedule
 	var err error
-	c.jobID, err = jobs.RegisterScheduledJobWithName(c, schedule, "Usage Reporting")
+	c.jobID, err = jobs.RegisterScheduledJobWithName(c, c.schedule, "Usage Reporting")
 	if err != nil {
 		c.logger.WithError(err).Error("could not register usage report creation job")
 	}
@@ -233,8 +235,11 @@ func (c *usagePublisher) Ready() bool {
 
 // Execute - process the offline report generation
 func (c *usagePublisher) Execute() error {
-	if c.offline {
-		return c.report.saveReport()
+	if c.report.shouldPublish(c.schedule) {
+		if c.offline {
+			return c.report.saveReport()
+		}
+		return c.report.sendReport(c.publishToPlatformUsage)
 	}
-	return c.report.sendReport(c.publishToPlatformUsage)
+	return nil
 }
