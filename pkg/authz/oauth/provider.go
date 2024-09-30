@@ -2,11 +2,13 @@ package oauth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/api"
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -29,6 +31,7 @@ type Provider interface {
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
 	UnregisterClient(clientID, accessToken string) error
+	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
 }
@@ -119,13 +122,16 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	return p, nil
 }
 
-func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
+func FetchMetadata(apiClient api.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
+	if apiClient == nil || metadataURL == "" {
+		return nil, errors.New("unexpected arguments")
+	}
 	request := coreapi.Request{
 		Method: coreapi.GET,
-		URL:    p.metadataURL,
+		URL:    metadataURL,
 	}
 
-	response, err := p.apiClient.Send(request)
+	response, err := apiClient.Send(request)
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +143,10 @@ func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
 	}
 	return nil, fmt.Errorf("error fetching metadata status code: %d, body: %s", response.Code, string(response.Body))
 
+}
+
+func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
+	return FetchMetadata(p.apiClient, p.metadataURL)
 }
 
 func (p *provider) createAuthClient() (AuthClient, error) {
@@ -507,4 +517,15 @@ func (p *provider) GetConfig() corecfg.IDPConfig {
 
 func (p *provider) GetMetadata() *AuthorizationServerMetadata {
 	return p.authServerMetadata
+}
+
+func (p *provider) Validate() error {
+	// Validate fetching token using client id/secret with oauth flow
+	// how to validate accessToken
+	// validate if the auth used has authorization?
+	_, err := p.getClientToken()
+	if err != nil {
+		return err
+	}
+	return nil
 }
