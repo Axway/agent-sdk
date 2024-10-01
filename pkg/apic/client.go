@@ -754,6 +754,29 @@ func (c *ServiceClient) CreateResource(url string, bts []byte) (*apiv1.ResourceI
 	return ri, err
 }
 
+func (c *ServiceClient) getCachedResource(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+	switch data.Kind {
+	case management.AccessRequestDefinitionGVK().Kind:
+		return c.caches.GetAccessRequestDefinitionByName(data.Name)
+	case management.CredentialRequestDefinitionGVK().Kind:
+		return c.caches.GetCredentialRequestDefinitionByName(data.Name)
+	case management.APIServiceInstanceGVK().Kind:
+		return c.caches.GetAPIServiceInstanceByName(data.Name)
+	}
+	return nil, nil
+}
+
+func (c *ServiceClient) addResourceToCache(data *apiv1.ResourceInstance) {
+	switch data.Kind {
+	case management.AccessRequestDefinitionGVK().Kind:
+		c.caches.AddAccessRequestDefinition(data)
+	case management.CredentialRequestDefinitionGVK().Kind:
+		c.caches.AddCredentialRequestDefinition(data)
+	case management.APIServiceInstanceGVK().Kind:
+		c.caches.AddAPIServiceInstance(data)
+	}
+}
+
 // updateORCreateResourceInstance
 func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
 	// default to post
@@ -761,17 +784,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	method := coreapi.POST
 
 	// check if the KIND and ID combo have an item in the cache
-	var existingRI *apiv1.ResourceInstance
-	var err error
-	switch data.Kind {
-	case management.AccessRequestDefinitionGVK().Kind:
-		existingRI, err = c.caches.GetAccessRequestDefinitionByName(data.Name)
-	case management.CredentialRequestDefinitionGVK().Kind:
-		existingRI, err = c.caches.GetCredentialRequestDefinitionByName(data.Name)
-	case management.APIServiceInstanceGVK().Kind:
-		existingRI, err = c.caches.GetAPIServiceInstanceByName(data.Name)
-	}
-
+	existingRI, err := c.getCachedResource(data)
 	updateRI := true
 	updateAgentDetails := true
 
@@ -838,6 +851,10 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			return nil, err
 		}
 
+	}
+
+	if existingRI == nil {
+		c.addResourceToCache(newRI)
 	}
 	return newRI, err
 }
