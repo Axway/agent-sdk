@@ -70,6 +70,20 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 		return
 	}
 
+	if err := m.harvester.EventCatchUp(m.topicSelfLink, eventChan); err != nil {
+		m.logger.WithError(err).Error("harvester returned an error when syncing events")
+		m.onHarvesterErr()
+		go func() {
+			m.Stop()
+			errChan <- err
+		}()
+		return
+	}
+
+	m.lock.Lock()
+	m.isReady = true
+	m.lock.Unlock()
+
 	go func() {
 		err := m.sync(m.topicSelfLink, eventChan)
 		m.Stop()
@@ -79,15 +93,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 
 func (m *pollExecutor) sync(topicSelfLink string, eventChan chan *proto.Event) error {
 	m.logger.Trace("sync events")
-	if err := m.harvester.EventCatchUp(topicSelfLink, eventChan); err != nil {
-		m.logger.WithError(err).Error("harvester returned an error when syncing events")
-		m.onHarvesterErr()
-		return err
-	}
 
-	m.lock.Lock()
-	m.isReady = true
-	m.lock.Unlock()
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -150,5 +156,9 @@ func (m *pollExecutor) Stop() {
 func (m *pollExecutor) Status() bool {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	return m.ctx.Err() == nil && m.isReady
+	if m.ctx.Err() != nil {
+		return false
+	}
+
+	return m.isReady
 }
