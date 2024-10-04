@@ -72,8 +72,8 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 
 	if ok := h.shouldProcessPending(ar.Status, ar.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
-		// call grpc service if custom unit quota given and quota enforcement service enabled
 		ar := h.onPending(ctx, ar)
+
 		ri, _ := ar.AsInstance()
 		defer h.cache.AddAccessRequest(ri)
 
