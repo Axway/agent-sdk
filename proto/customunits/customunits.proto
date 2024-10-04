@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package amplify.agent.customunits;
+
+option go_package = "pkg/amplify/agent/customunits";
+
+message APIServiceLookups {
+   // add many lookups, the agent will have to match on all and find a single result to report properly
+  repeated APIServiceLookup lookups = 1;
+}
+
+enum APIServiceLookupType {
+  CustomAPIServiceLookup = 0;
+  ServiceName = 1;
+  ServiceID = 2;
+  ExternalAPIID = 3;
+}
+
+message APIServiceLookup {
+  // the type that the agent will look to match against in the resource
+  APIServiceLookupType type = 1;
+
+  // Only required when Custom is the type
+  optional string customAttribute = 2;
+
+  // the value of the attribute the agent will look for in the resource
+  string value = 3;
+}
+
+
+message AppLookups {
+  // add many lookups, the agent will have to match on all and find a single result to report properly
+  repeated AppLookup lookups = 1;
+}
+
+enum AppLookupType {
+  CustomAppLookup = 0;
+  ManagedAppName = 1;
+  ManagedAppID = 2;
+  ExternalAppID = 3;
+  ClientID = 4;
+}
+
+message AppLookup {
+  // the type that the agent will look to match against in the resource
+  AppLookupType type = 1;
+
+  // Only required when Custom is the type
+  optional string customAttribute = 2;
+
+  // the value of the attribute the agent will look for in the resource
+  string value = 3;
+}
+ 
+message UnitLookups {
+  // add many lookups, the agent will have to match on all and find a single result to report properly
+  repeated UnitLookup lookups = 1;
+}
+
+enum UnitLookupType {
+  CustomUnitLookup = 0;
+  UnitName = 1;
+  UnitID = 2;
+}
+
+message UnitLookup {
+  // the type that the agent will look to match against in the resource
+  AppLookupType type = 1;
+
+  // Only required when Custom is the type
+  optional string customAttribute = 2;
+
+  // the value of the attribute the agent will look for in the resource
+  string value = 3;
+}
+
+// this message will be received continually
+message MetricReport {
+  int64 count = 1;
+  APIServiceLookup apiService = 2;
+  AppLookup managedApp = 3;
+  UnitLookup planUnit = 4;
+}
+ 
+// message to start the connection to the custom metric reporting service
+message MetricServiceInit {}
+ 
+message Quota {
+  int64 count = 1;
+  string unit = 2;
+}
+ 
+// message to send to the metric service for enforcing a quota
+message QuotaInfo {
+  map<string, string> APIInfo = 1; // x-agent-details from the API Service
+  map<string, string> AppInfo = 2; // x-agent-details from the Managed App
+  Quota quota = 3; // custom quota information
+}
+ 
+// response received for the quota enforcement rpc
+message QuotaEnforcementResponse {
+  string error = 1;
+}
+
+service MetricReportingService {
+  // The agent will initiate the connection to the service and the service can then begin to send metric data for the SDK to handle
+  rpc MetricReporting(MetricServiceInit) returns(stream MetricReport) {}
+} 
+
+service QuotaEnforcement { 
+  // The discovery agent will reach out, if configured, to allow the external service to provision any quota enforcement or access it may need to
+  rpc QuotaEnforcementInfo(QuotaInfo) returns(QuotaEnforcementResponse) {}
+}
