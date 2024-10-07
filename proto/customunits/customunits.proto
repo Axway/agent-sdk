@@ -21,7 +21,7 @@ message APIServiceLookup {
   APIServiceLookupType type = 1;
 
   // Only required when Custom is the type
-  optional string customAttribute = 2;
+  string customAttribute = 2;
 
   // the value of the attribute the agent will look for in the resource
   string value = 3;
@@ -46,7 +46,7 @@ message AppLookup {
   AppLookupType type = 1;
 
   // Only required when Custom is the type
-  optional string customAttribute = 2;
+  string customAttribute = 2;
 
   // the value of the attribute the agent will look for in the resource
   string value = 3;
@@ -68,7 +68,7 @@ message UnitLookup {
   AppLookupType type = 1;
 
   // Only required when Custom is the type
-  optional string customAttribute = 2;
+  string customAttribute = 2;
 
   // the value of the attribute the agent will look for in the resource
   string value = 3;
@@ -89,14 +89,26 @@ message Quota {
   int64 count = 1;
   string unit = 2;
 }
- 
+
+message APIInfo {
+  string ServiceName = 1;
+  string ServiceID = 2;
+  string ExternalAPIID = 3;
+}
+
+message AppInfo {
+  string AppName = 1;
+  string AppID = 2;
+  string ExternalAppID = 3;
+}
+
 // message to send to the metric service for enforcing a quota
 message QuotaInfo {
-  map<string, string> APIInfo = 1; // x-agent-details from the API Service
-  map<string, string> AppInfo = 2; // x-agent-details from the Managed App
-  Quota quota = 3; // custom quota information
+  APIInfo apiInfo = 1; // x-agent-details from the API Service
+  AppInfo appInfo = 2; // x-agent-details from the Managed App
+  Quota quota = 3;     // custom quota information
 }
- 
+
 // response received for the quota enforcement rpc
 message QuotaEnforcementResponse {
   string error = 1;
