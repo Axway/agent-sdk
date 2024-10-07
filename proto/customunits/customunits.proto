@@ -91,21 +91,23 @@ message Quota {
 }
 
 message APIInfo {
-  string ServiceName = 1;
-  string ServiceID = 2;
-  string ExternalAPIID = 3;
+  map<string, string> ServiceDetails = 1;  // x-agent-details from the API Service
+  string ServiceName = 2;
+  string ServiceID = 3;
+  string ExternalAPIID = 4;
 }
 
 message AppInfo {
-  string AppName = 1;
-  string AppID = 2;
-  string ExternalAppID = 3;
+  map<string, string> AppDetails = 1;      // x-agent-details from the Managed App
+  string AppName = 2;
+  string AppID = 3;
+  string ExternalAppID = 4;
 }
 
 // message to send to the metric service for enforcing a quota
 message QuotaInfo {
-  APIInfo apiInfo = 1; // x-agent-details from the API Service
-  AppInfo appInfo = 2; // x-agent-details from the Managed App
+  APIInfo apiInfo = 1;
+  AppInfo appInfo = 2; 
   Quota quota = 3;     // custom quota information
 }
 
