@@ -106,3 +106,16 @@ func (a APIDetails) GetLogFields(fields logrus.Fields) logrus.Fields {
 	}
 	return fields
 }
+
+// Unit - struct for custom unit details to report
+type Unit struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func (a Unit) GetLogFields(fields logrus.Fields) logrus.Fields {
+	if a.ID != "unknown" {
+		fields["apiID"] = a.ID
+	}
+	return fields
+}

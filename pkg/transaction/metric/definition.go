@@ -25,10 +25,10 @@ const (
 	unknown                 = "unknown"
 )
 
-type TransactionContext struct {
+type transactionContext struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
-	StatusCode string
+	UniqueKey  string // status code or custom metric name
 }
 
 // Detail - holds the details for computing metrics
@@ -47,6 +47,14 @@ type MetricDetail struct {
 	StatusCode  string
 	Count       int64
 	Response    ResponseMetrics
+	Observation ObservationDetails
+}
+
+type CustomMetricDetail struct {
+	APIDetails  models.APIDetails
+	AppDetails  models.AppDetails
+	UnitDetails models.Unit
+	Count       int64
 	Observation ObservationDetails
 }
 
@@ -72,12 +80,13 @@ type APIMetric struct {
 	AssetResource models.AssetResource `json:"assetResource,omitempty"`
 	ProductPlan   models.ProductPlan   `json:"productPlan,omitempty"`
 	Quota         models.Quota         `json:"quota,omitempty"`
+	Unit          *models.Unit         `json:"unit,omitempty"`
 	StatusCode    string               `json:"statusCode"`
 	Status        string               `json:"status"`
 	Count         int64                `json:"count"`
 	Response      ResponseMetrics      `json:"response"`
 	Observation   ObservationDetails   `json:"observation"`
-	EventID       string               `json:"eventID"`
+	EventID       string               `json:"-"`
 	StartTime     time.Time            `json:"-"`
 }
 

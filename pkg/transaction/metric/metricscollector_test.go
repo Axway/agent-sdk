@@ -180,7 +180,7 @@ func generateMockReports(transactionPerReport []int) UsageEvent {
 	return mockEvent
 }
 
-func cleanUpReportfiles() {
+func cleanUpReportFiles() {
 	os.RemoveAll("./reports")
 }
 
@@ -649,7 +649,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			s.resetConfig()
 		})
 	}
-	cleanUpReportfiles()
+	cleanUpReportFiles()
 }
 
 func TestMetricCollectorCache(t *testing.T) {
@@ -874,5 +874,22 @@ func TestOfflineMetricCollector(t *testing.T) {
 			s.resetOffline(myCollector)
 		})
 	}
-	cleanUpReportfiles()
+	cleanUpReportFiles()
+}
+
+func Test(t *testing.T) {
+	testCases := map[string]struct {
+		skip bool
+	}{
+		"test case 1": {
+			skip: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
+		})
+	}
 }

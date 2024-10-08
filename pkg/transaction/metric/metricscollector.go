@@ -52,6 +52,7 @@ func ExitMetricInit() {
 type Collector interface {
 	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
+	AddCustomMetricDetail(metric CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
@@ -95,7 +96,6 @@ type usageEventPublishItem interface {
 }
 
 type usageEventQueueItem struct {
-	usageEventPublishItem
 	event        UsageEvent
 	usageMetric  metrics.Counter
 	volumeMetric metrics.Counter
@@ -265,18 +265,64 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.createOrUpdateMetric(metricDetail)
 }
 
-// AddMetricDetailSet - add metric details for several response codes and transactions
+// AddAPIMetricDetail - add metric details for several response codes and transactions
 func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
 
-	newMetric, _ := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	newMetric, _ := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
 	// update the new metric with all the necessary details
 	newMetric.Count = detail.Count
 	newMetric.Response = detail.Response
 	newMetric.StartTime = time.UnixMilli(detail.Observation.Start)
 	newMetric.Observation = detail.Observation
+	newMetric.StatusCode = detail.StatusCode
+	newMetric.Status = c.getStatusText(detail.StatusCode)
+
+	c.AddAPIMetric(newMetric)
+}
+
+// AddCustomMetricDetail - add custom unit metric details for an api/app combo
+func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
+		return
+	}
+
+	logger := c.logger.WithField("handler", "customMetric").
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("appID", detail.AppDetails.ID).
+		WithField("unitID", detail.UnitDetails.ID).
+		WithField("unitName", detail.UnitDetails.Name)
+
+	if detail.APIDetails.ID == "" {
+		logger.Error("custom units require API information")
+		return
+	}
+
+	if detail.AppDetails.ID == "" {
+		logger.Error("custom units require App information")
+		return
+	}
+
+	if detail.UnitDetails.ID == "" || detail.UnitDetails.Name == "" {
+		logger.Error("custom units require Unit information")
+		return
+	}
+	logger.WithField("count", detail.Count).Debug("received custom unit report")
+
+	trxnCtx := transactionContext{detail.APIDetails, detail.AppDetails, detail.UnitDetails.ID}
+	newMetric, _ := c.createMetric(trxnCtx)
+
+	// update the new metric with all the necessary details
+	newMetric.Count = detail.Count
+	newMetric.StartTime = time.UnixMilli(detail.Observation.Start)
+	newMetric.Observation = detail.Observation
+
+	newMetric.Unit = &models.Unit{
+		ID:   detail.UnitDetails.ID,
+		Name: detail.UnitDetails.Name,
+	}
 
 	c.AddAPIMetric(newMetric)
 }
@@ -327,7 +373,7 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []string) {
+func (c *collector) createMetric(detail transactionContext) (*APIMetric, []string) {
 	// Go get the access request and managed app
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
@@ -346,7 +392,7 @@ func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []strin
 	appDetail := c.createAppDetail(managedApp)
 
 	// consumer, subscriptionID, appID, apiID, status
-	histogramKeyParts := []string{"consumer", subRef.ID, appDetail.ID, strings.ReplaceAll(detail.APIDetails.ID, ".", "#"), detail.StatusCode}
+	histogramKeyParts := []string{"consumer", subRef.ID, appDetail.ID, strings.ReplaceAll(detail.APIDetails.ID, ".", "#"), detail.UniqueKey}
 
 	return &APIMetric{
 		Subscription:  c.createSubscriptionDetail(subRef),
@@ -356,8 +402,6 @@ func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []strin
 		AssetResource: c.getAssetResource(accessRequest, c.logger),
 		ProductPlan:   c.getProductPlan(accessRequest, c.logger),
 		Quota:         c.getQuota(accessRequest, c.logger),
-		StatusCode:    detail.StatusCode,
-		Status:        c.getStatusText(detail.StatusCode),
 		StartTime:     now(),
 		EventID:       uuid.NewString(),
 	}, histogramKeyParts
@@ -368,7 +412,7 @@ func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
 		return nil // no need to update metrics with publish off
 	}
 
-	metric, keyParts := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	metric, keyParts := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
 	histogram := c.getOrRegisterHistogram(strings.Join(keyParts, "."))
 
 	c.metricMapLock.Lock()
@@ -394,7 +438,7 @@ func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
 }
 
 // getAccessRequest -
-func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail TransactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
+func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail transactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
 	if detail.AppDetails.Name == "" {
 		return nil, nil
 	}
