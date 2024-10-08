@@ -86,7 +86,7 @@ func (avj *AgentVersionCheckJob) getAgentState() (string, error) {
 	// The kind should be only DA or TA
 	subResKey := management.DiscoveryAgentAgentstateSubResourceName
 	if agentRes.GetGroupVersionKind().Kind == "TraceabilityAgent" {
-		subResKey = management.DiscoveryAgentAgentstateSubResourceName
+		subResKey = management.TraceabilityAgentAgentstateSubResourceName
 	}
 
 	err := fmt.Errorf("could not find the agentstate from agent subresource")
