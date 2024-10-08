@@ -415,6 +415,10 @@ func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
 	metric, keyParts := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
 	histogram := c.getOrRegisterHistogram(strings.Join(keyParts, "."))
 
+	// update metric with status code
+	metric.StatusCode = detail.StatusCode
+	metric.Status = c.getStatusText(detail.StatusCode)
+
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
 	if _, ok := c.metricMap[keyParts[1]]; !ok {
@@ -786,6 +790,7 @@ func (c *collector) setMetricsFromHistogram(metrics *APIMetric, histogram metric
 
 func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *APIMetric) {
 	if metric.Count == 0 {
+		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
 
