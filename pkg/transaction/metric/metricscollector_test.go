@@ -312,7 +312,23 @@ func TestMetricCollector(t *testing.T) {
 		appName                   string
 		publishPrior              bool
 		hcStatus                  healthcheck.StatusLevel
+		skipWaitForPub            bool
 	}{
+		// Success case with no usage report
+		{
+			name:                      "WithUsageNoUsageReport",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{0},
+			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*UsageResponse{nil},
+			expectedLHEvents:          []int{0},
+			expectedTransactionCount:  []int{0},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 0,
+			skipWaitForPub:            true,
+		},
 		// Success case with no app detail
 		{
 			name:                      "WithUsage",
@@ -370,20 +386,6 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
-		},
-		// Success case with no usage report
-		{
-			name:                      "WithUsageNoUsageReport",
-			loopCount:                 1,
-			retryBatchCount:           0,
-			apiTransactionCount:       []int{0},
-			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*UsageResponse{nil},
-			expectedLHEvents:          []int{0},
-			expectedTransactionCount:  []int{0},
-			trackVolume:               false,
-			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
@@ -464,6 +466,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 0, // API metric + Provider subscription metric
 			appName:                   "managed-app-1",
 			hcStatus:                  healthcheck.FAIL,
+			skipWaitForPub:            true,
 		},
 	}
 
@@ -493,12 +496,19 @@ func TestMetricCollector(t *testing.T) {
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				s.failUsageResponse = test.failUsageResponseOnServer[l]
+				myMockClient.(*MockClient).published = false
+				myMockClient.(*MockClient).eventsAcked = 0
 				if test.publishPrior {
 					metricCollector.usagePublisher.Execute()
 					metricCollector.Execute()
 				} else {
 					metricCollector.Execute()
 					metricCollector.usagePublisher.Execute()
+				}
+				if !test.skipWaitForPub {
+					for !myMockClient.(*MockClient).published {
+						time.Sleep(1000)
+					}
 				}
 				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}

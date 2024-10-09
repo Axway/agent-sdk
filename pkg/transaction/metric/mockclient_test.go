@@ -16,11 +16,13 @@ type MockClient struct {
 	retry       int
 	pubCount    int
 	eventsAcked int
+	published   bool
 }
 
 func (m *MockClient) Close() error   { return nil }
-func (m *MockClient) Connect() error { return nil }
+func (m *MockClient) Connect() error { m.published = false; return nil }
 func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
+	m.published = false
 	m.pubCount++
 	switch {
 	case m.retry >= m.pubCount:
@@ -31,6 +33,7 @@ func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
 		m.eventsAcked = len(batch.Events())
 		batch.ACK()
 	}
+	m.published = true
 	return nil
 }
 func (m *MockClient) String() string {
