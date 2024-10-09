@@ -60,13 +60,13 @@ func (avj *AgentVersionCheckJob) Execute() error {
 
 	switch state {
 	case "current":
-		log.Trace("agent is up to date.")
+		avj.logger.Trace("agent is up to date.")
 	case "available":
-		log.Warn("please be aware that there is a newer agent version available.")
+		avj.logger.Warn("please be aware that there is a newer agent version available.")
 	case "outdated":
-		log.Error("current agent version is no longer supported. We strongly advise to update the agent as soon as possible.")
+		avj.logger.Error("current agent version is no longer supported. We strongly advise to update the agent as soon as possible.")
 	case "retracted":
-		log.Error("current agent version has a known issue, please update the agent immediately.")
+		avj.logger.Error("current agent version has a known issue, please update the agent immediately.")
 	}
 	return nil
 }
