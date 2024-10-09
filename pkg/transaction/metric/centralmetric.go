@@ -5,26 +5,32 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/sirupsen/logrus"
 )
 
-// centralMetricEvent - the event that is actually sent to platform
-type centralMetricEvent struct {
+// metricInfo - the base object holding the metricInfo
+type metricInfo struct {
 	Subscription  *models.Subscription  `json:"subscription,omitempty"`
-	App           *models.AppDetails    `json:"application,omitempty"`
+	App           *models.AppDetails    `json:"app,omitempty"`
 	Product       *models.Product       `json:"product,omitempty"`
-	API           *models.APIDetails    `json:"api"`
+	API           *models.APIDetails    `json:"api,omitempty"`
 	AssetResource *models.AssetResource `json:"assetResource,omitempty"`
 	ProductPlan   *models.ProductPlan   `json:"productPlan,omitempty"`
 	Quota         *models.Quota         `json:"quota,omitempty"`
 	Unit          *models.Unit          `json:"unit,omitempty"`
 	StatusCode    string                `json:"statusCode,omitempty"`
-	Status        string                `json:"status,omitempty"`
-	Count         int64                 `json:"count"`
-	Response      *ResponseMetrics      `json:"response,omitempty"`
-	Observation   *ObservationDetails   `json:"observation"`
-	EventID       string                `json:"-"`
-	StartTime     time.Time             `json:"-"`
+}
+
+// centralMetricEvent - the event that is actually sent to platform
+type centralMetricEvent struct {
+	metricInfo
+	Status      string              `json:"status,omitempty"`
+	Count       int64               `json:"count"`
+	Response    *ResponseMetrics    `json:"response,omitempty"`
+	Observation *ObservationDetails `json:"observation"`
+	EventID     string              `json:"-"`
+	StartTime   time.Time           `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -80,7 +86,7 @@ func (a *centralMetricEvent) GetLogFields() logrus.Fields {
 	return fields
 }
 
-// GetType - Returns APIMetric
+// getKey - returns the cache key for the metric
 func (a *centralMetricEvent) getKey() string {
 	subID := unknown
 	if a.Subscription != nil {
@@ -102,4 +108,13 @@ func (a *centralMetricEvent) getKey() string {
 	}
 
 	return metricKeyPrefix + strings.Join([]string{subID, appID, apiID, uniqueKey}, ".")
+}
+
+func (a *centralMetricEvent) createdCachedMetric(histogram metrics.Histogram) cachedMetric {
+	return cachedMetric{
+		metricInfo: a.metricInfo,
+		StartTime:  a.StartTime,
+		Count:      histogram.Count(),
+		Values:     histogram.Sample().Values(),
+	}
 }

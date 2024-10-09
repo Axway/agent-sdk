@@ -193,28 +193,14 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *central
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	cachedMetric := cachedMetric{
-		Subscription:  metric.Subscription,
-		App:           metric.App,
-		Product:       metric.Product,
-		AssetResource: metric.AssetResource,
-		ProductPlan:   metric.ProductPlan,
-		Quota:         metric.Quota,
-		API:           metric.API,
-		Unit:          metric.Unit,
-		StatusCode:    metric.StatusCode,
-		Count:         histogram.Count(),
-		Values:        histogram.Sample().Values(),
-		StartTime:     metric.StartTime,
-	}
-
-	c.storage.Set(metric.getKey(), cachedMetric)
+	c.storage.Set(metric.getKey(), metric.createdCachedMetric(histogram))
 }
 
 func (c *cacheStorage) removeMetric(metric *centralMetricEvent) {
 	if !c.isInitialized {
 		return
 	}
+
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 

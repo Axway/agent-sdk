@@ -6,11 +6,13 @@ import (
 
 func centralMetricFromAPIMetric(in *APIMetric) *centralMetricEvent {
 	out := &centralMetricEvent{
-		StatusCode: in.StatusCode,
-		Status:     in.Status,
-		Count:      in.Count,
-		EventID:    in.EventID,
-		StartTime:  in.StartTime,
+		metricInfo: metricInfo{
+			StatusCode: in.StatusCode,
+		},
+		Count:     in.Count,
+		Status:    in.Status,
+		EventID:   in.EventID,
+		StartTime: in.StartTime,
 	}
 
 	if in.Subscription.ID != unknown && in.Subscription.ID != "" {

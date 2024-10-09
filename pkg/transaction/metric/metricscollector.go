@@ -382,15 +382,17 @@ func (c *collector) createMetric(detail transactionContext) *centralMetricEvent 
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
 	return &centralMetricEvent{
-		Subscription:  c.createSubscriptionDetail(accessRequest),
-		App:           c.createAppDetail(managedApp),
-		Product:       c.getProduct(accessRequest),
-		API:           c.createAPIDetail(detail.APIDetails),
-		AssetResource: c.getAssetResource(accessRequest),
-		ProductPlan:   c.getProductPlan(accessRequest),
-		Quota:         c.getQuota(accessRequest),
-		StartTime:     now(),
-		EventID:       uuid.NewString(),
+		metricInfo: metricInfo{
+			Subscription:  c.createSubscriptionDetail(accessRequest),
+			App:           c.createAppDetail(managedApp),
+			Product:       c.getProduct(accessRequest),
+			API:           c.createAPIDetail(detail.APIDetails),
+			AssetResource: c.getAssetResource(accessRequest),
+			ProductPlan:   c.getProductPlan(accessRequest),
+			Quota:         c.getQuota(accessRequest),
+		},
+		StartTime: now(),
+		EventID:   uuid.NewString(),
 	}
 }
 
