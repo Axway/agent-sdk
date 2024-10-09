@@ -9,9 +9,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	"regexp"
-	"strings"
-
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	log "github.com/Axway/agent-sdk/pkg/util/log"
@@ -24,26 +21,22 @@ const (
 // AgentVersionCheckJob - polls for agent versions
 type AgentVersionCheckJob struct {
 	jobs.Job
-	buildVersion string
-	manager      resource.Manager
+	logger  log.FieldLogger
+	manager resource.Manager
 }
 
 // NewAgentVersionCheckJob - creates a new agent version check job structure
 func NewAgentVersionCheckJob(cfg config.CentralConfig) (*AgentVersionCheckJob, error) {
-	// get current build version
-	buildVersion, err := getBuildVersion()
-	if err != nil {
-		return nil, err
-	}
-
 	manager := agent.GetAgentResourceManager()
 	if manager == nil {
 		return nil, errors.ErrStartingVersionChecker.FormatError("could not get the agent resource manager")
 	}
 
 	return &AgentVersionCheckJob{
-		manager:      manager,
-		buildVersion: buildVersion,
+		manager: manager,
+		logger: log.NewFieldLogger().
+			WithPackage("sdk.cmd").
+			WithComponent("agentVersionJob"),
 	}, nil
 }
 
@@ -61,14 +54,15 @@ func (avj *AgentVersionCheckJob) Status() error {
 func (avj *AgentVersionCheckJob) Execute() error {
 	state, err := avj.getAgentState()
 	if err != nil {
-		log.Trace(err)
-		// Could not get update from agent state.  Warn that we could not determine version and continue processing
-		log.Warn("Agent cannot determine the current available release. Be aware that your agent could be outdated.")
+		avj.logger.WithError(err).Warn("agent cannot determine the current available release. Be aware that your agent could be outdated.")
+		return nil
 	}
 
 	switch state {
+	case "current":
+		log.Trace("agent is up to date.")
 	case "available":
-		log.Warn("Please be aware that there is a newer agent version available")
+		log.Warn("please be aware that there is a newer agent version available.")
 	case "outdated":
 		log.Error("current agent version is no longer supported. We strongly advise to update the agent as soon as possible.")
 	case "retracted":
@@ -83,39 +77,22 @@ func (avj *AgentVersionCheckJob) getAgentState() (string, error) {
 		return "", fmt.Errorf("could not get the agent resource")
 	}
 
-	// The kind should be only DA or TA
-	subResKey := management.DiscoveryAgentAgentstateSubResourceName
-	if agentRes.GetGroupVersionKind().Kind == "TraceabilityAgent" {
-		subResKey = management.TraceabilityAgentAgentstateSubResourceName
-	}
-
-	err := fmt.Errorf("could not find the agentstate from agent subresource")
-	// This can happen at the first time the job executes, in which the resource has no agentState set beforehand
-	agentStateIface := agentRes.GetSubResource(subResKey)
-	if agentStateIface == nil {
-		return "", err
-	}
-
-	if agentState, ok := agentStateIface.(map[string]interface{}); ok {
-		if state, ok := agentState["update"]; ok {
-			if update, ok := state.(string); ok {
-				return update, nil
-			}
+	switch agentRes.GetGroupVersionKind().Kind {
+	case "TraceabilityAgent":
+		ta := management.NewTraceabilityAgent("", "")
+		if err := ta.FromInstance(agentRes); err != nil {
+			return "", fmt.Errorf("could not convert resource instance to TraceabilityAgent resource")
 		}
+		return ta.Agentstate.Update, nil
+	case "DiscoveryAgent":
+		da := management.NewDiscoveryAgent("", "")
+		if err := da.FromInstance(agentRes); err != nil {
+			return "", fmt.Errorf("could not convert resource instance to DiscoveryAgent resource")
+		}
+		return da.Agentstate.Update, nil
 	}
-	return "", err
-}
 
-func getBuildVersion() (string, error) {
-	//remove -SHA from build version
-	versionNoSHA := strings.Split(BuildVersion, "-")[0]
-
-	//regex check for semantic versioning
-	semVerRegexp := regexp.MustCompile(`\d.\d.\d`)
-	if versionNoSHA == "" || !semVerRegexp.MatchString(versionNoSHA) {
-		return "", errors.ErrStartingVersionChecker.FormatError("build version is missing or of noncompliant semantic versioning")
-	}
-	return versionNoSHA, nil
+	return "", fmt.Errorf("agent resource is neither Discovery nor Traceability")
 }
 
 // startVersionCheckJobs - starts both a single run and continuous checks
