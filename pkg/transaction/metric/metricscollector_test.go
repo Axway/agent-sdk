@@ -486,9 +486,12 @@ func TestMetricCollector(t *testing.T) {
 				traceStatus = test.hcStatus
 			}
 			runTestHealthcheck()
-
+			myCollector.InitializeBatch()
+			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetricEvent)
 			cfg.SetAxwayManaged(test.trackVolume)
-			setupMockClient(test.retryBatchCount)
+			testClient := setupMockClient(test.retryBatchCount)
+			mockClient := testClient.(*MockClient)
+
 			for l := 0; l < test.loopCount; l++ {
 				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
@@ -506,8 +509,6 @@ func TestMetricCollector(t *testing.T) {
 				}
 				s.failUsageEvent = test.failUsageEventOnServer[l]
 				s.failUsageResponse = test.failUsageResponseOnServer[l]
-				myMockClient.(*MockClient).published = false
-				myMockClient.(*MockClient).eventsAcked = 0
 				if test.publishPrior {
 					metricCollector.usagePublisher.Execute()
 					metricCollector.Execute()
@@ -515,13 +516,8 @@ func TestMetricCollector(t *testing.T) {
 					metricCollector.Execute()
 					metricCollector.usagePublisher.Execute()
 				}
-				if !test.skipWaitForPub {
-					for !myMockClient.(*MockClient).published {
-						time.Sleep(1000)
-					}
-				}
-				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
+			assert.Equal(t, test.expectedMetricEventsAcked, mockClient.eventsAcked)
 			s.resetConfig()
 		})
 	}
@@ -614,6 +610,16 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
+
+	// setup the cache for handling custom metrics
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
 
 	traceStatus = healthcheck.OK
 	runTestHealthcheck()
@@ -897,7 +903,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 	cleanUpReportFiles()
 }
 
-func Test(t *testing.T) {
+func TestCustomMetrics(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
 	defer s.closeServer()

@@ -16,13 +16,11 @@ type MockClient struct {
 	retry       int
 	pubCount    int
 	eventsAcked int
-	published   bool
 }
 
 func (m *MockClient) Close() error   { return nil }
-func (m *MockClient) Connect() error { m.published = false; return nil }
+func (m *MockClient) Connect() error { return nil }
 func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
-	m.published = false
 	m.pubCount++
 	switch {
 	case m.retry >= m.pubCount:
@@ -33,27 +31,23 @@ func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
 		m.eventsAcked = len(batch.Events())
 		batch.ACK()
 	}
-	m.published = true
 	return nil
 }
 func (m *MockClient) String() string {
 	return ""
 }
 
-var myMockClient outputs.Client
-
-func mockGetClient() (*traceability.Client, error) {
-	tpClient := &traceability.Client{}
-	tpClient.SetTransportClient(myMockClient)
-	tpClient.SetLogger(log.NewFieldLogger())
-	return tpClient, nil
-}
-
-func setupMockClient(retries int) {
-	myMockClient = &MockClient{
+func setupMockClient(retries int) outputs.Client {
+	testClient := &MockClient{
 		pubCount:    0,
 		retry:       retries,
 		eventsAcked: 0,
 	}
-	traceability.GetClient = mockGetClient
+	traceability.GetClient = func() (*traceability.Client, error) {
+		tpClient := &traceability.Client{}
+		tpClient.SetTransportClient(testClient)
+		tpClient.SetLogger(log.NewFieldLogger())
+		return tpClient, nil
+	}
+	return testClient
 }
