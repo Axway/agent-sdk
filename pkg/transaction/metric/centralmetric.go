@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
-	metrics "github.com/rcrowley/go-metrics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -107,14 +106,14 @@ func (a *centralMetricEvent) getKey() string {
 		uniqueKey = a.Unit.ID
 	}
 
-	return metricKeyPrefix + strings.Join([]string{subID, appID, apiID, uniqueKey}, ".")
+	return strings.Join([]string{metricKeyPrefix, subID, appID, apiID, uniqueKey}, ".")
 }
 
-func (a *centralMetricEvent) createdCachedMetric(histogram metrics.Histogram) cachedMetric {
+func (a *centralMetricEvent) createdCachedMetric(cached cachedMetricInterface) cachedMetric {
 	return cachedMetric{
 		metricInfo: a.metricInfo,
 		StartTime:  a.StartTime,
-		Count:      histogram.Count(),
-		Values:     histogram.Sample().Values(),
+		Count:      cached.Count(),
+		Values:     cached.Values(),
 	}
 }

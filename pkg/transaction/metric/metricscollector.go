@@ -271,7 +271,12 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		return
 	}
 
-	newMetric := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Status:     detail.StatusCode,
+	}
+	newMetric := c.createMetric(transactionCtx)
 	// update the new metric with all the necessary details
 	newMetric.Count = detail.Count
 	newMetric.Response = &detail.Response
@@ -311,19 +316,28 @@ func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
 	}
 	logger.WithField("count", detail.Count).Debug("received custom unit report")
 
-	newMetric := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.UnitDetails.ID})
-
-	// update the new metric with all the necessary details
-	newMetric.Count = detail.Count
-	newMetric.StartTime = time.UnixMilli(detail.Observation.Start)
-	newMetric.Observation = &detail.Observation
-
-	newMetric.Unit = &models.Unit{
-		ID:   detail.UnitDetails.ID,
-		Name: detail.UnitDetails.Name,
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Unit:       detail.UnitDetails.ID,
 	}
 
-	c.addMetric(newMetric)
+	metric := c.createMetric(transactionCtx)
+	metric.StartTime = time.UnixMilli(detail.Observation.Start)
+	metric.Observation = &detail.Observation
+
+	if m := c.getExistingMetric(metric); m != nil {
+		// use the cached metric
+		metric = m
+	}
+
+	// add the count
+	metric.Count += detail.Count
+
+	counter := c.getOrRegisterCounter(metric.getKey())
+	counter.Inc(detail.Count)
+
+	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
 // AddAPIMetric - add api metric for API transaction
@@ -381,7 +395,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetricEvent 
 	// Go get the access request and managed app
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
-	return &centralMetricEvent{
+	cme := &centralMetricEvent{
 		metricInfo: metricInfo{
 			Subscription:  c.createSubscriptionDetail(accessRequest),
 			App:           c.createAppDetail(managedApp),
@@ -389,11 +403,19 @@ func (c *collector) createMetric(detail transactionContext) *centralMetricEvent 
 			API:           c.createAPIDetail(detail.APIDetails),
 			AssetResource: c.getAssetResource(accessRequest),
 			ProductPlan:   c.getProductPlan(accessRequest),
-			Quota:         c.getQuota(accessRequest),
+			Quota:         c.getQuota(accessRequest, detail.Unit),
+			Unit:          c.getProductPlanUnit(accessRequest, detail.Unit),
 		},
 		StartTime: now(),
 		EventID:   uuid.NewString(),
 	}
+
+	if detail.Status != "" {
+		cme.StatusCode = detail.Status
+		cme.Status = c.getStatusText(detail.Status)
+	}
+
+	return cme
 }
 
 func (c *collector) createOrUpdateMetric(detail Detail) *centralMetricEvent {
@@ -401,16 +423,48 @@ func (c *collector) createOrUpdateMetric(detail Detail) *centralMetricEvent {
 		return nil // no need to update metrics with publish off
 	}
 
-	metric := c.createMetric(transactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
-	histogram := c.getOrRegisterHistogram(metric.getKey())
-	keyParts := strings.Split(metric.getKey(), ".")
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Status:     detail.StatusCode,
+		Unit:       detail.Unit,
+	}
 
-	// update metric with status code
-	metric.StatusCode = detail.StatusCode
-	metric.Status = c.getStatusText(detail.StatusCode)
+	metric := c.createMetric(transactionCtx)
+
+	histogram := c.getOrRegisterHistogram(metric.getKey())
+	histogram.Update(detail.Duration)
+
+	return c.updateMetricWithCachedMetric(metric, newCustomHistogram(histogram))
+}
+
+func (c *collector) getExistingMetric(metric *centralMetricEvent) *centralMetricEvent {
+	keyParts := strings.Split(metric.getKey(), ".")
 
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
+
+	if _, ok := c.metricMap[keyParts[1]]; !ok {
+		return nil
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
+		return nil
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
+		return nil
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
+		return nil
+	}
+	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
+}
+
+func (c *collector) updateMetricWithCachedMetric(metric *centralMetricEvent, cached cachedMetricInterface) *centralMetricEvent {
+	keyParts := strings.Split(metric.getKey(), ".")
+
+	c.metricMapLock.Lock()
+	defer c.metricMapLock.Unlock()
+
 	if _, ok := c.metricMap[keyParts[1]]; !ok {
 		c.metricMap[keyParts[1]] = make(map[string]map[string]map[string]*centralMetricEvent)
 	}
@@ -426,8 +480,7 @@ func (c *collector) createOrUpdateMetric(detail Detail) *centralMetricEvent {
 		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]] = metric
 	}
 
-	histogram.Update(detail.Duration)
-	c.storage.updateMetric(histogram, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
+	c.storage.updateMetric(cached, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
 	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
 }
 
@@ -490,6 +543,12 @@ func (c *collector) createSubscriptionDetail(accessRequest *management.AccessReq
 
 func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.AppDetails {
 	if appRI == nil {
+
+		// TODO remove the following when product plan unit ready
+		// return &models.AppDetails{
+		// 	ID:   "app-id",
+		// 	Name: "app-name",
+		// }
 		return nil
 	}
 
@@ -572,18 +631,40 @@ func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *mod
 	}
 }
 
-func (c *collector) getQuota(accessRequest *management.AccessRequest) *models.Quota {
+func (c *collector) getQuota(accessRequest *management.AccessRequest, id string) *models.Quota {
 	if accessRequest == nil {
 		return nil
 	}
 
-	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
+	quotaRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.QuotaGVK())
 	if quotaRef.ID == "" {
 		return nil
 	}
 
 	return &models.Quota{
 		ID: quotaRef.ID,
+	}
+}
+
+func (c *collector) getProductPlanUnit(accessRequest *management.AccessRequest, id string) *models.Unit {
+	if accessRequest == nil {
+		// TODO remove the following when product plan unit ready
+		// return &models.Unit{
+		// 	ID:   id,
+		// 	Name: id,
+		// }
+		return nil
+	}
+
+	// TODO get the ProductPlanUnit reference
+	unitRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.QuotaGVK())
+	if unitRef.ID == "" {
+		return nil
+	}
+
+	return &models.Unit{
+		ID:   unitRef.ID,
+		Name: unitRef.Name,
 	}
 }
 

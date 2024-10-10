@@ -35,8 +35,8 @@ var (
 		Version:            "",
 	}
 	apiDetails2 = models.APIDetails{
-		ID:                 "111",
-		Name:               "111",
+		ID:                 "222",
+		Name:               "222",
 		Revision:           1,
 		TeamID:             teamID,
 		APIServiceInstance: "",
@@ -44,6 +44,16 @@ var (
 		Version:            "",
 	}
 	traceStatus = healthcheck.OK
+	appDetails1 = models.AppDetails{
+		ID:            "111",
+		Name:          "111",
+		ConsumerOrgID: "org-id-111",
+	}
+	appDetails2 = models.AppDetails{
+		ID:            "222",
+		Name:          "222",
+		ConsumerOrgID: "org-id-222",
+	}
 )
 
 func getFutureTime() time.Time {
@@ -846,7 +856,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			publisher := metricCollector.usagePublisher
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
+					myCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 				}
 				metricCollector.Execute()
 				testLoops++
@@ -888,6 +898,37 @@ func TestOfflineMetricCollector(t *testing.T) {
 }
 
 func Test(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+
+	traceStatus = healthcheck.OK
+	traceability.SetDataDirPath(".")
+	runTestHealthcheck()
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/usage"
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+
+	m := CustomMetricDetail{
+		APIDetails: apiDetails1,
+		AppDetails: appDetails1,
+		Count:      5,
+		UnitDetails: models.Unit{
+			ID:   "unit-id",
+			Name: "unit-name",
+		},
+	}
+	metricCollector.AddCustomMetricDetail(m)
+	metricCollector.AddCustomMetricDetail(m)
+	metricCollector.AddCustomMetricDetail(m)
+
 	testCases := map[string]struct {
 		skip bool
 	}{

@@ -28,7 +28,8 @@ const (
 type transactionContext struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
-	UniqueKey  string // status code or custom metric name
+	Status     string
+	Unit       string
 }
 
 // Detail - holds the details for computing metrics
@@ -37,6 +38,7 @@ type Detail struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
 	StatusCode string
+	Unit       string
 	Duration   int64
 	Bytes      int64
 }
