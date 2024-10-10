@@ -94,14 +94,14 @@ func (a *centralMetricEvent) getKey() string {
 	}
 	appID := unknown
 	if a.App != nil {
-		subID = a.App.ID
+		appID = a.App.ID
 	}
 	apiID := unknown
 	if a.API != nil {
-		subID = a.API.ID
+		apiID = a.API.ID
 	}
 	uniqueKey := unknown
-	if a.StatusCode == "" {
+	if a.StatusCode != "" {
 		uniqueKey = a.StatusCode
 	} else if a.Unit != nil {
 		uniqueKey = a.Unit.ID
