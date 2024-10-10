@@ -919,10 +919,19 @@ func TestCustomMetrics(t *testing.T) {
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
 
-	m := CustomMetricDetail{
+	base := CustomMetricDetail{
 		APIDetails: apiDetails1,
 		AppDetails: appDetails1,
 		Count:      5,
@@ -931,15 +940,41 @@ func TestCustomMetrics(t *testing.T) {
 			Name: "unit-name",
 		},
 	}
-	metricCollector.AddCustomMetricDetail(m)
-	metricCollector.AddCustomMetricDetail(m)
-	metricCollector.AddCustomMetricDetail(m)
+	_ = base
 
 	testCases := map[string]struct {
-		skip bool
+		skip            bool
+		metricEvent1    CustomMetricDetail
+		metricEvent2    CustomMetricDetail
+		expectedMetrics int
 	}{
-		"test case 1": {
-			skip: true,
+		"no custom metric when api details not in event": {
+			skip:         false,
+			metricEvent1: CustomMetricDetail{},
+		},
+		"no custom metric when app details not in event": {
+			skip: false,
+			metricEvent1: CustomMetricDetail{
+				APIDetails: apiDetails1,
+			},
+		},
+		"no custom metric when unit details not in event": {
+			skip: false,
+			metricEvent1: CustomMetricDetail{
+				APIDetails: apiDetails1,
+				AppDetails: appDetails1,
+			},
+		},
+		"expect custom metric when all needed data given": {
+			skip:            false,
+			metricEvent1:    base,
+			expectedMetrics: 1,
+		},
+		"expect 1 metric when multiple updates for same unit and detials": {
+			skip:            false,
+			metricEvent1:    base,
+			metricEvent2:    base,
+			expectedMetrics: 1,
 		},
 	}
 	for name, tc := range testCases {
@@ -947,6 +982,12 @@ func TestCustomMetrics(t *testing.T) {
 			if tc.skip {
 				return
 			}
+			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetricEvent{}
+			metricCollector.AddCustomMetricDetail(tc.metricEvent1)
+			if tc.metricEvent2.Count > 0 {
+				metricCollector.AddCustomMetricDetail(tc.metricEvent2)
+			}
+			assert.Equal(t, tc.expectedMetrics, len(metricCollector.metricMap))
 		})
 	}
 }
