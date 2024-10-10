@@ -281,9 +281,5 @@ func (c *usageReportCache) shouldPublish(schedule string) bool {
 	}
 	// publish if last scheduled time is past
 	nextPublishTime := cronSchedule.Next(lastPublishTimestamp)
-	if nextPublishTime.Before(currentTime) {
-		return true
-	}
-
-	return false
+	return nextPublishTime.Before(currentTime)
 }
