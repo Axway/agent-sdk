@@ -156,15 +156,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 			if config.MetricServiceEnabled() {
 				// Initialize custom units client
-				c := &CustomUnitsQEClient{
-					logger:    getLoggerFromContext(ctx),
-					ctx:       ctx,
-					quotaInfo: quotaInfo,
-					url:       config.GetMetricServiceURL(),
-					dialOpts: []grpc.DialOption{
-						grpc.WithTransportCredentials(insecure.NewCredentials()),
-					},
-				}
+				c := NewQuotaEnforcementClient(ctx, config.URL, quotaInfo)
 
 				response, err := c.GetQuotaEnforcementInfo()
 
@@ -451,6 +443,18 @@ type CustomUnitsQEClient struct {
 	cOpts     []grpc.CallOption
 	url       string
 	conn      *grpc.ClientConn
+}
+
+func NewQuotaEnforcementClient(ctx context.Context, url string, quotaInfo *customunits.QuotaInfo) CustomUnitsQEClient {
+	return CustomUnitsQEClient{
+		logger:    getLoggerFromContext(ctx),
+		ctx:       ctx,
+		quotaInfo: quotaInfo,
+		url:       url,
+		dialOpts: []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		},
+	}
 }
 
 func (c *CustomUnitsQEClient) GetQuotaEnforcementInfo() (*customunits.QuotaEnforcementResponse, error) {
