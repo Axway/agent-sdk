@@ -57,6 +57,7 @@ type Collector interface {
 	AddAPIMetric(apiMetric *APIMetric)
 	Publish()
 	ShutdownPublish()
+	AddCustomMetricDetail()
 }
 
 // collector - collects the metrics for transactions events
@@ -913,4 +914,8 @@ func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, str
 	}
 
 	return ri.Metadata.ID, ri.Name // default to the managed app id
+}
+
+func (c *collector) AddCustomMetricDetail() {
+	// TODO: Implement this Function
 }

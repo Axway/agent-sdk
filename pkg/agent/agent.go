@@ -27,6 +27,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AgentStatus - status for Agent resource
@@ -164,7 +166,23 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			return err
 		}
 	}
+	// call the metric services.
+	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
+	// iterate over each metric service config
+	for _, config := range metricServicesConfigs {
+		ctx := context.WithValue(context.Background(), ctxLogger, logger)
+		// Initialize custom units client
+		c := &customunit.customUnitMetricReportingClient{
+			ctx: ctx,
+			url: config.GetMetricServiceURL(),
+			dialOpts: []grpc.DialOption{
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			},
+		}
 
+		c.MetricReporting()
+
+	}
 	if !agent.isInitialized {
 		err = handleInitialization()
 		if err != nil {

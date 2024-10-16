@@ -13,18 +13,20 @@ type AgentFeaturesConfig interface {
 	GetExternalIDPConfig() ExternalIDPConfig
 	AgentStatusUpdatesEnabled() bool
 	SetPersistentCache(enable bool)
+	GetMetricServicesConfigs() []MetricServiceConfiguration
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
 type AgentFeaturesConfiguration struct {
 	AgentFeaturesConfig
 	IConfigValidator
-	ConnectToCentral     bool              `config:"connectToCentral"`
-	ProcessSystemSignals bool              `config:"processSystemSignals"`
-	VersionChecker       bool              `config:"versionChecker"`
-	PersistCache         bool              `config:"persistCache"`
-	ExternalIDPConfig    ExternalIDPConfig `config:"idp"`
-	AgentStatusUpdates   bool              `config:"agentStatusUpdates"`
+	ConnectToCentral      bool                         `config:"connectToCentral"`
+	ProcessSystemSignals  bool                         `config:"processSystemSignals"`
+	VersionChecker        bool                         `config:"versionChecker"`
+	PersistCache          bool                         `config:"persistCache"`
+	ExternalIDPConfig     ExternalIDPConfig            `config:"idp"`
+	AgentStatusUpdates    bool                         `config:"agentStatusUpdates"`
+	MetricServicesConfigs []MetricServiceConfiguration `config:"metricServices"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -65,6 +67,11 @@ func (c *AgentFeaturesConfiguration) PersistCacheEnabled() bool {
 // GetExternalIDPConfig - returns the config for external IdP providers
 func (c *AgentFeaturesConfiguration) GetExternalIDPConfig() ExternalIDPConfig {
 	return c.ExternalIDPConfig
+}
+
+// GetMetricServicesConfigs - returns the configs for metric services
+func (c *AgentFeaturesConfiguration) GetMetricServicesConfigs() []MetricServiceConfiguration {
+	return c.MetricServicesConfigs
 }
 
 // AgentStatusUpdatesEnabled - True if the agent SDK should manage the status update.

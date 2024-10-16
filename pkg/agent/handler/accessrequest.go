@@ -5,12 +5,17 @@ import (
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -26,19 +31,21 @@ type arProvisioner interface {
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov          arProvisioner
-	cache         agentcache.Manager
-	client        client
-	encryptSchema encryptSchemaFunc
+	prov                 arProvisioner
+	cache                agentcache.Manager
+	client               client
+	encryptSchema        encryptSchemaFunc
+	metricServicesConfig []config.MetricServiceConfiguration
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, metricSvcCfg []config.MetricServiceConfiguration) Handler {
 	return &accessRequestHandler{
-		prov:          prov,
-		cache:         cache,
-		client:        client,
-		encryptSchema: encryptSchema,
+		prov:                 prov,
+		cache:                cache,
+		client:               client,
+		encryptSchema:        encryptSchema,
+		metricServicesConfig: metricSvcCfg,
 	}
 }
 
@@ -132,6 +139,57 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 	data := map[string]interface{}{}
 	status, accessData := h.prov.AccessRequestProvision(req)
+
+	if status.GetStatus() == prov.Success {
+		metricServicesConfigs := h.metricServicesConfig
+		errorQE := false
+		errMessage := ""
+		// Build quota info
+		quotaInfo, err := h.buildQuotaInfo(ctx, ar)
+		if err != nil {
+			log.WithError(err).Errorf("error building quota info")
+			h.onError(ctx, ar, err)
+			return ar
+		}
+		// iterate over each metric service config
+		for _, config := range metricServicesConfigs {
+
+			if config.MetricServiceEnabled() {
+				// Initialize custom units client
+				c := &CustomUnitsQEClient{
+					logger:    getLoggerFromContext(ctx),
+					ctx:       ctx,
+					quotaInfo: quotaInfo,
+					url:       config.GetMetricServiceURL(),
+					dialOpts: []grpc.DialOption{
+						grpc.WithTransportCredentials(insecure.NewCredentials()),
+					},
+				}
+
+				response, err := c.GetQuotaEnforcementInfo()
+
+				// if error from QE and reject on fail, we return the error back to the central
+				if err != nil && config.RejectOnFailEnabled() {
+					errorQE = true
+					errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
+				}
+				if response.GetError() != "" {
+					status = prov.NewRequestStatusBuilder().
+						//TODO: set the correct status message. ALSO confirm if needs to set to "SUCCESS" ????
+						SetMessage(fmt.Sprintf("TODO: message: ")).
+						SetCurrentStatusReasons(ar.Status.Reasons).
+						Success()
+				}
+			}
+		}
+
+		if errorQE {
+			status = prov.NewRequestStatusBuilder().
+				SetMessage(errMessage).
+				SetCurrentStatusReasons(ar.Status.Reasons).
+				Failed()
+		}
+	}
 
 	if status.GetStatus() == prov.Success && accessData != nil {
 		sec := app.Spec.Security
@@ -260,6 +318,41 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 	return ard, err
 }
 
+func (h *accessRequestHandler) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest) (*customunits.QuotaInfo, error) {
+	// Get service instance from access request to fetch the api service
+	instance, err := h.getServiceInstance(ctx, ar)
+	if err != nil {
+		return nil, err
+	}
+	serviceRef := instance.GetReferenceByGVK(management.APIServiceGVK())
+	serviceID := serviceRef.ID
+	service := h.cache.GetAPIServiceWithAPIID(serviceID)
+	extAPIID, err := util.GetAgentDetailsValue(service, defs.AttrExternalAPIID)
+	if err != nil {
+		return nil, err
+	}
+	// Get app info from the access request
+	appRef := instance.GetReferenceByGVK(management.ManagedApplicationGVK())
+	appName := appRef.Name
+	app := h.cache.GetManagedApplicationByName(appName)
+
+	q := &customunits.QuotaInfo{
+		ApiInfo: &customunits.APIInfo{
+			ServiceDetails: util.GetAgentDetailStrings(service),
+			ServiceName:    service.Name,
+			ServiceID:      serviceID,
+			ExternalAPIID:  extAPIID,
+		},
+		AppInfo: &customunits.AppInfo{
+			AppDetails: util.GetAgentDetailStrings(app),
+			AppName:    app.Name,
+			AppID:      app.Metadata.ID,
+		},
+	}
+
+	return q, nil
+}
+
 func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
 	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	instID := instRef.ID
@@ -348,4 +441,26 @@ func (r provAccReq) GetInstanceDetails() map[string]interface{} {
 
 func (r provAccReq) GetQuota() prov.Quota {
 	return r.quota
+}
+
+type CustomUnitsQEClient struct {
+	ctx       context.Context
+	quotaInfo *customunits.QuotaInfo
+	logger    log.FieldLogger
+	dialOpts  []grpc.DialOption
+	cOpts     []grpc.CallOption
+	url       string
+	conn      *grpc.ClientConn
+}
+
+func (c *CustomUnitsQEClient) GetQuotaEnforcementInfo() (*customunits.QuotaEnforcementResponse, error) {
+	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	quotaEnforcementClient := customunits.NewQuotaEnforcementClient(conn)
+
+	response, err := quotaEnforcementClient.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
+
+	return response, err
 }
