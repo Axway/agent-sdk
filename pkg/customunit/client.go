@@ -6,10 +6,14 @@ import (
 	"sync"
 
 	cu "github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
-	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+type metricCollector interface {
+	AddCustomMetricDetail()
+}
 
 type customUnitMetricReportingClient struct {
 	ctx                          context.Context
@@ -21,11 +25,23 @@ type customUnitMetricReportingClient struct {
 	cOpts                        []grpc.CallOption
 	url                          string
 	conn                         *grpc.ClientConn
+	metricCollector              metricCollector
 }
 
 type CustomUnitMetricReportingClient interface {
 	MetricReporting() error
 	Close() error
+}
+
+func NewCustomUnitMetricReportingClient(ctx context.Context, url string) CustomUnitMetricReportingClient {
+	// Initialize custom units client
+	return &customUnitMetricReportingClient{
+		ctx: ctx,
+		url: url,
+		dialOpts: []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		},
+	}
 }
 
 func (c *customUnitMetricReportingClient) createConnection() error {
@@ -80,7 +96,7 @@ func (c *customUnitMetricReportingClient) processMetrics() error {
 
 func (c *customUnitMetricReportingClient) reportMetrics(*cu.MetricReport) {
 	// TODO::// deprovision the metric report and send it to the metric collector
-	metric.GetMetricCollector().AddCustomMetricDetail()
+	c.metricCollector.AddCustomMetricDetail()
 }
 
 func (c *customUnitMetricReportingClient) recv() (*cu.MetricReport, error) {

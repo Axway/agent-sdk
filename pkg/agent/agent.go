@@ -24,11 +24,10 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/customunit"
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AgentStatus - status for Agent resource
@@ -172,13 +171,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	for _, config := range metricServicesConfigs {
 		ctx := context.WithValue(context.Background(), ctxLogger, logger)
 		// Initialize custom units client
-		c := &customunit.customUnitMetricReportingClient{
-			ctx: ctx,
-			url: config.GetMetricServiceURL(),
-			dialOpts: []grpc.DialOption{
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			},
-		}
+		c := customunit.NewCustomUnitMetricReportingClient(ctx, config.URL)
 
 		c.MetricReporting()
 
