@@ -13,4 +13,6 @@ package management
 type AccessRequestReferencesQuota struct {
 	Kind string `json:"kind"`
 	Name string `json:"name,omitempty"`
+	// The name of the unit for the included quota.
+	Unit string `json:"unit,omitempty"`
 }
