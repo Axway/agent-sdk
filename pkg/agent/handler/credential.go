@@ -81,7 +81,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	}
 
 	if c, ok := h.prov.(prov.CustomCredential); ok {
-		creds := c.GetIgnoredCredentials()
+		creds := c.GetIgnoredCredentialTypes()
 		for _, cred := range creds {
 			if cred == cr.Spec.CredentialRequestDefinition {
 				logger.WithField("crdName", cred).Debug("skipping handling credential provisioning")

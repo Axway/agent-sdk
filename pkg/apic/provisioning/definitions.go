@@ -131,7 +131,7 @@ type Provisioning interface {
 }
 
 type CustomCredential interface {
-	GetIgnoredCredentials() []string
+	GetIgnoredCredentialTypes() []string
 }
 
 // ExpiredCredentialAction - the action to take on an expired credential
