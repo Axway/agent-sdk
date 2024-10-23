@@ -58,7 +58,6 @@ type Collector interface {
 	AddAPIMetric(apiMetric *APIMetric)
 	Publish()
 	ShutdownPublish()
-	AddCustomMetricDetail()
 }
 
 // collector - collects the metrics for transactions events
