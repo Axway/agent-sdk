@@ -9,6 +9,7 @@ const (
 	OAuthSecretCRD    = "oauth-secret"
 	OAuthPublicKeyCRD = "oauth-public-key"
 	OAuthIDPCRD       = "oauth-idp"
+	ExternalCRD       = "external-crd"
 
 	OauthClientID            = "clientId"
 	OauthClientSecret        = "clientSecret"
@@ -127,6 +128,10 @@ type Provisioning interface {
 	CredentialDeprovision(CredentialRequest) RequestStatus
 	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
 	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
+}
+
+type CustomCredential interface {
+	GetIgnoredCredentials() []string
 }
 
 // ExpiredCredentialAction - the action to take on an expired credential
