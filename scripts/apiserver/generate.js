@@ -88,7 +88,8 @@ const writeSubResources = (subResources) => {
 	for (let groupKey in subResources) {
 		const groupObj = subResources[groupKey];
 		for (let versionKey in groupObj) {
-			const data = JSON.stringify(groupObj[versionKey]);
+			// stringify the group and version data, update all references to drop group and version within path
+			const data = JSON.stringify(groupObj[versionKey]).replaceAll(`components/schemas/${groupKey}.${versionKey}.`, `components/schemas/`);
 			const res = execSync(
 				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
 			);

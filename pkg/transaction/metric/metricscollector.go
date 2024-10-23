@@ -52,6 +52,7 @@ func ExitMetricInit() {
 type Collector interface {
 	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
+	AddCustomMetricDetail(metric CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
@@ -72,7 +73,7 @@ type collector struct {
 	batchLock        *sync.Mutex
 	registry         metrics.Registry
 	metricBatch      *EventBatch
-	metricMap        map[string]map[string]map[string]map[string]*APIMetric
+	metricMap        map[string]map[string]map[string]map[string]*centralMetricEvent
 	metricMapLock    *sync.Mutex
 	publishItemQueue []publishQueueItem
 	jobID            string
@@ -96,7 +97,6 @@ type usageEventPublishItem interface {
 }
 
 type usageEventQueueItem struct {
-	usageEventPublishItem
 	event        UsageEvent
 	usageMetric  metrics.Counter
 	volumeMetric metrics.Counter
@@ -165,7 +165,7 @@ func createMetricCollector() Collector {
 		batchLock:        &sync.Mutex{},
 		metricMapLock:    &sync.Mutex{},
 		registry:         metrics.NewRegistry(),
-		metricMap:        make(map[string]map[string]map[string]map[string]*APIMetric),
+		metricMap:        make(map[string]map[string]map[string]map[string]*centralMetricEvent),
 		publishItemQueue: make([]publishQueueItem, 0),
 		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
@@ -266,24 +266,88 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.createOrUpdateMetric(metricDetail)
 }
 
-// AddMetricDetailSet - add metric details for several response codes and transactions
+// AddAPIMetricDetail - add metric details for several response codes and transactions
 func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
 
-	newMetric, _ := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Status:     detail.StatusCode,
+	}
+	newMetric := c.createMetric(transactionCtx)
 	// update the new metric with all the necessary details
 	newMetric.Count = detail.Count
-	newMetric.Response = detail.Response
+	newMetric.Response = &detail.Response
 	newMetric.StartTime = time.UnixMilli(detail.Observation.Start)
-	newMetric.Observation = detail.Observation
+	newMetric.Observation = &detail.Observation
+	newMetric.StatusCode = detail.StatusCode
+	newMetric.Status = c.getStatusText(detail.StatusCode)
 
-	c.AddAPIMetric(newMetric)
+	c.addMetric(newMetric)
+}
+
+// AddCustomMetricDetail - add custom unit metric details for an api/app combo
+func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
+		return
+	}
+
+	logger := c.logger.WithField("handler", "customMetric").
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("appID", detail.AppDetails.ID).
+		WithField("unitID", detail.UnitDetails.ID).
+		WithField("unitName", detail.UnitDetails.Name)
+
+	if detail.APIDetails.ID == "" {
+		logger.Error("custom units require API information")
+		return
+	}
+
+	if detail.AppDetails.ID == "" {
+		logger.Error("custom units require App information")
+		return
+	}
+
+	if detail.UnitDetails.ID == "" || detail.UnitDetails.Name == "" {
+		logger.Error("custom units require Unit information")
+		return
+	}
+	logger.WithField("count", detail.Count).Debug("received custom unit report")
+
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		UnitName:   detail.UnitDetails.ID,
+	}
+
+	metric := c.createMetric(transactionCtx)
+	metric.StartTime = time.UnixMilli(detail.Observation.Start)
+	metric.Observation = &detail.Observation
+
+	if m := c.getExistingMetric(metric); m != nil {
+		// use the cached metric
+		metric = m
+	}
+
+	// add the count
+	metric.Count += detail.Count
+
+	counter := c.getOrRegisterCounter(metric.getKey())
+	counter.Inc(detail.Count)
+
+	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
 // AddAPIMetric - add api metric for API transaction
 func (c *collector) AddAPIMetric(metric *APIMetric) {
+	c.addMetric(centralMetricFromAPIMetric(metric))
+}
+
+// addMetric - add central metric event
+func (c *collector) addMetric(metric *centralMetricEvent) {
 	if metric.EventID == "" {
 		metric.EventID = uuid.NewString()
 	}
@@ -328,60 +392,88 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
-func (c *collector) createMetric(detail TransactionContext) (*APIMetric, []string) {
+func (c *collector) createMetric(detail transactionContext) *centralMetricEvent {
 	// Go get the access request and managed app
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
-	// Update consumer details
-	subRef := v1.Reference{
-		ID:   unknown,
-		Name: unknown,
+	cme := &centralMetricEvent{
+		metricInfo: metricInfo{
+			Subscription:  c.createSubscriptionDetail(accessRequest),
+			App:           c.createAppDetail(managedApp),
+			Product:       c.getProduct(accessRequest),
+			API:           c.createAPIDetail(detail.APIDetails),
+			AssetResource: c.getAssetResource(accessRequest),
+			ProductPlan:   c.getProductPlan(accessRequest),
+			Quota:         c.getQuota(accessRequest, detail.UnitName),
+			Unit:          c.getProductPlanUnit(accessRequest, detail.UnitName),
+		},
+		StartTime: now(),
+		EventID:   uuid.NewString(),
 	}
-	if accessRequest != nil {
-		accessReqSub := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
-		if accessReqSub.ID != "" {
-			subRef = accessReqSub
-		}
+
+	if detail.Status != "" {
+		cme.StatusCode = detail.Status
+		cme.Status = c.getStatusText(detail.Status)
 	}
 
-	appDetail := c.createAppDetail(managedApp)
-
-	// consumer, subscriptionID, appID, apiID, status
-	histogramKeyParts := []string{"consumer", subRef.ID, appDetail.ID, strings.ReplaceAll(detail.APIDetails.ID, ".", "#"), detail.StatusCode}
-
-	return &APIMetric{
-		Subscription:  c.createSubscriptionDetail(subRef),
-		App:           appDetail,
-		Product:       c.getProduct(accessRequest, c.logger),
-		API:           c.createAPIDetail(detail.APIDetails, accessRequest),
-		AssetResource: c.getAssetResource(accessRequest, c.logger),
-		ProductPlan:   c.getProductPlan(accessRequest, c.logger),
-		Quota:         c.getQuota(accessRequest, c.logger),
-		StatusCode:    detail.StatusCode,
-		Status:        c.getStatusText(detail.StatusCode),
-		StartTime:     now(),
-		EventID:       uuid.NewString(),
-	}, histogramKeyParts
+	return cme
 }
 
-func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
+func (c *collector) createOrUpdateMetric(detail Detail) *centralMetricEvent {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return nil // no need to update metrics with publish off
 	}
 
-	metric, keyParts := c.createMetric(TransactionContext{detail.APIDetails, detail.AppDetails, detail.StatusCode})
-	histogram := c.getOrRegisterHistogram(strings.Join(keyParts, "."))
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Status:     detail.StatusCode,
+		UnitName:   detail.UnitName,
+	}
+
+	metric := c.createMetric(transactionCtx)
+
+	histogram := c.getOrRegisterHistogram(metric.getKey())
+	histogram.Update(detail.Duration)
+
+	return c.updateMetricWithCachedMetric(metric, newCustomHistogram(histogram))
+}
+
+func (c *collector) getExistingMetric(metric *centralMetricEvent) *centralMetricEvent {
+	keyParts := strings.Split(metric.getKey(), ".")
 
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
+
 	if _, ok := c.metricMap[keyParts[1]]; !ok {
-		c.metricMap[keyParts[1]] = make(map[string]map[string]map[string]*APIMetric)
+		return nil
 	}
 	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
-		c.metricMap[keyParts[1]][keyParts[2]] = make(map[string]map[string]*APIMetric)
+		return nil
 	}
 	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
-		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]] = make(map[string]*APIMetric)
+		return nil
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
+		return nil
+	}
+	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
+}
+
+func (c *collector) updateMetricWithCachedMetric(metric *centralMetricEvent, cached cachedMetricInterface) *centralMetricEvent {
+	keyParts := strings.Split(metric.getKey(), ".")
+
+	c.metricMapLock.Lock()
+	defer c.metricMapLock.Unlock()
+
+	if _, ok := c.metricMap[keyParts[1]]; !ok {
+		c.metricMap[keyParts[1]] = make(map[string]map[string]map[string]*centralMetricEvent)
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
+		c.metricMap[keyParts[1]][keyParts[2]] = make(map[string]map[string]*centralMetricEvent)
+	}
+	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
+		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]] = make(map[string]*centralMetricEvent)
 	}
 	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
 		// First api metric for sub+app+api+statuscode,
@@ -389,13 +481,12 @@ func (c *collector) createOrUpdateMetric(detail Detail) *APIMetric {
 		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]] = metric
 	}
 
-	histogram.Update(detail.Duration)
-	c.storage.updateMetric(histogram, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
+	c.storage.updateMetric(cached, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
 	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
 }
 
 // getAccessRequest -
-func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail TransactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
+func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail transactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
 	if detail.AppDetails.Name == "" {
 		return nil, nil
 	}
@@ -415,7 +506,7 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 	}
 	c.logger.
 		WithField("appName", detail.AppDetails.Name).
-		WithField("managed-app-name", managedApp.Name).
+		WithField("managedAppName", managedApp.Name).
 		Trace("managed application info")
 
 	// get the access request
@@ -426,159 +517,150 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 		return nil, nil
 	}
 	c.logger.
-		WithField("managed-app-name", managedApp.Name).
+		WithField("managedAppName", managedApp.Name).
 		WithField("apiID", detail.APIDetails.ID).
 		WithField("stage", detail.APIDetails.Stage).
-		WithField("access-request-name", accessRequest.Name).
+		WithField("accessRequestName", accessRequest.Name).
 		Trace("managed application info")
 
 	return accessRequest, managedApp
 }
 
-func (c *collector) createSubscriptionDetail(subRef v1.Reference) models.Subscription {
-	detail := models.Subscription{
-		ID:   unknown,
-		Name: unknown,
-	}
-
-	if subRef.ID != "" && subRef.Name != "" {
-		detail.ID = subRef.ID
-		detail.Name = subRef.Name
-	}
-	return detail
-}
-
-func (c *collector) createAppDetail(app *v1.ResourceInstance) models.AppDetails {
-	detail := models.AppDetails{
-		ID:   unknown,
-		Name: unknown,
-	}
-
-	if app != nil {
-		detail.ID, detail.Name = c.getConsumerApplication(app)
-		detail.ConsumerOrgID = c.getConsumerOrgID(app)
-	}
-	return detail
-}
-
-func (c *collector) createAPIDetail(api models.APIDetails, accessReq *management.AccessRequest) models.APIDetails {
-	detail := models.APIDetails{
-		ID:                 api.ID,
-		Name:               api.Name,
-		Revision:           api.Revision,
-		TeamID:             api.TeamID,
-		APIServiceInstance: unknown,
-	}
-
-	if accessReq != nil {
-		detail.APIServiceInstance = accessReq.Spec.ApiServiceInstance
-	}
-	return detail
-}
-
-func (c *collector) getAssetResource(accessRequest *management.AccessRequest, log log.FieldLogger) models.AssetResource {
-	// Set default to provider details in case access request or managed apps comes back nil
-	assetResource := models.AssetResource{
-		ID:   unknown,
-		Name: unknown,
-	}
-
+func (c *collector) createSubscriptionDetail(accessRequest *management.AccessRequest) *models.Subscription {
 	if accessRequest == nil {
-		log.Trace("access request is nil. Setting default values to unknown")
-		return assetResource
+		return nil
+	}
+
+	subRef := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
+	if subRef.ID != "" {
+		return nil
+	}
+
+	return &models.Subscription{
+		ID:   subRef.ID,
+		Name: subRef.Name,
+	}
+}
+
+func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.AppDetails {
+	if appRI == nil {
+
+		// TODO remove the following when product plan unit ready
+		// return &models.AppDetails{
+		// 	ID:   "app-id",
+		// 	Name: "app-name",
+		// }
+		return nil
+	}
+
+	app := &management.ManagedApplication{}
+	app.FromInstance(appRI)
+
+	orgID := ""
+	if app.Marketplace.Resource.Owner != nil {
+		orgID = app.Marketplace.Resource.Owner.Organization.ID
+	}
+
+	appRef := app.GetReferenceByGVK(catalog.ApplicationGVK())
+	if appRef.ID == "" {
+		return nil
+	}
+
+	return &models.AppDetails{
+		ID:            appRef.ID,
+		Name:          appRef.Name,
+		ConsumerOrgID: orgID,
+	}
+}
+
+func (c *collector) createAPIDetail(api models.APIDetails) *models.APIDetails {
+	return &models.APIDetails{
+		ID:       api.ID,
+		Name:     api.Name,
+		Revision: api.Revision,
+		TeamID:   api.TeamID,
+	}
+}
+
+func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *models.AssetResource {
+	if accessRequest == nil {
+		return nil
 	}
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
-	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
-		log.Trace("could not get asset resource, setting asset resource to unknown")
-	} else {
-		assetResource.ID = assetResourceRef.ID
-		assetResource.Name = assetResourceRef.Name
+	if assetResourceRef.ID == "" {
+		return nil
 	}
-	log.WithField("asset-resource-id", assetResource.ID).
-		WithField("asset-resource-name", assetResource.Name).
-		Trace("asset resource information")
-
-	return assetResource
+	return &models.AssetResource{
+		ID:   assetResourceRef.ID,
+		Name: assetResourceRef.Name,
+	}
 }
 
-func (c *collector) getProduct(accessRequest *management.AccessRequest, log log.FieldLogger) models.Product {
-	product := models.Product{
-		ID:          unknown,
-		Name:        unknown,
-		VersionID:   unknown,
-		VersionName: unknown,
-	}
-
+func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.Product {
 	if accessRequest == nil {
-		log.Trace("access request is nil. Setting default values to unknown")
-		return product
+		return nil
 	}
 
 	productRef := accessRequest.GetReferenceByGVK(catalog.ProductGVK())
-	if productRef.ID == "" || productRef.Name == "" {
-		log.Trace("could not get product information, setting product to unknown")
-	} else {
-		product.ID = productRef.ID
-		product.Name = productRef.Name
+	releaseRef := accessRequest.GetReferenceByGVK(catalog.ProductReleaseGVK())
+
+	if productRef.ID == "" || releaseRef.ID == "" {
+		return nil
 	}
 
-	productReleaseRef := accessRequest.GetReferenceByGVK(catalog.ProductReleaseGVK())
-	if productReleaseRef.ID == "" || productReleaseRef.Name == "" {
-		log.Trace("could not get product release information, setting product release to unknown")
-	} else {
-		product.VersionID = productReleaseRef.ID
-		product.VersionName = productReleaseRef.Name
+	return &models.Product{
+		ID:          productRef.ID,
+		Name:        productRef.Name,
+		VersionID:   releaseRef.ID,
+		VersionName: releaseRef.Name,
 	}
-	log.WithField("product-id", product.ID).
-		WithField("product-name", product.Name).
-		WithField("product-version-id", product.VersionID).
-		WithField("product-version-name", product.VersionName).
-		Trace("product information")
-	return product
-
 }
 
-func (c *collector) getProductPlan(accessRequest *management.AccessRequest, log log.FieldLogger) models.ProductPlan {
-	productPlan := models.ProductPlan{
-		ID: unknown,
-	}
-
+func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *models.ProductPlan {
 	if accessRequest == nil {
-		log.Trace("access request is nil. Setting default values to unknown")
-		return productPlan
+		return nil
 	}
 
 	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
 	if productPlanRef.ID == "" {
-		log.Debug("could not get product plan ID, setting product plan to unknown")
-	} else {
-		productPlan.ID = productPlanRef.ID
+		return nil
 	}
-	log.WithField("product-plan-id", productPlan.ID).
-		Trace("product plan ID information")
 
-	return productPlan
+	return &models.ProductPlan{
+		ID: productPlanRef.ID,
+	}
 }
 
-func (c *collector) getQuota(accessRequest *management.AccessRequest, log log.FieldLogger) models.Quota {
-	quota := models.Quota{
-		ID: unknown,
-	}
+func (c *collector) getQuota(accessRequest *management.AccessRequest, id string) *models.Quota {
 	if accessRequest == nil {
-		log.Trace("access request or managed app is nil. Setting default values to unknown")
-		return quota
+		return nil
 	}
-	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
-	if quotaRef.ID == "" {
-		log.Debug("could not get quota ID, setting quota to unknown")
-	} else {
-		quota.ID = quotaRef.ID
-	}
-	log.WithField("quota-id", quota.ID).
-		Trace("quota ID information")
 
-	return quota
+	quotaRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.QuotaGVK())
+	if quotaRef.ID == "" {
+		return nil
+	}
+
+	return &models.Quota{
+		ID: quotaRef.ID,
+	}
+}
+
+func (c *collector) getProductPlanUnit(accessRequest *management.AccessRequest, name string) *models.Unit {
+	if accessRequest == nil {
+		return nil
+	}
+
+	unitRef := accessRequest.GetReferenceByNameAndGVK(name, catalog.ProductPlanUnitGVK())
+	if unitRef.ID == "" {
+		return nil
+	}
+
+	return &models.Unit{
+		ID:   unitRef.ID,
+		Name: unitRef.Name,
+	}
 }
 
 func (c *collector) cleanup() {
@@ -734,20 +816,25 @@ func (c *collector) processMetric(metricName string, metric interface{}) {
 	}
 }
 
-func (c *collector) setMetricsFromHistogram(metrics *APIMetric, histogram metrics.Histogram) {
+func (c *collector) setMetricsFromHistogram(metrics *centralMetricEvent, histogram metrics.Histogram) {
 	metrics.Count = histogram.Count()
-	metrics.Response.Max = histogram.Max()
-	metrics.Response.Min = histogram.Min()
-	metrics.Response.Avg = histogram.Mean()
+	metrics.Response = &ResponseMetrics{
+		Max: histogram.Max(),
+		Min: histogram.Min(),
+		Avg: histogram.Mean(),
+	}
 }
 
-func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *APIMetric) {
+func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *centralMetricEvent) {
 	if metric.Count == 0 {
+		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
+	metric.Observation = &ObservationDetails{
+		Start: util.ConvertTimeToMillis(c.metricStartTime),
+		End:   util.ConvertTimeToMillis(c.metricEndTime),
+	}
 
-	metric.Observation.Start = util.ConvertTimeToMillis(c.metricStartTime)
-	metric.Observation.End = util.ConvertTimeToMillis(c.metricEndTime)
 	// Generate app subscription metric
 	c.generateV4Event(histogram, metric)
 }
@@ -884,38 +971,4 @@ func (c *collector) getStatusText(statusCode string) string {
 	default:
 		return "Exception"
 	}
-}
-
-func (c *collector) getConsumerOrgID(ri *v1.ResourceInstance) string {
-	if ri == nil {
-		return ""
-	}
-
-	// Lookup Subscription
-	app := &management.ManagedApplication{}
-	app.FromInstance(ri)
-
-	if app.Marketplace.Resource.Owner != nil {
-		return app.Marketplace.Resource.Owner.Organization.ID
-	}
-	return ""
-}
-
-func (c *collector) getConsumerApplication(ri *v1.ResourceInstance) (string, string) {
-	if ri == nil {
-		return "", ""
-	}
-
-	for _, ref := range ri.Metadata.References {
-		// get the ID of the Catalog Application
-		if ref.Kind == catalog.ApplicationGVK().Kind {
-			return ref.ID, ref.Name
-		}
-	}
-
-	return ri.Metadata.ID, ri.Name // default to the managed app id
-}
-
-func (c *collector) AddCustomMetricDetail() {
-	// TODO: Implement this Function
 }

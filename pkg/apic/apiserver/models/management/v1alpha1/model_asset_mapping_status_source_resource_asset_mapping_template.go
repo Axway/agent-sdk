@@ -11,7 +11,6 @@ package management
 
 // AssetMappingStatusSourceResourceAssetMappingTemplate  (management.v1alpha1.AssetMapping)
 type AssetMappingStatusSourceResourceAssetMappingTemplate struct {
-	Ref string `json:"ref,omitempty"`
-	// GENERATE: The following code has been modified after code generation
+	Ref           string                          `json:"ref,omitempty"`
 	OperationType AssetMappingStatusOperationType `json:"operationType,omitempty"`
 }
