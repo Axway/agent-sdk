@@ -2,6 +2,7 @@ package metric
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,13 +14,13 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
 	appUsagePrefix     = "app_usage."
 	cacheFileName      = "agent-usagemetric.json"
-	metricKeyPrefix    = "metric."
+	metricKeyPrefix    = "metric"
 	metricStartTimeKey = "metric_start_time"
 	usageStartTimeKey  = "usage_start_time"
 	usageCountKey      = "usage_count"
@@ -31,8 +32,8 @@ type storageCache interface {
 	updateUsage(usageCount int)
 	updateVolume(bytes int64)
 	updateAppUsage(usageCount int, appID string)
-	updateMetric(apiStatusMetric metrics.Histogram, metric *APIMetric)
-	removeMetric(metric *APIMetric)
+	updateMetric(cachedMetric cachedMetricInterface, metric *centralMetricEvent)
+	removeMetric(metric *centralMetricEvent)
 	save()
 }
 
@@ -148,7 +149,7 @@ func (c *cacheStorage) updateAppUsage(usageCount int, appID string) {
 func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 	cacheKeys := storageCache.GetKeys()
 	for _, cacheKey := range cacheKeys {
-		if strings.Contains(cacheKey, metricKeyPrefix) {
+		if strings.HasPrefix(cacheKey, fmt.Sprintf("%s.", metricKeyPrefix)) {
 			if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 				// delete metrics from cache in offline mode
 				storageCache.Delete(cacheKey)
@@ -160,18 +161,23 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			var cm cachedMetric
 			json.Unmarshal(buffer, &cm)
 
-			var metric *APIMetric
+			var metric *centralMetricEvent
 			for _, duration := range cm.Values {
+				unitID := ""
+				if cm.Unit != nil {
+					unitID = cm.Unit.ID
+				}
 				metricDetail := Detail{
-					APIDetails: cm.API,
-					AppDetails: cm.App,
+					APIDetails: *cm.API,
+					AppDetails: *cm.App,
+					UnitName:   unitID,
 					StatusCode: cm.StatusCode,
 					Duration:   duration,
 				}
 				metric = c.collector.createOrUpdateMetric(metricDetail)
 			}
 
-			newKey := c.getKey(metric)
+			newKey := metric.getKey()
 			if newKey != cacheKey {
 				c.storageLock.Lock()
 				storageCache.Delete(cacheKey)
@@ -185,7 +191,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 	}
 }
 
-func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetric) {
+func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centralMetricEvent) {
 	if !c.isInitialized {
 		return
 	}
@@ -193,39 +199,18 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetr
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	cachedMetric := cachedMetric{
-		Subscription:  metric.Subscription,
-		App:           metric.App,
-		Product:       metric.Product,
-		AssetResource: metric.AssetResource,
-		ProductPlan:   metric.ProductPlan,
-		Quota:         metric.Quota,
-		API:           metric.API,
-		StatusCode:    metric.StatusCode,
-		Count:         histogram.Count(),
-		Values:        histogram.Sample().Values(),
-		StartTime:     metric.StartTime,
-	}
-
-	c.storage.Set(c.getKey(metric), cachedMetric)
+	c.storage.Set(metric.getKey(), metric.createdCachedMetric(cached))
 }
 
-func (c *cacheStorage) removeMetric(metric *APIMetric) {
+func (c *cacheStorage) removeMetric(metric *centralMetricEvent) {
 	if !c.isInitialized {
 		return
 	}
+
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Delete(c.getKey(metric))
-}
-
-func (c *cacheStorage) getKey(metric *APIMetric) string {
-	return metricKeyPrefix +
-		metric.Subscription.ID + "." +
-		metric.App.ID + "." +
-		metric.API.ID + "." +
-		metric.StatusCode
+	c.storage.Delete(metric.getKey())
 }
 
 func (c *cacheStorage) save() {
@@ -270,4 +255,41 @@ func parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
 		}
 	}
 	return resultTime, nil
+}
+
+type cachedMetricInterface interface {
+	Count() int64
+	Values() []int64
+}
+
+type customCounter struct {
+	c metrics.Counter
+}
+
+func newCustomCounter(c metrics.Counter) *customCounter {
+	return &customCounter{c: c}
+}
+
+func (c customCounter) Count() int64 {
+	return c.c.Count()
+}
+
+func (c customCounter) Values() []int64 {
+	return nil
+}
+
+type customHistogram struct {
+	h metrics.Histogram
+}
+
+func newCustomHistogram(h metrics.Histogram) *customHistogram {
+	return &customHistogram{h: h}
+}
+
+func (c customHistogram) Count() int64 {
+	return c.h.Count()
+}
+
+func (c customHistogram) Values() []int64 {
+	return c.h.Sample().Values()
 }

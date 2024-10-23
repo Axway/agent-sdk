@@ -133,10 +133,16 @@ func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
 func (b *EventBatch) ackEvents(events []beatPub.Event) {
 	for _, event := range events {
 		metric := getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("published", metric)
-			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
+		if metric == nil {
+			continue
 		}
+		b.collector.logMetric("published", metric)
+		histogram, found := b.histograms[metric.EventID]
+		if !found {
+			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
+			continue
+		}
+		b.collector.cleanupMetricCounter(histogram, metric)
 	}
 }
 
@@ -152,10 +158,19 @@ func NewEventBatch(c *collector) *EventBatch {
 func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatPub.Event {
 	ackEvents := make([]beatPub.Event, 0)
 	for _, e := range events {
-		eID := getMetricFromEvent(e).EventID
+		eID := ""
+		if m := getMetricFromEvent(e); m != nil {
+			eID = m.EventID
+		}
+		if eID == "" {
+			continue
+		}
 		found := false
 		for _, rE := range retryEvents {
-			rEID := getMetricFromEvent(rE).EventID
+			rEID := ""
+			if m := getMetricFromEvent(rE); m != nil {
+				rEID = m.EventID
+			}
 			if rEID == eID {
 				found = true
 				break
@@ -176,6 +191,10 @@ func getMetricFromEvent(event beatPub.Event) *APIMetric {
 		if err != nil {
 			return nil
 		}
+		eventID, ok := v4Event["id"]
+		if !ok {
+			return nil
+		}
 		eventType, ok := v4Event["event"]
 		if !ok {
 			return nil
@@ -192,6 +211,7 @@ func getMetricFromEvent(event beatPub.Event) *APIMetric {
 		if err != nil {
 			return nil
 		}
+		metric.EventID = eventID.(string)
 		return metric
 	}
 	return nil

@@ -11,10 +11,7 @@ package management
 
 // ApiServiceCompliance  (management.v1alpha1.APIService)
 type ApiServiceCompliance struct {
-	// GENERATE: The following code has been modified after code generation
-	Design ApiServiceComplianceLintingStatus `json:"design,omitempty"`
-	// GENERATE: The following code has been modified after code generation
+	Design   ApiServiceComplianceLintingStatus `json:"design,omitempty"`
 	Security ApiServiceComplianceLintingStatus `json:"security,omitempty"`
-	// GENERATE: The following code has been modified after code generation
-	Runtime ApiServiceComplianceRuntimeStatus `json:"runtime,omitempty"`
+	Runtime  ApiServiceComplianceRuntimeStatus `json:"runtime,omitempty"`
 }
