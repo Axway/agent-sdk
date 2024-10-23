@@ -648,16 +648,13 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, id string)
 
 func (c *collector) getProductPlanUnit(accessRequest *management.AccessRequest, id string) *models.Unit {
 	if accessRequest == nil {
-		// TODO remove the following when product plan unit ready
-		// return &models.Unit{
-		// 	ID:   id,
-		// 	Name: id,
-		// }
-		return nil
+		return &models.Unit{
+			ID:   id,
+			Name: id,
+		}
 	}
 
-	// TODO get the ProductPlanUnit reference
-	unitRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.QuotaGVK())
+	unitRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.ProductPlanUnitGVK())
 	if unitRef.ID == "" {
 		return nil
 	}
