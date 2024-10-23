@@ -29,7 +29,7 @@ type transactionContext struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
 	Status     string
-	Unit       string
+	UnitName   string
 }
 
 // Detail - holds the details for computing metrics
@@ -38,7 +38,7 @@ type Detail struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
 	StatusCode string
-	Unit       string
+	UnitName   string
 	Duration   int64
 	Bytes      int64
 }

@@ -319,7 +319,7 @@ func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
 	transactionCtx := transactionContext{
 		APIDetails: detail.APIDetails,
 		AppDetails: detail.AppDetails,
-		Unit:       detail.UnitDetails.ID,
+		UnitName:   detail.UnitDetails.ID,
 	}
 
 	metric := c.createMetric(transactionCtx)
@@ -403,8 +403,8 @@ func (c *collector) createMetric(detail transactionContext) *centralMetricEvent 
 			API:           c.createAPIDetail(detail.APIDetails),
 			AssetResource: c.getAssetResource(accessRequest),
 			ProductPlan:   c.getProductPlan(accessRequest),
-			Quota:         c.getQuota(accessRequest, detail.Unit),
-			Unit:          c.getProductPlanUnit(accessRequest, detail.Unit),
+			Quota:         c.getQuota(accessRequest, detail.UnitName),
+			Unit:          c.getProductPlanUnit(accessRequest, detail.UnitName),
 		},
 		StartTime: now(),
 		EventID:   uuid.NewString(),
@@ -427,7 +427,7 @@ func (c *collector) createOrUpdateMetric(detail Detail) *centralMetricEvent {
 		APIDetails: detail.APIDetails,
 		AppDetails: detail.AppDetails,
 		Status:     detail.StatusCode,
-		Unit:       detail.Unit,
+		UnitName:   detail.UnitName,
 	}
 
 	metric := c.createMetric(transactionCtx)
@@ -646,15 +646,12 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, id string)
 	}
 }
 
-func (c *collector) getProductPlanUnit(accessRequest *management.AccessRequest, id string) *models.Unit {
+func (c *collector) getProductPlanUnit(accessRequest *management.AccessRequest, name string) *models.Unit {
 	if accessRequest == nil {
-		return &models.Unit{
-			ID:   id,
-			Name: id,
-		}
+		return nil
 	}
 
-	unitRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.ProductPlanUnitGVK())
+	unitRef := accessRequest.GetReferenceByNameAndGVK(name, catalog.ProductPlanUnitGVK())
 	if unitRef.ID == "" {
 		return nil
 	}

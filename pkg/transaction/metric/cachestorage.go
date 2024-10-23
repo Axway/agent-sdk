@@ -170,7 +170,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				metricDetail := Detail{
 					APIDetails: *cm.API,
 					AppDetails: *cm.App,
-					Unit:       unitID,
+					UnitName:   unitID,
 					StatusCode: cm.StatusCode,
 					Duration:   duration,
 				}
