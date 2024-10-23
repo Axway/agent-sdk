@@ -16,6 +16,11 @@ import (
 
 const (
 	avcCronSchedule = "@daily"
+
+	agentStateCurrent   = "current"
+	agentStateAvailable = "available"
+	agentStateOutdated  = "outdated"
+	agentStateRetracted = "retracted"
 )
 
 // AgentVersionCheckJob - polls for agent versions
@@ -59,13 +64,13 @@ func (avj *AgentVersionCheckJob) Execute() error {
 	}
 
 	switch state {
-	case "current":
+	case agentStateCurrent:
 		avj.logger.Trace("agent is up to date.")
-	case "available":
+	case agentStateAvailable:
 		avj.logger.Warn("please be aware that there is a newer agent version available.")
-	case "outdated":
+	case agentStateOutdated:
 		avj.logger.Error("current agent version is no longer supported. We strongly advise to update the agent as soon as possible.")
-	case "retracted":
+	case agentStateRetracted:
 		avj.logger.Error("current agent version has a known issue, please update the agent immediately.")
 	}
 	return nil
