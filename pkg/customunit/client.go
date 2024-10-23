@@ -2,14 +2,69 @@ package customunit
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	cu "github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+type CustomUnitsQEClient struct {
+	ctx       context.Context
+	quotaInfo *customunits.QuotaInfo
+	logger    *logrus.Entry
+	dialOpts  []grpc.DialOption
+	cOpts     []grpc.CallOption
+	url       string
+	conn      *grpc.ClientConn
+}
+
+func NewQuotaEnforcementClient(ctx context.Context, url string, quotaInfo *customunits.QuotaInfo) CustomUnitsQEClient {
+	return CustomUnitsQEClient{
+		ctx:       ctx,
+		quotaInfo: quotaInfo,
+		url:       url,
+		dialOpts: []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		},
+	}
+}
+
+func QuotaEnforcementInfo(metricServicesConfig []config.MetricServiceConfiguration, ctx context.Context, quotaInfo *customunits.QuotaInfo) string {
+	errMessage := ""
+	// iterate over each metric service config
+	for _, config := range metricServicesConfig {
+
+		if config.MetricServiceEnabled() {
+			// Initialize custom units client
+			c := NewQuotaEnforcementClient(ctx, config.URL, quotaInfo)
+
+			_, err := c.GetQuotaEnforcementInfo()
+			// if error from QE and reject on fail, we return the error back to the central
+			if err != nil && config.RejectOnFailEnabled() {
+				errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
+			}
+		}
+	}
+
+	return errMessage
+}
+
+func (c *CustomUnitsQEClient) GetQuotaEnforcementInfo() (*customunits.QuotaEnforcementResponse, error) {
+	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	quotaEnforcementClient := customunits.NewQuotaEnforcementClient(conn)
+
+	response, err := quotaEnforcementClient.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
+
+	return response, err
+}
 
 type metricCollector interface {
 	AddCustomMetricDetail()
@@ -62,36 +117,33 @@ func (c *customUnitMetricReportingClient) MetricReporting() error {
 	}
 	metricServiceInit := &cu.MetricServiceInit{}
 
-	response, err := c.mtricReportingClient.MetricReporting(c.ctx, metricServiceInit, c.cOpts...)
+	client, err := c.mtricReportingClient.MetricReporting(c.ctx, metricServiceInit, c.cOpts...)
 	if err != nil {
 		return err
 	}
-	c.metricReportingServiceClient = response
+	c.metricReportingServiceClient = client
 	// process metrics
 	c.processMetrics()
 	return nil
 }
 
 // processMetrics will stream custom metrics
-func (c *customUnitMetricReportingClient) processMetrics() error {
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
+func (c *customUnitMetricReportingClient) processMetrics() {
 	for {
 		metricReport, err := c.recv()
 		if err == io.EOF {
 			c.logger.Debug("stream finished")
-			return nil
+			continue
 		}
 		if err != nil {
 			// if the connection fails, re-establish the connection
 			c.MetricReporting()
 		}
-		wg.Add(1)
-		go func() {
-			c.reportMetrics(metricReport)
-			wg.Done()
-		}()
+
+		c.reportMetrics(metricReport)
+
 	}
+
 }
 
 func (c *customUnitMetricReportingClient) reportMetrics(*cu.MetricReport) {

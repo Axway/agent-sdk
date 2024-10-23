@@ -11,11 +11,9 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/customunit"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -142,8 +140,6 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 	if status.GetStatus() == prov.Success {
 		metricServicesConfigs := h.metricServicesConfig
-		errorQE := false
-		errMessage := ""
 		// Build quota info
 		quotaInfo, err := h.buildQuotaInfo(ctx, ar)
 		if err != nil {
@@ -151,31 +147,9 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 			h.onError(ctx, ar, err)
 			return ar
 		}
-		// iterate over each metric service config
-		for _, config := range metricServicesConfigs {
+		errMessage := customunit.QuotaEnforcementInfo(metricServicesConfigs, ctx, quotaInfo)
 
-			if config.MetricServiceEnabled() {
-				// Initialize custom units client
-				c := NewQuotaEnforcementClient(ctx, config.URL, quotaInfo)
-
-				response, err := c.GetQuotaEnforcementInfo()
-
-				// if error from QE and reject on fail, we return the error back to the central
-				if err != nil && config.RejectOnFailEnabled() {
-					errorQE = true
-					errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
-				}
-				if response.GetError() != "" {
-					status = prov.NewRequestStatusBuilder().
-						//TODO: set the correct status message. ALSO confirm if needs to set to "SUCCESS" ????
-						SetMessage(fmt.Sprintf("TODO: message: ")).
-						SetCurrentStatusReasons(ar.Status.Reasons).
-						Success()
-				}
-			}
-		}
-
-		if errorQE {
+		if errMessage != "" {
 			status = prov.NewRequestStatusBuilder().
 				SetMessage(errMessage).
 				SetCurrentStatusReasons(ar.Status.Reasons).
@@ -433,38 +407,4 @@ func (r provAccReq) GetInstanceDetails() map[string]interface{} {
 
 func (r provAccReq) GetQuota() prov.Quota {
 	return r.quota
-}
-
-type CustomUnitsQEClient struct {
-	ctx       context.Context
-	quotaInfo *customunits.QuotaInfo
-	logger    log.FieldLogger
-	dialOpts  []grpc.DialOption
-	cOpts     []grpc.CallOption
-	url       string
-	conn      *grpc.ClientConn
-}
-
-func NewQuotaEnforcementClient(ctx context.Context, url string, quotaInfo *customunits.QuotaInfo) CustomUnitsQEClient {
-	return CustomUnitsQEClient{
-		logger:    getLoggerFromContext(ctx),
-		ctx:       ctx,
-		quotaInfo: quotaInfo,
-		url:       url,
-		dialOpts: []grpc.DialOption{
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-		},
-	}
-}
-
-func (c *CustomUnitsQEClient) GetQuotaEnforcementInfo() (*customunits.QuotaEnforcementResponse, error) {
-	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
-	if err != nil {
-		return nil, err
-	}
-	quotaEnforcementClient := customunits.NewQuotaEnforcementClient(conn)
-
-	response, err := quotaEnforcementClient.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
-
-	return response, err
 }

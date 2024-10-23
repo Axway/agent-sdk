@@ -129,7 +129,6 @@ func TestAccessRequestHandler(t *testing.T) {
 			if tc.appStatus != "" {
 				mApp.SubResources["status"].(map[string]interface{})["level"] = tc.appStatus
 			}
-
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 
 			ar := accessReq
@@ -175,8 +174,8 @@ func TestAccessRequestHandler(t *testing.T) {
 			if tc.state == v1.ResourceDeleting {
 				c.isDeleting = true
 			}
-
-			handler := NewAccessRequestHandler(arp, cm, c)
+			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
+			handler := NewAccessRequestHandler(arp, cm, c, af)
 			v := handler.(*accessRequestHandler)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -249,8 +248,8 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 				isDeleting:     true,
 				t:              t,
 			}
-
-			handler := NewAccessRequestHandler(arp, cm, c)
+			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
+			handler := NewAccessRequestHandler(arp, cm, c, af)
 
 			ri, _ := ar.AsInstance()
 
@@ -273,7 +272,8 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 		t: t,
 	}
 	ar := &mockARProvision{}
-	handler := NewAccessRequestHandler(ar, cm, c)
+	af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
+	handler := NewAccessRequestHandler(ar, cm, c, af)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),
