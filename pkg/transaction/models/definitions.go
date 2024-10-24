@@ -9,6 +9,42 @@ type ConsumerDetails struct {
 	Subscription     *Subscription `json:"subscription,omitempty"`
 }
 
+type ResourceReference struct {
+	ID          string `json:"id,omitempty"`
+	LoggerField string `json:"-"`
+}
+
+func (a ResourceReference) GetLogFields(fields logrus.Fields) logrus.Fields {
+	if a.ID != "" {
+		fields[a.LoggerField] = a.ID
+	}
+	return fields
+}
+
+type APIResourceReference struct {
+	ResourceReference
+	Name         string `json:"name,omitempty"`
+	APIServiceID string `json:"apiServiceId,omitempty"`
+}
+
+type ApplicationResourceReference struct {
+	ResourceReference
+	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
+}
+
+type ProductResourceReference struct {
+	ResourceReference
+	VersionID string `json:"versionId,omitempty"`
+}
+
+func (a ProductResourceReference) GetLogFields(fields logrus.Fields) logrus.Fields {
+	if a.ID != "" {
+		fields[a.LoggerField] = a.ID
+		fields["productVersionID"] = a.VersionID
+	}
+	return fields
+}
+
 // Subscription  - Represents the subscription used in transaction summary consumer details
 type Subscription struct {
 	ID   string `json:"id,omitempty"`

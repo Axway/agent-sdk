@@ -8,6 +8,27 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type newMetric struct {
+	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
+	App           *models.ApplicationResourceReference `json:"app,omitempty"`
+	Product       *models.ProductResourceReference     `json:"product,omitempty"`
+	API           *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
+	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
+	Units         *Units                               `json:"units,omitempty"`
+	Reporter      *reporter                            `json:"reporter,omitempty"`
+	Observation   *ObservationDetails                  `json:"-"`
+	EventID       string                               `json:"-"`
+}
+
+type reporter struct {
+	AgentVersion     string `json:"agentVersion,omitempty"`
+	AgentType        string `json:"agentType,omitempty"`
+	AgentSDKVersion  string `json:"agentSDKVersion,omitempty"`
+	AgentName        string `json:"agentName,omitempty"`
+	ObservationDelta int64  `json:"observationDelta,omitempty"`
+}
+
 // metricInfo - the base object holding the metricInfo
 type metricInfo struct {
 	Subscription  *models.Subscription  `json:"subscription,omitempty"`
