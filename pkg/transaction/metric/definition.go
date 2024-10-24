@@ -75,10 +75,18 @@ type ObservationDetails struct {
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	metricInfo
-	Count     int64     `json:"count"`
-	Values    []int64   `json:"values,omitempty"`
-	StartTime time.Time `json:"startTime"`
+	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
+	App           *models.ApplicationResourceReference `json:"app,omitempty"`
+	Product       *models.ProductResourceReference     `json:"product,omitempty"`
+	API           *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
+	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
+	Quota         *models.ResourceReference            `json:"quota,omitempty"`
+	Unit          *models.Unit                         `json:"unit,omitempty"`
+	StatusCode    string                               `json:"statusCode,omitempty"`
+	Count         int64                                `json:"count"`
+	Values        []int64                              `json:"values,omitempty"`
+	StartTime     time.Time                            `json:"startTime"`
 }
 
 // V4EventDistribution - represents V4 distribution
@@ -183,4 +191,12 @@ func (t ISO8601Time) MarshalJSON() ([]byte, error) {
 	b = tt.AppendFormat(b, ISO8601)
 	b = append(b, '"')
 	return b, nil
+}
+
+type Reporter struct {
+	AgentVersion     string `json:"agentVersion,omitempty"`
+	AgentType        string `json:"agentType,omitempty"`
+	AgentSDKVersion  string `json:"agentSDKVersion,omitempty"`
+	AgentName        string `json:"agentName,omitempty"`
+	ObservationDelta int64  `json:"observationDelta,omitempty"`
 }

@@ -4,76 +4,80 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
-func centralMetricFromAPIMetric(in *APIMetric) *centralMetricEvent {
-	out := &centralMetricEvent{
-		metricInfo: metricInfo{
-			StatusCode: in.StatusCode,
+func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
+	out := &centralMetric{
+		EventID: in.EventID,
+		Observation: &ObservationDetails{
+			Start: in.Observation.Start,
 		},
-		Count:     in.Count,
-		Status:    in.Status,
-		EventID:   in.EventID,
-		StartTime: in.StartTime,
+	}
+
+	if in.Unit == nil {
+		// transaction units
+		out.Units = &Units{
+			Transactions: &Transactions{
+				UnitCount: UnitCount{
+					Count: in.Count,
+				},
+				Status: in.Status,
+			},
+		}
+	} else {
+		// custom units
+		out.Units.CustomUnits[in.Unit.Name] = &UnitCount{
+			Count: in.Count,
+		}
 	}
 
 	if in.Subscription.ID != unknown && in.Subscription.ID != "" {
-		out.Subscription = &models.Subscription{
-			ID:   in.Subscription.ID,
-			Name: in.Subscription.Name,
+		out.Subscription = &models.ResourceReference{
+			ID: in.Subscription.ID,
 		}
 	}
 
 	if in.App.ID != unknown && in.App.ID != "" {
-		out.App = &models.AppDetails{
-			ID:            in.App.ID,
-			Name:          in.App.Name,
+		out.App = &models.ApplicationResourceReference{
+			ResourceReference: models.ResourceReference{
+				ID: in.App.ID,
+			},
 			ConsumerOrgID: in.App.ConsumerOrgID,
 		}
 	}
 
 	if in.Product.ID != unknown && in.Product.ID != "" {
-		out.Product = &models.Product{
-			ID:          in.Product.ID,
-			Name:        in.Product.Name,
-			VersionName: in.Product.VersionName,
-			VersionID:   in.Product.VersionID,
+		out.Product = &models.ProductResourceReference{
+			ResourceReference: models.ResourceReference{
+				ID: in.Product.ID,
+			},
+			VersionID: in.Product.VersionID,
 		}
 	}
 
 	if in.API.ID != unknown && in.API.ID != "" {
-		out.API = &models.APIDetails{
-			ID:                 in.API.ID,
-			Name:               in.API.Name,
-			Revision:           in.API.Revision,
-			TeamID:             in.API.TeamID,
-			APIServiceInstance: in.API.APIServiceInstance,
-			Stage:              in.API.Stage,
-			Version:            in.API.Version,
+		out.API = &models.APIResourceReference{
+			ResourceReference: models.ResourceReference{
+				ID: in.API.ID,
+			},
+			Name: in.API.Name,
+			//TODO find api service ID
 		}
 	}
 
 	if in.AssetResource.ID != unknown && in.AssetResource.ID != "" {
-		out.AssetResource = &models.AssetResource{
-			ID:   in.AssetResource.ID,
-			Name: in.AssetResource.Name,
+		out.AssetResource = &models.ResourceReference{
+			ID: in.AssetResource.ID,
 		}
 	}
 
 	if in.ProductPlan.ID != unknown && in.ProductPlan.ID != "" {
-		out.ProductPlan = &models.ProductPlan{
+		out.ProductPlan = &models.ResourceReference{
 			ID: in.ProductPlan.ID,
 		}
 	}
 
 	if in.Quota.ID != unknown && in.Quota.ID != "" {
-		out.Quota = &models.Quota{
+		out.Units.Transactions.Quota = &models.ResourceReference{
 			ID: in.Quota.ID,
-		}
-	}
-
-	if in.Unit.ID != unknown && in.Unit.ID != "" {
-		out.Unit = &models.Unit{
-			ID:   in.Unit.ID,
-			Name: in.Unit.Name,
 		}
 	}
 

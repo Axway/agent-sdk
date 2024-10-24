@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
@@ -84,7 +85,7 @@ func (b *EventBatch) Events() []beatPub.Event {
 // ACK - all events have been acknowledgeded, cleanup the counters
 func (b *EventBatch) ACK() {
 	b.ackEvents(b.events)
-	b.collector.metricStartTime = b.collector.metricEndTime
+	b.collector.metricStartTime = time.Time{}
 	b.batchUnlock()
 }
 
@@ -183,7 +184,7 @@ func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatP
 	return ackEvents
 }
 
-func getMetricFromEvent(event beatPub.Event) *APIMetric {
+func getMetricFromEvent(event beatPub.Event) *centralMetric {
 	if data, found := event.Content.Fields[messageKey]; found {
 		v4Bytes := data.(string)
 		v4Event := make(map[string]interface{})
@@ -206,7 +207,7 @@ func getMetricFromEvent(event beatPub.Event) *APIMetric {
 		if err != nil {
 			return nil
 		}
-		metric := &APIMetric{}
+		metric := &centralMetric{}
 		err = json.Unmarshal(buf, metric)
 		if err != nil {
 			return nil
