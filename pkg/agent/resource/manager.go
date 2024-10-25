@@ -105,6 +105,7 @@ func (a *agentResourceManager) SetRebuildCacheFunc(rebuildCache EventSyncCache) 
 // FetchAgentResource - Gets the agent resource using API call to apiserver
 func (a *agentResourceManager) FetchAgentResource() error {
 	if a.cfg.GetAgentName() == "" {
+		a.logger.Trace("skipping to fetch agent resource, agent name not configured")
 		return nil
 	}
 
@@ -130,10 +131,16 @@ func (a *agentResourceManager) FetchAgentResource() error {
 // UpdateAgentStatus - Updates the agent status in agent resource
 func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message string) error {
 	if a.cfg == nil || a.cfg.GetAgentName() == "" {
+		a.logger.WithField("status", status).
+			WithField("previous-status", prevStatus).
+			Trace("skipping agent status update, agent name config not set")
 		return nil
 	}
 
 	if a.agentResource == nil {
+		a.logger.WithField("status", status).
+			WithField("previous-status", prevStatus).
+			Trace("skipping agent status update, agent resource not initialized")
 		return nil
 	}
 
@@ -183,17 +190,19 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 	} else {
 		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
 		if value != nil {
+			logger := a.logger.WithField("cacheUpdateTime", value)
 			// get current cacheUpdateTime from x-agent-details
 			convToTimestamp, err := strconv.ParseInt(value.(string), 10, 64)
 			if err != nil {
+				logger.WithError(err).Error("unable to parse cache update time")
 				return false, err
 			}
 			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
-			a.logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+			logger.Trace("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 
 			// check to see if 7 days have passed since last refresh cache. currentCacheUpdateTime is the date at the time we rebuilt cache plus 7 days(in event sync - RebuildCache)
 			if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
-				a.logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
+				logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
 				rebuildCache = true
 			}
 		} else {
