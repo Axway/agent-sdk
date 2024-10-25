@@ -136,15 +136,20 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 			Trace("skipping agent status update, agent name config not set")
 		return nil
 	}
-
+	agentInstance := a.getAgentResourceType()
 	if a.agentResource == nil {
+		if agentInstance != nil {
+			a.logger.Info("re-initializing agent resource")
+			err := a.FetchAgentResource()
+			if err != nil {
+				return err
+			}
+		}
 		a.logger.WithField("status", status).
 			WithField("previous-status", prevStatus).
 			Trace("skipping agent status update, agent resource not initialized")
 		return nil
 	}
-
-	agentInstance := a.getAgentResourceType()
 
 	statusSubResourceName := management.DiscoveryAgentStatusSubResourceName
 	// using discovery agent status here, but all agent status resources have the same structure
