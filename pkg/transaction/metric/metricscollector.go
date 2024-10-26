@@ -272,14 +272,14 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
 	// TODO remove this after testing
-	c.AddCustomMetricDetail(CustomMetricDetail{
-		APIDetails: metricDetail.APIDetails,
-		AppDetails: metricDetail.AppDetails,
-		UnitDetails: models.Unit{
-			Name: "x-custom-token",
-		},
-		Count: 30,
-	})
+	// c.AddCustomMetricDetail(CustomMetricDetail{
+	// 	APIDetails: metricDetail.APIDetails,
+	// 	AppDetails: metricDetail.AppDetails,
+	// 	UnitDetails: models.Unit{
+	// 		Name: "x-custom-token",
+	// 	},
+	// 	Count: 30,
+	// })
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -309,6 +309,10 @@ func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
 
 	logger := c.logger.WithField("handler", "customMetric").
 		WithField("apiID", detail.APIDetails.ID).
@@ -948,21 +952,14 @@ func (c *collector) getOrRegisterGroupedCounter(name string) metrics.Counter {
 	groupKey, countKey := splitMetricKey(name)
 	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
 
-	if _, ok := groupedMetric.counters[countKey]; !ok {
-		groupedMetric.counters[countKey] = metrics.NewCounter()
-	}
-	return groupedMetric.counters[countKey]
+	return groupedMetric.getOrCreateCounter(countKey)
 }
 
 func (c *collector) getOrRegisterGroupedHistogram(name string) metrics.Histogram {
 	groupKey, histoKey := splitMetricKey(name)
 	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
 
-	if _, ok := groupedMetric.histograms[histoKey]; !ok {
-		sampler := metrics.NewUniformSample(2048)
-		groupedMetric.histograms[histoKey] = metrics.NewHistogram(sampler)
-	}
-	return groupedMetric.histograms[histoKey]
+	return groupedMetric.getOrCreateHistogram(histoKey)
 }
 
 func (c *collector) publishEvents() {

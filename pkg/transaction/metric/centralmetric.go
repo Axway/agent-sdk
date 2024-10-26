@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
@@ -11,15 +12,38 @@ import (
 )
 
 type groupedMetrics struct {
+	lock       *sync.Mutex
 	counters   map[string]metrics.Counter
 	histograms map[string]metrics.Histogram
 }
 
 func newGroupedMetric() groupedMetrics {
 	return groupedMetrics{
+		lock:       &sync.Mutex{},
 		counters:   make(map[string]metrics.Counter),
 		histograms: make(map[string]metrics.Histogram),
 	}
+}
+
+func (g groupedMetrics) getOrCreateHistogram(key string) metrics.Histogram {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	if _, ok := g.histograms[key]; !ok {
+		sampler := metrics.NewUniformSample(2048)
+		g.histograms[key] = metrics.NewHistogram(sampler)
+	}
+	return g.histograms[key]
+}
+
+func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	if _, ok := g.counters[key]; !ok {
+		g.counters[key] = metrics.NewCounter()
+	}
+	return g.counters[key]
 }
 
 type centralMetric struct {
