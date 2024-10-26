@@ -162,28 +162,41 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			var cm cachedMetric
 			json.Unmarshal(buffer, &cm)
 
+			apiDetails := models.APIDetails{}
+			if cm.API != nil {
+				apiDetails.ID = cm.API.ID
+				apiDetails.Name = cm.API.Name
+			}
+			appDetails := models.AppDetails{}
+			if cm.API != nil {
+				appDetails.ID = cm.App.ID
+				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
+			}
+
+			if len(cm.Values) == 0 {
+				if cm.Unit == nil {
+					continue
+				}
+
+				c.collector.AddCustomMetricDetail(CustomMetricDetail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					UnitDetails: models.Unit{
+						Name: cm.Unit.Name,
+					},
+					Count: cm.Count,
+				})
+				continue
+			}
+
 			var metric *centralMetric
 			for _, duration := range cm.Values {
-				metricDetail := Detail{
+				metric = c.collector.createOrUpdateHistogram(Detail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
 					StatusCode: cm.StatusCode,
 					Duration:   duration,
-				}
-				if cm.API != nil {
-					metricDetail.APIDetails = models.APIDetails{
-						ID:   cm.API.ID,
-						Name: cm.API.Name,
-					}
-				}
-				if cm.App != nil {
-					metricDetail.AppDetails = models.AppDetails{
-						ID:            cm.App.ID,
-						ConsumerOrgID: cm.App.ConsumerOrgID,
-					}
-				}
-				if cm.Unit != nil {
-					metricDetail.UnitName = cm.Unit.Name
-				}
-				metric = c.collector.createOrUpdateMetric(metricDetail)
+				})
 			}
 
 			newKey := metric.getKey()
@@ -193,9 +206,6 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				c.storageLock.Unlock()
 			}
 			storageCache.Set(newKey, cm)
-			if metric != nil {
-				metric.Observation.Start = cm.StartTime.UnixMilli()
-			}
 		}
 	}
 }
