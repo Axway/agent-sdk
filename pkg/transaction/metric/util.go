@@ -1,6 +1,8 @@
 package metric
 
 import (
+	"strings"
+
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
@@ -82,4 +84,12 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	}
 
 	return out
+}
+
+func splitMetricKey(key string) (string, string) {
+	const delimiter = "."
+
+	groupKey := strings.Join(strings.Split(key, delimiter)[:4], delimiter)
+	metricKey := strings.Split(key, delimiter)[4]
+	return groupKey, metricKey
 }
