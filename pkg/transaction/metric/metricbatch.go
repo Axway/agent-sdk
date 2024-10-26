@@ -12,20 +12,28 @@ import (
 
 const cancelMsg = "event cancelled, counts added at next publish"
 
+type eventMetric struct {
+	histogram metrics.Histogram
+	counters  map[string]metrics.Counter
+}
+
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
 	beatPub.Batch
 	events        []beatPub.Event
-	histograms    map[string]metrics.Histogram
+	batchMetrics  map[string]eventMetric
 	collector     *collector
 	haveBatchLock bool
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) {
+func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]metrics.Counter) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
-	b.histograms[eventID] = histogram
+	b.batchMetrics[eventID] = eventMetric{
+		histogram: histogram,
+		counters:  counters,
+	}
 }
 
 // AddEvent - adds an event to the batch
@@ -138,12 +146,12 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 			continue
 		}
 		b.collector.logMetric("published", metric)
-		histogram, found := b.histograms[metric.EventID]
-		if !found {
+
+		if eventMetric, ok := b.batchMetrics[metric.EventID]; ok {
+			b.collector.cleanupMetricCounters(eventMetric.histogram, eventMetric.counters, metric)
+		} else {
 			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
-			continue
 		}
-		b.collector.cleanupMetricCounter(histogram, metric)
 	}
 }
 
@@ -151,7 +159,7 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 func NewEventBatch(c *collector) *EventBatch {
 	return &EventBatch{
 		collector:     c,
-		histograms:    make(map[string]metrics.Histogram),
+		batchMetrics:  make(map[string]eventMetric),
 		haveBatchLock: false,
 	}
 }

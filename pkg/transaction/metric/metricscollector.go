@@ -70,7 +70,7 @@ type collector struct {
 	agentName        string
 	lock             *sync.Mutex
 	batchLock        *sync.Mutex
-	registry         metrics.Registry
+	registry         registry
 	metricBatch      *EventBatch
 	metricMap        map[string]map[string]map[string]map[string]*centralMetric
 	metricMapLock    *sync.Mutex
@@ -163,7 +163,7 @@ func createMetricCollector() Collector {
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
 		metricMapLock:    &sync.Mutex{},
-		registry:         metrics.NewRegistry(),
+		registry:         newRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*centralMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
 		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
@@ -270,7 +270,16 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
-	c.createOrUpdateMetric(metricDetail)
+	c.createOrUpdateHistogram(metricDetail)
+	// TODO remove this after testing
+	c.AddCustomMetricDetail(CustomMetricDetail{
+		APIDetails: metricDetail.APIDetails,
+		AppDetails: metricDetail.AppDetails,
+		UnitDetails: models.Unit{
+			Name: "x-custom-token",
+		},
+		Count: 30,
+	})
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -329,10 +338,6 @@ func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
 	}
 
 	metric := c.createMetric(transactionCtx)
-	metric.Observation = &ObservationDetails{
-		Start: detail.Observation.Start,
-		End:   detail.Observation.End,
-	}
 
 	if m := c.getExistingMetric(metric); m != nil {
 		// use the cached metric
@@ -342,7 +347,7 @@ func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
 	// add the count
 	metric.Units.CustomUnits[detail.UnitDetails.Name].Count += detail.Count
 
-	counter := c.getOrRegisterCounter(metric.getKey())
+	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
 
 	c.updateStartTime()
@@ -439,7 +444,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	return me
 }
 
-func (c *collector) createOrUpdateMetric(detail Detail) *centralMetric {
+func (c *collector) createOrUpdateHistogram(detail Detail) *centralMetric {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return nil // no need to update metrics with publish off
 	}
@@ -453,7 +458,7 @@ func (c *collector) createOrUpdateMetric(detail Detail) *centralMetric {
 
 	metric := c.createMetric(transactionCtx)
 
-	histogram := c.getOrRegisterHistogram(metric.getKey())
+	histogram := c.getOrRegisterGroupedHistogram(metric.getKey())
 	histogram.Update(detail.Duration)
 
 	return c.updateMetricWithCachedMetric(metric, newCustomHistogram(histogram))
@@ -507,7 +512,7 @@ func (c *collector) updateMetricWithCachedMetric(metric *centralMetric, cached c
 
 // getAccessRequest -
 func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, detail transactionContext) (*management.AccessRequest, *v1.ResourceInstance) {
-	if detail.AppDetails.Name == "" {
+	if detail.AppDetails.Name == "" && detail.AppDetails.ID == "" {
 		return nil, nil
 	}
 
@@ -517,7 +522,14 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 		Trace("metric collector information")
 
 	// get the managed application
-	managedApp := cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
+	// cached metrics will only have the catalog api id
+	managedApp := cacheManager.GetManagedApplicationByApplicationID(detail.AppDetails.ID)
+	if managedApp == nil {
+		managedApp = cacheManager.GetManagedApplication(detail.AppDetails.ID)
+	}
+	if managedApp == nil {
+		managedApp = cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
+	}
 	if managedApp == nil {
 		c.logger.
 			WithField("appName", detail.AppDetails.Name).
@@ -552,7 +564,7 @@ func (c *collector) createSubscriptionDetail(accessRequest *management.AccessReq
 	}
 
 	subRef := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
-	if subRef.ID != "" {
+	if subRef.ID == "" {
 		return nil
 	}
 
@@ -791,25 +803,74 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 }
 
-func (c *collector) processMetric(metricName string, metric interface{}) {
+func (c *collector) processMetric(metricName string, groupedMetric interface{}) {
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
 	elements := strings.Split(metricName, ".")
-	if len(elements) == 5 {
+	if len(elements) == 4 {
 		subscriptionID := elements[1]
 		appID := elements[2]
 		apiID := strings.ReplaceAll(elements[3], "#", ".")
-		statusCode := elements[4]
 		if appMap, ok := c.metricMap[subscriptionID]; ok {
 			if apiMap, ok := appMap[appID]; ok {
-				if statusMap, ok := apiMap[apiID]; ok {
-					if statusDetail, ok := statusMap[statusCode]; ok {
-						statusMetric := (metric.(metrics.Histogram))
-						c.setMetricsFromHistogram(statusDetail, statusMetric)
-						c.generateMetricEvent(statusMetric, statusDetail)
-					}
+				if groupMap, ok := apiMap[apiID]; ok {
+					logger := c.logger.WithField("subscriptionID", subscriptionID).WithField("applicationID", appID).WithField("apiID", apiID)
+					c.handleGroupedMetric(logger, groupedMetric, groupMap)
 				}
 			}
+		}
+	}
+}
+
+func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInterface interface{}, groupMap map[string]*centralMetric) {
+	groupedMetric, ok := groupedMetricInterface.(groupedMetrics)
+	if !ok {
+		logger.Error("metric data to process was not the expected type")
+		return
+	}
+
+	countersAdded := false
+	// handle each histogram, on the first one add the counter information
+	for k, histo := range groupedMetric.histograms {
+		logger := logger.WithField("status", k)
+		metric, ok := groupMap[k]
+		if !ok {
+			logger.Error("no metrics in map for status")
+			continue
+		}
+		c.setMetricsFromHistogram(metric, histo)
+		var counters map[string]metrics.Counter
+		if !countersAdded {
+			c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
+			counters = groupedMetric.counters
+			countersAdded = true
+		}
+		c.generateMetricEvent(histo, counters, metric)
+	}
+}
+
+func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
+	metricData.Units.CustomUnits = map[string]*UnitCount{}
+
+	for k, counter := range counters {
+		logger := logger.WithField("unit", k)
+		metric, ok := groupMap[k]
+		if !ok {
+			logger.Error("no counter in map for unit")
+			continue
+		}
+
+		// create a new quota pointer
+		var quota *models.ResourceReference
+		if metric.Units.CustomUnits[k].Quota != nil {
+			quota = &models.ResourceReference{
+				ID: metric.Units.CustomUnits[k].Quota.ID,
+			}
+		}
+
+		metricData.Units.CustomUnits[k] = &UnitCount{
+			Count: counter.Count(),
+			Quota: quota,
 		}
 	}
 }
@@ -823,7 +884,7 @@ func (c *collector) setMetricsFromHistogram(metrics *centralMetric, histogram me
 	}
 }
 
-func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *centralMetric) {
+func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters map[string]metrics.Counter, metric *centralMetric) {
 	if metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Count == 0 {
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
@@ -841,7 +902,7 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *cen
 	}
 
 	// Generate app subscription metric
-	c.generateV4Event(histogram, metric)
+	c.generateV4Event(histogram, counters, metric)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -859,10 +920,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(histogram metrics.Histogram, v4data V4Data) {
+func (c *collector) generateV4Event(histogram metrics.Histogram, counters map[string]metrics.Counter, v4data V4Data) {
 	generatedEvent := c.createV4Event(c.metricStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
-	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, histogram)
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, histogram, counters)
 }
 
 func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
@@ -874,14 +935,34 @@ func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
 	return counter.(metrics.Counter)
 }
 
-func (c *collector) getOrRegisterHistogram(name string) metrics.Histogram {
-	histogram := c.registry.Get(name)
-	if histogram == nil {
-		sampler := metrics.NewUniformSample(2048)
-		histogram = metrics.NewHistogram(sampler)
-		c.registry.Register(name, histogram)
+func (c *collector) getOrRegisterGroupedMetrics(name string) groupedMetrics {
+	group := c.registry.Get(name)
+	if group == nil {
+		group = newGroupedMetric()
+		c.registry.Register(name, group)
 	}
-	return histogram.(metrics.Histogram)
+	return group.(groupedMetrics)
+}
+
+func (c *collector) getOrRegisterGroupedCounter(name string) metrics.Counter {
+	groupKey, countKey := splitMetricKey(name)
+	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
+
+	if _, ok := groupedMetric.counters[countKey]; !ok {
+		groupedMetric.counters[countKey] = metrics.NewCounter()
+	}
+	return groupedMetric.counters[countKey]
+}
+
+func (c *collector) getOrRegisterGroupedHistogram(name string) metrics.Histogram {
+	groupKey, histoKey := splitMetricKey(name)
+	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
+
+	if _, ok := groupedMetric.histograms[histoKey]; !ok {
+		sampler := metrics.NewUniformSample(2048)
+		groupedMetric.histograms[histoKey] = metrics.NewHistogram(sampler)
+	}
+	return groupedMetric.histograms[histoKey]
 }
 
 func (c *collector) publishEvents() {
@@ -934,28 +1015,23 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
-func (c *collector) cleanupMetricCounter(histogram metrics.Histogram, metric *centralMetric) {
+func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters map[string]metrics.Counter, metric *centralMetric) {
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
-	subID := unknown
-	if metric.Subscription != nil {
-		subID = metric.Subscription.ID
-	}
-	appID := unknown
-	if metric.App != nil {
-		appID = metric.App.ID
-	}
-	apiID := metric.API.ID
-	if metric.API != nil {
-		apiID = metric.API.ID
-	}
-	status := metric.Units.Transactions.Status
+	subID, appID, apiID, group := metric.getKeyParts()
 	if consumerAppMap, ok := c.metricMap[subID]; ok {
 		if apiMap, ok := consumerAppMap[appID]; ok {
 			if apiStatusMap, ok := apiMap[apiID]; ok {
-				c.storage.removeMetric(apiStatusMap[status])
-				delete(c.metricMap[subID][appID][apiID], status)
+				c.storage.removeMetric(apiStatusMap[group])
+				delete(c.metricMap[subID][appID][apiID], group)
 				histogram.Clear()
+
+				// clean any counters, if needed
+				for k, counter := range counters {
+					c.storage.removeMetric(apiStatusMap[k])
+					delete(c.metricMap[subID][appID][apiID], k)
+					counter.Clear()
+				}
 			}
 			if len(c.metricMap[subID][appID][apiID]) == 0 {
 				delete(c.metricMap[subID][appID], apiID)
