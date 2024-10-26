@@ -86,7 +86,6 @@ type cachedMetric struct {
 	StatusCode    string                               `json:"statusCode,omitempty"`
 	Count         int64                                `json:"count"`
 	Values        []int64                              `json:"values,omitempty"`
-	StartTime     time.Time                            `json:"startTime"`
 }
 
 // V4EventDistribution - represents V4 distribution

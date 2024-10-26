@@ -6,8 +6,21 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/rcrowley/go-metrics"
 	"github.com/sirupsen/logrus"
 )
+
+type groupedMetrics struct {
+	counters   map[string]metrics.Counter
+	histograms map[string]metrics.Histogram
+}
+
+func newGroupedMetric() groupedMetrics {
+	return groupedMetrics{
+		counters:   make(map[string]metrics.Counter),
+		histograms: make(map[string]metrics.Histogram),
+	}
+}
 
 type centralMetric struct {
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
@@ -116,6 +129,13 @@ func (a *centralMetric) getKey() string {
 	return strings.Join([]string{metricKeyPrefix, subID, appID, apiID, uniqueKey}, ".")
 }
 
+// getKey - returns the cache key for the metric
+func (a *centralMetric) getKeyParts() (string, string, string, string) {
+	key := a.getKey()
+	parts := strings.Split(key, ".")
+	return parts[1], parts[2], parts[3], parts[4]
+}
+
 func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedMetric {
 	cacheM := cachedMetric{
 		Subscription:  a.Subscription,
@@ -126,7 +146,6 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		ProductPlan:   a.ProductPlan,
 		Count:         cached.Count(),
 		Values:        cached.Values(),
-		StartTime:     time.UnixMilli(a.Observation.Start),
 	}
 
 	if a.Units.Transactions != nil {
