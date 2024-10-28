@@ -604,12 +604,17 @@ func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.Applicat
 }
 
 func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceReference {
-	return &models.APIResourceReference{
+	ref := &models.APIResourceReference{
 		ResourceReference: models.ResourceReference{
 			ID: api.ID,
 		},
 		Name: api.Name,
 	}
+	svc, err := agent.GetAPICache().GetBySecondaryKey(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	if err == nil {
+		ref.APIServiceID = svc.(v1.ResourceInstance).Metadata.ID
+	}
+	return ref
 }
 
 func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *models.ResourceReference {
