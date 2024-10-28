@@ -4,11 +4,6 @@ package amplify.agent.customunits;
 
 option go_package = "pkg/amplify/agent/customunits";
 
-message APIServiceLookups {
-   // add many lookups, the agent will have to match on all and find a single result to report properly
-  repeated APIServiceLookup lookups = 1;
-}
-
 enum APIServiceLookupType {
   CustomAPIServiceLookup = 0;
   ServiceName = 1;
@@ -25,12 +20,6 @@ message APIServiceLookup {
 
   // the value of the attribute the agent will look for in the resource
   string value = 3;
-}
-
-
-message AppLookups {
-  // add many lookups, the agent will have to match on all and find a single result to report properly
-  repeated AppLookup lookups = 1;
 }
 
 enum AppLookupType {
@@ -51,11 +40,6 @@ message AppLookup {
   // the value of the attribute the agent will look for in the resource
   string value = 3;
 }
- 
-message UnitLookups {
-  // add many lookups, the agent will have to match on all and find a single result to report properly
-  repeated UnitLookup lookups = 1;
-}
 
 enum UnitLookupType {
   CustomUnitLookup = 0;
@@ -65,7 +49,7 @@ enum UnitLookupType {
 
 message UnitLookup {
   // the type that the agent will look to match against in the resource
-  AppLookupType type = 1;
+  UnitLookupType type = 1;
 
   // Only required when Custom is the type
   string customAttribute = 2;
