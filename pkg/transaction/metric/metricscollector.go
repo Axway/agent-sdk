@@ -430,7 +430,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		me.Units = &Units{
 			Transactions: &Transactions{
 				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, ""), // TODO figure this out for transaction quota
+					Quota: c.getQuota(accessRequest, ""),
 				},
 				Status: c.getStatusText(detail.Status),
 			},
@@ -662,12 +662,44 @@ func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *mod
 	}
 }
 
-func (c *collector) getQuota(accessRequest *management.AccessRequest, id string) *models.ResourceReference {
+func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName string) *models.ResourceReference {
 	if accessRequest == nil {
 		return nil
 	}
 
-	quotaRef := accessRequest.GetReferenceByIDAndGVK(id, catalog.QuotaGVK())
+	if unitName == "" && accessRequest.Spec.Quota == nil {
+		// no quota on transactions
+		return nil
+	}
+
+	quotaName := ""
+	if unitName == "" && accessRequest.Spec.Quota != nil {
+		// get transactions quota
+		for _, r := range accessRequest.References {
+			rMap := r.(map[string]string)
+			if rMap["kind"] != catalog.QuotaGVK().Kind {
+				continue
+			}
+			if _, ok := rMap["unit"]; !ok {
+				// no unit is transactions
+				quotaName = strings.Split(rMap["name"], "/")[2]
+			}
+		}
+	} else {
+		// get custom unit quota
+		for _, r := range accessRequest.References {
+			rMap := r.(map[string]string)
+			if rMap["kind"] != catalog.QuotaGVK().Kind {
+				continue
+			}
+			if unit, ok := rMap["unit"]; ok && unitName == unit {
+				// no unit is transactions
+				quotaName = strings.Split(rMap["name"], "/")[2]
+			}
+		}
+	}
+
+	quotaRef := accessRequest.GetReferenceByNameAndGVK(quotaName, catalog.QuotaGVK())
 	if quotaRef.ID == "" {
 		return nil
 	}
