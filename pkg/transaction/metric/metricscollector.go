@@ -271,15 +271,6 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
-	// TODO remove this after testing
-	c.AddCustomMetricDetail(CustomMetricDetail{
-		APIDetails: metricDetail.APIDetails,
-		AppDetails: metricDetail.AppDetails,
-		UnitDetails: models.Unit{
-			Name: "x-ai-tokens",
-		},
-		Count: 30,
-	})
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
