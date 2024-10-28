@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
@@ -65,9 +64,9 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 			},
 			Name: in.API.Name,
 		}
-		svc, err := agent.GetAPICache().GetBySecondaryKey(strings.TrimPrefix(in.API.ID, transutil.SummaryEventProxyIDPrefix))
-		if err == nil {
-			out.API.APIServiceID = svc.(v1.ResourceInstance).Metadata.ID
+		svc := agent.GetCacheManager().GetAPIServiceWithAPIID(strings.TrimPrefix(in.API.ID, transutil.SummaryEventProxyIDPrefix))
+		if svc != nil {
+			out.API.APIServiceID = svc.Metadata.ID
 		}
 	}
 

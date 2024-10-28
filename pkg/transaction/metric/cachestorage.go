@@ -168,7 +168,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				apiDetails.Name = cm.API.Name
 			}
 			appDetails := models.AppDetails{}
-			if cm.API != nil {
+			if cm.App != nil {
 				appDetails.ID = cm.App.ID
 				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
 			}

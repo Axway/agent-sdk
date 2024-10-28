@@ -272,14 +272,14 @@ func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
 	// TODO remove this after testing
-	// c.AddCustomMetricDetail(CustomMetricDetail{
-	// 	APIDetails: metricDetail.APIDetails,
-	// 	AppDetails: metricDetail.AppDetails,
-	// 	UnitDetails: models.Unit{
-	// 		Name: "x-custom-token",
-	// 	},
-	// 	Count: 30,
-	// })
+	c.AddCustomMetricDetail(CustomMetricDetail{
+		APIDetails: metricDetail.APIDetails,
+		AppDetails: metricDetail.AppDetails,
+		UnitDetails: models.Unit{
+			Name: "x-ai-tokens",
+		},
+		Count: 30,
+	})
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -610,9 +610,9 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		},
 		Name: api.Name,
 	}
-	svc, err := agent.GetAPICache().GetBySecondaryKey(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
-	if err == nil {
-		ref.APIServiceID = svc.(v1.ResourceInstance).Metadata.ID
+	svc := agent.GetCacheManager().GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	if svc != nil {
+		ref.APIServiceID = svc.Metadata.ID
 	}
 	return ref
 }
@@ -681,27 +681,32 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName s
 	if unitName == "" && accessRequest.Spec.Quota != nil {
 		// get transactions quota
 		for _, r := range accessRequest.References {
-			rMap := r.(map[string]string)
-			if rMap["kind"] != catalog.QuotaGVK().Kind {
+			rMap := r.(map[string]interface{})
+			if rMap["kind"].(string) != catalog.QuotaGVK().Kind {
 				continue
 			}
 			if _, ok := rMap["unit"]; !ok {
 				// no unit is transactions
-				quotaName = strings.Split(rMap["name"], "/")[2]
+				quotaName = strings.Split(rMap["name"].(string), "/")[2]
+				break
 			}
 		}
 	} else {
 		// get custom unit quota
 		for _, r := range accessRequest.References {
-			rMap := r.(map[string]string)
-			if rMap["kind"] != catalog.QuotaGVK().Kind {
+			rMap := r.(map[string]interface{})
+			if rMap["kind"].(string) != catalog.QuotaGVK().Kind {
 				continue
 			}
-			if unit, ok := rMap["unit"]; ok && unitName == unit {
+			if unit, ok := rMap["unit"]; ok && unitName == unit.(string) {
 				// no unit is transactions
-				quotaName = strings.Split(rMap["name"], "/")[2]
+				quotaName = strings.Split(rMap["name"].(string), "/")[2]
+				break
 			}
 		}
+	}
+	if quotaName == "" {
+		return nil
 	}
 
 	quotaRef := accessRequest.GetReferenceByNameAndGVK(quotaName, catalog.QuotaGVK())
