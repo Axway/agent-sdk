@@ -156,7 +156,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	statusSubResourceName := management.DiscoveryAgentStatusSubResourceName
 	// using discovery agent status here, but all agent status resources have the same structure
 	agentInstance.SubResources[statusSubResourceName] = management.DiscoveryAgentStatus{
-		Version:                config.AgentVersion,
+		Version:                strings.Split(config.AgentVersion, "-")[0], // report just the semver version
 		LatestAvailableVersion: config.AgentLatestVersion,
 		State:                  status,
 		PreviousState:          prevStatus,
