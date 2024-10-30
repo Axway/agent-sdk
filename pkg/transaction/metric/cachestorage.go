@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/rcrowley/go-metrics"
 )
@@ -32,8 +33,8 @@ type storageCache interface {
 	updateUsage(usageCount int)
 	updateVolume(bytes int64)
 	updateAppUsage(usageCount int, appID string)
-	updateMetric(cachedMetric cachedMetricInterface, metric *centralMetricEvent)
-	removeMetric(metric *centralMetricEvent)
+	updateMetric(cachedMetric cachedMetricInterface, metric *centralMetric)
+	removeMetric(metric *centralMetric)
 	save()
 }
 
@@ -161,20 +162,41 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			var cm cachedMetric
 			json.Unmarshal(buffer, &cm)
 
-			var metric *centralMetricEvent
-			for _, duration := range cm.Values {
-				unitID := ""
-				if cm.Unit != nil {
-					unitID = cm.Unit.ID
+			apiDetails := models.APIDetails{}
+			if cm.API != nil {
+				apiDetails.ID = cm.API.ID
+				apiDetails.Name = cm.API.Name
+			}
+			appDetails := models.AppDetails{}
+			if cm.App != nil {
+				appDetails.ID = cm.App.ID
+				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
+			}
+
+			if len(cm.Values) == 0 {
+				if cm.Unit == nil {
+					continue
 				}
-				metricDetail := Detail{
-					APIDetails: *cm.API,
-					AppDetails: *cm.App,
-					UnitName:   unitID,
+
+				c.collector.AddCustomMetricDetail(CustomMetricDetail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					UnitDetails: models.Unit{
+						Name: cm.Unit.Name,
+					},
+					Count: cm.Count,
+				})
+				continue
+			}
+
+			var metric *centralMetric
+			for _, duration := range cm.Values {
+				metric = c.collector.createOrUpdateHistogram(Detail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
 					StatusCode: cm.StatusCode,
 					Duration:   duration,
-				}
-				metric = c.collector.createOrUpdateMetric(metricDetail)
+				})
 			}
 
 			newKey := metric.getKey()
@@ -184,14 +206,11 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				c.storageLock.Unlock()
 			}
 			storageCache.Set(newKey, cm)
-			if metric != nil {
-				metric.StartTime = cm.StartTime
-			}
 		}
 	}
 }
 
-func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centralMetricEvent) {
+func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centralMetric) {
 	if !c.isInitialized {
 		return
 	}
@@ -199,10 +218,10 @@ func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centra
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Set(metric.getKey(), metric.createdCachedMetric(cached))
+	c.storage.Set(metric.getKey(), metric.createCachedMetric(cached))
 }
 
-func (c *cacheStorage) removeMetric(metric *centralMetricEvent) {
+func (c *cacheStorage) removeMetric(metric *centralMetric) {
 	if !c.isInitialized {
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -102,6 +103,31 @@ func (c *cacheManager) migrateInstanceCount(key string) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func (c *cacheManager) migrateManagedApplications(cacheKey string) error {
+	if cacheKey != managedAppKey {
+		return nil
+	}
+
+	for _, key := range c.managedApplicationMap.GetKeys() {
+		cachedManagedApp, _ := c.managedApplicationMap.Get(key)
+		if cachedManagedApp == nil {
+			continue
+		}
+		ri, ok := cachedManagedApp.(*v1.ResourceInstance)
+		if !ok {
+			continue
+		}
+		manApp := management.ManagedApplication{}
+		err := manApp.FromInstance(ri)
+		if err != nil {
+			continue
+		}
+		catalogAppRef := manApp.GetReferenceByGVK(catalog.ApplicationGVK())
+		c.managedApplicationMap.SetSecondaryKey(key, catalogAppRef.ID)
 	}
 	return nil
 }

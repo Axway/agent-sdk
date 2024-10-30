@@ -92,6 +92,7 @@ type Manager interface {
 	GetManagedApplicationCacheKeys() []string
 	AddManagedApplication(resource *v1.ResourceInstance)
 	GetManagedApplication(id string) *v1.ResourceInstance
+	GetManagedApplicationByApplicationID(id string) *v1.ResourceInstance
 	GetManagedApplicationByName(name string) *v1.ResourceInstance
 	DeleteManagedApplication(id string) error
 
@@ -116,7 +117,6 @@ type Manager interface {
 	ReleaseResourceReadLock()
 }
 
-type teamRefreshHandler func()
 type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
@@ -157,6 +157,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		m.migrators = []cacheMigrate{
 			m.migrateAccessRequest,
 			m.migrateInstanceCount,
+			m.migrateManagedApplications,
 		}
 	}
 	m.initializeCache(cfg)
