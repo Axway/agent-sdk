@@ -49,11 +49,6 @@ var (
 		Name:          "111",
 		ConsumerOrgID: "org-id-111",
 	}
-	appDetails2 = models.AppDetails{
-		ID:            "222",
-		Name:          "222",
-		ConsumerOrgID: "org-id-222",
-	}
 )
 
 func getFutureTime() time.Time {

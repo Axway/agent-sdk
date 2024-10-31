@@ -36,6 +36,7 @@ const (
 	metricStr         = "metric"
 	volumeStr         = "volume"
 	countStr          = "count"
+	defaultUnit       = "transactions"
 )
 
 var exitMetricInit = false
@@ -271,6 +272,7 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
+
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -284,15 +286,15 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		AppDetails: detail.AppDetails,
 		Status:     detail.StatusCode,
 	}
-	newMetric := c.createMetric(transactionCtx)
+	metric := c.createMetric(transactionCtx)
 
 	// update the new metric with all the necessary details
-	newMetric.Units.Transactions.Count = detail.Count
-	newMetric.Units.Transactions.Response = &detail.Response
-	newMetric.Observation = &detail.Observation
+	metric.Units.Transactions.Count = detail.Count
+	metric.Units.Transactions.Response = &detail.Response
+	metric.Observation = &detail.Observation
 
 	c.updateStartTime()
-	c.addMetric(newMetric)
+	c.addMetric(metric)
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
@@ -421,7 +423,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		me.Units = &Units{
 			Transactions: &Transactions{
 				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, ""),
+					Quota: c.getQuota(accessRequest, defaultUnit),
 				},
 				Status: c.getStatusText(detail.Status),
 			},
@@ -662,40 +664,25 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName s
 	if accessRequest == nil {
 		return nil
 	}
-
-	if unitName == "" && accessRequest.Spec.Quota == nil {
-		// no quota on transactions
-		return nil
+	if unitName == "" {
+		unitName = defaultUnit
 	}
 
 	quotaName := ""
-	if unitName == "" && accessRequest.Spec.Quota != nil {
-		// get transactions quota
-		for _, r := range accessRequest.References {
-			rMap := r.(map[string]interface{})
-			if rMap["kind"].(string) != catalog.QuotaGVK().Kind {
-				continue
-			}
-			if _, ok := rMap["unit"]; !ok {
-				// no unit is transactions
-				quotaName = strings.Split(rMap["name"].(string), "/")[2]
-				break
-			}
+
+	// get quota for unit
+	for _, r := range accessRequest.References {
+		rMap := r.(map[string]interface{})
+		if rMap["kind"].(string) != catalog.QuotaGVK().Kind {
+			continue
 		}
-	} else {
-		// get custom unit quota
-		for _, r := range accessRequest.References {
-			rMap := r.(map[string]interface{})
-			if rMap["kind"].(string) != catalog.QuotaGVK().Kind {
-				continue
-			}
-			if unit, ok := rMap["unit"]; ok && unitName == unit.(string) {
-				// no unit is transactions
-				quotaName = strings.Split(rMap["name"].(string), "/")[2]
-				break
-			}
+		if unit, ok := rMap["unit"]; ok && unit.(string) == unitName {
+			// no unit is transactions
+			quotaName = strings.Split(rMap["name"].(string), "/")[2]
+			break
 		}
 	}
+
 	if quotaName == "" {
 		return nil
 	}
