@@ -52,7 +52,7 @@ func ExitMetricInit() {
 type Collector interface {
 	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
-	AddCustomMetricDetail(metric CustomMetricDetail)
+	AddCustomMetricDetail(metric models.CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
@@ -289,7 +289,7 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
-func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
+func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
@@ -829,7 +829,7 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, metric *cen
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
-	metric.Observation = &ObservationDetails{
+	metric.Observation = &models.ObservationDetails{
 		Start: util.ConvertTimeToMillis(c.metricStartTime),
 		End:   util.ConvertTimeToMillis(c.metricEndTime),
 	}

@@ -147,7 +147,20 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 			h.onError(ctx, ar, err)
 			return ar
 		}
-		errMessage := customunit.QuotaEnforcementInfo(metricServicesConfigs, ctx, quotaInfo)
+		errMessage := ""
+		for _, config := range metricServicesConfigs {
+			if config.MetricServiceEnabled() {
+				factory := customunit.NewQuotaEnforcementClientFactory(config.URL, quotaInfo)
+				client, _ := factory(ctx)
+				response, err := client.QuotaEnforcementInfo()
+				if err == nil {
+					// if error from QE and reject on fail, we return the error back to the central
+					if response.Error != "" && config.RejectOnFailEnabled() {
+						errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
+					}
+				}
+			}
+		}
 
 		if errMessage != "" {
 			status = prov.NewRequestStatusBuilder().

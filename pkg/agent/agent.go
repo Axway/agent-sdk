@@ -169,12 +169,12 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
 	// iterate over each metric service config
 	for _, config := range metricServicesConfigs {
-		ctx := context.WithValue(context.Background(), ctxLogger, logger)
+		ctx, ctxCancel := context.WithCancel(context.Background())
 		// Initialize custom units client
-		c := customunit.NewCustomUnitMetricReportingClient(ctx, config.URL)
+		factory := customunit.NewCustomMetricReportingClientFactory(config.URL, agent.cacheManager)
+		client, _ := factory(ctx, ctxCancel)
 
-		c.MetricReporting()
-
+		client.MetricReporting()
 	}
 	if !agent.isInitialized {
 		err = handleInitialization()

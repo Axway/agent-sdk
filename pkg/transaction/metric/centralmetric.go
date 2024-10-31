@@ -24,12 +24,12 @@ type metricInfo struct {
 // centralMetricEvent - the event that is actually sent to platform
 type centralMetricEvent struct {
 	metricInfo
-	Status      string              `json:"status,omitempty"`
-	Count       int64               `json:"count"`
-	Response    *ResponseMetrics    `json:"response,omitempty"`
-	Observation *ObservationDetails `json:"observation"`
-	EventID     string              `json:"-"`
-	StartTime   time.Time           `json:"-"`
+	Status      string                     `json:"status,omitempty"`
+	Count       int64                      `json:"count"`
+	Response    *ResponseMetrics           `json:"response,omitempty"`
+	Observation *models.ObservationDetails `json:"observation"`
+	EventID     string                     `json:"-"`
+	StartTime   time.Time                  `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric

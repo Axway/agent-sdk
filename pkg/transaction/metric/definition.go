@@ -49,15 +49,7 @@ type MetricDetail struct {
 	StatusCode  string
 	Count       int64
 	Response    ResponseMetrics
-	Observation ObservationDetails
-}
-
-type CustomMetricDetail struct {
-	APIDetails  models.APIDetails
-	AppDetails  models.AppDetails
-	UnitDetails models.Unit
-	Count       int64
-	Observation ObservationDetails
+	Observation models.ObservationDetails
 }
 
 // ResponseMetrics - Holds metrics API response
@@ -65,12 +57,6 @@ type ResponseMetrics struct {
 	Max int64   `json:"max"`
 	Min int64   `json:"min"`
 	Avg float64 `json:"avg"`
-}
-
-// ObservationDetails - Holds start and end timestamp for interval
-type ObservationDetails struct {
-	Start int64 `json:"start,omitempty"`
-	End   int64 `json:"end,omitempty"`
 }
 
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
