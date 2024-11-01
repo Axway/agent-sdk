@@ -11,7 +11,7 @@ import (
 func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	out := &centralMetric{
 		EventID: in.EventID,
-		Observation: &ObservationDetails{
+		Observation: &models.ObservationDetails{
 			Start: in.Observation.Start,
 		},
 	}

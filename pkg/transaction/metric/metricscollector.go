@@ -412,7 +412,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		API:           c.createAPIDetail(detail.APIDetails),
 		AssetResource: c.getAssetResource(accessRequest),
 		ProductPlan:   c.getProductPlan(accessRequest),
-		Observation: &ObservationDetails{
+		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),

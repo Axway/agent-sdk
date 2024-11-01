@@ -110,6 +110,7 @@ func NewCustomMetricReportingClientFactory(url string, agentCache cache.Manager)
 			dialOpts: []grpc.DialOption{
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
+			timer: time.NewTimer(time.Hour),
 		}
 
 		for _, o := range opts {
@@ -184,7 +185,6 @@ func (c *customUnitMetricReportingClient) processMetrics() {
 			}
 			c.reportMetrics(metricReport)
 		}
-
 	}
 }
 
