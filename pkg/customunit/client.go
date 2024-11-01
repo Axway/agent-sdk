@@ -175,7 +175,7 @@ func (c *customUnitMetricReportingClient) processMetrics() {
 			}
 			c.MetricReporting()
 		case <-c.timer.C:
-			metricReport, err := c.recv()
+			metricReport, err := c.metricReportingServiceClient.Recv()
 			if err == io.EOF {
 				c.logger.Debug("stream finished")
 				break
@@ -219,14 +219,6 @@ func (c *customUnitMetricReportingClient) buildCustomMetricDetail(metricReport *
 		AppDetails:  *appDetails,
 		UnitDetails: *planUnitDetails,
 	}, nil
-}
-
-func (c *customUnitMetricReportingClient) recv() (*cu.MetricReport, error) {
-	metricReport, err := c.metricReportingServiceClient.Recv()
-	if err != nil {
-		return nil, err
-	}
-	return metricReport, nil
 }
 
 func (c *customUnitMetricReportingClient) Close() error {
@@ -276,9 +268,8 @@ func (c *customUnitMetricReportingClient) APIServiceLookup(apiServiceLookup *cu.
 	}
 
 	return &models.APIDetails{
-		ID:     apiSvc.Metadata.ID,
-		Name:   apiSvc.Name,
-		TeamID: apiSvc.Owner.ID,
+		ID:   apiSvc.Metadata.ID,
+		Name: apiSvc.Name,
 	}, nil
 }
 
