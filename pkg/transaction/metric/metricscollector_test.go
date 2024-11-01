@@ -49,11 +49,6 @@ var (
 		Name:          "111",
 		ConsumerOrgID: "org-id-111",
 	}
-	appDetails2 = models.AppDetails{
-		ID:            "222",
-		Name:          "222",
-		ConsumerOrgID: "org-id-222",
-	}
 )
 
 func getFutureTime() time.Time {
@@ -487,7 +482,7 @@ func TestMetricCollector(t *testing.T) {
 			}
 			runTestHealthcheck()
 			myCollector.InitializeBatch()
-			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetricEvent)
+			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)
 			mockClient := testClient.(*MockClient)
@@ -936,7 +931,6 @@ func TestCustomMetrics(t *testing.T) {
 		AppDetails: appDetails1,
 		Count:      5,
 		UnitDetails: models.Unit{
-			ID:   "unit-id",
 			Name: "unit-name",
 		},
 	}
@@ -982,7 +976,7 @@ func TestCustomMetrics(t *testing.T) {
 			if tc.skip {
 				return
 			}
-			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetricEvent{}
+			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetric{}
 			metricCollector.AddCustomMetricDetail(tc.metricEvent1)
 			if tc.metricEvent2.Count > 0 {
 				metricCollector.AddCustomMetricDetail(tc.metricEvent2)

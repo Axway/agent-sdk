@@ -16,7 +16,6 @@ type APIMetric struct {
 	AssetResource models.AssetResource      `json:"assetResource,omitempty"`
 	ProductPlan   models.ProductPlan        `json:"productPlan,omitempty"`
 	Quota         models.Quota              `json:"quota,omitempty"`
-	Unit          models.Unit               `json:"unit,omitempty"`
 	StatusCode    string                    `json:"statusCode,omitempty"`
 	Status        string                    `json:"status,omitempty"`
 	Count         int64                     `json:"count"`
@@ -24,6 +23,7 @@ type APIMetric struct {
 	Observation   models.ObservationDetails `json:"observation"`
 	EventID       string                    `json:"-"`
 	StartTime     time.Time                 `json:"-"`
+	Unit          *models.Unit              `json:"unit,omitempty"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
