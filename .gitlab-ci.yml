@@ -89,3 +89,11 @@ trigger-azure-discovery-agent:
   before_script:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
+
+twistlock-discovery:on-schedule:
+    rules:
+    - !reference [.only-never-rule, rules]
+
+twistlock-traceability:on-schedule:
+    rules:
+    - !reference [.only-never-rule, rules]
