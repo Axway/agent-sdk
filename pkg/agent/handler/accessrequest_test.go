@@ -12,6 +12,7 @@ import (
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
+	handler "github.com/Axway/agent-sdk/pkg/customunit/handler"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -175,7 +176,8 @@ func TestAccessRequestHandler(t *testing.T) {
 				c.isDeleting = true
 			}
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-			handler := NewAccessRequestHandler(arp, cm, c, af)
+			customUnitQuotaHandler := handler.NewCustomUnitQuotaHandler(af)
+			handler := NewAccessRequestHandler(arp, cm, c, customUnitQuotaHandler)
 			v := handler.(*accessRequestHandler)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -249,7 +251,8 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 				t:              t,
 			}
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-			handler := NewAccessRequestHandler(arp, cm, c, af)
+			customUnitQuotaHandler := handler.NewCustomUnitQuotaHandler(af)
+			handler := NewAccessRequestHandler(arp, cm, c, customUnitQuotaHandler)
 
 			ri, _ := ar.AsInstance()
 
@@ -273,7 +276,8 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 	}
 	ar := &mockARProvision{}
 	af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-	handler := NewAccessRequestHandler(ar, cm, c, af)
+	customUnitQuotaHandler := handler.NewCustomUnitQuotaHandler(af)
+	handler := NewAccessRequestHandler(ar, cm, c, customUnitQuotaHandler)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),

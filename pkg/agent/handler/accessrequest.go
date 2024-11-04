@@ -2,18 +2,14 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/customunit"
+	handler "github.com/Axway/agent-sdk/pkg/customunit/handler"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -31,21 +27,21 @@ type arProvisioner interface {
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov                 arProvisioner
-	cache                agentcache.Manager
-	client               client
-	encryptSchema        encryptSchemaFunc
-	metricServicesConfig []config.MetricServiceConfiguration
+	prov                   arProvisioner
+	cache                  agentcache.Manager
+	client                 client
+	encryptSchema          encryptSchemaFunc
+	customUnitQuotaHandler handler.CustomUnitQuotaHandler
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, metricSvcCfg []config.MetricServiceConfiguration) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitQuotaHandler handler.CustomUnitQuotaHandler) Handler {
 	return &accessRequestHandler{
-		prov:                 prov,
-		cache:                cache,
-		client:               client,
-		encryptSchema:        encryptSchema,
-		metricServicesConfig: metricSvcCfg,
+		prov:                   prov,
+		cache:                  cache,
+		client:                 client,
+		encryptSchema:          encryptSchema,
+		customUnitQuotaHandler: customUnitQuotaHandler,
 	}
 }
 
@@ -141,27 +137,10 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	status, accessData := h.prov.AccessRequestProvision(req)
 
 	if status.GetStatus() == prov.Success && len(ar.Spec.AdditionalQuotas) > 0 {
-		metricServicesConfigs := h.metricServicesConfig
-		// Build quota info
-		quotaInfo, err := h.buildQuotaInfo(ctx, ar, app)
+		errMessage, err := h.customUnitQuotaHandler.Handle(ctx, ar, app)
+
 		if err != nil {
-			log.WithError(err).Errorf("error building quota info")
 			h.onError(ctx, ar, err)
-			return ar
-		}
-		errMessage := ""
-		for _, config := range metricServicesConfigs {
-			if config.MetricServiceEnabled() {
-				factory := customunit.NewQuotaEnforcementClientFactory(config.URL, quotaInfo)
-				client, _ := factory(ctx)
-				response, err := client.QuotaEnforcementInfo()
-				if err != nil {
-					// if error from QE and reject on fail, we return the error back to the central
-					if response.Error != "" && config.RejectOnFailEnabled() {
-						errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
-					}
-				}
-			}
 		}
 
 		if errMessage != "" {
@@ -297,73 +276,6 @@ func (h *accessRequestHandler) getARD(ctx context.Context, ar *management.Access
 	ard = &management.AccessRequestDefinition{}
 	err = ard.FromInstance(ri)
 	return ard, err
-}
-
-type reference struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
-	Unit string `json:"unit"`
-}
-
-func (h *accessRequestHandler) getQuotaInfo(ar *management.AccessRequest) (string, int) {
-	index := 0
-	if len(ar.Spec.AdditionalQuotas) < index+1 {
-		return "", 0
-	}
-
-	q := ar.Spec.AdditionalQuotas[index]
-	for _, r := range ar.References {
-		d, _ := json.Marshal(r)
-		ref := &reference{}
-		json.Unmarshal(d, ref)
-		if ref.Kind == catalog.QuotaGVK().Kind && ref.Name == q.Name {
-			return ref.Unit, int(q.Limit)
-		}
-	}
-	return "", 0
-}
-
-func (h *accessRequestHandler) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
-	unitRef, count := h.getQuotaInfo(ar)
-	if unitRef == "" {
-		return nil, nil
-	}
-
-	instance, err := h.getServiceInstance(ctx, ar)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get service instance from access request to fetch the api service
-	serviceRef := instance.GetReferenceByGVK(management.APIServiceGVK())
-	service := h.cache.GetAPIServiceWithName(serviceRef.Name)
-	if service == nil {
-		return nil, fmt.Errorf("could not find service connected to quota")
-	}
-	extAPIID, err := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-	if err != nil {
-		return nil, err
-	}
-
-	q := &customunits.QuotaInfo{
-		ApiInfo: &customunits.APIInfo{
-			ServiceDetails: util.GetAgentDetailStrings(service),
-			ServiceName:    service.Name,
-			ServiceID:      service.Metadata.ID,
-			ExternalAPIID:  extAPIID,
-		},
-		AppInfo: &customunits.AppInfo{
-			AppDetails: util.GetAgentDetailStrings(app),
-			AppName:    app.Name,
-			AppID:      app.Metadata.ID,
-		},
-		Quota: &customunits.Quota{
-			Count: int64(count),
-			Unit:  unitRef,
-		},
-	}
-
-	return q, nil
 }
 
 func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {

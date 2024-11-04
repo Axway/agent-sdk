@@ -25,6 +25,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/customunit"
+	customunithandler "github.com/Axway/agent-sdk/pkg/customunit/handler"
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -69,6 +70,7 @@ type agentData struct {
 	apiValidatorJobID          string
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	customUnitQuotaHandler     customunithandler.CustomUnitQuotaHandler
 	agentShutdownHandler       ShutdownHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
@@ -165,8 +167,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			return err
 		}
 	}
+
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
+	agent.customUnitQuotaHandler = customunithandler.NewCustomUnitQuotaHandler(metricServicesConfigs)
 	// iterate over each metric service config
 	for _, config := range metricServicesConfigs {
 		ctx, ctxCancel := context.WithCancel(context.Background())

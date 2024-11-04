@@ -3,7 +3,6 @@ package customunit
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -89,11 +88,11 @@ type customUnitMetricReportingClient struct {
 	dialOpts                     []grpc.DialOption
 	cOpts                        []grpc.CallOption
 	url                          string
-	timer                        *time.Timer
 	isRunning                    bool
 	conn                         *grpc.ClientConn
 	cache                        agentcache.Manager
 	metricCollector              metricCollector
+	stopChan                     chan bool
 }
 
 type MROption func(*customUnitMetricReportingClient)
@@ -110,7 +109,7 @@ func NewCustomMetricReportingClientFactory(url string, agentCache cache.Manager)
 			dialOpts: []grpc.DialOption{
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
-			timer: time.NewTimer(time.Hour),
+			stopChan: make(chan bool, 1),
 		}
 
 		for _, o := range opts {
@@ -153,6 +152,7 @@ func (c *customUnitMetricReportingClient) MetricReporting() error {
 	c.metricReportingServiceClient = client
 	// process metrics
 	go c.processMetrics()
+	c.stopChan <- true
 	return nil
 }
 
@@ -163,19 +163,11 @@ func (c *customUnitMetricReportingClient) processMetrics() {
 		case <-c.ctx.Done():
 			if c.isRunning {
 				c.isRunning = false
-				c.timer.Stop()
 				c.cancelCtx()
 			}
 			c.MetricReporting()
-		case <-c.metricReportingServiceClient.Context().Done():
-			if c.isRunning {
-				c.isRunning = false
-				c.timer.Stop()
-				c.cancelCtx()
-			}
-			c.MetricReporting()
-		case <-c.timer.C:
-			metricReport, err := c.metricReportingServiceClient.Recv()
+		case <-c.stopChan:
+			metricReport, err := c.recv()
 			if err == io.EOF {
 				c.logger.Debug("stream finished")
 				break
@@ -185,6 +177,16 @@ func (c *customUnitMetricReportingClient) processMetrics() {
 			}
 			c.reportMetrics(metricReport)
 		}
+	}
+}
+func (c *customUnitMetricReportingClient) recv() (*cu.MetricReport, error) {
+	for {
+		metricReport, err := c.metricReportingServiceClient.Recv()
+		if err != nil {
+			return nil, err
+		}
+
+		return metricReport, nil
 	}
 }
 
