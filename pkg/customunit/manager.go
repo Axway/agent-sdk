@@ -143,6 +143,6 @@ func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Contex
 		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
 		client, _ := factory(ctx, cancelCtx)
 
-		client.MetricReporting()
+		go client.MetricReporting()
 	}
 }

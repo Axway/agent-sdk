@@ -53,7 +53,6 @@ type ConfigChangeHandler func()
 
 // ShutdownHandler - function that the agent may implement to be called when a shutdown request is received
 type ShutdownHandler func()
-
 type agentData struct {
 	agentResourceManager resource.Manager
 	teamJob              *centralTeamsCache
@@ -170,8 +169,6 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
 	agent.customUnitMetricServerManager = customunit.NewCustomUnitMetricServerManager(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
-	ctx, ctxCancel := context.WithCancel(context.Background())
-	agent.customUnitMetricServerManager.HandleMetricReporting(ctx, ctxCancel)
 
 	if !agent.isInitialized {
 		err = handleInitialization()
@@ -434,6 +431,10 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 		agent.authProviderRegistry = oauth.NewProviderRegistry()
 	}
 	return agent.authProviderRegistry
+}
+
+func GetCustomUnitMetricServerManager() *customunit.CustomUnitMetricServerManager {
+	return agent.customUnitMetricServerManager
 }
 
 // RegisterShutdownHandler - Registers shutdown handler

@@ -90,23 +90,21 @@ type metricCollector interface {
 	AddCustomMetricDetail(models.CustomMetricDetail)
 }
 
-func (c *customUnitClient) MetricReporting() error {
+func (c *customUnitClient) MetricReporting() {
 	if err := c.createConnection(); err != nil {
 		//TODO:: Retry until the connection is stable
-		return err
+		return
 	}
 	c.metricReportingClient = cu.NewMetricReportingServiceClient(c.conn)
 	metricServiceInit := &cu.MetricServiceInit{}
 
 	client, err := c.metricReportingClient.MetricReporting(c.ctx, metricServiceInit, c.cOpts...)
 	if err != nil {
-		return err
+		return
 	}
 	c.metricReportingServiceClient = client
 	// process metrics
-	go c.processMetrics()
-	c.stopChan <- true
-	return nil
+	c.processMetrics()
 }
 
 // processMetrics will stream custom metrics
@@ -119,7 +117,7 @@ func (c *customUnitClient) processMetrics() {
 				c.cancelCtx()
 			}
 			c.MetricReporting()
-		case <-c.stopChan:
+		default:
 			metricReport, err := c.recv()
 			if err == io.EOF {
 				c.logger.Debug("stream finished")

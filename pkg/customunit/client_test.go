@@ -73,8 +73,7 @@ func Test_MetricReporting(t *testing.T) {
 	ctx := context.Background()
 	fakeServer := &fakeCustomUnitMetricReportingServer{}
 	client, _ := createMRConnection(fakeServer, ctx)
-	err := client.MetricReporting()
-	fmt.Println(err)
+	client.MetricReporting()
 }
 
 func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx context.Context) (customUnitClient, error) {
