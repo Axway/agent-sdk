@@ -101,3 +101,17 @@ twistlock-discovery:on-schedule:
 twistlock-traceability:on-schedule:
     rules:
     - !reference [.only-never-rule, rules]
+
+run-csr:
+  needs:
+    - upload-files-to-srm
+    - fetch-fortify
+
+update-csr:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $COMPONENT_TESTS_ONLY != "y"
+      when: always
+  needs:
+    - upload-files-to-srm:on-schedule
+    - fetch-fortify:on-schedule
+    - fetch-third-party:on-schedule
