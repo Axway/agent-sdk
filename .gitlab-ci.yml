@@ -34,7 +34,7 @@ include:
     ref: master
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
-    ref: APIGOV-28747
+    ref: $BEANO_CICD_LATEST
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
@@ -49,7 +49,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-csr.yml"
   - project: "apigov/beano_cicd"
-    ref: APIGOV-28747
+    ref: $BEANO_CICD_LATEST
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/csrjobs.yml"
