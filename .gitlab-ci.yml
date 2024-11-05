@@ -19,6 +19,10 @@ variables:
   # Blackduck
   BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
 
+  # SRM
+  SRM_PROJECT_NAME: "$BLACKDUCK_PROJECT_NAME"
+  SRM_PROJECT_ID: "225"
+
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
 
