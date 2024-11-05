@@ -133,7 +133,7 @@ func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar
 	return instance, nil
 }
 
-func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc) {
+func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc, metricCollector metricCollector) {
 	if m.agentType != config.TraceabilityAgent {
 		return
 	}
@@ -141,7 +141,7 @@ func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Contex
 	for _, config := range m.configs {
 		// Initialize custom units client
 		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
-		client, _ := factory(ctx, cancelCtx)
+		client, _ := factory(ctx, cancelCtx, WithMetricCollector(metricCollector))
 
 		go client.MetricReporting()
 	}

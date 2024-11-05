@@ -150,7 +150,7 @@ func GetMetricCollector() Collector {
 		globalMetricCollector = createMetricCollector()
 	}
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	agent.GetCustomUnitMetricServerManager().HandleMetricReporting(ctx, ctxCancel)
+	agent.GetCustomUnitMetricServerManager().HandleMetricReporting(ctx, ctxCancel, globalMetricCollector)
 	return globalMetricCollector
 }
 

@@ -8,6 +8,8 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	cu "github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/sirupsen/logrus"
@@ -56,6 +58,12 @@ func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo 
 		}
 
 		return *c, nil
+	}
+}
+
+func WithMetricCollector(collector metricCollector) CustomUnitOption {
+	return func(c *customUnitClient) {
+		c.metricCollector = collector
 	}
 }
 
@@ -171,6 +179,7 @@ func (c *customUnitClient) buildCustomMetricDetail(metricReport *cu.MetricReport
 		APIDetails:  *apiDetails,
 		AppDetails:  *appDetails,
 		UnitDetails: *planUnitDetails,
+		Count:       metricReport.Count,
 	}, nil
 }
 
@@ -220,8 +229,10 @@ func (c *customUnitClient) APIServiceLookup(apiServiceLookup *cu.APIServiceLooku
 		return nil, nil
 	}
 
+	id, _ := util.GetAgentDetailsValue(apiSvc, definitions.AttrExternalAPIID) //TODO err handle
+
 	return &models.APIDetails{
-		ID:   apiSvc.Metadata.ID,
+		ID:   id,
 		Name: apiSvc.Name,
 	}, nil
 }
@@ -230,7 +241,7 @@ func (c *customUnitClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*m
 	appValue := appLookup.GetValue()
 	appLookupType := appLookup.GetType()
 	appCustomAttr := appLookup.GetCustomAttribute()
-	var managedApp *v1.ResourceInstance
+	var managedAppRI *v1.ResourceInstance
 	var err error
 
 	if appLookupType == cu.AppLookupType_CustomAppLookup && appValue == "" {
@@ -242,29 +253,34 @@ func (c *customUnitClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*m
 	}
 
 	switch appLookupType {
+	case cu.AppLookupType_ExternalAppID:
+		appCustomAttr = definitions.AttrExternalAPIID
+		fallthrough
 	case cu.AppLookupType_CustomAppLookup:
 		for _, key := range c.cache.GetAPIServiceKeys() {
 			app := c.cache.GetManagedApplication(key)
 			val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
 			if val == appValue {
-				managedApp = app
+				managedAppRI = app
 				break
 			}
 		}
-	case cu.AppLookupType_ExternalAppID:
-		managedApp = c.cache.GetManagedApplication(appValue)
 	case cu.AppLookupType_ManagedAppID:
-		managedApp = c.cache.GetManagedApplication(appValue)
+		managedAppRI = c.cache.GetManagedApplication(appValue)
 	case cu.AppLookupType_ManagedAppName:
-		managedApp = c.cache.GetManagedApplicationByName(appValue)
+		managedAppRI = c.cache.GetManagedApplicationByName(appValue)
 	}
-	if managedApp == nil {
+	if managedAppRI == nil {
 		return nil, nil
 	}
+	managedApp := &management.ManagedApplication{}
+	managedApp.FromInstance(managedAppRI) //TODO err handle
+
 	consumerOrgID := ""
-	if managedApp.Owner != nil {
-		consumerOrgID = managedApp.Owner.ID
+	if managedApp.Marketplace.Resource.Owner != nil {
+		consumerOrgID = managedApp.Marketplace.Resource.Owner.ID
 	}
+
 	return &models.AppDetails{
 		ID:            managedApp.Metadata.ID,
 		Name:          managedApp.Name,
@@ -273,7 +289,6 @@ func (c *customUnitClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*m
 }
 
 func (c *customUnitClient) PlanUnitLookup(planUnitLookup *cu.UnitLookup) *models.Unit {
-
 	return &models.Unit{
 		Name: planUnitLookup.GetUnitName(),
 	}
