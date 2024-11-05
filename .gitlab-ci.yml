@@ -104,7 +104,6 @@ twistlock-traceability:on-schedule:
 
 run-csr:
   needs:
-    - upload-files-to-srm
     - fetch-fortify
 
 update-csr:
@@ -112,6 +111,5 @@ update-csr:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $COMPONENT_TESTS_ONLY != "y"
       when: always
   needs:
-    - upload-files-to-srm:on-schedule
     - fetch-fortify:on-schedule
     - fetch-third-party:on-schedule
