@@ -15,29 +15,40 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type customUnitsQEClient struct {
-	ctx       context.Context
-	quotaInfo *cu.QuotaInfo
-	dialOpts  []grpc.DialOption
-	cOpts     []grpc.CallOption
-	url       string
-	conn      *grpc.ClientConn
-	client    cu.QuotaEnforcementClient
+type customUnitClient struct {
+	ctx                          context.Context
+	quotaInfo                    *cu.QuotaInfo
+	dialOpts                     []grpc.DialOption
+	cOpts                        []grpc.CallOption
+	url                          string
+	conn                         *grpc.ClientConn
+	quotaEnforcementClient       cu.QuotaEnforcementClient
+	cancelCtx                    context.CancelFunc
+	logger                       *logrus.Entry
+	metricReportingClient        cu.MetricReportingServiceClient
+	metricReportingServiceClient cu.MetricReportingService_MetricReportingClient
+	isRunning                    bool
+	cache                        agentcache.Manager
+	metricCollector              metricCollector
+	stopChan                     chan bool
 }
 
-type QEOption func(*customUnitsQEClient)
+type CustomUnitOption func(*customUnitClient)
 
-type QuotaEnforcementClientFactory func(context.Context, ...QEOption) (customUnitsQEClient, error)
+type CustomUnitClientFactory func(context.Context, context.CancelFunc, ...CustomUnitOption) (customUnitClient, error)
 
-func NewQuotaEnforcementClientFactory(url string, quotaInfo *cu.QuotaInfo) QuotaEnforcementClientFactory {
-	return func(ctx context.Context, opts ...QEOption) (customUnitsQEClient, error) {
-		c := &customUnitsQEClient{
+func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo *cu.QuotaInfo) CustomUnitClientFactory {
+	return func(ctx context.Context, ctxCancel context.CancelFunc, opts ...CustomUnitOption) (customUnitClient, error) {
+		c := &customUnitClient{
 			ctx:       ctx,
 			quotaInfo: quotaInfo,
 			url:       url,
 			dialOpts: []grpc.DialOption{
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
+			cancelCtx: ctxCancel,
+			cache:     agentCache,
+			stopChan:  make(chan bool, 1),
 		}
 
 		for _, o := range opts {
@@ -48,29 +59,29 @@ func NewQuotaEnforcementClientFactory(url string, quotaInfo *cu.QuotaInfo) Quota
 	}
 }
 
-func WithGRPCDialOption(opt grpc.DialOption) QEOption {
-	return func(c *customUnitsQEClient) {
+func WithGRPCDialOption(opt grpc.DialOption) CustomUnitOption {
+	return func(c *customUnitClient) {
 		c.dialOpts = append(c.dialOpts, opt)
 	}
 }
 
-func (c *customUnitsQEClient) createConnection() error {
+func (c *customUnitClient) createConnection() error {
 	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
 	if err != nil {
 		return err
 	}
 	c.conn = conn
-	c.client = cu.NewQuotaEnforcementClient(conn)
 	return nil
 }
 
-func (c *customUnitsQEClient) QuotaEnforcementInfo() (*cu.QuotaEnforcementResponse, error) {
+func (c *customUnitClient) QuotaEnforcementInfo() (*cu.QuotaEnforcementResponse, error) {
 	err := c.createConnection()
 	if err != nil {
 		// Handle the connection error
 		return nil, err
 	}
-	response, err := c.client.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
+	c.quotaEnforcementClient = cu.NewQuotaEnforcementClient(c.conn)
+	response, err := c.quotaEnforcementClient.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
 
 	return response, err
 }
@@ -79,73 +90,15 @@ type metricCollector interface {
 	AddCustomMetricDetail(models.CustomMetricDetail)
 }
 
-type customUnitMetricReportingClient struct {
-	ctx                          context.Context
-	cancelCtx                    context.CancelFunc
-	logger                       *logrus.Entry
-	mtricReportingClient         cu.MetricReportingServiceClient
-	metricReportingServiceClient cu.MetricReportingService_MetricReportingClient
-	dialOpts                     []grpc.DialOption
-	cOpts                        []grpc.CallOption
-	url                          string
-	isRunning                    bool
-	conn                         *grpc.ClientConn
-	cache                        agentcache.Manager
-	metricCollector              metricCollector
-	stopChan                     chan bool
-}
-
-type MROption func(*customUnitMetricReportingClient)
-
-type MetricReportingClientFactory func(context.Context, context.CancelFunc, ...MROption) (customUnitMetricReportingClient, error)
-
-func NewCustomMetricReportingClientFactory(url string, agentCache cache.Manager) MetricReportingClientFactory {
-	return func(ctx context.Context, ctxCancel context.CancelFunc, opts ...MROption) (customUnitMetricReportingClient, error) {
-		c := &customUnitMetricReportingClient{
-			ctx:       ctx,
-			cancelCtx: ctxCancel,
-			url:       url,
-			cache:     agentCache,
-			dialOpts: []grpc.DialOption{
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			},
-			stopChan: make(chan bool, 1),
-		}
-
-		for _, o := range opts {
-			o(c)
-		}
-
-		return *c, nil
-	}
-}
-
-func WithGRPCDialOptionForMR(opt grpc.DialOption) MROption {
-	return func(c *customUnitMetricReportingClient) {
-		c.dialOpts = append(c.dialOpts, opt)
-	}
-}
-
-func (c *customUnitMetricReportingClient) createConnection() error {
-	// create the metric reporting connection
-	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
-	if err != nil {
-		c.logger.WithError(err).Errorf("failed to connect to metric server")
-		return err
-	}
-	c.conn = conn
-	c.mtricReportingClient = cu.NewMetricReportingServiceClient(c.conn)
-	return nil
-}
-
-func (c *customUnitMetricReportingClient) MetricReporting() error {
+func (c *customUnitClient) MetricReporting() error {
 	if err := c.createConnection(); err != nil {
 		//TODO:: Retry until the connection is stable
 		return err
 	}
+	c.metricReportingClient = cu.NewMetricReportingServiceClient(c.conn)
 	metricServiceInit := &cu.MetricServiceInit{}
 
-	client, err := c.mtricReportingClient.MetricReporting(c.ctx, metricServiceInit, c.cOpts...)
+	client, err := c.metricReportingClient.MetricReporting(c.ctx, metricServiceInit, c.cOpts...)
 	if err != nil {
 		return err
 	}
@@ -157,7 +110,7 @@ func (c *customUnitMetricReportingClient) MetricReporting() error {
 }
 
 // processMetrics will stream custom metrics
-func (c *customUnitMetricReportingClient) processMetrics() {
+func (c *customUnitClient) processMetrics() {
 	for {
 		select {
 		case <-c.ctx.Done():
@@ -179,7 +132,7 @@ func (c *customUnitMetricReportingClient) processMetrics() {
 		}
 	}
 }
-func (c *customUnitMetricReportingClient) recv() (*cu.MetricReport, error) {
+func (c *customUnitClient) recv() (*cu.MetricReport, error) {
 	for {
 		metricReport, err := c.metricReportingServiceClient.Recv()
 		if err != nil {
@@ -190,7 +143,7 @@ func (c *customUnitMetricReportingClient) recv() (*cu.MetricReport, error) {
 	}
 }
 
-func (c *customUnitMetricReportingClient) reportMetrics(metricReport *cu.MetricReport) {
+func (c *customUnitClient) reportMetrics(metricReport *cu.MetricReport) {
 	// deprovision the metric report and send it to the metric collector
 	customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
 	if err == nil {
@@ -198,7 +151,7 @@ func (c *customUnitMetricReportingClient) reportMetrics(metricReport *cu.MetricR
 	}
 }
 
-func (c *customUnitMetricReportingClient) buildCustomMetricDetail(metricReport *cu.MetricReport) (*models.CustomMetricDetail, error) {
+func (c *customUnitClient) buildCustomMetricDetail(metricReport *cu.MetricReport) (*models.CustomMetricDetail, error) {
 	apiServiceLookup := metricReport.GetApiService()
 	managedAppLookup := metricReport.GetManagedApp()
 	planUnitLookup := metricReport.GetPlanUnit()
@@ -223,7 +176,7 @@ func (c *customUnitMetricReportingClient) buildCustomMetricDetail(metricReport *
 	}, nil
 }
 
-func (c *customUnitMetricReportingClient) Close() error {
+func (c *customUnitClient) Close() error {
 	var err error
 	defer c.conn.Close()
 	if err != nil {
@@ -233,7 +186,7 @@ func (c *customUnitMetricReportingClient) Close() error {
 	return nil
 }
 
-func (c *customUnitMetricReportingClient) APIServiceLookup(apiServiceLookup *cu.APIServiceLookup) (*models.APIDetails, error) {
+func (c *customUnitClient) APIServiceLookup(apiServiceLookup *cu.APIServiceLookup) (*models.APIDetails, error) {
 	apiSvcValue := apiServiceLookup.GetValue()
 	apiLookupType := apiServiceLookup.GetType()
 	apiCustomAttr := apiServiceLookup.GetCustomAttribute()
@@ -275,7 +228,7 @@ func (c *customUnitMetricReportingClient) APIServiceLookup(apiServiceLookup *cu.
 	}, nil
 }
 
-func (c *customUnitMetricReportingClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*models.AppDetails, error) {
+func (c *customUnitClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*models.AppDetails, error) {
 	appValue := appLookup.GetValue()
 	appLookupType := appLookup.GetType()
 	appCustomAttr := appLookup.GetCustomAttribute()
@@ -317,7 +270,7 @@ func (c *customUnitMetricReportingClient) ManagedApplicationLookup(appLookup *cu
 	}, nil
 }
 
-func (c *customUnitMetricReportingClient) PlanUnitLookup(planUnitLookup *cu.UnitLookup) *models.Unit {
+func (c *customUnitClient) PlanUnitLookup(planUnitLookup *cu.UnitLookup) *models.Unit {
 
 	return &models.Unit{
 		Name: planUnitLookup.GetUnitName(),

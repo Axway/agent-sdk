@@ -1,4 +1,4 @@
-package handler
+package customunit
 
 import (
 	"context"
@@ -12,51 +12,54 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/customunit"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
-type customUnitQuotaHandler struct {
+type customUnitMetricServerManager struct {
 	configs []config.MetricServiceConfiguration
 	cache   cache.Manager
 }
 
-type CustomUnitQuotaHandler interface {
-	Handle(context.Context, *management.AccessRequest, *management.ManagedApplication) (string, error)
+type CustomUnitMetricServerManager interface {
+	HandleQuotaEnforcement(context.Context, context.CancelFunc, *management.AccessRequest, *management.ManagedApplication) error
+	HandleMetricReporting(context.Context, context.CancelFunc)
 }
 
-// NewCustomUnitQuotaHandler creates a new Custom Unit Quota Handler for AccessRequest processing
-func NewCustomUnitQuotaHandler(configs []config.MetricServiceConfiguration) CustomUnitQuotaHandler {
-	return &customUnitQuotaHandler{
+func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguration, cache cache.Manager) CustomUnitMetricServerManager {
+	return &customUnitMetricServerManager{
 		configs: configs,
+		cache:   cache,
 	}
 }
 
-func (h *customUnitQuotaHandler) Handle(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (string, error) {
+func (h *customUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Context, cancelCtx context.CancelFunc, ar *management.AccessRequest, app *management.ManagedApplication) error {
 	// Build quota info
 	quotaInfo, err := h.buildQuotaInfo(ctx, ar, app)
 	if err != nil {
-		return "", fmt.Errorf("could not build quota info from access request")
+		return fmt.Errorf("could not build quota info from access request")
 	}
 	errMessage := ""
 	for _, config := range h.configs {
 		if config.MetricServiceEnabled() {
-			factory := customunit.NewQuotaEnforcementClientFactory(config.URL, quotaInfo)
-			client, _ := factory(ctx)
+			factory := NewCustomUnitClientFactory(config.URL, h.cache, quotaInfo)
+			client, _ := factory(ctx, cancelCtx)
 			response, err := client.QuotaEnforcementInfo()
 			if err != nil {
 				// if error from QE and reject on fail, we return the error back to the central
-				if response.Error != "" && config.RejectOnFailEnabled() {
+				if response != nil && response.Error != "" && config.RejectOnFailEnabled() {
 					errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
 				}
 			}
 		}
 	}
 
-	return errMessage, nil
+	if errMessage != "" {
+		return fmt.Errorf(errMessage)
+	}
+	return nil
 }
 
-func (h *customUnitQuotaHandler) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
+func (h *customUnitMetricServerManager) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
 	unitRef, count := h.getQuotaInfo(ar)
 	if unitRef == "" {
 		return nil, nil
@@ -105,7 +108,7 @@ type reference struct {
 	Unit string `json:"unit"`
 }
 
-func (h *customUnitQuotaHandler) getQuotaInfo(ar *management.AccessRequest) (string, int) {
+func (h *customUnitMetricServerManager) getQuotaInfo(ar *management.AccessRequest) (string, int) {
 	index := 0
 	if len(ar.Spec.AdditionalQuotas) < index+1 {
 		return "", 0
@@ -123,7 +126,7 @@ func (h *customUnitQuotaHandler) getQuotaInfo(ar *management.AccessRequest) (str
 	return "", 0
 }
 
-func (h *customUnitQuotaHandler) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
+func (h *customUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
 	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	instID := instRef.ID
 	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
@@ -131,4 +134,15 @@ func (h *customUnitQuotaHandler) getServiceInstance(_ context.Context, ar *manag
 		return nil, err
 	}
 	return instance, nil
+}
+
+func (m *customUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc) {
+	// iterate over each metric service config
+	for _, config := range m.configs {
+		// Initialize custom units client
+		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
+		client, _ := factory(ctx, cancelCtx)
+
+		client.MetricReporting()
+	}
 }

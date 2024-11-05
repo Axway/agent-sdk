@@ -9,7 +9,6 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
-	handler "github.com/Axway/agent-sdk/pkg/customunit/handler"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -24,24 +23,27 @@ type arProvisioner interface {
 	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
+type customUnitMetricServerManager interface {
+	HandleQuotaEnforcement(context.Context, context.CancelFunc, *management.AccessRequest, *management.ManagedApplication) error
+}
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov                   arProvisioner
-	cache                  agentcache.Manager
-	client                 client
-	encryptSchema          encryptSchemaFunc
-	customUnitQuotaHandler handler.CustomUnitQuotaHandler
+	prov                          arProvisioner
+	cache                         agentcache.Manager
+	client                        client
+	encryptSchema                 encryptSchemaFunc
+	customUnitMetricServerManager customUnitMetricServerManager
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitQuotaHandler handler.CustomUnitQuotaHandler) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitMetricServerManager customUnitMetricServerManager) Handler {
 	return &accessRequestHandler{
-		prov:                   prov,
-		cache:                  cache,
-		client:                 client,
-		encryptSchema:          encryptSchema,
-		customUnitQuotaHandler: customUnitQuotaHandler,
+		prov:                          prov,
+		cache:                         cache,
+		client:                        client,
+		encryptSchema:                 encryptSchema,
+		customUnitMetricServerManager: customUnitMetricServerManager,
 	}
 }
 
@@ -137,15 +139,13 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	status, accessData := h.prov.AccessRequestProvision(req)
 
 	if status.GetStatus() == prov.Success && len(ar.Spec.AdditionalQuotas) > 0 {
-		errMessage, err := h.customUnitQuotaHandler.Handle(ctx, ar, app)
+		ctx, cancelCtx := context.WithCancel(ctx)
+		err := h.customUnitMetricServerManager.HandleQuotaEnforcement(ctx, cancelCtx, ar, app)
 
 		if err != nil {
-			h.onError(ctx, ar, err)
-		}
-
-		if errMessage != "" {
+			// h.onError(ctx, ar, err)
 			status = prov.NewRequestStatusBuilder().
-				SetMessage(errMessage).
+				SetMessage(err.Error()).
 				SetCurrentStatusReasons(ar.Status.Reasons).
 				Failed()
 		}

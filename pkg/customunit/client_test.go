@@ -35,7 +35,7 @@ func Test_QuotaEnforcementInfo(t *testing.T) {
 	assert.Nil(t, response)
 }
 
-func createQEConnection(fakeServer *fakeQuotaEnforcementServer, ctx context.Context) (customUnitsQEClient, error) {
+func createQEConnection(fakeServer *fakeQuotaEnforcementServer, ctx context.Context) (customUnitClient, error) {
 	lis := bufconn.Listen(bufSize)
 	opt := grpc.WithContextDialer(
 		func(context.Context, string) (net.Conn, error) {
@@ -61,9 +61,10 @@ func createQEConnection(fakeServer *fakeQuotaEnforcementServer, ctx context.Cont
 			Unit: "mockUnit",
 		},
 	}
-	factory := NewQuotaEnforcementClientFactory("bufnet", quotaInfo)
-
-	return factory(context.Background(), WithGRPCDialOption(opt))
+	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	factory := NewCustomUnitClientFactory("bufnet", cache, quotaInfo)
+	streamCtx, streamCancel := context.WithCancel(context.Background())
+	return factory(streamCtx, streamCancel, WithGRPCDialOption(opt))
 
 }
 
@@ -76,7 +77,7 @@ func Test_MetricReporting(t *testing.T) {
 	fmt.Println(err)
 }
 
-func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx context.Context) (customUnitMetricReportingClient, error) {
+func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx context.Context) (customUnitClient, error) {
 	lis := bufconn.Listen(bufSize)
 	opt := grpc.WithContextDialer(
 		func(context.Context, string) (net.Conn, error) {
@@ -93,8 +94,8 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx con
 	}()
 
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	factory := NewCustomMetricReportingClientFactory("bufnet", cache)
+	factory := NewCustomUnitClientFactory("bufnet", cache, &customunits.QuotaInfo{})
 	streamCtx, streamCancel := context.WithCancel(context.Background())
-	return factory(streamCtx, streamCancel, WithGRPCDialOptionForMR(opt))
+	return factory(streamCtx, streamCancel, WithGRPCDialOption(opt))
 
 }
