@@ -69,7 +69,7 @@ type agentData struct {
 	apiValidatorJobID             string
 	configChangeHandler           ConfigChangeHandler
 	agentResourceChangeHandler    ConfigChangeHandler
-	customUnitMetricServerManager customunit.CustomUnitMetricServerManager
+	customUnitMetricServerManager *customunit.CustomUnitMetricServerManager
 	agentShutdownHandler          ShutdownHandler
 	proxyResourceHandler          *handler.StreamWatchProxyHandler
 	isInitialized                 bool
@@ -169,7 +169,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
-	agent.customUnitMetricServerManager = customunit.NewCustomUnitMetricServerManager(metricServicesConfigs, agent.cacheManager)
+	agent.customUnitMetricServerManager = customunit.NewCustomUnitMetricServerManager(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	agent.customUnitMetricServerManager.HandleMetricReporting(ctx, ctxCancel)
 

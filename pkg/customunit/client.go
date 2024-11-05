@@ -214,7 +214,7 @@ func (c *customUnitClient) APIServiceLookup(apiServiceLookup *cu.APIServiceLooku
 	case cu.APIServiceLookupType_ExternalAPIID:
 		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
 	case cu.APIServiceLookupType_ServiceID:
-		apiSvc = c.cache.GetAPIServiceWithPrimaryKey(apiSvcValue)
+		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
 	case cu.APIServiceLookupType_ServiceName:
 		apiSvc = c.cache.GetAPIServiceWithName(apiSvcValue)
 	}
@@ -263,10 +263,14 @@ func (c *customUnitClient) ManagedApplicationLookup(appLookup *cu.AppLookup) (*m
 	if managedApp == nil {
 		return nil, nil
 	}
+	consumerOrgID := ""
+	if managedApp.Owner != nil {
+		consumerOrgID = managedApp.Owner.ID
+	}
 	return &models.AppDetails{
 		ID:            managedApp.Metadata.ID,
 		Name:          managedApp.Name,
-		ConsumerOrgID: managedApp.Owner.ID,
+		ConsumerOrgID: consumerOrgID,
 	}, nil
 }
 

@@ -15,24 +15,21 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
-type customUnitMetricServerManager struct {
-	configs []config.MetricServiceConfiguration
-	cache   cache.Manager
+type CustomUnitMetricServerManager struct {
+	configs   []config.MetricServiceConfiguration
+	cache     cache.Manager
+	agentType config.AgentType
 }
 
-type CustomUnitMetricServerManager interface {
-	HandleQuotaEnforcement(context.Context, context.CancelFunc, *management.AccessRequest, *management.ManagedApplication) error
-	HandleMetricReporting(context.Context, context.CancelFunc)
-}
-
-func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguration, cache cache.Manager) CustomUnitMetricServerManager {
-	return &customUnitMetricServerManager{
-		configs: configs,
-		cache:   cache,
+func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguration, cache cache.Manager, agentType config.AgentType) *CustomUnitMetricServerManager {
+	return &CustomUnitMetricServerManager{
+		configs:   configs,
+		cache:     cache,
+		agentType: agentType,
 	}
 }
 
-func (h *customUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Context, cancelCtx context.CancelFunc, ar *management.AccessRequest, app *management.ManagedApplication) error {
+func (h *CustomUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Context, cancelCtx context.CancelFunc, ar *management.AccessRequest, app *management.ManagedApplication) error {
 	// Build quota info
 	quotaInfo, err := h.buildQuotaInfo(ctx, ar, app)
 	if err != nil {
@@ -59,7 +56,7 @@ func (h *customUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Conte
 	return nil
 }
 
-func (h *customUnitMetricServerManager) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
+func (h *CustomUnitMetricServerManager) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
 	unitRef, count := h.getQuotaInfo(ar)
 	if unitRef == "" {
 		return nil, nil
@@ -108,7 +105,7 @@ type reference struct {
 	Unit string `json:"unit"`
 }
 
-func (h *customUnitMetricServerManager) getQuotaInfo(ar *management.AccessRequest) (string, int) {
+func (h *CustomUnitMetricServerManager) getQuotaInfo(ar *management.AccessRequest) (string, int) {
 	index := 0
 	if len(ar.Spec.AdditionalQuotas) < index+1 {
 		return "", 0
@@ -126,7 +123,7 @@ func (h *customUnitMetricServerManager) getQuotaInfo(ar *management.AccessReques
 	return "", 0
 }
 
-func (h *customUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
+func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
 	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	instID := instRef.ID
 	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
@@ -136,7 +133,10 @@ func (h *customUnitMetricServerManager) getServiceInstance(_ context.Context, ar
 	return instance, nil
 }
 
-func (m *customUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc) {
+func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc) {
+	if m.agentType != config.TraceabilityAgent {
+		return
+	}
 	// iterate over each metric service config
 	for _, config := range m.configs {
 		// Initialize custom units client

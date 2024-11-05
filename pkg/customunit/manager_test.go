@@ -20,7 +20,7 @@ const managedAppRefName = "managed-app-name"
 func Test_NewCustomUnitMetricServerManager(t *testing.T) {
 	metricServicesConfigs := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	handler := NewCustomUnitMetricServerManager(metricServicesConfigs, cm)
+	handler := NewCustomUnitMetricServerManager(metricServicesConfigs, cm, config.DiscoveryAgent)
 
 	assert.NotNil(t, handler)
 }
@@ -91,7 +91,7 @@ func Test_HandleQuotaEnforcementInfo(t *testing.T) {
 		},
 	}
 
-	manager := NewCustomUnitMetricServerManager(metricServicesConfigs, cm)
+	manager := NewCustomUnitMetricServerManager(metricServicesConfigs, cm, config.DiscoveryAgent)
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	err := manager.HandleQuotaEnforcement(ctx, cancelCtx, accessReq, managedAppForTest)
 
