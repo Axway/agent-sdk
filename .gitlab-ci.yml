@@ -106,7 +106,7 @@ upload-files-to-srm:
   rules:
     - !reference [.only-never-rule, rules]
 
-upload-files-to-srm:
+upload-files-to-srm:on-schedule:
   rules:
     - !reference [.only-never-rule, rules]
 
