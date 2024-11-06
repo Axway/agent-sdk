@@ -7,25 +7,34 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
-	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 type CustomUnitMetricServerManager struct {
-	configs   []config.MetricServiceConfiguration
-	cache     cache.Manager
-	agentType config.AgentType
+	configs          []config.MetricServiceConfiguration
+	cache            cache.Manager
+	agentType        config.AgentType
+	logger           *logrus.Entry
+	metricReportChan chan *customunits.MetricReport
+}
+
+type metricCollector interface {
+	AddCustomMetricDetail(models.CustomMetricDetail)
 }
 
 func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguration, cache cache.Manager, agentType config.AgentType) *CustomUnitMetricServerManager {
 	return &CustomUnitMetricServerManager{
-		configs:   configs,
-		cache:     cache,
-		agentType: agentType,
+		configs:          configs,
+		cache:            cache,
+		agentType:        agentType,
+		metricReportChan: make(chan *customunits.MetricReport, 100),
 	}
 }
 
@@ -73,7 +82,7 @@ func (h *CustomUnitMetricServerManager) buildQuotaInfo(ctx context.Context, ar *
 	if service == nil {
 		return nil, fmt.Errorf("could not find service connected to quota")
 	}
-	extAPIID, err := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+	extAPIID, err := util.GetAgentDetailsValue(instance, definitions.AttrExternalAPIID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +132,7 @@ func (h *CustomUnitMetricServerManager) getQuotaInfo(ar *management.AccessReques
 	return "", 0
 }
 
-func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*apiv1.ResourceInstance, error) {
+func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*v1.ResourceInstance, error) {
 	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	instID := instRef.ID
 	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
@@ -137,12 +146,150 @@ func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Contex
 	if m.agentType != config.TraceabilityAgent {
 		return
 	}
+	go m.receiveMetrics(metricCollector)
 	// iterate over each metric service config
 	for _, config := range m.configs {
 		// Initialize custom units client
 		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
-		client, _ := factory(ctx, cancelCtx, WithMetricCollector(metricCollector))
+		client, _ := factory(ctx, cancelCtx)
+		go client.MetricReporting(m.metricReportChan)
+	}
+}
 
-		go client.MetricReporting()
+func (c *CustomUnitMetricServerManager) receiveMetrics(metricCollector metricCollector) {
+	for {
+		metricReport := <-c.metricReportChan
+		// deprovision the metric report and send it to the metric collector
+		customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
+		if err == nil {
+			metricCollector.AddCustomMetricDetail(*customMetricDetail)
+		}
+	}
+}
+
+func (c *CustomUnitMetricServerManager) buildCustomMetricDetail(metricReport *customunits.MetricReport) (*models.CustomMetricDetail, error) {
+	apiServiceLookup := metricReport.GetApiService()
+	managedAppLookup := metricReport.GetManagedApp()
+	planUnitLookup := metricReport.GetPlanUnit()
+
+	apiDetails, err := c.APIServiceLookup(apiServiceLookup)
+	if err != nil {
+		c.logger.Error(err)
+		return nil, err
+	}
+	appDetails, err := c.ManagedApplicationLookup(managedAppLookup)
+	if err != nil {
+		c.logger.Error(err)
+		return nil, err
+	}
+
+	planUnitDetails := c.PlanUnitLookup(planUnitLookup)
+
+	return &models.CustomMetricDetail{
+		APIDetails:  *apiDetails,
+		AppDetails:  *appDetails,
+		UnitDetails: *planUnitDetails,
+		Count:       metricReport.Count,
+	}, nil
+}
+
+func (c *CustomUnitMetricServerManager) APIServiceLookup(apiServiceLookup *customunits.APIServiceLookup) (*models.APIDetails, error) {
+	apiSvcValue := apiServiceLookup.GetValue()
+	apiLookupType := apiServiceLookup.GetType()
+	apiCustomAttr := apiServiceLookup.GetCustomAttribute()
+	var apiSvc *v1.ResourceInstance
+	var err error
+
+	if apiLookupType == customunits.APIServiceLookupType_CustomAPIServiceLookup && apiCustomAttr == "" {
+		return nil, err
+	}
+
+	if apiSvcValue == "" {
+		return nil, err
+	}
+
+	switch apiLookupType {
+	case customunits.APIServiceLookupType_CustomAPIServiceLookup:
+		for _, key := range c.cache.GetAPIServiceKeys() {
+			apisvc := c.cache.GetAPIServiceWithAPIID(key)
+			val, _ := util.GetAgentDetailsValue(apisvc, apiCustomAttr)
+			if val == apiSvcValue {
+				apiSvc = apisvc
+				break
+			}
+		}
+	case customunits.APIServiceLookupType_ExternalAPIID:
+		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
+	case customunits.APIServiceLookupType_ServiceID:
+		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
+	case customunits.APIServiceLookupType_ServiceName:
+		apiSvc = c.cache.GetAPIServiceWithName(apiSvcValue)
+	}
+	if apiSvc == nil {
+		return nil, nil
+	}
+
+	id, _ := util.GetAgentDetailsValue(apiSvc, definitions.AttrExternalAPIID) //TODO err handle
+
+	return &models.APIDetails{
+		ID:   id,
+		Name: apiSvc.Name,
+	}, nil
+}
+
+func (c *CustomUnitMetricServerManager) ManagedApplicationLookup(appLookup *customunits.AppLookup) (*models.AppDetails, error) {
+	appValue := appLookup.GetValue()
+	appLookupType := appLookup.GetType()
+	appCustomAttr := appLookup.GetCustomAttribute()
+	var managedAppRI *v1.ResourceInstance
+	var err error
+
+	if appLookupType == customunits.AppLookupType_CustomAppLookup && appValue == "" {
+		return nil, err
+	}
+
+	if appValue == "" {
+		return nil, err
+	}
+
+	switch appLookupType {
+	case customunits.AppLookupType_ExternalAppID:
+		appCustomAttr = definitions.AttrExternalAPIID
+		fallthrough
+	case customunits.AppLookupType_CustomAppLookup:
+		for _, key := range c.cache.GetAPIServiceKeys() {
+			app := c.cache.GetManagedApplication(key)
+			val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
+			if val == appValue {
+				managedAppRI = app
+				break
+			}
+		}
+	case customunits.AppLookupType_ManagedAppID:
+		managedAppRI = c.cache.GetManagedApplication(appValue)
+	case customunits.AppLookupType_ManagedAppName:
+		managedAppRI = c.cache.GetManagedApplicationByName(appValue)
+	}
+	if managedAppRI == nil {
+		return nil, nil
+	}
+	managedApp := &management.ManagedApplication{}
+	managedApp.FromInstance(managedAppRI) //TODO err handle
+
+	consumerOrgID := ""
+	if managedApp.Marketplace.Resource.Owner != nil {
+		consumerOrgID = managedApp.Marketplace.Resource.Owner.ID
+	}
+
+	return &models.AppDetails{
+		ID:            managedApp.Metadata.ID,
+		Name:          managedApp.Name,
+		ConsumerOrgID: consumerOrgID,
+	}, nil
+}
+
+func (c *CustomUnitMetricServerManager) PlanUnitLookup(planUnitLookup *customunits.UnitLookup) *models.Unit {
+	return &models.Unit{
+		Name: planUnitLookup.GetUnitName(),
 	}
 }
