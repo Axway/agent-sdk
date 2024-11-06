@@ -95,11 +95,19 @@ trigger-azure-discovery-agent:
   extends: .trigger-downstream-agent
 
 twistlock-discovery:on-schedule:
-    rules:
+  rules:
     - !reference [.only-never-rule, rules]
 
 twistlock-traceability:on-schedule:
-    rules:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+upload-files-to-srm:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+upload-files-to-srm:
+  rules:
     - !reference [.only-never-rule, rules]
 
 run-csr:
