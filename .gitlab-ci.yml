@@ -110,14 +110,12 @@ upload-files-to-srm:on-schedule:
   rules:
     - !reference [.only-never-rule, rules]
 
+# For these 2, override the 'needs' from base
 run-csr:
   needs:
     - fetch-fortify
 
 update-csr:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $COMPONENT_TESTS_ONLY != "y"
-      when: always
   needs:
     - fetch-fortify:on-schedule
     - fetch-third-party:on-schedule
