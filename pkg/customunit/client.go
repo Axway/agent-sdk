@@ -22,6 +22,7 @@ type customUnitClient struct {
 	conn      *grpc.ClientConn
 	isRunning bool
 	cache     cache.Manager
+	stopChan  chan bool
 }
 
 type CustomUnitOption func(*customUnitClient)
@@ -40,6 +41,7 @@ func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo 
 			cancelCtx: ctxCancel,
 			cache:     agentCache,
 			logger:    logrus.NewEntry(log.Get()),
+			stopChan:  make(chan bool, 1),
 		}
 
 		for _, o := range opts {
@@ -77,7 +79,6 @@ func (c *customUnitClient) QuotaEnforcementInfo() (*cu.QuotaEnforcementResponse,
 
 func (c *customUnitClient) MetricReporting(metricReportChan chan *cu.MetricReport) {
 	if err := c.createConnection(); err != nil {
-		//TODO:: Retry until the connection is stable
 		return
 	}
 	client := cu.NewMetricReportingServiceClient(c.conn)
@@ -101,7 +102,13 @@ func (c *customUnitClient) processMetrics(client cu.MetricReportingService_Metri
 			}
 			go c.MetricReporting(metricReportChan)
 			return
+		case <-c.stopChan:
+			c.stopChan = nil
+			return
 		default:
+			if c.stopChan == nil {
+				c.stopChan = make(chan bool, 1)
+			}
 			metricReport, err := client.Recv()
 			if err != nil {
 				c.logger.Debug("stream finished")
@@ -121,4 +128,10 @@ func (c *customUnitClient) Close() error {
 	}
 
 	return nil
+}
+
+func (c *customUnitClient) Stop() {
+	if c.stopChan != nil {
+		c.stopChan <- true
+	}
 }

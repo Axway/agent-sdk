@@ -229,7 +229,10 @@ func (c *CustomUnitMetricServerManager) APIServiceLookup(apiServiceLookup *custo
 		return nil, nil
 	}
 
-	id, _ := util.GetAgentDetailsValue(apiSvc, definitions.AttrExternalAPIID) //TODO err handle
+	id, err := util.GetAgentDetailsValue(apiSvc, definitions.AttrExternalAPIID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &models.APIDetails{
 		ID:   id,
@@ -274,8 +277,10 @@ func (c *CustomUnitMetricServerManager) ManagedApplicationLookup(appLookup *cust
 		return nil, nil
 	}
 	managedApp := &management.ManagedApplication{}
-	managedApp.FromInstance(managedAppRI) //TODO err handle
-
+	err = managedApp.FromInstance(managedAppRI)
+	if err != nil {
+		return nil, err
+	}
 	consumerOrgID := ""
 	if managedApp.Marketplace.Resource.Owner != nil {
 		consumerOrgID = managedApp.Marketplace.Resource.Owner.ID

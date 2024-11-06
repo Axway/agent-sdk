@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
@@ -75,6 +76,8 @@ func Test_MetricReporting(t *testing.T) {
 	client, _ := createMRConnection(fakeServer, ctx)
 	metricReportChan := make(chan *customunits.MetricReport, 100)
 	client.MetricReporting(metricReportChan)
+	time.Sleep(2 * time.Second)
+	client.Stop()
 }
 
 func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx context.Context) (customUnitClient, error) {
