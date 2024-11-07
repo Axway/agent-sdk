@@ -41,6 +41,7 @@ type agentStatusUpdate struct {
 	typeOfStatusUpdate    string
 	prevStatus            string
 	logger                log.FieldLogger
+	initialExecution      bool
 }
 
 var periodicStatusUpdate *agentStatusUpdate
@@ -65,6 +66,14 @@ func (su *agentStatusUpdate) Status() error {
 }
 
 func (su *agentStatusUpdate) Execute() error {
+	if su.typeOfStatusUpdate == immediate && !su.initialExecution {
+		su.initialExecution = true
+		if previousStatus == "" {
+			previousStatus = AgentRunning
+		}
+		return nil
+	}
+
 	id, _ := uuid.NewUUID()
 	log := su.logger.WithField("status-update-id", id)
 
@@ -117,7 +126,9 @@ func StartAgentStatusUpdate() {
 		logger.WithError(err).Error("not starting status update jobs")
 		return
 	}
-	startPeriodicStatusUpdate(logger)
+	if !agent.cfg.IsUsingGRPC() {
+		startPeriodicStatusUpdate(logger)
+	}
 	startImmediateStatusUpdate(logger)
 }
 

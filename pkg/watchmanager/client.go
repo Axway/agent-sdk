@@ -17,6 +17,7 @@ import (
 type clientConfig struct {
 	errors        chan error
 	events        chan *proto.Event
+	requests      chan *proto.Request
 	tokenGetter   TokenGetter
 	topicSelfLink string
 }
@@ -87,6 +88,13 @@ func (c *watchClient) processRequest() error {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wait := true
+
+	// If the request channel is not supplied, create new
+	// for token refresh request
+	if c.cfg.requests == nil {
+		c.cfg.requests = make(chan *proto.Request, 1)
+	}
+
 	go func() {
 		for {
 			select {
@@ -97,7 +105,13 @@ func (c *watchClient) processRequest() error {
 				c.handleError(c.stream.Context().Err())
 				return
 			case <-c.timer.C:
-				err = c.send()
+				err = c.createTokenRefreshRequest()
+				if err != nil {
+					c.handleError(err)
+					return
+				}
+			case req := <-c.cfg.requests:
+				err = c.stream.Send(req)
 				if wait {
 					wg.Done()
 					wait = false
@@ -114,8 +128,8 @@ func (c *watchClient) processRequest() error {
 	return err
 }
 
-// send a message with a new token to the grpc server and returns the expiration time
-func (c *watchClient) send() error {
+// create stream request with a new token to the grpc server and returns the expiration time
+func (c *watchClient) createTokenRefreshRequest() error {
 	c.timer.Stop()
 
 	token, err := c.cfg.tokenGetter()
@@ -129,10 +143,8 @@ func (c *watchClient) send() error {
 	}
 
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
-	err = c.stream.Send(req)
-	if err != nil {
-		return err
-	}
+	// write the token request to the channel
+	c.cfg.requests <- req
 	c.timer.Reset(exp)
 	return nil
 }

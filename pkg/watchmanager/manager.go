@@ -137,6 +137,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		clientConfig{
 			errors:        errors,
 			events:        events,
+			requests:      m.options.requestCh,
 			tokenGetter:   m.cfg.TokenGetter,
 			topicSelfLink: link,
 		},

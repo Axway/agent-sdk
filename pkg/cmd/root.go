@@ -421,6 +421,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	}
 	status := agent.AgentStopped
 	if statusText != "" {
+		fmt.Println(statusText)
 		status = agent.AgentFailed
 	}
 	agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
@@ -432,7 +433,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 func (c *agentRootCommand) healthCheckTicker() {
 	log.Trace("run health checker ticker to check health status on RunChecks")
 	ticker := time.NewTicker(5 * time.Second)
-	tickerTimeout := time.NewTicker(5 * time.Minute)
+	tickerTimeout := time.NewTicker(30 * time.Second)
 
 	defer ticker.Stop()
 	defer tickerTimeout.Stop()

@@ -36,6 +36,8 @@ type StreamerClient struct {
 	listener           *events.EventListener
 	manager            wm.Manager
 	newListener        events.NewListenerFunc
+	requestQueue       events.RequestQueue
+	newRequestQueue    events.NewRequestQueueFunc
 	newManager         wm.NewManagerFunc
 	onStreamConnection func()
 	sequence           events.SequenceProvider
@@ -75,13 +77,14 @@ func NewStreamerClient(
 	}
 
 	s := &StreamerClient{
-		handlers:       handlers,
-		apiClient:      apiClient,
-		watchCfg:       watchCfg,
-		newManager:     wm.New,
-		newListener:    events.NewEventListener,
-		logger:         logger,
-		environmentURL: cfg.GetEnvironmentURL(),
+		handlers:        handlers,
+		apiClient:       apiClient,
+		watchCfg:        watchCfg,
+		newManager:      wm.New,
+		newListener:     events.NewEventListener,
+		newRequestQueue: events.NewRequestQueue,
+		logger:          logger,
+		environmentURL:  cfg.GetEnvironmentURL(),
 	}
 
 	for _, opt := range options {
@@ -133,8 +136,7 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (s *StreamerClient) Start() error {
-	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
-
+	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
 	s.mutex.Lock()
 
 	s.listener = s.newListener(
@@ -145,7 +147,11 @@ func (s *StreamerClient) Start() error {
 	)
 	defer s.listener.Stop()
 
-	manager, err := s.newManager(s.watchCfg, s.watchOpts...)
+	s.requestQueue = s.newRequestQueue(requestCh)
+	defer s.requestQueue.Stop()
+	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh))
+
+	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
 		return err
 	}
@@ -156,6 +162,7 @@ func (s *StreamerClient) Start() error {
 	s.mutex.Unlock()
 
 	listenCh := s.listener.Listen()
+	s.requestQueue.Start()
 
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
 	if s.onStreamConnection != nil {
@@ -200,6 +207,7 @@ func (s *StreamerClient) Status() error {
 func (s *StreamerClient) Stop() {
 	s.manager.CloseConn()
 	s.listener.Stop()
+	s.requestQueue.Stop()
 }
 
 // Healthcheck - health check for stream client
@@ -213,4 +221,22 @@ func (s *StreamerClient) Healthcheck(_ string) *hc.Status {
 	return &hc.Status{
 		Result: hc.OK,
 	}
+}
+
+func (s *StreamerClient) CanUpdateStatus() bool {
+	return s.requestQueue != nil && s.requestQueue.IsActive()
+}
+
+func (s *StreamerClient) UpdateAgentStatus(status, prevStatus, message string) error {
+	if s.CanUpdateStatus() {
+		req := &proto.Request{
+			RequestType: proto.RequestType_AGENT_STATUS.Enum(),
+			AgentStatus: &proto.AgentStatus{
+				State:   status,
+				Message: message,
+			},
+		}
+		s.requestQueue.Write(req)
+	}
+	return nil
 }

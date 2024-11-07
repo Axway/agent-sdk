@@ -496,14 +496,13 @@ func GetUserAgent() string {
 		agentName = agent.cfg.GetAgentName()
 		isGRPC = agent.cfg.IsUsingGRPC()
 	}
-	return util.FormatUserAgent(
+	return util.NewUserAgent(
 		config.AgentTypeName,
 		config.AgentVersion,
 		config.SDKVersion,
 		envName,
 		agentName,
-		isRunningInDockerContainer(),
-		isGRPC)
+		isGRPC).FormatUserAgent()
 }
 
 // setCentralConfig - Sets the central config
@@ -585,7 +584,12 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
 	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
-	if agent.agentResourceManager != nil {
+	if agent.cfg.IsUsingGRPC() && agent.streamer != nil && agent.streamer.CanUpdateStatus() {
+		err := agent.streamer.UpdateAgentStatus(status, prevStatus, description)
+		if err != nil {
+			logger.WithError(err).Warnf("could not update the agent status reference")
+		}
+	} else if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
 			logger.WithError(err).Warnf("could not update the agent status reference")
@@ -672,7 +676,9 @@ func setupProfileSignalProcessor(cpuProfile, memProfile string) {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	if !agent.cfg.IsUsingGRPC() {
+		UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	}
 }
 
 func newHandlers() []handler.Handler {
