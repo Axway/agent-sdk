@@ -11,9 +11,21 @@ service watch {
     }
 }
 
+enum RequestType {
+    TOKEN_REFRESH = 0;
+    AGENT_STATUS = 1;
+}
+
+message AgentStatus {
+    string state = 1;
+    string message = 2;
+}
+
 message Request {
     string selfLink = 1;
     string token = 2;
+    optional RequestType requestType = 3;
+    .central.events.v1.AgentStatus agentStatus = 4;
 }
 
 message Event {
