@@ -23,7 +23,7 @@ type fakeQuotaEnforcementServer struct {
 }
 
 type fakeCustomUnitMetricReportingServer struct {
-	customunits.UnimplementedQuotaEnforcementServer
+	customunits.UnimplementedMetricReportingServiceServer
 }
 
 func Test_QuotaEnforcementInfo(t *testing.T) {
@@ -36,7 +36,7 @@ func Test_QuotaEnforcementInfo(t *testing.T) {
 	assert.Nil(t, response)
 }
 
-func createQEConnection(fakeServer *fakeQuotaEnforcementServer, ctx context.Context) (customUnitClient, error) {
+func createQEConnection(fakeServer *fakeQuotaEnforcementServer, _ context.Context) (*customUnitClient, error) {
 	lis := bufconn.Listen(bufSize)
 	opt := grpc.WithContextDialer(
 		func(context.Context, string) (net.Conn, error) {
@@ -70,17 +70,17 @@ func createQEConnection(fakeServer *fakeQuotaEnforcementServer, ctx context.Cont
 }
 
 func Test_MetricReporting(t *testing.T) {
-
 	ctx := context.Background()
 	fakeServer := &fakeCustomUnitMetricReportingServer{}
 	client, _ := createMRConnection(fakeServer, ctx)
 	metricReportChan := make(chan *customunits.MetricReport, 100)
-	client.MetricReporting(metricReportChan)
-	time.Sleep(2 * time.Second)
+	go client.MetricReporting(metricReportChan)
+
+	time.Sleep(5 * time.Second)
 	client.Stop()
 }
 
-func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx context.Context) (customUnitClient, error) {
+func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, _ context.Context) (*customUnitClient, error) {
 	lis := bufconn.Listen(bufSize)
 	opt := grpc.WithContextDialer(
 		func(context.Context, string) (net.Conn, error) {
@@ -88,7 +88,7 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx con
 		},
 	)
 	grpcServer := grpc.NewServer()
-	customunits.RegisterQuotaEnforcementServer(grpcServer, fakeServer)
+	customunits.RegisterMetricReportingServiceServer(grpcServer, fakeServer)
 
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
@@ -100,5 +100,4 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, ctx con
 	factory := NewCustomUnitClientFactory("bufnet", cache, &customunits.QuotaInfo{})
 	streamCtx, streamCancel := context.WithCancel(context.Background())
 	return factory(streamCtx, streamCancel, WithGRPCDialOption(opt))
-
 }

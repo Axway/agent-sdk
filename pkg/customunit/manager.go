@@ -3,6 +3,7 @@ package customunit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -22,7 +23,9 @@ type CustomUnitMetricServerManager struct {
 	cache            cache.Manager
 	agentType        config.AgentType
 	logger           *logrus.Entry
+	clients          []*customUnitClient
 	metricReportChan chan *customunits.MetricReport
+	stopChan         chan struct{}
 }
 
 type metricCollector interface {
@@ -35,6 +38,8 @@ func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguratio
 		cache:            cache,
 		agentType:        agentType,
 		metricReportChan: make(chan *customunits.MetricReport, 100),
+		stopChan:         make(chan struct{}),
+		clients:          []*customUnitClient{},
 	}
 }
 
@@ -60,7 +65,7 @@ func (h *CustomUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Conte
 	}
 
 	if errMessage != "" {
-		return fmt.Errorf(errMessage)
+		return errors.New(errMessage)
 	}
 	return nil
 }
@@ -153,16 +158,27 @@ func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Contex
 		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
 		client, _ := factory(ctx, cancelCtx)
 		go client.MetricReporting(m.metricReportChan)
+		m.clients = append(m.clients, client)
 	}
 }
 
 func (c *CustomUnitMetricServerManager) receiveMetrics(metricCollector metricCollector) {
 	for {
-		metricReport := <-c.metricReportChan
-		// deprovision the metric report and send it to the metric collector
-		customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
-		if err == nil {
+		select {
+		case metricReport := <-c.metricReportChan:
+			customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
+			if err != nil {
+				// log something
+				continue
+			}
+			// create the metric report and send it to the metric collector
 			metricCollector.AddCustomMetricDetail(*customMetricDetail)
+		case <-c.stopChan:
+			// log stopping
+			for _, c := range c.clients {
+				c.Stop()
+			}
+			return
 		}
 	}
 }
@@ -297,4 +313,8 @@ func (c *CustomUnitMetricServerManager) PlanUnitLookup(planUnitLookup *customuni
 	return &models.Unit{
 		Name: planUnitLookup.GetUnitName(),
 	}
+}
+
+func (c *CustomUnitMetricServerManager) Stop() {
+	c.stopChan <- struct{}{}
 }

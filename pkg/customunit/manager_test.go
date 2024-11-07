@@ -96,5 +96,4 @@ func Test_HandleQuotaEnforcementInfo(t *testing.T) {
 	err := manager.HandleQuotaEnforcement(ctx, cancelCtx, accessReq, managedAppForTest)
 
 	assert.Nil(t, err)
-
 }

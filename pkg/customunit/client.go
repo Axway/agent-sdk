@@ -22,15 +22,15 @@ type customUnitClient struct {
 	conn      *grpc.ClientConn
 	isRunning bool
 	cache     cache.Manager
-	stopChan  chan bool
+	stopChan  chan struct{}
 }
 
 type CustomUnitOption func(*customUnitClient)
 
-type CustomUnitClientFactory func(context.Context, context.CancelFunc, ...CustomUnitOption) (customUnitClient, error)
+type CustomUnitClientFactory func(context.Context, context.CancelFunc, ...CustomUnitOption) (*customUnitClient, error)
 
 func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo *cu.QuotaInfo) CustomUnitClientFactory {
-	return func(ctx context.Context, ctxCancel context.CancelFunc, opts ...CustomUnitOption) (customUnitClient, error) {
+	return func(ctx context.Context, ctxCancel context.CancelFunc, opts ...CustomUnitOption) (*customUnitClient, error) {
 		c := &customUnitClient{
 			ctx:       ctx,
 			quotaInfo: quotaInfo,
@@ -41,14 +41,14 @@ func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo 
 			cancelCtx: ctxCancel,
 			cache:     agentCache,
 			logger:    logrus.NewEntry(log.Get()),
-			stopChan:  make(chan bool, 1),
+			stopChan:  make(chan struct{}),
 		}
 
 		for _, o := range opts {
 			o(c)
 		}
 
-		return *c, nil
+		return c, nil
 	}
 }
 
@@ -103,12 +103,8 @@ func (c *customUnitClient) processMetrics(client cu.MetricReportingService_Metri
 			go c.MetricReporting(metricReportChan)
 			return
 		case <-c.stopChan:
-			c.stopChan = nil
 			return
 		default:
-			if c.stopChan == nil {
-				c.stopChan = make(chan bool, 1)
-			}
 			metricReport, err := client.Recv()
 			if err != nil {
 				c.logger.Debug("stream finished")
@@ -118,20 +114,15 @@ func (c *customUnitClient) processMetrics(client cu.MetricReportingService_Metri
 			metricReportChan <- metricReport
 		}
 	}
+
 }
 
-func (c *customUnitClient) Close() error {
-	var err error
+func (c *customUnitClient) Close() {
 	defer c.conn.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *customUnitClient) Stop() {
 	if c.stopChan != nil {
-		c.stopChan <- true
+		c.stopChan <- struct{}{}
 	}
 }
