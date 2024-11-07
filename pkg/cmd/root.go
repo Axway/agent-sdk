@@ -419,12 +419,13 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	} else {
 		statusText = err.Error()
 	}
-	status := agent.AgentStopped
-	if statusText != "" {
-		fmt.Println(statusText)
-		status = agent.AgentFailed
+	if !c.centralCfg.IsUsingGRPC() {
+		status := agent.AgentStopped
+		if statusText != "" {
+			status = agent.AgentFailed
+		}
+		agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
 	}
-	agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
 	return
 }
 
