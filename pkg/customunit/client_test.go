@@ -64,8 +64,7 @@ func createQEConnection(fakeServer *fakeQuotaEnforcementServer, _ context.Contex
 	}
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	factory := NewCustomUnitClientFactory("bufnet", cache, quotaInfo)
-	streamCtx, streamCancel := context.WithCancel(context.Background())
-	return factory(streamCtx, streamCancel, WithGRPCDialOption(opt))
+	return factory(WithGRPCDialOption(opt))
 
 }
 
@@ -74,7 +73,7 @@ func Test_MetricReporting(t *testing.T) {
 	fakeServer := &fakeCustomUnitMetricReportingServer{}
 	client, _ := createMRConnection(fakeServer, ctx)
 	metricReportChan := make(chan *customunits.MetricReport, 100)
-	go client.MetricReporting(metricReportChan)
+	go client.StartMetricReporting(metricReportChan)
 
 	time.Sleep(5 * time.Second)
 	client.Stop()
@@ -98,6 +97,5 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, _ conte
 
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	factory := NewCustomUnitClientFactory("bufnet", cache, &customunits.QuotaInfo{})
-	streamCtx, streamCancel := context.WithCancel(context.Background())
-	return factory(streamCtx, streamCancel, WithGRPCDialOption(opt))
+	return factory(WithGRPCDialOption(opt))
 }

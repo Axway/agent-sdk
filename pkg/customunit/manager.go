@@ -15,14 +15,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/sirupsen/logrus"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 type CustomUnitMetricServerManager struct {
 	configs          []config.MetricServiceConfiguration
 	cache            cache.Manager
 	agentType        config.AgentType
-	logger           *logrus.Entry
+	logger           log.FieldLogger
 	clients          []*customUnitClient
 	metricReportChan chan *customunits.MetricReport
 	stopChan         chan struct{}
@@ -40,6 +40,7 @@ func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguratio
 		metricReportChan: make(chan *customunits.MetricReport, 100),
 		stopChan:         make(chan struct{}),
 		clients:          []*customUnitClient{},
+		logger:           log.NewFieldLogger().WithPackage("customunit").WithComponent("manager"),
 	}
 }
 
@@ -53,7 +54,7 @@ func (h *CustomUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Conte
 	for _, config := range h.configs {
 		if config.MetricServiceEnabled() {
 			factory := NewCustomUnitClientFactory(config.URL, h.cache, quotaInfo)
-			client, _ := factory(ctx, cancelCtx)
+			client, _ := factory()
 			response, err := client.QuotaEnforcementInfo()
 			if err != nil {
 				// if error from QE and reject on fail, we return the error back to the central
@@ -156,8 +157,8 @@ func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Contex
 	for _, config := range m.configs {
 		// Initialize custom units client
 		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
-		client, _ := factory(ctx, cancelCtx)
-		go client.MetricReporting(m.metricReportChan)
+		client, _ := factory()
+		go client.StartMetricReporting(m.metricReportChan)
 		m.clients = append(m.clients, client)
 	}
 }
@@ -166,15 +167,20 @@ func (c *CustomUnitMetricServerManager) receiveMetrics(metricCollector metricCol
 	for {
 		select {
 		case metricReport := <-c.metricReportChan:
+			if metricReport == nil {
+				continue
+			}
+			logger := c.logger.WithField("api", metricReport.ApiService.GetValue())
 			customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
 			if err != nil {
-				// log something
+				logger.Error(err)
 				continue
 			}
 			// create the metric report and send it to the metric collector
+			logger.Debug("collecting custom metric detail")
 			metricCollector.AddCustomMetricDetail(*customMetricDetail)
 		case <-c.stopChan:
-			// log stopping
+			c.logger.Info("stopping to receive metric reports")
 			for _, c := range c.clients {
 				c.Stop()
 			}
@@ -200,6 +206,10 @@ func (c *CustomUnitMetricServerManager) buildCustomMetricDetail(metricReport *cu
 	}
 
 	planUnitDetails := c.PlanUnitLookup(planUnitLookup)
+
+	if apiDetails == nil || appDetails == nil || planUnitDetails == nil {
+		return nil, fmt.Errorf("unable to build custom metric detail")
+	}
 
 	return &models.CustomMetricDetail{
 		APIDetails:  *apiDetails,

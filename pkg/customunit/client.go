@@ -2,19 +2,17 @@ package customunit
 
 import (
 	"context"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	cu "github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type customUnitClient struct {
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	logger    *logrus.Entry
+	logger    log.FieldLogger
 	quotaInfo *cu.QuotaInfo
 	dialOpts  []grpc.DialOption
 	cOpts     []grpc.CallOption
@@ -23,25 +21,25 @@ type customUnitClient struct {
 	isRunning bool
 	cache     cache.Manager
 	stopChan  chan struct{}
+	delay     time.Duration
 }
 
 type CustomUnitOption func(*customUnitClient)
 
-type CustomUnitClientFactory func(context.Context, context.CancelFunc, ...CustomUnitOption) (*customUnitClient, error)
+type CustomUnitClientFactory func(...CustomUnitOption) (*customUnitClient, error)
 
 func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo *cu.QuotaInfo) CustomUnitClientFactory {
-	return func(ctx context.Context, ctxCancel context.CancelFunc, opts ...CustomUnitOption) (*customUnitClient, error) {
+	return func(opts ...CustomUnitOption) (*customUnitClient, error) {
 		c := &customUnitClient{
-			ctx:       ctx,
 			quotaInfo: quotaInfo,
 			url:       url,
 			dialOpts: []grpc.DialOption{
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
-			cancelCtx: ctxCancel,
 			cache:     agentCache,
-			logger:    logrus.NewEntry(log.Get()),
+			logger:    log.NewFieldLogger().WithPackage("customunit").WithComponent("client").WithField("metricServer", url),
 			stopChan:  make(chan struct{}),
+			isRunning: true,
 		}
 
 		for _, o := range opts {
@@ -59,7 +57,7 @@ func WithGRPCDialOption(opt grpc.DialOption) CustomUnitOption {
 }
 
 func (c *customUnitClient) createConnection() error {
-	conn, err := grpc.DialContext(c.ctx, c.url, c.dialOpts...)
+	conn, err := grpc.DialContext(context.Background(), c.url, c.dialOpts...)
 	if err != nil {
 		return err
 	}
@@ -70,46 +68,47 @@ func (c *customUnitClient) createConnection() error {
 func (c *customUnitClient) QuotaEnforcementInfo() (*cu.QuotaEnforcementResponse, error) {
 	err := c.createConnection()
 	if err != nil {
-		// Handle the connection error
 		return nil, err
 	}
 	client := cu.NewQuotaEnforcementClient(c.conn)
-	return client.QuotaEnforcementInfo(c.ctx, c.quotaInfo, c.cOpts...)
+	return client.QuotaEnforcementInfo(context.Background(), c.quotaInfo, c.cOpts...)
 }
 
-func (c *customUnitClient) MetricReporting(metricReportChan chan *cu.MetricReport) {
-	if err := c.createConnection(); err != nil {
-		return
-	}
-	client := cu.NewMetricReportingServiceClient(c.conn)
+func (c *customUnitClient) StartMetricReporting(metricReportChan chan *cu.MetricReport) {
+	c.isRunning = false
+	for {
+		err := c.createConnection()
+		if err != nil {
+			continue
+		}
 
-	stream, err := client.MetricReporting(c.ctx, &cu.MetricServiceInit{}, c.cOpts...)
-	if err != nil {
-		return
+		client := cu.NewMetricReportingServiceClient(c.conn)
+
+		stream, err := client.MetricReporting(context.Background(), &cu.MetricServiceInit{}, c.cOpts...)
+		if err != nil {
+			c.Close()
+			continue
+		}
+		c.isRunning = true
+		// process metrics
+		c.processMetrics(stream, metricReportChan)
+		c.logger.Debug("connection lost, retrying to connect to metric server")
+		c.Close()
 	}
-	// process metrics
-	c.processMetrics(stream, metricReportChan)
 }
 
 // processMetrics will stream custom metrics
 func (c *customUnitClient) processMetrics(client cu.MetricReportingService_MetricReportingClient, metricReportChan chan *cu.MetricReport) {
 	for {
 		select {
-		case <-c.ctx.Done():
-			if c.isRunning {
-				c.isRunning = false
-				c.cancelCtx()
-			}
-			go c.MetricReporting(metricReportChan)
-			return
 		case <-c.stopChan:
 			return
 		default:
 			metricReport, err := client.Recv()
 			if err != nil {
-				c.logger.Debug("stream finished")
-				c.Close()
-				break
+				c.isRunning = false
+				c.logger.WithError(err).Error(err.Error())
+				return
 			}
 			metricReportChan <- metricReport
 		}
