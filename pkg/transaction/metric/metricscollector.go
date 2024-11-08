@@ -873,10 +873,28 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 		}
 		c.generateMetricEvent(histo, counters, metric)
 	}
+
+	// create metric with just custom units
+	if !countersAdded && len(groupedMetric.counters) > 0 {
+		key := ""
+		for k := range groupedMetric.counters {
+			key = k
+			break
+		}
+		metric, ok := groupMap[key]
+		if !ok {
+			logger.WithField("counterKey", key).Error("could not get metric for counter")
+			return
+		}
+		c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
+		c.generateMetricEvent(metrics.NilHistogram{}, groupedMetric.counters, metric)
+	}
 }
 
 func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
-	metricData.Units.CustomUnits = map[string]*UnitCount{}
+	if metricData.Units.CustomUnits == nil {
+		metricData.Units.CustomUnits = map[string]*UnitCount{}
+	}
 
 	for k, counter := range counters {
 		logger := logger.WithField("unit", k)
@@ -1041,9 +1059,11 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 	if consumerAppMap, ok := c.metricMap[subID]; ok {
 		if apiMap, ok := consumerAppMap[appID]; ok {
 			if apiStatusMap, ok := apiMap[apiID]; ok {
-				c.storage.removeMetric(apiStatusMap[group])
-				delete(c.metricMap[subID][appID][apiID], group)
-				histogram.Clear()
+				if _, ok := apiStatusMap[group]; ok {
+					c.storage.removeMetric(apiStatusMap[group])
+					delete(c.metricMap[subID][appID][apiID], group)
+					histogram.Clear()
+				}
 
 				// clean any counters, if needed
 				for k, counter := range counters {
