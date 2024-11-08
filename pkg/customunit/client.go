@@ -40,7 +40,7 @@ func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo 
 			logger:    log.NewFieldLogger().WithPackage("customunit").WithComponent("client").WithField("metricServer", url),
 			stopChan:  make(chan struct{}),
 			isRunning: true,
-			delay:     3 * time.Second,
+			delay:     30 * time.Second,
 		}
 
 		for _, o := range opts {
