@@ -40,6 +40,7 @@ func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo 
 			logger:    log.NewFieldLogger().WithPackage("customunit").WithComponent("client").WithField("metricServer", url),
 			stopChan:  make(chan struct{}),
 			isRunning: true,
+			delay:     3 * time.Second,
 		}
 
 		for _, o := range opts {
@@ -79,6 +80,10 @@ func (c *customUnitClient) StartMetricReporting(metricReportChan chan *cu.Metric
 	for {
 		err := c.createConnection()
 		if err != nil {
+			c.ExecuteBackoff()
+			if c.delay > 5*time.Minute {
+				break
+			}
 			continue
 		}
 
@@ -87,9 +92,16 @@ func (c *customUnitClient) StartMetricReporting(metricReportChan chan *cu.Metric
 		stream, err := client.MetricReporting(context.Background(), &cu.MetricServiceInit{}, c.cOpts...)
 		if err != nil {
 			c.Close()
+			c.ExecuteBackoff()
+			if c.delay > 5*time.Minute {
+				c.logger.Debugf("ending connection retries")
+				break
+			}
 			continue
 		}
 		c.isRunning = true
+		// reset the delay
+		c.delay = 30 * time.Second
 		// process metrics
 		c.processMetrics(stream, metricReportChan)
 		c.logger.Debug("connection lost, retrying to connect to metric server")
@@ -114,6 +126,12 @@ func (c *customUnitClient) processMetrics(client cu.MetricReportingService_Metri
 		}
 	}
 
+}
+
+func (c *customUnitClient) ExecuteBackoff() {
+	c.logger.Debugf("connection is still lost, trying again in %v.", c.delay)
+	time.Sleep(c.delay)
+	c.delay = 2 * c.delay
 }
 
 func (c *customUnitClient) Close() {
