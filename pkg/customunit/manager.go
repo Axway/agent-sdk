@@ -14,6 +14,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -261,7 +262,7 @@ func (c *CustomUnitMetricServerManager) APIServiceLookup(apiServiceLookup *custo
 	}
 
 	return &models.APIDetails{
-		ID:   id,
+		ID:   transUtil.FormatProxyID(id),
 		Name: apiSvc.Name,
 	}, nil
 }
