@@ -584,7 +584,7 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
 	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
-	if agent.cfg.IsUsingGRPC() && agent.streamer != nil && agent.streamer.CanUpdateStatus() {
+	if agent.cfg.IsUsingGRPC() && agent.streamer != nil {
 		err := agent.streamer.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
 			logger.WithError(err).Warnf("could not update the agent status reference")

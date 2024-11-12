@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -22,7 +23,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	"github.com/Axway/agent-sdk/pkg/util/errors"
+	utilError "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -197,7 +198,7 @@ func (s *StreamerClient) Status() error {
 		return fmt.Errorf("stream client is not ready")
 	}
 	if ok := s.manager.Status(); !ok {
-		return errors.ErrGrpcConnection
+		return utilError.ErrGrpcConnection
 	}
 
 	return nil
@@ -227,16 +228,31 @@ func (s *StreamerClient) CanUpdateStatus() bool {
 	return s.requestQueue != nil && s.requestQueue.IsActive()
 }
 
-func (s *StreamerClient) UpdateAgentStatus(status, prevStatus, message string) error {
+func canTransitionAgentState(state, prevState string) bool {
+	return state != prevState && state != "stopped"
+}
+
+func (s *StreamerClient) UpdateAgentStatus(state, prevState, message string) error {
 	if s.CanUpdateStatus() {
-		req := &proto.Request{
-			RequestType: proto.RequestType_AGENT_STATUS.Enum(),
-			AgentStatus: &proto.AgentStatus{
-				State:   status,
-				Message: message,
-			},
+		// Initial running status and stopped status set by watch-controller
+		// allow running status after recovery from unhealthy state
+		if canTransitionAgentState(state, prevState) {
+			req := &proto.Request{
+				RequestType: proto.RequestType_AGENT_STATUS.Enum(),
+				AgentStatus: &proto.AgentStatus{
+					State:   state,
+					Message: message,
+				},
+			}
+			s.requestQueue.Write(req)
+		} else {
+			s.logger.
+				WithField("status", state).
+				WithField("previousStatus", prevState).
+				Debug("skipping agent status update request")
 		}
-		s.requestQueue.Write(req)
+	} else {
+		return errors.New("stream request queue is not active")
 	}
 	return nil
 }
