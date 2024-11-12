@@ -327,7 +327,7 @@ func (a *agentResourceManager) createAgentResource() (*v1.ResourceInstance, erro
 func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error) {
 	var agentRes v1.Interface
 	logger := a.logger.WithField("scope", a.agentResource.Metadata.Scope).WithField("kind", a.agentResource.Kind).WithField("name", a.agentResource.Name)
-
+	var lastActivityTime *v1.Time
 	currDataplaneType := apic.Unidentified.String()
 	if a.agentResource.Kind == management.DiscoveryAgentGVK().Kind {
 		da := management.NewDiscoveryAgent("", "")
@@ -335,12 +335,22 @@ func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error
 		currDataplaneType = da.Spec.DataplaneType
 		da.Spec.DataplaneType = config.AgentDataPlaneType
 		agentRes = da
+		lastActivityTime = &da.Status.LastActivityTime
 	} else if a.agentResource.Kind == management.TraceabilityAgentGVK().Kind {
 		ta := management.NewTraceabilityAgent("", "")
 		ta.FromInstance(a.agentResource)
 		currDataplaneType = ta.Spec.DataplaneType
 		ta.Spec.DataplaneType = config.AgentDataPlaneType
 		agentRes = ta
+		lastActivityTime = &ta.Status.LastActivityTime
+	}
+
+	if lastActivityTime != nil {
+		lat := time.Time(*lastActivityTime)
+		if !lat.IsZero() && lat.After(time.Now().UTC().Add(-30*time.Second)) {
+			a.logger.Info("delaying initialization for restart backoff time")
+			time.Sleep(30 * time.Second)
+		}
 	}
 
 	// nothing to update
