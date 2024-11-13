@@ -13,7 +13,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
-	gr "google.golang.org/grpc/resolver"
 )
 
 // NewManagerFunc func signature to create a Manager
@@ -88,7 +87,11 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
 		grpc.WithUserAgent(m.cfg.UserAgent),
-		grpc.WithResolvers(&builder{m.cfg.Host, m.cfg.Port}),
+		grpc.WithResolvers(
+			util.CreateCustomGRPCResolverBuilder(
+				fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port),
+				m.cfg.Host,
+				"https")),
 	}
 
 	m.logger.
@@ -98,36 +101,6 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 
 	return grpc.NewClient(address, grpcDialOptions...)
 }
-
-type builder struct {
-	host string
-	port uint32
-}
-
-func (b *builder) Build(target gr.Target, cc gr.ClientConn, _ gr.BuildOptions) (gr.Resolver, error) {
-	cc.UpdateState(gr.State{Endpoints: []gr.Endpoint{
-		{
-			Addresses: []gr.Address{
-				{
-					Addr:       fmt.Sprintf("%s:%d", b.host, b.port),
-					ServerName: b.host,
-				},
-			},
-		},
-	}})
-	return &nopResolver{}, nil
-}
-
-func (b *builder) Scheme() string {
-	return b.host
-}
-
-type nopResolver struct {
-}
-
-func (*nopResolver) ResolveNow(gr.ResolveNowOptions) {}
-
-func (*nopResolver) Close() {}
 
 func (m *watchManager) getDialer(targetAddr string) (util.Dialer, error) {
 	if m.options.singleEntryAddr == "" && m.options.proxyURL == "" {
