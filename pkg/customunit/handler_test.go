@@ -1,7 +1,7 @@
 package customunit
 
 import (
-	"math/rand/v2"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -119,7 +119,7 @@ func (c *fakeMetricCollector) AddCustomMetricDetail(detail models.CustomMetricDe
 
 func GetMetricReport() *customunits.MetricReport {
 	apiID, appID, unit := "fsdfsf2342r2ferge", "fsdfsdfsf234235fgdgd", "x-ai-tokens"
-	count := rand.Int64N(50)
+	count := rand.Int63n(50)
 	metricReport := &customunits.MetricReport{
 		ApiService: &customunits.APIServiceLookup{
 			Type:  customunits.APIServiceLookupType_ExternalAPIID,

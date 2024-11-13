@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand/v2"
+	"math/rand"
 	"net"
 	"testing"
 
@@ -30,7 +30,7 @@ type fakeCustomUnitMetricReportingServer struct {
 func (s *fakeCustomUnitMetricReportingServer) MetricReporting(metricServiceInit *customunits.MetricServiceInit, server customunits.MetricReportingService_MetricReportingServer) error {
 
 	apiID, appID, unit := "fsdfsf2342r2ferge", "fsdfsdfsf234235fgdgd", "x-ai-tokens"
-	count := rand.Int64N(50)
+	count := rand.Int63n(50)
 	metricReport := &customunits.MetricReport{
 		ApiService: &customunits.APIServiceLookup{
 			Type:  customunits.APIServiceLookupType_ExternalAPIID,
