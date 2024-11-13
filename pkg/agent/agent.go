@@ -61,17 +61,17 @@ type agentData struct {
 	agentFeaturesCfg     config.AgentFeaturesConfig
 	tokenRequester       auth.PlatformTokenGetter
 
-	teamMap                       cache.Cache
-	cacheManager                  agentcache.Manager
-	apiValidator                  APIValidator
-	apiValidatorLock              sync.Mutex
-	apiValidatorJobID             string
-	configChangeHandler           ConfigChangeHandler
-	agentResourceChangeHandler    ConfigChangeHandler
-	customUnitMetricServerManager *customunit.CustomUnitHandler
-	agentShutdownHandler          ShutdownHandler
-	proxyResourceHandler          *handler.StreamWatchProxyHandler
-	isInitialized                 bool
+	teamMap                    cache.Cache
+	cacheManager               agentcache.Manager
+	apiValidator               APIValidator
+	apiValidatorLock           sync.Mutex
+	apiValidatorJobID          string
+	configChangeHandler        ConfigChangeHandler
+	agentResourceChangeHandler ConfigChangeHandler
+	customUnitHandler          *customunit.CustomUnitHandler
+	agentShutdownHandler       ShutdownHandler
+	proxyResourceHandler       *handler.StreamWatchProxyHandler
+	isInitialized              bool
 
 	provisioner          provisioning.Provisioning
 	streamer             *stream.StreamerClient
@@ -168,7 +168,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
-	agent.customUnitMetricServerManager = customunit.NewCustomUnitMetricServerManager(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+	agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
 
 	if !agent.isInitialized {
 		err = handleInitialization()
@@ -433,8 +433,8 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 	return agent.authProviderRegistry
 }
 
-func GetCustomUnitMetricServerManager() *customunit.CustomUnitHandler {
-	return agent.customUnitMetricServerManager
+func GetCustomUnitHandler() *customunit.CustomUnitHandler {
+	return agent.customUnitHandler
 }
 
 // RegisterShutdownHandler - Registers shutdown handler

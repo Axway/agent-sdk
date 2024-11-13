@@ -40,7 +40,7 @@ type agentCacheManager interface {
 	GetManagedApplicationByName(string) *v1.ResourceInstance
 }
 
-func NewCustomUnitMetricServerManager(servicesConfigs []config.MetricServiceConfiguration, cache agentCacheManager, agentType config.AgentType) *CustomUnitHandler {
+func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, cache agentCacheManager, agentType config.AgentType) *CustomUnitHandler {
 	return &CustomUnitHandler{
 		servicesConfigs:  servicesConfigs,
 		cache:            cache,

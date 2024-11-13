@@ -176,8 +176,8 @@ func TestAccessRequestHandler(t *testing.T) {
 				c.isDeleting = true
 			}
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-			customUnitMetricServerManager := customunit.NewCustomUnitMetricServerManager(af, cm, config.DiscoveryAgent)
-			handler := NewAccessRequestHandler(arp, cm, c, customUnitMetricServerManager)
+			customUnitHandler := customunit.NewCustomUnitHandler(af, cm, config.DiscoveryAgent)
+			handler := NewAccessRequestHandler(arp, cm, c, customUnitHandler)
 			v := handler.(*accessRequestHandler)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
@@ -251,8 +251,8 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 				t:              t,
 			}
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-			customUnitMetricServerManager := customunit.NewCustomUnitMetricServerManager(af, cm, config.DiscoveryAgent)
-			handler := NewAccessRequestHandler(arp, cm, c, customUnitMetricServerManager)
+			customUnitHandler := customunit.NewCustomUnitHandler(af, cm, config.DiscoveryAgent)
+			handler := NewAccessRequestHandler(arp, cm, c, customUnitHandler)
 
 			ri, _ := ar.AsInstance()
 
@@ -276,8 +276,8 @@ func TestAccessRequestHandler_wrong_kind(t *testing.T) {
 	}
 	ar := &mockARProvision{}
 	af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
-	customUnitMetricServerManager := customunit.NewCustomUnitMetricServerManager(af, cm, config.DiscoveryAgent)
-	handler := NewAccessRequestHandler(ar, cm, c, customUnitMetricServerManager)
+	customUnitHandler := customunit.NewCustomUnitHandler(af, cm, config.DiscoveryAgent)
+	handler := NewAccessRequestHandler(ar, cm, c, customUnitHandler)
 	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: management.EnvironmentGVK(),

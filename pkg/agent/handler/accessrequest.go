@@ -23,27 +23,27 @@ type arProvisioner interface {
 	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
-type customUnitMetricServerManager interface {
+type customUnitHandler interface {
 	HandleQuotaEnforcement(*management.AccessRequest, *management.ManagedApplication) error
 }
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov                          arProvisioner
-	cache                         agentcache.Manager
-	client                        client
-	encryptSchema                 encryptSchemaFunc
-	customUnitMetricServerManager customUnitMetricServerManager
+	prov              arProvisioner
+	cache             agentcache.Manager
+	client            client
+	encryptSchema     encryptSchemaFunc
+	customUnitHandler customUnitHandler
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitMetricServerManager customUnitMetricServerManager) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
 	return &accessRequestHandler{
-		prov:                          prov,
-		cache:                         cache,
-		client:                        client,
-		encryptSchema:                 encryptSchema,
-		customUnitMetricServerManager: customUnitMetricServerManager,
+		prov:              prov,
+		cache:             cache,
+		client:            client,
+		encryptSchema:     encryptSchema,
+		customUnitHandler: customUnitHandler,
 	}
 }
 
@@ -139,7 +139,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	status, accessData := h.prov.AccessRequestProvision(req)
 
 	if status.GetStatus() == prov.Success && len(ar.Spec.AdditionalQuotas) > 0 {
-		err := h.customUnitMetricServerManager.HandleQuotaEnforcement(ar, app)
+		err := h.customUnitHandler.HandleQuotaEnforcement(ar, app)
 
 		if err != nil {
 			// h.onError(ctx, ar, err)

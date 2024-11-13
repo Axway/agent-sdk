@@ -16,10 +16,10 @@ const instRefID = "inst-id-1"
 const instRefName = "inst-name-1"
 const managedAppRefName = "managed-app-name"
 
-func Test_NewCustomUnitMetricServerManager(t *testing.T) {
+func Test_NewCustomUnitHandler(t *testing.T) {
 	metricServicesConfigs := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	handler := NewCustomUnitMetricServerManager(metricServicesConfigs, cm, config.DiscoveryAgent)
+	handler := NewCustomUnitHandler(metricServicesConfigs, cm, config.DiscoveryAgent)
 
 	assert.NotNil(t, handler)
 }
@@ -90,7 +90,7 @@ func Test_HandleQuotaEnforcementInfo(t *testing.T) {
 		},
 	}
 
-	manager := NewCustomUnitMetricServerManager(metricServicesConfigs, cm, config.DiscoveryAgent)
+	manager := NewCustomUnitHandler(metricServicesConfigs, cm, config.DiscoveryAgent)
 	err := manager.HandleQuotaEnforcement(accessReq, managedAppForTest)
 
 	assert.Nil(t, err)
