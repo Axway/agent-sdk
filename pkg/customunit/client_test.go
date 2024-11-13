@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
@@ -25,6 +25,33 @@ type fakeQuotaEnforcementServer struct {
 
 type fakeCustomUnitMetricReportingServer struct {
 	customunits.UnimplementedMetricReportingServiceServer
+}
+
+func (s *fakeCustomUnitMetricReportingServer) MetricReporting(metricServiceInit *customunits.MetricServiceInit, server customunits.MetricReportingService_MetricReportingServer) error {
+
+	apiID, appID, unit := "fsdfsf2342r2ferge", "fsdfsdfsf234235fgdgd", "x-ai-tokens"
+	count := rand.Int64N(50)
+	metricReport := &customunits.MetricReport{
+		ApiService: &customunits.APIServiceLookup{
+			Type:  customunits.APIServiceLookupType_ExternalAPIID,
+			Value: apiID,
+		},
+		ManagedApp: &customunits.AppLookup{
+			Type:  customunits.AppLookupType_ManagedAppID,
+			Value: appID,
+		},
+		PlanUnit: &customunits.UnitLookup{
+			UnitName: unit,
+		},
+		Count: count,
+	}
+
+	err := server.Send(metricReport)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Test_QuotaEnforcementInfo(t *testing.T) {
@@ -75,9 +102,11 @@ func Test_MetricReporting(t *testing.T) {
 	client, _ := createMRConnection(fakeServer, ctx)
 	metricReportChan := make(chan *customunits.MetricReport, 100)
 	go client.StartMetricReporting(metricReportChan)
-
-	time.Sleep(5 * time.Second)
-	client.Stop()
+	metricReport := <-metricReportChan
+	assert.NotNil(t, metricReport)
+	assert.Equal(t, metricReport.ApiService.Value, "fsdfsf2342r2ferge")
+	assert.Equal(t, metricReport.ManagedApp.Value, "fsdfsdfsf234235fgdgd")
+	assert.Equal(t, metricReport.PlanUnit.UnitName, "x-ai-tokens")
 }
 
 func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, _ context.Context) (*customUnitClient, error) {
