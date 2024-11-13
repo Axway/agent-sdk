@@ -1,12 +1,10 @@
 package customunit
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
@@ -19,9 +17,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-type CustomUnitMetricServerManager struct {
-	configs          []config.MetricServiceConfiguration
-	cache            cache.Manager
+type CustomUnitHandler struct {
+	servicesConfigs  []config.MetricServiceConfiguration
+	cache            agentCacheManager
 	agentType        config.AgentType
 	logger           log.FieldLogger
 	clients          []*customUnitClient
@@ -33,9 +31,18 @@ type metricCollector interface {
 	AddCustomMetricDetail(models.CustomMetricDetail)
 }
 
-func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguration, cache cache.Manager, agentType config.AgentType) *CustomUnitMetricServerManager {
-	return &CustomUnitMetricServerManager{
-		configs:          configs,
+type agentCacheManager interface {
+	GetAPIServiceWithName(string) *v1.ResourceInstance
+	GetAPIServiceInstanceByID(string) (*v1.ResourceInstance, error)
+	GetAPIServiceKeys() []string
+	GetAPIServiceWithAPIID(string) *v1.ResourceInstance
+	GetManagedApplication(string) *v1.ResourceInstance
+	GetManagedApplicationByName(string) *v1.ResourceInstance
+}
+
+func NewCustomUnitMetricServerManager(servicesConfigs []config.MetricServiceConfiguration, cache agentCacheManager, agentType config.AgentType) *CustomUnitHandler {
+	return &CustomUnitHandler{
+		servicesConfigs:  servicesConfigs,
 		cache:            cache,
 		agentType:        agentType,
 		metricReportChan: make(chan *customunits.MetricReport, 100),
@@ -45,17 +52,17 @@ func NewCustomUnitMetricServerManager(configs []config.MetricServiceConfiguratio
 	}
 }
 
-func (h *CustomUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Context, cancelCtx context.CancelFunc, ar *management.AccessRequest, app *management.ManagedApplication) error {
+func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest, app *management.ManagedApplication) error {
 	// Build quota info
-	quotaInfo, err := h.buildQuotaInfo(ctx, ar, app)
+	quotaInfo, err := h.buildQuotaInfo(ar, app)
 	if err != nil {
 		return fmt.Errorf("could not build quota info from access request")
 	}
 	errMessage := ""
-	for _, config := range h.configs {
+	for _, config := range h.servicesConfigs {
 		if config.MetricServiceEnabled() {
-			factory := NewCustomUnitClientFactory(config.URL, h.cache, quotaInfo)
-			client, _ := factory()
+			factory := NewCustomUnitClientFactory(config.URL, quotaInfo)
+			client, _ := factory(h.cache)
 			response, err := client.QuotaEnforcementInfo()
 			if err != nil {
 				// if error from QE and reject on fail, we return the error back to the central
@@ -72,13 +79,13 @@ func (h *CustomUnitMetricServerManager) HandleQuotaEnforcement(ctx context.Conte
 	return nil
 }
 
-func (h *CustomUnitMetricServerManager) buildQuotaInfo(ctx context.Context, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
+func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
 	unitRef, count := h.getQuotaInfo(ar)
 	if unitRef == "" {
 		return nil, nil
 	}
 
-	instance, err := h.getServiceInstance(ctx, ar)
+	instance, err := h.getServiceInstance(ar)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +128,7 @@ type reference struct {
 	Unit string `json:"unit"`
 }
 
-func (h *CustomUnitMetricServerManager) getQuotaInfo(ar *management.AccessRequest) (string, int) {
+func (h *CustomUnitHandler) getQuotaInfo(ar *management.AccessRequest) (string, int) {
 	index := 0
 	if len(ar.Spec.AdditionalQuotas) < index+1 {
 		return "", 0
@@ -139,7 +146,7 @@ func (h *CustomUnitMetricServerManager) getQuotaInfo(ar *management.AccessReques
 	return "", 0
 }
 
-func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar *management.AccessRequest) (*v1.ResourceInstance, error) {
+func (h *CustomUnitHandler) getServiceInstance(ar *management.AccessRequest) (*v1.ResourceInstance, error) {
 	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	instID := instRef.ID
 	instance, err := h.cache.GetAPIServiceInstanceByID(instID)
@@ -149,32 +156,34 @@ func (h *CustomUnitMetricServerManager) getServiceInstance(_ context.Context, ar
 	return instance, nil
 }
 
-func (m *CustomUnitMetricServerManager) HandleMetricReporting(ctx context.Context, cancelCtx context.CancelFunc, metricCollector metricCollector) {
+func (m *CustomUnitHandler) HandleMetricReporting(metricCollector metricCollector) {
 	if m.agentType != config.TraceabilityAgent {
 		return
 	}
-	go m.receiveMetrics(metricCollector)
+	if len(m.servicesConfigs) > 0 {
+		go m.receiveMetrics(metricCollector)
+	}
 	// iterate over each metric service config
-	for _, config := range m.configs {
+	for _, config := range m.servicesConfigs {
 		// Initialize custom units client
-		factory := NewCustomUnitClientFactory(config.URL, m.cache, &customunits.QuotaInfo{})
-		client, _ := factory()
+		factory := NewCustomUnitClientFactory(config.URL, &customunits.QuotaInfo{})
+		client, _ := factory(m.cache)
 		go client.StartMetricReporting(m.metricReportChan)
 		m.clients = append(m.clients, client)
 	}
 }
 
-func (c *CustomUnitMetricServerManager) receiveMetrics(metricCollector metricCollector) {
+func (c *CustomUnitHandler) receiveMetrics(metricCollector metricCollector) {
 	for {
 		select {
 		case metricReport := <-c.metricReportChan:
 			if metricReport == nil {
 				continue
 			}
-			logger := c.logger.WithField("api", metricReport.ApiService.GetValue())
+			logger := c.logger.WithField("api", metricReport.ApiService.GetValue()).WithField("app", metricReport.GetManagedApp().GetValue()).WithField("planUnit", metricReport.PlanUnit.GetUnitName())
 			customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
 			if err != nil {
-				logger.Error(err)
+				logger.WithError(err).Error("could not build metric data")
 				continue
 			}
 			// create the metric report and send it to the metric collector
@@ -190,7 +199,7 @@ func (c *CustomUnitMetricServerManager) receiveMetrics(metricCollector metricCol
 	}
 }
 
-func (c *CustomUnitMetricServerManager) buildCustomMetricDetail(metricReport *customunits.MetricReport) (*models.CustomMetricDetail, error) {
+func (c *CustomUnitHandler) buildCustomMetricDetail(metricReport *customunits.MetricReport) (*models.CustomMetricDetail, error) {
 	apiServiceLookup := metricReport.GetApiService()
 	managedAppLookup := metricReport.GetManagedApp()
 	planUnitLookup := metricReport.GetPlanUnit()
@@ -220,7 +229,7 @@ func (c *CustomUnitMetricServerManager) buildCustomMetricDetail(metricReport *cu
 	}, nil
 }
 
-func (c *CustomUnitMetricServerManager) APIServiceLookup(apiServiceLookup *customunits.APIServiceLookup) (*models.APIDetails, error) {
+func (c *CustomUnitHandler) APIServiceLookup(apiServiceLookup *customunits.APIServiceLookup) (*models.APIDetails, error) {
 	apiSvcValue := apiServiceLookup.GetValue()
 	apiLookupType := apiServiceLookup.GetType()
 	apiCustomAttr := apiServiceLookup.GetCustomAttribute()
@@ -267,7 +276,7 @@ func (c *CustomUnitMetricServerManager) APIServiceLookup(apiServiceLookup *custo
 	}, nil
 }
 
-func (c *CustomUnitMetricServerManager) ManagedApplicationLookup(appLookup *customunits.AppLookup) (*models.AppDetails, error) {
+func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppLookup) (*models.AppDetails, error) {
 	appValue := appLookup.GetValue()
 	appLookupType := appLookup.GetType()
 	appCustomAttr := appLookup.GetCustomAttribute()
@@ -320,12 +329,12 @@ func (c *CustomUnitMetricServerManager) ManagedApplicationLookup(appLookup *cust
 	}, nil
 }
 
-func (c *CustomUnitMetricServerManager) PlanUnitLookup(planUnitLookup *customunits.UnitLookup) *models.Unit {
+func (c *CustomUnitHandler) PlanUnitLookup(planUnitLookup *customunits.UnitLookup) *models.Unit {
 	return &models.Unit{
 		Name: planUnitLookup.GetUnitName(),
 	}
 }
 
-func (c *CustomUnitMetricServerManager) Stop() {
+func (c *CustomUnitHandler) Stop() {
 	c.stopChan <- struct{}{}
 }

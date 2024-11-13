@@ -68,7 +68,7 @@ type agentData struct {
 	apiValidatorJobID             string
 	configChangeHandler           ConfigChangeHandler
 	agentResourceChangeHandler    ConfigChangeHandler
-	customUnitMetricServerManager *customunit.CustomUnitMetricServerManager
+	customUnitMetricServerManager *customunit.CustomUnitHandler
 	agentShutdownHandler          ShutdownHandler
 	proxyResourceHandler          *handler.StreamWatchProxyHandler
 	isInitialized                 bool
@@ -433,7 +433,7 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 	return agent.authProviderRegistry
 }
 
-func GetCustomUnitMetricServerManager() *customunit.CustomUnitMetricServerManager {
+func GetCustomUnitMetricServerManager() *customunit.CustomUnitHandler {
 	return agent.customUnitMetricServerManager
 }
 

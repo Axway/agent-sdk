@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	cu "github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"google.golang.org/grpc"
@@ -19,28 +18,31 @@ type customUnitClient struct {
 	url       string
 	conn      *grpc.ClientConn
 	isRunning bool
-	cache     cache.Manager
+	cache     agentCacheManager
 	stopChan  chan struct{}
 	delay     time.Duration
 }
 
+const maxRetryDelay = 5 * time.Minute
+const initialRetryDelay = 30 * time.Second
+
 type CustomUnitOption func(*customUnitClient)
 
-type CustomUnitClientFactory func(...CustomUnitOption) (*customUnitClient, error)
+type CustomUnitClientFactory func(agentCacheManager, ...CustomUnitOption) (*customUnitClient, error)
 
-func NewCustomUnitClientFactory(url string, agentCache cache.Manager, quotaInfo *cu.QuotaInfo) CustomUnitClientFactory {
-	return func(opts ...CustomUnitOption) (*customUnitClient, error) {
+func NewCustomUnitClientFactory(url string, quotaInfo *cu.QuotaInfo) CustomUnitClientFactory {
+	return func(cache agentCacheManager, opts ...CustomUnitOption) (*customUnitClient, error) {
 		c := &customUnitClient{
 			quotaInfo: quotaInfo,
 			url:       url,
 			dialOpts: []grpc.DialOption{
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
-			cache:     agentCache,
+			cache:     cache,
 			logger:    log.NewFieldLogger().WithPackage("customunit").WithComponent("client").WithField("metricServer", url),
 			stopChan:  make(chan struct{}),
-			isRunning: true,
-			delay:     30 * time.Second,
+			isRunning: false,
+			delay:     initialRetryDelay,
 		}
 
 		for _, o := range opts {
@@ -58,7 +60,7 @@ func WithGRPCDialOption(opt grpc.DialOption) CustomUnitOption {
 }
 
 func (c *customUnitClient) createConnection() error {
-	conn, err := grpc.DialContext(context.Background(), c.url, c.dialOpts...)
+	conn, err := grpc.NewClient(c.url, c.dialOpts...)
 	if err != nil {
 		return err
 	}
@@ -81,9 +83,6 @@ func (c *customUnitClient) StartMetricReporting(metricReportChan chan *cu.Metric
 		err := c.createConnection()
 		if err != nil {
 			c.ExecuteBackoff()
-			if c.delay > 5*time.Minute {
-				break
-			}
 			continue
 		}
 
@@ -93,15 +92,11 @@ func (c *customUnitClient) StartMetricReporting(metricReportChan chan *cu.Metric
 		if err != nil {
 			c.Close()
 			c.ExecuteBackoff()
-			if c.delay > 5*time.Minute {
-				c.logger.Debugf("ending connection retries")
-				break
-			}
 			continue
 		}
 		c.isRunning = true
 		// reset the delay
-		c.delay = 30 * time.Second
+		c.delay = initialRetryDelay
 		// process metrics
 		c.processMetrics(stream, metricReportChan)
 		c.logger.Debug("connection lost, retrying to connect to metric server")
@@ -132,6 +127,10 @@ func (c *customUnitClient) ExecuteBackoff() {
 	c.logger.Debugf("connection is still lost, trying again in %v.", c.delay)
 	time.Sleep(c.delay)
 	c.delay = 2 * c.delay
+	if c.delay >= maxRetryDelay {
+		c.logger.Debugf("maximum retry delay of %v reached", maxRetryDelay)
+		c.delay = maxRetryDelay
+	}
 }
 
 func (c *customUnitClient) Close() {

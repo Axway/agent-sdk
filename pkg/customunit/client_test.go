@@ -63,8 +63,8 @@ func createQEConnection(fakeServer *fakeQuotaEnforcementServer, _ context.Contex
 		},
 	}
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	factory := NewCustomUnitClientFactory("bufnet", cache, quotaInfo)
-	return factory(WithGRPCDialOption(opt))
+	factory := NewCustomUnitClientFactory("bufnet", quotaInfo)
+	return factory(cache, WithGRPCDialOption(opt))
 
 }
 
@@ -96,6 +96,6 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, _ conte
 	}()
 
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	factory := NewCustomUnitClientFactory("bufnet", cache, &customunits.QuotaInfo{})
-	return factory(WithGRPCDialOption(opt))
+	factory := NewCustomUnitClientFactory("bufnet", &customunits.QuotaInfo{})
+	return factory(cache, WithGRPCDialOption(opt))
 }

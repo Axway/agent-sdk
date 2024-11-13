@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -148,9 +147,9 @@ func GetMetricCollector() Collector {
 
 	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
+		agent.GetCustomUnitMetricServerManager().HandleMetricReporting(globalMetricCollector)
+
 	}
-	ctx, ctxCancel := context.WithCancel(context.Background())
-	agent.GetCustomUnitMetricServerManager().HandleMetricReporting(ctx, ctxCancel, globalMetricCollector)
 	return globalMetricCollector
 }
 

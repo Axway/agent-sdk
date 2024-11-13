@@ -24,7 +24,7 @@ type arProvisioner interface {
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
 type customUnitMetricServerManager interface {
-	HandleQuotaEnforcement(context.Context, context.CancelFunc, *management.AccessRequest, *management.ManagedApplication) error
+	HandleQuotaEnforcement(*management.AccessRequest, *management.ManagedApplication) error
 }
 
 type accessRequestHandler struct {
@@ -139,8 +139,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	status, accessData := h.prov.AccessRequestProvision(req)
 
 	if status.GetStatus() == prov.Success && len(ar.Spec.AdditionalQuotas) > 0 {
-		ctx, cancelCtx := context.WithCancel(ctx)
-		err := h.customUnitMetricServerManager.HandleQuotaEnforcement(ctx, cancelCtx, ar, app)
+		err := h.customUnitMetricServerManager.HandleQuotaEnforcement(ar, app)
 
 		if err != nil {
 			// h.onError(ctx, ar, err)

@@ -1,7 +1,6 @@
 package customunit
 
 import (
-	"context"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -92,8 +91,7 @@ func Test_HandleQuotaEnforcementInfo(t *testing.T) {
 	}
 
 	manager := NewCustomUnitMetricServerManager(metricServicesConfigs, cm, config.DiscoveryAgent)
-	ctx, cancelCtx := context.WithCancel(context.Background())
-	err := manager.HandleQuotaEnforcement(ctx, cancelCtx, accessReq, managedAppForTest)
+	err := manager.HandleQuotaEnforcement(accessReq, managedAppForTest)
 
 	assert.Nil(t, err)
 }
