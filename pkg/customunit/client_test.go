@@ -13,6 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+	gr "google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -97,5 +98,31 @@ func createMRConnection(fakeServer *fakeCustomUnitMetricReportingServer, _ conte
 
 	cache := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	factory := NewCustomUnitClientFactory("bufnet", &customunits.QuotaInfo{})
-	return factory(cache, WithGRPCDialOption(opt))
+	return factory(cache, WithGRPCDialOption(opt), WithGRPCDialOption(grpc.WithResolvers(&builder{url: "bufnet"})))
 }
+
+type builder struct {
+	url string
+}
+
+func (b *builder) Build(target gr.Target, cc gr.ClientConn, _ gr.BuildOptions) (gr.Resolver, error) {
+	cc.UpdateState(gr.State{Endpoints: []gr.Endpoint{
+		{
+			Addresses: []gr.Address{
+				{
+					Addr: b.url,
+				},
+			},
+		},
+	}})
+	return &nopResolver{}, nil
+}
+func (b *builder) Scheme() string {
+	return ""
+}
+
+type nopResolver struct {
+}
+
+func (*nopResolver) ResolveNow(gr.ResolveNowOptions) {}
+func (*nopResolver) Close()                          {}
