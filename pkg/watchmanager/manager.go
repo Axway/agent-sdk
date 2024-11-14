@@ -87,6 +87,11 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 			logrusStreamClientInterceptor(m.options.loggerEntry),
 		),
 		grpc.WithUserAgent(m.cfg.UserAgent),
+		grpc.WithResolvers(
+			util.CreateCustomGRPCResolverBuilder(
+				fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port),
+				m.cfg.Host,
+				"https")),
 	}
 
 	m.logger.
