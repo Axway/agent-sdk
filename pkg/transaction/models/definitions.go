@@ -153,3 +153,17 @@ func (a Unit) GetLogFields(fields logrus.Fields) logrus.Fields {
 	}
 	return fields
 }
+
+type CustomMetricDetail struct {
+	APIDetails  APIDetails
+	AppDetails  AppDetails
+	UnitDetails Unit
+	Count       int64
+	Observation ObservationDetails
+}
+
+// ObservationDetails - Holds start and end timestamp for interval
+type ObservationDetails struct {
+	Start int64 `json:"start,omitempty"`
+	End   int64 `json:"end,omitempty"`
+}

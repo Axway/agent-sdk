@@ -52,7 +52,7 @@ func ExitMetricInit() {
 type Collector interface {
 	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
-	AddCustomMetricDetail(metric CustomMetricDetail)
+	AddCustomMetricDetail(metric models.CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
@@ -147,8 +147,9 @@ func GetMetricCollector() Collector {
 
 	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
-	}
+		agent.GetCustomUnitHandler().HandleMetricReporting(globalMetricCollector)
 
+	}
 	return globalMetricCollector
 }
 
@@ -298,7 +299,7 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
-func (c *collector) AddCustomMetricDetail(detail CustomMetricDetail) {
+func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
 		return
 	}
@@ -412,7 +413,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		API:           c.createAPIDetail(detail.APIDetails),
 		AssetResource: c.getAssetResource(accessRequest),
 		ProductPlan:   c.getProductPlan(accessRequest),
-		Observation: &ObservationDetails{
+		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),
@@ -871,10 +872,28 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 		}
 		c.generateMetricEvent(histo, counters, metric)
 	}
+
+	// create metric with just custom units
+	if !countersAdded && len(groupedMetric.counters) > 0 {
+		key := ""
+		for k := range groupedMetric.counters {
+			key = k
+			break
+		}
+		metric, ok := groupMap[key]
+		if !ok {
+			logger.WithField("counterKey", key).Error("could not get metric for counter")
+			return
+		}
+		c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
+		c.generateMetricEvent(metrics.NilHistogram{}, groupedMetric.counters, metric)
+	}
 }
 
 func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
-	metricData.Units.CustomUnits = map[string]*UnitCount{}
+	if metricData.Units.CustomUnits == nil {
+		metricData.Units.CustomUnits = map[string]*UnitCount{}
+	}
 
 	for k, counter := range counters {
 		logger := logger.WithField("unit", k)
@@ -913,7 +932,7 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters ma
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
-	metric.Observation = &ObservationDetails{
+	metric.Observation = &models.ObservationDetails{
 		Start: util.ConvertTimeToMillis(c.metricStartTime),
 		End:   util.ConvertTimeToMillis(c.metricEndTime),
 	}
@@ -1039,9 +1058,11 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 	if consumerAppMap, ok := c.metricMap[subID]; ok {
 		if apiMap, ok := consumerAppMap[appID]; ok {
 			if apiStatusMap, ok := apiMap[apiID]; ok {
-				c.storage.removeMetric(apiStatusMap[group])
-				delete(c.metricMap[subID][appID][apiID], group)
-				histogram.Clear()
+				if _, ok := apiStatusMap[group]; ok {
+					c.storage.removeMetric(apiStatusMap[group])
+					delete(c.metricMap[subID][appID][apiID], group)
+					histogram.Clear()
+				}
 
 				// clean any counters, if needed
 				for k, counter := range counters {

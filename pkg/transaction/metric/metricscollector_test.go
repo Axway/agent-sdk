@@ -926,7 +926,7 @@ func TestCustomMetrics(t *testing.T) {
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
 
-	base := CustomMetricDetail{
+	base := models.CustomMetricDetail{
 		APIDetails: apiDetails1,
 		AppDetails: appDetails1,
 		Count:      5,
@@ -938,23 +938,23 @@ func TestCustomMetrics(t *testing.T) {
 
 	testCases := map[string]struct {
 		skip            bool
-		metricEvent1    CustomMetricDetail
-		metricEvent2    CustomMetricDetail
+		metricEvent1    models.CustomMetricDetail
+		metricEvent2    models.CustomMetricDetail
 		expectedMetrics int
 	}{
 		"no custom metric when api details not in event": {
 			skip:         false,
-			metricEvent1: CustomMetricDetail{},
+			metricEvent1: models.CustomMetricDetail{},
 		},
 		"no custom metric when app details not in event": {
 			skip: false,
-			metricEvent1: CustomMetricDetail{
+			metricEvent1: models.CustomMetricDetail{
 				APIDetails: apiDetails1,
 			},
 		},
 		"no custom metric when unit details not in event": {
 			skip: false,
-			metricEvent1: CustomMetricDetail{
+			metricEvent1: models.CustomMetricDetail{
 				APIDetails: apiDetails1,
 				AppDetails: appDetails1,
 			},

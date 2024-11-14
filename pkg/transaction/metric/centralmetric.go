@@ -55,7 +55,7 @@ type centralMetric struct {
 	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
 	Units         *Units                               `json:"units,omitempty"`
 	Reporter      *Reporter                            `json:"reporter,omitempty"`
-	Observation   *ObservationDetails                  `json:"-"`
+	Observation   *models.ObservationDetails           `json:"-"`
 	EventID       string                               `json:"-"`
 }
 

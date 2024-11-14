@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/customunit"
 	"github.com/Axway/agent-sdk/pkg/util"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -52,7 +53,6 @@ type ConfigChangeHandler func()
 
 // ShutdownHandler - function that the agent may implement to be called when a shutdown request is received
 type ShutdownHandler func()
-
 type agentData struct {
 	agentResourceManager resource.Manager
 	teamJob              *centralTeamsCache
@@ -68,6 +68,7 @@ type agentData struct {
 	apiValidatorJobID          string
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	customUnitHandler          *customunit.CustomUnitHandler
 	agentShutdownHandler       ShutdownHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
@@ -164,6 +165,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			return err
 		}
 	}
+
+	// call the metric services.
+	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
+	agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
 
 	if !agent.isInitialized {
 		err = handleInitialization()
@@ -426,6 +431,10 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 		agent.authProviderRegistry = oauth.NewProviderRegistry()
 	}
 	return agent.authProviderRegistry
+}
+
+func GetCustomUnitHandler() *customunit.CustomUnitHandler {
+	return agent.customUnitHandler
 }
 
 // RegisterShutdownHandler - Registers shutdown handler

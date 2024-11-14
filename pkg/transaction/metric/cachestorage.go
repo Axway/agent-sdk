@@ -178,7 +178,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 					continue
 				}
 
-				c.collector.AddCustomMetricDetail(CustomMetricDetail{
+				c.collector.AddCustomMetricDetail(models.CustomMetricDetail{
 					APIDetails: apiDetails,
 					AppDetails: appDetails,
 					UnitDetails: models.Unit{
