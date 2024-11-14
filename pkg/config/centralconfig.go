@@ -829,7 +829,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
 	// Watch stream config
-	props.AddBoolProperty(pathGRPCEnabled, false, "Controls whether an agent uses a gRPC connection")
+	props.AddBoolProperty(pathGRPCEnabled, true, "Controls whether an agent uses a gRPC connection")
 	props.AddStringProperty(pathGRPCHost, "", "Host name for Amplify Central gRPC connection")
 	props.AddIntProperty(pathGRPCPort, 0, "Port for Amplify Central gRPC connection")
 	props.AddBoolProperty(pathGRPCInsecure, false, "Controls whether an agent uses a gRPC connection with TLS")

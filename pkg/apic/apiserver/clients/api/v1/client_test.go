@@ -562,6 +562,7 @@ func TestUpdateMerge(t *testing.T) {
 			Tags: []string{"old"},
 		},
 	}
+	oldAPISvcRI, _ := oldAPISvc.AsInstance()
 
 	newAPISvc := &management.APIService{
 		ResourceMeta: v1.ResourceMeta{
@@ -581,6 +582,7 @@ func TestUpdateMerge(t *testing.T) {
 			Tags: []string{"new"},
 		},
 	}
+	newAPISvcRI, _ := newAPISvc.AsInstance()
 
 	thisBytes, _ := json.Marshal(newAPISvc)
 	t.Log(string(thisBytes))
@@ -598,7 +600,7 @@ func TestUpdateMerge(t *testing.T) {
 			Tags: []string{"old", "new"},
 		},
 	}
-
+	mergedTagsRI, _ := mergedTags.AsInstance()
 	mergeError := fmt.Errorf("merge errror")
 
 	getError := InternalServerError{
@@ -626,7 +628,7 @@ func TestUpdateMerge(t *testing.T) {
 				return new, nil
 			},
 			expectedErr:      nil,
-			expectedResource: newAPISvc,
+			expectedResource: newAPISvcRI,
 		},
 		{
 			name:        "overwriting update",
@@ -638,11 +640,11 @@ func TestUpdateMerge(t *testing.T) {
 				return new, nil
 			},
 			expectedErr:      nil,
-			expectedResource: newAPISvc,
+			expectedResource: newAPISvcRI,
 		},
 		{
 			name:        "merging tags update",
-			getResponse: oldAPISvc,
+			getResponse: oldAPISvcRI,
 			newResource: newAPISvc,
 			getStatus:   200,
 			otherStatus: 200,
@@ -653,11 +655,10 @@ func TestUpdateMerge(t *testing.T) {
 				}
 
 				f.SetTags(append(f.GetTags(), new.GetTags()...))
-
 				return f, nil
 			},
 			expectedErr:      nil,
-			expectedResource: mergedTags,
+			expectedResource: mergedTagsRI,
 		},
 		{
 			name:        "merge error",
@@ -682,7 +683,8 @@ func TestUpdateMerge(t *testing.T) {
 			},
 			expectedErr:      getError,
 			expectedResource: nil,
-		}}
+		},
+	}
 	logger := WithLogger(noOpLogger{})
 	c, err := NewClient("http://localhost:8080/apis", logger).ForKind(management.APIServiceGVK())
 

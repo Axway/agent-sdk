@@ -590,6 +590,8 @@ func UpdateStatusWithContext(ctx context.Context, status, prevStatus, descriptio
 		if err != nil {
 			logger.WithError(err).Warnf("could not update the agent status reference")
 		}
+	} else {
+		logger.WithField("status", agent.status).Trace("skipping status update, agent resource manager is not initialized")
 	}
 }
 

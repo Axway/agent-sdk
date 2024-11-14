@@ -19,6 +19,10 @@ variables:
   # Blackduck
   BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
 
+  # SRM
+  SRM_PROJECT_NAME: "$BLACKDUCK_PROJECT_NAME"
+  SRM_PROJECT_ID: "225"
+
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
 
@@ -89,3 +93,29 @@ trigger-azure-discovery-agent:
   before_script:
     - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
   extends: .trigger-downstream-agent
+
+twistlock-discovery:on-schedule:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+twistlock-traceability:on-schedule:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+upload-files-to-srm:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+upload-files-to-srm:on-schedule:
+  rules:
+    - !reference [.only-never-rule, rules]
+
+# For these 2, override the 'needs' from base
+run-csr:
+  needs:
+    - fetch-fortify
+
+update-csr:
+  needs:
+    - fetch-fortify:on-schedule
+    - fetch-third-party:on-schedule

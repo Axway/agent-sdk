@@ -12,6 +12,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"golang.org/x/net/proxy"
+	gr "google.golang.org/grpc/resolver"
 )
 
 const (
@@ -167,3 +168,42 @@ func (d *dialer) createConnectRequest(ctx context.Context, targetAddress, sniHos
 	}
 	return req.WithContext(ctx)
 }
+
+type customGRPCResolverBuilder struct {
+	addr      string
+	authority string
+	schema    string
+}
+
+func CreateCustomGRPCResolverBuilder(addr, authority, scheme string) gr.Builder {
+	return &customGRPCResolverBuilder{
+		addr:      addr,
+		authority: authority,
+		schema:    scheme,
+	}
+}
+
+func (b *customGRPCResolverBuilder) Build(target gr.Target, cc gr.ClientConn, _ gr.BuildOptions) (gr.Resolver, error) {
+	cc.UpdateState(gr.State{Endpoints: []gr.Endpoint{
+		{
+			Addresses: []gr.Address{
+				{
+					Addr:       b.addr,
+					ServerName: b.authority,
+				},
+			},
+		},
+	}})
+	return &nopResolver{}, nil
+}
+
+func (b *customGRPCResolverBuilder) Scheme() string {
+	return b.schema
+}
+
+type nopResolver struct {
+}
+
+func (*nopResolver) ResolveNow(gr.ResolveNowOptions) {}
+
+func (*nopResolver) Close() {}
