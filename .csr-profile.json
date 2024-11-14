@@ -7,7 +7,7 @@
     "irius-risk": false,
     "pentest": false,
     "twistlock": false,
-    "blackduck": true,
+    "blackduck": false,
     "third-party-policy-violation": false,
     "appspider": false,
     "insightvm": false

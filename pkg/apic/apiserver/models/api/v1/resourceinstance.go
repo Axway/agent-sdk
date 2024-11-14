@@ -93,9 +93,22 @@ func (ri *ResourceInstance) MarshalJSON() ([]byte, error) {
 	rawInstance["spec"] = ri.Spec
 	rawInstance["owner"] = ri.Owner
 
+	keysToDelete := make([]string, 0)
+	for key := range rawStruct {
+		_, ok := rawInstance[key]
+		if !ok {
+			keysToDelete = append(keysToDelete, key)
+		}
+	}
+
 	// override the rawStruct map with the values from the rawInstance map
 	for key, value := range rawInstance {
 		rawStruct[key] = value
+	}
+
+	// remove deleted sub-resources
+	for _, key := range keysToDelete {
+		delete(rawStruct, key)
 	}
 
 	// return the marshal of the rawStruct
