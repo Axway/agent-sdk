@@ -82,15 +82,10 @@ func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest,
 }
 
 func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
-	unitRef, count := h.getQuotaInfo(ar)
+	unitRef, interval, count := h.getQuotaInfo(ar)
 	if unitRef == "" {
 		return nil, nil
 	}
-	quota := provisioning.NewQuotaFromAccessRequest(ar)
-	if quota == nil {
-		return nil, nil
-	}
-	quotaInterval := quota.GetInterval()
 
 	instance, err := h.getServiceInstance(ar)
 	if err != nil {
@@ -123,11 +118,20 @@ func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *ma
 		Quota: &customunits.Quota{
 			Count:    int64(count),
 			Unit:     unitRef,
-			Interval: customunits.QuotaIntervalType(quotaInterval),
+			Interval: intervalToProtoInterval(interval),
 		},
 	}
 
 	return q, nil
+}
+
+func intervalToProtoInterval(interval string) customunits.QuotaIntervalType {
+	return map[string]customunits.QuotaIntervalType{
+		provisioning.Daily.String():    customunits.QuotaIntervalType_IntervalDaily,
+		provisioning.Weekly.String():   customunits.QuotaIntervalType_IntervalWeekly,
+		provisioning.Monthly.String():  customunits.QuotaIntervalType_IntervalMonthly,
+		provisioning.Annually.String(): customunits.QuotaIntervalType_IntervalAnnually,
+	}[interval]
 }
 
 type reference struct {
@@ -136,10 +140,10 @@ type reference struct {
 	Unit string `json:"unit"`
 }
 
-func (h *CustomUnitHandler) getQuotaInfo(ar *management.AccessRequest) (string, int) {
+func (h *CustomUnitHandler) getQuotaInfo(ar *management.AccessRequest) (string, string, int) {
 	index := 0
 	if len(ar.Spec.AdditionalQuotas) < index+1 {
-		return "", 0
+		return "", "", 0
 	}
 
 	q := ar.Spec.AdditionalQuotas[index]
@@ -148,10 +152,10 @@ func (h *CustomUnitHandler) getQuotaInfo(ar *management.AccessRequest) (string, 
 		ref := &reference{}
 		json.Unmarshal(d, ref)
 		if ref.Kind == catalog.QuotaGVK().Kind && ref.Name == q.Name {
-			return ref.Unit, int(q.Limit)
+			return ref.Unit, q.Interval, int(q.Limit)
 		}
 	}
-	return "", 0
+	return "", "", 0
 }
 
 func (h *CustomUnitHandler) getServiceInstance(ar *management.AccessRequest) (*v1.ResourceInstance, error) {
