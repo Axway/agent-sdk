@@ -58,10 +58,10 @@ message MetricReport {
 message MetricServiceInit {}
 
 enum QuotaIntervalType {
-  Annually = 1;
-  Monthly = 2;
-  Weekly = 3;
-  Daily= 4;
+  Annually = 0;
+  Monthly = 1;
+  Weekly = 2;
+  Daily= 3;
 }
  
 message Quota {
