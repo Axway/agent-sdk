@@ -536,14 +536,13 @@ func GetUserAgent() string {
 		agentName = agent.cfg.GetAgentName()
 		isGRPC = agent.cfg.IsUsingGRPC()
 	}
-	return util.FormatUserAgent(
+	return util.NewUserAgent(
 		config.AgentTypeName,
 		config.AgentVersion,
 		config.SDKVersion,
 		envName,
 		agentName,
-		isRunningInDockerContainer(),
-		isGRPC)
+		isGRPC).FormatUserAgent()
 }
 
 // setCentralConfig - Sets the central config
