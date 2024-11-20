@@ -138,7 +138,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	data := map[string]interface{}{}
 	status, accessData := h.prov.AccessRequestProvision(req)
 
-	if status.GetStatus() == prov.Success && len(ar.Spec.AdditionalQuotas) > 0 {
+	if status.GetStatus() == prov.Success {
 		err := h.customUnitHandler.HandleQuotaEnforcement(ar, app)
 
 		if err != nil {

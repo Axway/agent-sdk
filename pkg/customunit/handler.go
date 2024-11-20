@@ -38,6 +38,7 @@ type agentCacheManager interface {
 	GetAPIServiceWithAPIID(string) *v1.ResourceInstance
 	GetManagedApplication(string) *v1.ResourceInstance
 	GetManagedApplicationByName(string) *v1.ResourceInstance
+	GetManagedApplicationCacheKeys() []string
 }
 
 func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, cache agentCacheManager, agentType config.AgentType) *CustomUnitHandler {
@@ -293,10 +294,10 @@ func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppL
 
 	switch appLookupType {
 	case customunits.AppLookupType_ExternalAppID:
-		appCustomAttr = definitions.AttrExternalAPIID
+		appCustomAttr = definitions.AttrExternalAppID
 		fallthrough
 	case customunits.AppLookupType_CustomAppLookup:
-		for _, key := range c.cache.GetAPIServiceKeys() {
+		for _, key := range c.cache.GetManagedApplicationCacheKeys() {
 			app := c.cache.GetManagedApplication(key)
 			val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
 			if val == appValue {

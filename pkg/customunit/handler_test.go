@@ -113,6 +113,11 @@ func (c *mockAgentCache) GetManagedApplicationByName(string) *v1.ResourceInstanc
 	}
 }
 
+func (c *mockAgentCache) GetManagedApplicationCacheKeys() []string {
+	keys := make([]string, 0)
+	return keys
+}
+
 func (c *fakeMetricCollector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 
 }

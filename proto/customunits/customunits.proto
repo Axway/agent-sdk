@@ -56,10 +56,18 @@ message MetricReport {
  
 // message to start the connection to the custom metric reporting service
 message MetricServiceInit {}
+
+enum QuotaIntervalType {
+  Annually = 1;
+  Monthly = 2;
+  Weekly = 3;
+  Daily= 4;
+}
  
 message Quota {
   int64 count = 1;
   string unit = 2;
+  QuotaIntervalType interval = 3;
 }
 
 message APIInfo {
