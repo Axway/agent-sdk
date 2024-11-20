@@ -141,7 +141,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		Port:        uint32(ccfg.GRPCCfg.Port),
 		TenantID:    config.TenantID,
 		TokenGetter: ta.GetToken,
-		UserAgent:   util.NewUserAgent("SampleClient", "0.0.1-sha1", "0.0.1", "testenvironment", "testagent", true).FormatUserAgent(),
+		UserAgent:   util.NewUserAgent("SampleClient", "0.0.1", "0.0.1", "testenvironment", "testagent", true).FormatUserAgent(),
 	}
 
 	w, err := wm.New(cfg, watchOptions...)
