@@ -10,6 +10,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
@@ -85,6 +86,11 @@ func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *ma
 	if unitRef == "" {
 		return nil, nil
 	}
+	quota := provisioning.NewQuotaFromAccessRequest(ar)
+	if quota == nil {
+		return nil, nil
+	}
+	quotaInterval := quota.GetInterval()
 
 	instance, err := h.getServiceInstance(ar)
 	if err != nil {
@@ -115,8 +121,9 @@ func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *ma
 			AppID:      app.Metadata.ID,
 		},
 		Quota: &customunits.Quota{
-			Count: int64(count),
-			Unit:  unitRef,
+			Count:    int64(count),
+			Unit:     unitRef,
+			Interval: customunits.QuotaIntervalType(quotaInterval),
 		},
 	}
 
