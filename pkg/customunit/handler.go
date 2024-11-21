@@ -55,6 +55,10 @@ func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, c
 }
 
 func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest, app *management.ManagedApplication) error {
+	if len(h.servicesConfigs) == 0 {
+		return nil
+	}
+
 	// Build quota info
 	logger := h.logger.WithField("applicationName", app.Name).WithField("apiInstance", ar.Spec.ApiServiceInstance)
 	quotaInfo, err := h.buildQuotaInfo(logger, ar, app)
@@ -94,7 +98,7 @@ func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest,
 }
 
 func (h *CustomUnitHandler) handleServiceQE(config config.MetricServiceConfiguration, quotaInfo *customunits.QuotaInfo) string {
-	if !config.MetricServiceConfig.MetricServiceEnabled() {
+	if !config.Enable {
 		return ""
 	}
 	factory := NewCustomUnitClientFactory(config.URL, quotaInfo)

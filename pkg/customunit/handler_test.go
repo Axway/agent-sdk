@@ -1,6 +1,7 @@
 package customunit
 
 import (
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -9,11 +10,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 const instRefID = "inst-id-1"
@@ -144,14 +149,43 @@ func GetMetricReport() *customunits.MetricReport {
 }
 
 func Test_HandleQuotaEnforcementInfo(t *testing.T) {
+	lis := bufconn.Listen(1024 * 1024)
+	s := grpc.NewServer()
+	customunits.RegisterQuotaEnforcementServer(s, customunits.UnimplementedQuotaEnforcementServer{})
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	metricServicesConfigs := []config.MetricServiceConfiguration{
 		{
 			Enable:       true,
-			URL:          "https://mockserver:8080",
-			RejectOnFail: true,
+			URL:          "bufnet",
+			RejectOnFail: false,
 		},
 	}
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+	// setup the api service instance
+	apisi := management.NewAPIServiceInstance(instRefName, "env-1")
+	apisi.Metadata.ID = instRefID
+	apisi.Metadata.References = []v1.Reference{
+		{
+			Name:  instRefName,
+			Kind:  management.APIServiceGVK().Kind,
+			Group: management.APIServiceGVK().Group,
+		},
+	}
+	apisiRI, _ := apisi.AsInstance()
+	cm.AddAPIServiceInstance(apisiRI)
+
+	// setup the api service
+	apis := management.NewAPIService(instRefName, "env-1")
+	util.SetAgentDetailsKey(apis, definitions.AttrExternalAPIID, instRefID)
+	apisRI, _ := apis.AsInstance()
+	cm.AddAPIService(apisRI)
+
 	accessReq := &management.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
