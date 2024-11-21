@@ -56,35 +56,74 @@ func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, c
 
 func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest, app *management.ManagedApplication) error {
 	// Build quota info
-	quotaInfo, err := h.buildQuotaInfo(ar, app)
+	logger := h.logger.WithField("applicationName", app.Name).WithField("apiInstance", ar.Spec.ApiServiceInstance)
+	quotaInfo, err := h.buildQuotaInfo(logger, ar, app)
 	if err != nil {
-		return fmt.Errorf("could not build quota info from access request")
+		logger.WithError(err).Error("could not build quota info from access request")
+		return err
 	}
+
 	errMessage := ""
 	for _, config := range h.servicesConfigs {
-		if config.MetricServiceEnabled() {
-			factory := NewCustomUnitClientFactory(config.URL, quotaInfo)
-			client, _ := factory(h.cache)
-			response, err := client.QuotaEnforcementInfo()
-			if err != nil {
-				// if error from QE and reject on fail, we return the error back to the central
-				if response != nil && response.Error != "" && config.RejectOnFailEnabled() {
-					errMessage = errMessage + fmt.Sprintf("TODO: message: %s", err.Error())
-				}
-			}
+		logger := logger.WithField("url", config.URL)
+		// if error from QE and reject on fail, we return the error back to the central
+		msg := h.handleServiceQE(config, quotaInfo)
+		if msg != "" {
+			logger.WithField("err", msg).Error("error handling provisioning")
+			msg = fmt.Sprintf("service (url: %s, message: %s)", config.URL, msg)
 		}
+		if !config.RejectOnFail || msg == "" {
+			continue // if there was an error do not add it to the overall errMessage
+		}
+
+		// add it to the overall errMessage since reject on fail enabled
+		if errMessage == "" {
+			errMessage = msg
+			continue
+		}
+		// append to existing errMessage if multiple services failed
+		errMessage = fmt.Sprintf("%s; %s", errMessage, msg)
 	}
 
 	if errMessage != "" {
-		return errors.New(errMessage)
+		err = errors.New(errMessage)
+		logger.WithError(err).Error("received back from metric services for quota enforcement")
+		return err
 	}
 	return nil
 }
 
-func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
+func (h *CustomUnitHandler) handleServiceQE(config config.MetricServiceConfiguration, quotaInfo *customunits.QuotaInfo) string {
+	if !config.MetricServiceConfig.MetricServiceEnabled() {
+		return ""
+	}
+	factory := NewCustomUnitClientFactory(config.URL, quotaInfo)
+	client, err := factory(h.cache)
+	// err creating the client
+	if err != nil {
+		return err.Error()
+	}
+
+	response, err := client.QuotaEnforcementInfo()
+	// err or errored response from the quota enforcement call
+	if err != nil {
+		return err.Error()
+	} else if response != nil && response.Error != "" {
+		return response.Error
+	}
+
+	return ""
+}
+
+func (h *CustomUnitHandler) buildQuotaInfo(logger log.FieldLogger, ar *management.AccessRequest, app *management.ManagedApplication) (*customunits.QuotaInfo, error) {
 	unitRef, interval, count := h.getQuotaInfo(ar)
-	if unitRef == "" {
-		return nil, nil
+	quota := &customunits.Quota{}
+	if unitRef != "" {
+		quota = &customunits.Quota{
+			Count:    int64(count),
+			Unit:     unitRef,
+			Interval: intervalToProtoInterval(interval),
+		}
 	}
 
 	instance, err := h.getServiceInstance(ar)
@@ -100,7 +139,11 @@ func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *ma
 	}
 	extAPIID, err := util.GetAgentDetailsValue(instance, definitions.AttrExternalAPIID)
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Error("external api id not found on api service, still sending to metric services")
+	}
+	extAppID, err := util.GetAgentDetailsValue(app, definitions.AttrExternalAppID)
+	if err != nil {
+		logger.WithError(err).Error("external app id not found on api service, still sending to metric services")
 	}
 
 	q := &customunits.QuotaInfo{
@@ -111,15 +154,12 @@ func (h *CustomUnitHandler) buildQuotaInfo(ar *management.AccessRequest, app *ma
 			ExternalAPIID:  extAPIID,
 		},
 		AppInfo: &customunits.AppInfo{
-			AppDetails: util.GetAgentDetailStrings(app),
-			AppName:    app.Name,
-			AppID:      app.Metadata.ID,
+			AppDetails:    util.GetAgentDetailStrings(app),
+			AppName:       app.Name,
+			AppID:         app.Metadata.ID,
+			ExternalAppID: extAppID,
 		},
-		Quota: &customunits.Quota{
-			Count:    int64(count),
-			Unit:     unitRef,
-			Interval: intervalToProtoInterval(interval),
-		},
+		Quota: quota,
 	}
 
 	return q, nil
