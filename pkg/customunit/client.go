@@ -124,11 +124,10 @@ func (c *customUnitClient) processMetrics(client cu.MetricReportingService_Metri
 }
 
 func (c *customUnitClient) ExecuteBackoff() {
-	c.logger.Debugf("connection is still lost, trying again in %v.", c.delay)
+	c.logger.WithField("retryDelay", c.delay).Debug("connection is still lost, trying again")
 	time.Sleep(c.delay)
 	c.delay = 2 * c.delay
 	if c.delay >= maxRetryDelay {
-		c.logger.Debugf("maximum retry delay of %v reached", maxRetryDelay)
 		c.delay = maxRetryDelay
 	}
 }

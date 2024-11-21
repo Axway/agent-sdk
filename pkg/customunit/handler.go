@@ -269,6 +269,10 @@ func (c *CustomUnitHandler) buildCustomMetricDetail(metricReport *customunits.Me
 	managedAppLookup := metricReport.GetManagedApp()
 	planUnitLookup := metricReport.GetPlanUnit()
 
+	if planUnitLookup.GetUnitName() == "" {
+		return nil, errors.New("not able to find the plan unit name")
+	}
+
 	apiDetails, err := c.APIServiceLookup(apiServiceLookup)
 	if err != nil {
 		c.logger.Error(err)
@@ -283,7 +287,7 @@ func (c *CustomUnitHandler) buildCustomMetricDetail(metricReport *customunits.Me
 	planUnitDetails := c.PlanUnitLookup(planUnitLookup)
 
 	if apiDetails == nil || appDetails == nil || planUnitDetails == nil {
-		return nil, fmt.Errorf("unable to build custom metric detail")
+		return nil, errors.New("unable to build custom metric detail")
 	}
 
 	return &models.CustomMetricDetail{
@@ -299,18 +303,16 @@ func (c *CustomUnitHandler) APIServiceLookup(apiServiceLookup *customunits.APISe
 	apiLookupType := apiServiceLookup.GetType()
 	apiCustomAttr := apiServiceLookup.GetCustomAttribute()
 	var apiSvc *v1.ResourceInstance
-	var err error
-
-	if apiLookupType == customunits.APIServiceLookupType_CustomAPIServiceLookup && apiCustomAttr == "" {
-		return nil, err
-	}
 
 	if apiSvcValue == "" {
-		return nil, err
+		return nil, errors.New("not able to find api service lookup value")
 	}
 
 	switch apiLookupType {
 	case customunits.APIServiceLookupType_CustomAPIServiceLookup:
+		if apiCustomAttr == "" {
+			return nil, errors.New("not able to find custom attribute value")
+		}
 		for _, key := range c.cache.GetAPIServiceKeys() {
 			apisvc := c.cache.GetAPIServiceWithAPIID(key)
 			val, _ := util.GetAgentDetailsValue(apisvc, apiCustomAttr)
@@ -320,7 +322,7 @@ func (c *CustomUnitHandler) APIServiceLookup(apiServiceLookup *customunits.APISe
 			}
 		}
 	case customunits.APIServiceLookupType_ExternalAPIID:
-		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
+		fallthrough
 	case customunits.APIServiceLookupType_ServiceID:
 		apiSvc = c.cache.GetAPIServiceWithAPIID(apiSvcValue)
 	case customunits.APIServiceLookupType_ServiceName:
@@ -346,14 +348,9 @@ func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppL
 	appLookupType := appLookup.GetType()
 	appCustomAttr := appLookup.GetCustomAttribute()
 	var managedAppRI *v1.ResourceInstance
-	var err error
-
-	if appLookupType == customunits.AppLookupType_CustomAppLookup && appValue == "" {
-		return nil, err
-	}
 
 	if appValue == "" {
-		return nil, err
+		return nil, errors.New("not able to find the app lookup value")
 	}
 
 	switch appLookupType {
@@ -361,6 +358,9 @@ func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppL
 		appCustomAttr = definitions.AttrExternalAppID
 		fallthrough
 	case customunits.AppLookupType_CustomAppLookup:
+		if appCustomAttr == "" {
+			return nil, errors.New("not able to find the custom atrribute value")
+		}
 		for _, key := range c.cache.GetManagedApplicationCacheKeys() {
 			app := c.cache.GetManagedApplication(key)
 			val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
@@ -378,7 +378,7 @@ func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppL
 		return nil, nil
 	}
 	managedApp := &management.ManagedApplication{}
-	err = managedApp.FromInstance(managedAppRI)
+	err := managedApp.FromInstance(managedAppRI)
 	if err != nil {
 		return nil, err
 	}
