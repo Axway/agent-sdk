@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/amplify/agent/customunits"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -67,32 +69,39 @@ func (h *CustomUnitHandler) HandleQuotaEnforcement(ar *management.AccessRequest,
 		return err
 	}
 
-	errMessage := ""
-	for _, config := range h.servicesConfigs {
-		logger := logger.WithField("url", config.URL)
-		// if error from QE and reject on fail, we return the error back to the central
-		msg := h.handleServiceQE(config, quotaInfo)
-		if msg != "" {
-			logger.WithField("err", msg).Error("error handling provisioning")
-			msg = fmt.Sprintf("service (url: %s, message: %s)", config.URL, msg)
-		}
-		if !config.RejectOnFail || msg == "" {
-			continue // if there was an error do not add it to the overall errMessage
-		}
+	var errMsgs []string
+	mutex := sync.Mutex{}
 
-		// add it to the overall errMessage since reject on fail enabled
-		if errMessage == "" {
-			errMessage = msg
-			continue
-		}
-		// append to existing errMessage if multiple services failed
-		errMessage = fmt.Sprintf("%s; %s", errMessage, msg)
+	wg := sync.WaitGroup{}
+	wg.Add(len(h.servicesConfigs))
+
+	rejectOnFail := false
+	for i := range h.servicesConfigs {
+		go func(c config.MetricServiceConfiguration) {
+			defer wg.Done()
+
+			msg := h.handleServiceQE(c, quotaInfo)
+			if msg == "" {
+				return
+			}
+			msg = fmt.Sprintf("service (url: %s, rejectOnFail: %v, message: %s)", c.URL, c.RejectOnFail, msg)
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			errMsgs = append(errMsgs, msg)
+			rejectOnFail = rejectOnFail || c.RejectOnFail
+		}(h.servicesConfigs[i])
+	}
+	wg.Wait()
+
+	var qeErr error
+	if len(errMsgs) > 0 {
+		qeErr = errors.New(strings.Join(errMsgs, "; "))
+		logger.WithError(qeErr).Error("errors from metric services for quota enforcement")
 	}
 
-	if errMessage != "" {
-		err = errors.New(errMessage)
-		logger.WithError(err).Error("received back from metric services for quota enforcement")
-		return err
+	if rejectOnFail {
+		return qeErr
 	}
 	return nil
 }
