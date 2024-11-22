@@ -3,6 +3,7 @@ package watchmanager
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -70,6 +71,7 @@ func Test_watchClient_send(t *testing.T) {
 		getTokenErr error
 		streamErr   error
 		hasErr      bool
+		hasSendErr  bool
 		getToken    getTokenExpFunc
 	}{
 		{
@@ -97,7 +99,7 @@ func Test_watchClient_send(t *testing.T) {
 			name:        "should return an error when Send fails",
 			getTokenErr: nil,
 			streamErr:   fmt.Errorf("err"),
-			hasErr:      true,
+			hasSendErr:  true,
 			getToken:    mockGetTokenExp,
 		},
 	}
@@ -112,6 +114,7 @@ func Test_watchClient_send(t *testing.T) {
 				events:      make(chan *proto.Event),
 				errors:      make(chan error),
 				tokenGetter: getter.GetToken,
+				requests:    make(chan *proto.Request, 1),
 			}
 
 			stream := &mockStream{
@@ -123,16 +126,30 @@ func Test_watchClient_send(t *testing.T) {
 				stream: stream,
 			}
 
+			wg := sync.WaitGroup{}
 			c, err := newWatchClient(conn, cfg, newMockWatchClient(stream, nil))
 			c.getTokenExpirationTime = tc.getToken
 			assert.Nil(t, err)
 			assert.NotNil(t, c)
 
-			err = c.send()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := c.processRequest()
+				if tc.hasSendErr {
+					assert.NotNil(t, err)
+				} else {
+					assert.Nil(t, err)
+				}
+			}()
+
+			err = c.createTokenRefreshRequest()
 			if tc.hasErr {
 				assert.NotNil(t, err)
-			} else {
+			} else if !tc.hasSendErr {
+				wg.Wait()
 				assert.Nil(t, err)
+				assert.NotNil(t, stream.request)
 			}
 		})
 	}
