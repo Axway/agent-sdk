@@ -58,10 +58,16 @@ func (q *requestQueue) Stop() {
 }
 
 func (q *requestQueue) IsActive() bool {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
 	return q.isActive
 }
 
 func (q *requestQueue) Write(request *proto.Request) error {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
 	if !q.isActive {
 		return errors.New("request queue is not active")
 	}
@@ -74,12 +80,14 @@ func (q *requestQueue) Write(request *proto.Request) error {
 }
 
 func (q *requestQueue) Start() {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
 	go func() {
+		q.lock.Lock()
 		q.isActive = true
+		q.lock.Unlock()
+
 		defer func() {
+			q.lock.Lock()
+			defer q.lock.Unlock()
 			q.isActive = false
 		}()
 
