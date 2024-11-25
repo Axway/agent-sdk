@@ -624,7 +624,7 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
 	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
-	if agent.cfg.IsUsingGRPC() {
+	if agent.cfg != nil && agent.cfg.IsUsingGRPC() {
 		updateStatusOverStream(status, prevStatus, description)
 		return
 	}
