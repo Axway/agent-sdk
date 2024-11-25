@@ -230,12 +230,11 @@ func (s *StreamerClient) UpdateAgentStatus(state, prevState, message string) err
 	// allow running status after recovery from unhealthy state
 	if canTransitionAgentState(state, prevState) {
 		return s.writeStatusRequest(state, message)
-	} else {
-		s.logger.
-			WithField("status", state).
-			WithField("previousStatus", prevState).
-			Trace("skipping agent status update request")
 	}
+	s.logger.
+		WithField("status", state).
+		WithField("previousStatus", prevState).
+		Trace("skipping agent status update request")
 	return nil
 }
 
