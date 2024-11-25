@@ -624,13 +624,29 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
 	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
+	if agent.cfg.IsUsingGRPC() {
+		updateStatusOverStream(status, prevStatus, description)
+		return
+	}
+
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			logger.WithError(err).Warnf("could not update the agent status reference")
+			logger.WithError(err).Warn("could not update the agent status reference")
 		}
 	} else {
 		logger.WithField("status", agent.status).Trace("skipping status update, agent resource manager is not initialized")
+	}
+}
+
+func updateStatusOverStream(status, prevStatus, description string) {
+	if agent.streamer != nil {
+		err := agent.streamer.UpdateAgentStatus(status, prevStatus, description)
+		if err != nil {
+			logger.WithError(err).Warn("could not update the agent status reference")
+		}
+	} else {
+		logger.WithField("status", agent.status).Trace("skipping status update, stream client is not initialized")
 	}
 }
 
@@ -711,7 +727,10 @@ func setupProfileSignalProcessor(cpuProfile, memProfile string) {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	// stopped status updated with gRPC watch
+	if !agent.cfg.IsUsingGRPC() {
+		UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	}
 }
 
 func newHandlers() []handler.Handler {
