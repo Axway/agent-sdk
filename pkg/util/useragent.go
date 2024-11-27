@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	agentInfoRe   = regexp.MustCompile(`^([a-zA-Z]*)/(\d*.\d*.\d*)[-]?[a-z0-9]*? SDK/(\d*.\d*.\d.*) ([a-z][a-zA-Z0-9-]*) ([a-z][a-zA-Z0-9-]*) (binary|docker)[ ]?(reactive)?`)
-	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z]*)\/(\d*.\d*.\d*)[-]?[a-z0-9]*? \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_]*)\)[ (.*grpc-go.*)$]?`)
+	agentInfoRe   = regexp.MustCompile(`^([a-zA-Z]*)\/(\d*.\d*.\d*)[-]?([a-z0-9]*?) SDK/(\d*.\d*.\d.*) ([a-z][a-zA-Z0-9-]*) ([a-z][a-zA-Z0-9-]*) (binary|docker)[ ]?(reactive)?`)
+	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z]*)\/(\d*.\d*.\d*)[-]?([a-z0-9]*?) \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_]*)\)[ (.*grpc-go.*)$]?`)
 )
 
 type CentralUserAgent struct {
 	AgentType           string `json:"type"`
 	Version             string `json:"version"`
-	CommitSHA           string `json:"sha"` // for backward compatibility
+	CommitSHA           string `json:"sha,omitempty"` // for backward compatibility
 	SDKVersion          string `json:"sdkVersion,omitempty"`
 	Environment         string `json:"environment,omitempty"`
 	AgentName           string `json:"name,omitempty"`
@@ -53,27 +53,29 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 		// backward compatible user agent
 		matches = agentInfoRe.FindStringSubmatch(userAgent)
 		if len(matches) > 6 {
-			isGRPC := len(matches) > 7 && matches[7] == "reactive"
+			isGRPC := len(matches) > 8 && matches[8] == "reactive"
 			return &CentralUserAgent{
 				AgentType:   matches[1],
 				Version:     matches[2],
-				SDKVersion:  matches[3],
-				Environment: matches[4],
-				AgentName:   matches[5],
+				CommitSHA:   matches[3],
+				SDKVersion:  matches[4],
+				Environment: matches[5],
+				AgentName:   matches[6],
 				IsGRPC:      isGRPC,
 			}
 		}
 	}
-	if len(matches) > 7 {
-		isGRPC := matches[6] == "true"
+	if len(matches) > 8 {
+		isGRPC := matches[7] == "true"
 		return &CentralUserAgent{
 			AgentType:           matches[1],
 			Version:             matches[2],
-			SDKVersion:          matches[3],
-			Environment:         matches[4],
-			AgentName:           matches[5],
+			CommitSHA:           matches[3],
+			SDKVersion:          matches[4],
+			Environment:         matches[5],
+			AgentName:           matches[6],
 			IsGRPC:              isGRPC,
-			HostName:            matches[7],
+			HostName:            matches[8],
 			UseGRPCStatusUpdate: isGRPC,
 		}
 	}
