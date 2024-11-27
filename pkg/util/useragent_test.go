@@ -59,10 +59,11 @@ func TestParseUserAgents(t *testing.T) {
 	}{
 		{
 			name:      "test-1",
-			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0-7e7eb72d (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
+				CommitSHA:           "7e7eb72d",
 				SDKVersion:          "1.0.0",
 				Environment:         "env",
 				AgentName:           "agent",
@@ -87,10 +88,11 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-3",
-			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0-7e7eb72d (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
+				CommitSHA:           "7e7eb72d",
 				SDKVersion:          "1.0.0",
 				Environment:         "env",
 				AgentName:           "agent",
