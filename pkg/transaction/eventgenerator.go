@@ -60,43 +60,59 @@ func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
 func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
-	// if CreateEvent is being used, sampling will not work, so all events need to be sent
-	if metaData == nil {
-		metaData = common.MapStr{}
-	}
-	metaData.Put(sampling.SampleKey, true)
+	builder := NewEventReportBuilder().
+		SetEventTime(eventTime).
+		SetMetadata(metaData).
+		SetFields(eventFields).
+		SetPrivateData(privateData).
+		SetForceSample()
 
+	// set the proper log event type
 	if logEvent.TransactionSummary != nil {
-
-		e.processTxnSummary(logEvent)
-		e.trackMetrics(logEvent, 0)
+		builder = builder.SetSummaryEvent(logEvent)
+	} else {
+		builder = builder.SetDetailEvents([]LogEvent{logEvent}).SetSkipMetricTracking()
 	}
 
-	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
+	report, err := builder.Build()
+	if err != nil {
+		return beat.Event{}, err
+	}
+	events, err := e.CreateFromEventReport(report)
+	if err != nil || len(events) == 0 {
+		return beat.Event{}, err
+	}
+	// will only ever have 1 beat event returned
+	return events[0], nil
 }
 
 // CreateEvents - Creates new events to be sent to Amplify Observability
 func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
-	return e.CreateFromEventReport(
-		&eventReport{
-			summaryEvent: summaryEvent,
-			detailEvents: detailEvents,
-			eventTime:    eventTime,
-			metadata:     metaData,
-			fields:       eventFields,
-			privateData:  privateData,
-		},
-	)
+	report, err := NewEventReportBuilder().
+		SetSummaryEvent(summaryEvent).
+		SetDetailEvents(detailEvents).
+		SetEventTime(eventTime).
+		SetMetadata(metaData).
+		SetFields(eventFields).
+		SetPrivateData(privateData).
+		Build()
+	if err != nil {
+		return []beat.Event{}, err
+	}
+
+	return e.CreateFromEventReport(report)
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
 func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event, error) {
-	bytes := e.getBytesSent(eventReport.GetDetailEvents())
-	e.trackMetrics(eventReport.GetSummaryEvent(), int64(bytes))
 	events := make([]beat.Event, 0)
 
-	// skip rest of processing
-	if eventReport.OnlyTrack() {
+	bytes := e.getBytesSent(eventReport.GetDetailEvents())
+	if eventReport.ShouldTrackMetrics() {
+		e.trackMetrics(eventReport.GetSummaryEvent(), int64(bytes))
+	}
+	if eventReport.ShouldOnlyTrackMetrics() {
+		// skip rest of processing
 		return events, nil
 	}
 
@@ -106,9 +122,18 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		return events, nil
 	}
 
+	//set up the sampling metadata if set to force it
+	metadata := eventReport.GetMetadata()
+	if eventReport.ShouldForceSample() {
+		if metadata == nil {
+			metadata = common.MapStr{}
+		}
+		metadata.Put(sampling.SampleKey, true)
+	}
+
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if eventReport.GetSummaryEvent() == (LogEvent{}) {
-		return e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
+		return e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
@@ -117,7 +142,7 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		return nil, err
 	}
 
-	if eventReport.ShouldSample() {
+	if eventReport.ShouldHandleSampling() && !eventReport.ShouldForceSample() {
 		shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(eventReport.GetSummaryEvent()))
 		if err != nil {
 			return events, err
@@ -127,14 +152,14 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		}
 	}
 
-	newEvent, err := e.createEvent(eventReport.GetSummaryEvent(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
+	newEvent, err := e.createEvent(eventReport.GetSummaryEvent(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 
 	if err != nil {
 		return events, err
 	}
 
 	events = append(events, newEvent)
-	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
+	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
 		return nil, err
 	}
