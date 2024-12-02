@@ -149,7 +149,7 @@ func Test_watchClient_send(t *testing.T) {
 			} else if !tc.hasSendErr {
 				wg.Wait()
 				assert.Nil(t, err)
-				assert.NotNil(t, stream.request)
+				assert.NotNil(t, stream.getRequest())
 			}
 		})
 	}

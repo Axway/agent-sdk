@@ -2,6 +2,7 @@ package watchmanager
 
 import (
 	"context"
+	"sync"
 
 	"google.golang.org/grpc/metadata"
 
@@ -42,9 +43,20 @@ type mockStream struct {
 	err     error
 	context context.Context
 	request *proto.Request
+	lock    sync.Mutex
+}
+
+func (m *mockStream) getRequest() *proto.Request {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	return m.request
 }
 
 func (m *mockStream) Send(request *proto.Request) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if m.err != nil {
 		return m.err
 	}
