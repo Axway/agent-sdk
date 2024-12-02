@@ -3,6 +3,7 @@ package api
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -221,6 +222,7 @@ func TestSend(t *testing.T) {
 	config.AgentVersion = "1.0"
 	config.SDKVersion = "1.0"
 	httpServer := newMockHTTPServer()
+	hostname, _ := os.Hostname()
 
 	tests := []struct {
 		name              string
@@ -256,7 +258,7 @@ func TestSend(t *testing.T) {
 			isDocker:          false,
 			isGRPC:            true,
 			agentName:         "agent",
-			expectedUserAgent: "Test/1.0 SDK/1.0 env agent binary reactive",
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
 		},
 		{
 			name:              "post-request-with-response",
@@ -268,7 +270,7 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          true,
 			agentName:         "agent",
-			expectedUserAgent: "Test/1.0 SDK/1.0 env agent docker",
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
 		},
 		{
 			name:              "override-user-agent",
@@ -285,14 +287,13 @@ func TestSend(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ua := util.FormatUserAgent(
+			ua := util.NewUserAgent(
 				config.AgentTypeName,
 				config.AgentVersion,
 				config.SDKVersion,
 				tc.envName,
 				tc.agentName,
-				tc.isDocker,
-				tc.isGRPC)
+				tc.isGRPC).FormatUserAgent()
 			SetConfigAgent(ua, httpServer.server.URL, []string{"http://test"})
 			httpServer.reset()
 			httpServer.respBody = tc.respBody

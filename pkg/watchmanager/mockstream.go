@@ -2,6 +2,7 @@ package watchmanager
 
 import (
 	"context"
+	"sync"
 
 	"google.golang.org/grpc/metadata"
 
@@ -14,7 +15,8 @@ type mockWatchClient struct {
 	err    error
 }
 
-func (m mockWatchClient) Subscribe(_ context.Context, _ ...grpc.CallOption) (proto.Watch_SubscribeClient, error) {
+func (m mockWatchClient) Subscribe(ctx context.Context, _ ...grpc.CallOption) (proto.Watch_SubscribeClient, error) {
+	m.stream.context = ctx
 	return m.stream, m.err
 }
 
@@ -27,11 +29,12 @@ func (m mockConn) Invoke(_ context.Context, _ string, _ interface{}, _ interface
 }
 
 func (m mockConn) NewStream(
-	_ context.Context,
+	ctx context.Context,
 	_ *grpc.StreamDesc,
 	_ string,
 	_ ...grpc.CallOption,
 ) (grpc.ClientStream, error) {
+	m.stream.context = ctx
 	return m.stream, nil
 }
 
@@ -39,37 +42,54 @@ type mockStream struct {
 	event   *proto.Event
 	err     error
 	context context.Context
+	request *proto.Request
+	lock    sync.Mutex
 }
 
-func (m mockStream) Send(_ *proto.Request) error {
-	return m.err
+func (m *mockStream) getRequest() *proto.Request {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	return m.request
 }
 
-func (m mockStream) Recv() (*proto.Event, error) {
+func (m *mockStream) Send(request *proto.Request) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.err != nil {
+		return m.err
+	}
+
+	m.request = request
+	return nil
+}
+
+func (m *mockStream) Recv() (*proto.Event, error) {
 	return m.event, m.err
 }
 
-func (m mockStream) Header() (metadata.MD, error) {
+func (m *mockStream) Header() (metadata.MD, error) {
 	return metadata.MD{}, nil
 }
 
-func (m mockStream) Trailer() metadata.MD {
+func (m *mockStream) Trailer() metadata.MD {
 	return metadata.MD{}
 }
 
-func (m mockStream) CloseSend() error {
+func (m *mockStream) CloseSend() error {
 	return nil
 }
 
-func (m mockStream) Context() context.Context {
+func (m *mockStream) Context() context.Context {
 	return m.context
 }
 
-func (m mockStream) SendMsg(_ interface{}) error {
+func (m *mockStream) SendMsg(_ interface{}) error {
 	return nil
 }
 
-func (m mockStream) RecvMsg(_ interface{}) error {
+func (m *mockStream) RecvMsg(_ interface{}) error {
 	return nil
 }
 

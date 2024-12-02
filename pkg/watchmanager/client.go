@@ -19,6 +19,7 @@ type clientConfig struct {
 	events        chan *proto.Event
 	tokenGetter   TokenGetter
 	topicSelfLink string
+	requests      chan *proto.Request
 }
 
 type watchClient struct {
@@ -83,39 +84,49 @@ func (c *watchClient) recv() error {
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
 func (c *watchClient) processRequest() error {
-	var err error
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wait := true
-	go func() {
-		for {
-			select {
-			case <-c.streamCtx.Done():
-				c.handleError(c.streamCtx.Err())
-				return
-			case <-c.stream.Context().Done():
-				c.handleError(c.stream.Context().Err())
-				return
-			case <-c.timer.C:
-				err = c.send()
-				if wait {
-					wg.Done()
-					wait = false
-				}
-				if err != nil {
-					c.handleError(err)
-					return
-				}
-			}
-		}
-	}()
-
-	wg.Wait()
-	return err
+	// If the request channel is not supplied, create new
+	// for token refresh request
+	if c.cfg.requests == nil {
+		c.cfg.requests = make(chan *proto.Request, 1)
+	}
+	lock := createInitialRequestLock()
+	go c.requestLoop(lock)
+	return lock.wait()
 }
 
-// send a message with a new token to the grpc server and returns the expiration time
-func (c *watchClient) send() error {
+func (c *watchClient) requestLoop(rl *initialRequestLock) {
+	var err error
+	defer func() {
+		rl.done(err)
+	}()
+
+	for {
+		select {
+		case <-c.streamCtx.Done():
+			c.handleError(c.streamCtx.Err())
+			return
+		case <-c.stream.Context().Done():
+			c.handleError(c.stream.Context().Err())
+			return
+		case <-c.timer.C:
+			err = c.createTokenRefreshRequest()
+			if err != nil {
+				c.handleError(err)
+				return
+			}
+		case req := <-c.cfg.requests:
+			err = c.stream.Send(req)
+			rl.done(err)
+			if err != nil {
+				c.handleError(err)
+				return
+			}
+		}
+	}
+}
+
+// create stream request with a new token to the grpc server and returns the expiration time
+func (c *watchClient) createTokenRefreshRequest() error {
 	c.timer.Stop()
 
 	token, err := c.cfg.tokenGetter()
@@ -129,10 +140,9 @@ func (c *watchClient) send() error {
 	}
 
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
-	err = c.stream.Send(req)
-	if err != nil {
-		return err
-	}
+	// write the token request to the channel
+	c.cfg.requests <- req
+
 	c.timer.Reset(exp)
 	return nil
 }
@@ -187,4 +197,38 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 		return time.Duration(0), fmt.Errorf("token is expired")
 	}
 	return d, nil
+}
+
+type initialRequestLock struct {
+	waitDone bool
+	lock     sync.Mutex
+	wg       sync.WaitGroup
+	err      error
+}
+
+func createInitialRequestLock() *initialRequestLock {
+	l := &initialRequestLock{
+		wg: sync.WaitGroup{},
+	}
+	l.wg.Add(1)
+	return l
+}
+
+func (l *initialRequestLock) done(err error) {
+	l.lock.Lock()
+	l.err = err
+	l.lock.Unlock()
+
+	if !l.waitDone {
+		l.wg.Done()
+		l.waitDone = true
+	}
+}
+
+func (l *initialRequestLock) wait() error {
+	l.wg.Wait()
+
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	return l.err
 }

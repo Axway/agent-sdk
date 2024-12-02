@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -19,8 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func NewConfig() config.CentralConfiguration {
-	return config.CentralConfiguration{
+func NewConfig() *config.CentralConfiguration {
+	return &config.CentralConfiguration{
 		AgentType:     1,
 		TenantID:      "12345",
 		Environment:   "stream-test",
@@ -38,11 +39,11 @@ func TestNewStreamer(t *testing.T) {
 	wt := &management.WatchTopic{}
 	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
-	cacheManager := agentcache.NewAgentCacheManager(&cfg, false)
+	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
 
 	streamer, err := NewStreamerClient(
 		httpClient,
-		&cfg,
+		cfg,
 		getToken,
 		nil,
 		WithOnStreamConnection(),
@@ -101,7 +102,7 @@ func TestClientOptions(t *testing.T) {
 	sequence.SetSequence(1)
 	sc, _ := NewStreamerClient(
 		&mock.Client{},
-		config.NewCentralConfig(config.DiscoveryAgent),
+		NewConfig(),
 		&mockTokenGetter{},
 		nil,
 		WithHarvester(&mockHarvester{}, sequence),
@@ -113,6 +114,97 @@ func TestClientOptions(t *testing.T) {
 	assert.NotNil(t, sc.sequence)
 	assert.NotNil(t, sc.onEventSyncError)
 	assert.NotNil(t, sc.onStreamConnection)
+}
+
+func TestStatusUpdates(t *testing.T) {
+	cases := map[string]struct {
+		queueActive  bool
+		state        string
+		prevState    string
+		stateMessage string
+		expectedReq  *proto.Request
+		expectedErr  bool
+	}{
+		"error on status update with inactive queue": {
+			state:       "unhealthy",
+			expectedErr: true,
+		},
+		"no stopped state update with stream client": {
+			state:       "stopped",
+			queueActive: true,
+		},
+		"no status update with same state change": {
+			state:       "unhealthy",
+			prevState:   "unhealthy",
+			queueActive: true,
+		},
+		"status update from running to unhealthy": {
+			state:       "unhealthy",
+			prevState:   "running",
+			queueActive: true,
+			expectedReq: &proto.Request{
+				RequestType: proto.RequestType_AGENT_STATUS.Enum(),
+				AgentStatus: &proto.AgentStatus{
+					State: "unhealthy",
+				},
+			},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			streamer, err := NewStreamerClient(
+				&mockAPIClient{},
+				NewConfig(),
+				&mockTokenGetter{},
+				nil,
+			)
+
+			assert.NotNil(t, streamer)
+			assert.Nil(t, err)
+
+			manager := &mockManager{
+				status:  true,
+				readyCh: make(chan struct{}),
+			}
+			requestQueue := &mockRequestQueue{active: tc.queueActive}
+
+			streamer.newRequestQueue = func(requestCh chan *proto.Request) events.RequestQueue {
+				return requestQueue
+			}
+			streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
+				return manager, nil
+			}
+
+			assert.Nil(t, streamer.Status())
+			errCh := make(chan error)
+			go func() {
+				err := streamer.Start()
+				errCh <- err
+			}()
+			defer func() {
+				streamer.Stop()
+				err = <-errCh
+				assert.Nil(t, err)
+			}()
+
+			// wait for stream ready
+			<-manager.readyCh
+
+			err = streamer.UpdateAgentStatus(tc.state, tc.prevState, tc.stateMessage)
+			if tc.expectedErr {
+				assert.NotNil(t, err)
+				return
+			}
+
+			if tc.expectedReq != nil {
+				assert.NotNil(t, requestQueue.request)
+				assert.Equal(t, tc.expectedReq.RequestType.Enum(), requestQueue.request.RequestType.Enum())
+				assert.Equal(t, tc.expectedReq.AgentStatus.State, requestQueue.request.AgentStatus.State)
+				return
+			}
+			assert.Nil(t, requestQueue.request)
+		})
+	}
 }
 
 func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
@@ -151,7 +243,6 @@ type mockAPIClient struct {
 	resource    *apiv1.ResourceInstance
 	getErr      error
 	createErr   error
-	updateErr   error
 	deleteErr   error
 	paged       []*apiv1.ResourceInstance
 	pagedCalled bool
@@ -194,15 +285,30 @@ func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64,
 	return 0, nil
 }
 
-type mockSequence struct {
-	seq int64
+type mockSequence struct{}
+
+func (m mockSequence) GetSequence() int64 { return 0 }
+
+func (m mockSequence) SetSequence(sequenceID int64) {}
+
+type mockRequestQueue struct {
+	active  bool
+	request *proto.Request
 }
 
-func (m mockSequence) GetSequence() int64 {
-	return m.seq
+func (m *mockRequestQueue) Start() {
+
 }
 
-func (m mockSequence) SetSequence(sequenceID int64) {
-	m.seq = sequenceID
-	return
+func (m *mockRequestQueue) Write(request *proto.Request) error {
+	m.request = request
+	return nil
+}
+
+func (m *mockRequestQueue) Stop() {
+
+}
+
+func (m *mockRequestQueue) IsActive() bool {
+	return m.active
 }

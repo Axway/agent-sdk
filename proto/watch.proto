@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package central.events.v1;
 
+import "google/protobuf/any.proto";
 import "apicentral.proto";
 
 option go_package = "pkg/watchmanager/proto";
@@ -11,9 +12,21 @@ service watch {
     }
 }
 
+enum RequestType {
+    TOKEN_REFRESH = 0;
+    AGENT_STATUS = 1;
+}
+
+message AgentStatus {
+    string state = 1;
+    string message = 2;
+}
+
 message Request {
     string selfLink = 1;
     string token = 2;
+    optional RequestType requestType = 3;
+    .central.events.v1.AgentStatus agentStatus = 4;
 }
 
 message Event {
@@ -28,6 +41,7 @@ message Event {
         UPDATED = 1;
         DELETED = 2;
         SUBRESOURCEUPDATED = 3;
+        TRIGGERACTION = 4;
     }
     Type type = 7;
 
@@ -41,6 +55,7 @@ message EventMeta {
     string watchTopicSelfLink = 2;
     int64 sequenceID = 3;
     string subresource = 4;
+    optional google.protobuf.Any actionDetails = 5;
 }
 
 message Organization {
