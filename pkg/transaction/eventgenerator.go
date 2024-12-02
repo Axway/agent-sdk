@@ -28,7 +28,6 @@ type EventGenerator interface {
 	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error) // DEPRECATED
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
-	CreateFromEventReport(eventReport EventReport) (events []beat.Event, err error)
 }
 
 // Generator - Create the events to be published to Condor
@@ -75,73 +74,6 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	return e.createEvent(logEvent, eventTime, metaData, eventFields, privateData)
 }
 
-// CreateEvents - Creates new events to be sent to Amplify Observability
-func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
-	return e.CreateFromEventReport(
-		&eventReport{
-			summaryEvent: summaryEvent,
-			detailEvents: detailEvents,
-			eventTime:    eventTime,
-			metadata:     metaData,
-			fields:       eventFields,
-			privateData:  privateData,
-		},
-	)
-}
-
-// CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
-func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event, error) {
-	bytes := e.getBytesSent(eventReport.GetDetailEvents())
-	e.trackMetrics(eventReport.GetSummaryEvent(), int64(bytes))
-	events := make([]beat.Event, 0)
-
-	// skip rest of processing
-	if eventReport.OnlyTrack() {
-		return events, nil
-	}
-
-	// See if the uri is in the api exceptions list
-	if e.isInAPIExceptionsList(eventReport.GetDetailEvents()) {
-		e.logger.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
-		return events, nil
-	}
-
-	//if no summary is sent then prepare the array of TransactionEvents for publishing
-	if eventReport.GetSummaryEvent() == (LogEvent{}) {
-		return e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
-	}
-
-	// Check to see if marketplace provisioning/subs is enabled
-	err := e.processTxnSummary(eventReport.GetSummaryEvent())
-	if err != nil {
-		return nil, err
-	}
-
-	if eventReport.ShouldSample() {
-		shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(eventReport.GetSummaryEvent()))
-		if err != nil {
-			return events, err
-		}
-		if shouldSample {
-			eventReport.GetMetadata().Put(sampling.SampleKey, true)
-		}
-	}
-
-	newEvent, err := e.createEvent(eventReport.GetSummaryEvent(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
-
-	if err != nil {
-		return events, err
-	}
-
-	events = append(events, newEvent)
-	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), eventReport.GetMetadata(), eventReport.GetFields(), eventReport.GetPrivateData())
-	if err != nil {
-		return nil, err
-	}
-
-	return append(events, detailEvents...), nil
-}
-
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 	if e.shouldUseTrafficForAggregation {
 		apiDetails := models.APIDetails{
@@ -161,7 +93,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 		appDetails := models.AppDetails{}
 		if summaryEvent.TransactionSummary.Application != nil {
 			appDetails.Name = summaryEvent.TransactionSummary.Application.Name
-			appDetails.ID = strings.ReplaceAll(summaryEvent.TransactionSummary.Application.ID, SummaryEventApplicationIDPrefix, "")
+			appDetails.ID = strings.TrimLeft(summaryEvent.TransactionSummary.Application.ID, SummaryEventApplicationIDPrefix)
 		}
 
 		collector := metric.GetMetricCollector()
@@ -203,14 +135,61 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	}, nil
 }
 
-func (e *Generator) getBytesSent(detailEvents []LogEvent) int {
-	if len(detailEvents) == 0 {
-		return 0
+// CreateEvents - Creates new events to be sent to Amplify Observability
+func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+	events := make([]beat.Event, 0)
+
+	// See if the uri is in the api exceptions list
+	if e.isInAPIExceptionsList(detailEvents) {
+		e.logger.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
+		return events, nil
 	}
-	if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
-		return httpEvent.BytesSent
+
+	// Check to see if marketplace provisioning/subs is enabled
+	err := e.processTxnSummary(summaryEvent)
+	if err != nil {
+		return nil, err
 	}
-	return 0
+
+	//if no summary is sent then prepare the array of TransactionEvents for publishing
+	if summaryEvent == (LogEvent{}) {
+		return e.handleTransactionEvents(detailEvents, eventTime, metaData, eventFields, privateData)
+	}
+
+	shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(summaryEvent))
+	if err != nil {
+		return events, err
+	}
+	if shouldSample {
+		if metaData == nil {
+			metaData = common.MapStr{}
+		}
+		metaData.Put(sampling.SampleKey, true)
+	}
+
+	newEvent, err := e.createEvent(summaryEvent, eventTime, metaData, eventFields, privateData)
+
+	if err != nil {
+		return events, err
+	}
+
+	events = append(events, newEvent)
+	for _, event := range detailEvents {
+		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+		if err == nil {
+			events = append(events, newEvent)
+		}
+	}
+
+	bytes := 0
+	if len(detailEvents) > 0 {
+		if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
+			bytes = httpEvent.BytesSent
+		}
+	}
+	e.trackMetrics(summaryEvent, int64(bytes))
+
+	return events, nil
 }
 
 func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
@@ -227,6 +206,7 @@ func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime t
 	}
 
 	return events, nil
+
 }
 
 func (e *Generator) processTxnSummary(summaryEvent LogEvent) error {
