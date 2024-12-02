@@ -362,7 +362,7 @@ func (b *httpProtocolBuilder) Build() (TransportProtocol, error) {
 	}
 	//set redacted URI
 	if b.httpProtocol.uriRaw == "" {
-		return nil, errors.New("Raw Uri property not set in HTTP protocol details")
+		return nil, errors.New("raw uri property not set in HTTP protocol details")
 	}
 	if b.redactionConfig == nil {
 		b.httpProtocol.URI, _ = redaction.URIRedaction(b.httpProtocol.uriRaw)
@@ -428,16 +428,6 @@ func (b *httpProtocolBuilder) headersRedaction() {
 
 	b.httpProtocol.RequestHeaders, b.httpProtocol.ResponseHeaders, b.err =
 		headersRedaction(b.requestHeaders, b.responseHeaders, b.redactionConfig)
-}
-
-func (b *httpProtocolBuilder) indexedHeadersRedaction() {
-	// skip if there is already an error
-	if b.err != nil {
-		return
-	}
-
-	b.httpProtocol.IndexedRequestHeaders, b.httpProtocol.IndexedResponseHeaders, b.err =
-		headersRedaction(b.indexedRequestHeaders, b.indexedResponseHeaders, b.redactionConfig)
 }
 
 func headersRedaction(requestHeaders, responseHeaders map[string]string, redactionConfig redaction.Redactions) (string, string, error) {

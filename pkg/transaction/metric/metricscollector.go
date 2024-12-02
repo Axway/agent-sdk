@@ -273,7 +273,6 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
-
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
