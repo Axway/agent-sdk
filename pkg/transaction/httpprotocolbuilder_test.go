@@ -67,7 +67,7 @@ func TestHTTPProtocolBuilder(t *testing.T) {
 	httpProtocol, err = httpProtocolBuilder.Build()
 	assert.Nil(t, httpProtocol)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Raw Uri property not set in HTTP protocol details", err.Error())
+	assert.Equal(t, "raw Uri property not set in HTTP protocol details", err.Error())
 
 	httpProtocol, err = httpProtocolBuilder.
 		SetURI("/test").

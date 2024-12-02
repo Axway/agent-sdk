@@ -229,7 +229,7 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 }
 
 func (e *Generator) getBytesSent(detailEvents []LogEvent) int {
-	if len(detailEvents) == 0 {
+	if len(detailEvents) == 0 || detailEvents[0].TransactionEvent == nil || detailEvents[0].TransactionEvent.Protocol == nil {
 		return 0
 	}
 	if httpEvent, ok := detailEvents[0].TransactionEvent.Protocol.(*Protocol); ok {
@@ -246,9 +246,10 @@ func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime t
 		}
 		metaData.Put(sampling.SampleKey, true)
 		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
-		if err == nil {
-			events = append(events, newEvent)
+		if err != nil {
+			return nil, err
 		}
+		events = append(events, newEvent)
 	}
 
 	return events, nil
@@ -374,7 +375,7 @@ func (e *Generator) createSamplingTransactionDetails(summaryEvent LogEvent) samp
 func (e *Generator) isInAPIExceptionsList(logEvents []LogEvent) bool {
 
 	// Sanity check.
-	if len(logEvents) == 0 {
+	if len(logEvents) == 0 || logEvents[0].TransactionEvent == nil || logEvents[0].TransactionEvent.Protocol == nil {
 		return false
 	}
 
