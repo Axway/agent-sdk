@@ -85,8 +85,6 @@ func (c *watchClient) recv() error {
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
 func (c *watchClient) processRequest() error {
 	var err error
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	wait := true
 
 	// If the request channel is not supplied, create new
@@ -95,7 +93,16 @@ func (c *watchClient) processRequest() error {
 		c.cfg.requests = make(chan *proto.Request, 1)
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		defer func() {
+			if wait {
+				wg.Done()
+				wait = false
+			}
+		}()
+
 		for {
 			select {
 			case <-c.streamCtx.Done():
