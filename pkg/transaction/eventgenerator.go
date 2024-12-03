@@ -137,7 +137,7 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
-	err := e.processTxnSummary(eventReport.GetSummaryEvent())
+	newSummaryEvent, err := e.processTxnSummary(eventReport.GetSummaryEvent())
 	if err != nil {
 		return nil, err
 	}
@@ -152,10 +152,9 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		}
 	}
 
-	newEvent, err := e.createEvent(eventReport.GetSummaryEvent(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
-
+	newEvent, err := e.createEvent(newSummaryEvent, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
-		return events, err
+		return nil, err
 	}
 
 	events = append(events, newEvent)
@@ -211,11 +210,8 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		return event, err
 	}
 
-	eventData := eventFields
 	// No need to get the other field data if not being sampled
-	if sampled, found := metaData[sampling.SampleKey]; found && sampled.(bool) {
-		eventData, err = e.createEventData(serializedLogEvent, eventFields)
-	}
+	eventData, err := e.createEventData(serializedLogEvent, eventFields)
 	if err != nil {
 		return event, err
 	}
@@ -255,23 +251,23 @@ func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime t
 	return events, nil
 }
 
-func (e *Generator) processTxnSummary(summaryEvent LogEvent) error {
+func (e *Generator) processTxnSummary(summaryEvent LogEvent) (LogEvent, error) {
 	// only process if there is a central client and marketplace subs are enabled
 	if agent.GetCentralClient() == nil {
-		return nil
+		return summaryEvent, nil
 	}
 	if summaryEvent.TransactionSummary != nil {
 		txnSummary := e.updateTxnSummaryByAccessRequest(summaryEvent)
 		if txnSummary != nil {
 			jsonData, err := json.Marshal(&txnSummary)
 			if err != nil {
-				return err
+				return summaryEvent, err
 			}
 			e.logger.Trace(string(jsonData))
 			summaryEvent.TransactionSummary = txnSummary
 		}
 	}
-	return nil
+	return summaryEvent, nil
 }
 
 // updateTxnSummaryByAccessRequest - get the consumer information to add to transaction event.  If we don't have any
