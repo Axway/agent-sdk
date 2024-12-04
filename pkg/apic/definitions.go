@@ -50,14 +50,15 @@ const (
 	Backstage  DataplaneType = "Backstage"
 
 	// Discovery and Traceability
-	APIConnect DataplaneType = "APIConnect"
-	Apigee     DataplaneType = "Apigee"
-	APIM       DataplaneType = "APIM"
-	AWS        DataplaneType = "AWS"
-	Azure      DataplaneType = "Azure"
-	Istio      DataplaneType = "Istio" // Reports as APIMG
-	Kafka      DataplaneType = "Kafka"
-	WebMethods DataplaneType = "WebMethods"
+	APIConnect   DataplaneType = "APIConnect"
+	Apigee       DataplaneType = "Apigee"
+	APIM         DataplaneType = "APIM"
+	AWS          DataplaneType = "AWS"
+	Azure        DataplaneType = "Azure"
+	Istio        DataplaneType = "Istio" // Reports as APIMG
+	Kafka        DataplaneType = "Kafka"
+	WebMethods   DataplaneType = "WebMethods"
+	SAPAPIPortal DataplaneType = "SAPAPIPortal"
 
 	// AgentSDK Metrics
 	Kong     DataplaneType = "Kong"
