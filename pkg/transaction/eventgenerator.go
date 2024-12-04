@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
-	"github.com/Axway/agent-sdk/pkg/util/errors"
+	sdkErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -78,10 +79,18 @@ func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData
 	if err != nil {
 		return beat.Event{}, err
 	}
+
 	events, err := e.CreateFromEventReport(report)
-	if err != nil || len(events) == 0 {
+	if err != nil {
 		return beat.Event{}, err
 	}
+	if len(events) == 0 {
+		return beat.Event{}, errors.New("an event was not created")
+	}
+	if len(events) > 1 {
+		return events[0], errors.New("unexpectedly, more than one event was created, only returning the first")
+	}
+
 	// will only ever have 1 beat event returned
 	return events[0], nil
 }
@@ -106,29 +115,36 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 // CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
 func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
+	logger := e.logger
+
+	// add logging fields from summary event
+	if eventReport.GetSummaryEvent() != (LogEvent{}) {
+		logger.WithField("transactionID", eventReport.GetSummaryEvent().TransactionID)
+	} else if len(eventReport.GetDetailEvents()) > 0 {
+		logger.WithField("transactionID", eventReport.GetDetailEvents()[0].TransactionID)
+	}
 
 	bytes := e.getBytesSent(eventReport.GetDetailEvents())
-	if eventReport.ShouldTrackMetrics() {
+	if eventReport.ShouldTrackMetrics() && eventReport.GetSummaryEvent() != (LogEvent{}) {
 		e.trackMetrics(eventReport.GetSummaryEvent(), int64(bytes))
 	}
+
 	if eventReport.ShouldOnlyTrackMetrics() {
-		// skip rest of processing
+		logger.Trace("not generating events, only tracking for metrics")
 		return events, nil
 	}
 
 	// See if the uri is in the api exceptions list
 	if e.isInAPIExceptionsList(eventReport.GetDetailEvents()) {
-		e.logger.Debug("Found api path in traceability api exceptions list.  Ignore transaction event")
+		logger.Debug("found api path in traceability api exceptions list, ignore transaction event")
 		return events, nil
 	}
 
 	//set up the sampling metadata if set to force it
 	metadata := eventReport.GetMetadata()
 	if eventReport.ShouldForceSample() {
-		if metadata == nil {
-			metadata = common.MapStr{}
-		}
-		metadata.Put(sampling.SampleKey, true)
+		logger.Trace("sampling event")
+		metadata = SetSampleInMetadata(metadata)
 	}
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
@@ -139,30 +155,32 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 	// Check to see if marketplace provisioning/subs is enabled
 	newSummaryEvent, err := e.processTxnSummary(eventReport.GetSummaryEvent())
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Trace("handling summary event")
+		return events, err
 	}
 
 	if eventReport.ShouldHandleSampling() && !eventReport.ShouldForceSample() {
 		shouldSample, err := sampling.ShouldSampleTransaction(e.createSamplingTransactionDetails(eventReport.GetSummaryEvent()))
-		if err != nil {
+		if err != nil || !shouldSample {
+			// do not need to create the event structure if it will not be sampled
 			return events, err
 		}
-		if shouldSample {
-			eventReport.GetMetadata().Put(sampling.SampleKey, true)
-		}
+		metadata = SetSampleInMetadata(metadata)
 	}
 
 	newEvent, err := e.createEvent(newSummaryEvent, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Trace("handling summary event")
+		return events, err
+	}
+
+	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+	if err != nil {
+		logger.WithError(err).Trace("handling detail event(s)")
+		return events, err
 	}
 
 	events = append(events, newEvent)
-	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
-	if err != nil {
-		return nil, err
-	}
-
 	return append(events, detailEvents...), nil
 }
 
@@ -404,7 +422,7 @@ func (e *Generator) healthcheck(name string) *hc.Status {
 	if err != nil {
 		status = &hc.Status{
 			Result:  hc.FAIL,
-			Details: errors.Wrap(apic.ErrAuthenticationCall, err.Error()).Error(),
+			Details: sdkErrors.Wrap(apic.ErrAuthenticationCall, err.Error()).Error(),
 		}
 	}
 
@@ -443,6 +461,14 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	fields["token"] = token
 	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
+}
+
+func SetSampleInMetadata(metadata common.MapStr) common.MapStr {
+	if metadata == nil {
+		metadata = common.MapStr{}
+	}
+	metadata.Put(sampling.SampleKey, true)
+	return metadata
 }
 
 // updateWithProviderDetails -
