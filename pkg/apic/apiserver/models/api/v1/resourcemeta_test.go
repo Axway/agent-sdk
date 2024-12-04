@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,8 +73,8 @@ func TestResourceMetaMarshal(t *testing.T) {
 	assert.Equal(t, meta1, meta2)
 
 	// expect to the sub resources to be equal
-	assert.True(t, len(meta2.SubResources) == 1)
-	assert.Equal(t, xAgentDetailsSub, meta2.SubResources["x-agent-details"])
+	assert.Equal(t, len(meta2.SubResources), len(meta1.SubResources))
+	assert.Equal(t, xAgentDetailsSub, meta2.GetSubResource("x-agent-details"))
 
 	// unset the name
 	meta1.Name = ""
@@ -192,6 +193,47 @@ func TestResourceMetaNilReference(t *testing.T) {
 	assert.Equal(t, map[string]string{}, meta.GetAttributes())
 	assert.Equal(t, []string{}, meta.GetTags())
 	assert.Nil(t, meta.GetSubResource("abc"))
+}
+
+func TestResourceMetaHashes(t *testing.T) {
+	meta1 := &ResourceMeta{
+		GroupVersionKind: GroupVersionKind{
+			GroupKind: GroupKind{
+				Group: "group",
+				Kind:  "kind",
+			},
+		},
+		Title: "title",
+		Metadata: Metadata{
+			ID: "333",
+		},
+		Name: "name",
+	}
+	meta1.SetSubResource("sub1", "sth")
+	meta1.SetSubResource("sub2", "sth")
+
+	bts, err := json.Marshal(meta1)
+	assert.Nil(t, err)
+
+	meta2 := &ResourceMeta{}
+	err = json.Unmarshal(bts, meta2)
+	assert.Nil(t, err)
+
+	// Test that after marshal-unmarshal, the data is the same.
+	meta1.Metadata.Audit = AuditMetadata{}
+	meta2.Metadata.Audit = AuditMetadata{}
+	assert.Equal(t, meta1, meta2)
+
+	meta1.PrepareHashesForSending()
+	meta1.SetIncomingHashes()
+	meta2.CreateHashes()
+	assert.Equal(t, meta1, meta2)
+
+	hashVal, ok := meta1.GetSubResourceHash("sub1")
+	assert.True(t, ok)
+	hashedReal, err := util.ComputeHash("sth")
+	assert.Nil(t, err)
+	assert.Equal(t, hashVal, hashedReal)
 }
 
 func TestResourceMetaGetSelfLink(t *testing.T) {

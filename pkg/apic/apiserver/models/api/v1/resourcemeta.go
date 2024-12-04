@@ -3,6 +3,9 @@ package v1
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 const (
@@ -23,6 +26,7 @@ type Meta interface {
 	SetTags([]string)
 	GetSubResource(key string) interface{}
 	SetSubResource(key string, resource interface{})
+	GetSubResourceHash(key string) (interface{}, bool)
 	GetReferenceByGVK(GroupVersionKind) Reference
 }
 
@@ -41,6 +45,8 @@ type ResourceMeta struct {
 	Finalizers []Finalizer `json:"finalizers"`
 	// SubResources contains all of the unique sub resources that may be added to a resource
 	SubResources map[string]interface{} `json:"-"`
+	// Contains the name of the subResource mapped to its hash value
+	SubResourceHashes map[string]interface{} `json:"-"`
 }
 
 // GetName gets the name of a resource
@@ -173,6 +179,15 @@ func (rm *ResourceMeta) GetSubResource(key string) interface{} {
 	return rm.SubResources[key]
 }
 
+func (rm *ResourceMeta) GetSubResourceHash(key string) (interface{}, bool) {
+	if rm == nil || rm.SubResources == nil {
+		return 0, false
+	}
+
+	hashVal, ok := rm.SubResourceHashes[key]
+	return hashVal, ok
+}
+
 // SetSubResource saves a value to a sub resource by name and overrides the current value.
 // To update a SubResource first call GetSubResource and modify it, then save it.
 func (rm *ResourceMeta) SetSubResource(name string, value interface{}) {
@@ -198,6 +213,7 @@ func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
 
 // MarshalJSON marshals the ResourceMeta to properly set the SubResources
 func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
+	rm.SetIncomingHashes()
 	rawSubs := map[string]interface{}{}
 	subResources := rm.SubResources
 
@@ -283,5 +299,58 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 		}
 	}
 
+	// first creates the hashes based on the current values, then overrides the values if there are any found in x-agent-details
+	rm.CreateHashes()
+	rm.SetIncomingHashes()
 	return nil
+}
+
+func (rm *ResourceMeta) SetIncomingHashes() {
+	if rm == nil || rm.SubResources == nil {
+		return
+	}
+	// if no agent-details or hashes inside agent details are found, we simply skip because there's nothing to set
+	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+		return
+	}
+	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes].(map[string]interface{}); !ok {
+		return
+	}
+
+	hashCopy := make(map[string]interface{})
+	for name, hash := range rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes].(map[string]interface{}) {
+		hashCopy[name] = hash
+	}
+	delete(rm.SubResources[definitions.XAgentDetails].(map[string]interface{}), definitions.XSubResourceHashes)
+	rm.SubResourceHashes = hashCopy
+
+	// if agent-details are empty(because there was only x-subresource-hashes inside x-agent-details) we remove them.
+	if len(rm.SubResources[definitions.XAgentDetails].(map[string]interface{})) == 0 {
+		delete(rm.SubResources, definitions.XAgentDetails)
+	}
+}
+
+func (rm *ResourceMeta) PrepareHashesForSending() {
+	if rm == nil || rm.SubResources == nil {
+		return
+	}
+
+	rm.CreateHashes()
+	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+		rm.SubResources[definitions.XAgentDetails] = make(map[string]interface{})
+	}
+	rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes] = rm.SubResourceHashes
+}
+
+func (rm *ResourceMeta) CreateHashes() {
+	if rm.SubResourceHashes == nil {
+		rm.SubResourceHashes = make(map[string]interface{})
+	}
+	for subName, subValue := range rm.SubResources {
+		hash, err := util.ComputeHash(subValue)
+		if err != nil {
+			continue
+		}
+		rm.SubResourceHashes[subName] = hash
+	}
 }

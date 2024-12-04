@@ -10,6 +10,7 @@ bin/
 __debug_bin
 debug
 *.log
+*.cache
 
 # Ignore key files in root
 /private_key.pem

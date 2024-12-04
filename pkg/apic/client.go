@@ -635,13 +635,25 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 	wg := &sync.WaitGroup{}
 	bytesMutex := &sync.Mutex{}
 
+	subsToUpdate := []string{}
 	for subName, sub := range subs {
-		wg.Add(1)
+		if existingHash, ok := rm.GetSubResourceHash(subName); ok {
+			hash, err := util.ComputeHash(sub)
+			if err == nil && hash == existingHash {
+				c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Debug("hash found, skipping createSubResource")
+				continue
+			}
+		}
+		subsToUpdate = append(subsToUpdate, subName)
+	}
 
+	rm.PrepareHashesForSending()
+	for _, subName := range subsToUpdate {
+		wg.Add(1)
 		url := c.createAPIServerURL(fmt.Sprintf("%s/%s", rm.GetSelfLink(), subName))
 
 		r := map[string]interface{}{
-			subName: sub,
+			subName: rm.GetSubResource(subName),
 		}
 		bts, err := json.Marshal(r)
 		if err != nil {
