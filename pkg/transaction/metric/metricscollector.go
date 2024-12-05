@@ -1065,10 +1065,12 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 				}
 
 				// clean any counters, if needed
-				for k, counter := range counters {
-					c.storage.removeMetric(apiStatusMap[k])
+				for k := range counters {
+					if apiStatusMap[k] != nil {
+						c.storage.removeMetric(apiStatusMap[k])
+					}
 					delete(c.metricMap[subID][appID][apiID], k)
-					counter.Clear()
+					delete(counters, k)
 				}
 			}
 			if len(c.metricMap[subID][appID][apiID]) == 0 {
