@@ -28,6 +28,8 @@ type CustomUnitHandler struct {
 	clients          []*customUnitClient
 	metricReportChan chan *customunits.MetricReport
 	stopChan         chan struct{}
+	apiCustomLookups map[string]string
+	appCustomLookups map[string]string
 }
 
 type metricCollector interface {
@@ -53,6 +55,8 @@ func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, c
 		stopChan:         make(chan struct{}),
 		clients:          []*customUnitClient{},
 		logger:           log.NewFieldLogger().WithPackage("customunit").WithComponent("manager"),
+		apiCustomLookups: map[string]string{},
+		appCustomLookups: map[string]string{},
 	}
 }
 
@@ -242,18 +246,8 @@ func (c *CustomUnitHandler) receiveMetrics(metricCollector metricCollector) {
 	for {
 		select {
 		case metricReport := <-c.metricReportChan:
-			if metricReport == nil {
-				continue
-			}
-			logger := c.logger.WithField("api", metricReport.ApiService.GetValue()).WithField("app", metricReport.GetManagedApp().GetValue()).WithField("planUnit", metricReport.PlanUnit.GetUnitName())
-			customMetricDetail, err := c.buildCustomMetricDetail(metricReport)
-			if err != nil {
-				logger.WithError(err).Error("could not build metric data")
-				continue
-			}
 			// create the metric report and send it to the metric collector
-			logger.Debug("collecting custom metric detail")
-			metricCollector.AddCustomMetricDetail(*customMetricDetail)
+			c.handleMetricReport(metricReport, metricCollector)
 		case <-c.stopChan:
 			c.logger.Info("stopping to receive metric reports")
 			for _, c := range c.clients {
@@ -264,30 +258,33 @@ func (c *CustomUnitHandler) receiveMetrics(metricCollector metricCollector) {
 	}
 }
 
-func (c *CustomUnitHandler) buildCustomMetricDetail(metricReport *customunits.MetricReport) (*models.CustomMetricDetail, error) {
+func (c *CustomUnitHandler) handleMetricReport(metricReport *customunits.MetricReport, metricCollector metricCollector) {
+	if metricReport == nil {
+		return
+	}
+
+	logger := c.logger.WithField("api", metricReport.ApiService.GetValue()).WithField("app", metricReport.GetManagedApp().GetValue()).WithField("planUnit", metricReport.PlanUnit.GetUnitName())
+	customMetricDetail := c.buildCustomMetricDetail(logger, metricReport)
+	if customMetricDetail == nil {
+		return
+	}
+
+	logger.Debug("collecting custom metric detail")
+	metricCollector.AddCustomMetricDetail(*customMetricDetail)
+}
+
+func (c *CustomUnitHandler) buildCustomMetricDetail(logger log.FieldLogger, metricReport *customunits.MetricReport) *models.CustomMetricDetail {
 	apiServiceLookup := metricReport.GetApiService()
 	managedAppLookup := metricReport.GetManagedApp()
 	planUnitLookup := metricReport.GetPlanUnit()
 
-	if planUnitLookup.GetUnitName() == "" {
-		return nil, errors.New("not able to find the plan unit name")
-	}
-
-	apiDetails, err := c.APIServiceLookup(apiServiceLookup)
-	if err != nil {
-		c.logger.Error(err)
-		return nil, err
-	}
-	appDetails, err := c.ManagedApplicationLookup(managedAppLookup)
-	if err != nil {
-		c.logger.Error(err)
-		return nil, err
-	}
-
-	planUnitDetails := c.PlanUnitLookup(planUnitLookup)
+	planUnitDetails := c.PlanUnitLookup(logger, planUnitLookup)
+	apiDetails := c.APIServiceLookup(logger, apiServiceLookup)
+	appDetails := c.ManagedApplicationLookup(logger, managedAppLookup)
 
 	if apiDetails == nil || appDetails == nil || planUnitDetails == nil {
-		return nil, errors.New("unable to build custom metric detail")
+		logger.Error("unable to build custom metric detail")
+		return nil
 	}
 
 	return &models.CustomMetricDetail{
@@ -295,32 +292,22 @@ func (c *CustomUnitHandler) buildCustomMetricDetail(metricReport *customunits.Me
 		AppDetails:  *appDetails,
 		UnitDetails: *planUnitDetails,
 		Count:       metricReport.Count,
-	}, nil
+	}
 }
 
-func (c *CustomUnitHandler) APIServiceLookup(apiServiceLookup *customunits.APIServiceLookup) (*models.APIDetails, error) {
+func (c *CustomUnitHandler) APIServiceLookup(logger log.FieldLogger, apiServiceLookup *customunits.APIServiceLookup) *models.APIDetails {
 	apiSvcValue := apiServiceLookup.GetValue()
 	apiLookupType := apiServiceLookup.GetType()
-	apiCustomAttr := apiServiceLookup.GetCustomAttribute()
-	var apiSvc *v1.ResourceInstance
 
 	if apiSvcValue == "" {
-		return nil, errors.New("not able to find api service lookup value")
+		logger.Error("not able to find api service lookup value")
+		return nil
 	}
 
+	var apiSvc *v1.ResourceInstance
 	switch apiLookupType {
 	case customunits.APIServiceLookupType_CustomAPIServiceLookup:
-		if apiCustomAttr == "" {
-			return nil, errors.New("not able to find custom attribute value")
-		}
-		for _, key := range c.cache.GetAPIServiceKeys() {
-			apisvc := c.cache.GetAPIServiceWithAPIID(key)
-			val, _ := util.GetAgentDetailsValue(apisvc, apiCustomAttr)
-			if val == apiSvcValue {
-				apiSvc = apisvc
-				break
-			}
-		}
+		apiSvc = c.customAPILookup(apiSvcValue, apiServiceLookup.GetCustomAttribute())
 	case customunits.APIServiceLookupType_ExternalAPIID:
 		fallthrough
 	case customunits.APIServiceLookupType_ServiceID:
@@ -328,60 +315,76 @@ func (c *CustomUnitHandler) APIServiceLookup(apiServiceLookup *customunits.APISe
 	case customunits.APIServiceLookupType_ServiceName:
 		apiSvc = c.cache.GetAPIServiceWithName(apiSvcValue)
 	}
+
 	if apiSvc == nil {
-		return nil, nil
+		return nil
 	}
 
 	id, err := util.GetAgentDetailsValue(apiSvc, definitions.AttrExternalAPIID)
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Error("could not find external api id")
+		return nil
 	}
 
 	return &models.APIDetails{
 		ID:   transUtil.FormatProxyID(id),
 		Name: apiSvc.Name,
-	}, nil
+	}
 }
 
-func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppLookup) (*models.AppDetails, error) {
-	appValue := appLookup.GetValue()
-	appLookupType := appLookup.GetType()
-	appCustomAttr := appLookup.GetCustomAttribute()
-	var managedAppRI *v1.ResourceInstance
-
-	if appValue == "" {
-		return nil, errors.New("not able to find the app lookup value")
+func (c *CustomUnitHandler) customAPILookup(apiSvcValue, apiCustomAttr string) *v1.ResourceInstance {
+	if apiCustomAttr == "" {
+		c.logger.Error("not able to lookup api service by custom attribute without the attribute name set")
+		return nil
 	}
 
+	customKey := fmt.Sprintf("%s_%s", apiCustomAttr, apiSvcValue)
+	if apiID, ok := c.apiCustomLookups[customKey]; ok {
+		return c.cache.GetAPIServiceWithAPIID(apiID)
+	}
+
+	for _, key := range c.cache.GetAPIServiceKeys() {
+		apisvc := c.cache.GetAPIServiceWithAPIID(key)
+		val, _ := util.GetAgentDetailsValue(apisvc, apiCustomAttr)
+		if val == apiSvcValue {
+			return apisvc
+		}
+	}
+
+	return nil
+}
+
+func (c *CustomUnitHandler) ManagedApplicationLookup(logger log.FieldLogger, appLookup *customunits.AppLookup) *models.AppDetails {
+	appValue := appLookup.GetValue()
+	appLookupType := appLookup.GetType()
+
+	if appValue == "" {
+		logger.Error("not able to find the app lookup value")
+		return nil
+	}
+
+	var managedAppRI *v1.ResourceInstance
 	switch appLookupType {
 	case customunits.AppLookupType_ExternalAppID:
-		appCustomAttr = definitions.AttrExternalAppID
-		fallthrough
+		managedAppRI = c.customAppLookup(appValue, definitions.AttrExternalAppID)
 	case customunits.AppLookupType_CustomAppLookup:
-		if appCustomAttr == "" {
-			return nil, errors.New("not able to find the custom atrribute value")
-		}
-		for _, key := range c.cache.GetManagedApplicationCacheKeys() {
-			app := c.cache.GetManagedApplication(key)
-			val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
-			if val == appValue {
-				managedAppRI = app
-				break
-			}
-		}
+		managedAppRI = c.customAppLookup(appValue, appLookup.GetCustomAttribute())
 	case customunits.AppLookupType_ManagedAppID:
 		managedAppRI = c.cache.GetManagedApplication(appValue)
 	case customunits.AppLookupType_ManagedAppName:
 		managedAppRI = c.cache.GetManagedApplicationByName(appValue)
 	}
+
 	if managedAppRI == nil {
-		return nil, nil
+		return nil
 	}
 	managedApp := &management.ManagedApplication{}
 	err := managedApp.FromInstance(managedAppRI)
 	if err != nil {
-		return nil, err
+		log.Error("could not read managed application from cache")
+		return nil
 	}
+
 	consumerOrgID := ""
 	if managedApp.Marketplace.Resource.Owner != nil {
 		consumerOrgID = managedApp.Marketplace.Resource.Owner.ID
@@ -391,10 +394,37 @@ func (c *CustomUnitHandler) ManagedApplicationLookup(appLookup *customunits.AppL
 		ID:            managedApp.Metadata.ID,
 		Name:          managedApp.Name,
 		ConsumerOrgID: consumerOrgID,
-	}, nil
+	}
 }
 
-func (c *CustomUnitHandler) PlanUnitLookup(planUnitLookup *customunits.UnitLookup) *models.Unit {
+func (c *CustomUnitHandler) customAppLookup(appValue, appCustomAttr string) *v1.ResourceInstance {
+	if appCustomAttr == "" {
+		c.logger.Error("not able to lookup application by custom attribute without the attribute name set")
+		return nil
+	}
+
+	customKey := fmt.Sprintf("%s_%s", appCustomAttr, appValue)
+	if apiID, ok := c.apiCustomLookups[customKey]; ok {
+		return c.cache.GetAPIServiceWithAPIID(apiID)
+	}
+
+	for _, key := range c.cache.GetAPIServiceKeys() {
+		app := c.cache.GetManagedApplication(key)
+		val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
+		if val == appCustomAttr {
+			return app
+		}
+	}
+
+	return nil
+}
+
+func (c *CustomUnitHandler) PlanUnitLookup(logger log.FieldLogger, planUnitLookup *customunits.UnitLookup) *models.Unit {
+	if planUnitLookup.GetUnitName() == "" {
+		logger.Error("plan unit name required for lookups")
+		return nil
+	}
+
 	return &models.Unit{
 		Name: planUnitLookup.GetUnitName(),
 	}

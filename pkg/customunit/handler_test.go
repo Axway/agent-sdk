@@ -1,7 +1,6 @@
 package customunit
 
 import (
-	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
@@ -154,7 +154,7 @@ func Test_HandleQuotaEnforcementInfo(t *testing.T) {
 	customunits.RegisterQuotaEnforcementServer(s, customunits.UnimplementedQuotaEnforcementServer{})
 	go func() {
 		if err := s.Serve(lis); err != nil {
-			log.Fatal(err)
+			t.Log(err)
 		}
 	}()
 
@@ -296,9 +296,8 @@ func Test_BuildCustomMetricDetail(t *testing.T) {
 	}
 	handler := NewCustomUnitHandler(metricServicesConfigs, &mockAgentCache{}, config.TraceabilityAgent)
 
-	customMetricDetail, err := handler.buildCustomMetricDetail(metricReport)
+	customMetricDetail := handler.buildCustomMetricDetail(log.NewFieldLogger(), metricReport)
 
-	assert.Nil(t, err)
 	assert.NotNil(t, customMetricDetail)
 	assert.Equal(t, customMetricDetail.APIDetails.ID, "remoteApiId_fsdfsf2342r2ferge")
 	assert.Equal(t, customMetricDetail.AppDetails.ID, "fsdfsdfsf234235fgdgd")
