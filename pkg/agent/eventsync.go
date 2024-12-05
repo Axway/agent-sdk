@@ -24,8 +24,8 @@ type EventSync struct {
 	discoveryCache *discoveryCache
 }
 
-// NewEventSync creates an EventSync
-func NewEventSync() (*EventSync, error) {
+// newEventSync creates an EventSync
+func newEventSync() (*EventSync, error) {
 	migrations := []migrate.Migrator{}
 
 	// Make sure only DA and Governance agents run migration processes
@@ -84,12 +84,7 @@ func (es *EventSync) SyncCache() error {
 		}
 	}
 
-	err := registerExternalIDPs()
-	if err != nil {
-		logger.WithError(err).Warn("failed to register CRDs for external IdP config")
-	}
-
-	err = es.startCentralEventProcessor()
+	err := es.startCentralEventProcessor()
 	if err != nil {
 		return err
 	}

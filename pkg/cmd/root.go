@@ -37,11 +37,14 @@ const (
 	httpprofile            = "httpprofile"
 )
 
+type NewCommandOption func(*agentRootCommand)
+
 // CommandHandler - Root command execution handler
 type CommandHandler func() error
 
 // InitConfigHandler - Handler to be invoked on config initialization
 type InitConfigHandler func(centralConfig config.CentralConfig) (interface{}, error)
+type FinalizeAgentInitHandler func() error
 
 // AgentRootCmd - Root Command for the Agents
 type AgentRootCmd interface {
@@ -61,6 +64,7 @@ type agentRootCommand struct {
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
+	finalizeAgentInit FinalizeAgentInitHandler
 	agentType         config.AgentType
 	props             properties.Properties
 	statusCfg         config.StatusConfig
@@ -95,8 +99,14 @@ func buildAgentInfo(desc string) string {
 	return fmt.Sprintf("%s version %s-%s, Amplify Agents SDK version %s", desc, BuildVersion, BuildCommitSha, SDKBuildVersion)
 }
 
+func WithFinalizeAgentInitFunc(f FinalizeAgentInitHandler) NewCommandOption {
+	return func(c *agentRootCommand) {
+		c.finalizeAgentInit = f
+	}
+}
+
 // NewRootCmd - Creates a new Agent Root Command
-func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType) AgentRootCmd {
+func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
 	c := &agentRootCommand{
 		agentName:         exeName,
 		commandHandler:    commandHandler,
@@ -104,6 +114,10 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
 		initialized:       false,
+	}
+
+	for _, o := range opts {
+		o(c)
 	}
 
 	// use the description from the build if available
@@ -136,7 +150,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 }
 
 // NewCmd - Creates a new Agent Root Command using existing cmd
-func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType) AgentRootCmd {
+func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
 	c := &agentRootCommand{
 		agentName:         exeName,
 		commandHandler:    commandHandler,
@@ -144,6 +158,10 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
 		initialized:       false,
+	}
+
+	for _, o := range opts {
+		o(c)
 	}
 
 	// use the description from the build if available
@@ -354,18 +372,21 @@ func (c *agentRootCommand) initConfig() error {
 }
 
 func (c *agentRootCommand) finishInit() error {
-	if util.IsNotTest() && c.agentFeaturesCfg.ConnectionToCentralEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
-		eventSync, err := agent.NewEventSync()
+	err := agent.FinalizeInitialization()
+	if err != nil {
+		return err
+	}
+
+	if c.finalizeAgentInit != nil {
+		err := c.finalizeAgentInit()
 		if err != nil {
-			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+			return err
 		}
+	}
 
-		if err := eventSync.SyncCache(); err != nil {
-			return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
-		}
-		// set the rebuild function in the agent resource manager
-		agent.GetAgentResourceManager().SetRebuildCacheFunc(eventSync)
-
+	err = agent.CacheInitSync()
+	if err != nil {
+		return err
 	}
 
 	// Start the initial and recurring version check jobs

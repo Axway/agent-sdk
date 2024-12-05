@@ -44,7 +44,7 @@ func TestEventSync_pollMode(t *testing.T) {
 	InitializeForTest(mc)
 	assert.Nil(t, err)
 
-	es, err := NewEventSync()
+	es, err := newEventSync()
 	assert.Nil(t, err)
 	assert.NotNil(t, es.watchTopic)
 	assert.NotNil(t, es.discoveryCache)
@@ -95,7 +95,7 @@ func TestEventSync_streamMode(t *testing.T) {
 	InitializeForTest(mc)
 	assert.Nil(t, err)
 
-	es, err := NewEventSync()
+	es, err := newEventSync()
 	assert.Nil(t, err)
 	assert.NotNil(t, es.watchTopic)
 	assert.NotNil(t, es.discoveryCache)

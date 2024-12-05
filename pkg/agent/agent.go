@@ -25,6 +25,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -233,7 +234,19 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 	}
 }
 
+func FinalizeInitialization() error {
+	err := registerExternalIDPs()
+	if err != nil {
+		logger.WithError(err).Error("failed to register CRDs for external IdP config")
+	}
+	return nil
+}
+
 func registerExternalIDPs() error {
+	if !util.IsNotTest() || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() || agent.cfg.GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
 		if idPCfg == nil {
@@ -253,6 +266,24 @@ func registerExternalIDPs() error {
 			}
 		}
 	}
+	return nil
+}
+
+func CacheInitSync() error {
+	if !util.IsNotTest() || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() || agent.cfg.GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
+	eventSync, err := newEventSync()
+	if err != nil {
+		return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+	}
+
+	if err := eventSync.SyncCache(); err != nil {
+		return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+	}
+	// set the rebuild function in the agent resource manager
+	agent.agentResourceManager.SetRebuildCacheFunc(eventSync)
 	return nil
 }
 
