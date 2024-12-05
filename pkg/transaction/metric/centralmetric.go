@@ -48,7 +48,7 @@ func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
 
 type centralMetric struct {
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
-	App           *models.ApplicationResourceReference `json:"app,omitempty"`
+	App           *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product       *models.ProductResourceReference     `json:"product,omitempty"`
 	API           *models.APIResourceReference         `json:"api,omitempty"`
 	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
