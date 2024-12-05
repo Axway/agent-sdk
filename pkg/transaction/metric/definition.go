@@ -62,7 +62,7 @@ type ResponseMetrics struct {
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
-	App           *models.ApplicationResourceReference `json:"app,omitempty"`
+	App           *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product       *models.ProductResourceReference     `json:"product,omitempty"`
 	API           *models.APIResourceReference         `json:"api,omitempty"`
 	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
