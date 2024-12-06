@@ -235,14 +235,14 @@ func (m *CustomUnitHandler) HandleMetricReporting(metricCollector metricCollecto
 		go m.receiveMetrics(metricCollector)
 	}
 	// iterate over each metric service config
+	m.clientLock.Lock()
+	defer m.clientLock.Unlock()
 	for _, config := range m.servicesConfigs {
 		// Initialize custom units client
 		factory := NewCustomUnitClientFactory(config.URL, &customunits.QuotaInfo{})
 		client, _ := factory(m.cache)
 		go client.StartMetricReporting(m.metricReportChan)
-		m.clientLock.Lock()
 		m.clients = append(m.clients, client)
-		m.clientLock.Unlock()
 	}
 }
 
@@ -255,10 +255,10 @@ func (c *CustomUnitHandler) receiveMetrics(metricCollector metricCollector) {
 		case <-c.stopChan:
 			c.logger.Info("stopping to receive metric reports")
 			c.clientLock.Lock()
+			defer c.clientLock.Unlock()
 			for _, c := range c.clients {
 				c.Stop()
 			}
-			c.clientLock.Unlock()
 			return
 		}
 	}
