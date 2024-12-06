@@ -21,6 +21,7 @@ import (
 )
 
 type CustomUnitHandler struct {
+	clientLock       sync.Mutex
 	servicesConfigs  []config.MetricServiceConfiguration
 	cache            agentCacheManager
 	agentType        config.AgentType
@@ -48,6 +49,7 @@ type agentCacheManager interface {
 
 func NewCustomUnitHandler(servicesConfigs []config.MetricServiceConfiguration, cache agentCacheManager, agentType config.AgentType) *CustomUnitHandler {
 	return &CustomUnitHandler{
+		clientLock:       sync.Mutex{},
 		servicesConfigs:  servicesConfigs,
 		cache:            cache,
 		agentType:        agentType,
@@ -238,7 +240,9 @@ func (m *CustomUnitHandler) HandleMetricReporting(metricCollector metricCollecto
 		factory := NewCustomUnitClientFactory(config.URL, &customunits.QuotaInfo{})
 		client, _ := factory(m.cache)
 		go client.StartMetricReporting(m.metricReportChan)
+		m.clientLock.Lock()
 		m.clients = append(m.clients, client)
+		m.clientLock.Unlock()
 	}
 }
 
@@ -250,9 +254,11 @@ func (c *CustomUnitHandler) receiveMetrics(metricCollector metricCollector) {
 			c.handleMetricReport(metricReport, metricCollector)
 		case <-c.stopChan:
 			c.logger.Info("stopping to receive metric reports")
+			c.clientLock.Lock()
 			for _, c := range c.clients {
 				c.Stop()
 			}
+			c.clientLock.Unlock()
 			return
 		}
 	}
