@@ -347,6 +347,7 @@ func (c *CustomUnitHandler) customAPILookup(apiSvcValue, apiCustomAttr string) *
 		apisvc := c.cache.GetAPIServiceWithAPIID(key)
 		val, _ := util.GetAgentDetailsValue(apisvc, apiCustomAttr)
 		if val == apiSvcValue {
+			c.apiCustomLookups[customKey] = apisvc.Metadata.ID
 			return apisvc
 		}
 	}
@@ -404,14 +405,15 @@ func (c *CustomUnitHandler) customAppLookup(appValue, appCustomAttr string) *v1.
 	}
 
 	customKey := fmt.Sprintf("%s_%s", appCustomAttr, appValue)
-	if apiID, ok := c.apiCustomLookups[customKey]; ok {
-		return c.cache.GetAPIServiceWithAPIID(apiID)
+	if appID, ok := c.appCustomLookups[customKey]; ok {
+		return c.cache.GetManagedApplication(appID)
 	}
 
-	for _, key := range c.cache.GetAPIServiceKeys() {
+	for _, key := range c.cache.GetManagedApplicationCacheKeys() {
 		app := c.cache.GetManagedApplication(key)
 		val, _ := util.GetAgentDetailsValue(app, appCustomAttr)
-		if val == appCustomAttr {
+		if val == appValue {
+			c.appCustomLookups[customKey] = app.Metadata.ID
 			return app
 		}
 	}
