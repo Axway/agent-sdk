@@ -27,7 +27,6 @@ enum AppLookupType {
   ManagedAppName = 1;
   ManagedAppID = 2;
   ExternalAppID = 3;
-  ClientID = 4;
 }
 
 message AppLookup {
