@@ -30,6 +30,7 @@ const (
 	SubscriptionInvoiceResourceName               = "subscriptioninvoices"
 	SubscriptionInvoiceBillingSubResourceName     = "billing"
 	SubscriptionInvoiceMarketplaceSubResourceName = "marketplace"
+	SubscriptionInvoiceReferencesSubResourceName  = "references"
 	SubscriptionInvoiceStateSubResourceName       = "state"
 	SubscriptionInvoiceStatusSubResourceName      = "status"
 )
@@ -49,6 +50,7 @@ type SubscriptionInvoice struct {
 	Billing     SubscriptionInvoiceBilling     `json:"billing"`
 	Marketplace SubscriptionInvoiceMarketplace `json:"marketplace"`
 	Owner       *apiv1.Owner                   `json:"owner"`
+	References  SubscriptionInvoiceReferences  `json:"references"`
 	Spec        SubscriptionInvoiceSpec        `json:"spec"`
 	State       SubscriptionInvoiceState       `json:"state"`
 	// Status      SubscriptionInvoiceStatus      `json:"status"`
@@ -140,6 +142,7 @@ func (res *SubscriptionInvoice) MarshalJSON() ([]byte, error) {
 	out["billing"] = res.Billing
 	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["state"] = res.State
 	out["status"] = res.Status
@@ -195,6 +198,20 @@ func (res *SubscriptionInvoice) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "marketplace")
 		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
 		if err != nil {
 			return err
 		}

@@ -13,18 +13,20 @@ type AgentFeaturesConfig interface {
 	GetExternalIDPConfig() ExternalIDPConfig
 	AgentStatusUpdatesEnabled() bool
 	SetPersistentCache(enable bool)
+	GetMetricServicesConfigs() []MetricServiceConfiguration
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
 type AgentFeaturesConfiguration struct {
 	AgentFeaturesConfig
 	IConfigValidator
-	ConnectToCentral     bool              `config:"connectToCentral"`
-	ProcessSystemSignals bool              `config:"processSystemSignals"`
-	VersionChecker       bool              `config:"versionChecker"`
-	PersistCache         bool              `config:"persistCache"`
-	ExternalIDPConfig    ExternalIDPConfig `config:"idp"`
-	AgentStatusUpdates   bool              `config:"agentStatusUpdates"`
+	ConnectToCentral      bool                         `config:"connectToCentral"`
+	ProcessSystemSignals  bool                         `config:"processSystemSignals"`
+	VersionChecker        bool                         `config:"versionChecker"`
+	PersistCache          bool                         `config:"persistCache"`
+	ExternalIDPConfig     ExternalIDPConfig            `config:"idp"`
+	AgentStatusUpdates    bool                         `config:"agentStatusUpdates"`
+	MetricServicesConfigs []MetricServiceConfiguration `config:"metricServices"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -67,6 +69,11 @@ func (c *AgentFeaturesConfiguration) GetExternalIDPConfig() ExternalIDPConfig {
 	return c.ExternalIDPConfig
 }
 
+// GetMetricServicesConfigs - returns the configs for metric services
+func (c *AgentFeaturesConfiguration) GetMetricServicesConfigs() []MetricServiceConfiguration {
+	return c.MetricServicesConfigs
+}
+
 // AgentStatusUpdatesEnabled - True if the agent SDK should manage the status update.
 func (c *AgentFeaturesConfiguration) AgentStatusUpdatesEnabled() bool {
 	return c.AgentStatusUpdates
@@ -95,6 +102,7 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 	props.AddBoolProperty(pathPersistCache, true, "Controls whether the agent SDK will persist agent cache or not")
 	props.AddBoolProperty(pathAgentStatusUpdates, true, "Controls whether the agent should manage the status update or not")
+	addMetricServicesProperties(props)
 	addExternalIDPProperties(props)
 }
 
@@ -107,6 +115,11 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		PersistCache:         props.BoolPropertyValueOrTrue(pathPersistCache),
 		AgentStatusUpdates:   props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
 	}
+	metricSvsCfgs, err := parseMetricServicesConfig(props)
+	if err != nil {
+		return nil, err
+	}
+	cfg.MetricServicesConfigs = metricSvsCfgs
 	externalIDPCfg, err := parseExternalIDPConfig(props)
 	if err != nil {
 		return nil, err

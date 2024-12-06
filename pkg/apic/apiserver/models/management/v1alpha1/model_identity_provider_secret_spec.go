@@ -16,9 +16,7 @@ type IdentityProviderSecretSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	Config interface{} `json:"config"`
 	// The list of request headers to be sent in the call to get token from Identity provider
-	// GENERATE: The following code has been modified after code generation
 	RequestHeaders []IdentityProviderSecretSpecKeyValuePair `json:"requestHeaders,omitempty"`
 	// The list of query parameters to be sent in the call to get token from Identity provider
-	// GENERATE: The following code has been modified after code generation
 	QueryParameters []IdentityProviderSecretSpecKeyValuePair `json:"queryParameters,omitempty"`
 }

@@ -9,8 +9,8 @@
 
 package catalog
 
-// AssetMappingStatusResourceStage  (catalog.v1alpha1.AssetMapping)
-type AssetMappingStatusResourceStage struct {
-	Ref           string                          `json:"ref,omitempty"`
-	OperationType AssetMappingStatusOperationType `json:"operationType,omitempty"`
+// SubscriptionInvoiceReferences  (catalog.v1alpha1.SubscriptionInvoice)
+type SubscriptionInvoiceReferences struct {
+	// Reference to product.
+	Product string `json:"product,omitempty"`
 }

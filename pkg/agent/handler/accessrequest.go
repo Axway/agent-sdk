@@ -23,22 +23,27 @@ type arProvisioner interface {
 	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
 	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
 }
+type customUnitHandler interface {
+	HandleQuotaEnforcement(*management.AccessRequest, *management.ManagedApplication) error
+}
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov          arProvisioner
-	cache         agentcache.Manager
-	client        client
-	encryptSchema encryptSchemaFunc
+	prov              arProvisioner
+	cache             agentcache.Manager
+	client            client
+	encryptSchema     encryptSchemaFunc
+	customUnitHandler customUnitHandler
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client) Handler {
+func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
 	return &accessRequestHandler{
-		prov:          prov,
-		cache:         cache,
-		client:        client,
-		encryptSchema: encryptSchema,
+		prov:              prov,
+		cache:             cache,
+		client:            client,
+		encryptSchema:     encryptSchema,
+		customUnitHandler: customUnitHandler,
 	}
 }
 
@@ -132,6 +137,18 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 	data := map[string]interface{}{}
 	status, accessData := h.prov.AccessRequestProvision(req)
+
+	if status.GetStatus() == prov.Success {
+		err := h.customUnitHandler.HandleQuotaEnforcement(ar, app)
+
+		if err != nil {
+			// h.onError(ctx, ar, err)
+			status = prov.NewRequestStatusBuilder().
+				SetMessage(err.Error()).
+				SetCurrentStatusReasons(ar.Status.Reasons).
+				Failed()
+		}
+	}
 
 	if status.GetStatus() == prov.Success && accessData != nil {
 		sec := app.Spec.Security

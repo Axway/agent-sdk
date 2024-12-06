@@ -25,10 +25,11 @@ const (
 	unknown                 = "unknown"
 )
 
-type TransactionContext struct {
+type transactionContext struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
-	StatusCode string
+	Status     string
+	UnitName   string
 }
 
 // Detail - holds the details for computing metrics
@@ -37,6 +38,7 @@ type Detail struct {
 	APIDetails models.APIDetails
 	AppDetails models.AppDetails
 	StatusCode string
+	UnitName   string
 	Duration   int64
 	Bytes      int64
 }
@@ -47,7 +49,7 @@ type MetricDetail struct {
 	StatusCode  string
 	Count       int64
 	Response    ResponseMetrics
-	Observation ObservationDetails
+	Observation models.ObservationDetails
 }
 
 // ResponseMetrics - Holds metrics API response
@@ -57,79 +59,19 @@ type ResponseMetrics struct {
 	Avg float64 `json:"avg"`
 }
 
-// ObservationDetails - Holds start and end timestamp for interval
-type ObservationDetails struct {
-	Start int64 `json:"start,omitempty"`
-	End   int64 `json:"end,omitempty"`
-}
-
-// APIMetric - struct to hold metric aggregated for subscription,application,api,statuscode
-type APIMetric struct {
-	Subscription  models.Subscription  `json:"subscription"`
-	App           models.AppDetails    `json:"application"`
-	Product       models.Product       `json:"product,omitempty"`
-	API           models.APIDetails    `json:"api"`
-	AssetResource models.AssetResource `json:"assetResource,omitempty"`
-	ProductPlan   models.ProductPlan   `json:"productPlan,omitempty"`
-	Quota         models.Quota         `json:"quota,omitempty"`
-	StatusCode    string               `json:"statusCode"`
-	Status        string               `json:"status"`
-	Count         int64                `json:"count"`
-	Response      ResponseMetrics      `json:"response"`
-	Observation   ObservationDetails   `json:"observation"`
-	EventID       string               `json:"eventID"`
-	StartTime     time.Time            `json:"-"`
-}
-
-// GetStartTime - Returns the start time for subscription metric
-func (a *APIMetric) GetStartTime() time.Time {
-	return a.StartTime
-}
-
-// GetType - Returns APIMetric
-func (a *APIMetric) GetType() string {
-	return "APIMetric"
-}
-
-// GetType - Returns APIMetric
-func (a *APIMetric) GetEventID() string {
-	return a.EventID
-}
-
-func (a *APIMetric) GetLogFields() logrus.Fields {
-	fields := logrus.Fields{
-		"id":             a.EventID,
-		"count":          a.Count,
-		"status":         a.StatusCode,
-		"minResponse":    a.Response.Min,
-		"maxResponse":    a.Response.Max,
-		"avgResponse":    a.Response.Avg,
-		"startTimestamp": a.Observation.Start,
-		"endTimestamp":   a.Observation.End,
-	}
-	fields = a.Subscription.GetLogFields(fields)
-	fields = a.App.GetLogFields(fields)
-	fields = a.Product.GetLogFields(fields)
-	fields = a.API.GetLogFields(fields)
-	fields = a.AssetResource.GetLogFields(fields)
-	fields = a.ProductPlan.GetLogFields(fields)
-	fields = a.Quota.GetLogFields(fields)
-	return fields
-}
-
 // cachedMetric - struct to hold metric specific that gets cached and used for agent recovery
 type cachedMetric struct {
-	Subscription  models.Subscription  `json:"subscription,omitempty"`
-	App           models.AppDetails    `json:"app,omitempty"`
-	Product       models.Product       `json:"product,omitempty"`
-	API           models.APIDetails    `json:"api"`
-	AssetResource models.AssetResource `json:"assetResource,omitempty"`
-	ProductPlan   models.ProductPlan   `json:"productPlan,omitempty"`
-	Quota         models.Quota         `json:"quota,omitempty"`
-	StatusCode    string               `json:"statusCode"`
-	Count         int64                `json:"count"`
-	Values        []int64              `json:"values"`
-	StartTime     time.Time            `json:"startTime"`
+	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
+	App           *models.ApplicationResourceReference `json:"application,omitempty"`
+	Product       *models.ProductResourceReference     `json:"product,omitempty"`
+	API           *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
+	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
+	Quota         *models.ResourceReference            `json:"quota,omitempty"`
+	Unit          *models.Unit                         `json:"unit,omitempty"`
+	StatusCode    string                               `json:"statusCode,omitempty"`
+	Count         int64                                `json:"count"`
+	Values        []int64                              `json:"values,omitempty"`
 }
 
 // V4EventDistribution - represents V4 distribution
@@ -234,4 +176,12 @@ func (t ISO8601Time) MarshalJSON() ([]byte, error) {
 	b = tt.AppendFormat(b, ISO8601)
 	b = append(b, '"')
 	return b, nil
+}
+
+type Reporter struct {
+	AgentVersion     string `json:"agentVersion,omitempty"`
+	AgentType        string `json:"agentType,omitempty"`
+	AgentSDKVersion  string `json:"agentSDKVersion,omitempty"`
+	AgentName        string `json:"agentName,omitempty"`
+	ObservationDelta int64  `json:"observationDelta,omitempty"`
 }

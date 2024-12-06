@@ -35,8 +35,8 @@ var (
 		Version:            "",
 	}
 	apiDetails2 = models.APIDetails{
-		ID:                 "111",
-		Name:               "111",
+		ID:                 "222",
+		Name:               "222",
 		Revision:           1,
 		TeamID:             teamID,
 		APIServiceInstance: "",
@@ -44,6 +44,11 @@ var (
 		Version:            "",
 	}
 	traceStatus = healthcheck.OK
+	appDetails1 = models.AppDetails{
+		ID:            "111",
+		Name:          "111",
+		ConsumerOrgID: "org-id-111",
+	}
 )
 
 func getFutureTime() time.Time {
@@ -180,7 +185,7 @@ func generateMockReports(transactionPerReport []int) UsageEvent {
 	return mockEvent
 }
 
-func cleanUpReportfiles() {
+func cleanUpReportFiles() {
 	os.RemoveAll("./reports")
 }
 
@@ -312,7 +317,23 @@ func TestMetricCollector(t *testing.T) {
 		appName                   string
 		publishPrior              bool
 		hcStatus                  healthcheck.StatusLevel
+		skipWaitForPub            bool
 	}{
+		// Success case with no usage report
+		{
+			name:                      "WithUsageNoUsageReport",
+			loopCount:                 1,
+			retryBatchCount:           0,
+			apiTransactionCount:       []int{0},
+			failUsageEventOnServer:    []bool{false},
+			failUsageResponseOnServer: []*UsageResponse{nil},
+			expectedLHEvents:          []int{0},
+			expectedTransactionCount:  []int{0},
+			trackVolume:               false,
+			expectedTransactionVolume: []int{0},
+			expectedMetricEventsAcked: 0,
+			skipWaitForPub:            true,
+		},
 		// Success case with no app detail
 		{
 			name:                      "WithUsage",
@@ -370,20 +391,6 @@ func TestMetricCollector(t *testing.T) {
 			expectedTransactionVolume: []int{0},
 			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
 			appName:                   "managed-app-2",
-		},
-		// Success case with no usage report
-		{
-			name:                      "WithUsageNoUsageReport",
-			loopCount:                 1,
-			retryBatchCount:           0,
-			apiTransactionCount:       []int{0},
-			failUsageEventOnServer:    []bool{false},
-			failUsageResponseOnServer: []*UsageResponse{nil},
-			expectedLHEvents:          []int{0},
-			expectedTransactionCount:  []int{0},
-			trackVolume:               false,
-			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0,
 		},
 		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
@@ -464,6 +471,7 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 0, // API metric + Provider subscription metric
 			appName:                   "managed-app-1",
 			hcStatus:                  healthcheck.FAIL,
+			skipWaitForPub:            true,
 		},
 	}
 
@@ -473,9 +481,12 @@ func TestMetricCollector(t *testing.T) {
 				traceStatus = test.hcStatus
 			}
 			runTestHealthcheck()
-
+			myCollector.InitializeBatch()
+			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
 			cfg.SetAxwayManaged(test.trackVolume)
-			setupMockClient(test.retryBatchCount)
+			testClient := setupMockClient(test.retryBatchCount)
+			mockClient := testClient.(*MockClient)
+
 			for l := 0; l < test.loopCount; l++ {
 				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 				for i := 0; i < test.apiTransactionCount[l]; i++ {
@@ -500,8 +511,8 @@ func TestMetricCollector(t *testing.T) {
 					metricCollector.Execute()
 					metricCollector.usagePublisher.Execute()
 				}
-				assert.Equal(t, test.expectedMetricEventsAcked, myMockClient.(*MockClient).eventsAcked)
 			}
+			assert.Equal(t, test.expectedMetricEventsAcked, mockClient.eventsAcked)
 			s.resetConfig()
 		})
 	}
@@ -595,6 +606,16 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
+	// setup the cache for handling custom metrics
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+
 	traceStatus = healthcheck.OK
 	runTestHealthcheck()
 
@@ -649,7 +670,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			s.resetConfig()
 		})
 	}
-	cleanUpReportfiles()
+	cleanUpReportFiles()
 }
 
 func TestMetricCollectorCache(t *testing.T) {
@@ -836,7 +857,7 @@ func TestOfflineMetricCollector(t *testing.T) {
 			publisher := metricCollector.usagePublisher
 			for testLoops < test.loopCount {
 				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					metricCollector.AddMetric(apiDetails1, "200", 10, 10, "")
+					myCollector.AddMetric(apiDetails1, "200", 10, 10, "")
 				}
 				metricCollector.Execute()
 				testLoops++
@@ -874,5 +895,93 @@ func TestOfflineMetricCollector(t *testing.T) {
 			s.resetOffline(myCollector)
 		})
 	}
-	cleanUpReportfiles()
+	cleanUpReportFiles()
+}
+
+func TestCustomMetrics(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+
+	traceStatus = healthcheck.OK
+	traceability.SetDataDirPath(".")
+	runTestHealthcheck()
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/usage"
+	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+
+	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+
+	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
+	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+
+	myCollector := createMetricCollector()
+	metricCollector := myCollector.(*collector)
+
+	base := models.CustomMetricDetail{
+		APIDetails: apiDetails1,
+		AppDetails: appDetails1,
+		Count:      5,
+		UnitDetails: models.Unit{
+			Name: "unit-name",
+		},
+	}
+	_ = base
+
+	testCases := map[string]struct {
+		skip            bool
+		metricEvent1    models.CustomMetricDetail
+		metricEvent2    models.CustomMetricDetail
+		expectedMetrics int
+	}{
+		"no custom metric when api details not in event": {
+			skip:         false,
+			metricEvent1: models.CustomMetricDetail{},
+		},
+		"no custom metric when app details not in event": {
+			skip: false,
+			metricEvent1: models.CustomMetricDetail{
+				APIDetails: apiDetails1,
+			},
+		},
+		"no custom metric when unit details not in event": {
+			skip: false,
+			metricEvent1: models.CustomMetricDetail{
+				APIDetails: apiDetails1,
+				AppDetails: appDetails1,
+			},
+		},
+		"expect custom metric when all needed data given": {
+			skip:            false,
+			metricEvent1:    base,
+			expectedMetrics: 1,
+		},
+		"expect 1 metric when multiple updates for same unit and detials": {
+			skip:            false,
+			metricEvent1:    base,
+			metricEvent2:    base,
+			expectedMetrics: 1,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
+			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetric{}
+			metricCollector.AddCustomMetricDetail(tc.metricEvent1)
+			if tc.metricEvent2.Count > 0 {
+				metricCollector.AddCustomMetricDetail(tc.metricEvent2)
+			}
+			assert.Equal(t, tc.expectedMetrics, len(metricCollector.metricMap))
+		})
+	}
 }

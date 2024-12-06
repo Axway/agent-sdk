@@ -11,6 +11,5 @@ package catalog
 
 // ReleaseTagStatusSuccessMeta struct for ReleaseTagStatusSuccessMeta
 type ReleaseTagStatusSuccessMeta struct {
-	// GENERATE: The following code has been modified after code generation
 	Reference []ReleaseTagStatusReference `json:"reference,omitempty"`
 }

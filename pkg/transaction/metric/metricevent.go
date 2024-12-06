@@ -22,7 +22,7 @@ type CondorMetricEvent struct {
 }
 
 // AddCondorMetricEventToBatch - creates the condor metric event and adds to the batch
-func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogram metrics.Histogram) error {
+func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogram metrics.Histogram, counters map[string]metrics.Counter) error {
 	metricData, _ := json.Marshal(metricEvent)
 
 	cme := &CondorMetricEvent{
@@ -35,7 +35,7 @@ func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogr
 	if err != nil {
 		return err
 	}
-	batch.AddEvent(event, histogram)
+	batch.AddEvent(event, histogram, counters)
 	return nil
 }
 

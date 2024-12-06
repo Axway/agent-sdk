@@ -9,6 +9,41 @@ type ConsumerDetails struct {
 	Subscription     *Subscription `json:"subscription,omitempty"`
 }
 
+type ResourceReference struct {
+	ID string `json:"id,omitempty"`
+}
+
+func (a ResourceReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {
+	if a.ID != "" {
+		fields[idFieldName] = a.ID
+	}
+	return fields
+}
+
+type APIResourceReference struct {
+	ResourceReference
+	Name         string `json:"name,omitempty"`
+	APIServiceID string `json:"apiServiceId,omitempty"`
+}
+
+type ApplicationResourceReference struct {
+	ResourceReference
+	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
+}
+
+type ProductResourceReference struct {
+	ResourceReference
+	VersionID string `json:"versionId,omitempty"`
+}
+
+func (a ProductResourceReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {
+	if a.ID != "" {
+		fields[idFieldName] = a.ID
+		fields["productVersionID"] = a.VersionID
+	}
+	return fields
+}
+
 // Subscription  - Represents the subscription used in transaction summary consumer details
 type Subscription struct {
 	ID   string `json:"id,omitempty"`
@@ -105,4 +140,30 @@ func (a APIDetails) GetLogFields(fields logrus.Fields) logrus.Fields {
 		fields["apiID"] = a.ID
 	}
 	return fields
+}
+
+// Unit - struct for custom unit details to report
+type Unit struct {
+	Name string `json:"name"`
+}
+
+func (a Unit) GetLogFields(fields logrus.Fields) logrus.Fields {
+	if a.Name != "unknown" {
+		fields["unitName"] = a.Name
+	}
+	return fields
+}
+
+type CustomMetricDetail struct {
+	APIDetails  APIDetails
+	AppDetails  AppDetails
+	UnitDetails Unit
+	Count       int64
+	Observation ObservationDetails
+}
+
+// ObservationDetails - Holds start and end timestamp for interval
+type ObservationDetails struct {
+	Start int64 `json:"start,omitempty"`
+	End   int64 `json:"end,omitempty"`
 }

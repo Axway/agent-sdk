@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
@@ -11,20 +12,28 @@ import (
 
 const cancelMsg = "event cancelled, counts added at next publish"
 
+type eventMetric struct {
+	histogram metrics.Histogram
+	counters  map[string]metrics.Counter
+}
+
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
 	beatPub.Batch
 	events        []beatPub.Event
-	histograms    map[string]metrics.Histogram
+	batchMetrics  map[string]eventMetric
 	collector     *collector
 	haveBatchLock bool
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram) {
+func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]metrics.Counter) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
-	b.histograms[eventID] = histogram
+	b.batchMetrics[eventID] = eventMetric{
+		histogram: histogram,
+		counters:  counters,
+	}
 }
 
 // AddEvent - adds an event to the batch
@@ -84,7 +93,7 @@ func (b *EventBatch) Events() []beatPub.Event {
 // ACK - all events have been acknowledgeded, cleanup the counters
 func (b *EventBatch) ACK() {
 	b.ackEvents(b.events)
-	b.collector.metricStartTime = b.collector.metricEndTime
+	b.collector.metricStartTime = time.Time{}
 	b.batchUnlock()
 }
 
@@ -133,9 +142,15 @@ func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
 func (b *EventBatch) ackEvents(events []beatPub.Event) {
 	for _, event := range events {
 		metric := getMetricFromEvent(event)
-		if metric != nil {
-			b.collector.logMetric("published", metric)
-			b.collector.cleanupMetricCounter(b.histograms[metric.EventID], metric)
+		if metric == nil {
+			continue
+		}
+		b.collector.logMetric("published", metric)
+
+		if eventMetric, ok := b.batchMetrics[metric.EventID]; ok {
+			b.collector.cleanupMetricCounters(eventMetric.histogram, eventMetric.counters, metric)
+		} else {
+			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
 		}
 	}
 }
@@ -144,7 +159,7 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 func NewEventBatch(c *collector) *EventBatch {
 	return &EventBatch{
 		collector:     c,
-		histograms:    make(map[string]metrics.Histogram),
+		batchMetrics:  make(map[string]eventMetric),
 		haveBatchLock: false,
 	}
 }
@@ -152,10 +167,19 @@ func NewEventBatch(c *collector) *EventBatch {
 func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatPub.Event {
 	ackEvents := make([]beatPub.Event, 0)
 	for _, e := range events {
-		eID := getMetricFromEvent(e).EventID
+		eID := ""
+		if m := getMetricFromEvent(e); m != nil {
+			eID = m.EventID
+		}
+		if eID == "" {
+			continue
+		}
 		found := false
 		for _, rE := range retryEvents {
-			rEID := getMetricFromEvent(rE).EventID
+			rEID := ""
+			if m := getMetricFromEvent(rE); m != nil {
+				rEID = m.EventID
+			}
 			if rEID == eID {
 				found = true
 				break
@@ -168,12 +192,16 @@ func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatP
 	return ackEvents
 }
 
-func getMetricFromEvent(event beatPub.Event) *APIMetric {
+func getMetricFromEvent(event beatPub.Event) *centralMetric {
 	if data, found := event.Content.Fields[messageKey]; found {
 		v4Bytes := data.(string)
 		v4Event := make(map[string]interface{})
 		err := json.Unmarshal([]byte(v4Bytes), &v4Event)
 		if err != nil {
+			return nil
+		}
+		eventID, ok := v4Event["id"]
+		if !ok {
 			return nil
 		}
 		eventType, ok := v4Event["event"]
@@ -187,11 +215,12 @@ func getMetricFromEvent(event beatPub.Event) *APIMetric {
 		if err != nil {
 			return nil
 		}
-		metric := &APIMetric{}
+		metric := &centralMetric{}
 		err = json.Unmarshal(buf, metric)
 		if err != nil {
 			return nil
 		}
+		metric.EventID = eventID.(string)
 		return metric
 	}
 	return nil
