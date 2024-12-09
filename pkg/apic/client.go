@@ -864,14 +864,14 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	}
 
 	if data := util.GetAgentDetails(data); data != nil && updateAgentDetails {
+		var receivedRI *apiv1.ResourceInstance
 		// only send in the agent details here, that is all the agent needs to update for anything here
-		receivedRI, err := c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+		receivedRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
 		if err != nil {
 			return nil, err
 		} else if receivedRI != nil {
 			newRI = receivedRI
 		}
-
 	}
 
 	if existingRI == nil {
