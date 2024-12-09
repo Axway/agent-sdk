@@ -74,7 +74,7 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-2",
-			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s) grpc-go-client-1.1.0", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s) grpc-go/1.65.0", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
@@ -88,7 +88,7 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-3",
-			userAgent: fmt.Sprintf("Test/1.0.0-7e7eb72d (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0-APIGOV-Test (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
