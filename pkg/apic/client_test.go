@@ -13,6 +13,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -164,16 +165,16 @@ func TestCreateSubResource(t *testing.T) {
 	cfg.PlatformURL = "http://foo.bar:4080"
 
 	// There should be one request for each sub resource of the ResourceInstance
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
+	responsesInOrder := []api.MockResponse{}
+	numberOfResponses := 20
+	for i := 0; i < numberOfResponses; i++ {
+		responsesInOrder = append(responsesInOrder, api.MockResponse{
 			FileName: "./testdata/agent-details-sr.json",
 			RespCode: http.StatusOK,
 		},
-		{
-			FileName: "./testdata/agent-details-sr.json",
-			RespCode: http.StatusOK,
-		},
-	})
+		)
+	}
+	mockHTTPClient.SetResponses(responsesInOrder)
 
 	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -194,6 +195,40 @@ func TestCreateSubResource(t *testing.T) {
 
 	err := svcClient.CreateSubResource(ri.ResourceMeta, ri.SubResources)
 	assert.Nil(t, err)
+
+	// with no changes to the subResource, there should be no updates
+	ri.CreateHashes()
+	bts, err := json.Marshal(ri)
+	assert.Nil(t, err)
+	err = json.Unmarshal(bts, &ri)
+	assert.Nil(t, err)
+	err = svcClient.CreateSubResource(ri.ResourceMeta, ri.SubResources)
+	assert.Nil(t, err)
+	assert.Equal(t, mockHTTPClient.RespCount, 2)
+
+	bts, err = json.Marshal(ri)
+	assert.Nil(t, err)
+	err = json.Unmarshal(bts, &ri)
+	assert.Nil(t, err)
+	// with a subResource update, we expect 2 extra updates
+	ri.SetSubResource("sub1", "val")
+	err = svcClient.CreateSubResource(ri.ResourceMeta, ri.SubResources)
+	assert.Nil(t, err)
+	assert.Equal(t, mockHTTPClient.RespCount, 4)
+
+	bts, err = json.Marshal(ri)
+	assert.Nil(t, err)
+	err = json.Unmarshal(bts, &ri)
+	assert.Nil(t, err)
+	err = svcClient.CreateSubResource(ri.ResourceMeta, map[string]interface{}{
+		definitions.XAgentDetails: map[string]interface{}{
+			"externalAPIID":   "12345",
+			"externalAPIName": "daleapi",
+			"createdBy":       "",
+		},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 4, mockHTTPClient.RespCount)
 }
 
 func TestUpdateSpecORCreateResourceInstance(t *testing.T) {

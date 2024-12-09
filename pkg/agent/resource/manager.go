@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -137,7 +138,10 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 		return nil
 	}
 
-	agentInstance := a.getAgentResourceType()
+	agentInstance := a.agentResource
+	if a.agentResource == nil {
+		agentInstance = a.getAgentResourceType()
+	}
 	if a.agentResource == nil && agentInstance != nil {
 		a.logger.Info("re-initializing agent resource")
 		err := a.FetchAgentResource()
@@ -155,15 +159,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 
 	statusSubResourceName := management.DiscoveryAgentStatusSubResourceName
 	// using discovery agent status here, but all agent status resources have the same structure
-	agentInstance.SubResources[statusSubResourceName] = management.DiscoveryAgentStatus{
-		Version:                strings.Split(config.AgentVersion, "-")[0], // report just the semver version
-		LatestAvailableVersion: config.AgentLatestVersion,
-		State:                  status,
-		PreviousState:          prevStatus,
-		Message:                message,
-		LastActivityTime:       getTimestamp(),
-		SdkVersion:             config.SDKVersion,
-	}
+	agentStatus := newDAStatus(agentInstance.ResourceMeta, status, prevStatus, message)
 
 	// See if we need to rebuildCache
 	timeToRebuild, _ := a.shouldRebuildCache()
@@ -172,7 +168,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	}
 
 	subResources := make(map[string]interface{})
-	subResources[statusSubResourceName] = agentInstance.SubResources[statusSubResourceName]
+	subResources[statusSubResourceName] = agentStatus
 	// add any details
 	if len(a.agentDetails) > 0 {
 		util.SetAgentDetails(agentInstance, a.agentDetails)
@@ -249,6 +245,41 @@ func getTimestamp() apiv1.Time {
 	activityTime := time.Now()
 	newV1Time := apiv1.Time(activityTime)
 	return newV1Time
+}
+
+func newDAStatus(rm apiv1.ResourceMeta, status, prevStatus, message string) management.DiscoveryAgentStatus {
+	now := getTimestamp()
+	daStatus := management.DiscoveryAgentStatus{
+		Version:                strings.Split(config.AgentVersion, "-")[0], // report just the semver version
+		LatestAvailableVersion: config.AgentLatestVersion,
+		State:                  status,
+		PreviousState:          prevStatus,
+		Message:                message,
+		LastActivityTime:       now,
+		SdkVersion:             config.SDKVersion,
+	}
+	statusIface := rm.GetSubResource(management.DiscoveryAgentStatusSubResourceName)
+	if statusIface == nil {
+		return daStatus
+	}
+
+	existingStatus, ok := statusIface.(management.DiscoveryAgentStatus)
+	if !ok {
+		bts, err := json.Marshal(statusIface)
+		if err != nil {
+			return daStatus
+		}
+		if err = json.Unmarshal(bts, &existingStatus); err != nil {
+			return daStatus
+		}
+	}
+
+	// maybe add config for this if everything else is fine
+	if time.Time(now).Sub(time.Time(existingStatus.LastActivityTime)) > 6*time.Hour {
+		daStatus.LastActivityTime = now
+	}
+
+	return daStatus
 }
 
 func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string) {

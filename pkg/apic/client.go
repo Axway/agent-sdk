@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 
@@ -635,20 +636,22 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 	wg := &sync.WaitGroup{}
 	bytesMutex := &sync.Mutex{}
 
-	subsToUpdate := []string{}
+	subsToUpdate := map[string]string{}
 	for subName, sub := range subs {
 		if existingHash, ok := rm.GetSubResourceHash(subName); ok {
 			hash, err := util.ComputeHash(sub)
-			if err == nil && hash == existingHash {
+			if err == nil && float64(hash) == existingHash {
 				c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Debug("hash found, skipping createSubResource")
 				continue
 			}
 		}
-		subsToUpdate = append(subsToUpdate, subName)
+		rm.SetSubResource(subName, sub)
+		subsToUpdate[subName] = ""
+		subsToUpdate[definitions.XAgentDetails] = ""
 	}
 
 	rm.PrepareHashesForSending()
-	for _, subName := range subsToUpdate {
+	for subName, _ := range subsToUpdate {
 		wg.Add(1)
 		url := c.createAPIServerURL(fmt.Sprintf("%s/%s", rm.GetSelfLink(), subName))
 
@@ -672,10 +675,14 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 			bytesMutex.Unlock()
 		}(subName)
 	}
-
 	wg.Wait()
+	rm.SetIncomingHashes()
+
 	if execErr != nil {
 		return nil, execErr
+	} else if len(instanceBytes) == 0 {
+		c.logger.WithField("resourceName", rm.Name).Debug("no subResource updates were executed")
+		return nil, nil
 	}
 
 	ri := &apiv1.ResourceInstance{}
@@ -858,9 +865,11 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 
 	if data := util.GetAgentDetails(data); data != nil && updateAgentDetails {
 		// only send in the agent details here, that is all the agent needs to update for anything here
-		newRI, err = c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
+		receivedRI, err := c.createSubResource(newRI.ResourceMeta, map[string]interface{}{defs.XAgentDetails: data})
 		if err != nil {
 			return nil, err
+		} else if receivedRI != nil {
+			newRI = receivedRI
 		}
 
 	}

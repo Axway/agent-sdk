@@ -233,7 +233,7 @@ func TestResourceMetaHashes(t *testing.T) {
 	assert.True(t, ok)
 	hashedReal, err := util.ComputeHash("sth")
 	assert.Nil(t, err)
-	assert.Equal(t, hashVal, hashedReal)
+	assert.Equal(t, hashVal, float64(hashedReal))
 }
 
 func TestResourceMetaGetSelfLink(t *testing.T) {

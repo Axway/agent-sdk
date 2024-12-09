@@ -26,7 +26,7 @@ type Meta interface {
 	SetTags([]string)
 	GetSubResource(key string) interface{}
 	SetSubResource(key string, resource interface{})
-	GetSubResourceHash(key string) (interface{}, bool)
+	GetSubResourceHash(key string) (float64, bool)
 	GetReferenceByGVK(GroupVersionKind) Reference
 }
 
@@ -179,13 +179,17 @@ func (rm *ResourceMeta) GetSubResource(key string) interface{} {
 	return rm.SubResources[key]
 }
 
-func (rm *ResourceMeta) GetSubResourceHash(key string) (interface{}, bool) {
+func (rm *ResourceMeta) GetSubResourceHash(key string) (float64, bool) {
 	if rm == nil || rm.SubResources == nil {
 		return 0, false
 	}
 
-	hashVal, ok := rm.SubResourceHashes[key]
-	return hashVal, ok
+	if h, ok := rm.SubResourceHashes[key].(uint64); ok {
+		return float64(h), ok
+	} else if h, ok := rm.SubResourceHashes[key].(float64); ok {
+		return h, ok
+	}
+	return 0, false
 }
 
 // SetSubResource saves a value to a sub resource by name and overrides the current value.
@@ -213,7 +217,6 @@ func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
 
 // MarshalJSON marshals the ResourceMeta to properly set the SubResources
 func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
-	rm.SetIncomingHashes()
 	rawSubs := map[string]interface{}{}
 	subResources := rm.SubResources
 
@@ -299,8 +302,7 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// first creates the hashes based on the current values, then overrides the values if there are any found in x-agent-details
-	rm.CreateHashes()
+	// sets the hashes if there are any found in x-agent-details
 	rm.SetIncomingHashes()
 	return nil
 }
@@ -330,6 +332,8 @@ func (rm *ResourceMeta) SetIncomingHashes() {
 	}
 }
 
+// because we want to keep x-subresource-hashes inside x-agent-details only on api-server.
+// for simplicity, we keep them inside a different field from ResourceMeta
 func (rm *ResourceMeta) PrepareHashesForSending() {
 	if rm == nil || rm.SubResources == nil {
 		return
@@ -342,6 +346,7 @@ func (rm *ResourceMeta) PrepareHashesForSending() {
 	rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes] = rm.SubResourceHashes
 }
 
+// PrepareHashesForSending -> CreateSubResource -> GetResource -> SetIncomingHashes should yield same result as CreateHashes
 func (rm *ResourceMeta) CreateHashes() {
 	if rm.SubResourceHashes == nil {
 		rm.SubResourceHashes = make(map[string]interface{})
@@ -351,6 +356,6 @@ func (rm *ResourceMeta) CreateHashes() {
 		if err != nil {
 			continue
 		}
-		rm.SubResourceHashes[subName] = hash
+		rm.SubResourceHashes[subName] = float64(hash)
 	}
 }

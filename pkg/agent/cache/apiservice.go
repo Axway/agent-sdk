@@ -82,6 +82,7 @@ func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
+			apiSvc.CreateHashes()
 			return apiSvc
 		}
 	}
@@ -97,6 +98,7 @@ func (c *cacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.Resour
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
+			apiSvc.CreateHashes()
 			return apiSvc
 		}
 	}
@@ -112,6 +114,7 @@ func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstanc
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
+			apiSvc.CreateHashes()
 			return apiSvc
 		}
 	}
