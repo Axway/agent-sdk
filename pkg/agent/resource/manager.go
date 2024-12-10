@@ -273,12 +273,17 @@ func newDAStatus(rm apiv1.ResourceMeta, status, prevStatus, message string) mana
 			return daStatus
 		}
 	}
+	if existingStatus.State != "" {
+		daStatus.PreviousState = existingStatus.State
+	}
 
 	// maybe add config for this if everything else is fine
 	if time.Time(now).Sub(time.Time(existingStatus.LastActivityTime)) > 6*time.Hour {
 		daStatus.LastActivityTime = now
+		return daStatus
 	}
 
+	daStatus.LastActivityTime = existingStatus.LastActivityTime
 	return daStatus
 }
 

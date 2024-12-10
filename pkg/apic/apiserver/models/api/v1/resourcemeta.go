@@ -219,6 +219,9 @@ func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
 func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	rawSubs := map[string]interface{}{}
 	subResources := rm.SubResources
+	if rm.SubResourceHashes == nil {
+		rm.SubResourceHashes = make(map[string]interface{})
+	}
 
 	for key, value := range subResources {
 		rawSubs[key] = value
@@ -302,6 +305,9 @@ func (rm *ResourceMeta) UnmarshalJSON(data []byte) error {
 		}
 	}
 
+	if rm.SubResourceHashes == nil {
+		rm.SubResourceHashes = make(map[string]interface{})
+	}
 	// sets the hashes if there are any found in x-agent-details
 	rm.SetIncomingHashes()
 	return nil
@@ -357,5 +363,19 @@ func (rm *ResourceMeta) CreateHashes() {
 			continue
 		}
 		rm.SubResourceHashes[subName] = float64(hash)
+	}
+}
+
+func (rm *ResourceMeta) ClearHashes() {
+	if rm == nil {
+		return
+	}
+
+	rm.SubResourceHashes = map[string]interface{}{}
+	delete(rm.SubResources[definitions.XAgentDetails].(map[string]interface{}), definitions.XSubResourceHashes)
+
+	// if agent-details are empty(because there was only x-subresource-hashes inside x-agent-details) we remove them.
+	if len(rm.SubResources[definitions.XAgentDetails].(map[string]interface{})) == 0 {
+		delete(rm.SubResources, definitions.XAgentDetails)
 	}
 }

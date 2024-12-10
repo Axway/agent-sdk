@@ -9,7 +9,7 @@ import (
 )
 
 func createWatchResource(group, kind, id, name string) *v1.ResourceInstance {
-	return &v1.ResourceInstance{
+	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			GroupVersionKind: v1.GroupVersionKind{
 				GroupKind: v1.GroupKind{
@@ -23,6 +23,8 @@ func createWatchResource(group, kind, id, name string) *v1.ResourceInstance {
 			Name: name,
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 // add watch resource

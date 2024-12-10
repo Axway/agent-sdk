@@ -23,7 +23,7 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 		sub[defs.AttrExternalAPIPrimaryKey] = primaryKey
 	}
 
-	return &v1.ResourceInstance{
+	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Name: fmt.Sprintf("name-%s", apiName),
 			SubResources: map[string]interface{}{
@@ -31,6 +31,8 @@ func createAPIService(apiID, apiName, primaryKey string) *v1.ResourceInstance {
 			},
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 func createAPIServiceInstance(id, apiID, stage string) *v1.ResourceInstance {
@@ -44,7 +46,7 @@ func createAPIServiceInstanceWithVersion(id, apiID, stage, version string) *v1.R
 		defs.AttrExternalAPIPrimaryKey: fmt.Sprintf("%s-%s", apiID, stage),
 		defs.AttrExternalAPIVersion:    version,
 	}
-	return &v1.ResourceInstance{
+	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Name: fmt.Sprintf("name-%s", id),
 			Metadata: v1.Metadata{
@@ -55,10 +57,12 @@ func createAPIServiceInstanceWithVersion(id, apiID, stage, version string) *v1.R
 			},
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 func createRI(id, name string) *v1.ResourceInstance {
-	return &v1.ResourceInstance{
+	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
@@ -66,6 +70,8 @@ func createRI(id, name string) *v1.ResourceInstance {
 			Name: name,
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 // add api service with externalAPIID, externalAPIName
@@ -256,7 +262,7 @@ func assertResourceInstance(t *testing.T, expected *v1.ResourceInstance, actual 
 }
 
 func createRequestDefinition(name, id string) *v1.ResourceInstance {
-	return &v1.ResourceInstance{
+	ri := &v1.ResourceInstance{
 		ResourceMeta: v1.ResourceMeta{
 			Name: name,
 			Metadata: v1.Metadata{
@@ -264,6 +270,8 @@ func createRequestDefinition(name, id string) *v1.ResourceInstance {
 			},
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 func TestAccessRequestDefinitionCache(t *testing.T) {

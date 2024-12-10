@@ -235,6 +235,17 @@ func createAPIServiceInstance(name, id string, refInstance string, dpType string
 	return instance
 }
 
+func generateResponses(filename string, respCode int, nbOfCalls int) []api.MockResponse {
+	responses := []api.MockResponse{}
+	for i := 0; i < nbOfCalls; i++ {
+		responses = append(responses, api.MockResponse{
+			FileName: filename,
+			RespCode: respCode,
+		})
+	}
+	return responses
+}
+
 func TestInstanceSourceUpdates(t *testing.T) {
 	// case 1 - new instance, source managed dataplane, sub resource updated
 	// case 2 - new instance, source design dataplane, sub resource updated
@@ -256,107 +267,57 @@ func TestInstanceSourceUpdates(t *testing.T) {
 			name:             "new instance for managed dataplane",
 			instanceName:     "newInstManaged",
 			managedDataplane: AWS,
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/serviceinstance.json", // call to create the instance
-					RespCode: http.StatusCreated,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/serviceinstance.json", http.StatusCreated, 1), // call to create the instance
+				append(
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 1),    // call to update source
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 2)..., // call to update source + x-agent-details hashes
+				)...,
+			),
 		},
 		{
 			name:            "new instance for design dataplane",
 			instanceName:    "newInstDesign",
 			designDataplane: GitLab,
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/serviceinstance.json", // call to create the instance
-					RespCode: http.StatusCreated,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/serviceinstance.json", http.StatusCreated, 1), // call to create the instance
+				append(
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 1),    // call to update source
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 2)..., // call to update source + x-agent-details hashes
+				)...,
+			),
 		},
 		{
 			name:              "new instance for unmanaged dataplane with referenced instance",
 			instanceName:      "newInstUnmanaged",
 			managedDataplane:  Unclassified,
 			referenceInstance: "refInst",
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/serviceinstance.json", // call to create the instance
-					RespCode: http.StatusCreated,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/serviceinstance.json", http.StatusCreated, 1), // call to create the instance
+				append(
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 1),    // call to update source
+					generateResponses("./testdata/serviceinstance.json", http.StatusOK, 2)..., // call to update source + x-agent-details hashes
+				)...,
+			),
 		},
 		{
 			name:             "existing instance with no source",
 			instanceName:     "daleapi",
 			managedDataplane: AWS,
 			existingInstance: createAPIServiceInstance("daleapi", "2f5f92f0-f5e4-44fb-bc84-599c27b3497a", "", "", false),
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/serviceinstance.json", // call to get the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			// get the instance -> update the instance -> update x-agent-details-subres -> update source subres -> update x-agent-details hashes
+			apiserverResponses: generateResponses("./testdata/serviceinstance.json", http.StatusOK, 5),
 		},
 		{
 			name:             "existing instance with different dataplane type",
 			instanceName:     "existingInstance",
 			managedDataplane: AWS,
 			existingInstance: createAPIServiceInstance("existingInstance", "existingInstance", "", Unclassified.String(), false),
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/existingserviceinstances.json", http.StatusOK, 1), // call to get the instance
+				// update the instance -> update x-agent-details-subres -> update source subres -> update x-agent-details hashes
+				generateResponses("./testdata/serviceinstance.json", http.StatusOK, 4)...,
+			),
 		},
 		{
 			name:              "existing instance with different referenced instance",
@@ -364,24 +325,11 @@ func TestInstanceSourceUpdates(t *testing.T) {
 			managedDataplane:  Unclassified,
 			existingInstance:  createAPIServiceInstance("existingInstance", "existingInstance", "refInstance", Unclassified.String(), false),
 			referenceInstance: "newRefInstance",
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update source subresource
-					RespCode: http.StatusOK,
-				},
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/existingserviceinstances.json", http.StatusOK, 1), // call to get the instance
+				// update the instance -> update x-agent-details-subres -> update source subres -> update x-agent-details hashes
+				generateResponses("./testdata/serviceinstance.json", http.StatusOK, 4)...,
+			),
 		},
 		{
 			name:              "existing instance with same source",
@@ -389,21 +337,11 @@ func TestInstanceSourceUpdates(t *testing.T) {
 			managedDataplane:  Unclassified,
 			existingInstance:  createAPIServiceInstance("existingInstance", "existingInstance", "refInstance", Unclassified.String(), false),
 			referenceInstance: "refInstance",
-			apiserverResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/existingserviceinstances.json", // call to get the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update the instance
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/serviceinstance.json", // call to update x-agent-details subresource
-					RespCode: http.StatusOK,
-				},
-				// no source subresource update
-			},
+			apiserverResponses: append(
+				generateResponses("./testdata/existingserviceinstances.json", http.StatusOK, 1), // call to get the instance
+				// update the instance -> update x-agent-details-subres
+				generateResponses("./testdata/serviceinstance.json", http.StatusOK, 2)...,
+			),
 		},
 	}
 	for _, test := range testCases {

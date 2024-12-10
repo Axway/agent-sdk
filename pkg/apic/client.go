@@ -676,11 +676,14 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 		}(subName)
 	}
 	wg.Wait()
-	rm.SetIncomingHashes()
 
 	if execErr != nil {
+		rm.ClearHashes()
 		return nil, execErr
-	} else if len(instanceBytes) == 0 {
+	}
+
+	rm.SetIncomingHashes()
+	if len(instanceBytes) == 0 {
 		c.logger.WithField("resourceName", rm.Name).Debug("no subResource updates were executed")
 		return nil, nil
 	}
