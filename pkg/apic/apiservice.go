@@ -189,7 +189,6 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		serviceBody.serviceContext.serviceAction = updateAPI
 		httpMethod = http.MethodPut
 		serviceURL += "/" + svc.Name
-		svc.CreateHashes()
 		c.updateAPIService(serviceBody, svc)
 	} else {
 		svc = c.buildAPIService(serviceBody)
