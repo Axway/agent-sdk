@@ -91,7 +91,7 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 			util.CreateCustomGRPCResolverBuilder(
 				fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port),
 				m.cfg.Host,
-				"https")),
+				m.cfg.Host)),
 	}
 
 	m.logger.
