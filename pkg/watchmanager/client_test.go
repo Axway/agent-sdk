@@ -133,15 +133,20 @@ func Test_watchClient_send(t *testing.T) {
 			assert.NotNil(t, c)
 
 			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				err := c.processRequest()
-				if tc.hasSendErr {
-					assert.NotNil(t, err)
-				} else {
-					assert.Nil(t, err)
-				}
-			}()
+			if !tc.hasErr {
+				go func() {
+					defer wg.Done()
+					err := c.processRequest()
+					if tc.hasSendErr {
+						assert.NotNil(t, err)
+					} else {
+						assert.Nil(t, err)
+					}
+				}()
+
+				// allow the request channel to listen
+				time.Sleep(time.Second)
+			}
 
 			err = c.createTokenRefreshRequest()
 			if tc.hasErr {
