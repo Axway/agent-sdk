@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -22,7 +23,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
-	"github.com/Axway/agent-sdk/pkg/util/errors"
+	sdkErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
 	"github.com/Axway/agent-sdk/pkg/config"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -37,6 +38,8 @@ type StreamerClient struct {
 	manager            wm.Manager
 	newListener        events.NewListenerFunc
 	newManager         wm.NewManagerFunc
+	requestQueue       events.RequestQueue
+	newRequestQueue    events.NewRequestQueueFunc
 	onStreamConnection func()
 	sequence           events.SequenceProvider
 	topicSelfLink      string
@@ -75,13 +78,14 @@ func NewStreamerClient(
 	}
 
 	s := &StreamerClient{
-		handlers:       handlers,
-		apiClient:      apiClient,
-		watchCfg:       watchCfg,
-		newManager:     wm.New,
-		newListener:    events.NewEventListener,
-		logger:         logger,
-		environmentURL: cfg.GetEnvironmentURL(),
+		handlers:        handlers,
+		apiClient:       apiClient,
+		watchCfg:        watchCfg,
+		newManager:      wm.New,
+		newListener:     events.NewEventListener,
+		newRequestQueue: events.NewRequestQueue,
+		logger:          logger,
+		environmentURL:  cfg.GetEnvironmentURL(),
 	}
 
 	for _, opt := range options {
@@ -133,7 +137,7 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (s *StreamerClient) Start() error {
-	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
+	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
 
 	s.mutex.Lock()
 
@@ -145,7 +149,11 @@ func (s *StreamerClient) Start() error {
 	)
 	defer s.listener.Stop()
 
-	manager, err := s.newManager(s.watchCfg, s.watchOpts...)
+	s.requestQueue = s.newRequestQueue(requestCh)
+	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh))
+	defer s.requestQueue.Stop()
+
+	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
 		return err
 	}
@@ -156,6 +164,7 @@ func (s *StreamerClient) Start() error {
 	s.mutex.Unlock()
 
 	listenCh := s.listener.Listen()
+	s.requestQueue.Start()
 
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
 	if s.onStreamConnection != nil {
@@ -186,11 +195,11 @@ func (s *StreamerClient) Status() error {
 		return nil
 	}
 
-	if s.manager == nil || s.listener == nil {
+	if s.manager == nil || s.listener == nil || s.requestQueue == nil {
 		return fmt.Errorf("stream client is not ready")
 	}
 	if ok := s.manager.Status(); !ok {
-		return errors.ErrGrpcConnection
+		return sdkErrors.ErrGrpcConnection
 	}
 
 	return nil
@@ -200,6 +209,7 @@ func (s *StreamerClient) Status() error {
 func (s *StreamerClient) Stop() {
 	s.manager.CloseConn()
 	s.listener.Stop()
+	s.requestQueue.Stop()
 }
 
 // Healthcheck - health check for stream client
@@ -213,4 +223,39 @@ func (s *StreamerClient) Healthcheck(_ string) *hc.Status {
 	return &hc.Status{
 		Result: hc.OK,
 	}
+}
+
+func (s *StreamerClient) UpdateAgentStatus(state, prevState, message string) error {
+	// Initial running status and stopped status set by watch-controller
+	// allow running status after recovery from unhealthy state
+	if canTransitionAgentState(state, prevState) {
+		return s.writeStatusRequest(state, message)
+	}
+	s.logger.
+		WithField("status", state).
+		WithField("previousStatus", prevState).
+		Trace("skipping agent status update request")
+	return nil
+}
+
+func (s *StreamerClient) writeStatusRequest(state, message string) error {
+	if s.canUpdateStatus() {
+		req := &proto.Request{
+			RequestType: proto.RequestType_AGENT_STATUS.Enum(),
+			AgentStatus: &proto.AgentStatus{
+				State:   state,
+				Message: message,
+			},
+		}
+		return s.requestQueue.Write(req)
+	}
+	return errors.New("stream request queue is not active")
+}
+
+func (s *StreamerClient) canUpdateStatus() bool {
+	return s.requestQueue != nil && s.requestQueue.IsActive()
+}
+
+func canTransitionAgentState(state, prevState string) bool {
+	return state != prevState && state != "stopped"
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 
@@ -53,6 +54,7 @@ type watchOptions struct {
 	sequence         events.SequenceProvider
 	onEventSyncError eventSyncCb
 	harvester        harvester.Harvest
+	requestCh        chan *proto.Request
 }
 
 // newWatchOptions returns the default watchOptions
@@ -115,6 +117,13 @@ func WithHarvester(harvester harvester.Harvest, sequence events.SequenceProvider
 	return funcOption(func(o *watchOptions) {
 		o.sequence = sequence
 		o.harvester = harvester
+	})
+}
+
+// WithRequestChannel - sets up the channel to send requests for watch subscriptions
+func WithRequestChannel(requestCh chan *proto.Request) Option {
+	return funcOption(func(o *watchOptions) {
+		o.requestCh = requestCh
 	})
 }
 
