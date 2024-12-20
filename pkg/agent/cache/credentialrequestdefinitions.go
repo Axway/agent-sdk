@@ -31,6 +31,7 @@ func (c *cacheManager) ListCredentialRequestDefinitions() []*v1.ResourceInstance
 		if item != nil {
 			instance, ok := item.(*v1.ResourceInstance)
 			if ok {
+				instance.CreateHashes()
 				instances = append(instances, instance)
 			}
 		}
@@ -46,8 +47,9 @@ func (c *cacheManager) GetCredentialRequestDefinitionByName(name string) (*v1.Re
 
 	item, err := c.crdMap.GetBySecondaryKey(name)
 	if item != nil {
-		if ard, ok := item.(*v1.ResourceInstance); ok {
-			return ard, nil
+		if crd, ok := item.(*v1.ResourceInstance); ok {
+			crd.CreateHashes()
+			return crd, nil
 		}
 	}
 	return nil, err
@@ -60,8 +62,9 @@ func (c *cacheManager) GetCredentialRequestDefinitionByID(id string) (*v1.Resour
 
 	item, err := c.crdMap.Get(id)
 	if item != nil {
-		if ard, ok := item.(*v1.ResourceInstance); ok {
-			return ard, nil
+		if crd, ok := item.(*v1.ResourceInstance); ok {
+			crd.CreateHashes()
+			return crd, nil
 		}
 	}
 	return nil, err

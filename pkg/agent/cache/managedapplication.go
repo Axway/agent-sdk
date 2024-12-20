@@ -36,6 +36,7 @@ func (c *cacheManager) GetManagedApplication(id string) *v1.ResourceInstance {
 	if managedApp != nil {
 		ri, ok := managedApp.(*v1.ResourceInstance)
 		if ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}
@@ -64,6 +65,7 @@ func (c *cacheManager) GetManagedApplicationByName(name string) *v1.ResourceInst
 	if managedApp != nil {
 		ri, ok := managedApp.(*v1.ResourceInstance)
 		if ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}

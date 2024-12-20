@@ -7,7 +7,7 @@
 
 # Build artifacts
 bin/
-__debug_bin
+__debug_bin*
 debug
 *.log
 
