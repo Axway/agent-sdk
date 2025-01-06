@@ -52,6 +52,7 @@ func TestFormatUserAgents(t *testing.T) {
 
 func TestParseUserAgents(t *testing.T) {
 	hostname, _ := os.Hostname()
+	hostname2 := "test-test.abc.com"
 	tests := []struct {
 		name       string
 		userAgent  string
@@ -131,6 +132,21 @@ func TestParseUserAgents(t *testing.T) {
 			name:       "test-5",
 			userAgent:  "invalid user-agent",
 			expectedUA: nil,
+		},
+		{
+			name:      "test-6",
+			userAgent: fmt.Sprintf("Test/1.0.0-APIGOV-Test (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname2),
+			expectedUA: &CentralUserAgent{
+				AgentType:           "Test",
+				Version:             "1.0.0",
+				CommitSHA:           "7e7eb72d",
+				SDKVersion:          "1.0.0",
+				Environment:         "env",
+				AgentName:           "agent",
+				IsGRPC:              false,
+				HostName:            hostname2,
+				UseGRPCStatusUpdate: false,
+			},
 		},
 	}
 	for _, tc := range tests {
