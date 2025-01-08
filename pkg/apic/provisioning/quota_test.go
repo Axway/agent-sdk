@@ -31,6 +31,20 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 			limit:          100,
 			wantNil:        false,
 		},
+		{
+			name:           "good hourly quota",
+			intervalString: "hourly",
+			interval:       Hourly,
+			limit:          10,
+			wantNil:        false,
+		},
+		{
+			name:           "good every minute quota",
+			intervalString: "minutes",
+			interval:       Minutes,
+			limit:          1,
+			wantNil:        false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
