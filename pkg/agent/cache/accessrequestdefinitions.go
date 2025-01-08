@@ -27,6 +27,7 @@ func (c *cacheManager) GetAccessRequestDefinitionByName(name string) (*v1.Resour
 	item, err := c.ardMap.GetBySecondaryKey(name)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
+			ard.CreateHashes()
 			return ard, nil
 		}
 	}
@@ -41,6 +42,7 @@ func (c *cacheManager) GetAccessRequestDefinitionByID(id string) (*v1.ResourceIn
 	item, err := c.ardMap.Get(id)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
+			ard.CreateHashes()
 			return ard, nil
 		}
 	}

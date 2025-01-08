@@ -43,6 +43,7 @@ func (c *cacheManager) GetAPIServiceInstanceByID(id string) (*v1.ResourceInstanc
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
+			instance.CreateHashes()
 			return instance, nil
 		}
 	}
@@ -58,6 +59,7 @@ func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceIns
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
+			instance.CreateHashes()
 			return instance, nil
 		}
 	}
@@ -98,6 +100,7 @@ func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
 		if item != nil {
 			instance, ok := item.(*v1.ResourceInstance)
 			if ok {
+				instance.CreateHashes()
 				instances = append(instances, instance)
 			}
 		}

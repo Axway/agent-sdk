@@ -88,6 +88,7 @@ func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAP
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}
@@ -104,6 +105,7 @@ func (c *cacheManager) GetAccessRequestsByApp(appName string) []*v1.ResourceInst
 	for _, item := range items {
 		if item != nil {
 			if ri, ok := item.GetObject().(*v1.ResourceInstance); ok {
+				ri.CreateHashes()
 				accessRequests = append(accessRequests, ri)
 			}
 		}
@@ -119,6 +121,7 @@ func (c *cacheManager) GetAccessRequest(id string) *v1.ResourceInstance {
 	accessRequest, _ := c.accessRequestMap.Get(id)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}
@@ -134,6 +137,7 @@ func (c *cacheManager) ListAccessRequests() []*v1.ResourceInstance {
 	for _, key := range c.accessRequestMap.GetKeys() {
 		item, _ := c.accessRequestMap.Get(key)
 		if v, ok := item.(*v1.ResourceInstance); ok && v != nil {
+			v.CreateHashes()
 			list = append(list, v)
 		}
 	}
