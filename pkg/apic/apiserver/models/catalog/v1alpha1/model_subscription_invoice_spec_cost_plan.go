@@ -14,8 +14,10 @@ type SubscriptionInvoiceSpecCostPlan struct {
 	// The Product Plan to which to migrate the Subscription.
 	Name string `json:"name,omitempty"`
 	// The cost of the plan when the invoice was generated.
-	Cost  float64                              `json:"cost,omitempty"`
-	Setup SubscriptionInvoiceSpecCostPlanSetup `json:"setup,omitempty"`
+	Cost float64 `json:"cost,omitempty"`
+	// Plan's currency.
+	Currency string                               `json:"currency,omitempty"`
+	Setup    SubscriptionInvoiceSpecCostPlanSetup `json:"setup,omitempty"`
 	// Quotas for which there is cost associated.
 	Quotas []SubscriptionInvoiceSpecCostPlanQuotas `json:"quotas,omitempty"`
 }

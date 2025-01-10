@@ -24,7 +24,7 @@ var (
 		APIVersion: "v1alpha1",
 	}
 
-	DocumentScopes = []string{"Product", "ProductRelease"}
+	DocumentScopes = []string{"DocumentTemplate", "Product", "ProductRelease"}
 )
 
 const (

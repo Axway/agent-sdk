@@ -11,6 +11,8 @@ package definitions
 
 // ResourceDefinitionSpec  (definitions.v1alpha1.ResourceDefinition)
 type ResourceDefinitionSpec struct {
+	// List of versions that are sorted in latest release order.
+	ApiVersions []ResourceDefinitionSpecApiVersions `json:"apiVersions,omitempty"`
 	// Value used in the endpoint path for accessing the resource.
 	Plural string `json:"plural"`
 	// Defines the kind of the resource. The server infers this from the endpoint the client submits the request to.

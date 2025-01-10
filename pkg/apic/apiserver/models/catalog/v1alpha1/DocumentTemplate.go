@@ -6,7 +6,6 @@ package catalog
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
@@ -14,74 +13,57 @@ import (
 )
 
 var (
-	ResourceCtx log.ContextField = "resource"
+	DocumentTemplateCtx log.ContextField = "documentTemplate"
 
-	_ResourceGVK = apiv1.GroupVersionKind{
+	_DocumentTemplateGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Resource",
+			Kind:  "DocumentTemplate",
 		},
-		APIVersion: "v1",
+		APIVersion: "v1alpha1",
 	}
 
-	ResourceScopes = []string{"DocumentTemplate", "Product", "ProductRelease"}
+	DocumentTemplateScopes = []string{""}
 )
 
 const (
-	ResourceResourceName = "resources"
+	DocumentTemplateResourceName = "documenttemplates"
 )
 
-func ResourceGVK() apiv1.GroupVersionKind {
-	return _ResourceGVK
+func DocumentTemplateGVK() apiv1.GroupVersionKind {
+	return _DocumentTemplateGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceGVK, ResourceScopes[0], ResourceResourceName)
-	log.RegisterContextField(ResourceCtx)
+	apiv1.RegisterGVK(_DocumentTemplateGVK, DocumentTemplateScopes[0], DocumentTemplateResourceName)
+	log.RegisterContextField(DocumentTemplateCtx)
 }
 
-// Resource Resource
-type Resource struct {
+// DocumentTemplate Resource
+type DocumentTemplate struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner `json:"owner"`
-	Spec  ResourceSpec `json:"spec"`
+	Owner *apiv1.Owner         `json:"owner"`
+	Spec  DocumentTemplateSpec `json:"spec"`
 }
 
-// NewResource creates an empty *Resource
-func NewResource(name, scopeKind, scopeName string) (*Resource, error) {
-	validScope := false
-	for _, s := range ResourceScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for Resource kind", scopeKind)
-	}
-
-	return &Resource{
+// NewDocumentTemplate creates an empty *DocumentTemplate
+func NewDocumentTemplate(name string) *DocumentTemplate {
+	return &DocumentTemplate{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _ResourceGVK,
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
-					Name: scopeName,
-					Kind: scopeKind,
-				},
-			},
+			GroupVersionKind: _DocumentTemplateGVK,
 		},
-	}, nil
+	}
 }
 
-// ResourceFromInstanceArray converts a []*ResourceInstance to a []*Resource
-func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource, error) {
-	newArray := make([]*Resource, 0)
+// DocumentTemplateFromInstanceArray converts a []*ResourceInstance to a []*DocumentTemplate
+func DocumentTemplateFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*DocumentTemplate, error) {
+	newArray := make([]*DocumentTemplate, 0)
 	for _, item := range fromArray {
-		res := &Resource{}
+		res := &DocumentTemplate{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Resource, 0), err
+			return make([]*DocumentTemplate, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -89,10 +71,10 @@ func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource
 	return newArray, nil
 }
 
-// AsInstance converts a Resource to a ResourceInstance
-func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a DocumentTemplate to a ResourceInstance
+func (res *DocumentTemplate) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ResourceGVK()
+	meta.GroupVersionKind = DocumentTemplateGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -109,8 +91,8 @@ func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a Resource
-func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a DocumentTemplate
+func (res *DocumentTemplate) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -128,7 +110,7 @@ func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *Resource) MarshalJSON() ([]byte, error) {
+func (res *DocumentTemplate) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -147,7 +129,7 @@ func (res *Resource) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *Resource) UnmarshalJSON(data []byte) error {
+func (res *DocumentTemplate) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -175,6 +157,6 @@ func (res *Resource) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *Resource) PluralName() string {
-	return ResourceResourceName
+func (res *DocumentTemplate) PluralName() string {
+	return DocumentTemplateResourceName
 }
