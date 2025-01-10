@@ -202,6 +202,8 @@ type CentralConfig interface {
 	GetWatchResourceFilters() []ResourceFilter
 	SetWatchResourceFilters([]ResourceFilter) error
 	GetCredentialConfig() CredentialConfig
+	IsSamplingEnabled() bool
+	SetSamplingSetting(bool)
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -246,6 +248,7 @@ type CentralConfiguration struct {
 	isRegionSet               bool
 	isAxwayManaged            bool
 	WatchResourceFilters      []ResourceFilter
+	samplingEnabled           bool
 }
 
 // GRPCConfig - Represents the grpc config
@@ -592,6 +595,15 @@ func (c *CentralConfiguration) GetWatchResourceFilters() []ResourceFilter {
 		c.WatchResourceFilters = make([]ResourceFilter, 0)
 	}
 	return c.WatchResourceFilters
+}
+
+func (c *CentralConfiguration) SetSamplingSetting(val bool) {
+	c.samplingEnabled = val
+}
+
+// IsSamplingEnabled - Returns the value of sampling enabled
+func (c *CentralConfiguration) IsSamplingEnabled() bool {
+	return c.samplingEnabled
 }
 
 // SetWatchResourceFilters - sets the custom watch filter config

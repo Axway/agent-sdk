@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
@@ -16,6 +17,10 @@ type sample struct {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	if !agent.GetCentralConfig().IsSamplingEnabled() {
+		return false
+	}
+
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && s.config.OnlyErrors {
