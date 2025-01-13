@@ -37,20 +37,17 @@ func (m *MockClient) String() string {
 	return ""
 }
 
-var myMockClient outputs.Client
-
-func mockGetClient() (*traceability.Client, error) {
-	tpClient := &traceability.Client{}
-	tpClient.SetTransportClient(myMockClient)
-	tpClient.SetLogger(log.NewFieldLogger())
-	return tpClient, nil
-}
-
-func setupMockClient(retries int) {
-	myMockClient = &MockClient{
+func setupMockClient(retries int) outputs.Client {
+	testClient := &MockClient{
 		pubCount:    0,
 		retry:       retries,
 		eventsAcked: 0,
 	}
-	traceability.GetClient = mockGetClient
+	traceability.GetClient = func() (*traceability.Client, error) {
+		tpClient := &traceability.Client{}
+		tpClient.SetTransportClient(testClient)
+		tpClient.SetLogger(log.NewFieldLogger())
+		return tpClient, nil
+	}
+	return testClient
 }

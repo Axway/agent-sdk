@@ -40,7 +40,9 @@ type agentStatusUpdate struct {
 	immediateStatusChange bool
 	typeOfStatusUpdate    string
 	prevStatus            string
+	prevStatusDetail      string
 	logger                log.FieldLogger
+	initialExecution      bool
 }
 
 var periodicStatusUpdate *agentStatusUpdate
@@ -65,6 +67,14 @@ func (su *agentStatusUpdate) Status() error {
 }
 
 func (su *agentStatusUpdate) Execute() error {
+	if su.typeOfStatusUpdate == immediate && !su.initialExecution {
+		su.initialExecution = true
+		if previousStatus == "" {
+			previousStatus = AgentRunning
+		}
+		return nil
+	}
+
 	id, _ := uuid.NewUUID()
 	log := su.logger.WithField("status-update-id", id)
 
@@ -84,20 +94,20 @@ func (su *agentStatusUpdate) Execute() error {
 	if su.typeOfStatusUpdate == periodic {
 		// always update on the periodic status update, even if the status has not changed
 		log.
-			WithField("previous-status", previousStatus).
-			WithField("previous-status-detail", previousStatusDetail).
-			WithField("new-status", status).
-			WithField("new-status-detail", statusDetail).
+			WithField("previousStatus", previousStatus).
+			WithField("previousStatusDetail", previousStatusDetail).
+			WithField("newStatus", status).
+			WithField("newStatusDetail", statusDetail).
 			Debugf("%s -- Last activity updated", su.typeOfStatusUpdate)
 		UpdateStatusWithContext(ctx, status, previousStatus, statusDetail)
 		su.previousActivityTime = su.currentActivityTime
 	} else if previousStatus != status || previousStatusDetail != statusDetail {
 		// if the status has changed then report that on the immediate check
 		log.
-			WithField("previous-status", previousStatus).
-			WithField("previous-status-detail", previousStatusDetail).
-			WithField("new-status", status).
-			WithField("new-status-detail", statusDetail).
+			WithField("previousStatus", previousStatus).
+			WithField("previousStatusDetail", previousStatusDetail).
+			WithField("newStatus", status).
+			WithField("newStatusDetail", statusDetail).
 			Debug("status is changing")
 		UpdateStatusWithContext(ctx, status, previousStatus, statusDetail)
 		su.previousActivityTime = su.currentActivityTime
@@ -117,7 +127,9 @@ func StartAgentStatusUpdate() {
 		logger.WithError(err).Error("not starting status update jobs")
 		return
 	}
-	startPeriodicStatusUpdate(logger)
+	if !agent.cfg.IsUsingGRPC() {
+		startPeriodicStatusUpdate(logger)
+	}
 	startImmediateStatusUpdate(logger)
 }
 
@@ -126,7 +138,7 @@ func startPeriodicStatusUpdate(logger log.FieldLogger) {
 	interval := agent.cfg.GetReportActivityFrequency()
 	periodicStatusUpdate = &agentStatusUpdate{
 		typeOfStatusUpdate: periodic,
-		logger:             logger.WithField("status-check", periodic),
+		logger:             logger.WithField("statusCheck", periodic),
 	}
 	_, err := jobs.RegisterIntervalJobWithName(periodicStatusUpdate, interval, "Status Update")
 
@@ -142,7 +154,7 @@ func startImmediateStatusUpdate(logger log.FieldLogger) {
 	immediateStatusUpdate = &agentStatusUpdate{
 		immediateStatusChange: true,
 		typeOfStatusUpdate:    immediate,
-		logger:                logger.WithField("status-check", immediate),
+		logger:                logger.WithField("statusCheck", immediate),
 	}
 	_, err := jobs.RegisterDetachedIntervalJobWithName(immediateStatusUpdate, interval, "Immediate Status Update")
 
@@ -156,13 +168,16 @@ func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) (string, str
 	status := su.getJobPoolStatus(ctx)
 	statusDetail := ""
 	if status != AgentRunning {
-		statusDetail = "agent job pool not running"
+		// do not clean the previous unhealthy status detail until the agent is in running state
+		if su.prevStatusDetail != "" {
+			statusDetail = su.prevStatusDetail
+		}
 	}
 
 	hcStatus, hcStatusDetail := su.getHealthcheckStatus(ctx)
-	entry := log.WithField("pool-status", status).
-		WithField("healthcheck-status", hcStatus).
-		WithField("healthcheck-status-detail", hcStatusDetail)
+	entry := log.WithField("poolStatus", status).
+		WithField("healthCheckStatus", hcStatus).
+		WithField("healthCheckStatusDetail", hcStatusDetail)
 
 	if hcStatus != AgentRunning {
 		entry.Info("agent not in running status")
@@ -175,6 +190,7 @@ func (su *agentStatusUpdate) getCombinedStatus(ctx context.Context) (string, str
 	}
 
 	su.prevStatus = status
+	su.prevStatusDetail = statusDetail
 	return status, statusDetail
 }
 

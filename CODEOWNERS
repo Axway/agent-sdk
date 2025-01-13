@@ -2,9 +2,9 @@
 
 * @jcollins-axway @dfeldick @sbolosan @vivekschauhan @alrosca @dgghinea
 
-#[CSR]
- # .csr-profile.json requires SPOC approval for any modifications
-.csr-profile.json @dfeldick @jcollins-axway @vivekschauhan
+#[SECURITY]
+ # .security-profile.json requires SPOC approval for any modifications
+.security-profile.json @dfeldick @jcollins-axway @vivekschauhan
 renovate.json @dfeldick
 
 
