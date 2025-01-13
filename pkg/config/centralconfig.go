@@ -203,7 +203,9 @@ type CentralConfig interface {
 	SetWatchResourceFilters([]ResourceFilter) error
 	GetCredentialConfig() CredentialConfig
 	IsSamplingEnabled() bool
-	SetSamplingSetting(bool)
+	SetIsSampling(bool)
+	GetSamplingPerMinuteLimit() int
+	SetSamplingPerMinuteLimit(int)
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -249,6 +251,7 @@ type CentralConfiguration struct {
 	isAxwayManaged            bool
 	WatchResourceFilters      []ResourceFilter
 	samplingEnabled           bool
+	samplingPerMinLimit       int
 }
 
 // GRPCConfig - Represents the grpc config
@@ -597,7 +600,16 @@ func (c *CentralConfiguration) GetWatchResourceFilters() []ResourceFilter {
 	return c.WatchResourceFilters
 }
 
-func (c *CentralConfiguration) SetSamplingSetting(val bool) {
+func (c *CentralConfiguration) SetSamplingPerMinuteLimit(limit int) {
+	c.samplingPerMinLimit = limit
+}
+
+// GetSamplingPerMinuteLimit - Returns the limit of sampled messages per limit
+func (c *CentralConfiguration) GetSamplingPerMinuteLimit() int {
+	return c.samplingPerMinLimit
+}
+
+func (c *CentralConfiguration) SetIsSampling(val bool) {
 	c.samplingEnabled = val
 }
 

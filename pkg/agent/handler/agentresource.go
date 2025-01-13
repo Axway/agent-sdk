@@ -17,7 +17,8 @@ const (
 )
 
 type samplingFeatures interface {
-	SetSamplingSetting(bool)
+	SetIsSampling(bool)
+	SetSamplingPerMinuteLimit(int)
 }
 
 type agentResourceHandler struct {
@@ -62,7 +63,8 @@ func (h *agentResourceHandler) checkToEnableSampling(resource *v1.ResourceInstan
 		return
 	}
 
-	h.features.SetSamplingSetting(true)
+	h.features.SetIsSampling(true)
+
 	go func(ta *management.TraceabilityAgent) {
 		tickerDuration := time.Time(ta.Agentstate.Sampling.EndTime).Sub(time.Now())
 		if tickerDuration <= 0 {
@@ -71,6 +73,6 @@ func (h *agentResourceHandler) checkToEnableSampling(resource *v1.ResourceInstan
 		ticker := time.NewTicker(tickerDuration)
 		<-ticker.C
 		ticker.Stop()
-		h.features.SetSamplingSetting(false)
+		h.features.SetIsSampling(false)
 	}(ta)
 }

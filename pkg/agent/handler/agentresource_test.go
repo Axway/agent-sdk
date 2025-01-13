@@ -118,7 +118,8 @@ func TestAgentResourceHandler(t *testing.T) {
 
 type mockFeatures struct{}
 
-func (m mockFeatures) SetSamplingSetting(_ bool) {}
+func (m mockFeatures) SetIsSampling(_ bool)            {}
+func (m mockFeatures) SetSamplingPerMinuteLimit(_ int) {}
 
 type EventSyncCache interface {
 	RebuildCache()
