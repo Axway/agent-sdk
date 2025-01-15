@@ -59,6 +59,7 @@ const (
 	Kafka        DataplaneType = "Kafka"
 	WebMethods   DataplaneType = "WebMethods"
 	SAPAPIPortal DataplaneType = "SAPAPIPortal"
+	WSO2         DataplaneType = "WSO2"
 
 	// AgentSDK Metrics
 	Kong     DataplaneType = "Kong"
