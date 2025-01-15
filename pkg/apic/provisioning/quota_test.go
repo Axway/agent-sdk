@@ -41,7 +41,7 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 		{
 			name:           "good every minute quota",
 			intervalString: "minutes",
-			interval:       Minutes,
+			interval:       Minute,
 			limit:          1,
 			wantNil:        false,
 		},
