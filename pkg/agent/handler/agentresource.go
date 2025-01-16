@@ -64,9 +64,10 @@ func (h *agentResourceHandler) checkToEnableSampling(resource *v1.ResourceInstan
 	}
 
 	h.features.SetIsSampling(true)
+	h.features.SetSamplingPerMinuteLimit(int(ta.Agentstate.Sampling.Limit))
 
 	go func(ta *management.TraceabilityAgent) {
-		tickerDuration := time.Time(ta.Agentstate.Sampling.EndTime).Sub(time.Now())
+		tickerDuration := time.Until(time.Time(ta.Agentstate.Sampling.EndTime))
 		if tickerDuration <= 0 {
 			return
 		}

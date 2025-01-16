@@ -25,7 +25,12 @@ func (s *sample) stopLimiter() {
 	if !s.limiterRunning {
 		return
 	}
+	defer s.setLimiterRunning(false)
 	s.stopChan <- struct{}{}
+}
+
+func (s *sample) setLimiterRunning(val bool) {
+	s.limiterRunning = val
 }
 
 func (s *sample) runLimiter() {
@@ -51,9 +56,10 @@ func (s *sample) startLimiter() {
 	if s.limiterRunning {
 		return
 	}
+
 	// get the limit
 	s.minuteLimit = agent.GetCentralConfig().GetSamplingPerMinuteLimit()
-	defer func() { s.limiterRunning = true }()
+	defer s.setLimiterRunning(true)
 
 	// init counter limiter
 	s.resetLimiter()
@@ -64,10 +70,7 @@ func (s *sample) startLimiter() {
 func (s *sample) resetLimiter() {
 	s.counterLock.Lock()
 	defer s.counterLock.Unlock()
-	_, ok := s.currentCounts[limiterCounter]
-	if !ok {
-		s.currentCounts[limiterCounter] = 0
-	}
+	s.currentCounts[limiterCounter] = 0
 }
 
 func (s *sample) checkLimiter(shouldSample bool) bool {
@@ -91,9 +94,6 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 	s.startLimiter()
-	if !s.limiterRunning {
-
-	}
 
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
