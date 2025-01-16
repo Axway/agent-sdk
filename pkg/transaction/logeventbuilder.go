@@ -58,13 +58,9 @@ type EventBuilder interface {
 
 type transactionEventBuilder struct {
 	EventBuilder
-	err                error
-	cfgTenantID        string
-	cfgAPICDeployment  string
-	cfgEnvironmentName string
-	cfgEnvironmentID   string
-	logEvent           *LogEvent
-	redactionConfig    redaction.Redactions
+	err             error
+	logEvent        *LogEvent
+	redactionConfig redaction.Redactions
 }
 
 // SummaryBuilder - Interface to build the log event of type transaction summary
@@ -96,13 +92,9 @@ type SummaryBuilder interface {
 
 type transactionSummaryBuilder struct {
 	SummaryBuilder
-	err                error
-	cfgTenantID        string
-	cfgAPICDeployment  string
-	cfgEnvironmentName string
-	cfgEnvironmentID   string
-	logEvent           *LogEvent
-	redactionConfig    redaction.Redactions
+	err             error
+	logEvent        *LogEvent
+	redactionConfig redaction.Redactions
 }
 
 // NewTransactionEventBuilder - Creates a new log event builder
