@@ -24,7 +24,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/customunit"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -52,7 +54,6 @@ type ConfigChangeHandler func()
 
 // ShutdownHandler - function that the agent may implement to be called when a shutdown request is received
 type ShutdownHandler func()
-
 type agentData struct {
 	agentResourceManager resource.Manager
 	teamJob              *centralTeamsCache
@@ -68,6 +69,7 @@ type agentData struct {
 	apiValidatorJobID          string
 	configChangeHandler        ConfigChangeHandler
 	agentResourceChangeHandler ConfigChangeHandler
+	customUnitHandler          *customunit.CustomUnitHandler
 	agentShutdownHandler       ShutdownHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
@@ -165,6 +167,10 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	// call the metric services.
+	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
+	agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+
 	if !agent.isInitialized {
 		err = handleInitialization()
 		if err != nil {
@@ -233,7 +239,19 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 	}
 }
 
+func FinalizeInitialization() error {
+	err := registerExternalIDPs()
+	if err != nil {
+		logger.WithError(err).Error("failed to register CRDs for external IdP config")
+	}
+	return nil
+}
+
 func registerExternalIDPs() error {
+	if !util.IsNotTest() || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() || agent.cfg.GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
 	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
 		if idPCfg == nil {
@@ -253,6 +271,24 @@ func registerExternalIDPs() error {
 			}
 		}
 	}
+	return nil
+}
+
+func CacheInitSync() error {
+	if !util.IsNotTest() || !agent.agentFeaturesCfg.ConnectionToCentralEnabled() || agent.cfg.GetUsageReportingConfig().IsOfflineMode() {
+		return nil
+	}
+
+	eventSync, err := newEventSync()
+	if err != nil {
+		return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+	}
+
+	if err := eventSync.SyncCache(); err != nil {
+		return errors.Wrap(errors.ErrInitServicesNotReady, err.Error())
+	}
+	// set the rebuild function in the agent resource manager
+	agent.agentResourceManager.SetRebuildCacheFunc(eventSync)
 	return nil
 }
 
@@ -428,6 +464,10 @@ func GetAuthProviderRegistry() oauth.ProviderRegistry {
 	return agent.authProviderRegistry
 }
 
+func GetCustomUnitHandler() *customunit.CustomUnitHandler {
+	return agent.customUnitHandler
+}
+
 // RegisterShutdownHandler - Registers shutdown handler
 func RegisterShutdownHandler(handler ShutdownHandler) {
 	agent.agentShutdownHandler = handler
@@ -496,14 +536,13 @@ func GetUserAgent() string {
 		agentName = agent.cfg.GetAgentName()
 		isGRPC = agent.cfg.IsUsingGRPC()
 	}
-	return util.FormatUserAgent(
+	return util.NewUserAgent(
 		config.AgentTypeName,
 		config.AgentVersion,
 		config.SDKVersion,
 		envName,
 		agentName,
-		isRunningInDockerContainer(),
-		isGRPC)
+		isGRPC).FormatUserAgent()
 }
 
 // setCentralConfig - Sets the central config
@@ -585,13 +624,29 @@ func UpdateStatusWithPrevious(status, prevStatus, description string) {
 func UpdateStatusWithContext(ctx context.Context, status, prevStatus, description string) {
 	agent.status = status
 	logger := ctx.Value(ctxLogger).(log.FieldLogger)
+	if agent.cfg != nil && agent.cfg.IsUsingGRPC() {
+		updateStatusOverStream(status, prevStatus, description)
+		return
+	}
+
 	if agent.agentResourceManager != nil {
 		err := agent.agentResourceManager.UpdateAgentStatus(status, prevStatus, description)
 		if err != nil {
-			logger.WithError(err).Warnf("could not update the agent status reference")
+			logger.WithError(err).Warn("could not update the agent status reference")
 		}
 	} else {
 		logger.WithField("status", agent.status).Trace("skipping status update, agent resource manager is not initialized")
+	}
+}
+
+func updateStatusOverStream(status, prevStatus, description string) {
+	if agent.streamer != nil {
+		err := agent.streamer.UpdateAgentStatus(status, prevStatus, description)
+		if err != nil {
+			logger.WithError(err).Warn("could not update the agent status reference")
+		}
+	} else {
+		logger.WithField("status", agent.status).Trace("skipping status update, stream client is not initialized")
 	}
 }
 
@@ -672,7 +727,10 @@ func setupProfileSignalProcessor(cpuProfile, memProfile string) {
 
 // cleanUp - AgentCleanup
 func cleanUp() {
-	UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	// stopped status updated with gRPC watch
+	if !agent.cfg.IsUsingGRPC() {
+		UpdateStatusWithPrevious(AgentStopped, AgentRunning, "")
+	}
 }
 
 func newHandlers() []handler.Handler {

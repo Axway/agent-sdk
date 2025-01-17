@@ -32,6 +32,7 @@ const (
 	AttrExternalAPIName              = "externalAPIName"
 	AttrExternalAPIStage             = "externalAPIStage"
 	AttrExternalAPIVersion           = "externalAPIVersion"
+	AttrExternalAppID                = "applicationID"
 	AttrCreatedBy                    = "createdBy"
 	AttrSpecHash                     = "specHash"
 	Spec                             = "spec"

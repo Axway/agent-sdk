@@ -11,6 +11,5 @@ package management
 
 // ApiServiceInstanceSourceCompliance  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSourceCompliance struct {
-	// GENERATE: The following code has been modified after code generation
 	Runtime ApiServiceInstanceSourceRuntimeStatus `json:"runtime,omitempty"`
 }

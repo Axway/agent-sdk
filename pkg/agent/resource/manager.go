@@ -133,7 +133,7 @@ func (a *agentResourceManager) FetchAgentResource() error {
 func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message string) error {
 	if a.cfg == nil || a.cfg.GetAgentName() == "" {
 		a.logger.WithField("status", status).
-			WithField("previous-status", prevStatus).
+			WithField("previousStatus", prevStatus).
 			Trace("skipping agent status update, agent name config not set")
 		return nil
 	}
@@ -152,7 +152,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 
 	if a.agentResource == nil {
 		a.logger.WithField("status", status).
-			WithField("previous-status", prevStatus).
+			WithField("previousStatus", prevStatus).
 			Trace("skipping agent status update, agent resource not initialized")
 		return nil
 	}

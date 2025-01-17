@@ -2,6 +2,7 @@ package metric
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,14 +13,15 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
 	appUsagePrefix     = "app_usage."
 	cacheFileName      = "agent-usagemetric.json"
-	metricKeyPrefix    = "metric."
+	metricKeyPrefix    = "metric"
 	metricStartTimeKey = "metric_start_time"
 	usageStartTimeKey  = "usage_start_time"
 	usageCountKey      = "usage_count"
@@ -31,8 +33,8 @@ type storageCache interface {
 	updateUsage(usageCount int)
 	updateVolume(bytes int64)
 	updateAppUsage(usageCount int, appID string)
-	updateMetric(apiStatusMetric metrics.Histogram, metric *APIMetric)
-	removeMetric(metric *APIMetric)
+	updateMetric(cachedMetric cachedMetricInterface, metric *centralMetric)
+	removeMetric(metric *centralMetric)
 	save()
 }
 
@@ -148,7 +150,7 @@ func (c *cacheStorage) updateAppUsage(usageCount int, appID string) {
 func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 	cacheKeys := storageCache.GetKeys()
 	for _, cacheKey := range cacheKeys {
-		if strings.Contains(cacheKey, metricKeyPrefix) {
+		if strings.HasPrefix(cacheKey, fmt.Sprintf("%s.", metricKeyPrefix)) {
 			if agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() {
 				// delete metrics from cache in offline mode
 				storageCache.Delete(cacheKey)
@@ -160,32 +162,55 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			var cm cachedMetric
 			json.Unmarshal(buffer, &cm)
 
-			var metric *APIMetric
-			for _, duration := range cm.Values {
-				metricDetail := Detail{
-					APIDetails: cm.API,
-					AppDetails: cm.App,
-					StatusCode: cm.StatusCode,
-					Duration:   duration,
-				}
-				metric = c.collector.createOrUpdateMetric(metricDetail)
+			apiDetails := models.APIDetails{}
+			if cm.API != nil {
+				apiDetails.ID = cm.API.ID
+				apiDetails.Name = cm.API.Name
+			}
+			appDetails := models.AppDetails{}
+			if cm.App != nil {
+				appDetails.ID = cm.App.ID
+				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
 			}
 
-			newKey := c.getKey(metric)
+			if len(cm.Values) == 0 {
+				if cm.Unit == nil {
+					continue
+				}
+
+				c.collector.AddCustomMetricDetail(models.CustomMetricDetail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					UnitDetails: models.Unit{
+						Name: cm.Unit.Name,
+					},
+					Count: cm.Count,
+				})
+				continue
+			}
+
+			var metric *centralMetric
+			for _, duration := range cm.Values {
+				metric = c.collector.createOrUpdateHistogram(Detail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					StatusCode: cm.StatusCode,
+					Duration:   duration,
+				})
+			}
+
+			newKey := metric.getKey()
 			if newKey != cacheKey {
 				c.storageLock.Lock()
 				storageCache.Delete(cacheKey)
 				c.storageLock.Unlock()
 			}
 			storageCache.Set(newKey, cm)
-			if metric != nil {
-				metric.StartTime = cm.StartTime
-			}
 		}
 	}
 }
 
-func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetric) {
+func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centralMetric) {
 	if !c.isInitialized {
 		return
 	}
@@ -193,39 +218,18 @@ func (c *cacheStorage) updateMetric(histogram metrics.Histogram, metric *APIMetr
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	cachedMetric := cachedMetric{
-		Subscription:  metric.Subscription,
-		App:           metric.App,
-		Product:       metric.Product,
-		AssetResource: metric.AssetResource,
-		ProductPlan:   metric.ProductPlan,
-		Quota:         metric.Quota,
-		API:           metric.API,
-		StatusCode:    metric.StatusCode,
-		Count:         histogram.Count(),
-		Values:        histogram.Sample().Values(),
-		StartTime:     metric.StartTime,
-	}
-
-	c.storage.Set(c.getKey(metric), cachedMetric)
+	c.storage.Set(metric.getKey(), metric.createCachedMetric(cached))
 }
 
-func (c *cacheStorage) removeMetric(metric *APIMetric) {
+func (c *cacheStorage) removeMetric(metric *centralMetric) {
 	if !c.isInitialized {
 		return
 	}
+
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Delete(c.getKey(metric))
-}
-
-func (c *cacheStorage) getKey(metric *APIMetric) string {
-	return metricKeyPrefix +
-		metric.Subscription.ID + "." +
-		metric.App.ID + "." +
-		metric.API.ID + "." +
-		metric.StatusCode
+	c.storage.Delete(metric.getKey())
 }
 
 func (c *cacheStorage) save() {
@@ -270,4 +274,41 @@ func parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
 		}
 	}
 	return resultTime, nil
+}
+
+type cachedMetricInterface interface {
+	Count() int64
+	Values() []int64
+}
+
+type customCounter struct {
+	c metrics.Counter
+}
+
+func newCustomCounter(c metrics.Counter) *customCounter {
+	return &customCounter{c: c}
+}
+
+func (c customCounter) Count() int64 {
+	return c.c.Count()
+}
+
+func (c customCounter) Values() []int64 {
+	return nil
+}
+
+type customHistogram struct {
+	h metrics.Histogram
+}
+
+func newCustomHistogram(h metrics.Histogram) *customHistogram {
+	return &customHistogram{h: h}
+}
+
+func (c customHistogram) Count() int64 {
+	return c.h.Count()
+}
+
+func (c customHistogram) Values() []int64 {
+	return c.h.Sample().Values()
 }

@@ -91,7 +91,7 @@ func (m *watchManager) createConnection() (*grpc.ClientConn, error) {
 			util.CreateCustomGRPCResolverBuilder(
 				fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port),
 				m.cfg.Host,
-				"https")),
+				m.cfg.Host)),
 	}
 
 	m.logger.
@@ -144,6 +144,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 			events:        events,
 			tokenGetter:   m.cfg.TokenGetter,
 			topicSelfLink: link,
+			requests:      m.options.requestCh,
 		},
 		m.newWatchClientFunc,
 	)

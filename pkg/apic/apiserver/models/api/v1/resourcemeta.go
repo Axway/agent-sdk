@@ -215,6 +215,26 @@ func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
 	return Reference{}
 }
 
+// GetReferenceByIDAndGVK returns the first found reference that matches the ID and GroupKind arguments.
+func (rm *ResourceMeta) GetReferenceByIDAndGVK(id string, gvk GroupVersionKind) Reference {
+	for _, ref := range rm.Metadata.References {
+		if ref.Group == gvk.Group && ref.Kind == gvk.Kind && ref.ID == id {
+			return ref
+		}
+	}
+	return Reference{}
+}
+
+// GetReferenceByNameAndGVK returns the first found reference that matches the Name and GroupKind arguments.
+func (rm *ResourceMeta) GetReferenceByNameAndGVK(name string, gvk GroupVersionKind) Reference {
+	for _, ref := range rm.Metadata.References {
+		if ref.Group == gvk.Group && ref.Kind == gvk.Kind && ref.Name == name {
+			return ref
+		}
+	}
+	return Reference{}
+}
+
 // MarshalJSON marshals the ResourceMeta to properly set the SubResources
 func (rm *ResourceMeta) MarshalJSON() ([]byte, error) {
 	rawSubs := map[string]interface{}{}
