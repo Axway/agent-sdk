@@ -89,6 +89,7 @@ func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
+			instance.CreateHashes()
 			return instance
 		}
 	}

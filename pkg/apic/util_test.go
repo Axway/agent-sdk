@@ -1,9 +1,10 @@
-package definitions
+package apic
 
 import (
 	"testing"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar := &management.AccessRequest{
 		References: []interface{}{
 			management.AccessRequestReferencesSubscription{
-				Kind: Subscription,
+				Kind: definitions.Subscription,
 				Name: "management/test",
 			},
 		},
@@ -27,7 +28,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar = &management.AccessRequest{
 		References: []interface{}{
 			management.AccessRequestReferencesSubscription{
-				Kind: Subscription,
+				Kind: definitions.Subscription,
 				Name: "catalog/test",
 			},
 		},
@@ -38,7 +39,7 @@ func TestGetSubscriptionNameFromAccessReq(t *testing.T) {
 	ar = &management.AccessRequest{
 		References: []interface{}{
 			&management.AccessRequestReferencesSubscription{
-				Kind: Subscription,
+				Kind: definitions.Subscription,
 				Name: "catalog/test",
 			},
 		},

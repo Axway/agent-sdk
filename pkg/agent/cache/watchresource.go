@@ -43,6 +43,7 @@ func (c *cacheManager) GetWatchResourceByKey(key string) *v1.ResourceInstance {
 	resource, _ := c.watchResourceMap.Get(key)
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}
@@ -56,6 +57,7 @@ func (c *cacheManager) GetWatchResourceByID(group, kind, id string) *v1.Resource
 	resource, _ := c.watchResourceMap.Get(c.getWatchResourceKey(group, kind, id))
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}
@@ -69,6 +71,7 @@ func (c *cacheManager) GetWatchResourceByName(group, kind, name string) *v1.Reso
 	resource, _ := c.watchResourceMap.GetBySecondaryKey(c.getWatchResourceKey(group, kind, name))
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
+			ri.CreateHashes()
 			return ri
 		}
 	}

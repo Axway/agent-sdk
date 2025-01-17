@@ -10,7 +10,7 @@ import (
 )
 
 func createAccessRequest(id, name, appName, instanceID, instanceName string) *management.AccessRequest {
-	return &management.AccessRequest{
+	ri := &management.AccessRequest{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{
 				ID: id,
@@ -30,6 +30,8 @@ func createAccessRequest(id, name, appName, instanceID, instanceName string) *ma
 			ApiServiceInstance: instanceName,
 		},
 	}
+	ri.CreateHashes()
+	return ri
 }
 
 // add access request
