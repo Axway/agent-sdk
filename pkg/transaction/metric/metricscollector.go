@@ -147,8 +147,9 @@ func GetMetricCollector() Collector {
 
 	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
-		agent.GetCustomUnitHandler().HandleMetricReporting(globalMetricCollector)
-
+		if agent.GetCustomUnitHandler() != nil {
+			agent.GetCustomUnitHandler().HandleMetricReporting(globalMetricCollector)
+		}
 	}
 	return globalMetricCollector
 }
