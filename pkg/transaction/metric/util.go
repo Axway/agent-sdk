@@ -4,32 +4,67 @@ import (
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
 
 func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
+	if in == nil {
+		return nil
+	}
+
 	out := &centralMetric{
 		EventID: in.EventID,
 		Observation: &models.ObservationDetails{
 			Start: in.Observation.Start,
 		},
+		Reporter: &Reporter{
+			AgentVersion:     cmd.BuildVersion,
+			AgentType:        cmd.BuildAgentName,
+			AgentSDKVersion:  cmd.SDKBuildVersion,
+			AgentName:        agent.GetCentralConfig().GetAgentName(),
+			ObservationDelta: in.Observation.End - in.Observation.Start,
+		},
 	}
 
 	if in.Unit == nil {
+		status := in.Status
+		if status == "" {
+			status = getStatusFromCodeString(in.StatusCode).String()
+		}
 		// transaction units
 		out.Units = &Units{
 			Transactions: &Transactions{
 				UnitCount: UnitCount{
 					Count: in.Count,
 				},
-				Status: in.Status,
+				Status: status,
+				Response: &ResponseMetrics{
+					Max: in.Response.Max,
+					Min: in.Response.Min,
+					Avg: in.Response.Avg,
+				},
 			},
+		}
+		if in.Quota.ID != unknown && in.Quota.ID != "" {
+			out.Units.Transactions.Quota = &models.ResourceReference{
+				ID: in.Quota.ID,
+			}
 		}
 	} else {
 		// custom units
-		out.Units.CustomUnits[in.Unit.Name] = &UnitCount{
-			Count: in.Count,
+		out.Units = &Units{
+			CustomUnits: map[string]*UnitCount{
+				in.Unit.Name: {
+					Count: in.Count,
+				},
+			},
+		}
+		if in.Quota.ID != unknown && in.Quota.ID != "" {
+			out.Units.CustomUnits[in.Unit.Name].Quota = &models.ResourceReference{
+				ID: in.Quota.ID,
+			}
 		}
 	}
 
@@ -79,12 +114,6 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	if in.ProductPlan.ID != unknown && in.ProductPlan.ID != "" {
 		out.ProductPlan = &models.ResourceReference{
 			ID: in.ProductPlan.ID,
-		}
-	}
-
-	if in.Quota.ID != unknown && in.Quota.ID != "" {
-		out.Units.Transactions.Quota = &models.ResourceReference{
-			ID: in.Quota.ID,
 		}
 	}
 
