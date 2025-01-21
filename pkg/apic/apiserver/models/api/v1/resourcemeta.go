@@ -365,10 +365,12 @@ func (rm *ResourceMeta) PrepareHashesForSending() {
 		return
 	}
 
+	delete(rm.SubResources, definitions.XSubResourceHashes)
 	rm.CreateHashes()
 	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
 		rm.SubResources[definitions.XAgentDetails] = make(map[string]interface{})
 	}
+
 	rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes] = rm.SubResourceHashes
 }
 
@@ -384,6 +386,10 @@ func (rm *ResourceMeta) CreateHashes() {
 		}
 		rm.SubResourceHashes[subName] = float64(hash)
 	}
+}
+
+func (rm *ResourceMeta) ClearAgentDetailsHashes() {
+	delete(rm.SubResources, definitions.XSubResourceHashes)
 }
 
 func (rm *ResourceMeta) ClearHashes() {

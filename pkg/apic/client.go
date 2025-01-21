@@ -641,7 +641,7 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 		if existingHash, ok := rm.GetSubResourceHash(subName); ok {
 			hash, err := util.ComputeHash(sub)
 			if err == nil && float64(hash) == existingHash {
-				c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Debug("hash found, skipping createSubResource")
+				c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Trace("hash found, skipping createSubResource")
 				continue
 			}
 		}
@@ -674,6 +674,7 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 			}
 			bytesMutex.Unlock()
 		}(subName)
+		c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Trace("executed subResource update")
 	}
 	wg.Wait()
 

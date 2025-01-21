@@ -96,6 +96,7 @@ func (res *AccessRequestDefinition) AsInstance() (*apiv1.ResourceInstance, error
 		return nil, err
 	}
 
+	instance.SubResourceHashes = res.SubResourceHashes
 	return &instance, nil
 }
 
@@ -114,6 +115,10 @@ func (res *AccessRequestDefinition) FromInstance(ri *apiv1.ResourceInstance) err
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+	if err != nil {
+		return err
+	}
+	res.SubResourceHashes = ri.SubResourceHashes
 	return err
 }
 
