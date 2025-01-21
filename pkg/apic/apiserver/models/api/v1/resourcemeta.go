@@ -388,16 +388,15 @@ func (rm *ResourceMeta) CreateHashes() {
 	}
 }
 
-func (rm *ResourceMeta) ClearAgentDetailsHashes() {
-	delete(rm.SubResources, definitions.XSubResourceHashes)
-}
-
 func (rm *ResourceMeta) ClearHashes() {
 	if rm == nil {
 		return
 	}
 
 	rm.SubResourceHashes = map[string]interface{}{}
+	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+		return
+	}
 	delete(rm.SubResources[definitions.XAgentDetails].(map[string]interface{}), definitions.XSubResourceHashes)
 
 	// if agent-details are empty(because there was only x-subresource-hashes inside x-agent-details) we remove them.
