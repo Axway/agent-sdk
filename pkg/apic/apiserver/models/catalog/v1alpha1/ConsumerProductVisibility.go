@@ -93,7 +93,7 @@ func (res *ConsumerProductVisibility) AsInstance() (*apiv1.ResourceInstance, err
 	if err != nil {
 		return nil, err
 	}
-
+	instance.SubResourceHashes = res.SubResourceHashes
 	return &instance, nil
 }
 
@@ -112,6 +112,10 @@ func (res *ConsumerProductVisibility) FromInstance(ri *apiv1.ResourceInstance) e
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+	if err != nil {
+		return err
+	}
+	res.SubResourceHashes = ri.SubResourceHashes
 	return err
 }
 

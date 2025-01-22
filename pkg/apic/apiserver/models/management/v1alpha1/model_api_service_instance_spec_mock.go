@@ -14,4 +14,7 @@ type ApiServiceInstanceSpecMock struct {
 	// Assigned to the mock server's URL base path. Must be unique for the organization.
 	Name              string                                      `json:"name"`
 	UseLatestRevision ApiServiceInstanceSpecMockUseLatestRevision `json:"useLatestRevision,omitempty"`
+	// Optional property used to require authorization with mock-server.
+	// GENERATE: The following code has been modified after code generation
+	Auth interface{} `json:"auth,omitempty"`
 }
