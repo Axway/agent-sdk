@@ -19,5 +19,6 @@ type QuotaSpec struct {
 	Pricing interface{} `json:"pricing"`
 	// The resources that the access is being granted to.
 	// GENERATE: The following code has been modified after code generation
-	Resources []interface{} `json:"resources"`
+	Resources []interface{}  `json:"resources"`
+	Usage     QuotaSpecUsage `json:"usage,omitempty"`
 }

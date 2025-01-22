@@ -365,10 +365,12 @@ func (rm *ResourceMeta) PrepareHashesForSending() {
 		return
 	}
 
+	delete(rm.SubResources, definitions.XSubResourceHashes)
 	rm.CreateHashes()
 	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
 		rm.SubResources[definitions.XAgentDetails] = make(map[string]interface{})
 	}
+
 	rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes] = rm.SubResourceHashes
 }
 
@@ -392,6 +394,9 @@ func (rm *ResourceMeta) ClearHashes() {
 	}
 
 	rm.SubResourceHashes = map[string]interface{}{}
+	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+		return
+	}
 	delete(rm.SubResources[definitions.XAgentDetails].(map[string]interface{}), definitions.XSubResourceHashes)
 
 	// if agent-details are empty(because there was only x-subresource-hashes inside x-agent-details) we remove them.

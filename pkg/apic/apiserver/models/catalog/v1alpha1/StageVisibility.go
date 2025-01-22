@@ -93,7 +93,7 @@ func (res *StageVisibility) AsInstance() (*apiv1.ResourceInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	instance.SubResourceHashes = res.SubResourceHashes
 	return &instance, nil
 }
 
@@ -112,6 +112,10 @@ func (res *StageVisibility) FromInstance(ri *apiv1.ResourceInstance) error {
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+	if err != nil {
+		return err
+	}
+	res.SubResourceHashes = ri.SubResourceHashes
 	return err
 }
 

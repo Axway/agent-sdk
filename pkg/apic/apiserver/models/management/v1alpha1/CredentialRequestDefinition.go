@@ -97,7 +97,7 @@ func (res *CredentialRequestDefinition) AsInstance() (*apiv1.ResourceInstance, e
 	if err != nil {
 		return nil, err
 	}
-
+	instance.SubResourceHashes = res.SubResourceHashes
 	return &instance, nil
 }
 
@@ -116,6 +116,10 @@ func (res *CredentialRequestDefinition) FromInstance(ri *apiv1.ResourceInstance)
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+	if err != nil {
+		return err
+	}
+	res.SubResourceHashes = ri.SubResourceHashes
 	return err
 }
 

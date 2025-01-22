@@ -56,6 +56,7 @@ type Set struct {
 	SubscriptionJobCatalogV1alpha1                *catalog_v1alpha1.UnscopedSubscriptionJobClient
 	SubscriptionInvoiceCatalogV1alpha1            *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
 	DocumentResourceCatalogV1alpha1               *catalog_v1alpha1.DocumentResourceClient
+	DocumentTemplateCatalogV1alpha1               *catalog_v1alpha1.DocumentTemplateClient
 	MarketplaceCatalogV1alpha1                    *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1               *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1              *catalog_v1alpha1.UnscopedProductVisibilityClient
@@ -89,6 +90,7 @@ type Set struct {
 	AccessControlListCatalogV1alpha1              *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                             *catalog_v1.CategoryClient
 	DocumentResourceCatalogV1                     *catalog_v1.DocumentResourceClient
+	DocumentTemplateCatalogV1                     *catalog_v1.DocumentTemplateClient
 	MarketplaceCatalogV1                          *catalog_v1.MarketplaceClient
 	CategoryVisibilityCatalogV1                   *catalog_v1.UnscopedCategoryVisibilityClient
 	PublishedDocumentResourceCatalogV1            *catalog_v1.UnscopedPublishedDocumentResourceClient
@@ -275,6 +277,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentResource: %s", err))
 	}
+	s.DocumentTemplateCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentTemplateClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentTemplate: %s", err))
+	}
 	s.MarketplaceCatalogV1alpha1, err = catalog_v1alpha1.NewMarketplaceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.Marketplace: %s", err))
@@ -406,6 +412,10 @@ func New(b cAPIV1.Base) *Set {
 	s.DocumentResourceCatalogV1, err = catalog_v1.NewDocumentResourceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentResource: %s", err))
+	}
+	s.DocumentTemplateCatalogV1, err = catalog_v1.NewDocumentTemplateClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentTemplate: %s", err))
 	}
 	s.MarketplaceCatalogV1, err = catalog_v1.NewMarketplaceClient(b)
 	if err != nil {

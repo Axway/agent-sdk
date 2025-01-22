@@ -87,7 +87,7 @@ func (res *SubscriptionRequestDefinition) AsInstance() (*apiv1.ResourceInstance,
 	if err != nil {
 		return nil, err
 	}
-
+	instance.SubResourceHashes = res.SubResourceHashes
 	return &instance, nil
 }
 
@@ -106,6 +106,10 @@ func (res *SubscriptionRequestDefinition) FromInstance(ri *apiv1.ResourceInstanc
 		}
 	}
 	err = json.Unmarshal(rawResource, res)
+	if err != nil {
+		return err
+	}
+	res.SubResourceHashes = ri.SubResourceHashes
 	return err
 }
 
