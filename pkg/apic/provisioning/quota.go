@@ -29,11 +29,17 @@ const (
 	Monthly
 	// Annually -
 	Annually
+	// Hourly -
+	Hourly
+	// Minute -
+	Minute
 )
 
 // String returns the string value of the State
 func (q QuotaInterval) String() string {
 	return map[QuotaInterval]string{
+		Minute:   "minute",
+		Hourly:   "hourly",
 		Daily:    "daily",
 		Weekly:   "weekly",
 		Monthly:  "monthly",
@@ -44,6 +50,8 @@ func (q QuotaInterval) String() string {
 // quotaIntervalFromString returns the quota limit represented by the string sent in
 func quotaIntervalFromString(limit string) QuotaInterval {
 	if q, ok := map[string]QuotaInterval{
+		"minute":   Minute,
+		"hourly":   Hourly,
 		"daily":    Daily,
 		"weekly":   Weekly,
 		"monthly":  Monthly,

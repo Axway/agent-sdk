@@ -29,7 +29,18 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 			intervalString: "weekly",
 			interval:       Weekly,
 			limit:          100,
-			wantNil:        false,
+		},
+		{
+			name:           "good hourly quota",
+			intervalString: "hourly",
+			interval:       Hourly,
+			limit:          10,
+		},
+		{
+			name:           "good every minute quota",
+			intervalString: "minute",
+			interval:       Minute,
+			limit:          1,
 		},
 	}
 	for _, tt := range tests {
@@ -48,6 +59,7 @@ func TestNewQuotaFromAccessRequest(t *testing.T) {
 				return
 			}
 
+			assert.NotNil(t, quota)
 			assert.Equal(t, quota.GetIntervalString(), tt.intervalString)
 			assert.Equal(t, quota.GetInterval(), tt.interval)
 			assert.Equal(t, quota.GetLimit(), int64(tt.limit))
