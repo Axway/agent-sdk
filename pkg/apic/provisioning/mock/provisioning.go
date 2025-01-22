@@ -39,6 +39,7 @@ type MockCredentialRequest struct {
 	AppDetails    map[string]string
 	AppName       string
 	Name          string
+	Days          int
 	CredDefName   string
 	Details       map[string]string
 	CredData      map[string]interface{}
@@ -79,6 +80,10 @@ func (m MockCredentialRequest) GetCredentialData() map[string]interface{} {
 
 func (m MockCredentialRequest) GetCredentialAction() provisioning.CredentialAction {
 	return m.Action
+}
+
+func (m MockCredentialRequest) GetCredentialExpirationDays() int {
+	return m.Days
 }
 
 func (m MockCredentialRequest) GetCredentialSchema() map[string]interface{} {
