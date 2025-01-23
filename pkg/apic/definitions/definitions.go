@@ -22,6 +22,7 @@ type PlatformTeam struct {
 }
 
 // Constants for attributes
+// TODO - epic branch creation to add WSO2 definitions
 const (
 	XAgentDetails                    = "x-agent-details"
 	XSubResourceHashes               = "x-subresource-hashes"
