@@ -139,7 +139,7 @@ func (e *eventReport) SetPrivateData(privateData interface{}) EventReportBuilder
 
 func (e *eventReport) SetSkipSampleHandling() EventReportBuilder {
 	e.skipSampling = true
-	return e
+	return e.SetForceSample()
 }
 
 func (e *eventReport) SetForceSample() EventReportBuilder {
