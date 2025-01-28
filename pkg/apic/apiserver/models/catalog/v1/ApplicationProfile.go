@@ -44,10 +44,10 @@ func init() {
 // ApplicationProfile Resource
 type ApplicationProfile struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner `json:"owner"`
-	References interface{}  `json:"references"`
-	Spec       interface{}  `json:"spec"`
-	// Status     interface{}  `json:"status"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApplicationProfileReferences `json:"references"`
+	Spec       ApplicationProfileSpec       `json:"spec"`
+	// Status     ApplicationProfileStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 

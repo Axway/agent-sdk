@@ -43,9 +43,9 @@ func init() {
 // ApplicationProfileDefinition Resource
 type ApplicationProfileDefinition struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner `json:"owner"`
-	References interface{}  `json:"references"`
-	Spec       interface{}  `json:"spec"`
+	Owner      *apiv1.Owner                           `json:"owner"`
+	References ApplicationProfileDefinitionReferences `json:"references"`
+	Spec       ApplicationProfileDefinitionSpec       `json:"spec"`
 }
 
 // NewApplicationProfileDefinition creates an empty *ApplicationProfileDefinition
