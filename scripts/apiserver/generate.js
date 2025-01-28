@@ -19,6 +19,7 @@ const https = require("https");
 const http = require("http");
 const fs = require("fs");
 const { exit } = require("process");
+const { version } = require("os");
 
 const outDir = process.env.OUTDIR;
 const clientsPath = outDir + "/clients/";
@@ -88,8 +89,13 @@ const writeSubResources = (subResources) => {
 	for (let groupKey in subResources) {
 		const groupObj = subResources[groupKey];
 		for (let versionKey in groupObj) {
+			if (groupKey === "catalog" && versionKey === "v1alpha1") {
+				// skipping this because a circular reference exists
+				continue
+			}
 			// stringify the group and version data, update all references to drop group and version within path
 			const data = JSON.stringify(groupObj[versionKey]).replaceAll(`components/schemas/${groupKey}.${versionKey}.`, `components/schemas/`);
+			// fs.writeFileSync(`${groupKey}.${versionKey}.json`, data);
 			const res = execSync(
 				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
 			);
