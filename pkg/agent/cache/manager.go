@@ -69,6 +69,13 @@ type Manager interface {
 	GetAccessControlList() *v1.ResourceInstance
 	DeleteAccessControlList() error
 
+	// ApplicationProfileDefinition cache related methods
+	AddApplicationProfileDefinition(resource *v1.ResourceInstance)
+	GetApplicationProfileDefinitionKeys() []string
+	GetApplicationProfileDefinitionByName(name string) (*v1.ResourceInstance, error)
+	GetApplicationProfileDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteApplicationProfileDefinition(id string) error
+
 	// AccessRequestDefinition cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
 	GetAccessRequestDefinitionKeys() []string

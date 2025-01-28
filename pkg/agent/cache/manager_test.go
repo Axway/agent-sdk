@@ -273,6 +273,35 @@ func createRequestDefinition(name, id string) *v1.ResourceInstance {
 	ri.CreateHashes()
 	return ri
 }
+func TestApplicationProfileDefinitionCache(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	assert.NotNil(t, m)
+
+	ard1 := createRequestDefinition("name1", "id1")
+	ard2 := createRequestDefinition("name2", "id2")
+
+	m.AddApplicationProfileDefinition(ard1)
+	m.AddApplicationProfileDefinition(ard2)
+
+	cachedAPD, err := m.GetApplicationProfileDefinitionByName("name1")
+	assert.Nil(t, err)
+	assert.Equal(t, ard1, cachedAPD)
+
+	cachedAPD, err = m.GetApplicationProfileDefinitionByID("id1")
+	assert.Nil(t, err)
+	assert.Equal(t, ard1, cachedAPD)
+
+	err = m.DeleteApplicationProfileDefinition("id1")
+	assert.Nil(t, err)
+
+	cachedAPD, err = m.GetApplicationProfileDefinitionByName("name1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedAPD)
+
+	cachedAPD, err = m.GetApplicationProfileDefinitionByID("id1")
+	assert.NotNil(t, err)
+	assert.Nil(t, cachedAPD)
+}
 
 func TestAccessRequestDefinitionCache(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
