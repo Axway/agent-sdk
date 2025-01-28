@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	AccessRequestDefinitionResourceName            = "accessrequestdefinitions"
-	AccessRequestDefinitionWebhooksSubResourceName = "webhooks"
+	AccessRequestDefinitionResourceName                      = "accessrequestdefinitions"
+	AccessRequestDefinitionApplicationprofileSubResourceName = "applicationprofile"
+	AccessRequestDefinitionWebhooksSubResourceName           = "webhooks"
 )
 
 func AccessRequestDefinitionGVK() apiv1.GroupVersionKind {
@@ -43,9 +44,10 @@ func init() {
 // AccessRequestDefinition Resource
 type AccessRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner    *apiv1.Owner                `json:"owner"`
-	Spec     AccessRequestDefinitionSpec `json:"spec"`
-	Webhooks interface{}                 `json:"webhooks"`
+	Applicationprofile AccessRequestDefinitionApplicationprofile `json:"applicationprofile"`
+	Owner              *apiv1.Owner                              `json:"owner"`
+	Spec               AccessRequestDefinitionSpec               `json:"spec"`
+	Webhooks           interface{}                               `json:"webhooks"`
 }
 
 // NewAccessRequestDefinition creates an empty *AccessRequestDefinition
@@ -134,6 +136,7 @@ func (res *AccessRequestDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["applicationprofile"] = res.Applicationprofile
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["webhooks"] = res.Webhooks
@@ -164,6 +167,20 @@ func (res *AccessRequestDefinition) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Applicationprofile
+	if v, ok := aux.SubResources["applicationprofile"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "applicationprofile")
+		err = json.Unmarshal(sr, &res.Applicationprofile)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Webhooks
