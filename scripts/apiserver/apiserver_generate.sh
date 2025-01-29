@@ -14,8 +14,7 @@ cd ${cwd}
 if [ -z "${PROTOCOL}" ]; then export PROTOCOL=https; fi
 if [ -z "${HOST}" ]; then export HOST=apicentral.axway.com; fi
 if [ -z "${PORT}" ]; then export PORT=443; fi
-if [ -z "${DEBUG}" ]; then export DEBUG=0; elif [ "${DEBUG}" == "true" ]; then export DEBUG=1;  fi
-
+if [ -z "${DEBUG}" ]; then export DEBUG="false"; fi
 
 # set the environment vars
 export GO_POST_PROCESS_FILE="`command -v gofmt` -w"

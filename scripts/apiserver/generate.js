@@ -27,11 +27,13 @@ const modelsPath = outDir + "/models/";
 const resourcesTmplPath = "resources.tmpl";
 const clientsTmplPath = "clients.tmpl";
 
-var isDebug = 0;
+var isDebug = false;
+
+function parseBool(val) { return val === true || val === "true" }
 
 const fetch = () => {
 	const [, , protocol, host, port, debug] = process.argv;
-	isDebug = debug
+	isDebug = parseBool(debug);
 	if (!protocol || !host || !port) {
 		throw new Error(
 			"Protocol, host, and port are required. Ex: node generate.js https apicentral.axway.com 443",
@@ -72,7 +74,7 @@ fetch()
 		}
 		const [subResources, mainResources] = createMainAndSubResources(resources);
 		
-		if ( isDebug === 1) {
+		if (isDebug) {
 			fs.writeFileSync(outDir + '/sub-resources.json', JSON.stringify(subResources));
 			fs.writeFileSync(outDir + '/main-resources.json', JSON.stringify(mainResources));
 		}
@@ -101,16 +103,17 @@ const writeSubResources = (subResources) => {
 
 			console.log(`generating from ${fn}`);
 			try {
-				if (isDebug === 1) {
+				if (isDebug) {
 					const res1 = execSync(`openapi-generator-cli validate -i ${fn}`);
 					console.log(res1.toString());
 				}
 				const res = execSync(`openapi-generator-cli generate -g go -i ${fn} --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models`);
 
-				if (isDebug === 1) {
+				if (isDebug) {
 					console.log(res.toString());
+				} else {
+					fs.unlinkSync(fn)
 				}
-				fs.unlinkSync(fn)
 			} catch (error) {
 				console.error(error.message)
 				throw error
