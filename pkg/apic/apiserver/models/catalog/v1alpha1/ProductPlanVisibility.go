@@ -42,8 +42,8 @@ func init() {
 // ProductPlanVisibility Resource
 type ProductPlanVisibility struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner `json:"owner"`
-	Spec  interface{}  `json:"spec"`
+	Owner *apiv1.Owner              `json:"owner"`
+	Spec  ProductPlanVisibilitySpec `json:"spec"`
 }
 
 // NewProductPlanVisibility creates an empty *ProductPlanVisibility

@@ -43,10 +43,10 @@ func init() {
 // ProductPlanJob Resource
 type ProductPlanJob struct {
 	apiv1.ResourceMeta
-	Owner  *apiv1.Owner         `json:"owner"`
-	Spec   ProductPlanJobSpec   `json:"spec"`
-// 	Status ProductPlanJobStatus `json:"status"`
-Status *apiv1.ResourceStatus `json:"status"`
+	Owner *apiv1.Owner       `json:"owner"`
+	Spec  ProductPlanJobSpec `json:"spec"`
+	// Status ProductPlanJobStatus `json:"status"`
+	Status *apiv1.ResourceStatus `json:"status"`
 }
 
 // NewProductPlanJob creates an empty *ProductPlanJob
@@ -175,9 +175,9 @@ func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-// 		err = json.Unmarshal(sr, &res.Status)
-res.Status = &apiv1.ResourceStatus{}
-err = json.Unmarshal(sr, res.Status)
+		// err = json.Unmarshal(sr, &res.Status)
+		res.Status = &apiv1.ResourceStatus{}
+		err = json.Unmarshal(sr, res.Status)
 		if err != nil {
 			return err
 		}

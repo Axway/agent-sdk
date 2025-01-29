@@ -46,12 +46,12 @@ func init() {
 // AssetRequestDefinition Resource
 type AssetRequestDefinition struct {
 	apiv1.ResourceMeta
-	Applicationprofile ApplicationProfile                  `json:"applicationprofile"`
-	Authorization      AssetRequestDefinitionAuthorization `json:"authorization"`
-	Owner              *apiv1.Owner                        `json:"owner"`
-	References         interface{}                         `json:"references"`
-	Spec               AssetRequestDefinitionSpec          `json:"spec"`
-	Webhooks           interface{}                         `json:"webhooks"`
+	Applicationprofile AssetRequestDefinitionApplicationprofile `json:"applicationprofile"`
+	Authorization      AssetRequestDefinitionAuthorization      `json:"authorization"`
+	Owner              *apiv1.Owner                             `json:"owner"`
+	References         interface{}                              `json:"references"`
+	Spec               AssetRequestDefinitionSpec               `json:"spec"`
+	Webhooks           interface{}                              `json:"webhooks"`
 }
 
 // NewAssetRequestDefinition creates an empty *AssetRequestDefinition

@@ -14,12 +14,14 @@ cd ${cwd}
 if [ -z "${PROTOCOL}" ]; then export PROTOCOL=https; fi
 if [ -z "${HOST}" ]; then export HOST=apicentral.axway.com; fi
 if [ -z "${PORT}" ]; then export PORT=443; fi
+if [ -z "${DEBUG}" ]; then export DEBUG=0; elif [ "${DEBUG}" == "true" ]; then export DEBUG=1;  fi
+
 
 # set the environment vars
 export GO_POST_PROCESS_FILE="`command -v gofmt` -w"
 export GO111MODULE=on
 
-if node ./generate.js ${PROTOCOL} ${HOST} ${PORT}; then
+if node ./generate.js ${PROTOCOL} ${HOST} ${PORT} ${DEBUG}; then
   # update all go imports
   goimports -w=true ${OUTDIR}
 
