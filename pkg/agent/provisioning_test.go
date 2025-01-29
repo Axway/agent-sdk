@@ -180,15 +180,15 @@ func TestCleanApplicationProfileDefinition(t *testing.T) {
 		expectErr    bool
 	}{
 		"success removing when app profile does not exist": {
-			name: "app-profile-1",
+			name: "delete-app-profile-1",
 		},
 		"success removing when app profile exists": {
-			name:         "app-profile-2",
+			name:         "delete-app-profile-2",
 			exists:       true,
 			deleteCalled: true,
 		},
 		"expect error when call to remove app profile fails": {
-			name:         "app-profile-2",
+			name:         "delete-app-profile-3",
 			exists:       true,
 			deleteCalled: true,
 			returnErr:    true,
