@@ -546,6 +546,24 @@ func NewApplicationProfileBuilder() provisioning.ApplicationProfileBuilder {
 	return provisioning.NewApplicationProfileBuilder(createOrUpdateApplicationProfileDefinition)
 }
 
+// CleanApplicationProfileDefinition - agent can call this to remove an ApplicationProfileDefinition from API Central when their setting is disabled
+func CleanApplicationProfileDefinition(name string) error {
+	existingRI, _ := agent.cacheManager.GetApplicationProfileDefinitionByName(name)
+	if existingRI == nil {
+		return nil
+	}
+	apd := management.NewApplicationProfileDefinition(name, agent.cfg.GetEnvironmentName())
+	ri, err := apd.AsInstance()
+	if err != nil {
+		return err
+	}
+	err = agent.apicClient.DeleteResourceInstance(ri)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // provisioner
 
 // RegisterProvisioner - allow the agent to register a provisioner

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,6 +95,128 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			}
 			assert.NotNil(t, crd)
 			assert.Nil(t, err)
+		})
+	}
+}
+
+func TestNewApplicationProfileDefinitionBuilder(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer s.Close()
+	cfg := createCentralCfg(s.URL, "test")
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	var sentAPD *v1.ResourceInstance
+	var createOrUpdateCalled bool
+
+	agent.apicClient = &mock.Client{
+		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+			sentAPD, _ = data.AsInstance()
+			createOrUpdateCalled = true
+			return sentAPD, nil
+		},
+	}
+
+	tests := map[string]struct {
+		title  string
+		name   string
+		exists bool
+	}{
+		"success when app profile does not exist": {
+			title: "Test Application Profile 1",
+			name:  "app-profile-1",
+		},
+		"success when app profile exists": {
+			title:  "Test Application Profile 2",
+			name:   "app-profile-2",
+			exists: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			createOrUpdateCalled = false
+			sentAPD = nil
+			if tc.exists {
+				apd := management.NewApplicationProfileDefinition(tc.name, agent.cfg.GetEnvironmentName())
+				ri, _ := apd.AsInstance()
+				agent.cacheManager.AddApplicationProfileDefinition(ri)
+			}
+			apd, err := NewApplicationProfileBuilder().
+				SetName(tc.name).
+				SetTitle(tc.title).
+				Register()
+			assert.NotNil(t, apd)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.name, sentAPD.Name)
+			assert.Equal(t, tc.title, sentAPD.Title)
+			assert.True(t, createOrUpdateCalled)
+		})
+	}
+}
+
+func TestCleanApplicationProfileDefinition(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer s.Close()
+	cfg := createCentralCfg(s.URL, "test")
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	var deleteAPD *v1.ResourceInstance
+	var deleteCalled, returnErr bool
+
+	agent.apicClient = &mock.Client{
+		DeleteResourceInstanceMock: func(data v1.Interface) error {
+			deleteCalled = true
+			if returnErr {
+				return errors.New("error")
+			}
+			deleteAPD, _ = data.AsInstance()
+			return nil
+		},
+	}
+
+	tests := map[string]struct {
+		name         string
+		exists       bool
+		returnErr    bool
+		deleteCalled bool
+		expectErr    bool
+	}{
+		"success removing when app profile does not exist": {
+			name: "app-profile-1",
+		},
+		"success removing when app profile exists": {
+			name:         "app-profile-2",
+			exists:       true,
+			deleteCalled: true,
+		},
+		"expect error when call to remove app profile fails": {
+			name:         "app-profile-2",
+			exists:       true,
+			deleteCalled: true,
+			returnErr:    true,
+			expectErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			returnErr = tc.returnErr
+			deleteCalled = false
+			deleteAPD = nil
+			if tc.exists {
+				apd := management.NewApplicationProfileDefinition(tc.name, agent.cfg.GetEnvironmentName())
+				ri, _ := apd.AsInstance()
+				agent.cacheManager.AddApplicationProfileDefinition(ri)
+			}
+			err := CleanApplicationProfileDefinition(tc.name)
+			if tc.expectErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+			assert.Equal(t, tc.deleteCalled, deleteCalled)
+			if !tc.deleteCalled || tc.expectErr {
+				return
+			}
+			assert.Equal(t, tc.name, deleteAPD.Name)
 		})
 	}
 }
