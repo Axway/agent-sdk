@@ -273,6 +273,7 @@ func createRequestDefinition(name, id string) *v1.ResourceInstance {
 	ri.CreateHashes()
 	return ri
 }
+
 func TestApplicationProfileDefinitionCache(t *testing.T) {
 	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	assert.NotNil(t, m)
