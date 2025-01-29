@@ -244,6 +244,7 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
 		{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.ManagedApplicationProfileGVK().GroupKind, Name: scope, EventTypes: createdOrUpdated},
 		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 	}
 
