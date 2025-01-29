@@ -573,19 +573,20 @@ func RegisterProvisioner(provisioner provisioning.Provisioning) {
 	}
 	agent.provisioner = provisioner
 
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent {
-		agent.proxyResourceHandler.RegisterTargetHandler(
-			"accessrequesthandler",
-			handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
-		)
-		agent.proxyResourceHandler.RegisterTargetHandler(
-			"managedappHandler",
-			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
-		)
-		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
-		agent.proxyResourceHandler.RegisterTargetHandler(
-			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
-		)
+	if agent.cfg.GetAgentType() != config.DiscoveryAgent {
+		return
 	}
+	agent.proxyResourceHandler.RegisterTargetHandler(
+		"accessrequesthandler",
+		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
+	)
+	agent.proxyResourceHandler.RegisterTargetHandler(
+		"managedappHandler",
+		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
+	)
+	registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
+	agent.proxyResourceHandler.RegisterTargetHandler(
+		"credentialHandler",
+		handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
+	)
 }

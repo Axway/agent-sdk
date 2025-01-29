@@ -58,25 +58,6 @@ func TestAgentResourceHandler(t *testing.T) {
 			},
 		},
 		{
-			name:     "should save GovernanceAgent",
-			hasError: false,
-			action:   proto.Event_UPDATED,
-			resource: &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					Name:  "name",
-					Title: "title",
-					Metadata: v1.Metadata{
-						ID: "123",
-					},
-					GroupVersionKind: v1.GroupVersionKind{
-						GroupKind: v1.GroupKind{
-							Kind: governanceAgent,
-						},
-					},
-				},
-			},
-		},
-		{
 			name:     "should ignore processing agent resource",
 			hasError: true,
 			action:   proto.Event_UPDATED,

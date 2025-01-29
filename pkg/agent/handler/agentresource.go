@@ -11,7 +11,6 @@ import (
 const (
 	discoveryAgent    = "DiscoveryAgent"
 	traceabilityAgent = "TraceabilityAgent"
-	governanceAgent   = "GovernanceAgent"
 )
 
 type agentResourceHandler struct {

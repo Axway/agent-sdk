@@ -21,7 +21,6 @@ var agentTemplate string
 var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    "discoveryagents",
 	config.TraceabilityAgent: "traceabilityagents",
-	config.GovernanceAgent:   "governanceagents",
 }
 
 type watchTopicFeatures interface {
@@ -270,27 +269,6 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 		Name:        name,
 		Title:       name,
 		Description: fmt.Sprintf(desc, "traceability", scope),
-		Kinds:       kinds,
-	}
-}
-
-// NewGovernanceAgentWatchTopic creates a WatchTopic template string
-func NewGovernanceAgentWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
-	kinds := []kindValues{
-		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: agentResourceGroupKind, ScopeName: scope, EventTypes: updated},
-		{GroupKind: management.CredentialGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, EventTypes: createdOrUpdated},
-		{GroupKind: management.CredentialRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-		{GroupKind: management.AccessRequestDefinitionGVK().GroupKind, ScopeName: scope, EventTypes: all},
-	}
-
-	return WatchTopicValues{
-		Name:        name,
-		Title:       name,
-		Description: fmt.Sprintf(desc, "governance", scope),
 		Kinds:       kinds,
 	}
 }
