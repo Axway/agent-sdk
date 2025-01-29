@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -224,13 +225,13 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 
 	status := h.prov.AccessRequestDeprovision(req)
 
-	if status.GetStatus() == prov.Success || err != nil {
+	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 		h.cache.DeleteAccessRequest(ri.Metadata.ID)
 	} else {
-		err := fmt.Errorf(status.GetMessage())
+		err := errors.New(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
-		h.onError(ctx, ar, fmt.Errorf(status.GetMessage()))
+		h.onError(ctx, ar, err)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 	}
 }
