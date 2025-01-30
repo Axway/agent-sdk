@@ -610,7 +610,17 @@ func (p *properties) ObjectSlicePropertyValue(name string) []map[string]interfac
 	if !strings.HasSuffix(name, "_") {
 		name += "_"
 	}
-	return p.envIntfArrayPropValues[name]
+	values := p.envIntfArrayPropValues[name]
+	for idxValues, mapValues := range values {
+		for name, valueIface := range mapValues {
+			val, ok := valueIface.(string)
+			if !ok {
+				continue
+			}
+			values[idxValues][name] = p.resolveSecretReference(name, val)
+		}
+	}
+	return values
 }
 
 func (p *properties) readEnv() {
