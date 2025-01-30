@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -118,7 +118,7 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *management.Man
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
 	} else {
-		err := fmt.Errorf(status.GetMessage())
+		err := errors.New(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
 		h.onError(app, err)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
@@ -172,7 +172,7 @@ func (a provManagedApp) GetConsumerOrgID() string {
 	return a.consumerOrgID
 }
 
-func getTeamName(cache agentcache.Manager, owner *apiv1.Owner) string {
+func getTeamName(cache getTeamByID, owner *apiv1.Owner) string {
 	teamName := ""
 	if owner != nil && owner.ID != "" {
 		team := cache.GetTeamByID(owner.ID)

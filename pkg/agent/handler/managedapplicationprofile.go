@@ -2,9 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
-	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -16,15 +17,28 @@ const (
 	mapFinalizer = "agent.managedapplicationprofile.provisioned"
 )
 
+type getTeamByID interface {
+	GetTeamByID(id string) *defs.PlatformTeam
+}
+
+type getManagedAppByName interface {
+	GetManagedApplicationByName(name string) *v1.ResourceInstance
+}
+
+type managedApplicationProfileCache interface {
+	getTeamByID
+	getManagedAppByName
+}
+
 type managedApplicationProfile struct {
 	marketplaceHandler
 	prov   prov.ApplicationProfileProvisioner
-	cache  agentcache.Manager
+	cache  managedApplicationProfileCache
 	client client
 }
 
 // NewManagedApplicationProfileHandler creates a Handler for Credentials
-func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner, cache agentcache.Manager, client client) Handler {
+func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner, cache managedApplicationProfileCache, client client) Handler {
 	return &managedApplicationProfile{
 		prov:   prov,
 		cache:  cache,
@@ -64,7 +78,15 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 
 func (h *managedApplicationProfile) onPending(ctx context.Context, profile *management.ManagedApplicationProfile) error {
 	log := getLoggerFromContext(ctx)
-	app, err := h.getManagedApp(ctx, profile)
+
+	defer func() {
+		statusErr := h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
+		if statusErr != nil {
+			log.WithError(statusErr).Error("error creating status subresources")
+		}
+	}()
+
+	app, err := getManagedApp(h.cache, profile.Spec.ManagedApplication)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
 		h.onError(ctx, profile, err)
@@ -72,12 +94,13 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 	}
 
 	pma := provManagedAppProfile{
-		attributes:     profile.Spec.Data,
-		managedAppName: app.Name,
-		teamName:       getTeamName(h.cache, app.Owner),
-		data:           util.GetAgentDetails(app),
-		consumerOrgID:  getConsumerOrgID(app),
-		id:             app.Metadata.ID,
+		attributes:        profile.Spec.Data,
+		profileDefinition: profile.Spec.ApplicationProfileDefinition,
+		managedAppName:    app.Name,
+		teamName:          getTeamName(h.cache, app.Owner),
+		data:              util.GetAgentDetails(app),
+		consumerOrgID:     getConsumerOrgID(app),
+		id:                app.Metadata.ID,
 	}
 
 	status := h.prov.ApplicationProfileRequestProvision(pma)
@@ -103,25 +126,7 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 		log.WithError(err).Error("error creating subresources")
 	}
 
-	statusErr := h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
-	if statusErr != nil {
-		log.WithError(statusErr).Error("error creating status subresources")
-		return statusErr
-	}
-
 	return err
-}
-
-func (h *managedApplicationProfile) getManagedApp(_ context.Context, profile *management.ManagedApplicationProfile) (*management.ManagedApplication, error) {
-	app := management.NewManagedApplication(profile.Spec.ManagedApplication, profile.Metadata.Scope.Name)
-	ri, err := h.client.GetResource(app.GetSelfLink())
-	if err != nil {
-		return nil, err
-	}
-
-	app = &management.ManagedApplication{}
-	err = app.FromInstance(ri)
-	return app, err
 }
 
 // onError updates the managed app with an error status
@@ -135,12 +140,13 @@ func (h *managedApplicationProfile) onError(_ context.Context, profile *manageme
 }
 
 type provManagedAppProfile struct {
-	managedAppName string
-	teamName       string
-	consumerOrgID  string
-	id             string
-	attributes     map[string]interface{}
-	data           map[string]interface{}
+	managedAppName    string
+	profileDefinition string
+	teamName          string
+	consumerOrgID     string
+	id                string
+	attributes        map[string]interface{}
+	data              map[string]interface{}
 }
 
 // GetApplicationDetailsValue returns a value found on the managed application
@@ -162,6 +168,11 @@ func (a provManagedAppProfile) GetManagedApplicationName() string {
 	return a.managedAppName
 }
 
+// GetApplicationProfileName returns the name of the application profile definition
+func (a provManagedAppProfile) GetApplicationProfileDefinitionName() string {
+	return a.profileDefinition
+}
+
 // GetTeamName gets the owning team name for the managed application
 func (a provManagedAppProfile) GetTeamName() string {
 	return a.teamName
@@ -175,4 +186,14 @@ func (a provManagedAppProfile) GetConsumerOrgID() string {
 // GetTeamName gets the owning team name for the managed application
 func (a provManagedAppProfile) GetID() string {
 	return a.id
+}
+
+func getManagedApp(cache getManagedAppByName, name string) (*management.ManagedApplication, error) {
+	ri := cache.GetManagedApplicationByName(name)
+	if ri == nil {
+		return nil, fmt.Errorf("could not retrieved managed application")
+	}
+	app := &management.ManagedApplication{}
+	err := app.FromInstance(ri)
+	return app, err
 }
