@@ -576,6 +576,16 @@ func registerApplicationProvisioner(provisioner interface{}) {
 	}
 }
 
+// application profile provisioner
+func registerApplicationProfileProvisioner(provisioner interface{}) {
+	if appProfileProv, ok := provisioner.(provisioning.ApplicationProfileProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"managedApplicationProfileHandler",
+			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient),
+		)
+	}
+}
+
 // access provisioner
 func registerAccessProvisioner(provisioner interface{}) {
 	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
@@ -609,5 +619,6 @@ func RegisterProvisioner(provisioner interface{}) {
 	// call to register all provisioners, they will register if the interface is implemented
 	registerAccessProvisioner(provisioner)
 	registerApplicationProvisioner(provisioner)
+	registerApplicationProfileProvisioner(provisioner)
 	registerCredentialProvisioner(provisioner)
 }

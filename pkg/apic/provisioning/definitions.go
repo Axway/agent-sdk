@@ -135,6 +135,10 @@ type ApplicationProvisioner interface {
 	ApplicationRequestProvision(ApplicationRequest) RequestStatus
 }
 
+type ApplicationProfileProvisioner interface {
+	ApplicationProfileRequestProvision(ApplicationProfileRequest) RequestStatus
+}
+
 type AccessProvisioner interface {
 	AccessRequestDeprovision(AccessRequest) RequestStatus
 	AccessRequestProvision(AccessRequest) (RequestStatus, AccessData)
