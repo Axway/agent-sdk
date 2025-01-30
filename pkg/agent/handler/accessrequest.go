@@ -20,17 +20,13 @@ const (
 	arFinalizer = "agent.accessrequest.provisioned"
 )
 
-type arProvisioner interface {
-	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
-	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
-}
 type customUnitHandler interface {
 	HandleQuotaEnforcement(*management.AccessRequest, *management.ManagedApplication) error
 }
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov              arProvisioner
+	prov              prov.AccessProvisioner
 	cache             agentcache.Manager
 	client            client
 	encryptSchema     encryptSchemaFunc
@@ -38,7 +34,7 @@ type accessRequestHandler struct {
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
+func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
 	return &accessRequestHandler{
 		prov:              prov,
 		cache:             cache,

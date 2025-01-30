@@ -74,7 +74,6 @@ type agentData struct {
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
 
-	provisioner          provisioning.Provisioning
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 

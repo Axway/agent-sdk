@@ -564,29 +564,50 @@ func CleanApplicationProfileDefinition(name string) error {
 	return nil
 }
 
-// provisioner
+// provisioner registration
+
+// application provisioner
+func registerApplicationProvisioner(provisioner interface{}) {
+	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"managedappHandler",
+			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient),
+		)
+	}
+}
+
+// access provisioner
+func registerAccessProvisioner(provisioner interface{}) {
+	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"accessrequestHandler",
+			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
+		)
+	}
+}
+
+// access provisioner
+func registerCredentialProvisioner(provisioner interface{}) {
+	if credProv, ok := provisioner.(provisioning.CredentialProvisioner); ok {
+		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"credentialHandler",
+			handler.NewCredentialHandler(credProv, agent.apicClient, registry),
+		)
+	}
+}
 
 // RegisterProvisioner - allow the agent to register a provisioner
-func RegisterProvisioner(provisioner provisioning.Provisioning) {
+func RegisterProvisioner(provisioner interface{}) {
 	if agent.agentFeaturesCfg == nil {
 		return
 	}
-	agent.provisioner = provisioner
 
 	if agent.cfg.GetAgentType() != config.DiscoveryAgent {
 		return
 	}
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"accessrequesthandler",
-		handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
-	)
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"managedappHandler",
-		handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
-	)
-	registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
-	agent.proxyResourceHandler.RegisterTargetHandler(
-		"credentialHandler",
-		handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
-	)
+	// call to register all provisioners, they will register if the interface is implemented
+	registerAccessProvisioner(provisioner)
+	registerApplicationProvisioner(provisioner)
+	registerCredentialProvisioner(provisioner)
 }
