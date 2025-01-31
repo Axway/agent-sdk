@@ -52,6 +52,8 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	var existingRI *v1.ResourceInstance
 
 	switch ri.Kind {
+	case management.ApplicationProfileDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetApplicationProfileDefinitionByName(ri.Name)
 	case management.AccessRequestDefinitionGVK().Kind:
 		existingRI, _ = agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
 	case management.CredentialRequestDefinitionGVK().Kind:
@@ -61,6 +63,8 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	// if not existing, go ahead and add the request definition
 	if existingRI == nil {
 		switch ri.Kind {
+		case management.ApplicationProfileDefinitionGVK().Kind:
+			agent.cacheManager.AddApplicationProfileDefinition(ri)
 		case management.AccessRequestDefinitionGVK().Kind:
 			agent.cacheManager.AddAccessRequestDefinition(ri)
 		case management.CredentialRequestDefinitionGVK().Kind:
@@ -523,6 +527,41 @@ func NewBasicAuthAccessRequestBuilder() provisioning.AccessRequestBuilder {
 // NewAPIKeyAccessRequestBuilder - called by the agents
 func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
+}
+
+// application profile definitions
+
+// createOrUpdateApplicationProfileDefinition -
+func createOrUpdateApplicationProfileDefinition(data *management.ApplicationProfileDefinition) (*management.ApplicationProfileDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
+	}
+	err = data.FromInstance(ri)
+	return data, err
+}
+
+// NewApplicationProfileBuilder - called by the agents to build and register a new application profile definition
+func NewApplicationProfileBuilder() provisioning.ApplicationProfileBuilder {
+	return provisioning.NewApplicationProfileBuilder(createOrUpdateApplicationProfileDefinition)
+}
+
+// CleanApplicationProfileDefinition - agent can call this to remove an ApplicationProfileDefinition from API Central when their setting is disabled
+func CleanApplicationProfileDefinition(name string) error {
+	existingRI, _ := agent.cacheManager.GetApplicationProfileDefinitionByName(name)
+	if existingRI == nil {
+		return nil
+	}
+	apd := management.NewApplicationProfileDefinition(name, agent.cfg.GetEnvironmentName())
+	ri, err := apd.AsInstance()
+	if err != nil {
+		return err
+	}
+	err = agent.apicClient.DeleteResourceInstance(ri)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // provisioner

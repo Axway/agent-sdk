@@ -13,66 +13,68 @@ import (
 )
 
 var (
-	ProductPlanJobCtx log.ContextField = "productPlanJob"
+	ApplicationProfileCtx log.ContextField = "applicationProfile"
 
-	_ProductPlanJobGVK = apiv1.GroupVersionKind{
+	_ApplicationProfileGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "ProductPlanJob",
+			Kind:  "ApplicationProfile",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	ProductPlanJobScopes = []string{"ProductPlan"}
+	ApplicationProfileScopes = []string{"Application"}
 )
 
 const (
-	ProductPlanJobResourceName          = "productplanjobs"
-	ProductPlanJobStatusSubResourceName = "status"
+	ApplicationProfileResourceName              = "applicationprofiles"
+	ApplicationProfileReferencesSubResourceName = "references"
+	ApplicationProfileStatusSubResourceName     = "status"
 )
 
-func ProductPlanJobGVK() apiv1.GroupVersionKind {
-	return _ProductPlanJobGVK
+func ApplicationProfileGVK() apiv1.GroupVersionKind {
+	return _ApplicationProfileGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ProductPlanJobGVK, ProductPlanJobScopes[0], ProductPlanJobResourceName)
-	log.RegisterContextField(ProductPlanJobCtx)
+	apiv1.RegisterGVK(_ApplicationProfileGVK, ApplicationProfileScopes[0], ApplicationProfileResourceName)
+	log.RegisterContextField(ApplicationProfileCtx)
 }
 
-// ProductPlanJob Resource
-type ProductPlanJob struct {
+// ApplicationProfile Resource
+type ApplicationProfile struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner       `json:"owner"`
-	Spec  ProductPlanJobSpec `json:"spec"`
-	// Status ProductPlanJobStatus `json:"status"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApplicationProfileReferences `json:"references"`
+	Spec       ApplicationProfileSpec       `json:"spec"`
+	// Status     ApplicationProfileStatus     `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
-// NewProductPlanJob creates an empty *ProductPlanJob
-func NewProductPlanJob(name, scopeName string) *ProductPlanJob {
-	return &ProductPlanJob{
+// NewApplicationProfile creates an empty *ApplicationProfile
+func NewApplicationProfile(name, scopeName string) *ApplicationProfile {
+	return &ApplicationProfile{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _ProductPlanJobGVK,
+			GroupVersionKind: _ApplicationProfileGVK,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: ProductPlanJobScopes[0],
+					Kind: ApplicationProfileScopes[0],
 				},
 			},
 		},
 	}
 }
 
-// ProductPlanJobFromInstanceArray converts a []*ResourceInstance to a []*ProductPlanJob
-func ProductPlanJobFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ProductPlanJob, error) {
-	newArray := make([]*ProductPlanJob, 0)
+// ApplicationProfileFromInstanceArray converts a []*ResourceInstance to a []*ApplicationProfile
+func ApplicationProfileFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ApplicationProfile, error) {
+	newArray := make([]*ApplicationProfile, 0)
 	for _, item := range fromArray {
-		res := &ProductPlanJob{}
+		res := &ApplicationProfile{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*ProductPlanJob, 0), err
+			return make([]*ApplicationProfile, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -80,10 +82,10 @@ func ProductPlanJobFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Pr
 	return newArray, nil
 }
 
-// AsInstance converts a ProductPlanJob to a ResourceInstance
-func (res *ProductPlanJob) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a ApplicationProfile to a ResourceInstance
+func (res *ApplicationProfile) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ProductPlanJobGVK()
+	meta.GroupVersionKind = ApplicationProfileGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -100,8 +102,8 @@ func (res *ProductPlanJob) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a ProductPlanJob
-func (res *ProductPlanJob) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a ApplicationProfile
+func (res *ApplicationProfile) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -123,7 +125,7 @@ func (res *ProductPlanJob) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *ProductPlanJob) MarshalJSON() ([]byte, error) {
+func (res *ApplicationProfile) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -136,6 +138,7 @@ func (res *ProductPlanJob) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -143,7 +146,7 @@ func (res *ProductPlanJob) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
+func (res *ApplicationProfile) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -167,6 +170,20 @@ func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource References
+	if v, ok := aux.SubResources["references"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "references")
+		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
 	// marshalling subresource Status
 	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
@@ -187,6 +204,6 @@ func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *ProductPlanJob) PluralName() string {
-	return ProductPlanJobResourceName
+func (res *ApplicationProfile) PluralName() string {
+	return ApplicationProfileResourceName
 }
