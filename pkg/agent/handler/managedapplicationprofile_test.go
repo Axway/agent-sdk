@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -19,14 +18,14 @@ import (
 
 type mockCache struct {
 	team   *defs.PlatformTeam
-	manApp *v1.ResourceInstance
+	manApp *apiv1.ResourceInstance
 }
 
 func (m mockCache) GetTeamByID(id string) *defs.PlatformTeam {
 	return m.team
 }
 
-func (m mockCache) GetManagedApplicationByName(name string) *v1.ResourceInstance {
+func (m mockCache) GetManagedApplicationByName(name string) *apiv1.ResourceInstance {
 	return m.manApp
 }
 
