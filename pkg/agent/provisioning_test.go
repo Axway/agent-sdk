@@ -99,6 +99,63 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	}
 }
 
+func TestNewAccessRequestBuilder(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer s.Close()
+	cfg := createCentralCfg(s.URL, "test")
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+
+	agent.apicClient = &mock.Client{
+		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+			ri, _ := data.AsInstance()
+			return ri, nil
+		},
+		UpdateResourceInstanceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+			ri, _ := data.AsInstance()
+			return ri, nil
+		},
+	}
+
+	tests := map[string]struct {
+		name    string
+		apdName string
+	}{
+		"Test Basic Auth Helper": {
+			name: "http-basic",
+		},
+		"Test APIKey Helper": {
+			name: "api-key",
+		},
+		"Custom ARD": {
+			name: "custom-ard",
+		},
+		"Validate APD added": {
+			name:    "custom-ard",
+			apdName: "apd",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			agent.applicationProfileDefinition = test.apdName
+			var err error
+			var ard *management.AccessRequestDefinition
+			switch test.name {
+			case "http-basic":
+				ard, err = NewBasicAuthAccessRequestBuilder().Register()
+			case "api-key":
+				ard, err = NewAPIKeyAccessRequestBuilder().Register()
+			default:
+				ard, err = NewAccessRequestBuilder().SetName(test.name).Register()
+			}
+			assert.Equal(t, test.name, ard.Name)
+			assert.Equal(t, test.apdName, ard.Applicationprofile.Name)
+			assert.NotNil(t, ard)
+			assert.Nil(t, err)
+		})
+	}
+}
+
 func TestNewApplicationProfileDefinitionBuilder(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()

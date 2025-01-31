@@ -43,7 +43,6 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
-
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
@@ -516,7 +515,11 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
-	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	b := provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	if agent.applicationProfileDefinition != "" {
+		b.SetApplicationProfileDefinition(agent.applicationProfileDefinition)
+	}
+	return b
 }
 
 // NewBasicAuthAccessRequestBuilder - called by the agents
@@ -537,6 +540,7 @@ func createOrUpdateApplicationProfileDefinition(data *management.ApplicationProf
 	if ri == nil || err != nil {
 		return nil, err
 	}
+	agent.applicationProfileDefinition = ri.Name
 	err = data.FromInstance(ri)
 	return data, err
 }

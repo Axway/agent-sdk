@@ -80,7 +80,8 @@ type agentData struct {
 	publishingLock *sync.Mutex
 	ardLock        sync.Mutex
 
-	status string
+	status                       string
+	applicationProfileDefinition string
 
 	// profiling
 	profileDone chan struct{}
