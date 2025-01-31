@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -13,16 +12,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const (
-	mapFinalizer = "agent.managedapplicationprofile.provisioned"
-)
-
 type getTeamByID interface {
 	GetTeamByID(id string) *defs.PlatformTeam
 }
 
 type getManagedAppByName interface {
-	GetManagedApplicationByName(name string) *v1.ResourceInstance
+	GetManagedApplicationByName(name string) *apiv1.ResourceInstance
 }
 
 type managedApplicationProfileCache interface {
@@ -109,13 +104,6 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(profile), status.GetProperties())
 	util.SetAgentDetails(profile, util.MapStringStringToMapStringInterface(details))
-
-	// add finalizer
-	ri, _ := profile.AsInstance()
-	if profile.Status.Level == prov.Success.String() {
-		// only add finalizer on success
-		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
-	}
 
 	profile.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(profile),
