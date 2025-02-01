@@ -34,14 +34,14 @@ include:
     ref: master
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_BLUE
+    ref: $BEANO_CICD_GREEN
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
       - "/gitlabci/restrictions.yml"
       - "/gitlabci/jobs.yml"
   - project: "scurity/gitlabci"
-    ref: $SCURITY_BLUE
+    ref: $SCURITY_GREEN
     file:
       - "/.gitlab-ci-fortify.yml"
       - "/.gitlab-ci-twistlock.yml"
@@ -49,7 +49,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_BLUE
+    ref: $BEANO_CICD_GREEN
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"
@@ -111,11 +111,11 @@ upload-files-to-srm:on-schedule:
     - !reference [.only-never-rule, rules]
 
 # For these 2, override the 'needs' from base
-report-main:
+report-latest:
+  needs:
+    - fetch-blackduck:on-schedule
+
+report-snapshot-and-push:
   needs:
     - fetch-fortify
-
-report-latest-and-push:
-  needs:
-    - fetch-fortify:on-schedule
-    - fetch-third-party:on-schedule
+    - fetch-third-party
