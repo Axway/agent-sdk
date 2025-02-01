@@ -106,10 +106,6 @@ upload-files-to-srm:
   rules:
     - !reference [.only-never-rule, rules]
 
-upload-files-to-srm:on-schedule:
-  rules:
-    - !reference [.only-never-rule, rules]
-
 # For these 2, override the 'needs' from base
 report-latest:
   needs:
