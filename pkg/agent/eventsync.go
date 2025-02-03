@@ -79,7 +79,7 @@ func newEventSync() (*EventSync, error) {
 // SyncCache initializes agent cache and starts the agent in stream or poll mode
 func (es *EventSync) SyncCache() error {
 	if !agent.cacheManager.HasLoadedPersistedCache() {
-		if err := es.initCache(false); err != nil {
+		if err := es.initCache(); err != nil {
 			return err
 		}
 	}
@@ -101,7 +101,7 @@ func (es *EventSync) registerInstanceValidator() error {
 	return nil
 }
 
-func (es *EventSync) initCache(rebuild bool) error {
+func (es *EventSync) initCache() error {
 	seqID, err := es.harvester.ReceiveSyncEvents(es.watchTopic.GetSelfLink(), 0, nil)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (es *EventSync) initCache(rebuild bool) error {
 	if seqID > 0 {
 		es.sequence.SetSequence(seqID - 1)
 	}
-	err = es.discoveryCache.execute(rebuild)
+	err = es.discoveryCache.execute()
 	if err != nil {
 		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
 		agent.cacheManager.Flush()
@@ -141,7 +141,7 @@ func (es *EventSync) RebuildCache() {
 	PublishingLock()
 	defer PublishingUnlock()
 
-	if err := es.initCache(true); err != nil {
+	if err := es.initCache(); err != nil {
 		logger.WithError(err).Error("failed to rebuild cache")
 	}
 }

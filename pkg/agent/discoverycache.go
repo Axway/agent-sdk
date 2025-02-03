@@ -24,6 +24,7 @@ type discoveryCache struct {
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
 	preMPFunc                func() error
+	initialized              bool
 }
 
 type resourceClient interface {
@@ -82,7 +83,7 @@ func newDiscoveryCache(
 }
 
 // execute rebuilds the discovery cache
-func (dc *discoveryCache) execute(rebuild bool) error {
+func (dc *discoveryCache) execute() error {
 	dc.logger.Debug("executing discovery cache")
 
 	discoveryFuncs := dc.buildDiscoveryFuncs()
@@ -95,7 +96,7 @@ func (dc *discoveryCache) execute(rebuild bool) error {
 		return err
 	}
 
-	err = dc.callPreMPFunc(rebuild)
+	err = dc.callPreMPFunc()
 	if err != nil {
 		dc.logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
 		return err
@@ -110,14 +111,16 @@ func (dc *discoveryCache) execute(rebuild bool) error {
 	}
 
 	dc.logger.Debug("cache has been updated")
-
 	return nil
 }
 
-func (dc *discoveryCache) callPreMPFunc(rebuild bool) error {
-	if dc.preMPFunc == nil || rebuild {
+func (dc *discoveryCache) callPreMPFunc() error {
+	if dc.preMPFunc == nil || dc.initialized {
 		return nil
 	}
+	defer func() {
+		dc.initialized = true
+	}()
 	return dc.preMPFunc()
 }
 
