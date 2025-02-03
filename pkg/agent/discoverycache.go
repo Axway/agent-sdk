@@ -101,9 +101,9 @@ func (dc *discoveryCache) execute() error {
 		dc.logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
 		return err
 	}
+
 	// Now do the marketplace discovery funcs as the other functions have completed
 	// AccessRequest cache need the APIServiceInstance cache to be fully loaded.
-
 	marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncs()
 	err = dc.executeDiscoveryFuncs(marketplaceDiscoveryFuncs)
 	if err != nil {
