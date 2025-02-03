@@ -245,6 +245,10 @@ func SetFinalizeAgentFunc(f func() error) {
 }
 
 func finalizeInitialization() error {
+	if agent.isInitialized {
+		return nil
+	}
+
 	err := registerExternalIDPs()
 	if err != nil {
 		logger.WithError(err).Fatal("failed to register CRDs for external IdP config")

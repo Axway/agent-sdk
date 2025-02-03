@@ -24,7 +24,6 @@ type discoveryCache struct {
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
 	preMPFunc                func() error
-	initialized              bool
 }
 
 type resourceClient interface {
@@ -115,12 +114,9 @@ func (dc *discoveryCache) execute() error {
 }
 
 func (dc *discoveryCache) callPreMPFunc() error {
-	if dc.preMPFunc == nil || dc.initialized {
+	if dc.preMPFunc == nil {
 		return nil
 	}
-	defer func() {
-		dc.initialized = true
-	}()
 	return dc.preMPFunc()
 }
 
