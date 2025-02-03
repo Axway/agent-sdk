@@ -251,6 +251,8 @@ func finalizeInitialization() error {
 
 	err := registerExternalIDPs()
 	if err != nil {
+		// if an error happened registering IdPs we should kill the agent to avoid
+		//   updating instances with wrong credential request def types
 		logger.WithError(err).Fatal("failed to register CRDs for external IdP config")
 	}
 
