@@ -28,7 +28,7 @@ type EventSync struct {
 func newEventSync() (*EventSync, error) {
 	migrations := []migrate.Migrator{}
 
-	// Make sure only DA and Governance agents run migration processes
+	// Make sure only DA agents run migration processes
 	runMigrations := agent.cfg.GetAgentType() != config.TraceabilityAgent
 
 	if runMigrations {
@@ -38,13 +38,13 @@ func newEventSync() (*EventSync, error) {
 		apisiMigration := migrate.NewAPISIMigration(agent.apicClient, agent.cfg)
 		instanceMigration := migrate.NewInstanceMigration(agent.apicClient, agent.cfg)
 		migrations = append(migrations, attributeMigration, ardMigration, apisiMigration, instanceMigration)
-
 	}
 
 	mig := migrate.NewMigrateAll(migrations...)
 
 	opts := []discoveryOpt{
 		withMigration(mig),
+		preMarketplaceSetup(finalizeInitialization),
 	}
 
 	if agent.agentResourceManager != nil {

@@ -78,8 +78,9 @@ type agentData struct {
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
-	publishingLock *sync.Mutex
-	ardLock        sync.Mutex
+	finalizeAgentInit func() error
+	publishingLock    *sync.Mutex
+	ardLock           sync.Mutex
 
 	status string
 
@@ -239,10 +240,21 @@ func InitializeProfiling(cpuProfile, memProfile string) {
 	}
 }
 
-func FinalizeInitialization() error {
+func SetFinalizeAgentFunc(f func() error) {
+	agent.finalizeAgentInit = f
+}
+
+func finalizeInitialization() error {
 	err := registerExternalIDPs()
 	if err != nil {
-		logger.WithError(err).Error("failed to register CRDs for external IdP config")
+		logger.WithError(err).Fatal("failed to register CRDs for external IdP config")
+	}
+
+	if agent.finalizeAgentInit != nil {
+		err := agent.finalizeAgentInit()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -293,15 +305,13 @@ func CacheInitSync() error {
 }
 
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
+	logger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadata-url", idp.GetMetadataURL())
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
-		logger.
-			WithField("name", idp.GetIDPName()).
-			WithField("type", idp.GetIDPType()).
-			WithField("metadata-url", idp.GetMetadataURL()).
-			Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed. %s", err.Error())
+		logger.WithError(err).Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed.")
+		return err
 	}
-	crdName := idp.GetIDPName() + " " + provisioning.OAuthIDPCRD
+	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
 	if err != nil {
 		return err

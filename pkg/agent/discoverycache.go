@@ -23,6 +23,7 @@ type discoveryCache struct {
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
+	preMPFunc                func() error
 }
 
 type resourceClient interface {
@@ -44,6 +45,13 @@ func withAdditionalDiscoverFuncs(funcs ...discoverFunc) discoveryOpt {
 func withMigration(mig migrate.Migrator) discoveryOpt {
 	return func(dc *discoveryCache) {
 		dc.migrator = mig
+	}
+}
+
+// set a function to call after syncing all the cached resources except marketplace resources
+func preMarketplaceSetup(f func() error) discoveryOpt {
+	return func(dc *discoveryCache) {
+		dc.preMPFunc = f
 	}
 }
 
@@ -87,6 +95,11 @@ func (dc *discoveryCache) execute() error {
 		return err
 	}
 
+	err = dc.callPreMPFunc()
+	if err != nil {
+		dc.logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
+		return err
+	}
 	// Now do the marketplace discovery funcs as the other functions have completed
 	// AccessRequest cache need the APIServiceInstance cache to be fully loaded.
 
@@ -99,6 +112,13 @@ func (dc *discoveryCache) execute() error {
 	dc.logger.Debug("cache has been updated")
 
 	return nil
+}
+
+func (dc *discoveryCache) callPreMPFunc() error {
+	if dc.preMPFunc == nil {
+		return nil
+	}
+	return dc.preMPFunc()
 }
 
 func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) error {
