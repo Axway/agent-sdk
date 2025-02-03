@@ -82,7 +82,7 @@ func newDiscoveryCache(
 }
 
 // execute rebuilds the discovery cache
-func (dc *discoveryCache) execute() error {
+func (dc *discoveryCache) execute(rebuild bool) error {
 	dc.logger.Debug("executing discovery cache")
 
 	discoveryFuncs := dc.buildDiscoveryFuncs()
@@ -95,7 +95,7 @@ func (dc *discoveryCache) execute() error {
 		return err
 	}
 
-	err = dc.callPreMPFunc()
+	err = dc.callPreMPFunc(rebuild)
 	if err != nil {
 		dc.logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
 		return err
@@ -114,8 +114,8 @@ func (dc *discoveryCache) execute() error {
 	return nil
 }
 
-func (dc *discoveryCache) callPreMPFunc() error {
-	if dc.preMPFunc == nil {
+func (dc *discoveryCache) callPreMPFunc(rebuild bool) error {
+	if dc.preMPFunc == nil || rebuild {
 		return nil
 	}
 	return dc.preMPFunc()

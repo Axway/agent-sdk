@@ -51,11 +51,6 @@ func NewProviderRegistry() ProviderRegistry {
 
 // RegisterProvider - registers the provider using the config
 func (r *providerRegistry) RegisterProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
-	if p, _ := r.providerMap.Get(idp.GetIDPName()); p != nil {
-		r.logger.WithField("name", idp.GetIDPName()).Debug("skipping reregistration of the same IDP provider")
-		return nil
-	}
-
 	p, err := NewProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
 		return err
