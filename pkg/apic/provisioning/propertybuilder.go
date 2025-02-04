@@ -12,6 +12,7 @@ const (
 	DataTypeInteger = "integer"
 	DataTypeArray   = "array"
 	DataTypeObject  = "object"
+	DataTypeBoolean = "boolean"
 )
 
 // oneOfPropertyDefinitions - used for items of propertyDefinition
@@ -244,7 +245,7 @@ func (p *schemaProperty) IsString() StringPropertyBuilder {
 
 // IsString - Set the property to be of type string
 func (p *schemaProperty) IsBoolean() BooleanPropertyBuilder {
-	p.dataType = DataTypeString
+	p.dataType = DataTypeBoolean
 	return &booleanSchemaProperty{
 		schemaProperty: p,
 	}
@@ -548,6 +549,11 @@ func (p *booleanSchemaProperty) Build() (def *propertyDefinition, err error) {
 	}
 
 	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *booleanSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
 }
 
 /**
