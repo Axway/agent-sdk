@@ -73,6 +73,7 @@ type agentData struct {
 	agentShutdownHandler       ShutdownHandler
 	proxyResourceHandler       *handler.StreamWatchProxyHandler
 	isInitialized              bool
+	isFinalized                bool
 
 	provisioner          provisioning.Provisioning
 	streamer             *stream.StreamerClient
@@ -245,7 +246,7 @@ func SetFinalizeAgentFunc(f func() error) {
 }
 
 func finalizeInitialization() error {
-	if agent.isInitialized {
+	if agent.isFinalized {
 		return nil
 	}
 
@@ -262,6 +263,7 @@ func finalizeInitialization() error {
 			return err
 		}
 	}
+	agent.isFinalized = true
 	return nil
 }
 
