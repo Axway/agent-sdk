@@ -21,7 +21,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "test")
-	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, nil)
 
 	agent.apicClient = &mock.Client{
 		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {

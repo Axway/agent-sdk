@@ -103,11 +103,13 @@ func init() {
 
 // Initialize - Initializes the agent
 func Initialize(centralCfg config.CentralConfig) error {
-	return InitializeWithAgentFeatures(centralCfg, config.NewAgentFeaturesConfiguration())
+	return InitializeWithAgentFeatures(centralCfg, config.NewAgentFeaturesConfiguration(), nil)
 }
 
+type PostCentralConfigProc func(config.CentralConfig, config.AgentFeaturesConfig) error
+
 // InitializeWithAgentFeatures - Initializes the agent with agent features
-func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
+func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig, postCfgProcessor PostCentralConfigProc) error {
 	if agent.teamMap == nil {
 		agent.teamMap = cache.New()
 	}
@@ -164,6 +166,12 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		err = handleCentralConfig(centralCfg)
 		if err != nil {
 			return err
+		}
+		if postCfgProcessor != nil {
+			err = postCfgProcessor(centralCfg, agentFeaturesCfg)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
