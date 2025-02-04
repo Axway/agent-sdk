@@ -43,7 +43,6 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
-
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
@@ -516,7 +515,11 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
-	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	b := provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	if agent.applicationProfileDefinition != "" {
+		b.SetApplicationProfileDefinition(agent.applicationProfileDefinition)
+	}
+	return b
 }
 
 // NewBasicAuthAccessRequestBuilder - called by the agents
@@ -537,6 +540,7 @@ func createOrUpdateApplicationProfileDefinition(data *management.ApplicationProf
 	if ri == nil || err != nil {
 		return nil, err
 	}
+	agent.applicationProfileDefinition = ri.Name
 	err = data.FromInstance(ri)
 	return data, err
 }
@@ -564,28 +568,61 @@ func CleanApplicationProfileDefinition(name string) error {
 	return nil
 }
 
-// provisioner
+// provisioner registration
 
-// RegisterProvisioner - allow the agent to register a provisioner
-func RegisterProvisioner(provisioner provisioning.Provisioning) {
-	if agent.agentFeaturesCfg == nil {
-		return
-	}
-	agent.provisioner = provisioner
-
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent {
-		agent.proxyResourceHandler.RegisterTargetHandler(
-			"accessrequesthandler",
-			handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
-		)
+// application provisioner
+func registerApplicationProvisioner(provisioner interface{}) {
+	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"managedappHandler",
-			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
+			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient),
 		)
+	}
+}
+
+// application profile provisioner
+func registerApplicationProfileProvisioner(provisioner interface{}) {
+	if appProfileProv, ok := provisioner.(provisioning.ApplicationProfileProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"managedApplicationProfileHandler",
+			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient),
+		)
+	}
+}
+
+// access provisioner
+func registerAccessProvisioner(provisioner interface{}) {
+	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"accessrequestHandler",
+			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
+		)
+	}
+}
+
+// access provisioner
+func registerCredentialProvisioner(provisioner interface{}) {
+	if credProv, ok := provisioner.(provisioning.CredentialProvisioner); ok {
 		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
+			handler.NewCredentialHandler(credProv, agent.apicClient, registry),
 		)
 	}
+}
+
+// RegisterProvisioner - allow the agent to register a provisioner
+func RegisterProvisioner(provisioner interface{}) {
+	if agent.agentFeaturesCfg == nil {
+		return
+	}
+
+	if agent.cfg.GetAgentType() != config.DiscoveryAgent {
+		return
+	}
+	// call to register all provisioners, they will register if the interface is implemented
+	registerAccessProvisioner(provisioner)
+	registerApplicationProvisioner(provisioner)
+	registerApplicationProfileProvisioner(provisioner)
+	registerCredentialProvisioner(provisioner)
 }

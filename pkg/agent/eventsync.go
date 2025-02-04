@@ -28,7 +28,7 @@ type EventSync struct {
 func newEventSync() (*EventSync, error) {
 	migrations := []migrate.Migrator{}
 
-	// Make sure only DA and Governance agents run migration processes
+	// Make sure only DA agents run migration processes
 	runMigrations := agent.cfg.GetAgentType() != config.TraceabilityAgent
 
 	if runMigrations {
