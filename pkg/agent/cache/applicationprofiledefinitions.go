@@ -8,7 +8,7 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 func (c *cacheManager) AddApplicationProfileDefinition(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
 
-	c.ardMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
+	c.apdMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
 
 // GetApplicationProfileDefinitionKeys - returns keys for ApplicationProfileDefinition cache
@@ -16,7 +16,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionKeys() []string {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	return c.ardMap.GetKeys()
+	return c.apdMap.GetKeys()
 }
 
 // GetApplicationProfileDefinitionByName - returns resource from ApplicationProfileDefinition cache based on resource name
@@ -24,7 +24,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByName(name string) (*v1.R
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, err := c.ardMap.GetBySecondaryKey(name)
+	item, err := c.apdMap.GetBySecondaryKey(name)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
 			ard.CreateHashes()
@@ -39,7 +39,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByID(id string) (*v1.Resou
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, err := c.ardMap.Get(id)
+	item, err := c.apdMap.Get(id)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
 			ard.CreateHashes()
@@ -53,5 +53,5 @@ func (c *cacheManager) GetApplicationProfileDefinitionByID(id string) (*v1.Resou
 func (c *cacheManager) DeleteApplicationProfileDefinition(id string) error {
 	defer c.setCacheUpdated(true)
 
-	return c.ardMap.Delete(id)
+	return c.apdMap.Delete(id)
 }
