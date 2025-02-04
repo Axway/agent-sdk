@@ -612,16 +612,16 @@ func (p *properties) ObjectSlicePropertyValue(name string) []map[string]interfac
 	}
 	values := p.envIntfArrayPropValues[name]
 	for _, mapValues := range values {
-		p.resolveObjSlieceValues(mapValues)
+		p.resolveObjSliceValues(mapValues)
 	}
 	return values
 }
 
-func (p *properties) resolveObjSlieceValues(mapValues map[string]interface{}) {
+func (p *properties) resolveObjSliceValues(mapValues map[string]interface{}) {
 	for name, valueIface := range mapValues {
 		switch val := valueIface.(type) {
 		case map[string]interface{}:
-			p.resolveObjSlieceValues(val)
+			p.resolveObjSliceValues(val)
 		case string:
 			mapValues[name] = p.resolveSecretReference(name, val)
 		}
