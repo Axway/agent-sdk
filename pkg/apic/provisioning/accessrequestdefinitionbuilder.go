@@ -143,7 +143,9 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 	ard.Spec = spec
 
 	if a.appProfDef != "" {
-		ard.Applicationprofile.Name = a.appProfDef
+		ard.Applicationprofile = management.AccessRequestDefinitionApplicationprofile{
+			Name: a.appProfDef,
+		}
 	}
 
 	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
