@@ -372,19 +372,9 @@ func (c *agentRootCommand) initConfig() error {
 }
 
 func (c *agentRootCommand) finishInit() error {
-	err := agent.FinalizeInitialization()
-	if err != nil {
-		return err
-	}
+	agent.SetFinalizeAgentFunc(c.finalizeAgentInit)
 
-	if c.finalizeAgentInit != nil {
-		err := c.finalizeAgentInit()
-		if err != nil {
-			return err
-		}
-	}
-
-	err = agent.CacheInitSync()
+	err := agent.CacheInitSync()
 	if err != nil {
 		return err
 	}
