@@ -509,7 +509,17 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 	if ri == nil || err != nil {
 		return nil, err
 	}
-	err = data.FromInstance(ri)
+
+	if data.FromInstance(ri) == nil && agent.applicationProfileDefinition != "" {
+		err = agent.apicClient.CreateSubResource(ri.ResourceMeta,
+			map[string]interface{}{
+				management.AccessRequestDefinitionApplicationprofileSubResourceName: data.Applicationprofile,
+			})
+		if err != nil {
+			return data, err
+		}
+	}
+
 	return data, err
 }
 

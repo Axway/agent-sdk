@@ -91,23 +91,24 @@ func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
 // AddProperty - adds a new subscription schema property to the schema
 func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	prop, err := property.Build()
-	if err == nil {
-		s.properties[prop.Name] = *prop
-
-		// If property order wasn't set, add property as they come in
-		if !s.propertyOrderSet {
-			s.propertyOrder = append(s.propertyOrder, prop.Name)
-		}
-
-		dep, err := property.BuildDependencies()
-		if err != nil {
-			s.err = err
-		}
-		if dep != nil {
-			s.dependencies[prop.Name] = dep
-		}
-	} else {
+	if err != nil {
 		s.err = err
+		return s
+	}
+
+	s.properties[prop.Name] = *prop
+
+	// If property order wasn't set, add property as they come in
+	if !s.propertyOrderSet {
+		s.propertyOrder = append(s.propertyOrder, prop.Name)
+	}
+
+	dep, err := property.BuildDependencies()
+	if err != nil {
+		s.err = err
+	}
+	if dep != nil {
+		s.dependencies[prop.Name] = dep
 	}
 
 	return s

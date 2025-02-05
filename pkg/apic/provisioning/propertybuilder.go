@@ -12,6 +12,7 @@ const (
 	DataTypeInteger = "integer"
 	DataTypeArray   = "array"
 	DataTypeObject  = "object"
+	DataTypeBoolean = "boolean"
 )
 
 // oneOfPropertyDefinitions - used for items of propertyDefinition
@@ -95,6 +96,8 @@ type TypePropertyBuilder interface {
 	SetReadOnly() TypePropertyBuilder
 	// SetHidden - set the property as a hidden property
 	SetHidden() TypePropertyBuilder
+	// IsBoolean - Set the property to be of type string
+	IsBoolean() BooleanPropertyBuilder
 	// IsString - Set the property to be of type string
 	IsString() StringPropertyBuilder
 	// IsInteger - Set the property to be of type integer
@@ -105,6 +108,13 @@ type TypePropertyBuilder interface {
 	IsArray() ArrayPropertyBuilder
 	// IsObject - Set the property to be of type object
 	IsObject() ObjectPropertyBuilder
+	PropertyBuilder
+}
+
+// BooleanPropertyBuilder - specific methods related to the Boolean property builders
+type BooleanPropertyBuilder interface {
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value bool) BooleanPropertyBuilder
 	PropertyBuilder
 }
 
@@ -229,6 +239,14 @@ func (p *schemaProperty) SetHidden() TypePropertyBuilder {
 func (p *schemaProperty) IsString() StringPropertyBuilder {
 	p.dataType = DataTypeString
 	return &stringSchemaProperty{
+		schemaProperty: p,
+	}
+}
+
+// IsString - Set the property to be of type string
+func (p *schemaProperty) IsBoolean() BooleanPropertyBuilder {
+	p.dataType = DataTypeBoolean
+	return &booleanSchemaProperty{
 		schemaProperty: p,
 	}
 }
@@ -501,6 +519,41 @@ func (p *stringSchemaProperty) buildDependenciesDef(val string, props []Property
 		}
 	}
 	return depDef, nil
+}
+
+/**
+  boolean property datatype
+*/
+// booleanSchemaProperty - adds specific info needed for a boolean schema property
+type booleanSchemaProperty struct {
+	schemaProperty *schemaProperty
+	defaultValue   *bool
+	BooleanPropertyBuilder
+}
+
+// SetDefaultValue - Define the initial value for the property
+func (p *booleanSchemaProperty) SetDefaultValue(value bool) BooleanPropertyBuilder {
+	p.defaultValue = &value
+	return p
+}
+
+// Build - create the propertyDefinition for use in the subscription schema builder
+func (p *booleanSchemaProperty) Build() (def *propertyDefinition, err error) {
+	def, err = p.schemaProperty.Build()
+	if err != nil {
+		return
+	}
+
+	if p.defaultValue != nil {
+		def.DefaultValue = p.defaultValue
+	}
+
+	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *booleanSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
 }
 
 /**
