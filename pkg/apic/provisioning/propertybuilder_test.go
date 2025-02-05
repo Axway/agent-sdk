@@ -160,6 +160,10 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, "a", prop.Enum[1])
 }
 
+func getBoolPointer(value bool) *bool {
+	return &value
+}
+
 func getFloat64Pointer(value float64) *float64 {
 	return &value
 }
@@ -307,6 +311,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetReadOnly().
 				IsString().
 				IsEncrypted().
+				IsCopyable().
 				SetAsTextArea().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
@@ -320,6 +325,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Format:       "hidden",
 				ReadOnly:     true,
 				IsEncrypted:  true,
+				IsCopyable:   true,
 				Widget:       "textArea",
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "c", "a", "b", "addedValue"},
@@ -354,6 +360,30 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "a", "addedValue", "b", "c"},
 				DefaultValue: "a",
+			},
+			nil},
+		{"Minimal Boolean property",
+			NewSchemaPropertyBuilder().
+				SetName("TheBool").
+				SetLabel("The Boolean").
+				IsBoolean(),
+			propertyDefinition{
+				Name:  "TheBool",
+				Title: "The Boolean",
+				Type:  DataTypeBoolean,
+			},
+			nil},
+		{"Full Boolean property",
+			NewSchemaPropertyBuilder().
+				SetName("TheBool").
+				SetLabel("The Boolean").
+				IsBoolean().
+				SetDefaultValue(true),
+			propertyDefinition{
+				Name:         "TheBool",
+				Title:        "The Boolean",
+				Type:         DataTypeBoolean,
+				DefaultValue: getBoolPointer(true),
 			},
 			nil},
 		{"Minimal Number property",
@@ -640,6 +670,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 			SetName("anObject").
 			IsObject().
 			AddProperty(NewSchemaPropertyBuilder()), "without a name"},
+		{"Boolean property without name", NewSchemaPropertyBuilder().
+			IsBoolean(), "without a name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -541,7 +541,7 @@ func (p *booleanSchemaProperty) SetDefaultValue(value bool) BooleanPropertyBuild
 func (p *booleanSchemaProperty) Build() (def *propertyDefinition, err error) {
 	def, err = p.schemaProperty.Build()
 	if err != nil {
-		return
+		return def, err
 	}
 
 	if p.defaultValue != nil {
