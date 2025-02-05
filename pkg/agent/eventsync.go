@@ -82,6 +82,12 @@ func (es *EventSync) SyncCache() error {
 		if err := es.initCache(); err != nil {
 			return err
 		}
+	} else {
+		err := finalizeInitialization()
+		if err != nil {
+			logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
+			return err
+		}
 	}
 
 	err := es.startCentralEventProcessor()
