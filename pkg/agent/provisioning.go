@@ -43,7 +43,6 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 
 // createOrUpdateDefinition -
 func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
-
 	ri, err := agent.apicClient.CreateOrUpdateResource(data)
 	if err != nil {
 		return nil, err
