@@ -302,6 +302,14 @@ func (c *agentRootCommand) onConfigChange() {
 	}
 }
 
+func (c *agentRootCommand) postCentralConfigProcessing(_ config.CentralConfig, agentFeaturesCfg config.AgentFeaturesConfig) error {
+	err := config.ParseExternalIDPConfig(agentFeaturesCfg, c.GetProperties())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // initConfig - Initializes the central config and invokes initConfig handler
 // to initialize the agent config. Performs validation on returned agent config
 func (c *agentRootCommand) initConfig() error {
@@ -334,7 +342,7 @@ func (c *agentRootCommand) initConfig() error {
 	// must set the hc config now, because the healthchecker loop starts in agent.Initialize
 	hc.SetStatusConfig(c.statusCfg)
 
-	err = agent.InitializeWithAgentFeatures(c.centralCfg, c.agentFeaturesCfg)
+	err = agent.InitializeWithAgentFeatures(c.centralCfg, c.agentFeaturesCfg, c.postCentralConfigProcessing)
 	if err != nil {
 		return err
 	}

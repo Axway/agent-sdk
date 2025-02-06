@@ -117,15 +117,16 @@ func TestExternalIDPConfig(t *testing.T) {
 			}()
 			prop := properties.NewProperties(nil)
 			AddAgentFeaturesConfigProperties(prop)
-			cfg, err := ParseAgentFeaturesConfig(prop)
+			agentFeatures := &AgentFeaturesConfiguration{}
+			err := ParseExternalIDPConfig(agentFeatures, prop)
 			assert.Nil(t, err)
-			assert.NotNil(t, cfg)
-			err = cfg.(*AgentFeaturesConfiguration).ValidateCfg()
+			assert.NotNil(t, agentFeatures.ExternalIDPConfig)
+			idpCfgs := agentFeatures.ExternalIDPConfig
+			err = idpCfgs.ValidateCfg()
 			if test.hasError {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				idpCfgs := cfg.GetExternalIDPConfig()
 				for _, idp := range idpCfgs.GetIDPList() {
 					buf, err := json.Marshal(idp)
 					assert.Nil(t, err)

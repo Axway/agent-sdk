@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -64,6 +65,7 @@ type agentConfig struct {
 	sProp                 string
 	sPropExt              string
 	ssProp                []string
+	osProp                []map[string]interface{}
 	agentValidationCalled bool
 }
 
@@ -466,6 +468,7 @@ func TestRootCmdHandlers(t *testing.T) {
 	assert.Equal(t, 30*time.Second, agentCfg.dProp)
 	assert.Equal(t, 555, agentCfg.iProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
+	assert.Equal(t, []string{"ss1", "ss2"}, agentCfg.ssProp)
 
 }
 
@@ -687,6 +690,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 				agentValidationCalled: false,
 				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
 				sPropExt:              rootCmd.GetProperties().StringPropertyValue("agent.stringExt"),
+				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue("agent.objectSlice"),
 			},
 		}
 		return cfg, nil
@@ -710,25 +714,41 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
 
 	// Case 1 : No secret resolution - use the value in config
 	os.Setenv("AGENT_STRING", "testValue")
 	os.Setenv("AGENT_STRINGEXT", "anotherTestValue")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "osp1_1")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "osp1_2")
 	err := rootCmd.Execute()
 	assert.Nil(t, err, "An unexpected error returned")
 	agentCfg := cfg.AgentCfg.(*agentConfig)
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "testValue", agentCfg.sProp)
 	assert.Equal(t, "anotherTestValue", agentCfg.sPropExt)
+	objectSliceProps := []string{agentCfg.osProp[0]["prop1"].(string), agentCfg.osProp[1]["prop1"].(string)}
+	slices.Sort(objectSliceProps)
+	assert.Equal(t, []string{"osp1_1", "osp1_2"}, objectSliceProps)
 	assert.Equal(t, true, cmdHandlerInvoked)
 
 	// Case 2 : Invalid secret resolution - secret ref with invalid secret name,
 	// config value will be set to empty string
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 	os.Setenv("AGENT_STRING", "@Secret.invalidSecret.secretKey")
 	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.invalidSecret.secretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.invalidSecret.cachedSecretKey")
+
 	err = rootCmd.Execute()
 	assert.NotNil(t, err)
 	assert.Equal(t, "agentConfig: String prop not set", err.Error())
@@ -736,16 +756,27 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "", agentCfg.sProp)
 	assert.Equal(t, "", agentCfg.sPropExt)
+	assert.Equal(t, "", agentCfg.osProp[0]["prop1"])
+	assert.Equal(t, "", agentCfg.osProp[1]["prop1"])
 	assert.Equal(t, false, cmdHandlerInvoked)
 
 	// Case 3 : Invalid secret resolution - secret ref with invalid key in secret
 	// config value will be set to empty string
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 
 	os.Setenv("AGENT_STRING", "@Secret.agentSecret.invalidKey")
 	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.agentSecret.secretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.invalidSecret.cachedSecretKey")
 	err = rootCmd.Execute()
 	assert.NotNil(t, err)
 	assert.Equal(t, "agentConfig: String prop not set", err.Error())
@@ -753,37 +784,63 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "", agentCfg.sProp)
 	assert.Equal(t, "", agentCfg.sPropExt)
+	objectSliceProps = []string{agentCfg.osProp[0]["prop1"].(string), agentCfg.osProp[1]["prop1"].(string)}
+	slices.Sort(objectSliceProps)
+	assert.Equal(t, []string{"", "secretValue"}, objectSliceProps)
+	assert.Equal(t, "", agentCfg.osProp[1]["prop1"])
 	assert.Equal(t, false, cmdHandlerInvoked)
 
 	// Case 4 : Successful secret resolution - use value in secret key
 	// config value will be set to specified key in secret
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 
 	os.Setenv("AGENT_STRING", "@Secret.agentSecret.secretKey")
 	os.Setenv("AGENT_STRINGEXT", "@Secret.agentSecret.cachedSecretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.agentSecret.secretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.agentSecret.cachedSecretKey")
 	err = rootCmd.Execute()
 	assert.Nil(t, err)
 	agentCfg = cfg.AgentCfg.(*agentConfig)
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "secretValue", agentCfg.sProp)
 	assert.Equal(t, "cachedSecretValue", agentCfg.sPropExt)
+	objectSliceProps = []string{agentCfg.osProp[0]["prop1"].(string), agentCfg.osProp[1]["prop1"].(string)}
+	slices.Sort(objectSliceProps)
+	assert.Equal(t, []string{"cachedSecretValue", "secretValue"}, objectSliceProps)
 	assert.Equal(t, true, cmdHandlerInvoked)
 
 	// Case 5 : Successful secret resolution with key separate with dots(.) - use value in secret key
 	// config value will be set to specified key in secret
+	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
+	viper.AddConfigPath("./testdata")
+
+	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
+	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 
 	os.Setenv("AGENT_STRING", "@Secret.agentSecret.keyElement1.keyElement2")
+	os.Unsetenv("AGENT_OBJECTSLICE_PROP1_1")
+	os.Unsetenv("AGENT_OBJECTSLICE_PROP1_2")
+	os.Setenv("AGENT_OBJECTSLICE_PROP2_1", "@Secret.agentSecret.keyElement1.keyElement2")
 	err = rootCmd.Execute()
 	assert.Nil(t, err)
 	agentCfg = cfg.AgentCfg.(*agentConfig)
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "secretValue2", agentCfg.sProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
+	assert.Equal(t, "secretValue2", agentCfg.osProp[0]["prop2"])
 }
 
 func noOpInitConfigHandler(centralConfig corecfg.CentralConfig) (interface{}, error) {

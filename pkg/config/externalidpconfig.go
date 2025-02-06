@@ -585,7 +585,11 @@ func addExternalIDPProperties(props properties.Properties) {
 	props.AddObjectSliceProperty(pathExternalIDP, configProperties)
 }
 
-func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, error) {
+func ParseExternalIDPConfig(agentFeature AgentFeaturesConfig, props properties.Properties) error {
+	af, ok := agentFeature.(*AgentFeaturesConfiguration)
+	if !ok {
+		return nil
+	}
 	envIDPCfgList := props.ObjectSlicePropertyValue(pathExternalIDP)
 
 	cfg := &externalIDPConfig{
@@ -610,15 +614,16 @@ func parseExternalIDPConfig(props properties.Properties) (ExternalIDPConfig, err
 		buf, _ := json.Marshal(envIdpCfg)
 		err := json.Unmarshal(buf, idpCfg)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing idp configuration, %s", err)
+			return fmt.Errorf("error parsing idp configuration, %s", err)
 		}
 		if entry, ok := envIdpCfg["ssl"]; ok && entry != nil {
 			idpCfg.TLSConfig = parseExternalIDPTLSConfig(entry)
 		}
 		cfg.IDPConfigs[idpCfg.Name] = idpCfg
 	}
+	af.ExternalIDPConfig = cfg
 
-	return cfg, nil
+	return nil
 }
 
 func parseExternalIDPTLSConfig(idpTLSCfg interface{}) TLSConfig {

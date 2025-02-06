@@ -120,10 +120,6 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		return nil, err
 	}
 	cfg.MetricServicesConfigs = metricSvsCfgs
-	externalIDPCfg, err := parseExternalIDPConfig(props)
-	if err != nil {
-		return nil, err
-	}
-	cfg.ExternalIDPConfig = externalIDPCfg
+
 	return cfg, nil
 }

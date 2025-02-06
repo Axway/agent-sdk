@@ -374,7 +374,7 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 		ProcessSystemSignals: false,
 		VersionChecker:       false,
 	}
-	err := InitializeWithAgentFeatures(cfg, agentFeatures)
+	err := InitializeWithAgentFeatures(cfg, agentFeatures, nil)
 	assert.NoError(t, err) // This asserts central config is not being validated as ConnectToCentral is false
 
 	assert.False(t, agent.agentFeaturesCfg.ConnectionToCentralEnabled())
