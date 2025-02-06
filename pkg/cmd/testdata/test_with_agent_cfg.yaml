@@ -9,3 +9,4 @@ agent:
   string: "ssss"
   duration: 30s
   int: 555
+  stringSlice: "ss1,ss2"
