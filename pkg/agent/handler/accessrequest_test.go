@@ -164,9 +164,9 @@ func TestAccessRequestHandler(t *testing.T) {
 
 			c := &mockClient{
 				expectedStatus: tc.outboundStatus,
-				getErr:         tc.getErr,
+				getManAppErr:   tc.getErr,
 				getARDErr:      tc.getARDErr,
-				getRI:          mApp,
+				manApp:         mApp,
 				subError:       tc.subError,
 				t:              t,
 				ard:            ardRI,
@@ -246,7 +246,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 
 			c := &mockClient{
 				expectedStatus: tc.outboundStatus.String(),
-				getRI:          mApp,
+				manApp:         mApp,
 				isDeleting:     true,
 				t:              t,
 			}

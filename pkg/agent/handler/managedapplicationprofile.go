@@ -119,7 +119,7 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 }
 
 func (h *managedApplicationProfile) checkForEnumValueMap(_ context.Context, data map[string]interface{}, profileDef string) {
-	log := h.logger.WithField("applicaitonProfileDefinition", profileDef)
+	log := h.logger.WithField("applicationProfileDefinition", profileDef)
 
 	// get application profile definition
 	ri, err := h.cache.GetApplicationProfileDefinitionByName(profileDef)
@@ -137,25 +137,7 @@ func (h *managedApplicationProfile) checkForEnumValueMap(_ context.Context, data
 		return
 	}
 
-	enumPropMap := prov.GetEnumValueMapsFromSchema(appProfDef.Spec.Schema)
-	if len(enumPropMap) == 0 {
-		return
-	}
-	for k, l := range data {
-		enumMap, ok := enumPropMap[k]
-		if !ok {
-			continue
-		}
-		label, ok := l.(string)
-		if !ok {
-			continue
-		}
-		value, ok := enumMap[label]
-		if !ok {
-			continue
-		}
-		data[k] = value
-	}
+	updateDataFromEnumMap(data, appProfDef.Spec.Schema)
 }
 
 func (h *managedApplicationProfile) getManagedApp(_ context.Context, profile *management.ManagedApplicationProfile) (*management.ManagedApplication, error) {
@@ -227,4 +209,26 @@ func (a provManagedAppProfile) GetConsumerOrgID() string {
 // GetTeamName gets the owning team name for the managed application
 func (a provManagedAppProfile) GetID() string {
 	return a.id
+}
+
+func updateDataFromEnumMap(data map[string]interface{}, schema map[string]interface{}) {
+	enumPropMap := prov.GetEnumValueMapsFromSchema(schema)
+	if len(enumPropMap) == 0 {
+		return
+	}
+	for k, l := range data {
+		enumMap, ok := enumPropMap[k]
+		if !ok {
+			continue
+		}
+		label, ok := l.(string)
+		if !ok {
+			continue
+		}
+		value, ok := enumMap[label]
+		if !ok {
+			continue
+		}
+		data[k] = value
+	}
 }
