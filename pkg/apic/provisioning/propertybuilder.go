@@ -444,7 +444,11 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
-	def.EnumMap = p.enumMap
+
+	// add enum map if it exists
+	if len(p.enumMap) > 0 {
+		def.EnumMap = p.enumMap
+	}
 
 	// set default value
 	if len(p.defaultValue) > 0 {
