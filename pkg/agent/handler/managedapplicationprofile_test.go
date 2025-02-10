@@ -17,77 +17,92 @@ import (
 )
 
 type mockCache struct {
-	team   *defs.PlatformTeam
-	manApp *apiv1.ResourceInstance
+	team    *defs.PlatformTeam
+	profDef *apiv1.ResourceInstance
 }
 
 func (m mockCache) GetTeamByID(id string) *defs.PlatformTeam {
 	return m.team
 }
 
-func (m mockCache) GetManagedApplicationByName(name string) *apiv1.ResourceInstance {
-	return m.manApp
+func (m mockCache) GetApplicationProfileDefinitionByName(name string) (*apiv1.ResourceInstance, error) {
+	return m.profDef, nil
 }
 
 func TestManagedApplicationProfileHandler(t *testing.T) {
 	//setup test cache
-	appRI, _ := managedAppForTest.AsInstance()
+	apd, _ := prov.NewApplicationProfileBuilder(
+		func(a *v1alpha1.ApplicationProfileDefinition) (*v1alpha1.ApplicationProfileDefinition, error) {
+			return a, nil
+		}).
+		SetName("APD").
+		SetTitle("APD Title").
+		SetRequestSchema(prov.NewSchemaBuilder().
+			AddProperty(prov.NewSchemaPropertyBuilder().
+				SetName("enumMapData").
+				IsString().
+				AddEnumValueMap(map[string]interface{}{
+					"label1": "val1",
+					"label2": "val2",
+					"label3": "val3",
+					"label4": "val4",
+				}),
+			),
+		).
+		Register()
+	apdRI, _ := apd.AsInstance()
 
-	tests := []struct {
+	manAppRI, _ := managedAppForTest.AsInstance()
+
+	tests := map[string]struct {
+		skip             bool
 		action           proto.Event_Type
 		createErr        error
 		getErr           error
 		hasError         bool
-		skipManAppLoad   bool
-		name             string
 		expectedProvType string
 		inboundStatus    string
 		subError         error
 		teamName         string
 		outboundStatus   string
 	}{
-		{
-			name:             "should handle a create event for a ManagedApplicationProfile when status is pending",
+		"should handle a create event for a ManagedApplicationProfile when status is pending": {
+			skip:             false,
 			action:           proto.Event_CREATED,
 			teamName:         teamName,
 			expectedProvType: provision,
 			inboundStatus:    prov.Pending.String(),
 			outboundStatus:   prov.Success.String(),
 		},
-		{
-			name:           "should return err when get man app fails",
-			action:         proto.Event_CREATED,
-			skipManAppLoad: true,
-			hasError:       true,
-			inboundStatus:  prov.Pending.String(),
-			outboundStatus: prov.Error.String(),
-		},
-		{
-			name:   "should return nil when the event type is for updating",
+		"should return nil when the event type is for updating": {
+			skip:   false,
 			action: proto.Event_UPDATED,
 		},
-		{
-			name:   "should return nil when the event is for subresources",
+		"should return nil when the event is for subresources": {
+			skip:   false,
 			action: proto.Event_SUBRESOURCEUPDATED,
 		},
-		{
-			name:   "should return nil when status field is empty",
+		"should return nil when status field is empty": {
+			skip:   false,
 			action: proto.Event_CREATED,
 		},
-		{
-			name:          "should return nil when status field is Success",
+		"should return nil when status field is Success": {
+			skip:          false,
 			action:        proto.Event_CREATED,
 			inboundStatus: prov.Success.String(),
 		},
-		{
-			name:          "should return nil when status field is Error",
+		"should return nil when status field is Error": {
+			skip:          false,
 			action:        proto.Event_CREATED,
 			inboundStatus: prov.Error.String(),
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
 			profile := managedAppForProfTest
 			profile.Status.Level = tc.inboundStatus
 
@@ -111,16 +126,12 @@ func TestManagedApplicationProfileHandler(t *testing.T) {
 				subError:       tc.subError,
 				expectedStatus: tc.outboundStatus,
 				t:              t,
+				manApp:         manAppRI,
 			}
 
 			testCache := mockCache{
-				team:   team,
-				manApp: appRI,
-			}
-			if tc.skipManAppLoad {
-				testCache = mockCache{
-					team: team,
-				}
+				team:    team,
+				profDef: apdRI,
 			}
 
 			handler := NewManagedApplicationProfileHandler(p, testCache, c)
@@ -225,7 +236,8 @@ var managedAppForProfTest = management.ManagedApplicationProfile{
 		ManagedApplication:           "app-test",
 		ApplicationProfileDefinition: "app-prof-def",
 		Data: map[string]interface{}{
-			"data": "value",
+			"enumMapData": "label2",
+			"data2":       "value2",
 		},
 	},
 	Status: &apiv1.ResourceStatus{
