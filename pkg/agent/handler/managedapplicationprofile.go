@@ -128,7 +128,7 @@ func (h *managedApplicationProfile) checkForEnumValueMap(_ context.Context, data
 		return
 	}
 	if ri == nil {
-		log.Debug("could not fine application profile definition in cache")
+		log.Debug("could not find application profile definition in cache")
 		return
 	}
 	appProfDef := management.ApplicationProfileDefinition{}
