@@ -33,6 +33,45 @@ func (m MockApplicationRequest) GetConsumerOrgID() string {
 	return m.ConsumerOrgID
 }
 
+type MockApplicationProfileRequest struct {
+	provisioning.ApplicationProfileRequest
+	ID             string
+	AppProfileName string
+	Details        map[string]interface{}
+	AppName        string
+	AppDetails     map[string]string
+	TeamName       string
+	ConsumerOrgID  string
+}
+
+func (m MockApplicationProfileRequest) GetApplicationProfileData() map[string]interface{} {
+	return m.Details
+}
+
+func (m MockApplicationProfileRequest) GetApplicationDetailsValue(key string) string {
+	return m.AppDetails[key]
+}
+
+func (m MockApplicationProfileRequest) GetApplicationProfileDefinitionName() string {
+	return m.AppProfileName
+}
+
+func (m MockApplicationProfileRequest) GetManagedApplicationName() string {
+	return m.AppName
+}
+
+func (m MockApplicationProfileRequest) GetTeamName() string {
+	return m.TeamName
+}
+
+func (m MockApplicationProfileRequest) GetConsumerOrgID() string {
+	return m.ConsumerOrgID
+}
+
+func (m MockApplicationProfileRequest) GetID() string {
+	return m.ID
+}
+
 type MockCredentialRequest struct {
 	provisioning.CredentialRequest
 	ID            string
