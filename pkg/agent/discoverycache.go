@@ -177,6 +177,11 @@ func (dc *discoveryCache) buildMarketplaceFuncs(mpResources map[string]discoverF
 		marketplaceFuncs = append(marketplaceFuncs, mApps)
 	}
 
+	mAppProfs, ok := mpResources[management.ManagedApplicationProfileGVK().Kind]
+	if ok {
+		marketplaceFuncs = append(marketplaceFuncs, mAppProfs)
+	}
+
 	accessReq, ok := mpResources[management.AccessRequestGVK().Kind]
 	if ok {
 		marketplaceFuncs = append(marketplaceFuncs, accessReq)
@@ -279,6 +284,8 @@ func getAction(state string) proto.Event_Type {
 func isMPResource(kind string) bool {
 	switch kind {
 	case management.ManagedApplicationGVK().Kind:
+		return true
+	case management.ManagedApplicationProfileGVK().Kind:
 		return true
 	case management.AccessRequestGVK().Kind:
 		return true

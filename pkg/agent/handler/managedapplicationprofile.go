@@ -147,7 +147,6 @@ func (h *managedApplicationProfile) getManagedApp(_ context.Context, profile *ma
 		return nil, err
 	}
 
-	app = &management.ManagedApplication{}
 	err = app.FromInstance(ri)
 	return app, err
 }
