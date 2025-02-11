@@ -212,3 +212,31 @@ func (s *schemaParser) Parse(schemaBytes []byte) (map[string]PropertyDefinition,
 	}
 	return ret, nil
 }
+
+// GetEnumValueMapsFromSchema receives a schema from a xxxxDefinition resource and returns any properties that have enum value maps
+func GetEnumValueMapsFromSchema(schema map[string]interface{}) map[string]map[string]interface{} {
+	enumValueProps := map[string]map[string]interface{}{}
+
+	// convert the map to jsonSchema type
+	data, err := json.Marshal(schema)
+	if err != nil {
+		return enumValueProps
+	}
+	jSchema := jsonSchema{}
+	err = json.Unmarshal(data, &jSchema)
+	if err != nil {
+		return enumValueProps
+	}
+
+	for n, v := range jSchema.Properties {
+		if v.Type != "string" {
+			continue
+		}
+		if len(v.Enum) == 0 || len(v.EnumMap) == 0 {
+			continue
+		}
+		enumValueProps[n] = v.EnumMap
+	}
+
+	return enumValueProps
+}

@@ -132,6 +132,8 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 		return ar
 	}
 
+	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
+
 	data := map[string]interface{}{}
 	status, accessData := h.prov.AccessRequestProvision(req)
 

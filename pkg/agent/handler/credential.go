@@ -299,6 +299,8 @@ func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.
 		return nil, nil, true
 	}
 
+	updateDataFromEnumMap(cred.Spec.Data, crd.Spec.Schema)
+
 	return app, crd, false
 }
 

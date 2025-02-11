@@ -37,6 +37,7 @@ type propertyDefinition struct {
 	Title              string                               `json:"title,omitempty"`
 	Description        string                               `json:"description,omitempty"`
 	Enum               []string                             `json:"enum,omitempty"`
+	EnumMap            map[string]interface{}               `json:"x-enum-values,omitempty"`
 	DefaultValue       interface{}                          `json:"default,omitempty"`
 	ReadOnly           bool                                 `json:"readOnly,omitempty"`
 	Format             string                               `json:"format,omitempty"`
@@ -128,6 +129,8 @@ type StringPropertyBuilder interface {
 	SetFirstEnumValue(value string) StringPropertyBuilder
 	// AddEnumValue - Add another value to the list of allowed values for the property
 	AddEnumValue(value string) StringPropertyBuilder
+	// AddEnumValueMap - Add map of enum values with display values
+	AddEnumValueMap(values map[string]interface{}) StringPropertyBuilder
 	// IsEncrypted - Set that this field must be encrypted at rest
 	IsEncrypted() StringPropertyBuilder
 	// IsCopyable - Set that this field may be copied via the UI
@@ -239,6 +242,7 @@ func (p *schemaProperty) SetHidden() TypePropertyBuilder {
 func (p *schemaProperty) IsString() StringPropertyBuilder {
 	p.dataType = DataTypeString
 	return &stringSchemaProperty{
+		enumMap:        map[string]interface{}{},
 		schemaProperty: p,
 	}
 }
@@ -324,6 +328,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	enumMap        map[string]interface{}
 	widget         string
 	defaultValue   string
 	dependencies   map[string][]PropertyBuilder
@@ -371,6 +376,17 @@ func (p *stringSchemaProperty) enumContains(str string) bool {
 func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder {
 	if !p.enumContains(value) {
 		p.enums = append(p.enums, value)
+	}
+	return p
+}
+
+// AddEnumValueMap - Receives a map of strings with Display:Value. The Schema created will contain all
+//
+//	of the Display values but on provisioning the agent will receive the Value back
+func (p *stringSchemaProperty) AddEnumValueMap(values map[string]interface{}) StringPropertyBuilder {
+	for d, v := range values {
+		p.enums = append(p.enums, d)
+		p.enumMap[d] = v
 	}
 	return p
 }
@@ -428,6 +444,11 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
+
+	// add enum map if it exists
+	if len(p.enumMap) > 0 {
+		def.EnumMap = p.enumMap
+	}
 
 	// set default value
 	if len(p.defaultValue) > 0 {

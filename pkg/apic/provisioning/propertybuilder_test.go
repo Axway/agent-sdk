@@ -158,6 +158,31 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, prop.Format, "")
 	assert.Equal(t, "xxx", prop.Enum[0])
 	assert.Equal(t, "a", prop.Enum[1])
+
+	// good path, add emums with label mapping
+
+	// good path, set enums
+	prop, err = NewSchemaPropertyBuilder().
+		SetName("name").
+		IsString().
+		AddEnumValueMap(map[string]interface{}{
+			"LabelA": "a",
+			"LabelB": "b",
+			"LabelC": "c",
+			"LabelD": "d",
+		}).
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, prop)
+	assert.Len(t, prop.Enum, 4)
+	assert.Len(t, prop.EnumMap, 4)
+	assert.Equal(t, "c", prop.EnumMap["LabelC"])
+	assert.Equal(t, "name", prop.Name)
+	assert.Equal(t, "", prop.Description)
+	assert.False(t, prop.Required)
+	assert.False(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "")
 }
 
 func getBoolPointer(value bool) *bool {

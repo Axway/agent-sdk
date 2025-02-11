@@ -2,13 +2,14 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -16,17 +17,14 @@ type getTeamByID interface {
 	GetTeamByID(id string) *defs.PlatformTeam
 }
 
-type getManagedAppByName interface {
-	GetManagedApplicationByName(name string) *apiv1.ResourceInstance
-}
-
 type managedApplicationProfileCache interface {
 	getTeamByID
-	getManagedAppByName
+	GetApplicationProfileDefinitionByName(name string) (*v1.ResourceInstance, error)
 }
 
 type managedApplicationProfile struct {
 	marketplaceHandler
+	logger log.FieldLogger
 	prov   prov.ApplicationProfileProvisioner
 	cache  managedApplicationProfileCache
 	client client
@@ -35,6 +33,7 @@ type managedApplicationProfile struct {
 // NewManagedApplicationProfileHandler creates a Handler for Credentials
 func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner, cache managedApplicationProfileCache, client client) Handler {
 	return &managedApplicationProfile{
+		logger: log.NewFieldLogger().WithComponent("managedApplicationProfile").WithPackage("agent.handler"),
 		prov:   prov,
 		cache:  cache,
 		client: client,
@@ -81,12 +80,14 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 		}
 	}()
 
-	app, err := getManagedApp(h.cache, profile.Spec.ManagedApplication)
+	app, err := h.getManagedApp(ctx, profile)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
 		h.onError(ctx, profile, err)
 		return err
 	}
+
+	h.checkForEnumValueMap(ctx, profile.Spec.Data, profile.Spec.ApplicationProfileDefinition)
 
 	pma := provManagedAppProfile{
 		attributes:        profile.Spec.Data,
@@ -115,6 +116,39 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 	}
 
 	return err
+}
+
+func (h *managedApplicationProfile) checkForEnumValueMap(_ context.Context, data map[string]interface{}, profileDef string) {
+	log := h.logger.WithField("applicationProfileDefinition", profileDef)
+
+	// get application profile definition
+	ri, err := h.cache.GetApplicationProfileDefinitionByName(profileDef)
+	if err != nil {
+		log.WithError(err).Error("error getting application profile definition from cache")
+		return
+	}
+	if ri == nil {
+		log.Debug("could not find application profile definition in cache")
+		return
+	}
+	appProfDef := management.ApplicationProfileDefinition{}
+	if err := appProfDef.FromInstance(ri); err != nil {
+		log.WithError(err).Error("error reading application profile definition from cache")
+		return
+	}
+
+	updateDataFromEnumMap(data, appProfDef.Spec.Schema)
+}
+
+func (h *managedApplicationProfile) getManagedApp(_ context.Context, profile *management.ManagedApplicationProfile) (*management.ManagedApplication, error) {
+	app := management.NewManagedApplication(profile.Spec.ManagedApplication, profile.Metadata.Scope.Name)
+	ri, err := h.client.GetResource(app.GetSelfLink())
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.FromInstance(ri)
+	return app, err
 }
 
 // onError updates the managed app with an error status
@@ -176,12 +210,24 @@ func (a provManagedAppProfile) GetID() string {
 	return a.id
 }
 
-func getManagedApp(cache getManagedAppByName, name string) (*management.ManagedApplication, error) {
-	ri := cache.GetManagedApplicationByName(name)
-	if ri == nil {
-		return nil, fmt.Errorf("could not retrieved managed application")
+func updateDataFromEnumMap(data map[string]interface{}, schema map[string]interface{}) {
+	enumPropMap := prov.GetEnumValueMapsFromSchema(schema)
+	if len(enumPropMap) == 0 {
+		return
 	}
-	app := &management.ManagedApplication{}
-	err := app.FromInstance(ri)
-	return app, err
+	for k, l := range data {
+		enumMap, ok := enumPropMap[k]
+		if !ok {
+			continue
+		}
+		label, ok := l.(string)
+		if !ok {
+			continue
+		}
+		value, ok := enumMap[label]
+		if !ok {
+			continue
+		}
+		data[k] = value
+	}
 }
