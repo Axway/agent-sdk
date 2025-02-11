@@ -14,6 +14,10 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+const (
+	initDuration = 30 * time.Second
+)
+
 type clientConfig struct {
 	errors        chan error
 	events        chan *proto.Event
@@ -55,7 +59,7 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 		isRunning:              true,
 		stream:                 stream,
 		streamCtx:              streamCtx,
-		timer:                  time.NewTimer(0),
+		timer:                  time.NewTimer(initDuration),
 	}
 
 	return client, nil
@@ -91,7 +95,19 @@ func (c *watchClient) processRequest() error {
 	}
 	lock := createInitialRequestLock()
 	go c.requestLoop(lock)
+
+	// writes the initial watch request and resets the timer
+	err := c.initialRequest()
+	if err != nil {
+		c.handleError(err)
+		return err
+	}
+
 	return lock.wait()
+}
+
+func (c *watchClient) initialRequest() error {
+	return c.createTokenRefreshRequest()
 }
 
 func (c *watchClient) requestLoop(rl *initialRequestLock) {
