@@ -23,9 +23,14 @@ const (
 	mimeApplicationFormURLEncoded = "application/x-www-form-urlencoded"
 	mimeApplicationJSON           = "application/json"
 
-	GrantTypeAuthorizationCode = "authorization_code"
-	GrantTypeImplicit          = "implicit"
-	GrantTypeClientCredentials = "client_credentials"
+	GrantTypeAuthorizationCode     = "authorization_code"
+	GrantTypeImplicit              = "implicit"
+	GrantTypeClientCredentials     = "client_credentials"
+	GrantTypeRefreshToken          = "refresh_token"
+	GrantTypeSaml2Bearer           = "urn:ietf:params:oauth:grant-type:saml2-bearer"
+	GrantTypePassword              = "password"
+	GrantTypeIntegratedWindowsAuth = "iwa:ntlm" // NTLM
+	GrantTypeJWTBearer             = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
 	AuthResponseToken = "token"
 	AuthResponseCode  = "code"
