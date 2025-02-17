@@ -95,6 +95,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 		Owner: owner,
 	}
 	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
+	buildAPIServiceInstanceLifecycleSubResource(instance, serviceBody)
 
 	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	details := buildAgentDetailsSubResource(serviceBody, false, instDetails)
@@ -120,6 +121,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 
 	instance.Owner = owner
 	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
+	buildAPIServiceInstanceLifecycleSubResource(instance, serviceBody)
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
@@ -161,6 +163,14 @@ func buildAPIServiceInstanceSourceSubResource(instance *management.APIServiceIns
 			source.References.ApiServiceInstance = serviceBody.GetReferenceInstanceName()
 			serviceBody.serviceContext.updateInstanceSource = true
 		}
+	}
+	return nil
+}
+
+func buildAPIServiceInstanceLifecycleSubResource(instance *management.APIServiceInstance, serviceBody *ServiceBody) *management.ApiServiceInstanceSource {
+	lifecycle := serviceBody.GetInstanceLifeCycle()
+	if lifecycle != nil {
+		instance.Lifecycle = lifecycle
 	}
 	return nil
 }
@@ -214,6 +224,9 @@ func (c *ServiceClient) updateAPIServiceInstanceSubresources(ri apiv1.Interface,
 	subResources := make(map[string]interface{})
 	if serviceBody.serviceContext.updateInstanceSource && instance.Source != nil {
 		subResources[management.ApiServiceInstanceSourceSubResourceName] = instance.Source
+	}
+	if serviceBody.instanceLifecycle != nil && instance.Lifecycle != nil && instance.Lifecycle.Stage != "" {
+		subResources[management.ApiServiceInstanceLifecycleSubResourceName] = instance.Lifecycle
 	}
 
 	if len(subResources) > 0 {
