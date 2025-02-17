@@ -200,10 +200,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	addSpecHashToResource(instance)
 
 	ri, err := c.CreateOrUpdateResource(instance)
-	if err == nil {
-		err = c.updateAPIServiceInstanceSubresources(ri, instance, serviceBody)
-	}
-
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -213,7 +209,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		}
 		return err
 	}
-
+	err = c.updateAPIServiceInstanceSubresources(ri, instance, serviceBody)
+	if err != nil {
+		c.logger.WithField("resourceName", ri.Name).WithError(err).Warn("failed to update subresource")
+	}
 	c.caches.AddAPIServiceInstance(ri)
 	serviceBody.serviceContext.instanceName = instance.Name
 
