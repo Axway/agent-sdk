@@ -80,11 +80,11 @@ func TestServiceBodySetters(t *testing.T) {
 		SetRevisionAgentDetails(revDetails).
 		SetReferenceServiceName("refSvc", "refEnv").
 		SetReferenceInstanceName("refInstance", "refEnv").
-		SetIgnoreSpecBasedCreds(true)
+		SetIgnoreSpecBasedCreds(true).
+		SetInstanceLifecycle("stage", "active", "").
+		SetServiceEndpoints(ep)
 
-	sb, err := serviceBuilder.
-		SetServiceEndpoints(ep).
-		Build()
+	sb, err := serviceBuilder.Build()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, sb)
@@ -132,6 +132,10 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "refEnv/refSvc", sb.GetReferencedServiceName())
 	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
 	assert.Equal(t, true, sb.ignoreSpecBasesCreds)
+	instanceLifecycle := sb.GetInstanceLifeCycle()
+	assert.NotNil(t, instanceLifecycle)
+	assert.Equal(t, "stage", instanceLifecycle.Stage)
+	assert.Equal(t, "active", instanceLifecycle.ReleaseState.Name)
 
 	sb, err = serviceBuilder.
 		SetSourceDataplaneType(GitHub, true).

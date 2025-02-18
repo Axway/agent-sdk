@@ -40,6 +40,12 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 		RevisionAgentDetails: map[string]interface{}{
 			"subresource_revision_key": "value",
 		},
+		instanceLifecycle: &management.ApiServiceInstanceLifecycle{
+			Stage: "stage",
+			ReleaseState: management.ApiServiceInstanceLifecycleReleaseState{
+				Name: "active",
+			},
+		},
 	}
 
 	tags := []string{"tag1_value1", "tag2_value2"}
@@ -80,6 +86,7 @@ func TestServiceClient_buildAPIServiceInstance(t *testing.T) {
 	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIID)
 	assert.NotContains(t, inst.Attributes, defs.AttrExternalAPIName)
 	assert.NotContains(t, inst.Attributes, defs.AttrCreatedBy)
+	assert.NotNil(t, inst.Lifecycle)
 
 	assert.Equal(t, inst.Spec.Endpoint, ep)
 
