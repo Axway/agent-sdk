@@ -142,11 +142,11 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 			var ard *management.AccessRequestDefinition
 			switch test.name {
 			case "http-basic":
-				ard, err = NewBasicAuthAccessRequestBuilder().Register()
+				ard, err = NewBasicAuthAccessRequestBuilder().SetApplicationProfileDefinition(test.apdName).Register()
 			case "api-key":
-				ard, err = NewAPIKeyAccessRequestBuilder().Register()
+				ard, err = NewAPIKeyAccessRequestBuilder().SetApplicationProfileDefinition(test.apdName).Register()
 			default:
-				ard, err = NewAccessRequestBuilder().SetName(test.name).Register()
+				ard, err = NewAccessRequestBuilder().SetApplicationProfileDefinition(test.apdName).SetName(test.name).Register()
 			}
 			assert.Equal(t, test.name, ard.Name)
 			assert.Equal(t, test.apdName, ard.Applicationprofile.Name)
