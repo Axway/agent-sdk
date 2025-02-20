@@ -505,6 +505,7 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
+	// add the application profile definition, if it exists
 	ri, err := createOrUpdateDefinition(data)
 	if ri == nil || err != nil {
 		return nil, err
@@ -513,7 +514,9 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 	if data.FromInstance(ri) == nil && agent.applicationProfileDefinition != "" {
 		err = agent.apicClient.CreateSubResource(ri.ResourceMeta,
 			map[string]interface{}{
-				management.AccessRequestDefinitionApplicationprofileSubResourceName: data.Applicationprofile,
+				management.AccessRequestDefinitionApplicationprofileSubResourceName: management.AccessRequestDefinitionApplicationprofile{
+					Name: agent.applicationProfileDefinition,
+				},
 			})
 		if err != nil {
 			return data, err
@@ -526,9 +529,6 @@ func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinit
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	b := provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
-	if agent.applicationProfileDefinition != "" {
-		b.SetApplicationProfileDefinition(agent.applicationProfileDefinition)
-	}
 	return b
 }
 
