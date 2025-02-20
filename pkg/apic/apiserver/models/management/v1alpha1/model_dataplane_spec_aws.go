@@ -16,4 +16,6 @@ type DataplaneSpecAws struct {
 	AccessLogARN string `json:"accessLogARN,omitempty"`
 	// If true, the discovery agent will enable full transaction logging for discovered API stages
 	FullTransactionLogging bool `json:"fullTransactionLogging,omitempty"`
+	// The name of tag on AWS API Gateway Stage that holds mapped stage on Amplify Engage.
+	StageTagName string `json:"stageTagName,omitempty"`
 }

@@ -95,6 +95,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 		Owner: owner,
 	}
 	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
+	buildAPIServiceInstanceLifecycleSubResource(instance, serviceBody)
 
 	instDetails := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	details := buildAgentDetailsSubResource(serviceBody, false, instDetails)
@@ -120,6 +121,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 
 	instance.Owner = owner
 	buildAPIServiceInstanceSourceSubResource(instance, serviceBody)
+	buildAPIServiceInstanceLifecycleSubResource(instance, serviceBody)
 
 	details := util.MergeMapStringInterface(serviceBody.ServiceAgentDetails, serviceBody.InstanceAgentDetails)
 	util.SetAgentDetails(instance, buildAgentDetailsSubResource(serviceBody, false, details))
@@ -165,6 +167,14 @@ func buildAPIServiceInstanceSourceSubResource(instance *management.APIServiceIns
 	return nil
 }
 
+func buildAPIServiceInstanceLifecycleSubResource(instance *management.APIServiceInstance, serviceBody *ServiceBody) *management.ApiServiceInstanceSource {
+	lifecycle := serviceBody.GetInstanceLifeCycle()
+	if lifecycle != nil {
+		instance.Lifecycle = lifecycle
+	}
+	return nil
+}
+
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
@@ -190,10 +200,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 	addSpecHashToResource(instance)
 
 	ri, err := c.CreateOrUpdateResource(instance)
-	if err == nil {
-		err = c.updateAPIServiceInstanceSubresources(ri, instance, serviceBody)
-	}
-
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
 			_, rollbackErr := c.rollbackAPIService(serviceBody.serviceContext.serviceName)
@@ -203,7 +209,10 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		}
 		return err
 	}
-
+	err = c.updateAPIServiceInstanceSubresources(ri, instance, serviceBody)
+	if err != nil {
+		c.logger.WithField("resourceName", ri.Name).WithError(err).Warn("failed to update subresource")
+	}
 	c.caches.AddAPIServiceInstance(ri)
 	serviceBody.serviceContext.instanceName = instance.Name
 
@@ -214,6 +223,9 @@ func (c *ServiceClient) updateAPIServiceInstanceSubresources(ri apiv1.Interface,
 	subResources := make(map[string]interface{})
 	if serviceBody.serviceContext.updateInstanceSource && instance.Source != nil {
 		subResources[management.ApiServiceInstanceSourceSubResourceName] = instance.Source
+	}
+	if serviceBody.instanceLifecycle != nil && instance.Lifecycle != nil && instance.Lifecycle.Stage != "" {
+		subResources[management.ApiServiceInstanceLifecycleSubResourceName] = instance.Lifecycle
 	}
 
 	if len(subResources) > 0 {

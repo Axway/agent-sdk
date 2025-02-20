@@ -50,9 +50,11 @@ type APIServiceInstance struct {
 	//
 	//	Compliance ApiServiceInstanceCompliance `json:"compliance"`
 	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
-	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
-	Owner      *apiv1.Owner                  `json:"owner"`
-	References ApiServiceInstanceReferences  `json:"references"`
+	Lifecycle  *ApiServiceInstanceLifecycle  `json:"lifecycle,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//	Lifecycle  ApiServiceInstanceLifecycle  `json:"lifecycle"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApiServiceInstanceReferences `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Source     ApiServiceInstanceSource      `json:"source"`
