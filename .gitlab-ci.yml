@@ -102,6 +102,10 @@ twistlock-traceability:on-schedule:
   rules:
     - !reference [.only-never-rule, rules]
 
+merge-twistlock-scans-latest:
+  rules:
+    - !reference [.only-never-rule, rules]
+
 upload-files-to-srm:
   rules:
     - !reference [.only-never-rule, rules]
