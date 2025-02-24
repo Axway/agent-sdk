@@ -27,10 +27,11 @@ var (
 )
 
 const (
-	TraceabilityAgentResourceName              = "traceabilityagents"
-	TraceabilityAgentAgentstateSubResourceName = "agentstate"
-	TraceabilityAgentDataplaneSubResourceName  = "dataplane"
-	TraceabilityAgentStatusSubResourceName     = "status"
+	TraceabilityAgentResourceName                 = "traceabilityagents"
+	TraceabilityAgentAgentstateSubResourceName    = "agentstate"
+	TraceabilityAgentDataplaneSubResourceName     = "dataplane"
+	TraceabilityAgentSampletriggerSubResourceName = "sampletrigger"
+	TraceabilityAgentStatusSubResourceName        = "status"
 )
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
@@ -45,11 +46,12 @@ func init() {
 // TraceabilityAgent Resource
 type TraceabilityAgent struct {
 	apiv1.ResourceMeta
-	Agentstate TraceabilityAgentAgentstate `json:"agentstate"`
-	Dataplane  TraceabilityAgentDataplane  `json:"dataplane"`
-	Owner      *apiv1.Owner                `json:"owner"`
-	Spec       TraceabilityAgentSpec       `json:"spec"`
-	Status     TraceabilityAgentStatus     `json:"status"`
+	Agentstate    TraceabilityAgentAgentstate    `json:"agentstate"`
+	Dataplane     TraceabilityAgentDataplane     `json:"dataplane"`
+	Owner         *apiv1.Owner                   `json:"owner"`
+	Sampletrigger TraceabilityAgentSampletrigger `json:"sampletrigger"`
+	Spec          TraceabilityAgentSpec          `json:"spec"`
+	Status        TraceabilityAgentStatus        `json:"status"`
 }
 
 // NewTraceabilityAgent creates an empty *TraceabilityAgent
@@ -141,6 +143,7 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 	out["agentstate"] = res.Agentstate
 	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
+	out["sampletrigger"] = res.Sampletrigger
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -195,6 +198,20 @@ func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "dataplane")
 		err = json.Unmarshal(sr, &res.Dataplane)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Sampletrigger
+	if v, ok := aux.SubResources["sampletrigger"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "sampletrigger")
+		err = json.Unmarshal(sr, &res.Sampletrigger)
 		if err != nil {
 			return err
 		}

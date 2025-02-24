@@ -60,6 +60,8 @@ type Set struct {
 	MarketplaceCatalogV1alpha1                    *catalog_v1alpha1.MarketplaceClient
 	PublishedProductCatalogV1alpha1               *catalog_v1alpha1.UnscopedPublishedProductClient
 	ProductVisibilityCatalogV1alpha1              *catalog_v1alpha1.UnscopedProductVisibilityClient
+	ProductPlanVisibilityCatalogV1alpha1          *catalog_v1alpha1.UnscopedProductPlanVisibilityClient
+	ConsumerProductPlanVisibilityCatalogV1alpha1  *catalog_v1alpha1.UnscopedConsumerProductPlanVisibilityClient
 	ConsumerProductVisibilityCatalogV1alpha1      *catalog_v1alpha1.UnscopedConsumerProductVisibilityClient
 	CategoryVisibilityCatalogV1alpha1             *catalog_v1alpha1.UnscopedCategoryVisibilityClient
 	PublishedDocumentResourceCatalogV1alpha1      *catalog_v1alpha1.UnscopedPublishedDocumentResourceClient
@@ -292,6 +294,14 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewProductVisibilityClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductVisibility: %s", err))
+	}
+	s.ProductPlanVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewProductPlanVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ProductPlanVisibility: %s", err))
+	}
+	s.ConsumerProductPlanVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewConsumerProductPlanVisibilityClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.ConsumerProductPlanVisibility: %s", err))
 	}
 	s.ConsumerProductVisibilityCatalogV1alpha1, err = catalog_v1alpha1.NewConsumerProductVisibilityClient(b)
 	if err != nil {

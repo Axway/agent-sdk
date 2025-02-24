@@ -13,66 +13,63 @@ import (
 )
 
 var (
-	ProductPlanJobCtx log.ContextField = "productPlanJob"
+	ConsumerProductPlanVisibilityCtx log.ContextField = "consumerProductPlanVisibility"
 
-	_ProductPlanJobGVK = apiv1.GroupVersionKind{
+	_ConsumerProductPlanVisibilityGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "ProductPlanJob",
+			Kind:  "ConsumerProductPlanVisibility",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	ProductPlanJobScopes = []string{"ProductPlan"}
+	ConsumerProductPlanVisibilityScopes = []string{"Marketplace"}
 )
 
 const (
-	ProductPlanJobResourceName          = "productplanjobs"
-	ProductPlanJobStatusSubResourceName = "status"
+	ConsumerProductPlanVisibilityResourceName = "consumerproductplanvisibility"
 )
 
-func ProductPlanJobGVK() apiv1.GroupVersionKind {
-	return _ProductPlanJobGVK
+func ConsumerProductPlanVisibilityGVK() apiv1.GroupVersionKind {
+	return _ConsumerProductPlanVisibilityGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ProductPlanJobGVK, ProductPlanJobScopes[0], ProductPlanJobResourceName)
-	log.RegisterContextField(ProductPlanJobCtx)
+	apiv1.RegisterGVK(_ConsumerProductPlanVisibilityGVK, ConsumerProductPlanVisibilityScopes[0], ConsumerProductPlanVisibilityResourceName)
+	log.RegisterContextField(ConsumerProductPlanVisibilityCtx)
 }
 
-// ProductPlanJob Resource
-type ProductPlanJob struct {
+// ConsumerProductPlanVisibility Resource
+type ConsumerProductPlanVisibility struct {
 	apiv1.ResourceMeta
-	Owner *apiv1.Owner       `json:"owner"`
-	Spec  ProductPlanJobSpec `json:"spec"`
-	// Status ProductPlanJobStatus `json:"status"`
-	Status *apiv1.ResourceStatus `json:"status"`
+	Owner *apiv1.Owner                      `json:"owner"`
+	Spec  ConsumerProductPlanVisibilitySpec `json:"spec"`
 }
 
-// NewProductPlanJob creates an empty *ProductPlanJob
-func NewProductPlanJob(name, scopeName string) *ProductPlanJob {
-	return &ProductPlanJob{
+// NewConsumerProductPlanVisibility creates an empty *ConsumerProductPlanVisibility
+func NewConsumerProductPlanVisibility(name, scopeName string) *ConsumerProductPlanVisibility {
+	return &ConsumerProductPlanVisibility{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _ProductPlanJobGVK,
+			GroupVersionKind: _ConsumerProductPlanVisibilityGVK,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: ProductPlanJobScopes[0],
+					Kind: ConsumerProductPlanVisibilityScopes[0],
 				},
 			},
 		},
 	}
 }
 
-// ProductPlanJobFromInstanceArray converts a []*ResourceInstance to a []*ProductPlanJob
-func ProductPlanJobFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ProductPlanJob, error) {
-	newArray := make([]*ProductPlanJob, 0)
+// ConsumerProductPlanVisibilityFromInstanceArray converts a []*ResourceInstance to a []*ConsumerProductPlanVisibility
+func ConsumerProductPlanVisibilityFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ConsumerProductPlanVisibility, error) {
+	newArray := make([]*ConsumerProductPlanVisibility, 0)
 	for _, item := range fromArray {
-		res := &ProductPlanJob{}
+		res := &ConsumerProductPlanVisibility{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*ProductPlanJob, 0), err
+			return make([]*ConsumerProductPlanVisibility, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -80,10 +77,10 @@ func ProductPlanJobFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Pr
 	return newArray, nil
 }
 
-// AsInstance converts a ProductPlanJob to a ResourceInstance
-func (res *ProductPlanJob) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a ConsumerProductPlanVisibility to a ResourceInstance
+func (res *ConsumerProductPlanVisibility) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ProductPlanJobGVK()
+	meta.GroupVersionKind = ConsumerProductPlanVisibilityGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -100,8 +97,8 @@ func (res *ProductPlanJob) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a ProductPlanJob
-func (res *ProductPlanJob) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a ConsumerProductPlanVisibility
+func (res *ConsumerProductPlanVisibility) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -123,7 +120,7 @@ func (res *ProductPlanJob) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *ProductPlanJob) MarshalJSON() ([]byte, error) {
+func (res *ConsumerProductPlanVisibility) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -137,13 +134,12 @@ func (res *ProductPlanJob) MarshalJSON() ([]byte, error) {
 
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
-	out["status"] = res.Status
 
 	return json.Marshal(out)
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
+func (res *ConsumerProductPlanVisibility) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -167,26 +163,10 @@ func (res *ProductPlanJob) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// marshalling subresource Status
-	if v, ok := aux.SubResources["status"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "status")
-		// err = json.Unmarshal(sr, &res.Status)
-		res.Status = &apiv1.ResourceStatus{}
-		err = json.Unmarshal(sr, res.Status)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
 // PluralName returns the plural name of the resource
-func (res *ProductPlanJob) PluralName() string {
-	return ProductPlanJobResourceName
+func (res *ConsumerProductPlanVisibility) PluralName() string {
+	return ConsumerProductPlanVisibilityResourceName
 }
