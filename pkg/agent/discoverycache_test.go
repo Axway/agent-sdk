@@ -70,6 +70,7 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			c := &mockRIClient{
 				svcs:        newAPIServices(scopeName),
 				managedApps: newManagedApps(scopeName),
+				manAppProfs: newManaAppProfs(scopeName),
 				accessReqs:  newAccessReqs(scopeName),
 				creds:       newCredentials(scopeName),
 			}
@@ -78,6 +79,9 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			}
 			managedAppHandler := &mockHandler{
 				kind: management.ManagedApplicationGVK().Kind,
+			}
+			managedAppProfHandler := &mockHandler{
+				kind: management.ManagedApplicationProfileGVK().Kind,
 			}
 			accessReqHandler := &mockHandler{
 				kind: management.AccessRequestGVK().Kind,
@@ -89,6 +93,7 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			handlers := []handler.Handler{
 				svcHandler,
 				managedAppHandler,
+				managedAppProfHandler,
 				accessReqHandler,
 				credHandler,
 			}
@@ -158,6 +163,14 @@ func newManagedApps(scope string) []*apiv1.ResourceInstance {
 	}
 }
 
+func newManaAppProfs(scope string) []*apiv1.ResourceInstance {
+	map1, _ := management.NewManagedApplicationProfile("map1", scope).AsInstance()
+	map2, _ := management.NewManagedApplicationProfile("map2", scope).AsInstance()
+	return []*apiv1.ResourceInstance{
+		map1, map2,
+	}
+}
+
 func newAccessReqs(scope string) []*apiv1.ResourceInstance {
 	ar1, _ := management.NewAccessRequest("ar1", scope).AsInstance()
 	ar2, _ := management.NewAccessRequest("ar2", scope).AsInstance()
@@ -177,6 +190,7 @@ func newCredentials(scope string) []*apiv1.ResourceInstance {
 type mockRIClient struct {
 	svcs        []*apiv1.ResourceInstance
 	managedApps []*apiv1.ResourceInstance
+	manAppProfs []*apiv1.ResourceInstance
 	accessReqs  []*apiv1.ResourceInstance
 	creds       []*apiv1.ResourceInstance
 	err         error
@@ -188,6 +202,8 @@ func (m mockRIClient) GetAPIV1ResourceInstances(_ map[string]string, URL string)
 		return m.svcs, m.err
 	} else if strings.Contains(URL, "managedapplications") {
 		return m.managedApps, m.err
+	} else if strings.Contains(URL, "managedapplicationprofiles") {
+		return m.manAppProfs, m.err
 	} else if strings.Contains(URL, "accessrequests") {
 		return m.accessReqs, m.err
 	} else if strings.Contains(URL, "credentials") {
@@ -226,6 +242,15 @@ var mpWatchTopic = &management.WatchTopic{
 			{
 				Group: "management",
 				Kind:  management.ManagedApplicationGVK().Kind,
+				Name:  "*",
+				Scope: &management.WatchTopicSpecScope{
+					Kind: "Environment",
+					Name: envName,
+				},
+			},
+			{
+				Group: "management",
+				Kind:  management.ManagedApplicationProfileGVK().Kind,
 				Name:  "*",
 				Scope: &management.WatchTopicSpecScope{
 					Kind: "Environment",

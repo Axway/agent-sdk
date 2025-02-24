@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -19,17 +20,13 @@ const (
 	arFinalizer = "agent.accessrequest.provisioned"
 )
 
-type arProvisioner interface {
-	AccessRequestProvision(accessRequest prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData)
-	AccessRequestDeprovision(accessRequest prov.AccessRequest) (status prov.RequestStatus)
-}
 type customUnitHandler interface {
 	HandleQuotaEnforcement(*management.AccessRequest, *management.ManagedApplication) error
 }
 
 type accessRequestHandler struct {
 	marketplaceHandler
-	prov              arProvisioner
+	prov              prov.AccessProvisioner
 	cache             agentcache.Manager
 	client            client
 	encryptSchema     encryptSchemaFunc
@@ -37,7 +34,7 @@ type accessRequestHandler struct {
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov arProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
+func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
 	return &accessRequestHandler{
 		prov:              prov,
 		cache:             cache,
@@ -135,6 +132,8 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 		return ar
 	}
 
+	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
+
 	data := map[string]interface{}{}
 	status, accessData := h.prov.AccessRequestProvision(req)
 
@@ -224,13 +223,13 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 
 	status := h.prov.AccessRequestDeprovision(req)
 
-	if status.GetStatus() == prov.Success || err != nil {
+	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 		h.cache.DeleteAccessRequest(ri.Metadata.ID)
 	} else {
-		err := fmt.Errorf(status.GetMessage())
+		err := errors.New(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
-		h.onError(ctx, ar, fmt.Errorf(status.GetMessage()))
+		h.onError(ctx, ar, err)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 	}
 }

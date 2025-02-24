@@ -27,9 +27,8 @@ var (
 )
 
 const (
-	CredentialRequestDefinitionResourceName              = "credentialrequestdefinitions"
-	CredentialRequestDefinitionReferencesSubResourceName = "references"
-	CredentialRequestDefinitionWebhooksSubResourceName   = "webhooks"
+	CredentialRequestDefinitionResourceName            = "credentialrequestdefinitions"
+	CredentialRequestDefinitionWebhooksSubResourceName = "webhooks"
 )
 
 func CredentialRequestDefinitionGVK() apiv1.GroupVersionKind {
@@ -44,10 +43,9 @@ func init() {
 // CredentialRequestDefinition Resource
 type CredentialRequestDefinition struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner                          `json:"owner"`
-	References CredentialRequestDefinitionReferences `json:"references"`
-	Spec       CredentialRequestDefinitionSpec       `json:"spec"`
-	Webhooks   interface{}                           `json:"webhooks"`
+	Owner    *apiv1.Owner                    `json:"owner"`
+	Spec     CredentialRequestDefinitionSpec `json:"spec"`
+	Webhooks interface{}                     `json:"webhooks"`
 }
 
 // NewCredentialRequestDefinition creates an empty *CredentialRequestDefinition
@@ -137,7 +135,6 @@ func (res *CredentialRequestDefinition) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
-	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["webhooks"] = res.Webhooks
 
@@ -167,20 +164,6 @@ func (res *CredentialRequestDefinition) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
-	}
-
-	// marshalling subresource References
-	if v, ok := aux.SubResources["references"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "references")
-		err = json.Unmarshal(sr, &res.References)
-		if err != nil {
-			return err
-		}
 	}
 
 	// marshalling subresource Webhooks

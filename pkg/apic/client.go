@@ -783,6 +783,8 @@ func (c *ServiceClient) getCachedResource(data *apiv1.ResourceInstance) (*apiv1.
 		return c.caches.GetAccessRequestDefinitionByName(data.Name)
 	case management.CredentialRequestDefinitionGVK().Kind:
 		return c.caches.GetCredentialRequestDefinitionByName(data.Name)
+	case management.ApplicationProfileDefinitionGVK().Kind:
+		return c.caches.GetApplicationProfileDefinitionByName(data.Name)
 	case management.APIServiceInstanceGVK().Kind:
 		return c.caches.GetAPIServiceInstanceByName(data.Name)
 	}
@@ -795,6 +797,8 @@ func (c *ServiceClient) addResourceToCache(data *apiv1.ResourceInstance) {
 		c.caches.AddAccessRequestDefinition(data)
 	case management.CredentialRequestDefinitionGVK().Kind:
 		c.caches.AddCredentialRequestDefinition(data)
+	case management.ApplicationProfileDefinitionGVK().Kind:
+		c.caches.AddApplicationProfileDefinition(data)
 	case management.APIServiceInstanceGVK().Kind:
 		c.caches.AddAPIServiceInstance(data)
 	}

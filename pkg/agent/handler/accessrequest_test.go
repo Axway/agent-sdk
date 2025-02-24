@@ -164,9 +164,9 @@ func TestAccessRequestHandler(t *testing.T) {
 
 			c := &mockClient{
 				expectedStatus: tc.outboundStatus,
-				getErr:         tc.getErr,
+				getManAppErr:   tc.getErr,
 				getARDErr:      tc.getARDErr,
-				getRI:          mApp,
+				manApp:         mApp,
 				subError:       tc.subError,
 				t:              t,
 				ard:            ardRI,
@@ -246,7 +246,7 @@ func TestAccessRequestHandler_deleting(t *testing.T) {
 
 			c := &mockClient{
 				expectedStatus: tc.outboundStatus.String(),
-				getRI:          mApp,
+				manApp:         mApp,
 				isDeleting:     true,
 				t:              t,
 			}
@@ -329,6 +329,8 @@ type mockClient struct {
 	getARDErr       error
 	getRI           *v1.ResourceInstance
 	ard             *v1.ResourceInstance
+	manApp          *v1.ResourceInstance
+	getManAppErr    error
 	isDeleting      bool
 	subError        error
 	t               *testing.T
@@ -337,6 +339,9 @@ type mockClient struct {
 func (m *mockClient) GetResource(url string) (*v1.ResourceInstance, error) {
 	if strings.Contains(url, "/accessrequestdefinitions") {
 		return m.ard, m.getARDErr
+	}
+	if strings.Contains(url, "/managedapplication") {
+		return m.manApp, m.getManAppErr
 	}
 	return m.getRI, m.getErr
 }

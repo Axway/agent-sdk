@@ -19,6 +19,7 @@ const https = require("https");
 const http = require("http");
 const fs = require("fs");
 const { exit } = require("process");
+const { version } = require("os");
 
 const outDir = process.env.OUTDIR;
 const clientsPath = outDir + "/clients/";
@@ -26,8 +27,13 @@ const modelsPath = outDir + "/models/";
 const resourcesTmplPath = "resources.tmpl";
 const clientsTmplPath = "clients.tmpl";
 
+var isDebug = false;
+
+function parseBool(val) { return val === true || val === "true" }
+
 const fetch = () => {
-	const [, , protocol, host, port] = process.argv;
+	const [, , protocol, host, port, debug] = process.argv;
+	isDebug = parseBool(debug);
 	if (!protocol || !host || !port) {
 		throw new Error(
 			"Protocol, host, and port are required. Ex: node generate.js https apicentral.axway.com 443",
@@ -67,9 +73,11 @@ fetch()
 			process.exit(1);
 		}
 		const [subResources, mainResources] = createMainAndSubResources(resources);
-		// uncomment to see how the resources are grouped
-		//fs.writeFileSync(outDir + '/sub-resources.json', JSON.stringify(subResources));
-		//fs.writeFileSync(outDir + '/main-resources.json', JSON.stringify(mainResources));
+		
+		if (isDebug) {
+			fs.writeFileSync(outDir + '/sub-resources.json', JSON.stringify(subResources));
+			fs.writeFileSync(outDir + '/main-resources.json', JSON.stringify(mainResources));
+		}
 		delete subResources.api; // the api resources are common resources, and have been written manually.
 		writeSubResources(subResources);
 		writeMainResources(mainResources);
@@ -90,9 +98,26 @@ const writeSubResources = (subResources) => {
 		for (let versionKey in groupObj) {
 			// stringify the group and version data, update all references to drop group and version within path
 			const data = JSON.stringify(groupObj[versionKey]).replaceAll(`components/schemas/${groupKey}.${versionKey}.`, `components/schemas/`);
-			const res = execSync(
-				`openapi-generator-cli generate -g go -i /dev/stdin --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models << 'EOF'\n${data}\nEOF`
-			);
+			const fn =`${groupKey}-${versionKey}.json`;
+			fs.writeFileSync(fn, data)
+
+			console.log(`generating from ${fn}`);
+			try {
+				if (isDebug) {
+					const res1 = execSync(`openapi-generator-cli validate -i ${fn}`);
+					console.log(res1.toString());
+				}
+				const res = execSync(`openapi-generator-cli generate -g go -i ${fn} --package-name ${groupKey} --output ${modelsPath}${groupKey}/${versionKey} --global-property modelDocs=false,models`);
+
+				if (isDebug) {
+					console.log(res.toString());
+				} else {
+					fs.unlinkSync(fn)
+				}
+			} catch (error) {
+				console.error(error.message)
+				throw error
+			}
 		}
 	}
 };

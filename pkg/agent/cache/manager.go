@@ -23,6 +23,7 @@ const (
 	instanceCountKey       = "instanceCount"
 	credReqDefKey          = "credReqDef"
 	accReqDefKey           = "accReqDef"
+	appProfDefKey          = "appProfDef"
 	teamsKey               = "teams"
 	managedAppKey          = "managedApp"
 	subscriptionsKey       = "subscriptions"
@@ -68,6 +69,13 @@ type Manager interface {
 	SetAccessControlList(acl *v1.ResourceInstance)
 	GetAccessControlList() *v1.ResourceInstance
 	DeleteAccessControlList() error
+
+	// ApplicationProfileDefinition cache related methods
+	AddApplicationProfileDefinition(resource *v1.ResourceInstance)
+	GetApplicationProfileDefinitionKeys() []string
+	GetApplicationProfileDefinitionByName(name string) (*v1.ResourceInstance, error)
+	GetApplicationProfileDefinitionByID(id string) (*v1.ResourceInstance, error)
+	DeleteApplicationProfileDefinition(id string) error
 
 	// AccessRequestDefinition cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
@@ -133,6 +141,7 @@ type cacheManager struct {
 	persistedCache          cache.Cache
 	teams                   cache.Cache
 	ardMap                  cache.Cache
+	apdMap                  cache.Cache
 	crdMap                  cache.Cache
 	cacheFilename           string
 	isPersistedCacheLoaded  bool
@@ -178,6 +187,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		instanceCountKey:       func(loaded cache.Cache) { c.instanceCountMap = loaded },
 		credReqDefKey:          func(loaded cache.Cache) { c.crdMap = loaded },
 		accReqDefKey:           func(loaded cache.Cache) { c.ardMap = loaded },
+		appProfDefKey:          func(loaded cache.Cache) { c.apdMap = loaded },
 		teamsKey:               func(loaded cache.Cache) { c.teams = loaded },
 		managedAppKey:          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
 		subscriptionsKey:       func(loaded cache.Cache) { c.subscriptionMap = loaded },
@@ -334,6 +344,7 @@ func (c *cacheManager) Flush() {
 	c.accessRequestMap.Flush()
 	c.apiMap.Flush()
 	c.ardMap.Flush()
+	c.apdMap.Flush()
 	c.crdMap.Flush()
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()

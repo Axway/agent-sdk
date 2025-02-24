@@ -177,3 +177,79 @@ func TestSchemaBuilderWithDependenciesProperties(t *testing.T) {
 	assert.NotNil(t, schema.Dependencies)
 
 }
+
+func TestGetEnumValueMapsFromSchema(t *testing.T) {
+	testCases := map[string]struct {
+		skip           bool
+		inputSchema    map[string]interface{}
+		expectedOutput map[string]map[string]interface{}
+	}{
+		"expect no mapped schema properties when bad input schema": {
+			skip: false,
+			inputSchema: map[string]interface{}{
+				"properties": "string",
+			},
+			expectedOutput: map[string]map[string]interface{}{},
+		},
+		"expect no mapped schema properties basic props": {
+			skip: false,
+			inputSchema: map[string]interface{}{
+				"properties": map[string]interface{}{
+					"string": map[string]interface{}{
+						"type": "string",
+					},
+					"number": map[string]interface{}{
+						"type": "number",
+					},
+				},
+			},
+			expectedOutput: map[string]map[string]interface{}{},
+		},
+		"expect no mapped schema properties with string enum without enum map": {
+			skip: false,
+			inputSchema: map[string]interface{}{
+				"properties": map[string]interface{}{
+					"string": map[string]interface{}{
+						"type": "string",
+						"enum": []string{"a", "b", "c", "d"},
+					},
+				},
+			},
+			expectedOutput: map[string]map[string]interface{}{},
+		},
+		"expect mapped schema properties with string enum with enum map": {
+			skip: false,
+			inputSchema: map[string]interface{}{
+				"properties": map[string]interface{}{
+					"string": map[string]interface{}{
+						"type": "string",
+						"enum": []string{"LabelA", "LabelB", "LabelC", "LabelD"},
+						"x-enum-values": map[string]interface{}{
+							"LabelA": "a",
+							"LabelB": "b",
+							"LabelC": "c",
+							"LabelD": "d",
+						},
+					},
+				},
+			},
+			expectedOutput: map[string]map[string]interface{}{
+				"string": {
+					"LabelA": "a",
+					"LabelB": "b",
+					"LabelC": "c",
+					"LabelD": "d",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
+			output := GetEnumValueMapsFromSchema(tc.inputSchema)
+			assert.Equal(t, tc.expectedOutput, output)
+		})
+	}
+}
