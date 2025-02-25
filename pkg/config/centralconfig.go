@@ -86,8 +86,6 @@ const (
 	DiscoveryAgent AgentType = iota + 1
 	// TraceabilityAgent - Type definition for traceability agent
 	TraceabilityAgent
-	// GovernanceAgent - Type definition for governance agent
-	GovernanceAgent
 	// GenericService - Type for a generic service
 	GenericService
 )
@@ -95,13 +93,11 @@ const (
 var agentTypeNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "discoveryagent",
 	TraceabilityAgent: "traceabilityagent",
-	GovernanceAgent:   "governanceagent",
 }
 
 var agentTypeShortNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "da",
 	TraceabilityAgent: "ta",
-	GovernanceAgent:   "ga",
 }
 
 func (agentType AgentType) ToString() string {

@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -17,20 +17,15 @@ const (
 	maFinalizer = "agent.managedapplication.provisioned"
 )
 
-type managedAppProvision interface {
-	ApplicationRequestProvision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
-	ApplicationRequestDeprovision(applicationRequest prov.ApplicationRequest) (status prov.RequestStatus)
-}
-
 type managedApplication struct {
 	marketplaceHandler
-	prov   managedAppProvision
+	prov   prov.ApplicationProvisioner
 	cache  agentcache.Manager
 	client client
 }
 
 // NewManagedApplicationHandler creates a Handler for Credentials
-func NewManagedApplicationHandler(prov managedAppProvision, cache agentcache.Manager, client client) Handler {
+func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client) Handler {
 	return &managedApplication{
 		prov:   prov,
 		cache:  cache,
@@ -62,9 +57,9 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       h.getTeamName(ctx, app.Owner),
+		teamName:       getTeamName(h.cache, app.Owner),
 		data:           util.GetAgentDetails(app),
-		consumerOrgID:  h.getConsumerOrgID(app),
+		consumerOrgID:  getConsumerOrgID(app),
 		id:             app.Metadata.ID,
 	}
 
@@ -123,7 +118,7 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *management.Man
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
 	} else {
-		err := fmt.Errorf(status.GetMessage())
+		err := errors.New(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")
 		h.onError(app, err)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
@@ -138,25 +133,6 @@ func (h *managedApplication) onError(ar *management.ManagedApplication, err erro
 	ar.SubResources = map[string]interface{}{
 		"status": ar.Status,
 	}
-}
-
-func (h *managedApplication) getTeamName(_ context.Context, owner *apiv1.Owner) string {
-	teamName := ""
-	if owner != nil && owner.ID != "" {
-		team := h.cache.GetTeamByID(owner.ID)
-		if team != nil {
-			teamName = team.Name
-		}
-	}
-	return teamName
-}
-
-func (h *managedApplication) getConsumerOrgID(app *management.ManagedApplication) string {
-	consumerOrgID := ""
-	if app != nil && app.Marketplace.Resource.Owner != nil && app.Marketplace.Resource.Owner.Organization.ID != "" {
-		consumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
-	}
-	return consumerOrgID
 }
 
 type provManagedApp struct {
@@ -194,4 +170,23 @@ func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 // GetConsumerOrgID returns the ID of the consumer org for the managed application
 func (a provManagedApp) GetConsumerOrgID() string {
 	return a.consumerOrgID
+}
+
+func getTeamName(cache getTeamByID, owner *apiv1.Owner) string {
+	teamName := ""
+	if owner != nil && owner.ID != "" {
+		team := cache.GetTeamByID(owner.ID)
+		if team != nil {
+			teamName = team.Name
+		}
+	}
+	return teamName
+}
+
+func getConsumerOrgID(app *management.ManagedApplication) string {
+	consumerOrgID := ""
+	if app != nil && app.Marketplace.Resource.Owner != nil && app.Marketplace.Resource.Owner.Organization.ID != "" {
+		consumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
+	}
+	return consumerOrgID
 }

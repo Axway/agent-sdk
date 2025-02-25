@@ -12,6 +12,7 @@ const (
 	DataTypeInteger = "integer"
 	DataTypeArray   = "array"
 	DataTypeObject  = "object"
+	DataTypeBoolean = "boolean"
 )
 
 // oneOfPropertyDefinitions - used for items of propertyDefinition
@@ -36,6 +37,7 @@ type propertyDefinition struct {
 	Title              string                               `json:"title,omitempty"`
 	Description        string                               `json:"description,omitempty"`
 	Enum               []string                             `json:"enum,omitempty"`
+	EnumMap            map[string]interface{}               `json:"x-enum-values,omitempty"`
 	DefaultValue       interface{}                          `json:"default,omitempty"`
 	ReadOnly           bool                                 `json:"readOnly,omitempty"`
 	Format             string                               `json:"format,omitempty"`
@@ -95,6 +97,8 @@ type TypePropertyBuilder interface {
 	SetReadOnly() TypePropertyBuilder
 	// SetHidden - set the property as a hidden property
 	SetHidden() TypePropertyBuilder
+	// IsBoolean - Set the property to be of type string
+	IsBoolean() BooleanPropertyBuilder
 	// IsString - Set the property to be of type string
 	IsString() StringPropertyBuilder
 	// IsInteger - Set the property to be of type integer
@@ -108,6 +112,13 @@ type TypePropertyBuilder interface {
 	PropertyBuilder
 }
 
+// BooleanPropertyBuilder - specific methods related to the Boolean property builders
+type BooleanPropertyBuilder interface {
+	// SetDefaultValue - Define the initial value for the property
+	SetDefaultValue(value bool) BooleanPropertyBuilder
+	PropertyBuilder
+}
+
 // StringPropertyBuilder - specific methods related to the String property builders
 type StringPropertyBuilder interface {
 	// SetEnumValues - Set a list of valid values for the property
@@ -118,6 +129,8 @@ type StringPropertyBuilder interface {
 	SetFirstEnumValue(value string) StringPropertyBuilder
 	// AddEnumValue - Add another value to the list of allowed values for the property
 	AddEnumValue(value string) StringPropertyBuilder
+	// AddEnumValueMap - Add map of enum values with display values
+	AddEnumValueMap(values map[string]interface{}) StringPropertyBuilder
 	// IsEncrypted - Set that this field must be encrypted at rest
 	IsEncrypted() StringPropertyBuilder
 	// IsCopyable - Set that this field may be copied via the UI
@@ -229,6 +242,15 @@ func (p *schemaProperty) SetHidden() TypePropertyBuilder {
 func (p *schemaProperty) IsString() StringPropertyBuilder {
 	p.dataType = DataTypeString
 	return &stringSchemaProperty{
+		enumMap:        map[string]interface{}{},
+		schemaProperty: p,
+	}
+}
+
+// IsString - Set the property to be of type string
+func (p *schemaProperty) IsBoolean() BooleanPropertyBuilder {
+	p.dataType = DataTypeBoolean
+	return &booleanSchemaProperty{
 		schemaProperty: p,
 	}
 }
@@ -306,6 +328,7 @@ type stringSchemaProperty struct {
 	sortEnums      bool
 	firstEnumValue string
 	enums          []string
+	enumMap        map[string]interface{}
 	widget         string
 	defaultValue   string
 	dependencies   map[string][]PropertyBuilder
@@ -353,6 +376,17 @@ func (p *stringSchemaProperty) enumContains(str string) bool {
 func (p *stringSchemaProperty) AddEnumValue(value string) StringPropertyBuilder {
 	if !p.enumContains(value) {
 		p.enums = append(p.enums, value)
+	}
+	return p
+}
+
+// AddEnumValueMap - Receives a map of strings with Display:Value. The Schema created will contain all
+//
+//	of the Display values but on provisioning the agent will receive the Value back
+func (p *stringSchemaProperty) AddEnumValueMap(values map[string]interface{}) StringPropertyBuilder {
+	for d, v := range values {
+		p.enums = append(p.enums, d)
+		p.enumMap[d] = v
 	}
 	return p
 }
@@ -410,6 +444,11 @@ func (p *stringSchemaProperty) Build() (def *propertyDefinition, err error) {
 		p.enums = append([]string{p.firstEnumValue}, p.enums...)
 	}
 	def.Enum = p.enums
+
+	// add enum map if it exists
+	if len(p.enumMap) > 0 {
+		def.EnumMap = p.enumMap
+	}
 
 	// set default value
 	if len(p.defaultValue) > 0 {
@@ -501,6 +540,41 @@ func (p *stringSchemaProperty) buildDependenciesDef(val string, props []Property
 		}
 	}
 	return depDef, nil
+}
+
+/**
+  boolean property datatype
+*/
+// booleanSchemaProperty - adds specific info needed for a boolean schema property
+type booleanSchemaProperty struct {
+	schemaProperty *schemaProperty
+	defaultValue   *bool
+	BooleanPropertyBuilder
+}
+
+// SetDefaultValue - Define the initial value for the property
+func (p *booleanSchemaProperty) SetDefaultValue(value bool) BooleanPropertyBuilder {
+	p.defaultValue = &value
+	return p
+}
+
+// Build - create the propertyDefinition for use in the subscription schema builder
+func (p *booleanSchemaProperty) Build() (def *propertyDefinition, err error) {
+	def, err = p.schemaProperty.Build()
+	if err != nil {
+		return def, err
+	}
+
+	if p.defaultValue != nil {
+		def.DefaultValue = p.defaultValue
+	}
+
+	return def, err
+}
+
+// BuildDependencies - builds the dependencies for the property, this is called automatically by the schema builder
+func (p *booleanSchemaProperty) BuildDependencies() (*oneOfPropertyDefinitions, error) {
+	return nil, nil
 }
 
 /**

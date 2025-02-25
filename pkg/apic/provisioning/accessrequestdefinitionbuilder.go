@@ -14,6 +14,7 @@ type RegisterAccessRequestDefinition func(accessRequestDefinition *management.Ac
 type accessRequestDef struct {
 	name                   string
 	title                  string
+	appProfDef             string
 	provisionSchema        map[string]interface{}
 	requestSchema          map[string]interface{}
 	provisionEqualsRequest bool
@@ -28,6 +29,7 @@ type AccessRequestBuilder interface {
 	SetRequestSchema(schema SchemaBuilder) AccessRequestBuilder
 	SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder
 	SetProvisionSchemaToRequestSchema() AccessRequestBuilder
+	SetApplicationProfileDefinition(name string) AccessRequestBuilder
 	Register() (*management.AccessRequestDefinition, error)
 }
 
@@ -47,6 +49,12 @@ func (a *accessRequestDef) SetName(name string) AccessRequestBuilder {
 // SetTitle - set the title of the access request
 func (a *accessRequestDef) SetTitle(title string) AccessRequestBuilder {
 	a.title = title
+	return a
+}
+
+// SetApplicationProfileDefinition - set the name of the application profile definition
+func (a *accessRequestDef) SetApplicationProfileDefinition(name string) AccessRequestBuilder {
+	a.appProfDef = name
 	return a
 }
 
@@ -133,6 +141,12 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 	ard := management.NewAccessRequestDefinition(a.name, "")
 	ard.Title = a.title
 	ard.Spec = spec
+
+	if a.appProfDef != "" {
+		ard.Applicationprofile = management.AccessRequestDefinitionApplicationprofile{
+			Name: a.appProfDef,
+		}
+	}
 
 	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 

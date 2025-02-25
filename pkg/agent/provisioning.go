@@ -51,6 +51,8 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	var existingRI *v1.ResourceInstance
 
 	switch ri.Kind {
+	case management.ApplicationProfileDefinitionGVK().Kind:
+		existingRI, _ = agent.cacheManager.GetApplicationProfileDefinitionByName(ri.Name)
 	case management.AccessRequestDefinitionGVK().Kind:
 		existingRI, _ = agent.cacheManager.GetAccessRequestDefinitionByName(ri.Name)
 	case management.CredentialRequestDefinitionGVK().Kind:
@@ -60,6 +62,8 @@ func createOrUpdateDefinition(data v1.Interface) (*v1.ResourceInstance, error) {
 	// if not existing, go ahead and add the request definition
 	if existingRI == nil {
 		switch ri.Kind {
+		case management.ApplicationProfileDefinitionGVK().Kind:
+			agent.cacheManager.AddApplicationProfileDefinition(ri)
 		case management.AccessRequestDefinitionGVK().Kind:
 			agent.cacheManager.AddAccessRequestDefinition(ri)
 		case management.CredentialRequestDefinitionGVK().Kind:
@@ -501,17 +505,31 @@ func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provi
 
 // createOrUpdateAccessRequestDefinition -
 func createOrUpdateAccessRequestDefinition(data *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error) {
+	// add the application profile definition, if it exists
 	ri, err := createOrUpdateDefinition(data)
 	if ri == nil || err != nil {
 		return nil, err
 	}
-	err = data.FromInstance(ri)
+
+	if data.FromInstance(ri) == nil && agent.applicationProfileDefinition != "" {
+		err = agent.apicClient.CreateSubResource(ri.ResourceMeta,
+			map[string]interface{}{
+				management.AccessRequestDefinitionApplicationprofileSubResourceName: management.AccessRequestDefinitionApplicationprofile{
+					Name: agent.applicationProfileDefinition,
+				},
+			})
+		if err != nil {
+			return data, err
+		}
+	}
+
 	return data, err
 }
 
 // NewAccessRequestBuilder - called by the agents to build and register a new access request definition
 func NewAccessRequestBuilder() provisioning.AccessRequestBuilder {
-	return provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	b := provisioning.NewAccessRequestBuilder(createOrUpdateAccessRequestDefinition)
+	return b
 }
 
 // NewBasicAuthAccessRequestBuilder - called by the agents
@@ -524,28 +542,97 @@ func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
 }
 
-// provisioner
+// application profile definitions
 
-// RegisterProvisioner - allow the agent to register a provisioner
-func RegisterProvisioner(provisioner provisioning.Provisioning) {
-	if agent.agentFeaturesCfg == nil {
-		return
+// createOrUpdateApplicationProfileDefinition -
+func createOrUpdateApplicationProfileDefinition(data *management.ApplicationProfileDefinition) (*management.ApplicationProfileDefinition, error) {
+	ri, err := createOrUpdateDefinition(data)
+	if ri == nil || err != nil {
+		return nil, err
 	}
-	agent.provisioner = provisioner
+	agent.applicationProfileDefinition = ri.Name
+	err = data.FromInstance(ri)
+	return data, err
+}
 
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent || agent.cfg.GetAgentType() == config.GovernanceAgent {
-		agent.proxyResourceHandler.RegisterTargetHandler(
-			"accessrequesthandler",
-			handler.NewAccessRequestHandler(agent.provisioner, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
-		)
+// NewApplicationProfileBuilder - called by the agents to build and register a new application profile definition
+func NewApplicationProfileBuilder() provisioning.ApplicationProfileBuilder {
+	return provisioning.NewApplicationProfileBuilder(createOrUpdateApplicationProfileDefinition)
+}
+
+// CleanApplicationProfileDefinition - agent can call this to remove an ApplicationProfileDefinition from API Central when their setting is disabled
+func CleanApplicationProfileDefinition(name string) error {
+	existingRI, _ := agent.cacheManager.GetApplicationProfileDefinitionByName(name)
+	if existingRI == nil {
+		return nil
+	}
+	apd := management.NewApplicationProfileDefinition(name, agent.cfg.GetEnvironmentName())
+	ri, err := apd.AsInstance()
+	if err != nil {
+		return err
+	}
+	err = agent.apicClient.DeleteResourceInstance(ri)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// provisioner registration
+
+// application provisioner
+func registerApplicationProvisioner(provisioner interface{}) {
+	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"managedappHandler",
-			handler.NewManagedApplicationHandler(agent.provisioner, agent.cacheManager, agent.apicClient),
+			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient),
 		)
+	}
+}
+
+// application profile provisioner
+func registerApplicationProfileProvisioner(provisioner interface{}) {
+	if appProfileProv, ok := provisioner.(provisioning.ApplicationProfileProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"managedApplicationProfileHandler",
+			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient),
+		)
+	}
+}
+
+// access provisioner
+func registerAccessProvisioner(provisioner interface{}) {
+	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
+		agent.proxyResourceHandler.RegisterTargetHandler(
+			"accessrequestHandler",
+			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
+		)
+	}
+}
+
+// access provisioner
+func registerCredentialProvisioner(provisioner interface{}) {
+	if credProv, ok := provisioner.(provisioning.CredentialProvisioner); ok {
 		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(agent.provisioner, agent.apicClient, registry),
+			handler.NewCredentialHandler(credProv, agent.apicClient, registry),
 		)
 	}
+}
+
+// RegisterProvisioner - allow the agent to register a provisioner
+func RegisterProvisioner(provisioner interface{}) {
+	if agent.agentFeaturesCfg == nil {
+		return
+	}
+
+	if agent.cfg.GetAgentType() != config.DiscoveryAgent {
+		return
+	}
+	// call to register all provisioners, they will register if the interface is implemented
+	registerAccessProvisioner(provisioner)
+	registerApplicationProvisioner(provisioner)
+	registerApplicationProfileProvisioner(provisioner)
+	registerCredentialProvisioner(provisioner)
 }

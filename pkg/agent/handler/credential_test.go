@@ -999,8 +999,7 @@ var crd = &management.CredentialRequestDefinition{
 			},
 		},
 	},
-	Owner:      nil,
-	References: management.CredentialRequestDefinitionReferences{},
+	Owner: nil,
 	Spec: management.CredentialRequestDefinitionSpec{
 		Schema: nil,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{

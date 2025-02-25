@@ -158,6 +158,35 @@ func TestSubscriptionSchemaPropertyBuilderSetters(t *testing.T) {
 	assert.Equal(t, prop.Format, "")
 	assert.Equal(t, "xxx", prop.Enum[0])
 	assert.Equal(t, "a", prop.Enum[1])
+
+	// good path, add emums with label mapping
+
+	// good path, set enums
+	prop, err = NewSchemaPropertyBuilder().
+		SetName("name").
+		IsString().
+		AddEnumValueMap(map[string]interface{}{
+			"LabelA": "a",
+			"LabelB": "b",
+			"LabelC": "c",
+			"LabelD": "d",
+		}).
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, prop)
+	assert.Len(t, prop.Enum, 4)
+	assert.Len(t, prop.EnumMap, 4)
+	assert.Equal(t, "c", prop.EnumMap["LabelC"])
+	assert.Equal(t, "name", prop.Name)
+	assert.Equal(t, "", prop.Description)
+	assert.False(t, prop.Required)
+	assert.False(t, prop.ReadOnly)
+	assert.Equal(t, prop.Format, "")
+}
+
+func getBoolPointer(value bool) *bool {
+	return &value
 }
 
 func getFloat64Pointer(value float64) *float64 {
@@ -307,6 +336,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				SetReadOnly().
 				IsString().
 				IsEncrypted().
+				IsCopyable().
 				SetAsTextArea().
 				SetEnumValues([]string{"c", "a", "b"}).
 				AddEnumValue("addedValue").
@@ -320,6 +350,7 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Format:       "hidden",
 				ReadOnly:     true,
 				IsEncrypted:  true,
+				IsCopyable:   true,
 				Widget:       "textArea",
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "c", "a", "b", "addedValue"},
@@ -354,6 +385,30 @@ func Test_SubscriptionPropertyBuilder_Build_with_valid_values(t *testing.T) {
 				Type:         DataTypeString,
 				Enum:         []string{"firstValue", "a", "addedValue", "b", "c"},
 				DefaultValue: "a",
+			},
+			nil},
+		{"Minimal Boolean property",
+			NewSchemaPropertyBuilder().
+				SetName("TheBool").
+				SetLabel("The Boolean").
+				IsBoolean(),
+			propertyDefinition{
+				Name:  "TheBool",
+				Title: "The Boolean",
+				Type:  DataTypeBoolean,
+			},
+			nil},
+		{"Full Boolean property",
+			NewSchemaPropertyBuilder().
+				SetName("TheBool").
+				SetLabel("The Boolean").
+				IsBoolean().
+				SetDefaultValue(true),
+			propertyDefinition{
+				Name:         "TheBool",
+				Title:        "The Boolean",
+				Type:         DataTypeBoolean,
+				DefaultValue: getBoolPointer(true),
 			},
 			nil},
 		{"Minimal Number property",
@@ -640,6 +695,8 @@ func Test_SubscriptionPropertyBuilder_Build_with_error(t *testing.T) {
 			SetName("anObject").
 			IsObject().
 			AddProperty(NewSchemaPropertyBuilder()), "without a name"},
+		{"Boolean property without name", NewSchemaPropertyBuilder().
+			IsBoolean(), "without a name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
