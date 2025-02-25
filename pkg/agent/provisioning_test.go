@@ -99,11 +99,13 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	}
 }
 
+var postCfgFunc = func(cc config.CentralConfig, afc config.AgentFeaturesConfig) error { return nil }
+
 func TestNewAccessRequestBuilder(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "test")
-	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, postCfgFunc)
 
 	agent.apicClient = &mock.Client{
 		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
@@ -160,7 +162,7 @@ func TestNewApplicationProfileDefinitionBuilder(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "test")
-	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, postCfgFunc)
 	var sentAPD *v1.ResourceInstance
 	var createOrUpdateCalled bool
 
@@ -214,7 +216,7 @@ func TestCleanApplicationProfileDefinition(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer s.Close()
 	cfg := createCentralCfg(s.URL, "test")
-	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{})
+	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, postCfgFunc)
 	var deleteAPD *v1.ResourceInstance
 	var deleteCalled, returnErr bool
 
