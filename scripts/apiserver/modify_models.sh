@@ -132,6 +132,20 @@ $SED -i "/ApiServiceInstanceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceI
 # reformat the code
 go fmt ${MODEL_PATH}/APIServiceInstance.go
 
+######################
+# For APIServiceInstance.go, we want to turn    "Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`" into
+# "Lifecycle  *ApiServiceInstanceLifecycle   `json:"lifecycle,omitempty"`"
+######################
+SEARCH="\s*Lifecycle\s*ApiServiceInstanceLifecycle.*"
+REPLACE="Lifecycle *ApiServiceInstanceLifecycle \`json:\"lifecycle,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
 
 ######################
 # For APIServiceInstance.go, we want to turn    "Source ApiServiceInstanceSource `json:"source"`" into

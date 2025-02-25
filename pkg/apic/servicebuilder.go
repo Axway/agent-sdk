@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -66,6 +67,7 @@ type ServiceBuilder interface {
 	SetSourceDataplaneType(dataplaneType DataplaneType, isDesign bool) ServiceBuilder
 	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
 	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
+	SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -428,6 +430,19 @@ func (b *serviceBodyBuilder) SetReferenceInstanceName(instanceName, envName stri
 		b.serviceBody.referencedInstanceName = fmt.Sprintf("%s/%s", envName, instanceName)
 	} else {
 		b.serviceBody.referencedInstanceName = instanceName
+	}
+	return b
+}
+
+func (b *serviceBodyBuilder) SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder {
+	if stage != "" && releaseState != "" {
+		b.serviceBody.instanceLifecycle = &management.ApiServiceInstanceLifecycle{
+			Stage: stage,
+			ReleaseState: management.ApiServiceInstanceLifecycleReleaseState{
+				Name:    releaseState,
+				Message: message,
+			},
+		}
 	}
 	return b
 }
