@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -14,14 +16,20 @@ const (
 	governanceAgent   = "GovernanceAgent"
 )
 
+type sampling interface {
+	EnableSampling(samplingLimit int32, samplingEndTime time.Time)
+}
+
 type agentResourceHandler struct {
 	agentResourceManager resource.Manager
+	sampler              sampling
 }
 
 // NewAgentResourceHandler - creates a Handler for Agent resources
-func NewAgentResourceHandler(agentResourceManager resource.Manager) Handler {
+func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling) Handler {
 	return &agentResourceHandler{
 		agentResourceManager: agentResourceManager,
+		sampler:              sampler,
 	}
 }
 
@@ -36,6 +44,17 @@ func (h *agentResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, r
 			fallthrough
 		case governanceAgent:
 			h.agentResourceManager.SetAgentResource(resource)
+		}
+	}
+
+	if action == proto.Event_SUBRESOURCEUPDATED && resource.Kind == traceabilityAgent {
+		ta := &management.TraceabilityAgent{}
+		err := ta.FromInstance(resource)
+		if err != nil {
+			return err
+		}
+		if ta.Agentstate.Sampling.Enabled {
+			h.sampler.EnableSampling(ta.Agentstate.Sampling.Limit, time.Time(ta.Agentstate.Sampling.EndTime))
 		}
 	}
 	return nil
