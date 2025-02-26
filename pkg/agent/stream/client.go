@@ -241,6 +241,7 @@ func (s *StreamerClient) UpdateAgentStatus(state, prevState, message string) err
 func (s *StreamerClient) writeStatusRequest(state, message string) error {
 	if s.canUpdateStatus() {
 		req := &proto.Request{
+			SelfLink:    s.topicSelfLink,
 			RequestType: proto.RequestType_AGENT_STATUS.Enum(),
 			AgentStatus: &proto.AgentStatus{
 				State:   state,

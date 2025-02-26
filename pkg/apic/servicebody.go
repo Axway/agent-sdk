@@ -65,6 +65,7 @@ type ServiceBody struct {
 	referencedServiceName     string
 	referencedInstanceName    string
 	logger                    log.FieldLogger
+	instanceLifecycle         *management.ApiServiceInstanceLifecycle
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body
@@ -165,4 +166,8 @@ func (s *ServiceBody) GetReferencedServiceName() string {
 
 func (s *ServiceBody) GetReferenceInstanceName() string {
 	return s.referencedInstanceName
+}
+
+func (s *ServiceBody) GetInstanceLifeCycle() *management.ApiServiceInstanceLifecycle {
+	return s.instanceLifecycle
 }
