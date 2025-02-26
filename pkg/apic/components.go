@@ -65,6 +65,10 @@ var typeToComponent = map[string]map[string]string{
 	Traceable.String(): {
 		management.TraceabilityAgentGVK().Kind: "traceable-agent",
 	},
+	WSO2.String(): {
+		management.DiscoveryAgentGVK().Kind:    "wso2-discovery-agent",
+		management.TraceabilityAgentGVK().Kind: "wso2-traceability-agent",
+	},
 }
 
 func GetComponent(dataplaneType, agentResourceKind string) (string, error) {
