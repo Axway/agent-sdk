@@ -97,7 +97,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 	agentSamples = &sample{
 		config:             cfg,
 		currentCounts:      make(map[string]int),
-		counterLock:        sync.Mutex{},
+		samplingLock:       sync.Mutex{},
 		samplingCounter:    0,
 		counterResetPeriod: time.Minute,
 		counterResetStopCh: make(chan struct{}),

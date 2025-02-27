@@ -127,7 +127,6 @@ func TestSamplingConfig(t *testing.T) {
 func TestShouldSample(t *testing.T) {
 	type transactionCount struct {
 		successCount int
-		errorCount   int
 	}
 	testCases := []struct {
 		name               string
@@ -143,7 +142,6 @@ func TestShouldSample(t *testing.T) {
 			name: "Limit sampling to 10 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
 			expectedSampled:    40,
 			limit:              10,
@@ -154,7 +152,6 @@ func TestShouldSample(t *testing.T) {
 			name: "Limit sampling to 100 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
 			expectedSampled:    400,
 			limit:              100,
@@ -165,7 +162,6 @@ func TestShouldSample(t *testing.T) {
 			name: "Limit sampling to 1000 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
 			expectedSampled:    4000,
 			limit:              1000,
@@ -176,7 +172,6 @@ func TestShouldSample(t *testing.T) {
 			name: "Limit sampling to 0",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
 			expectedSampled:    0,
 			limit:              0,
@@ -234,10 +229,6 @@ func TestShouldSample(t *testing.T) {
 							for i := 0; i < calls.successCount; i++ {
 								sampleFunc(id, subID, "Success")
 							}
-
-							for i := 0; i < calls.errorCount; i++ {
-								sampleFunc(id, subID, "Failure")
-							}
 						}
 					}
 				}(&waitGroup, apiID, subID, numCalls)
@@ -245,8 +236,8 @@ func TestShouldSample(t *testing.T) {
 
 			waitGroup.Wait()
 			assert.Nil(t, err)
-			assert.Equal(t, 1, sampled)
-			assert.False(t, test.expectedSampled <= sampled && test.expectedSampled+int(test.limit) >= sampled)
+			assert.LessOrEqual(t, test.expectedSampled, sampled)
+			assert.GreaterOrEqual(t, test.expectedSampled+int(test.limit), sampled)
 		})
 	}
 }

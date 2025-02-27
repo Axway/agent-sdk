@@ -11,7 +11,7 @@ import (
 type sample struct {
 	config             Sampling
 	currentCounts      map[string]int
-	counterLock        sync.Mutex
+	samplingLock       sync.Mutex
 	samplingCounter    int32
 	counterResetPeriod time.Duration
 	counterResetStopCh chan struct{}
@@ -35,7 +35,9 @@ func (s *sample) disableSampling() {
 	disableTimer := time.NewTimer(time.Until(s.config.endTime))
 	<-disableTimer.C
 
+	s.samplingLock.Lock()
 	s.config.enabled = false
+	s.samplingLock.Unlock()
 
 	// stop limit reset job when sampling is disabled
 	s.counterResetStopCh <- struct{}{}
@@ -60,19 +62,23 @@ func (s *sample) samplingCounterReset() {
 }
 
 func (s *sample) resetSamplingCounter() {
-	s.counterLock.Lock()
-	defer s.counterLock.Unlock()
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
 	s.samplingCounter = 0
 }
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+
 	// check if sampling is enabled
 	if !s.config.enabled {
 		return false
 	}
 
 	// sampling limit per minute exceeded
+
 	if s.config.limit <= s.samplingCounter {
 		return false
 	}
@@ -83,9 +89,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 
-	s.counterLock.Lock()
 	s.samplingCounter++
-	s.counterLock.Unlock()
 
 	return true
 }
