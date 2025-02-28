@@ -713,7 +713,7 @@ func (p *properties) fillEnvVarsMap(name string, val string, prefix string, iPro
 		for pName := range iPropNames {
 			propName := strings.ReplaceAll(pName, ".", "_")
 			propName = strings.ToUpper(propName)
-			if strings.HasPrefix(n, propName) {
+			if strings.HasPrefix(n, fmt.Sprintf("%s_", propName)) {
 				m[pName] = val
 				envVarsMap[prefix][lastSuffix] = m
 			}
