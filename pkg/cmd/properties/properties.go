@@ -27,6 +27,8 @@ const qaEnforceDurationLowerLimit = "QA_ENFORCE_DURATION_LOWER_LIMIT"
 const (
 	lowerLimitName  = "%s-lowerLimit"
 	upperLimitName  = "%s-upperLimit"
+	minItemsName    = "%s-minitems"
+	maxItemsName    = "%s-maxitems"
 	qaVarNameFormat = "qa.%s"
 )
 
@@ -46,7 +48,7 @@ type Properties interface {
 	AddBoolProperty(name string, defaultVal bool, description string)
 	AddBoolFlag(name, description string)
 	AddStringSliceProperty(name string, defaultVal []string, description string)
-	AddObjectSliceProperty(name string, objectPropertyNames []string)
+	AddObjectSliceProperty(name string, objectPropertyNames []string, options ...ObjectOpt)
 
 	// Methods to get the configured properties
 	StringPropertyValue(name string) string
@@ -181,7 +183,29 @@ func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 	}
 }
 
-func (p *properties) AddObjectSliceProperty(envPrefix string, intfPropertyNames []string) {
+type objectOpts struct {
+	minItems int
+	maxItems int
+}
+
+// ObjectOpt are object options passed into AddObjectProperty
+type ObjectOpt func(prop *objectOpts)
+
+// WithMinimumItems - lower limit of the number of items in an object property
+func WithMinimumItems(minimumItems int) ObjectOpt {
+	return func(d *objectOpts) {
+		d.minItems = minimumItems
+	}
+}
+
+// WithMinimumItems - lower limit of the number of items in an object property
+func WithMaximumItems(maximumItems int) ObjectOpt {
+	return func(d *objectOpts) {
+		d.maxItems = maximumItems
+	}
+}
+
+func (p *properties) AddObjectSliceProperty(envPrefix string, intfPropertyNames []string, options ...ObjectOpt) {
 	envPrefix = strings.ReplaceAll(envPrefix, ".", "_")
 	envPrefix = strings.ToUpper(envPrefix)
 	if !strings.HasSuffix(envPrefix, "_") {
@@ -192,7 +216,33 @@ func (p *properties) AddObjectSliceProperty(envPrefix string, intfPropertyNames 
 		iPropNames[propName] = true
 	}
 
+	opts := &objectOpts{
+		minItems: -1,
+		maxItems: -1,
+	}
+	for _, option := range options {
+		option(opts)
+	}
+	p.configureObjectPropLimits(opts, envPrefix)
+
 	p.envIntfArrayPropertyKeys[envPrefix] = iPropNames
+}
+
+func (p *properties) configureObjectPropLimits(opts *objectOpts, envPrefix string) {
+	minFlag := fmt.Sprintf(minItemsName, envPrefix)
+	maxFlag := fmt.Sprintf(maxItemsName, envPrefix)
+
+	// validate that min is not greater than max if max is set
+	if opts.maxItems >= 0 && opts.minItems > opts.maxItems {
+		panic(fmt.Errorf("can not set (%s) to have a higher minimum items (%d) than maximum items {%d}", envPrefix, opts.minItems, opts.maxItems))
+	}
+
+	if opts.minItems > 0 {
+		p.rootCmd.Flags().Int(minFlag, opts.minItems, fmt.Sprintf("minimum items flag for configuration %s", envPrefix))
+	}
+	if opts.maxItems > 0 {
+		p.rootCmd.Flags().Int(maxFlag, opts.maxItems, fmt.Sprintf("maximum items flag for configuration %s", envPrefix))
+	}
 }
 
 func (p *properties) AddStringProperty(name string, defaultVal string, description string) {
@@ -602,6 +652,23 @@ func isDurationLowerLimitEnforced() bool {
 	return true
 }
 
+// getObjectSliceLimits - returns the limits of the object slice
+func (p *properties) getObjectItemLimits(envPrefix string) (int, int) {
+	minItemsFlag := p.rootCmd.Flag(fmt.Sprintf(minItemsName, envPrefix))
+	maxItemsFlag := p.rootCmd.Flag(fmt.Sprintf(maxItemsName, envPrefix))
+
+	min := -1
+	max := -1
+	if minItemsFlag != nil {
+		min, _ = strconv.Atoi(minItemsFlag.Value.String())
+	}
+	if maxItemsFlag != nil {
+		max, _ = strconv.Atoi(maxItemsFlag.Value.String())
+	}
+
+	return min, max
+}
+
 // ObjectSlicePropertyValue
 func (p *properties) ObjectSlicePropertyValue(name string) []map[string]interface{} {
 	p.readEnv()
@@ -610,7 +677,17 @@ func (p *properties) ObjectSlicePropertyValue(name string) []map[string]interfac
 	if !strings.HasSuffix(name, "_") {
 		name += "_"
 	}
+	min, max := p.getObjectItemLimits(name)
 	values := p.envIntfArrayPropValues[name]
+	if min > -1 && len(values) < min {
+		os.Stderr.WriteString(fmt.Sprintf("must specify more items for config %s", name))
+		os.Exit(1)
+	}
+	if max > -1 && len(values) > min {
+		os.Stderr.WriteString(fmt.Sprintf("must specify fewer items for config %s", name))
+		os.Exit(1)
+	}
+
 	for _, mapValues := range values {
 		p.resolveObjSliceValues(mapValues)
 	}
@@ -713,7 +790,7 @@ func (p *properties) fillEnvVarsMap(name string, val string, prefix string, iPro
 		for pName := range iPropNames {
 			propName := strings.ReplaceAll(pName, ".", "_")
 			propName = strings.ToUpper(propName)
-			if strings.HasPrefix(n, propName) {
+			if strings.HasPrefix(n, fmt.Sprintf("%s_", propName)) {
 				m[pName] = val
 				envVarsMap[prefix][lastSuffix] = m
 			}
