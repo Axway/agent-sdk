@@ -15,12 +15,15 @@ type sample struct {
 	samplingCounter    int32
 	counterResetPeriod time.Duration
 	counterResetStopCh chan struct{}
+	enabled            bool
+	endTime            time.Time
+	limit              int32
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
-	s.config.enabled = true
-	s.config.endTime = samplingEndTime
-	s.config.limit = samplingLimit
+	s.enabled = true
+	s.endTime = samplingEndTime
+	s.limit = samplingLimit
 
 	s.resetSamplingCounter()
 
@@ -32,11 +35,11 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) 
 }
 
 func (s *sample) disableSampling() {
-	disableTimer := time.NewTimer(time.Until(s.config.endTime))
+	disableTimer := time.NewTimer(time.Until(s.endTime))
 	<-disableTimer.C
 
 	s.samplingLock.Lock()
-	s.config.enabled = false
+	s.enabled = false
 	s.samplingLock.Unlock()
 
 	// stop limit reset job when sampling is disabled
@@ -73,13 +76,13 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	defer s.samplingLock.Unlock()
 
 	// check if sampling is enabled
-	if !s.config.enabled {
+	if !s.enabled {
 		return false
 	}
 
 	// sampling limit per minute exceeded
 
-	if s.config.limit <= s.samplingCounter {
+	if s.limit <= s.samplingCounter {
 		return false
 	}
 

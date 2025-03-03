@@ -28,9 +28,6 @@ type Sampling struct {
 	OnlyErrors      bool    `config:"onlyErrors" yaml:"onlyErrors"`
 	countMax        int
 	shouldSampleMax int
-	enabled         bool
-	endTime         time.Time
-	limit           int32
 }
 
 // DefaultConfig - returns a default sampling config where all transactions are sent
@@ -52,6 +49,14 @@ func GetGlobalSamplingPercentage() (float64, error) {
 
 // GetGlobalSampling -
 func GetGlobalSampling() *sample {
+	if agentSamples == nil {
+		agentSamples = &sample{
+			currentCounts:      make(map[string]int),
+			samplingLock:       sync.Mutex{},
+			counterResetPeriod: time.Minute,
+			counterResetStopCh: make(chan struct{}),
+		}
+	}
 	return agentSamples
 }
 
@@ -94,13 +99,16 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 	}
 
-	agentSamples = &sample{
-		config:             cfg,
-		currentCounts:      make(map[string]int),
-		samplingLock:       sync.Mutex{},
-		samplingCounter:    0,
-		counterResetPeriod: time.Minute,
-		counterResetStopCh: make(chan struct{}),
+	if agentSamples == nil {
+		agentSamples = &sample{
+			config:             cfg,
+			currentCounts:      make(map[string]int),
+			samplingLock:       sync.Mutex{},
+			counterResetPeriod: time.Minute,
+			counterResetStopCh: make(chan struct{}),
+		}
+	} else {
+		agentSamples.config = cfg
 	}
 
 	if err != nil {
