@@ -12,6 +12,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1059,6 +1060,96 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 			} else {
 				assert.NotPanics(t, fExecute)
 				_ = rootCmd.Execute()
+			}
+		})
+	}
+}
+
+func TestIntLowerAndUpperLimits(t *testing.T) {
+	cases := map[string]struct {
+		intProp     string
+		defaultInt  int
+		lowerLimit  int
+		upperLimit  int
+		useDefault  bool
+		expectPanic bool
+	}{
+		"valid limits range - value out of limits": {
+			intProp:     "10",
+			defaultInt:  5,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  true,
+			expectPanic: false,
+		},
+		"valid limits range - value within limits": {
+			intProp:     "6",
+			defaultInt:  5,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  false,
+			expectPanic: false,
+		},
+		"invalid limits range - lower > upper": {
+			intProp:     "5",
+			defaultInt:  5,
+			lowerLimit:  6,
+			upperLimit:  5,
+			useDefault:  false,
+			expectPanic: true,
+		},
+		"default value out of limits": {
+			intProp:     "5",
+			defaultInt:  10,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  false,
+			expectPanic: true,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			s := newTestServer()
+			defer s.Close()
+
+			var rootCmd AgentRootCmd
+			var cfg *configWithValidation
+			initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+				cfg = &configWithValidation{
+					configValidationCalled: false,
+					CentralCfg:             centralConfig,
+					AgentCfg: &agentConfig{
+						agentValidationCalled: false,
+						iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+					},
+				}
+				return cfg, nil
+			}
+
+			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+			os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+			os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+			os.Setenv("CENTRAL_AUTH_URL", s.URL)
+			os.Setenv("CENTRAL_URL", s.URL)
+			os.Setenv("CENTRAL_SINGLEURL", s.URL)
+			os.Setenv("AGENT_INT", tc.intProp)
+
+			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
+			viper.AddConfigPath("./testdata")
+			fExecute := func() {
+				rootCmd.GetProperties().AddIntProperty("agent.int", tc.defaultInt, "", properties.WithLowerLimitInt(tc.lowerLimit), properties.WithUpperLimitInt(tc.upperLimit))
+			}
+			if tc.expectPanic {
+				assert.Panics(t, fExecute)
+			} else {
+				assert.NotPanics(t, fExecute)
+				_ = rootCmd.Execute()
+				if tc.useDefault {
+					assert.Equal(t, tc.defaultInt, cfg.AgentCfg.iProp)
+				} else {
+					assert.Equal(t, tc.intProp, strconv.Itoa(cfg.AgentCfg.iProp))
+				}
 			}
 		})
 	}

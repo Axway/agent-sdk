@@ -530,10 +530,10 @@ func (p *properties) IntPropertyValue(name string) int {
 		lowerLimit, upperLimit := p.getIntLimits(flagName)
 		defaultVal, _ := strconv.Atoi(flag.DefValue)
 
-		if lowerLimit > 0 && i < lowerLimit {
+		if lowerLimit > -1 && i < lowerLimit {
 			i = defaultVal
 			log.Warnf("Configuration %s has been set to the default value of %d. Please update this value greater than the lower limit of %d", name, i, lowerLimit)
-		} else if upperLimit > 0 && i > upperLimit {
+		} else if upperLimit > -1 && i > upperLimit {
 			i = defaultVal
 			log.Warnf("Configuration %s has been set to the default value of %d. Please update this value lower than the upper limit of %d", name, i, upperLimit)
 		}
