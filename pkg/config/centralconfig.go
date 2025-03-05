@@ -605,12 +605,12 @@ func (c *CentralConfiguration) SetWatchResourceFilters(filters []ResourceFilter)
 			filter.EventTypes = []ResourceEventType{ResourceEventCreated, ResourceEventUpdated, ResourceEventDeleted}
 		}
 
-		if filter.Scope == nil {
+		if filter.Scope == nil && !filter.IsUnscoped {
 			filter.Scope = &ResourceScope{
 				Kind: mv1.EnvironmentGVK().Kind,
 				Name: c.GetEnvironmentName(),
 			}
-		} else {
+		} else if !filter.IsUnscoped {
 			if filter.Scope.Kind == "" || filter.Scope.Name == "" {
 				return errors.New("invalid watch filter configuration, scope kind and name are required")
 			}
