@@ -573,8 +573,41 @@ func (p *properties) IntPropertyValue(name string) int {
 	s := p.parseStringValue(name)
 	i, _ := strconv.Atoi(s)
 
+	flagName := p.nameToFlagName(name)
+	flag := p.rootCmd.Flag(flagName)
+
+	if flag != nil {
+		lowerLimit, upperLimit := p.getIntLimits(flagName)
+		defaultVal, _ := strconv.Atoi(flag.DefValue)
+
+		if lowerLimit > -1 && i < lowerLimit {
+			i = defaultVal
+			log.Warnf("Configuration %s has been set to the default value of %d. Please update this value greater than the lower limit of %d", name, i, lowerLimit)
+		} else if upperLimit > -1 && i > upperLimit {
+			i = defaultVal
+			log.Warnf("Configuration %s has been set to the default value of %d. Please update this value lower than the upper limit of %d", name, i, upperLimit)
+		}
+	}
+
 	p.addPropertyToFlatMap(name, s)
 	return i
+}
+
+func (p *properties) getIntLimits(flagName string) (int, int) {
+	lowerLimitFlag := p.rootCmd.Flag(fmt.Sprintf(lowerLimitName, flagName))
+	upperLimitFlag := p.rootCmd.Flag(fmt.Sprintf(upperLimitName, flagName))
+
+	lowerLimit := -1
+	upperLimit := -1
+
+	if lowerLimitFlag != nil {
+		lowerLimit, _ = strconv.Atoi(lowerLimitFlag.Value.String())
+	}
+	if upperLimitFlag != nil {
+		upperLimit, _ = strconv.Atoi(upperLimitFlag.Value.String())
+	}
+
+	return lowerLimit, upperLimit
 }
 
 func (p *properties) BoolPropertyValue(name string) bool {
