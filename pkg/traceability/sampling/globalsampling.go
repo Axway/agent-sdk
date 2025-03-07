@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
@@ -48,13 +48,21 @@ func GetGlobalSamplingPercentage() (float64, error) {
 }
 
 // GetGlobalSampling -
-func GetGlobalSampling() Sampling {
-	return agentSamples.config
+func GetGlobalSampling() *sample {
+	if agentSamples == nil {
+		agentSamples = &sample{
+			currentCounts:      make(map[string]int),
+			samplingLock:       sync.Mutex{},
+			counterResetPeriod: time.Minute,
+			counterResetStopCh: make(chan struct{}),
+		}
+	}
+	return agentSamples
 }
 
-func getSamplingPercentageConfig(percentage float64) (float64, error) {
+func getSamplingPercentageConfig(percentage float64, apicDeployment string) (float64, error) {
 	maxAllowedSampling := float64(maximumSamplingRate)
-	if !strings.HasPrefix(agent.GetCentralConfig().GetAPICDeployment(), "prod") {
+	if !strings.HasPrefix(apicDeployment, "prod") {
 		if val := os.Getenv(qaSamplingPercentageEnvVar); val != "" {
 			if qaSamplingPercentage, err := strconv.ParseFloat(val, 64); err == nil {
 				log.Tracef("Using %s (%s) rather than the default (%d) for non-production", qaSamplingPercentageEnvVar, val, defaultSamplingRate)
@@ -75,7 +83,7 @@ func getSamplingPercentageConfig(percentage float64) (float64, error) {
 }
 
 // SetupSampling - set up the global sampling for use by traceability
-func SetupSampling(cfg Sampling, offlineMode bool) error {
+func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error {
 	var err error
 
 	if offlineMode {
@@ -86,15 +94,21 @@ func SetupSampling(cfg Sampling, offlineMode bool) error {
 			OnlyErrors: false,
 		}
 	} else {
-		cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage)
+		cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage, apicDeployment)
 		cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
 		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 	}
 
-	agentSamples = &sample{
-		config:        cfg,
-		currentCounts: make(map[string]int),
-		counterLock:   sync.Mutex{},
+	if agentSamples == nil {
+		agentSamples = &sample{
+			config:             cfg,
+			currentCounts:      make(map[string]int),
+			samplingLock:       sync.Mutex{},
+			counterResetPeriod: time.Minute,
+			counterResetStopCh: make(chan struct{}),
+		}
+	} else {
+		agentSamples.config = cfg
 	}
 
 	if err != nil {
