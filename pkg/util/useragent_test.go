@@ -148,6 +148,21 @@ func TestParseUserAgents(t *testing.T) {
 				UseGRPCStatusUpdate: false,
 			},
 		},
+		{
+			name:      "test-7",
+			userAgent: fmt.Sprintf("WSO2DiscoveryAgent/1.0.0-65a0b4c (sdkVer:1.1.110; env:wso2; agent:wso2-da; reactive:true; hostname:%s)", hostname2),
+			expectedUA: &CentralUserAgent{
+				AgentType:           "WSO2DiscoveryAgent",
+				Version:             "1.0.0",
+				CommitSHA:           "65a0b4c",
+				SDKVersion:          "1.1.110",
+				Environment:         "wso2",
+				AgentName:           "wso2-da",
+				IsGRPC:              true,
+				HostName:            hostname2,
+				UseGRPCStatusUpdate: true,
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
