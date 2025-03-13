@@ -148,3 +148,9 @@ func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
 func (m *mockResourceManager) SetRebuildCacheFunc(rebuildCache resource.EventSyncCache) {
 	m.rebuildCache = rebuildCache
 }
+
+func (m *mockResourceManager) RegisterHandler(handler interface{}) {}
+
+func (m *mockResourceManager) GetHandler() interface{} {
+	return nil
+}

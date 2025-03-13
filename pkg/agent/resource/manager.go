@@ -35,6 +35,8 @@ type Manager interface {
 	UpdateAgentStatus(status, prevStatus, message string) error
 	AddUpdateAgentDetails(key, value string)
 	SetRebuildCacheFunc(rebuildCache EventSyncCache)
+	RegisterHandler(handler interface{})
+	GetHandler() interface{}
 }
 
 type executeAPIClient interface {
@@ -46,6 +48,7 @@ type executeAPIClient interface {
 
 type agentResourceManager struct {
 	agentResource              *apiv1.ResourceInstance
+	handler                    interface{}
 	prevAgentResHash           uint64
 	apicClient                 executeAPIClient
 	cfg                        config.CentralConfig
@@ -412,4 +415,12 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 	default:
 		panic(ErrUnsupportedAgentType)
 	}
+}
+
+func (a *agentResourceManager) RegisterHandler(handler interface{}) {
+	a.handler = handler
+}
+
+func (a *agentResourceManager) GetHandler() interface{} {
+	return a.handler
 }

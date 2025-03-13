@@ -112,3 +112,7 @@ func (s *sample) FilterEvents(events []publisher.Event) []publisher.Event {
 
 	return sampledEvents
 }
+
+func (s *sample) GetSamplePercentage() float64 {
+	return s.config.Percentage
+}
