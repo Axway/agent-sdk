@@ -14,8 +14,8 @@ type gcmEncoder struct {
 	gcm cipher.AEAD
 }
 
-func newGCMEncoder(key []byte) (*gcmEncoder, error) {
-	block, err := aes.NewCipher(hashedKey(key))
+func newGCMEncoderWithHashedKey(key []byte) (*gcmEncoder, error) {
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +28,10 @@ func newGCMEncoder(key []byte) (*gcmEncoder, error) {
 		gcm: gcm,
 	}
 	return enc, nil
+}
+
+func newGCMEncoder(key []byte) (*gcmEncoder, error) {
+	return newGCMEncoderWithHashedKey(hashedKey(key))
 }
 
 func hashedKey(key []byte) []byte {
@@ -69,10 +73,13 @@ func (e *gcmEncoder) Decrypt(str string) (string, error) {
 	}
 
 	nonce, cipherText := ed[:nonceSize], ed[nonceSize:]
-	decrypted, err := e.gcm.Open(nil, nonce, cipherText, nil)
+	decrypted, err := e.DecryptWithNonce(nonce, cipherText, nil)
 	if err != nil {
 		return "", err
 	}
-
 	return string(decrypted), nil
+}
+
+func (e *gcmEncoder) DecryptWithNonce(nonce, cipherText, additionalData []byte) ([]byte, error) {
+	return e.gcm.Open(nil, nonce, cipherText, additionalData)
 }
