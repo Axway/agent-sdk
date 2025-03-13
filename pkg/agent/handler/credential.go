@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"reflect"
@@ -655,14 +654,13 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 				continue
 			}
 
-			str, err := enc.Encrypt(v)
+			encrypted, err := enc.Encrypt(v)
 			if err != nil {
-
 				log.Error(err)
 				continue
 			}
 
-			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
+			data[key] = encrypted
 		}
 	}
 
