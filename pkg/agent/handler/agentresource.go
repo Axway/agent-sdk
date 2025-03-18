@@ -21,6 +21,10 @@ type sampling interface {
 	EnableSampling(samplingLimit int32, samplingEndTime time.Time)
 }
 
+type TraceabilityTriggerHandler interface {
+	TriggerTraceability()
+}
+
 type agentResourceHandler struct {
 	agentResourceManager resource.Manager
 	sampler              sampling
@@ -60,6 +64,10 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 	if ta.Agentstate.Sampling.Enabled {
 		h.sampler.EnableSampling(ta.Agentstate.Sampling.Limit, time.Time(ta.Agentstate.Sampling.EndTime))
+
+		if traceabilityTriggerHandler, ok := h.agentResourceManager.GetHandler().(TraceabilityTriggerHandler); ok {
+			traceabilityTriggerHandler.TriggerTraceability()
+		}
 	}
 
 	return nil
