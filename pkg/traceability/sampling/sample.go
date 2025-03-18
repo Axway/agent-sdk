@@ -15,7 +15,7 @@ type sample struct {
 	samplingCounter    int32
 	counterResetPeriod time.Duration
 	counterResetStopCh chan struct{}
-	disableSamplingCH  chan struct{}
+	disableSamplingCh  chan struct{}
 	enabled            bool
 	endTime            time.Time
 	limit              int32
@@ -27,7 +27,7 @@ func NewSample(counterResetPeriod time.Duration) *sample {
 	}
 
 	sampler := &sample{
-		disableSamplingCH:  make(chan struct{}),
+		disableSamplingCh:  make(chan struct{}),
 		counterResetStopCh: make(chan struct{}),
 		counterResetPeriod: counterResetPeriod,
 	}
@@ -53,7 +53,7 @@ func (s *sample) DisableSampling() {
 	s.samplingLock.Lock()
 	defer s.samplingLock.Unlock()
 	if s.enabled {
-		s.disableSamplingCH <- struct{}{}
+		s.disableSamplingCh <- struct{}{}
 	}
 }
 
@@ -61,7 +61,7 @@ func (s *sample) disableSampling() {
 	disableTimer := time.NewTimer(time.Until(s.endTime))
 	select {
 	case <-disableTimer.C:
-	case <-s.disableSamplingCH:
+	case <-s.disableSamplingCh:
 	}
 
 	s.samplingLock.Lock()
