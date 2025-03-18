@@ -36,7 +36,10 @@ func NewSample(counterResetPeriod time.Duration) *sample {
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
+	s.samplingLock.Lock()
 	s.enabled = true
+	s.samplingLock.Unlock()
+
 	s.endTime = samplingEndTime
 	s.limit = samplingLimit
 
