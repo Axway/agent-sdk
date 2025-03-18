@@ -21,7 +21,7 @@ type sample struct {
 	limit              int32
 }
 
-func NewSample(limit int32, endTime time.Time, counterResetPeriod time.Duration) *sample {
+func NewSample(counterResetPeriod time.Duration) *sample {
 	if counterResetPeriod == 0 {
 		counterResetPeriod = time.Minute
 	}
@@ -30,8 +30,6 @@ func NewSample(limit int32, endTime time.Time, counterResetPeriod time.Duration)
 		disableSamplingCH:  make(chan struct{}),
 		counterResetStopCh: make(chan struct{}),
 		counterResetPeriod: counterResetPeriod,
-		limit:              limit,
-		endTime:            endTime,
 	}
 
 	return sampler
