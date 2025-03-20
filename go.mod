@@ -8,7 +8,7 @@ require (
 	github.com/elastic/beats/v7 v7.17.23
 	github.com/emicklei/proto v1.9.2
 	github.com/fsnotify/fsnotify v1.5.4
-	github.com/getkin/kin-openapi v0.127.0
+	github.com/getkin/kin-openapi v0.131.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
