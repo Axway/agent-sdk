@@ -27,9 +27,10 @@ var (
 )
 
 const (
-	ApplicationProfileResourceName              = "applicationprofiles"
-	ApplicationProfileReferencesSubResourceName = "references"
-	ApplicationProfileStatusSubResourceName     = "status"
+	ApplicationProfileResourceName               = "applicationprofiles"
+	ApplicationProfileMarketplaceSubResourceName = "marketplace"
+	ApplicationProfileReferencesSubResourceName  = "references"
+	ApplicationProfileStatusSubResourceName      = "status"
 )
 
 func ApplicationProfileGVK() apiv1.GroupVersionKind {
@@ -44,10 +45,11 @@ func init() {
 // ApplicationProfile Resource
 type ApplicationProfile struct {
 	apiv1.ResourceMeta
-	Owner      *apiv1.Owner                 `json:"owner"`
-	References ApplicationProfileReferences `json:"references"`
-	Spec       ApplicationProfileSpec       `json:"spec"`
-	// Status     ApplicationProfileStatus     `json:"status"`
+	Marketplace ApplicationProfileMarketplace `json:"marketplace"`
+	Owner       *apiv1.Owner                  `json:"owner"`
+	References  ApplicationProfileReferences  `json:"references"`
+	Spec        ApplicationProfileSpec        `json:"spec"`
+	// Status      ApplicationProfileStatus      `json:"status"`
 	Status *apiv1.ResourceStatus `json:"status"`
 }
 
@@ -137,6 +139,7 @@ func (res *ApplicationProfile) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["marketplace"] = res.Marketplace
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["spec"] = res.Spec
@@ -168,6 +171,20 @@ func (res *ApplicationProfile) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Marketplace
+	if v, ok := aux.SubResources["marketplace"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "marketplace")
+		err = json.Unmarshal(sr, &res.Marketplace)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References

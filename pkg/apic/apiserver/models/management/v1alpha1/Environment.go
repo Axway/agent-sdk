@@ -32,6 +32,7 @@ const (
 	EnvironmentPoliciesSubResourceName        = "policies"
 	EnvironmentReferencesSubResourceName      = "references"
 	EnvironmentStagesSubResourceName          = "stages"
+	EnvironmentTraceableSubResourceName       = "traceable"
 )
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
@@ -52,6 +53,7 @@ type Environment struct {
 	References      EnvironmentReferences      `json:"references"`
 	Spec            EnvironmentSpec            `json:"spec"`
 	Stages          EnvironmentStages          `json:"stages"`
+	Traceable       EnvironmentTraceable       `json:"traceable"`
 }
 
 // NewEnvironment creates an empty *Environment
@@ -140,6 +142,7 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 	out["references"] = res.References
 	out["spec"] = res.Spec
 	out["stages"] = res.Stages
+	out["traceable"] = res.Traceable
 
 	return json.Marshal(out)
 }
@@ -220,6 +223,20 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "stages")
 		err = json.Unmarshal(sr, &res.Stages)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Traceable
+	if v, ok := aux.SubResources["traceable"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "traceable")
+		err = json.Unmarshal(sr, &res.Traceable)
 		if err != nil {
 			return err
 		}

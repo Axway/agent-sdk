@@ -17,6 +17,8 @@ type AssetRequestReferences struct {
 	// Reference to Release that got created from this asset request.
 	Asset                        string   `json:"asset,omitempty"`
 	CredentialRequestDefinitions []string `json:"credentialRequestDefinitions,omitempty"`
+	// Reference to the application profile definition used for this asset request.
+	ApplicationProfileDefinition string `json:"applicationProfileDefinition,omitempty"`
 	// Reference to Access Request resource
 	AccessRequest string `json:"accessRequest,omitempty"`
 }
