@@ -19,6 +19,8 @@ func TestFormatUserAgents(t *testing.T) {
 		expectedUserAgent string
 		envName           string
 		agentName         string
+		agentVersion      string
+		sdkVersion        string
 		isGRPC            bool
 	}{
 		{
@@ -26,12 +28,25 @@ func TestFormatUserAgents(t *testing.T) {
 			envName:           "env",
 			isGRPC:            true,
 			agentName:         "agent",
+			agentVersion:      "v1.0.0-125678e",
+			sdkVersion:        "v1.1.100",
+			expectedUserAgent: fmt.Sprintf("Test/1.0.0-125678e (sdkVer:1.1.100; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+		},
+		{
+			name:              "test-1",
+			envName:           "env",
+			isGRPC:            true,
+			agentName:         "agent",
+			agentVersion:      agentVersion,
+			sdkVersion:        sdkVersion,
 			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
 		},
 		{
 			name:              "test-2",
 			envName:           "env",
 			agentName:         "agent",
+			agentVersion:      agentVersion,
+			sdkVersion:        sdkVersion,
 			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
 		},
 	}
@@ -39,8 +54,8 @@ func TestFormatUserAgents(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ua := NewUserAgent(
 				agentTypeName,
-				agentVersion,
-				sdkVersion,
+				tc.agentVersion,
+				tc.sdkVersion,
 				tc.envName,
 				tc.agentName,
 				tc.isGRPC)
