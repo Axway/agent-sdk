@@ -50,19 +50,22 @@ type APIServiceInstance struct {
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Compliance ApiServiceInstanceCompliance `json:"compliance"`
-	Lifecycle  *ApiServiceInstanceLifecycle  `json:"lifecycle,omitempty"`
 	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
-	Lifecycle  *ApiServiceInstanceLifecycle  `json:"lifecycle,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	// 	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
+	//
+	//	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
+	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Source     ApiServiceInstanceSource     `json:"source"`
-	Source    *ApiServiceInstanceSource   `json:"source,omitempty"`
-	Spec      ApiServiceInstanceSpec      `json:"spec"`
-	Traceable ApiServiceInstanceTraceable `json:"traceable"`
+	Source *ApiServiceInstanceSource `json:"source,omitempty"`
+	Spec   ApiServiceInstanceSpec    `json:"spec"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Traceable ApiServiceInstanceTraceable `json:"traceable"`
+	Traceable *ApiServiceInstanceTraceable `json:"traceable,omitempty"`
 }
 
 // NewAPIServiceInstance creates an empty *APIServiceInstance

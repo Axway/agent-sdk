@@ -53,7 +53,10 @@ type Environment struct {
 	References      EnvironmentReferences      `json:"references"`
 	Spec            EnvironmentSpec            `json:"spec"`
 	Stages          EnvironmentStages          `json:"stages"`
-	Traceable       EnvironmentTraceable       `json:"traceable"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Traceable       EnvironmentTraceable       `json:"traceable"`
+	Traceable *EnvironmentTraceable `json:"traceable,omitempty"`
 }
 
 // NewEnvironment creates an empty *Environment
