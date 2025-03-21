@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -26,8 +27,8 @@ type CentralUserAgent struct {
 func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool) *CentralUserAgent {
 	return &CentralUserAgent{
 		AgentType:   agentType,
-		Version:     version,
-		SDKVersion:  sdkVersion,
+		Version:     strings.TrimPrefix(version, "v"),
+		SDKVersion:  strings.TrimPrefix(sdkVersion, "v"),
 		Environment: environmentName,
 		AgentName:   agentName,
 		IsGRPC:      isGRPC,
