@@ -42,11 +42,11 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 					assert.Len(t, accessRequestDefinition.Spec.Schema["properties"], 0)
 				}
 				registerFuncCalled = true
-				return nil, nil
+				return accessRequestDefinition, nil
 			}
 
 			builder := NewAccessRequestBuilder(registerFunc).
-				SetName(tt.name)
+				SetName(tt.name).SetApplicationProfileDefinition("apd")
 
 			if tt.wantErr {
 				builder = builder.SetRequestSchema(nil)
@@ -74,13 +74,15 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 								IsString()))
 			}
 
-			_, err := builder.Register()
+			ard, err := builder.Register()
 
 			if tt.wantErr {
 				assert.NotNil(t, err)
 				assert.False(t, registerFuncCalled)
 			} else {
 				assert.Nil(t, err)
+				assert.Equal(t, tt.name, ard.Name)
+				assert.Equal(t, "apd", ard.Applicationprofile.Name)
 				assert.True(t, registerFuncCalled)
 			}
 		})

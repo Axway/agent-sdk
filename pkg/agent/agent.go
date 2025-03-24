@@ -76,7 +76,6 @@ type agentData struct {
 	isInitialized              bool
 	isFinalized                bool
 
-	provisioner          provisioning.Provisioning
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
@@ -84,7 +83,8 @@ type agentData struct {
 	publishingLock    *sync.Mutex
 	ardLock           sync.Mutex
 
-	status string
+	status                       string
+	applicationProfileDefinition string
 
 	// profiling
 	profileDone chan struct{}
@@ -775,6 +775,7 @@ func newHandlers() []handler.Handler {
 			handlers,
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
+			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
 		)
 	}

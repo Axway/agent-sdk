@@ -1,15 +1,8 @@
 package handler
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"net/http"
 	"os"
@@ -737,18 +730,10 @@ func (m *mockProvCredential) GetExpirationTime() time.Time {
 	return time.Now()
 }
 
-func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[string]interface{} {
-	enc := func(v string) ([]byte, error) {
-		switch alg {
-		case "RSA-OAEP":
-			bts, _ := base64.StdEncoding.DecodeString(v)
-			return rsa.DecryptOAEP(sha256.New(), rand.Reader, pk, bts, nil)
-		case "PKCS":
-			bts, _ := base64.StdEncoding.DecodeString(v)
-			return rsa.DecryptPKCS1v15(rand.Reader, pk, bts)
-		default:
-			return nil, fmt.Errorf("unexpected algorithm")
-		}
+func decrypt(pk string, alg, hash string, data map[string]interface{}) map[string]interface{} {
+	dec, _ := util.NewDecryptor(pk, alg, hash)
+	if dec == nil {
+		return data
 	}
 
 	for key, value := range data {
@@ -757,12 +742,12 @@ func decrypt(pk *rsa.PrivateKey, alg string, data map[string]interface{}) map[st
 			continue
 		}
 
-		bts, err := enc(v)
+		bts, err := dec.Decrypt(v)
 		if err != nil {
 			log.Errorf("Failed to decrypt: %s\n", err)
 			continue
 		}
-		data[key] = string(bts)
+		data[key] = bts
 	}
 
 	return data
@@ -798,7 +783,7 @@ func Test_encrypt(t *testing.T) {
 	err := json.Unmarshal([]byte(crdSchema), &crd)
 	assert.Nil(t, err)
 
-	pub, priv, err := newKeyPair()
+	pub, priv, err := util.NewKeyPair(2048)
 	assert.Nil(t, err)
 
 	tests := []struct {
@@ -866,7 +851,7 @@ func Test_encrypt(t *testing.T) {
 				assert.Equal(t, "def", schemaData["two"])
 				assert.NotEqual(t, "ghi", schemaData["three"])
 
-				decrypted := decrypt(parsePrivateKey(tc.privateKey), tc.alg, encrypted)
+				decrypted := decrypt(tc.privateKey, tc.alg, tc.hash, encrypted)
 				assert.Equal(t, "abc", decrypted["one"])
 				assert.Equal(t, "def", decrypted["two"])
 				assert.Equal(t, "ghi", decrypted["three"])
@@ -922,58 +907,6 @@ func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.Resource
 	return nil, nil
 }
 
-func parsePrivateKey(priv string) *rsa.PrivateKey {
-	block, _ := pem.Decode([]byte(priv))
-	if block == nil {
-		panic("failed to parse PEM block containing the public key")
-	}
-
-	pk, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		panic("failed to parse private key: " + err.Error())
-	}
-
-	return pk
-}
-
-func newKeyPair() (public string, private string, err error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return "", "", err
-	}
-
-	pkBts := x509.MarshalPKCS1PrivateKey(priv)
-	fmt.Println(pkBts)
-	pvBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: pkBts,
-	}
-
-	privBuff := bytes.NewBuffer([]byte{})
-	err = pem.Encode(privBuff, pvBlock)
-	if err != nil {
-		return "", "", err
-	}
-
-	pubKeyBts, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	pubKeyBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKeyBts,
-	}
-
-	pubKeyBuff := bytes.NewBuffer([]byte{})
-	err = pem.Encode(pubKeyBuff, pubKeyBlock)
-	if err != nil {
-		return "", "", err
-	}
-
-	return pubKeyBuff.String(), privBuff.String(), nil
-}
-
 const credAppRefName = "managed-app-name"
 
 var credApp = &apiv1.ResourceInstance{
@@ -999,8 +932,7 @@ var crd = &management.CredentialRequestDefinition{
 			},
 		},
 	},
-	Owner:      nil,
-	References: management.CredentialRequestDefinitionReferences{},
+	Owner: nil,
 	Spec: management.CredentialRequestDefinitionSpec{
 		Schema: nil,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{

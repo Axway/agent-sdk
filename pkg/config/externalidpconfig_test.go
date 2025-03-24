@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,7 +116,7 @@ func TestExternalIDPConfig(t *testing.T) {
 					os.Setenv(key, "")
 				}
 			}()
-			prop := properties.NewProperties(nil)
+			prop := properties.NewProperties(&cobra.Command{})
 			AddAgentFeaturesConfigProperties(prop)
 			agentFeatures := &AgentFeaturesConfiguration{}
 			err := ParseExternalIDPConfig(agentFeatures, prop)
@@ -145,9 +146,7 @@ func TestExternalIDPConfig(t *testing.T) {
 					assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIdP.GetAuthConfig().GetClientSecret())
 					assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIdP.GetAuthConfig().GetRequestHeaders()))
 					assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIdP.GetAuthConfig().GetQueryParams()))
-
 				}
-
 			}
 		})
 	}

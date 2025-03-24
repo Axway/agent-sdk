@@ -5,11 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -423,6 +426,7 @@ func TestRootCmdHandlers(t *testing.T) {
 				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
 				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
 				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
+				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue("agent.objectSlice"),
 			},
 		}
 		return cfg, nil
@@ -439,6 +443,18 @@ func TestRootCmdHandlers(t *testing.T) {
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+	os.Setenv("AGENT_OBJECTSLICE_INDEX_1", "1")
+	os.Setenv("AGENT_OBJECTSLICE_NAME_1", "osp1_name")
+	os.Setenv("AGENT_OBJECTSLICE_NAMEVALUE_1", "osp1_value")
+	os.Setenv("AGENT_OBJECTSLICE_NAMETITLE_1", "osp1_title")
+	os.Setenv("AGENT_OBJECTSLICE_INDEX_2", "2")
+	os.Setenv("AGENT_OBJECTSLICE_NAMEVALUE_2", "osp2_value")
+	os.Setenv("AGENT_OBJECTSLICE_NAMETITLE_2", "osp2_title")
+	os.Setenv("AGENT_OBJECTSLICE_NAME_2", "osp2_name")
+	os.Setenv("AGENT_OBJECTSLICE_INDEX_3", "3")
+	os.Setenv("AGENT_OBJECTSLICE_NAMEVALUE_3", "osp3_value")
+	os.Setenv("AGENT_OBJECTSLICE_NAME_3", "osp3_name")
+	os.Setenv("AGENT_OBJECTSLICE_NAMETITLE_3", "osp3_title")
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	viper.AddConfigPath("./testdata")
@@ -448,7 +464,7 @@ func TestRootCmdHandlers(t *testing.T) {
 	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
 	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
 	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-
+	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"index", "name", "namevalue", "nametitle"})
 	err := rootCmd.Execute()
 
 	// should NOT be FileNotFound error
@@ -469,7 +485,19 @@ func TestRootCmdHandlers(t *testing.T) {
 	assert.Equal(t, 555, agentCfg.iProp)
 	assert.Equal(t, true, cmdHandlerInvoked)
 	assert.Equal(t, []string{"ss1", "ss2"}, agentCfg.ssProp)
+	if !assert.Len(t, agentCfg.osProp, 3, "the number of object slices expected was incorrect") {
+		return
+	}
 
+	sort.Slice(agentCfg.osProp, func(i, j int) bool {
+		return agentCfg.osProp[i]["index"].(string) < agentCfg.osProp[j]["index"].(string)
+	})
+	exp1 := map[string]interface{}{"index": "1", "name": "osp1_name", "namevalue": "osp1_value", "nametitle": "osp1_title"}
+	assert.True(t, assert.ObjectsAreEqualValues(exp1, agentCfg.osProp[0]), fmt.Sprintf("the first object slice did not have correct values:\n expected %+v\n actual %+v", exp1, agentCfg.osProp[0]))
+	exp2 := map[string]interface{}{"index": "2", "name": "osp2_name", "namevalue": "osp2_value", "nametitle": "osp2_title"}
+	assert.True(t, assert.ObjectsAreEqualValues(exp2, agentCfg.osProp[1]), fmt.Sprintf("the second object slice did not have correct values:\n expected %+v\n actual %+v", exp2, agentCfg.osProp[1]))
+	exp3 := map[string]interface{}{"index": "3", "name": "osp3_name", "namevalue": "osp3_value", "nametitle": "osp3_title"}
+	assert.True(t, assert.ObjectsAreEqualValues(exp3, agentCfg.osProp[2]), fmt.Sprintf("the third object slice did not have correct values:\n expected %+v\n actual %+v", exp3, agentCfg.osProp[2]))
 }
 
 func TestRootCommandLoggerStdout(t *testing.T) {
@@ -1032,6 +1060,96 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 			} else {
 				assert.NotPanics(t, fExecute)
 				_ = rootCmd.Execute()
+			}
+		})
+	}
+}
+
+func TestIntLowerAndUpperLimits(t *testing.T) {
+	cases := map[string]struct {
+		intProp     string
+		defaultInt  int
+		lowerLimit  int
+		upperLimit  int
+		useDefault  bool
+		expectPanic bool
+	}{
+		"valid limits range - value out of limits": {
+			intProp:     "10",
+			defaultInt:  5,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  true,
+			expectPanic: false,
+		},
+		"valid limits range - value within limits": {
+			intProp:     "6",
+			defaultInt:  5,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  false,
+			expectPanic: false,
+		},
+		"invalid limits range - lower > upper": {
+			intProp:     "5",
+			defaultInt:  5,
+			lowerLimit:  6,
+			upperLimit:  5,
+			useDefault:  false,
+			expectPanic: true,
+		},
+		"default value out of limits": {
+			intProp:     "5",
+			defaultInt:  10,
+			lowerLimit:  2,
+			upperLimit:  8,
+			useDefault:  false,
+			expectPanic: true,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			s := newTestServer()
+			defer s.Close()
+
+			var rootCmd AgentRootCmd
+			var cfg *configWithValidation
+			initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+				cfg = &configWithValidation{
+					configValidationCalled: false,
+					CentralCfg:             centralConfig,
+					AgentCfg: &agentConfig{
+						agentValidationCalled: false,
+						iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+					},
+				}
+				return cfg, nil
+			}
+
+			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+			os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+			os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+			os.Setenv("CENTRAL_AUTH_URL", s.URL)
+			os.Setenv("CENTRAL_URL", s.URL)
+			os.Setenv("CENTRAL_SINGLEURL", s.URL)
+			os.Setenv("AGENT_INT", tc.intProp)
+
+			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
+			viper.AddConfigPath("./testdata")
+			fExecute := func() {
+				rootCmd.GetProperties().AddIntProperty("agent.int", tc.defaultInt, "", properties.WithLowerLimitInt(tc.lowerLimit), properties.WithUpperLimitInt(tc.upperLimit))
+			}
+			if tc.expectPanic {
+				assert.Panics(t, fExecute)
+			} else {
+				assert.NotPanics(t, fExecute)
+				_ = rootCmd.Execute()
+				if tc.useDefault {
+					assert.Equal(t, tc.defaultInt, cfg.AgentCfg.iProp)
+				} else {
+					assert.Equal(t, tc.intProp, strconv.Itoa(cfg.AgentCfg.iProp))
+				}
 			}
 		})
 	}

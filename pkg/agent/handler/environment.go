@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	environment "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -27,7 +26,7 @@ func NewEnvironmentHandler(agentCacheManager agentcache.Manager, credentialConfi
 }
 
 func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != environment.EnvironmentGVK().Kind {
+	if resource.Kind != management.EnvironmentGVK().Kind {
 		return nil
 	}
 

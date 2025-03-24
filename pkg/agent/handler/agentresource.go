@@ -13,7 +13,6 @@ import (
 const (
 	discoveryAgent        = "DiscoveryAgent"
 	traceabilityAgent     = "TraceabilityAgent"
-	governanceAgent       = "GovernanceAgent"
 	agentStateSubresource = "agentstate"
 )
 
@@ -47,8 +46,6 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		case discoveryAgent:
 			fallthrough
 		case traceabilityAgent:
-			fallthrough
-		case governanceAgent:
 			h.agentResourceManager.SetAgentResource(resource)
 		}
 	}

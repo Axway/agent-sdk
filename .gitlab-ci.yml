@@ -5,11 +5,6 @@ variables:
   GIT_REPO_PATH: src/github.com/Axway # overridden from variables.yml
   GIT_REPO_NAME: agent-sdk
 
-  # for agent trigger jobs
-  AWS_DISCOVERY_PROJECT_ID: 7397
-  V7_DISCOVERY_PROJECT_ID: 7540
-  AZURE_DISCOVERY_PROJECT_ID: 8585
-
   # Fortify
   FORTIFY_PROJECT: "10566"
   FORTIFY_BUILD_ID: "apic_agents_sdk"
@@ -34,7 +29,7 @@ include:
     ref: master
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_GREEN
+    ref: $BEANO_CICD_BLUE
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
@@ -49,7 +44,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_GREEN
+    ref: $BEANO_CICD_BLUE
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"
@@ -63,36 +58,6 @@ stages:
   - security-scans
   - security-review
   - update-dep
-
-############################################################
-# Section for triggering agent updates
-############################################################
-.trigger-downstream-agent:
-  stage: update-dep
-  when: manual
-  script:
-    - apk update && apk add curl ca-certificates
-    - echo "triggering downstream agent with SDK_SHA = ${CI_COMMIT_SHA}"
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form "variables[SDK_SHA]=${CI_COMMIT_SHA}" --form ref=master ${CURL_URL_FOR_TRIGGER}/${PROJECT_ID}/trigger/pipeline
-  extends: .only-default-branch
-  except:
-    refs:
-      - schedules
-
-trigger-aws-apigw-discovery-agent:
-  before_script:
-    - export PROJECT_ID=${AWS_DISCOVERY_PROJECT_ID}
-  extends: .trigger-downstream-agent
-
-trigger-v7-discovery-agent:
-  before_script:
-    - export PROJECT_ID=${V7_DISCOVERY_PROJECT_ID}
-  extends: .trigger-downstream-agent
-
-trigger-azure-discovery-agent:
-  before_script:
-    - export PROJECT_ID=${AZURE_DISCOVERY_PROJECT_ID}
-  extends: .trigger-downstream-agent
 
 twistlock-discovery:on-schedule:
   rules:

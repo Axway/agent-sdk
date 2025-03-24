@@ -24,4 +24,5 @@ type ResourceFilter struct {
 	EventTypes       []ResourceEventType `json:"eventTypes"`
 	Scope            *ResourceScope      `json:"scope"`
 	IsCachedResource bool                `json:"isCachedResource"`
+	IsUnscoped       bool                `json:"isUnscoped"`
 }

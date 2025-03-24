@@ -130,6 +130,26 @@ type Provisioning interface {
 	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
 }
 
+type ApplicationProvisioner interface {
+	ApplicationRequestDeprovision(ApplicationRequest) RequestStatus
+	ApplicationRequestProvision(ApplicationRequest) RequestStatus
+}
+
+type ApplicationProfileProvisioner interface {
+	ApplicationProfileRequestProvision(ApplicationProfileRequest) RequestStatus
+}
+
+type AccessProvisioner interface {
+	AccessRequestDeprovision(AccessRequest) RequestStatus
+	AccessRequestProvision(AccessRequest) (RequestStatus, AccessData)
+}
+
+type CredentialProvisioner interface {
+	CredentialDeprovision(CredentialRequest) RequestStatus
+	CredentialProvision(CredentialRequest) (RequestStatus, Credential)
+	CredentialUpdate(CredentialRequest) (RequestStatus, Credential)
+}
+
 type CustomCredential interface {
 	GetIgnoredCredentialTypes() []string
 }

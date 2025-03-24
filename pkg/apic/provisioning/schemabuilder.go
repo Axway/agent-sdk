@@ -91,23 +91,24 @@ func (s *schemaBuilder) SetPropertyOrder(propertyOrder []string) SchemaBuilder {
 // AddProperty - adds a new subscription schema property to the schema
 func (s *schemaBuilder) AddProperty(property PropertyBuilder) SchemaBuilder {
 	prop, err := property.Build()
-	if err == nil {
-		s.properties[prop.Name] = *prop
-
-		// If property order wasn't set, add property as they come in
-		if !s.propertyOrderSet {
-			s.propertyOrder = append(s.propertyOrder, prop.Name)
-		}
-
-		dep, err := property.BuildDependencies()
-		if err != nil {
-			s.err = err
-		}
-		if dep != nil {
-			s.dependencies[prop.Name] = dep
-		}
-	} else {
+	if err != nil {
 		s.err = err
+		return s
+	}
+
+	s.properties[prop.Name] = *prop
+
+	// If property order wasn't set, add property as they come in
+	if !s.propertyOrderSet {
+		s.propertyOrder = append(s.propertyOrder, prop.Name)
+	}
+
+	dep, err := property.BuildDependencies()
+	if err != nil {
+		s.err = err
+	}
+	if dep != nil {
+		s.dependencies[prop.Name] = dep
 	}
 
 	return s
@@ -210,4 +211,32 @@ func (s *schemaParser) Parse(schemaBytes []byte) (map[string]PropertyDefinition,
 		ret[s] = newprop
 	}
 	return ret, nil
+}
+
+// GetEnumValueMapsFromSchema receives a schema from a xxxxDefinition resource and returns any properties that have enum value maps
+func GetEnumValueMapsFromSchema(schema map[string]interface{}) map[string]map[string]interface{} {
+	enumValueProps := map[string]map[string]interface{}{}
+
+	// convert the map to jsonSchema type
+	data, err := json.Marshal(schema)
+	if err != nil {
+		return enumValueProps
+	}
+	jSchema := jsonSchema{}
+	err = json.Unmarshal(data, &jSchema)
+	if err != nil {
+		return enumValueProps
+	}
+
+	for n, v := range jSchema.Properties {
+		if v.Type != "string" {
+			continue
+		}
+		if len(v.Enum) == 0 || len(v.EnumMap) == 0 {
+			continue
+		}
+		enumValueProps[n] = v.EnumMap
+	}
+
+	return enumValueProps
 }

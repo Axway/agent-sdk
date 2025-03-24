@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -184,7 +184,6 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
-	provData := h.deprovisionPreProcess(ctx, cred)
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
 		logger.WithError(err).Error("error getting credential request definition")
@@ -198,8 +197,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 		return
 	}
 
-	provCreds, err := h.newProvCreds(cred, app, provData, 0, crd)
-
+	provCreds, err := h.newProvCreds(cred, app, 0, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -209,16 +207,6 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	status := h.prov.CredentialDeprovision(provCreds)
 
 	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
-}
-
-func (*credentials) deprovisionPreProcess(_ context.Context, cred *management.Credential) map[string]interface{} {
-	var provData map[string]interface{}
-	if cred.Data != nil {
-		if m, ok := cred.Data.(map[string]interface{}); ok {
-			provData = m
-		}
-	}
-	return provData
 }
 
 func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
@@ -250,7 +238,7 @@ func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCred
 			})
 		}
 	} else {
-		err := fmt.Errorf(status.GetMessage())
+		err := errors.New(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")
 		h.onError(ctx, cred, err)
 		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
@@ -265,7 +253,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	provCreds, err := h.newProvCreds(cred, app, nil, 0, crd)
+	provCreds, err := h.newProvCreds(cred, app, 0, crd)
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
@@ -309,6 +297,8 @@ func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.
 		h.onError(ctx, cred, err)
 		return nil, nil, true
 	}
+
+	updateDataFromEnumMap(cred.Spec.Data, crd.Spec.Schema)
 
 	return app, crd, false
 }
@@ -397,13 +387,12 @@ func (h *credentials) processCredentialLevelSuccess(provCreds *provCreds, cred *
 func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential, actions []prov.CredentialAction) *management.Credential {
 	logger := getLoggerFromContext(ctx)
 	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
-	provData := h.deprovisionPreProcess(ctx, cred)
 	if shouldReturn {
 		return cred
 	}
 
 	for _, action := range actions {
-		provCreds, err := h.newProvCreds(cred, app, provData, action, crd)
+		provCreds, err := h.newProvCreds(cred, app, action, crd)
 		if err != nil {
 			logger.WithError(err).Error("error preparing credential request")
 			h.onError(ctx, cred, err)
@@ -504,7 +493,7 @@ type provCreds struct {
 	credSchemaDetails map[string]interface{}
 }
 
-func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, provData map[string]interface{}, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
+func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{
@@ -665,14 +654,13 @@ func encryptMap(enc util.Encryptor, schema, data map[string]interface{}) map[str
 				continue
 			}
 
-			str, err := enc.Encrypt(v)
+			encrypted, err := enc.Encrypt(v)
 			if err != nil {
-
 				log.Error(err)
 				continue
 			}
 
-			data[key] = base64.StdEncoding.EncodeToString([]byte(str))
+			data[key] = encrypted
 		}
 	}
 
