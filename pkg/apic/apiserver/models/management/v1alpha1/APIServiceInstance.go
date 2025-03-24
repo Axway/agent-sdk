@@ -32,6 +32,7 @@ const (
 	ApiServiceInstanceLifecycleSubResourceName  = "lifecycle"
 	ApiServiceInstanceReferencesSubResourceName = "references"
 	ApiServiceInstanceSourceSubResourceName     = "source"
+	ApiServiceInstanceTraceableSubResourceName  = "traceable"
 )
 
 func APIServiceInstanceGVK() apiv1.GroupVersionKind {
@@ -50,16 +51,21 @@ type APIServiceInstance struct {
 	//
 	//	Compliance ApiServiceInstanceCompliance `json:"compliance"`
 	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
-	Lifecycle  *ApiServiceInstanceLifecycle  `json:"lifecycle,omitempty"`
 	// GENERATE: The following code has been modified after code generation
-	//	Lifecycle  ApiServiceInstanceLifecycle  `json:"lifecycle"`
+	//
+	//	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
+	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source     ApiServiceInstanceSource      `json:"source"`
+	//	Source     ApiServiceInstanceSource     `json:"source"`
 	Source *ApiServiceInstanceSource `json:"source,omitempty"`
 	Spec   ApiServiceInstanceSpec    `json:"spec"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Traceable ApiServiceInstanceTraceable `json:"traceable"`
+	Traceable *ApiServiceInstanceTraceable `json:"traceable,omitempty"`
 }
 
 // NewAPIServiceInstance creates an empty *APIServiceInstance
@@ -154,6 +160,7 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 	out["references"] = res.References
 	out["source"] = res.Source
 	out["spec"] = res.Spec
+	out["traceable"] = res.Traceable
 
 	return json.Marshal(out)
 }
@@ -234,6 +241,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "source")
 		err = json.Unmarshal(sr, &res.Source)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Traceable
+	if v, ok := aux.SubResources["traceable"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "traceable")
+		err = json.Unmarshal(sr, &res.Traceable)
 		if err != nil {
 			return err
 		}

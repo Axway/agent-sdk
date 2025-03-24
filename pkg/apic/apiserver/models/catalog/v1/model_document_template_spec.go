@@ -14,5 +14,6 @@ type DocumentTemplateSpec struct {
 	// Document Template description.
 	Description string `json:"description,omitempty"`
 	// Version of the Document Template.
-	Version string `json:"version,omitempty"`
+	Version string                    `json:"version,omitempty"`
+	Usage   DocumentTemplateSpecUsage `json:"usage,omitempty"`
 }
