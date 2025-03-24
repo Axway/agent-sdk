@@ -143,7 +143,7 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
 # comment out the line we're changing
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
 # add in the new line we want
-$SED -i "/ApiServiceInstanceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+$SED -i "/ApiServiceInstanceLifecycle\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIServiceInstance.go
 
@@ -159,6 +159,21 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
 # add in the new line we want
 $SED -i "/ApiServiceInstanceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
+
+######################
+# For APIServiceInstance.go, we want to turn    "Traceable  ApiServiceInstanceTraceable   `json:"traceable"`" into
+# "Traceable  *ApiServiceInstanceTraceable   `json:"traceable,omitempty"`"
+######################
+SEARCH="\s*Traceable\s*ApiServiceInstanceTraceable.*"
+REPLACE="Traceable *ApiServiceInstanceTraceable \`json:\"traceable,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceTraceable\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIServiceInstance.go
 
@@ -223,8 +238,8 @@ $SED -i "/ApiServiceInstanceSourceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/model
 go fmt ${MODEL_PATH}/model_api_service_instance_source.go
 
 ######################
-# For model_traceability_agent_spec_config.go, we want to turn 	"Sampling TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`" into
-# "Sampling  *TraceabilityAgentSpecConfigSampling  `json:"sampling"`"
+# For model_traceability_agent_spec_config.go, we want to turn 	"Traceable TraceabilityAgentSpecConfigSampling  `json:"sampling,omitempty"`" into
+# "Traceable  *TraceabilityAgentSpecConfigSampling  `json:"sampling"`"
 ######################
 SEARCH="\s*Sampling\s*TraceabilityAgentSpecConfigSampling.*"
 REPLACE="Sampling *TraceabilityAgentSpecConfigSampling \`json:\"sampling,omitempty\"\`"
@@ -236,6 +251,22 @@ $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_traceability_agent_spec_con
 $SED -i "/TraceabilityAgentSpecConfigSampling/a ${REPLACE}" ${MODEL_PATH}/model_traceability_agent_spec_config.go
 # reformat the code
 go fmt ${MODEL_PATH}/model_traceability_agent_spec_config.go
+
+
+######################
+# For Environment.go, we want to turn    "Traceable  EnvironmentTraceable   `json:"traceable"`" into
+# "Traceable  *EnvironmentTraceable   `json:"traceable,omitempty"`"
+######################
+SEARCH="\s*Traceable\s*EnvironmentTraceable.*"
+REPLACE="Traceable *EnvironmentTraceable \`json:\"traceable,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/Environment.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/Environment.go
+# add in the new line we want
+$SED -i "/EnvironmentTraceable\s/a ${REPLACE}" ${MODEL_PATH}/Environment.go
+# reformat the code
+go fmt ${MODEL_PATH}/Environment.go
 
 ######################
 # Update the Status subresource in generated model to use v1.ResourceStatus
