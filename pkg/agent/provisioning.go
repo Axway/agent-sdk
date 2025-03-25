@@ -561,8 +561,8 @@ func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
 }
 
-// NewAMtlsAccessRequestBuilder - called by the agents
-func NewAMtlsAccessRequestBuilder() provisioning.AccessRequestBuilder {
+// NewMtlsAccessRequestBuilder - called by the agents
+func NewMtlsAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return NewAccessRequestBuilder().SetName(provisioning.MtlsARD)
 }
 
