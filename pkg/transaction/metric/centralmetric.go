@@ -46,62 +46,62 @@ func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
 	return g.counters[key]
 }
 
-type centralMetricBuilder struct {
+type CentralMetricBuilder struct {
 	*centralMetric
 }
 
-func NewCentralMetricBuilder() *centralMetricBuilder {
-	return &centralMetricBuilder{
+func NewCentralMetricBuilder() *CentralMetricBuilder {
+	return &CentralMetricBuilder{
 		centralMetric: &centralMetric{},
 	}
 }
 
-func (b *centralMetricBuilder) SetSubscription(sub *models.ResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetSubscription(sub *models.ResourceReference) *CentralMetricBuilder {
 	b.Subscription = sub
 	return b
 }
 
-func (b *centralMetricBuilder) SetApp(app *models.ApplicationResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetApp(app *models.ApplicationResourceReference) *CentralMetricBuilder {
 	b.App = app
 	return b
 }
 
-func (b *centralMetricBuilder) SetProduct(product *models.ProductResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetProduct(product *models.ProductResourceReference) *CentralMetricBuilder {
 	b.Product = product
 	return b
 }
 
-func (b *centralMetricBuilder) SetAPI(api *models.APIResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetAPI(api *models.APIResourceReference) *CentralMetricBuilder {
 	b.API = api
 	return b
 }
 
-func (b *centralMetricBuilder) SetAssetResource(asset *models.ResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetAssetResource(asset *models.ResourceReference) *CentralMetricBuilder {
 	b.AssetResource = asset
 	return b
 }
 
-func (b *centralMetricBuilder) SetProductPlan(plan *models.ResourceReference) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetProductPlan(plan *models.ResourceReference) *CentralMetricBuilder {
 	b.ProductPlan = plan
 	return b
 }
 
-func (b *centralMetricBuilder) SetUnits(units *Units) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetUnits(units *Units) *CentralMetricBuilder {
 	b.Units = units
 	return b
 }
 
-func (b *centralMetricBuilder) SetObservation(obs *models.ObservationDetails) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetObservation(obs *models.ObservationDetails) *CentralMetricBuilder {
 	b.Observation = obs
 	return b
 }
 
-func (b *centralMetricBuilder) SetEventID(id string) *centralMetricBuilder {
+func (b *CentralMetricBuilder) SetEventID(id string) *CentralMetricBuilder {
 	b.EventID = id
 	return b
 }
 
-func (b *centralMetricBuilder) Build() *centralMetric {
+func (b *CentralMetricBuilder) Build() *centralMetric {
 	return b.centralMetric
 }
 
