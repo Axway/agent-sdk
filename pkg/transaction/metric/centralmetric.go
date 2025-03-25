@@ -46,6 +46,65 @@ func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
 	return g.counters[key]
 }
 
+type centralMetricBuilder struct {
+	*centralMetric
+}
+
+func NewCentralMetricBuilder() *centralMetricBuilder {
+	return &centralMetricBuilder{
+		centralMetric: &centralMetric{},
+	}
+}
+
+func (b *centralMetricBuilder) SetSubscription(sub *models.ResourceReference) *centralMetricBuilder {
+	b.Subscription = sub
+	return b
+}
+
+func (b *centralMetricBuilder) SetApp(app *models.ApplicationResourceReference) *centralMetricBuilder {
+	b.App = app
+	return b
+}
+
+func (b *centralMetricBuilder) SetProduct(product *models.ProductResourceReference) *centralMetricBuilder {
+	b.Product = product
+	return b
+}
+
+func (b *centralMetricBuilder) SetAPI(api *models.APIResourceReference) *centralMetricBuilder {
+	b.API = api
+	return b
+}
+
+func (b *centralMetricBuilder) SetAssetResource(asset *models.ResourceReference) *centralMetricBuilder {
+	b.AssetResource = asset
+	return b
+}
+
+func (b *centralMetricBuilder) SetProductPlan(plan *models.ResourceReference) *centralMetricBuilder {
+	b.ProductPlan = plan
+	return b
+}
+
+func (b *centralMetricBuilder) SetUnits(units *Units) *centralMetricBuilder {
+	b.Units = units
+	return b
+}
+
+func (b *centralMetricBuilder) SetObservation(obs *models.ObservationDetails) *centralMetricBuilder {
+	b.Observation = obs
+	return b
+}
+
+func (b *centralMetricBuilder) SetEventID(id string) *centralMetricBuilder {
+	b.EventID = id
+	return b
+}
+
+func (b *centralMetricBuilder) Build() *centralMetric {
+	return b.centralMetric
+}
+
 type centralMetric struct {
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
 	App           *models.ApplicationResourceReference `json:"application,omitempty"`
