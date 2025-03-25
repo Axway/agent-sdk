@@ -91,6 +91,27 @@ func (b *CentralMetricBuilder) SetUnits(units *Units) *CentralMetricBuilder {
 	return b
 }
 
+func (b *CentralMetricBuilder) SetQuota(quota *models.ResourceReference) *CentralMetricBuilder {
+	if b.Units != nil && b.Units.Transactions != nil {
+		b.Units.Transactions.Quota = quota
+	} else if b.Units == nil {
+		b.Units = &Units{
+			Transactions: &Transactions{
+				UnitCount: UnitCount{
+					Quota: quota,
+				},
+			},
+		}
+	} else if b.Units.Transactions == nil {
+		b.Units.Transactions = &Transactions{
+			UnitCount: UnitCount{
+				Quota: quota,
+			},
+		}
+	}
+	return b
+}
+
 func (b *CentralMetricBuilder) SetObservation(obs *models.ObservationDetails) *CentralMetricBuilder {
 	b.Observation = obs
 	return b
