@@ -458,6 +458,25 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 	return NewCredentialRequestBuilder(apiKeyOptions...)
 }
 
+// NewMtlsCredentialRequestBuilder - add api key base properties for provisioning schema
+func NewMtlsCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
+	apiKeyOptions := []func(*crdBuilderOptions){
+		WithCRDName(provisioning.MtlsCRD),
+		WithCRDTitle("MTLS"),
+		WithCRDProvisionSchemaProperty(
+			provisioning.NewSchemaPropertyBuilder().
+				SetName(provisioning.Mtls).
+				SetLabel("MTLS").
+				SetRequired().
+				IsString().
+				IsEncrypted()),
+	}
+
+	apiKeyOptions = append(apiKeyOptions, options...)
+
+	return NewCredentialRequestBuilder(apiKeyOptions...)
+}
+
 // NewBasicAuthCredentialRequestBuilder - add basic auth base properties for provisioning schema
 func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	basicAuthOptions := []func(*crdBuilderOptions){
@@ -540,6 +559,11 @@ func NewBasicAuthAccessRequestBuilder() provisioning.AccessRequestBuilder {
 // NewAPIKeyAccessRequestBuilder - called by the agents
 func NewAPIKeyAccessRequestBuilder() provisioning.AccessRequestBuilder {
 	return NewAccessRequestBuilder().SetName(provisioning.APIKeyARD)
+}
+
+// NewAMtlsAccessRequestBuilder - called by the agents
+func NewAMtlsAccessRequestBuilder() provisioning.AccessRequestBuilder {
+	return NewAccessRequestBuilder().SetName(provisioning.MtlsARD)
 }
 
 // application profile definitions
