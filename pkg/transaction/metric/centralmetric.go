@@ -264,3 +264,80 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 	}
 	return cacheM
 }
+
+func (a *centralMetric) GetSubscriptionID() string {
+	if a.Subscription != nil {
+		return a.Subscription.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetAppInfo() (string, string) {
+	if a.App != nil {
+		return a.App.ID, a.App.ConsumerOrgID
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetProductInfo() (string, string) {
+	if a.Product != nil {
+		return a.Product.ID, a.Product.VersionID
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetAPIInfo() (string, string) {
+	if a.API != nil {
+		return a.API.ID, a.API.Name
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetAssetResourceID() string {
+	if a.AssetResource != nil {
+		return a.AssetResource.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetProductPlanID() string {
+	if a.ProductPlan != nil {
+		return a.ProductPlan.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetStatus() string {
+	if a.Units != nil && a.Units.Transactions != nil {
+		return a.Units.Transactions.Status
+	}
+	return ""
+}
+
+func (a *centralMetric) GetCount() int64 {
+	if a.Units != nil && a.Units.Transactions != nil {
+		return a.Units.Transactions.Count
+	}
+	return -1
+}
+
+func (a *centralMetric) GetResponseMetrics() *ResponseMetrics {
+	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Response != nil {
+		return a.Units.Transactions.Response
+	}
+	return &ResponseMetrics{}
+}
+
+func (a *centralMetric) GetQuotaID() string {
+	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Quota != nil {
+		return a.Units.Transactions.Quota.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetObservation() *models.ObservationDetails {
+	if a.Observation != nil {
+		return a.Observation
+	}
+	return &models.ObservationDetails{}
+}
