@@ -125,6 +125,14 @@ func ShouldSampleTransaction(details TransactionDetails) (bool, error) {
 	return agentSamples.ShouldSampleTransaction(details), nil
 }
 
+func SetSamplingResetCounterInterval(interval time.Duration) error {
+	if agentSamples == nil {
+		return ErrGlobalSamplingCfg
+	}
+	agentSamples.counterResetPeriod = interval
+	return nil
+}
+
 // FilterEvents - returns an array of events that are part of the sample
 func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 	if agentSamples == nil {
