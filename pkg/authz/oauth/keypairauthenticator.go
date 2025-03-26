@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -68,13 +68,13 @@ func (p *keyPairAuthenticator) prepareInitialToken(kid string) (string, error) {
 	if p.issuer == "" {
 		p.issuer = fmt.Sprintf("%s:%s", assertionTypeJWT, p.clientID)
 	}
-	token := jwt.NewWithClaims(getSigningMethod(p.signingMethod, jwt.SigningMethodRS256), jwt.StandardClaims{
+	token := jwt.NewWithClaims(getSigningMethod(p.signingMethod, jwt.SigningMethodRS256), jwt.RegisteredClaims{
 		Issuer:    p.issuer,
 		Subject:   p.clientID,
-		Audience:  p.aud,
-		ExpiresAt: now.Add(60*time.Second).UnixNano() / 1e9,
-		IssuedAt:  now.UnixNano() / 1e9,
-		Id:        uuid.New().String(),
+		Audience:  []string{p.aud},
+		ExpiresAt: jwt.NewNumericDate(now.Add(60 * time.Second)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		ID:        uuid.New().String(),
 	})
 
 	token.Header["kid"] = kid

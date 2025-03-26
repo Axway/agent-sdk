@@ -27,7 +27,7 @@ import (
 	"unicode"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
 )
 

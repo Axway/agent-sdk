@@ -9,7 +9,7 @@ require (
 	github.com/emicklei/proto v1.9.2
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/getkin/kin-openapi v0.131.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
