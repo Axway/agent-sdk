@@ -33,7 +33,10 @@ const (
 	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
-	Mtls   = "mtls"
+
+	// MTLS
+	Mtls       = "mtls"
+	XAxwayMTLS = "x-axway-mtls"
 
 	BasicAuthUsername = "username"
 	BasicAuthPassword = "password"

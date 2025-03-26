@@ -465,8 +465,7 @@ func NewMtlsCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provis
 		WithCRDTitle("MTLS"),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
-				SetName("FubarName").
-				SetLabel("FubarLabel").
+				SetName(provisioning.XAxwayMTLS).
 				SetRequired().
 				SetHidden().
 				IsString().
@@ -474,7 +473,7 @@ func NewMtlsCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provis
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.Mtls).
-				SetLabel("MTLS").
+				SetLabel("MTLS Key").
 				SetRequired().
 				IsString().
 				IsEncrypted()),
