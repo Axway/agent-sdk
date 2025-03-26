@@ -10,8 +10,7 @@ const (
 	OAuthPublicKeyCRD = "oauth-public-key"
 	OAuthIDPCRD       = "oauth-idp"
 	ExternalCRD       = "external-crd"
-	MtlsCRD           = "mtls"
-	MtlsARD           = "mtls"
+	MtlsCRD           = "mtls-key"
 
 	OauthClientID            = "clientId"
 	OauthClientSecret        = "clientSecret"
