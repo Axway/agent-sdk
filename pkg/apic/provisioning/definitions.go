@@ -34,7 +34,7 @@ const (
 	APIKey = "apiKey"
 
 	// MTLS
-	Mtls       = "mtls"
+	Mtls       = "mtlskey"
 	XAxwayMTLS = "x-axway-mtls"
 
 	BasicAuthUsername = "username"
