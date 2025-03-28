@@ -154,6 +154,10 @@ type CustomCredential interface {
 	GetIgnoredCredentialTypes() []string
 }
 
+type CustomAccessRequest interface {
+	GetIgnoredAccessRequestTypes() []string
+}
+
 // ExpiredCredentialAction - the action to take on an expired credential
 type ExpiredCredentialAction int
 

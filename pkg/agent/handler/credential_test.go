@@ -27,18 +27,19 @@ func TestCredentialHandler(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
-		action           proto.Event_Type
-		expectedProvType string
-		getAppErr        error
-		getCrdErr        error
-		hasError         bool
-		isRenew          bool
-		inboundStatus    string
-		inboundState     prov.CredentialAction
-		name             string
-		outboundStatus   string
-		subError         error
-		appStatus        string
+		action               proto.Event_Type
+		expectedProvType     string
+		getAppErr            error
+		getCrdErr            error
+		hasError             bool
+		isRenew              bool
+		inboundStatus        string
+		inboundState         prov.CredentialAction
+		name                 string
+		outboundStatus       string
+		subError             error
+		appStatus            string
+		ignoredCredTypeNames []string
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -102,6 +103,21 @@ func TestCredentialHandler(t *testing.T) {
 			action: proto.Event_CREATED,
 			name:   "should return nil and not process anything when the status field is empty",
 		},
+		{
+			action:               proto.Event_CREATED,
+			inboundStatus:        prov.Pending.String(),
+			name:                 "should skip processing due to external credential found",
+			outboundStatus:       prov.Pending.String(),
+			ignoredCredTypeNames: []string{crdRefName},
+		},
+		{
+			action:               proto.Event_CREATED,
+			expectedProvType:     provision,
+			inboundStatus:        prov.Pending.String(),
+			name:                 "should process because external cred name not found",
+			outboundStatus:       prov.Success.String(),
+			ignoredCredTypeNames: []string{"un-findable"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -127,10 +143,11 @@ func TestCredentialHandler(t *testing.T) {
 						"status_key": "status_val",
 					},
 				},
-				expectedAppDetails:  util.GetAgentDetails(credApp),
-				expectedCredDetails: util.GetAgentDetails(&cred),
-				expectedManagedApp:  credAppRefName,
-				expectedCredType:    cred.Spec.CredentialRequestDefinition,
+				expectedAppDetails:   util.GetAgentDetails(credApp),
+				expectedCredDetails:  util.GetAgentDetails(&cred),
+				expectedManagedApp:   credAppRefName,
+				expectedCredType:     cred.Spec.CredentialRequestDefinition,
+				ignoredCredTypeNames: tc.ignoredCredTypeNames,
 			}
 
 			c := &credClient{
@@ -681,13 +698,14 @@ func TestIDPCredentialDeprovisioning(t *testing.T) {
 }
 
 type mockCredProv struct {
-	expectedAppDetails  map[string]interface{}
-	expectedCredDetails map[string]interface{}
-	expectedCredType    string
-	expectedManagedApp  string
-	expectedProvType    string
-	expectedStatus      mock.MockRequestStatus
-	t                   *testing.T
+	expectedAppDetails   map[string]interface{}
+	expectedCredDetails  map[string]interface{}
+	expectedCredType     string
+	expectedManagedApp   string
+	expectedProvType     string
+	expectedStatus       mock.MockRequestStatus
+	t                    *testing.T
+	ignoredCredTypeNames []string
 }
 
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
@@ -718,6 +736,10 @@ func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus, &mockProvCredential{}
+}
+
+func (m *mockCredProv) GetIgnoredCredentialTypes() []string {
+	return m.ignoredCredTypeNames
 }
 
 type mockProvCredential struct{}
@@ -908,6 +930,7 @@ func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.Resource
 }
 
 const credAppRefName = "managed-app-name"
+const crdRefName = "crd"
 
 var credApp = &apiv1.ResourceInstance{
 	ResourceMeta: apiv1.ResourceMeta{
@@ -960,7 +983,7 @@ var credential = management.Credential{
 		},
 	},
 	Spec: management.CredentialSpec{
-		CredentialRequestDefinition: "api-key",
+		CredentialRequestDefinition: crdRefName,
 		ManagedApplication:          credAppRefName,
 		Data:                        nil,
 		State: management.CredentialSpecState{
