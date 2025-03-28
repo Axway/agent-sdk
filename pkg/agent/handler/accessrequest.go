@@ -73,7 +73,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 
-	if shouldSkip := h.shouldSkipAccessRequest(log, ar); shouldSkip {
+	if h.shouldSkipAccessRequest(log, ar) {
 		return nil
 	}
 
