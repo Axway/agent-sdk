@@ -73,7 +73,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 
-	if shouldSkip := h.shouldSkipAccessRequest(ar, log); shouldSkip {
+	if shouldSkip := h.shouldSkipAccessRequest(log, ar); shouldSkip {
 		return nil
 	}
 
@@ -309,7 +309,7 @@ func (h *accessRequestHandler) newReq(ctx context.Context, ar *management.Access
 	}, nil
 }
 
-func (h *accessRequestHandler) shouldSkipAccessRequest(ar *management.AccessRequest, logger log.FieldLogger) bool {
+func (h *accessRequestHandler) shouldSkipAccessRequest(logger log.FieldLogger, ar *management.AccessRequest) bool {
 	customAR, ok := h.prov.(prov.CustomAccessRequest)
 	if !ok {
 		return false
