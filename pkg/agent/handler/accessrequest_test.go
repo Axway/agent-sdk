@@ -22,19 +22,21 @@ func TestAccessRequestHandler(t *testing.T) {
 	ardRI, _ := ard.AsInstance()
 
 	tests := []struct {
-		action           proto.Event_Type
-		expectedProvType string
-		getErr           error
-		hasError         bool
-		inboundStatus    string
-		name             string
-		outboundStatus   string
-		references       []v1.Reference
-		subError         error
-		appStatus        string
-		getARDErr        error
-		state            string
-		finalizers       []v1.Finalizer
+		action             proto.Event_Type
+		expectedProvType   string
+		getErr             error
+		hasError           bool
+		inboundStatus      string
+		name               string
+		outboundStatus     string
+		references         []v1.Reference
+		subError           error
+		appStatus          string
+		getARDErr          error
+		state              string
+		finalizers         []v1.Finalizer
+		ignoredARTypeNames []string
+		shouldBeSkipped    bool
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -122,6 +124,33 @@ func TestAccessRequestHandler(t *testing.T) {
 			state:          v1.ResourceDeleting,
 			finalizers:     []v1.Finalizer{{Name: "abc"}},
 		},
+		{
+			action:             proto.Event_CREATED,
+			inboundStatus:      prov.Pending.String(),
+			name:               "should skip processing due to external AR found",
+			outboundStatus:     prov.Pending.String(),
+			finalizers:         []v1.Finalizer{{Name: "abc"}},
+			references:         accessReq.Metadata.References,
+			ignoredARTypeNames: []string{ardRefName},
+			shouldBeSkipped:    true,
+		},
+		{
+			action:             proto.Event_CREATED,
+			inboundStatus:      prov.Success.String(),
+			name:               "should process due to no ApiSI resource found",
+			outboundStatus:     prov.Success.String(),
+			finalizers:         []v1.Finalizer{{Name: "abc"}},
+			ignoredARTypeNames: []string{ardRefName},
+		},
+		{
+			action:             proto.Event_CREATED,
+			inboundStatus:      prov.Success.String(),
+			name:               "should continue processing because ARD name not found",
+			outboundStatus:     prov.Success.String(),
+			finalizers:         []v1.Finalizer{{Name: "abc"}},
+			references:         accessReq.Metadata.References,
+			ignoredARTypeNames: []string{"un-findable"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -160,6 +189,7 @@ func TestAccessRequestHandler(t *testing.T) {
 				expectedAppName:       managedAppRefName,
 				expectedStatus:        status,
 				t:                     t,
+				ignoredARTypeNames:    tc.ignoredARTypeNames,
 			}
 
 			c := &mockClient{
@@ -193,7 +223,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			}
 
 			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
-			if tc.inboundStatus == prov.Pending.String() {
+			if tc.inboundStatus == prov.Pending.String() && !tc.shouldBeSkipped {
 				assert.True(t, c.createSubCalled)
 			} else {
 				assert.False(t, c.createSubCalled)
@@ -331,6 +361,8 @@ type mockClient struct {
 	ard             *v1.ResourceInstance
 	manApp          *v1.ResourceInstance
 	getManAppErr    error
+	getApiSI        management.APIServiceInstance
+	getApiSIErr     error
 	isDeleting      bool
 	subError        error
 	t               *testing.T
@@ -377,6 +409,7 @@ type mockARProvision struct {
 	expectedProvType      string
 	expectedStatus        mock.MockRequestStatus
 	t                     *testing.T
+	ignoredARTypeNames    []string
 }
 
 func (m *mockARProvision) AccessRequestProvision(ar prov.AccessRequest) (status prov.RequestStatus, data prov.AccessData) {
@@ -399,15 +432,24 @@ func (m *mockARProvision) AccessRequestDeprovision(ar prov.AccessRequest) (statu
 	return m.expectedStatus
 }
 
+func (m *mockARProvision) GetIgnoredAccessRequestTypes() []string {
+	return m.ignoredARTypeNames
+}
+
 const instRefID = "inst-id-1"
 const instRefName = "inst-name-1"
 const managedAppRefName = "managed-app-name"
+const envRefName = "env"
+const ardRefName = "ard"
 
-var instance = &management.APIServiceInstance{
+var instance = management.APIServiceInstance{
 	ResourceMeta: v1.ResourceMeta{
 		Name: instRefName,
 		Metadata: v1.Metadata{
 			ID: instRefID,
+			Scope: v1.MetadataScope{
+				Name: envRefName,
+			},
 		},
 		SubResources: map[string]interface{}{
 			defs.XAgentDetails: map[string]interface{}{
@@ -416,7 +458,7 @@ var instance = &management.APIServiceInstance{
 		},
 	},
 	Spec: management.ApiServiceInstanceSpec{
-		AccessRequestDefinition: "ard",
+		AccessRequestDefinition: ardRefName,
 	},
 }
 

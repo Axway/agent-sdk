@@ -11,6 +11,7 @@ import (
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -69,6 +70,10 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 
 	if ok := isStatusFound(ar.Status); !ok {
 		log.Debug("could not handle access request as it did not have a status subresource")
+		return nil
+	}
+
+	if shouldSkip := h.shouldSkipAccessRequest(ar, log); shouldSkip {
 		return nil
 	}
 
@@ -302,6 +307,34 @@ func (h *accessRequestHandler) newReq(ctx context.Context, ar *management.Access
 		id:              ar.Metadata.ID,
 		quota:           prov.NewQuotaFromAccessRequest(ar),
 	}, nil
+}
+
+func (h *accessRequestHandler) shouldSkipAccessRequest(ar *management.AccessRequest, logger log.FieldLogger) bool {
+	customAR, ok := h.prov.(prov.CustomAccessRequest)
+	if !ok {
+		return false
+	}
+	arTypes := customAR.GetIgnoredAccessRequestTypes()
+	// return early to avoid the api call
+	if len(arTypes) == 0 {
+		return false
+	}
+
+	existingApisi, err := h.getServiceInstance(context.Background(), ar)
+	if err != nil {
+		logger.WithError(err).Error("could not get service instance from cache")
+		return false
+	}
+
+	apisi := management.APIServiceInstance{}
+	apisi.FromInstance(existingApisi)
+	for _, ardName := range arTypes {
+		if ardName == apisi.Spec.AccessRequestDefinition {
+			logger.WithField("accessRequestName", ar.Name).Trace("skipping handling access request provisioning")
+			return true
+		}
+	}
+	return false
 }
 
 type provAccReq struct {
