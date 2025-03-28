@@ -314,11 +314,6 @@ func (h *accessRequestHandler) shouldSkipAccessRequest(logger log.FieldLogger, a
 	if !ok {
 		return false
 	}
-	arTypes := customAR.GetIgnoredAccessRequestTypes()
-	// return early to avoid the api call
-	if len(arTypes) == 0 {
-		return false
-	}
 
 	existingApisi, err := h.getServiceInstance(context.Background(), ar)
 	if err != nil {
@@ -326,6 +321,7 @@ func (h *accessRequestHandler) shouldSkipAccessRequest(logger log.FieldLogger, a
 		return false
 	}
 
+	arTypes := customAR.GetIgnoredAccessRequestTypes()
 	apisi := management.APIServiceInstance{}
 	apisi.FromInstance(existingApisi)
 	for _, ardName := range arTypes {
