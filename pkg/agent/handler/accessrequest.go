@@ -63,7 +63,8 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	// add or update the cache with the access request
-	if action == proto.Event_CREATED || action == proto.Event_UPDATED {
+	// migrated access request is not added to cache until processed for Pending
+	if (action == proto.Event_CREATED || action == proto.Event_UPDATED) && ar.Spec.AccessRequest == "" {
 		h.cache.AddAccessRequest(resource)
 	}
 
@@ -73,8 +74,10 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	if ok := h.shouldProcessPending(ar.Status, ar.Metadata.State); ok {
+		mar := h.getMigratingAccessRequest(ar)
+
 		log.Trace("processing resource in pending status")
-		ar := h.onPending(ctx, ar)
+		ar := h.onPending(ctx, ar, mar)
 
 		ri, _ := ar.AsInstance()
 		defer h.cache.AddAccessRequest(ri)
@@ -91,6 +94,14 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 			return statusErr
 		}
 
+		if mar != nil && ar.Status.Level == prov.Success.String() {
+			h.client.UpdateResourceFinalizer(mar, arFinalizer, "", false)
+			err := h.client.DeleteResourceInstance(mar)
+			if err != nil {
+				log.WithError(err).Error("failed to delete migrating access request")
+			}
+			h.cache.DeleteAccessRequest(ri.Metadata.ID)
+		}
 		return err
 	}
 
@@ -102,7 +113,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest) *management.AccessRequest {
+func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
 	log := getLoggerFromContext(ctx)
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
@@ -125,7 +136,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 		return ar
 	}
 
-	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
+	req, err := h.newReq(ctx, ar, mar, util.GetAgentDetails(app))
 	if err != nil {
 		log.WithError(err).Error("error getting resource details")
 		h.onError(ctx, ar, err)
@@ -213,7 +224,7 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 
 	ri, _ := ar.AsInstance()
 
-	req, err := h.newReq(ctx, ar, util.GetAgentDetails(app))
+	req, err := h.newReq(ctx, ar, nil, util.GetAgentDetails(app))
 	if err != nil {
 		log.WithError(err).Debug("removing finalizers on the access request")
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
@@ -286,33 +297,53 @@ func (h *accessRequestHandler) getServiceInstance(_ context.Context, ar *managem
 	return instance, nil
 }
 
-func (h *accessRequestHandler) newReq(ctx context.Context, ar *management.AccessRequest, appDetails map[string]interface{}) (*provAccReq, error) {
+func (h *accessRequestHandler) getMigratingAccessRequest(ar *management.AccessRequest) *apiv1.ResourceInstance {
+	if ar.Spec.AccessRequest == "" {
+		return nil
+	}
+	accessReqRef := ar.GetReferenceByNameAndGVK(ar.Spec.AccessRequest, management.AccessRequestGVK())
+	if accessReqRef.ID == "" {
+		return nil
+	}
+	return h.cache.GetAccessRequest(accessReqRef.ID)
+}
+
+func (h *accessRequestHandler) newReq(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance, appDetails map[string]interface{}) (*provAccReq, error) {
 	instance, err := h.getServiceInstance(ctx, ar)
 	if err != nil {
 		return nil, err
 	}
-
+	refID := ""
+	var refAccessDetails map[string]interface{}
+	if mar != nil {
+		refID = mar.Metadata.ID
+		refAccessDetails = util.GetAgentDetails(mar)
+	}
 	return &provAccReq{
-		appDetails:      appDetails,
-		requestData:     ar.Spec.Data,
-		provData:        ar.Data,
-		accessDetails:   util.GetAgentDetails(ar),
-		instanceDetails: util.GetAgentDetails(instance),
-		managedApp:      ar.Spec.ManagedApplication,
-		id:              ar.Metadata.ID,
-		quota:           prov.NewQuotaFromAccessRequest(ar),
+		appDetails:       appDetails,
+		requestData:      ar.Spec.Data,
+		provData:         ar.Data,
+		accessDetails:    util.GetAgentDetails(ar),
+		refAccessDetails: refAccessDetails,
+		instanceDetails:  util.GetAgentDetails(instance),
+		managedApp:       ar.Spec.ManagedApplication,
+		id:               ar.Metadata.ID,
+		refID:            refID,
+		quota:            prov.NewQuotaFromAccessRequest(ar),
 	}, nil
 }
 
 type provAccReq struct {
-	appDetails      map[string]interface{}
-	accessDetails   map[string]interface{}
-	requestData     map[string]interface{}
-	instanceDetails map[string]interface{}
-	provData        interface{}
-	managedApp      string
-	id              string
-	quota           prov.Quota
+	appDetails       map[string]interface{}
+	accessDetails    map[string]interface{}
+	refAccessDetails map[string]interface{}
+	requestData      map[string]interface{}
+	instanceDetails  map[string]interface{}
+	provData         interface{}
+	managedApp       string
+	id               string
+	quota            prov.Quota
+	refID            string
 }
 
 // GetApplicationName gets the application name the access request is linked too.
@@ -320,9 +351,19 @@ func (r provAccReq) GetApplicationName() string {
 	return r.managedApp
 }
 
+// IsTransferring returns flag indicating the AccessRequest is for migrating referenced AccessRequest
+func (r provAccReq) IsTransferring() bool {
+	return r.refID != ""
+}
+
 // GetID gets the if of the access request resource
 func (r provAccReq) GetID() string {
 	return r.id
+}
+
+// GetReferencedID returns the ID of the referenced AccessRequest resource for the request
+func (r provAccReq) GetReferencedID() string {
+	return r.refID
 }
 
 // GetAccessRequestData gets the data of the access request
@@ -337,20 +378,17 @@ func (r provAccReq) GetAccessRequestProvisioningData() interface{} {
 
 // GetApplicationDetailsValue returns a value found on the 'x-agent-details' sub resource of the ManagedApplication.
 func (r provAccReq) GetApplicationDetailsValue(key string) string {
-	if r.appDetails == nil {
-		return ""
-	}
-
-	return util.ToString(r.appDetails[key])
+	return getDetailsValue(r.appDetails, key)
 }
 
 // GetAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the AccessRequest.
 func (r provAccReq) GetAccessRequestDetailsValue(key string) string {
-	if r.accessDetails == nil {
-		return ""
-	}
+	return getDetailsValue(r.accessDetails, key)
+}
 
-	return util.ToString(r.accessDetails[key])
+// GetReferencedAccessRequestDetailsValue returns a value found on the 'x-agent-details' sub resource of the referenced AccessRequest.
+func (r provAccReq) GetReferencedAccessRequestDetailsValue(key string) string {
+	return getDetailsValue(r.refAccessDetails, key)
 }
 
 // GetInstanceDetails returns the 'x-agent-details' sub resource of the API Service Instance
@@ -364,4 +402,12 @@ func (r provAccReq) GetInstanceDetails() map[string]interface{} {
 
 func (r provAccReq) GetQuota() prov.Quota {
 	return r.quota
+}
+
+func getDetailsValue(details map[string]interface{}, key string) string {
+	if details == nil {
+		return ""
+	}
+
+	return util.ToString(details[key])
 }

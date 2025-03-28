@@ -18,6 +18,7 @@ type accessRequestDef struct {
 	provisionSchema        map[string]interface{}
 	requestSchema          map[string]interface{}
 	provisionEqualsRequest bool
+	transferable           bool
 	registerFunc           RegisterAccessRequestDefinition
 	err                    error
 }
@@ -30,6 +31,7 @@ type AccessRequestBuilder interface {
 	SetProvisionSchema(schema SchemaBuilder) AccessRequestBuilder
 	SetProvisionSchemaToRequestSchema() AccessRequestBuilder
 	SetApplicationProfileDefinition(name string) AccessRequestBuilder
+	IsTransferable() AccessRequestBuilder
 	Register() (*management.AccessRequestDefinition, error)
 }
 
@@ -103,6 +105,12 @@ func (a *accessRequestDef) SetProvisionSchema(schema SchemaBuilder) AccessReques
 	return a
 }
 
+// IsTransferable - marks the access request transferable for plan migration
+func (a *accessRequestDef) IsTransferable() AccessRequestBuilder {
+	a.transferable = true
+	return a
+}
+
 // Register - create the access request defintion and send it to Central
 func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, error) {
 	if a.err != nil {
@@ -130,6 +138,12 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 		Provision: &management.AccessRequestDefinitionSpecProvision{
 			Schema: a.provisionSchema,
 		},
+	}
+
+	if a.transferable {
+		spec.Provision.Policies = management.AccessRequestDefinitionSpecProvisionPolicies{
+			Transferable: true,
+		}
 	}
 
 	hashInt, _ := util.ComputeHash(spec)
