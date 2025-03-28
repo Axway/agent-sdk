@@ -458,32 +458,6 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 	return NewCredentialRequestBuilder(apiKeyOptions...)
 }
 
-// NewMtlsCredentialRequestBuilder - add api key base properties for provisioning schema
-func NewMtlsCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
-	mtlsKeyOptions := []func(*crdBuilderOptions){
-		WithCRDName(provisioning.MtlsCRD),
-		WithCRDTitle("MTLS"),
-		WithCRDProvisionSchemaProperty(
-			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.XAxwayMTLS).
-				SetRequired().
-				SetHidden().
-				IsString().
-				IsEncrypted()),
-		WithCRDProvisionSchemaProperty(
-			provisioning.NewSchemaPropertyBuilder().
-				SetName(provisioning.Mtls).
-				SetLabel("MTLS Key").
-				SetRequired().
-				IsString().
-				IsEncrypted()),
-	}
-
-	mtlsKeyOptions = append(mtlsKeyOptions, options...)
-
-	return NewCredentialRequestBuilder(mtlsKeyOptions...)
-}
-
 // NewBasicAuthCredentialRequestBuilder - add basic auth base properties for provisioning schema
 func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	basicAuthOptions := []func(*crdBuilderOptions){
