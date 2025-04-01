@@ -9,10 +9,11 @@ import (
 
 func TestNewAccessRequestBuilder(t *testing.T) {
 	tests := []struct {
-		name       string
-		noSchema   bool
-		copySchema bool
-		wantErr    bool
+		name         string
+		noSchema     bool
+		copySchema   bool
+		transferable bool
+		wantErr      bool
 	}{
 		{
 			name: "Success",
@@ -28,6 +29,10 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 		{
 			name:       "Copied",
 			copySchema: true,
+		},
+		{
+			name:         "Transferable",
+			transferable: true,
 		},
 	}
 	for _, tt := range tests {
@@ -51,6 +56,10 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 			if tt.wantErr {
 				builder = builder.SetRequestSchema(nil)
 				builder = builder.SetProvisionSchema(nil)
+			}
+
+			if tt.transferable {
+				builder = builder.IsTransferable()
 			}
 
 			if !tt.noSchema {
@@ -84,6 +93,7 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 				assert.Equal(t, tt.name, ard.Name)
 				assert.Equal(t, "apd", ard.Applicationprofile.Name)
 				assert.True(t, registerFuncCalled)
+				assert.Equal(t, tt.transferable, ard.Spec.Provision.Policies.Transferable)
 			}
 		})
 	}
