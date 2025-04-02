@@ -11,6 +11,7 @@ import (
 	"time"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -927,6 +928,10 @@ func (m *credClient) UpdateResourceFinalizer(ri *apiv1.ResourceInstance, _, _ st
 
 func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 	return nil, nil
+}
+
+func (m *credClient) DeleteResourceInstance(ri v1.Interface) error {
+	return nil
 }
 
 const credAppRefName = "managed-app-name"

@@ -10,6 +10,7 @@ const (
 	OAuthPublicKeyCRD = "oauth-public-key"
 	OAuthIDPCRD       = "oauth-idp"
 	ExternalCRD       = "external-crd"
+	MtlsCRD           = "mtls-key"
 
 	OauthClientID            = "clientId"
 	OauthClientSecret        = "clientSecret"
@@ -31,6 +32,10 @@ const (
 	IDPTokenURL = "idpTokenURL"
 
 	APIKey = "apiKey"
+
+	// MTLS
+	Mtls       = "mtlskey"
+	XAxwayMTLS = "x-axway-mtls"
 
 	BasicAuthUsername = "username"
 	BasicAuthPassword = "password"

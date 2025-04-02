@@ -160,10 +160,20 @@ type MockAccessRequest struct {
 	QuotaLimit                    int64
 	QuotaInterval                 provisioning.QuotaInterval
 	PlanName                      string
+	RefID                         string
+	RefAccessDetails              map[string]string
 }
 
 func (m MockAccessRequest) GetID() string {
 	return m.ID
+}
+
+func (r MockAccessRequest) GetReferencedID() string {
+	return r.RefID
+}
+
+func (r MockAccessRequest) IsTransferring() bool {
+	return r.RefID != ""
 }
 
 func (m MockAccessRequest) GetAccessRequestData() map[string]interface{} {
@@ -180,6 +190,13 @@ func (m MockAccessRequest) GetApplicationName() string {
 
 func (m MockAccessRequest) GetAccessRequestDetailsValue(key string) string {
 	return m.Details[key]
+}
+
+func (r MockAccessRequest) GetReferencedAccessRequestDetailsValue(key string) string {
+	if r.RefAccessDetails == nil {
+		return ""
+	}
+	return r.RefAccessDetails[key]
 }
 
 func (m MockAccessRequest) GetApplicationDetailsValue(key string) string {

@@ -37,6 +37,7 @@ func TestAccessRequestHandler(t *testing.T) {
 		finalizers         []v1.Finalizer
 		ignoredARTypeNames []string
 		shouldBeSkipped    bool
+		refAccessReq       string
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -152,6 +153,20 @@ func TestAccessRequestHandler(t *testing.T) {
 			expectedProvType:   provision,
 			ignoredARTypeNames: []string{"un-findable"},
 		},
+		{
+			action:           proto.Event_CREATED,
+			inboundStatus:    prov.Pending.String(),
+			name:             "should handle a create event for an AccessRequest when status is pending",
+			outboundStatus:   prov.Success.String(),
+			expectedProvType: provision,
+			references: append(accessReq.Metadata.References, v1.Reference{
+				ID:    "migrating",
+				Group: management.AccessRequestGVK().Group,
+				Kind:  management.AccessRequestGVK().Kind,
+				Name:  "migrating",
+			}),
+			refAccessReq: "migrating",
+		},
 	}
 
 	for _, tc := range tests {
@@ -161,6 +176,11 @@ func TestAccessRequestHandler(t *testing.T) {
 				mApp.SubResources["status"].(map[string]interface{})["level"] = tc.appStatus
 			}
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			if tc.refAccessReq != "" {
+				accessReq.Spec.AccessRequest = tc.refAccessReq
+				ri, _ := migratingAccessReq.AsInstance()
+				cm.AddAccessRequest(ri)
+			}
 
 			ar := accessReq
 			ar.Status.Level = tc.inboundStatus
@@ -206,6 +226,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			if tc.state == v1.ResourceDeleting {
 				c.isDeleting = true
 			}
+
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
 			customUnitHandler := customunit.NewCustomUnitHandler(af, cm, config.DiscoveryAgent)
 			handler := NewAccessRequestHandler(arp, cm, c, customUnitHandler)
@@ -226,6 +247,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			assert.Equal(t, tc.expectedProvType, arp.expectedProvType)
 			if tc.inboundStatus == prov.Pending.String() && !tc.shouldBeSkipped {
 				assert.True(t, c.createSubCalled)
+				assert.Equal(t, tc.refAccessReq != "", c.deleteResCalled)
 			} else {
 				assert.False(t, c.createSubCalled)
 			}
@@ -366,6 +388,7 @@ type mockClient struct {
 	getApiSIErr     error
 	isDeleting      bool
 	subError        error
+	deleteResCalled bool
 	t               *testing.T
 }
 
@@ -388,8 +411,8 @@ func (m *mockClient) CreateSubResource(_ v1.ResourceMeta, subs map[string]interf
 	return m.subError
 }
 
-func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string, addAction bool) (*v1.ResourceInstance, error) {
-	if m.isDeleting {
+func (m *mockClient) UpdateResourceFinalizer(ri *v1.ResourceInstance, _, _ string, addAction bool) (*v1.ResourceInstance, error) {
+	if m.isDeleting || ri.Metadata.ID == "migrating" {
 		assert.False(m.t, addAction, "addAction should be false when the resource is deleting")
 	} else {
 		assert.True(m.t, addAction, "addAction should be true when the resource is not deleting")
@@ -400,6 +423,11 @@ func (m *mockClient) UpdateResourceFinalizer(_ *v1.ResourceInstance, _, _ string
 
 func (m *mockClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstance, error) {
 	return nil, nil
+}
+
+func (m *mockClient) DeleteResourceInstance(ri v1.Interface) error {
+	m.deleteResCalled = true
+	return nil
 }
 
 type mockARProvision struct {
@@ -481,6 +509,39 @@ var accessReq = management.AccessRequest{
 	ResourceMeta: v1.ResourceMeta{
 		Metadata: v1.Metadata{
 			ID: "11",
+			References: []v1.Reference{
+				{
+					Group: management.APIServiceInstanceGVK().Group,
+					Kind:  management.APIServiceInstanceGVK().Kind,
+					ID:    instRefID,
+					Name:  instRefName,
+				},
+			},
+			Scope: v1.MetadataScope{
+				Kind: management.EnvironmentGVK().Kind,
+				Name: "env-1",
+			},
+		},
+		SubResources: map[string]interface{}{
+			defs.XAgentDetails: map[string]interface{}{
+				"sub_access_request_key": "sub_access_request_val",
+			},
+		},
+	},
+	Spec: management.AccessRequestSpec{
+		ApiServiceInstance: instRefName,
+		ManagedApplication: managedAppRefName,
+		Data:               map[string]interface{}{},
+	},
+	Status: &v1.ResourceStatus{
+		Level: prov.Pending.String(),
+	},
+}
+
+var migratingAccessReq = management.AccessRequest{
+	ResourceMeta: v1.ResourceMeta{
+		Metadata: v1.Metadata{
+			ID: "migrating",
 			References: []v1.Reference{
 				{
 					Group: management.APIServiceInstanceGVK().Group,
