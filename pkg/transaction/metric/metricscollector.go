@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/rcrowley/go-metrics"
 
@@ -705,9 +705,7 @@ func (c *collector) cleanup() {
 
 func (c *collector) getOrgGUID() string {
 	authToken, _ := agent.GetCentralAuthToken()
-	parser := new(jwt.Parser)
-	parser.SkipClaimsValidation = true
-
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	claims := jwt.MapClaims{}
 	_, _, err := parser.ParseUnverified(authToken, claims)
 	if err != nil {
