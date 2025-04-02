@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func getMockToken() (string, error) {
-	claims := &jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+	claims := &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 1)),
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signKey := []byte("testsecret")

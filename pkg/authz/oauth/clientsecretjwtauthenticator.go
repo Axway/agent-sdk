@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -20,13 +20,13 @@ type clientSecretJwtAuthenticator struct {
 // prepareInitialToken prepares a token for an access request
 func (p *clientSecretJwtAuthenticator) prepareInitialToken() (string, error) {
 	now := time.Now()
-	token := jwt.NewWithClaims(getSigningMethod(p.signingMethod, jwt.SigningMethodHS256), jwt.StandardClaims{
+	token := jwt.NewWithClaims(getSigningMethod(p.signingMethod, jwt.SigningMethodHS256), jwt.RegisteredClaims{
 		Issuer:    p.issuer,
 		Subject:   p.clientID,
-		Audience:  p.aud,
-		ExpiresAt: now.Add(60*time.Second).UnixNano() / 1e9,
-		IssuedAt:  now.UnixNano() / 1e9,
-		Id:        uuid.New().String(),
+		Audience:  []string{p.aud},
+		ExpiresAt: jwt.NewNumericDate(now.Add(60 * time.Second)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		ID:        uuid.New().String(),
 	})
 
 	requestToken, err := token.SignedString([]byte(p.clientSecret))
