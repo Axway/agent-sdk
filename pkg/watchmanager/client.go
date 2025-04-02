@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const (
@@ -184,9 +184,7 @@ func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
 }
 
 func getTokenExpirationTime(token string) (time.Duration, error) {
-	parser := new(jwt.Parser)
-	parser.SkipClaimsValidation = true
-
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	claims := jwt.MapClaims{}
 	_, _, err := parser.ParseUnverified(token, claims)
 	if err != nil {
