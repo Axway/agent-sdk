@@ -456,7 +456,7 @@ func (p *properties) parseSlice(s string, expSlice [][]byte) string {
 	}
 
 	if envVar != "" {
-		rtnS = os.Getenv(envVar)
+		rtnS = strings.TrimSpace(os.Getenv(envVar))
 		if rtnS == "" && defaultVal != "" {
 			rtnS = defaultVal
 		}
