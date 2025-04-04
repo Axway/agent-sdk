@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -111,9 +110,8 @@ func TestSamplingConfig(t *testing.T) {
 				centralCfg.APICDeployment = test.apicDeployment
 			}
 			os.Setenv(qaSamplingPercentageEnvVar, test.qaOverride)
-			agent.Initialize(cfg)
 
-			err := SetupSampling(test.config, false)
+			err := SetupSampling(test.config, false, test.apicDeployment)
 			if test.errExpected {
 				assert.NotNil(t, err, "Expected the config to fail")
 			} else {
@@ -129,215 +127,56 @@ func TestSamplingConfig(t *testing.T) {
 func TestShouldSample(t *testing.T) {
 	type transactionCount struct {
 		successCount int
-		errorCount   int
 	}
 	testCases := []struct {
-		name            string
-		apiTransactions map[string]transactionCount
-		expectedSampled int
-		config          Sampling
-		subIDs          map[string]string
+		name               string
+		apiTransactions    map[string]transactionCount
+		expectedSampled    int
+		config             Sampling
+		subIDs             map[string]string
+		limit              int32
+		duration           time.Duration
+		counterResetPeriod time.Duration
 	}{
 		{
-			name: "Maximum Transactions",
+			name: "Limit sampling to 10 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
-			expectedSampled: 200,
-			config: Sampling{
-				Percentage: 10,
-				PerAPI:     false,
-			},
+			expectedSampled:    40,
+			limit:              10,
+			duration:           4 * time.Second,
+			counterResetPeriod: 1 * time.Second,
 		},
 		{
-			name: "Default config transactions",
+			name: "Limit sampling to 100 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
-			expectedSampled: 0,
-			config:          DefaultConfig(),
+			expectedSampled:    400,
+			limit:              100,
+			duration:           4 * time.Second,
+			counterResetPeriod: 1 * time.Second,
 		},
 		{
-			name: "5% of Transactions when per api is disabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 50},
-				"id2": {successCount: 50},
-				"id3": {successCount: 50},
-				"id4": {successCount: 50},
-			}, // Total = 200
-			expectedSampled: 10,
-			config: Sampling{
-				Percentage: 5,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "10% of Transactions when per api is disabled",
+			name: "Limit sampling to 1000 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
-			expectedSampled: 200,
-			config: Sampling{
-				Percentage: 10,
-				PerAPI:     false,
-			},
+			expectedSampled:    4000,
+			limit:              1000,
+			duration:           4 * time.Second,
+			counterResetPeriod: 1 * time.Second,
 		},
 		{
-			name: "0.55% of Transactions when per api is disabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 10000},
-			},
-			expectedSampled: 55,
-			config: Sampling{
-				Percentage: 0.55,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "9.99% of Transactions when per api is disabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 10000},
-				"id2": {successCount: 10000},
-				"id3": {successCount: 10000},
-			},
-			expectedSampled: 30000 * 999 / 10000,
-			config: Sampling{
-				Percentage: 9.99,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "0.0006% of Transactions when per api is disabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 2000000},
-			},
-			expectedSampled: 12,
-			config: Sampling{
-				Percentage: 0.0006,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "1% of Transactions when per api is disabled",
+			name: "Limit sampling to 0",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
 			},
-			expectedSampled: 20,
-			config: Sampling{
-				Percentage: 1,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "0% of Transactions when per api is disabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 1000},
-				"id2": {successCount: 1000},
-			},
-			expectedSampled: 0,
-			config: Sampling{
-				Percentage: 0,
-				PerAPI:     false,
-			},
-		},
-		{
-			name: "5% per API of Transactions when per api is enabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 50}, // expect 50
-				"id2": {successCount: 50}, // expect 50
-				"id3": {successCount: 50}, // expect 50
-				"id4": {successCount: 50}, // expect 50
-			},
-			expectedSampled: 20,
-			config: Sampling{
-				Percentage: 5,
-				PerAPI:     true,
-			},
-		},
-		{
-			name: "5% of subscription transactions when per api and per sub are enabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 50}, // expect 50
-				"id2": {successCount: 50}, // expect 50
-				"id3": {successCount: 50}, // expect 50
-				"id4": {successCount: 50}, // expect 50
-			},
-			subIDs: map[string]string{
-				"id1": "sub1",
-				"id2": "sub2",
-				"id3": "sub3",
-				"id4": "sub4",
-			},
-			expectedSampled: 20,
-			config: Sampling{
-				Percentage: 5,
-				PerAPI:     true,
-				PerSub:     true,
-			},
-		},
-		{
-			name: "5% of subscription transactions when per api is disabled and per sub is enabled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 50}, // expect 50
-				"id2": {successCount: 50}, // expect 50
-				"id3": {successCount: 50}, // expect 50
-				"id4": {successCount: 50}, // expect 50
-			},
-			subIDs: map[string]string{
-				"id1": "sub1",
-				"id2": "sub2",
-				"id3": "sub3",
-				"id4": "sub4",
-			},
-			expectedSampled: 20,
-			config: Sampling{
-				Percentage: 5,
-				PerAPI:     false,
-				PerSub:     true,
-			},
-		},
-		{
-			name: "5% of per API transactions when per api and per sub are enabled, but no subID is found",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 50}, // expect 50
-				"id2": {successCount: 50}, // expect 50
-				"id3": {successCount: 50}, // expect 50
-				"id4": {successCount: 50}, // expect 50
-			},
-			subIDs:          map[string]string{},
-			expectedSampled: 20,
-			config: Sampling{
-				Percentage: 5,
-				PerAPI:     true,
-				PerSub:     true,
-			},
-		},
-		{
-			name: "only errors to be sampled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 500, errorCount: 500},
-				"id2": {successCount: 500, errorCount: 500},
-			},
-			expectedSampled: 100,
-			config: Sampling{
-				Percentage: 10,
-				OnlyErrors: true,
-			},
-		},
-		{
-			name: "errors and success to be sampled",
-			apiTransactions: map[string]transactionCount{
-				"id1": {successCount: 500, errorCount: 500},
-				"id2": {successCount: 500, errorCount: 500},
-			},
-			expectedSampled: 200,
-			config: Sampling{
-				Percentage: 10,
-			},
+			expectedSampled:    0,
+			limit:              0,
+			duration:           4 * time.Second,
+			counterResetPeriod: 1 * time.Second,
 		},
 	}
 
@@ -345,10 +184,12 @@ func TestShouldSample(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			waitGroup := sync.WaitGroup{}
 			sampleCounterLock := sync.Mutex{}
-			centralCfg := config.NewTestCentralConfig(config.TraceabilityAgent)
-			agent.Initialize(centralCfg)
 
-			err := SetupSampling(test.config, false)
+			err := SetupSampling(test.config, false, "")
+			endTime := time.Now().Truncate(test.counterResetPeriod).Add(test.duration)
+
+			agentSamples.counterResetPeriod = test.counterResetPeriod
+			agentSamples.EnableSampling(test.limit, endTime)
 			assert.Nil(t, err)
 
 			sampled := 0
@@ -363,6 +204,8 @@ func TestShouldSample(t *testing.T) {
 
 				go func(wg *sync.WaitGroup, id, subID string, calls transactionCount) {
 					defer wg.Done()
+					endTimeTimer := time.NewTimer(time.Until(endTime))
+
 					sampleFunc := func(id, subID string, status string) {
 						testDetails := TransactionDetails{
 							Status: status,
@@ -377,18 +220,24 @@ func TestShouldSample(t *testing.T) {
 						}
 						assert.Nil(t, err)
 					}
-					for i := 0; i < calls.successCount; i++ {
-						sampleFunc(id, subID, "Success")
-					}
-					for i := 0; i < calls.errorCount; i++ {
-						sampleFunc(id, subID, "Failure")
+
+					for {
+						select {
+						case <-endTimeTimer.C:
+							return
+						default:
+							for i := 0; i < calls.successCount; i++ {
+								sampleFunc(id, subID, "Success")
+							}
+						}
 					}
 				}(&waitGroup, apiID, subID, numCalls)
 			}
 
 			waitGroup.Wait()
 			assert.Nil(t, err)
-			assert.Equal(t, test.expectedSampled, sampled)
+			assert.LessOrEqual(t, test.expectedSampled, sampled)
+			assert.GreaterOrEqual(t, test.expectedSampled+int(test.limit), sampled)
 		})
 	}
 }
@@ -479,10 +328,8 @@ func TestFilterEvents(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			centralCfg := config.NewTestCentralConfig(config.TraceabilityAgent)
-			agent.Initialize(centralCfg)
 
-			err := SetupSampling(test.config, false)
+			err := SetupSampling(test.config, false, "")
 			assert.Nil(t, err)
 
 			eventsInTest := createEvents(test.testEvents, test.config.Percentage)

@@ -82,7 +82,7 @@ func TestAgentResourceHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			resourceManager := &mockResourceManager{}
 
-			handler := NewAgentResourceHandler(resourceManager)
+			handler := NewAgentResourceHandler(resourceManager, nil)
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), nil, tc.resource)
 			if tc.hasError {
@@ -128,4 +128,10 @@ func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
 
 func (m *mockResourceManager) SetRebuildCacheFunc(rebuildCache resource.EventSyncCache) {
 	m.rebuildCache = rebuildCache
+}
+
+func (m *mockResourceManager) RegisterHandler(handler interface{}) {}
+
+func (m *mockResourceManager) GetHandler() interface{} {
+	return nil
 }

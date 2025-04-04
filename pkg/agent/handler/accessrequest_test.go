@@ -35,9 +35,9 @@ func TestAccessRequestHandler(t *testing.T) {
 		getARDErr          error
 		state              string
 		finalizers         []v1.Finalizer
+		refAccessReq       string
 		ignoredARTypeNames []string
 		shouldBeSkipped    bool
-		refAccessReq       string
 	}{
 		{
 			action:           proto.Event_CREATED,

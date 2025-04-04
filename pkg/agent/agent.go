@@ -25,6 +25,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/customunit"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -764,7 +765,7 @@ func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager, envName),
 		handler.NewInstanceHandler(agent.cacheManager, envName),
-		handler.NewAgentResourceHandler(agent.agentResourceManager),
+		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling()),
 		handler.NewWatchResourceHandler(agent.cacheManager, agent.cfg),
 		agent.proxyResourceHandler,
 	}
