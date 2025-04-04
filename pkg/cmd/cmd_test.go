@@ -94,6 +94,11 @@ func (c *configWithValidation) ValidateCfg() error {
 	return nil
 }
 
+type newCmdConfigValidation struct {
+	configValidationCalled bool
+	CentralCfg             corecfg.CentralConfig
+}
+
 type configWithNoValidation struct {
 	configValidationCalled bool
 	CentralCfg             corecfg.CentralConfig
@@ -148,82 +153,6 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "log.format", "logFormat", "json", "Log format (json, line)")
 	assertStringCmdFlag(t, rootCmd, "log.output", "logOutput", "stdout", "Log output type (stdout, file, both)")
 	assertStringCmdFlag(t, rootCmd, "log.file.path", "logFilePath", "logs", "Log file path if output type is file or both")
-}
-
-func TestNewCmd(t *testing.T) {
-	teams := []definitions.PlatformTeam{
-		{
-			ID:      "123",
-			Name:    "name",
-			Default: true,
-		},
-	}
-
-	environmentRes := &management.Environment{
-		ResourceMeta: v1.ResourceMeta{
-			Metadata: v1.Metadata{ID: "123"},
-			Name:     "test",
-			Title:    "test",
-		},
-	}
-	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
-			resp.Write([]byte(token))
-			return
-		}
-
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test") {
-			buf, _ := json.Marshal(environmentRes)
-			resp.Write(buf)
-			return
-		}
-
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
-			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
-			return
-		}
-	}))
-	defer s.Close()
-
-	rootCmd := &cobra.Command{}
-	var cfg *configWithNoValidation
-	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
-		cfg = &configWithNoValidation{
-			configValidationCalled: false,
-			CentralCfg:             centralConfig,
-			AgentCfg:               &agentConfig{},
-		}
-		return cfg, nil
-	}
-	cmdHandler := func() error {
-		return nil
-	}
-	newCmd := NewCmd(rootCmd, "traceability", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.TraceabilityAgent)
-	viper.AddConfigPath("./testdata")
-	assert.NotNil(t, newCmd)
-
-	os.Setenv("CENTRAL_AUTH_URL", s.URL+"/auth")
-	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
-	os.Setenv("CENTRAL_ORGANIZATIONID", " test")
-	os.Setenv("CENTRAL_URL", s.URL)
-	os.Setenv("CENTRAL_SINGLEURL", s.URL)
-	os.Setenv("CENTRAL_ENVIRONMENT", "test ")
-
-	newCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	newCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	newCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
-	os.Setenv("AGENT_STRING", "testValue")
-	os.Setenv("AGENT_STRINGEXT", "anotherTestValue")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "osp1_1")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "osp1_2")
-
-	rootCmd.Execute()
-	assert.Equal(t, "test", cfg.CentralCfg.GetEnvironmentName())
-	assert.Equal(t, "test", cfg.CentralCfg.GetTenantID())
 }
 
 func TestRootCmdConfigFileLoad(t *testing.T) {
@@ -1210,4 +1139,46 @@ func TestIntLowerAndUpperLimits(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewCmd(t *testing.T) {
+	s := newTestServer()
+	defer s.Close()
+
+	rootCmd := &cobra.Command{}
+	var cfg *newCmdConfigValidation
+	initConfigHandler := func(centralConfig corecfg.CentralConfig) (interface{}, error) {
+		cfg = &newCmdConfigValidation{
+			configValidationCalled: false,
+			CentralCfg:             centralConfig,
+		}
+		return cfg, nil
+	}
+	cmdHandler := func() error {
+		return nil
+	}
+	newCmd := NewCmd(rootCmd, "traceability", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.TraceabilityAgent)
+	viper.AddConfigPath("./testdata")
+	assert.NotNil(t, newCmd)
+
+	os.Setenv("CENTRAL_AUTH_URL", s.URL)
+	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_URL", s.URL)
+	os.Setenv("CENTRAL_SINGLEURL", s.URL)
+	os.Setenv("CENTRAL_ORGANIZATIONID", " orgid")
+	os.Setenv("CENTRAL_ENVIRONMENT", "environment ")
+	defer os.Setenv("CENTRAL_ORGANIZATIONID", "")
+
+	err := rootCmd.Execute()
+
+	assert.Nil(t, err)
+	assert.Equal(t, "environment", cfg.CentralCfg.GetEnvironmentName())
+	assert.Equal(t, "orgid", cfg.CentralCfg.GetTenantID())
+
+	errBuf := new(bytes.Buffer)
+	rootCmd.SetErr(errBuf)
+
+	assert.Contains(t, "Error central.organizationID not set in config", errBuf.String())
 }
