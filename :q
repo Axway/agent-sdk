@@ -1,0 +1,189 @@
+[1mdiff --git a/pkg/apic/apiserver/clients/set.go b/pkg/apic/apiserver/clients/set.go[m
+[1mindex 36aa3f0f..dd7afb8d 100644[m
+[1m--- a/pkg/apic/apiserver/clients/set.go[m
+[1m+++ b/pkg/apic/apiserver/clients/set.go[m
+[36m@@ -21,6 +21,7 @@[m [mtype Set struct {[m
+ 	DataplaneManagementV1alpha1                    *management_v1alpha1.UnscopedDataplaneClient[m
+ 	DataplaneSecretManagementV1alpha1              *management_v1alpha1.UnscopedDataplaneSecretClient[m
+ 	TraceabilityAgentManagementV1alpha1            *management_v1alpha1.UnscopedTraceabilityAgentClient[m
+[32m+[m	[32mComplianceAgentManagementV1alpha1              *management_v1alpha1.UnscopedComplianceAgentClient[m
+ 	EnvironmentManagementV1alpha1                  *management_v1alpha1.EnvironmentClient[m
+ 	APIServiceManagementV1alpha1                   *management_v1alpha1.UnscopedAPIServiceClient[m
+ 	APIServiceRevisionManagementV1alpha1           *management_v1alpha1.UnscopedAPIServiceRevisionClient[m
+[36m@@ -147,6 +148,10 @@[m [mfunc New(b cAPIV1.Base) *Set {[m
+ 	if err != nil {[m
+ 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.TraceabilityAgent: %s", err))[m
+ 	}[m
+[32m+[m	[32ms.ComplianceAgentManagementV1alpha1, err = management_v1alpha1.NewComplianceAgentClient(b)[m
+[32m+[m	[32mif err != nil {[m
+[32m+[m		[32mpanic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ComplianceAgent: %s", err))[m
+[32m+[m	[32m}[m
+ 	s.EnvironmentManagementV1alpha1, err = management_v1alpha1.NewEnvironmentClient(b)[m
+ 	if err != nil {[m
+ 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.Environment: %s", err))[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/TraceabilityAgent.go b/pkg/apic/apiserver/models/management/v1alpha1/TraceabilityAgent.go[m
+[1mindex ab440e17..d5b08896 100644[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/TraceabilityAgent.go[m
+[1m+++ b/pkg/apic/apiserver/models/management/v1alpha1/TraceabilityAgent.go[m
+[36m@@ -27,11 +27,10 @@[m [mvar ([m
+ )[m
+ [m
+ const ([m
+[31m-	TraceabilityAgentResourceName                 = "traceabilityagents"[m
+[31m-	TraceabilityAgentAgentstateSubResourceName    = "agentstate"[m
+[31m-	TraceabilityAgentDataplaneSubResourceName     = "dataplane"[m
+[31m-	TraceabilityAgentSampletriggerSubResourceName = "sampletrigger"[m
+[31m-	TraceabilityAgentStatusSubResourceName        = "status"[m
+[32m+[m	[32mTraceabilityAgentResourceName              = "traceabilityagents"[m
+[32m+[m	[32mTraceabilityAgentAgentstateSubResourceName = "agentstate"[m
+[32m+[m	[32mTraceabilityAgentDataplaneSubResourceName  = "dataplane"[m
+[32m+[m	[32mTraceabilityAgentStatusSubResourceName     = "status"[m
+ )[m
+ [m
+ func TraceabilityAgentGVK() apiv1.GroupVersionKind {[m
+[36m@@ -46,12 +45,11 @@[m [mfunc init() {[m
+ // TraceabilityAgent Resource[m
+ type TraceabilityAgent struct {[m
+ 	apiv1.ResourceMeta[m
+[31m-	Agentstate    TraceabilityAgentAgentstate    `json:"agentstate"`[m
+[31m-	Dataplane     TraceabilityAgentDataplane     `json:"dataplane"`[m
+[31m-	Owner         *apiv1.Owner                   `json:"owner"`[m
+[31m-	Sampletrigger TraceabilityAgentSampletrigger `json:"sampletrigger"`[m
+[31m-	Spec          TraceabilityAgentSpec          `json:"spec"`[m
+[31m-	Status        TraceabilityAgentStatus        `json:"status"`[m
+[32m+[m	[32mAgentstate TraceabilityAgentAgentstate `json:"agentstate"`[m
+[32m+[m	[32mDataplane  TraceabilityAgentDataplane  `json:"dataplane"`[m
+[32m+[m	[32mOwner      *apiv1.Owner                `json:"owner"`[m
+[32m+[m	[32mSpec       TraceabilityAgentSpec       `json:"spec"`[m
+[32m+[m	[32mStatus     TraceabilityAgentStatus     `json:"status"`[m
+ }[m
+ [m
+ // NewTraceabilityAgent creates an empty *TraceabilityAgent[m
+[36m@@ -143,7 +141,6 @@[m [mfunc (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {[m
+ 	out["agentstate"] = res.Agentstate[m
+ 	out["dataplane"] = res.Dataplane[m
+ 	out["owner"] = res.Owner[m
+[31m-	out["sampletrigger"] = res.Sampletrigger[m
+ 	out["spec"] = res.Spec[m
+ 	out["status"] = res.Status[m
+ [m
+[36m@@ -203,20 +200,6 @@[m [mfunc (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {[m
+ 		}[m
+ 	}[m
+ [m
+[31m-	// marshalling subresource Sampletrigger[m
+[31m-	if v, ok := aux.SubResources["sampletrigger"]; ok {[m
+[31m-		sr, err = json.Marshal(v)[m
+[31m-		if err != nil {[m
+[31m-			return err[m
+[31m-		}[m
+[31m-[m
+[31m-		delete(aux.SubResources, "sampletrigger")[m
+[31m-		err = json.Unmarshal(sr, &res.Sampletrigger)[m
+[31m-		if err != nil {[m
+[31m-			return err[m
+[31m-		}[m
+[31m-	}[m
+[31m-[m
+ 	// marshalling subresource Status[m
+ 	if v, ok := aux.SubResources["status"]; ok {[m
+ 		sr, err = json.Marshal(v)[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/model_access_request_spec.go b/pkg/apic/apiserver/models/management/v1alpha1/model_access_request_spec.go[m
+[1mindex 1bf2c3ed..dc68db96 100644[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/model_access_request_spec.go[m
+[1m+++ b/pkg/apic/apiserver/models/management/v1alpha1/model_access_request_spec.go[m
+[36m@@ -11,7 +11,7 @@[m [mtype AccessRequestSpec struct {[m
+ 	// The name of an ManagedApplication resource that groups set of credentials.[m
+ 	ManagedApplication string `json:"managedApplication"`[m
+ 	// The value that matches the AccessRequestDefinition schema linked to the referenced APIServiceInstance. (management.v1alpha1.AccessRequest)[m
+[31m-	Data             map[string]interface{}              `json:"data"`[m
+[31m-	Quota            *AccessRequestSpecQuota             `json:"quota,omitempty"`[m
+[32m+[m	[32mData  map[string]interface{}  `json:"data"`[m
+[32m+[m	[32mQuota *AccessRequestSpecQuota `json:"quota,omitempty"`[m
+ 	AdditionalQuotas []AccessRequestSpecAdditionalQuotas `json:"additionalQuotas,omitempty"`[m
+ }[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate.go b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate.go[m
+[1mindex caf5543d..7e4ec0c6 100644[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate.go[m
+[1m+++ b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate.go[m
+[36m@@ -12,6 +12,5 @@[m [mpackage management[m
+ // TraceabilityAgentAgentstate  (management.v1alpha1.TraceabilityAgent)[m
+ type TraceabilityAgentAgentstate struct {[m
+ 	// * current - Current version is the latest available * available - New version available to update to * outdated - Version in use is no longer supported * retracted - Version in use has a known issue, update immediately[m
+[31m-	Update   string                              `json:"update,omitempty"`[m
+[31m-	Sampling TraceabilityAgentAgentstateSampling `json:"sampling,omitempty"`[m
+[32m+[m	[32mUpdate string `json:"update,omitempty"`[m
+ }[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate_sampling.go b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate_sampling.go[m
+[1mdeleted file mode 100644[m
+[1mindex 0f2b0393..00000000[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_agentstate_sampling.go[m
+[1m+++ /dev/null[m
+[36m@@ -1,29 +0,0 @@[m
+[31m-/*[m
+[31m- * API Server specification.[m
+[31m- *[m
+[31m- * No description provided (generated by Openapi Generator https://github.com/openapitools/openapi-generator)[m
+[31m- *[m
+[31m- * API version: SNAPSHOT[m
+[31m- * Generated by: OpenAPI Generator (https://openapi-generator.tech)[m
+[31m- */[m
+[31m-[m
+[31m-package management[m
+[31m-[m
+[31m-import ([m
+[31m-	// GENERATE: The following code has been modified after code generation[m
+[31m-	//[m
+[31m-	//	"time"[m
+[31m-	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"[m
+[31m-)[m
+[31m-[m
+[31m-// TraceabilityAgentAgentstateSampling  (management.v1alpha1.TraceabilityAgent)[m
+[31m-type TraceabilityAgentAgentstateSampling struct {[m
+[31m-	// When sampling is approved by the controller, enabled will be set to true then automatically set to false after the time period[m
+[31m-	Enabled bool `json:"enabled,omitempty"`[m
+[31m-	// The time that the agent will stop sampling[m
+[31m-	EndTime time.Time `json:"endTime,omitempty"`[m
+[31m-	// The upper limit of transactions, in a 1 minute period, the agent may sample[m
+[31m-	Limit int32 `json:"limit,omitempty"`[m
+[31m-	// The time after which the sampling can be triggered again, without hitting the cooldown[m
+[31m-	DisabledUntil time.Time `json:"disabledUntil,omitempty"`[m
+[31m-}[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_sampletrigger.go b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_sampletrigger.go[m
+[1mdeleted file mode 100644[m
+[1mindex ecc25492..00000000[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_sampletrigger.go[m
+[1m+++ /dev/null[m
+[36m@@ -1,18 +0,0 @@[m
+[31m-/*[m
+[31m- * API Server specification.[m
+[31m- *[m
+[31m- * No description provided (generated by Openapi Generator https://github.com/openapitools/openapi-generator)[m
+[31m- *[m
+[31m- * API version: SNAPSHOT[m
+[31m- * Generated by: OpenAPI Generator (https://openapi-generator.tech)[m
+[31m- */[m
+[31m-[m
+[31m-package management[m
+[31m-[m
+[31m-// TraceabilityAgentSampletrigger  (management.v1alpha1.TraceabilityAgent)[m
+[31m-type TraceabilityAgentSampletrigger struct {[m
+[31m-	// Set to true to request that sampling for this agent is started for the duration selected[m
+[31m-	Requested bool `json:"requested,omitempty"`[m
+[31m-	// The duration, in seconds, for which the agent will sample if the request is approved[m
+[31m-	Duration int32 `json:"duration,omitempty"`[m
+[31m-}[m
+[1mdiff --git a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_spec_config_sampling.go b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_spec_config_sampling.go[m
+[1mindex 6bfdd48d..e753ce52 100644[m
+[1m--- a/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_spec_config_sampling.go[m
+[1m+++ b/pkg/apic/apiserver/models/management/v1alpha1/model_traceability_agent_spec_config_sampling.go[m
+[36m@@ -11,6 +11,9 @@[m [mpackage management[m
+ [m
+ // TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection (management.v1alpha1.TraceabilityAgent)[m
+ type TraceabilityAgentSpecConfigSampling struct {[m
+[32m+[m	[32m// The percentage of transactions that the agent will save the full transaction details for. Valid values(decimals included) are 0 to 10[m
+[32m+[m	[32m// GENERATE: The following code has been modified after code generation[m
+[32m+[m	[32mPercentage float64 `json:"percentage"`[m
+ 	// Property is not used anymore. Set onlyErrors to true will allow the agent to sample only the error transactions for Business and Consumer Insights[m
+ 	AllErrors bool `json:"allErrors,omitempty"`[m
+ 	// Allows the agent to sample only the error transactions for Business and Consumer Insights[m

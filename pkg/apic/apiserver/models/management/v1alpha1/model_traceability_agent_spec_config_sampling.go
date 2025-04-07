@@ -11,6 +11,9 @@ package management
 
 // TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigSampling struct {
+	// The percentage of transactions that the agent will save the full transaction details for. Valid values(decimals included) are 0 to 10
+	// GENERATE: The following code has been modified after code generation
+	Percentage float64 `json:"percentage"`
 	// Property is not used anymore. Set onlyErrors to true will allow the agent to sample only the error transactions for Business and Consumer Insights
 	AllErrors bool `json:"allErrors,omitempty"`
 	// Allows the agent to sample only the error transactions for Business and Consumer Insights
