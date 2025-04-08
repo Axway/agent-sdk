@@ -55,6 +55,7 @@ func GetGlobalSampling() *sample {
 			samplingLock:       sync.Mutex{},
 			counterResetPeriod: time.Minute,
 			counterResetStopCh: make(chan struct{}),
+			disableSamplingCh:  make(chan struct{}),
 		}
 	}
 	return agentSamples
@@ -106,6 +107,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 			samplingLock:       sync.Mutex{},
 			counterResetPeriod: time.Minute,
 			counterResetStopCh: make(chan struct{}),
+			disableSamplingCh:  make(chan struct{}),
 		}
 	} else {
 		agentSamples.config = cfg
