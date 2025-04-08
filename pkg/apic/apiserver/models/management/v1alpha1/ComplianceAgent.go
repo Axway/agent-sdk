@@ -49,8 +49,7 @@ type ComplianceAgent struct {
 	Dataplane  ComplianceAgentDataplane  `json:"dataplane"`
 	Owner      *apiv1.Owner              `json:"owner"`
 	Spec       ComplianceAgentSpec       `json:"spec"`
-	// Status     ComplianceAgentStatus     `json:"status"`
-	Status *apiv1.ResourceStatus `json:"status"`
+	Status     ComplianceAgentStatus     `json:"status"`
 }
 
 // NewComplianceAgent creates an empty *ComplianceAgent
@@ -209,9 +208,7 @@ func (res *ComplianceAgent) UnmarshalJSON(data []byte) error {
 		}
 
 		delete(aux.SubResources, "status")
-		// err = json.Unmarshal(sr, &res.Status)
-		res.Status = &apiv1.ResourceStatus{}
-		err = json.Unmarshal(sr, res.Status)
+		err = json.Unmarshal(sr, &res.Status)
 		if err != nil {
 			return err
 		}
