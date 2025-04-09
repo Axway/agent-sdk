@@ -26,6 +26,7 @@ var agentTypesMap = map[config.AgentType]string{
 
 type watchTopicFeatures interface {
 	GetAgentType() config.AgentType
+	GetManagedEnvironments() []string
 	GetWatchResourceFilters() []config.ResourceFilter
 }
 
@@ -285,6 +286,15 @@ func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.Group
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.ComplianceAgentGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+	}
+
+	for _, env := range features.GetManagedEnvironments() {
+		kinds = append(kinds, []kindValues{
+			{GroupKind: management.EnvironmentGVK().GroupKind, Name: env, EventTypes: all},                                                          // watch environments
+			{GroupKind: management.DiscoveryAgentGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all},     // watch discovery agents
+			{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all}, // watch api service instances
+		}...)
 	}
 
 	return WatchTopicValues{
