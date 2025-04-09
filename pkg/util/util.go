@@ -555,8 +555,10 @@ func SanitizeServiceVersion(version string) string {
 		if err != nil {
 			// if hash computation fails, take the substring of version up to 30 chars (apiserver limit). That's the least that can be done
 			sanitizedVersion = version[:30] // Gets first 30 bytes
+		} else {
+			sanitizedVersion = strconv.FormatUint(hashInt, 10)
 		}
-		sanitizedVersion = strconv.FormatUint(hashInt, 10)
+
 	}
 	return sanitizedVersion
 }
