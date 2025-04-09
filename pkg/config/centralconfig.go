@@ -202,6 +202,8 @@ type CentralConfig interface {
 	GetWatchResourceFilters() []ResourceFilter
 	SetWatchResourceFilters([]ResourceFilter) error
 	GetCredentialConfig() CredentialConfig
+	SetManagedEnvironments([]string)
+	GetManagedEnvironments() []string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -239,6 +241,7 @@ type CentralConfiguration struct {
 	CacheStoragePath          string                `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
 	CredentialConfig          CredentialConfig      `config:"credential"`
+	managedEnvironments       []string
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
@@ -624,6 +627,14 @@ func (c *CentralConfiguration) SetWatchResourceFilters(filters []ResourceFilter)
 	}
 
 	return nil
+}
+
+func (c *CentralConfiguration) SetManagedEnvironments(envs []string) {
+	c.managedEnvironments = envs
+}
+
+func (c *CentralConfiguration) GetManagedEnvironments() []string {
+	return c.managedEnvironments
 }
 
 const (
