@@ -60,7 +60,6 @@ type agentResourceManager struct {
 
 // NewAgentResourceManager - Create a new agent resource manager
 func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClient, agentResourceChangeHandler func()) (Manager, error) {
-
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("agentResourceManager")

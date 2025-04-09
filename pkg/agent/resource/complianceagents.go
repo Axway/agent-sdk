@@ -6,6 +6,14 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 )
 
+func MergeComplianceAgentWithConfig(agentRes *v1.ResourceInstance, centralCfg config.CentralConfig) {
+	cfg, ok := centralCfg.(*config.CentralConfiguration)
+	if !ok {
+		return
+	}
+	mergeComplianceAgentWithConfig(agentRes, cfg)
+}
+
 func complianceAgent(res *v1.ResourceInstance) *management.ComplianceAgent {
 	agentRes := &management.ComplianceAgent{}
 	agentRes.FromInstance(res)
