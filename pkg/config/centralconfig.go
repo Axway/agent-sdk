@@ -86,6 +86,8 @@ const (
 	DiscoveryAgent AgentType = iota + 1
 	// TraceabilityAgent - Type definition for traceability agent
 	TraceabilityAgent
+	// ComplianceAgent - Type definition for compliance agent
+	ComplianceAgent
 	// GenericService - Type for a generic service
 	GenericService
 )
@@ -93,11 +95,13 @@ const (
 var agentTypeNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "discoveryagent",
 	TraceabilityAgent: "traceabilityagent",
+	ComplianceAgent:   "compliance",
 }
 
 var agentTypeShortNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "da",
 	TraceabilityAgent: "ta",
+	ComplianceAgent:   "ca",
 }
 
 func (agentType AgentType) ToString() string {
@@ -293,7 +297,7 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config.environmentID = "env-id"
 	config.Auth = newTestAuthConfig()
 	config.MigrationSettings = newTestMigrationConfig()
-	if agentType == TraceabilityAgent {
+	if agentType == TraceabilityAgent || agentType == ComplianceAgent {
 		config.APICDeployment = "deployment"
 	}
 	return config
@@ -963,5 +967,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 }
 
 func supportsTraceability(agentType AgentType) bool {
-	return agentType == TraceabilityAgent
+	return agentType == TraceabilityAgent || agentType == ComplianceAgent
 }

@@ -40,12 +40,12 @@ func (l *LogConfiguration) setupLogger(agentType AgentType) error {
 		MaxSize(l.File.MaxSize).
 		MaxBackups(l.File.MaxBackups).
 		MaxAge(l.File.MaxAge).
-		Metrics(agentType == TraceabilityAgent && l.MetricFile.Enabled).
+		Metrics(agentType != DiscoveryAgent && l.MetricFile.Enabled).
 		MetricFilename(l.MetricFile.Name).
 		MaxMetricSize(l.MetricFile.MaxSize).
 		MaxMetricBackups(l.MetricFile.MaxBackups).
 		MaxMetricAge(l.MetricFile.MaxAge).
-		Usage(agentType == TraceabilityAgent && l.UsageFile.Enabled).
+		Usage(agentType != DiscoveryAgent && l.UsageFile.Enabled).
 		UsageFilename(l.UsageFile.Name).
 		MaxUsageSize(l.UsageFile.MaxSize).
 		MaxUsageBackups(l.UsageFile.MaxBackups).
@@ -149,7 +149,7 @@ func ParseAndSetupLogConfig(props properties.Properties, agentType AgentType) (L
 		},
 	}
 
-	if agentType == TraceabilityAgent {
+	if agentType == TraceabilityAgent || agentType == ComplianceAgent {
 		cfg.MetricFile = LogFileConfiguration{
 			Enabled:    props.BoolPropertyValue(pathLogMetricsFileEnabled),
 			Name:       props.StringPropertyValue(pathLogMetricsFileName),

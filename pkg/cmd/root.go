@@ -177,7 +177,7 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.rootCmd.PreRunE = c.initialize
 
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
-	if agentType == config.TraceabilityAgent {
+	if agentType == config.TraceabilityAgent || agentType == config.ComplianceAgent {
 		properties.SetAliasKeyPrefix(c.agentName)
 	}
 
@@ -418,7 +418,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			// Setup logp to use beats logger.
 			// Setting up late here as log entries for agent/command initialization are not logged
 			// as the beats logger is initialized only when the beat instance is created.
-			if c.agentType == config.TraceabilityAgent {
+			if c.agentType == config.TraceabilityAgent || c.agentType == config.ComplianceAgent {
 				properties.SetAliasKeyPrefix(c.agentName)
 				log.SetIsLogP()
 			}

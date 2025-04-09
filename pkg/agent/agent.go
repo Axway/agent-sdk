@@ -44,9 +44,6 @@ const (
 	RedirectURLsField = "redirectURLs"
 )
 
-// AgentResourceType - Holds the type for agent resource in Central
-var AgentResourceType string
-
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
 
@@ -180,7 +177,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
-	agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+	if agent.cfg.GetAgentType() != config.ComplianceAgent {
+		agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+	}
 
 	if !agent.isInitialized {
 		err = handleInitialization()
@@ -281,7 +280,7 @@ func registerExternalIDPs() error {
 		return nil
 	}
 
-	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
 		if idPCfg == nil {
 			return nil

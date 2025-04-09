@@ -19,8 +19,9 @@ import (
 var agentTemplate string
 
 var agentTypesMap = map[config.AgentType]string{
-	config.DiscoveryAgent:    "discoveryagents",
-	config.TraceabilityAgent: "traceabilityagents",
+	config.DiscoveryAgent:    management.DiscoveryAgentResourceName,
+	config.TraceabilityAgent: management.TraceabilityAgentResourceName,
+	config.ComplianceAgent:   management.ComplianceAgentResourceName,
 }
 
 type watchTopicFeatures interface {
@@ -68,6 +69,9 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 	case config.TraceabilityAgent:
 		agentResourceGroupKind = management.TraceabilityAgentGVK().GroupKind
 		tmplValuesFunc = NewTraceWatchTopic
+	case config.ComplianceAgent:
+		agentResourceGroupKind = management.ComplianceAgentGVK().GroupKind
+		tmplValuesFunc = NewComplianceWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
 	}
@@ -271,6 +275,22 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 		Name:        name,
 		Title:       name,
 		Description: fmt.Sprintf(desc, "traceability", scope),
+		Kinds:       kinds,
+	}
+}
+
+// NewComplianceWatchTopic creates a WatchTopic template string
+func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
+	kinds := []kindValues{
+		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
+		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+	}
+
+	return WatchTopicValues{
+		Name:        name,
+		Title:       name,
+		Description: fmt.Sprintf(desc, "compliance", scope),
 		Kinds:       kinds,
 	}
 }
