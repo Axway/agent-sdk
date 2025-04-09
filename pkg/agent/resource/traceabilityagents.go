@@ -20,5 +20,5 @@ func mergeTraceabilityAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config
 		resCfgTeamID = ta.Spec.Config.Owner.ID
 	}
 	resCfgLogLevel := ta.Spec.Logging.Level
-	applyResConfigToCentralConfig(cfg, "", resCfgTeamID, resCfgLogLevel)
+	applyResConfigToCentralConfig(cfg, "", resCfgTeamID, resCfgLogLevel, nil)
 }

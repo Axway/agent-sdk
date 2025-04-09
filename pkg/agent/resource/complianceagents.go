@@ -14,5 +14,7 @@ func complianceAgent(res *v1.ResourceInstance) *management.ComplianceAgent {
 }
 
 func mergeComplianceAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.CentralConfiguration) {
-	applyResConfigToCentralConfig(cfg, "", "", "")
+	ca := complianceAgent(agentRes)
+
+	applyResConfigToCentralConfig(cfg, "", "", "", ca.Spec.Config.ManagedEnvironments)
 }

@@ -290,7 +290,7 @@ func newDAStatus(rm apiv1.ResourceMeta, status, prevStatus, message string) mana
 	return daStatus
 }
 
-func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string) {
+func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string, managedEnvs []string) {
 	agentResLogLevel := log.GlobalLoggerConfig.GetLevel()
 	if resCfgLogLevel != "" && !strings.EqualFold(agentResLogLevel, resCfgLogLevel) {
 		log.GlobalLoggerConfig.Level(resCfgLogLevel).Apply()
@@ -304,6 +304,8 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	if resCfgTeamID != "" && cfg.TeamName == "" {
 		cfg.SetTeamID(resCfgTeamID)
 	}
+
+	cfg.SetManagedEnvironments(managedEnvs)
 }
 
 func (a *agentResourceManager) onResourceChange() {

@@ -23,5 +23,5 @@ func mergeDiscoveryAgentWithConfig(agentRes *v1.ResourceInstance, cfg *config.Ce
 		resCfgTeamID = da.Spec.Config.Owner.ID
 	}
 	resCfgLogLevel := da.Spec.Logging.Level
-	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel)
+	applyResConfigToCentralConfig(cfg, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel, nil)
 }
