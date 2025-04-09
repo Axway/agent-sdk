@@ -32,7 +32,7 @@ func (p *oas3SpecProcessor) GetResourceType() string {
 
 // GetVersion -
 func (p *oas3SpecProcessor) GetVersion() string {
-	return p.spec.Info.Version
+	return util.SanitizeServiceVersion(p.spec.Info.Version)
 }
 
 // GetEndpoints -

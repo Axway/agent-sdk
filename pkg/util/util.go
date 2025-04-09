@@ -546,3 +546,17 @@ func OrderedKeys[T any](input map[string]T) []string {
 
 	return keys
 }
+
+// SanitizeServiceVersion - apiserver limits version size to 30.  If its greater than 30, compute hash for the version and use that for the displayed value
+func SanitizeServiceVersion(version string) string {
+	sanitizedVersion := version
+	if len(version) > 30 {
+		hashInt, err := ComputeHash(version)
+		if err != nil {
+			// if hash computation fails, take the substring of version up to 30 chars (apiserver limit). That's the least that can be done
+			sanitizedVersion = version[:30] // Gets first 30 bytes
+		}
+		sanitizedVersion = strconv.FormatUint(hashInt, 10)
+	}
+	return sanitizedVersion
+}
