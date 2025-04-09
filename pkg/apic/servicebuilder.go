@@ -7,6 +7,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -312,6 +313,9 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	if b.serviceBody.specVersion == "" {
 		b.serviceBody.specVersion = b.serviceBody.Version
 	}
+
+	// sanitize version
+	b.serviceBody.specVersion = util.SanitizeServiceVersion(b.serviceBody.Version)
 
 	// Check if the type is unstructured to gather more info
 

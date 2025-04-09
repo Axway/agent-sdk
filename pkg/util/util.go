@@ -558,7 +558,6 @@ func SanitizeServiceVersion(version string) string {
 		} else {
 			sanitizedVersion = strconv.FormatUint(hashInt, 10)
 		}
-
 	}
 	return sanitizedVersion
 }

@@ -4,8 +4,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 type asyncAPIProcessor struct {
@@ -28,7 +26,7 @@ func (p *asyncAPIProcessor) GetVersion() string {
 		if infoDetail, ok := info.(map[string]interface{}); ok {
 			version := infoDetail["version"]
 			if version != nil {
-				return util.SanitizeServiceVersion(version.(string))
+				return version.(string)
 			}
 		}
 	}
