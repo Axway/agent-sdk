@@ -7,13 +7,9 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-)
-
-const (
-	discoveryAgent        = "DiscoveryAgent"
-	traceabilityAgent     = "TraceabilityAgent"
-	agentStateSubresource = "agentstate"
 )
 
 type sampling interface {
@@ -22,6 +18,10 @@ type sampling interface {
 
 type TraceabilityTriggerHandler interface {
 	TriggerTraceability()
+}
+
+type ComplianceAgentHandler interface {
+	TriggerProcessing()
 }
 
 // Register an AgentResourceUpdateHandler in an agent to trigger events when changes to the resource is made
@@ -56,10 +56,14 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if h.agentResourceManager == nil {
 		return nil
 	}
+	subres := ""
+	if meta != nil {
+		subres = meta.Subresource
+	}
 
 	action := GetActionFromContext(ctx)
 	if f, ok := h.agentTypeHandler[resource.Kind]; ok {
-		return f(action, meta.Subresource, resource)
+		return f(action, subres, resource)
 	}
 
 	return nil
@@ -103,8 +107,21 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 }
 
 func (h *agentResourceHandler) handleCompliance(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error {
-	if action == proto.Event_UPDATED {
+	switch {
+	case action == proto.Event_UPDATED:
 		h.agentResourceManager.SetAgentResource(resource)
+	case action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails:
+		return h.handleComplianceProcessing(resource)
+	}
+
+	return nil
+}
+
+func (h *agentResourceHandler) handleComplianceProcessing(resource *v1.ResourceInstance) error {
+	trigger, _ := util.GetAgentDetailsValue(resource, definitions.ComplianceAgentTrigger)
+	if complianceAgentHandler, ok := h.agentResourceManager.GetHandler().(ComplianceAgentHandler); ok && trigger == "true" {
+		defer h.agentResourceManager.AddUpdateAgentDetails(definitions.ComplianceAgentTrigger, "false")
+		complianceAgentHandler.TriggerProcessing()
 	}
 	return nil
 }
