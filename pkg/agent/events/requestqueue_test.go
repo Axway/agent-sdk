@@ -34,12 +34,12 @@ func TestRequestQueue(t *testing.T) {
 			if tc.queueActivated {
 				wg.Add(1)
 				q.Start()
-				time.Sleep(1 * time.Second)
+				time.Sleep(time.Second)
 				go func() {
-					defer wg.Done()
 					receivedReq = <-requestCh
-					time.Sleep(time.Second / 2)
 					q.Stop()
+					time.Sleep(time.Second)
+					wg.Done()
 				}()
 			}
 
