@@ -36,9 +36,9 @@ func TestRequestQueue(t *testing.T) {
 				q.Start()
 				time.Sleep(1 * time.Second)
 				go func() {
+					defer wg.Done()
 					receivedReq = <-requestCh
 					q.Stop()
-					wg.Done()
 				}()
 			}
 
