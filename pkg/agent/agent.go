@@ -802,7 +802,6 @@ func newHandlers() []handler.Handler {
 					[]apiV1.GroupKind{
 						management.EnvironmentGVK().GroupKind,
 						management.APIServiceInstanceGVK().GroupKind,
-						management.DiscoveryAgentGVK().GroupKind,
 					},
 				),
 			),

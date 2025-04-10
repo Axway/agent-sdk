@@ -292,7 +292,6 @@ func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.Group
 	for _, env := range features.GetManagedEnvironments() {
 		kinds = append(kinds, []kindValues{
 			{GroupKind: management.EnvironmentGVK().GroupKind, Name: env, EventTypes: all},                                                          // watch environments
-			{GroupKind: management.DiscoveryAgentGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all},     // watch discovery agents
 			{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all}, // watch api service instances
 		}...)
 	}
