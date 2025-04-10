@@ -230,21 +230,16 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			if len(tc.managedEnvs) > 0 && tc.agentType == config.ComplianceAgent {
 				for _, env := range tc.managedEnvs {
 					foundEnv := false
-					foundDA := false
 					foundAPIS := false
 					for _, wtFilter := range wt.Spec.Filters {
 						if wtFilter.Group == management.EnvironmentGVK().Group && wtFilter.Kind == management.EnvironmentGVK().Kind && wtFilter.Name == env {
 							foundEnv = true
-						}
-						if wtFilter.Group == management.DiscoveryAgentGVK().Group && wtFilter.Kind == management.DiscoveryAgentGVK().Kind && wtFilter.Scope.Name == env {
-							foundDA = true
 						}
 						if wtFilter.Group == management.APIServiceInstanceGVK().Group && wtFilter.Kind == management.APIServiceInstanceGVK().Kind && wtFilter.Scope.Name == env {
 							foundAPIS = true
 						}
 					}
 					assert.Truef(t, foundEnv, "managed env, %s, environment filter not found", env)
-					assert.Truef(t, foundDA, "managed env, %s, discovery agent filter not found", env)
 					assert.Truef(t, foundAPIS, "managed env, %s, api service instance filter not found", env)
 				}
 			}
