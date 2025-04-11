@@ -95,7 +95,7 @@ const (
 var agentTypeNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "discoveryagent",
 	TraceabilityAgent: "traceabilityagent",
-	ComplianceAgent:   "compliance",
+	ComplianceAgent:   "complianceagent",
 }
 
 var agentTypeShortNamesMap = map[AgentType]string{
