@@ -86,6 +86,8 @@ const (
 	DiscoveryAgent AgentType = iota + 1
 	// TraceabilityAgent - Type definition for traceability agent
 	TraceabilityAgent
+	// ComplianceAgent - Type definition for compliance agent
+	ComplianceAgent
 	// GenericService - Type for a generic service
 	GenericService
 )
@@ -93,11 +95,13 @@ const (
 var agentTypeNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "discoveryagent",
 	TraceabilityAgent: "traceabilityagent",
+	ComplianceAgent:   "complianceagent",
 }
 
 var agentTypeShortNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "da",
 	TraceabilityAgent: "ta",
+	ComplianceAgent:   "ca",
 }
 
 func (agentType AgentType) ToString() string {
@@ -198,6 +202,8 @@ type CentralConfig interface {
 	GetWatchResourceFilters() []ResourceFilter
 	SetWatchResourceFilters([]ResourceFilter) error
 	GetCredentialConfig() CredentialConfig
+	SetManagedEnvironments([]string)
+	GetManagedEnvironments() []string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -235,6 +241,7 @@ type CentralConfiguration struct {
 	CacheStoragePath          string                `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
 	CredentialConfig          CredentialConfig      `config:"credential"`
+	managedEnvironments       []string
 	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
@@ -293,7 +300,7 @@ func NewTestCentralConfig(agentType AgentType) CentralConfig {
 	config.environmentID = "env-id"
 	config.Auth = newTestAuthConfig()
 	config.MigrationSettings = newTestMigrationConfig()
-	if agentType == TraceabilityAgent {
+	if agentType == TraceabilityAgent || agentType == ComplianceAgent {
 		config.APICDeployment = "deployment"
 	}
 	return config
@@ -620,6 +627,14 @@ func (c *CentralConfiguration) SetWatchResourceFilters(filters []ResourceFilter)
 	}
 
 	return nil
+}
+
+func (c *CentralConfiguration) SetManagedEnvironments(envs []string) {
+	c.managedEnvironments = envs
+}
+
+func (c *CentralConfiguration) GetManagedEnvironments() []string {
+	return c.managedEnvironments
 }
 
 const (
@@ -963,5 +978,5 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 }
 
 func supportsTraceability(agentType AgentType) bool {
-	return agentType == TraceabilityAgent
+	return agentType == TraceabilityAgent || agentType == ComplianceAgent
 }

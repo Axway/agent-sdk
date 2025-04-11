@@ -41,6 +41,10 @@ func TestDefaultLogConfig(t *testing.T) {
 			agentType: TraceabilityAgent,
 			logName:   "traceability_agent.log",
 		},
+		"default compliance agent configuration": {
+			agentType: ComplianceAgent,
+			logName:   "compliance_agent.log",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -65,7 +69,7 @@ func TestDefaultLogConfig(t *testing.T) {
 			assert.Equal(t, defMaxAge, props.IntPropertyValue(pathLogFileMaxAge))
 			assert.Equal(t, defMaxFiles, props.IntPropertyValue(pathLogFileMaxBackups))
 
-			if tc.agentType == TraceabilityAgent {
+			if tc.agentType == TraceabilityAgent || tc.agentType == ComplianceAgent {
 				assert.Equal(t, defMetricName, props.StringPropertyValue(pathLogMetricsFileName))
 				assert.Equal(t, defMetricMaxSize, props.IntPropertyValue(pathLogMetricsFileMaxSize))
 				assert.Equal(t, defMetricMaxAge, props.IntPropertyValue(pathLogMetricsFileMaxAge))
@@ -126,6 +130,12 @@ func TestLogConfigValidations(t *testing.T) {
 		"success": {
 			metricsEnabled: true,
 			usageEnabled:   true,
+		},
+		"expect err, compliance agent, bad metric log size": {
+			agentType:      ComplianceAgent,
+			metricsEnabled: true,
+			errInfo:        "log.metricfile.rotateeverybytes",
+			metricMaxSize:  1,
 		},
 		"expect err, traceability agent, bad metric log size": {
 			agentType:      TraceabilityAgent,
@@ -220,7 +230,7 @@ func TestLogConfigValidations(t *testing.T) {
 			props.AddIntProperty(pathLogFileMaxBackups, tc.maxBackups, "")
 			props.AddIntProperty(pathLogFileMaxAge, tc.maxAge, "")
 
-			if tc.agentType == TraceabilityAgent && tc.metricsEnabled {
+			if tc.agentType != DiscoveryAgent && tc.metricsEnabled {
 				props.AddBoolProperty(pathLogMetricsFileEnabled, true, "")
 				props.AddStringProperty(pathLogMetricsFileName, "metrics.log", "")
 				props.AddIntProperty(pathLogMetricsFileMaxSize, tc.metricMaxSize, "")
@@ -228,7 +238,7 @@ func TestLogConfigValidations(t *testing.T) {
 				props.AddIntProperty(pathLogMetricsFileMaxAge, tc.metricMaxAge, "")
 			}
 
-			if tc.agentType == TraceabilityAgent && tc.usageEnabled {
+			if tc.agentType != DiscoveryAgent && tc.usageEnabled {
 				props.AddBoolProperty(pathLogUsageFileEnabled, true, "")
 				props.AddStringProperty(pathLogUsageFileName, "usage.log", "")
 				props.AddIntProperty(pathLogUsageFileMaxSize, tc.usageMaxSize, "")

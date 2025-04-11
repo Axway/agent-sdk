@@ -228,7 +228,7 @@ func (h *CustomUnitHandler) getServiceInstance(ar *management.AccessRequest) (*v
 }
 
 func (m *CustomUnitHandler) HandleMetricReporting(metricCollector metricCollector) {
-	if m.agentType != config.TraceabilityAgent {
+	if m.agentType == config.DiscoveryAgent {
 		return
 	}
 	if len(m.servicesConfigs) > 0 {

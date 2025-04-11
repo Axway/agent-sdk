@@ -60,7 +60,6 @@ type agentResourceManager struct {
 
 // NewAgentResourceManager - Create a new agent resource manager
 func NewAgentResourceManager(cfg config.CentralConfig, apicClient executeAPIClient, agentResourceChangeHandler func()) (Manager, error) {
-
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("agentResourceManager")
@@ -290,7 +289,7 @@ func newDAStatus(rm apiv1.ResourceMeta, status, prevStatus, message string) mana
 	return daStatus
 }
 
-func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string) {
+func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAdditionalTags, resCfgTeamID, resCfgLogLevel string, managedEnvs []string) {
 	agentResLogLevel := log.GlobalLoggerConfig.GetLevel()
 	if resCfgLogLevel != "" && !strings.EqualFold(agentResLogLevel, resCfgLogLevel) {
 		log.GlobalLoggerConfig.Level(resCfgLogLevel).Apply()
@@ -304,6 +303,8 @@ func applyResConfigToCentralConfig(cfg *config.CentralConfiguration, resCfgAddit
 	if resCfgTeamID != "" && cfg.TeamName == "" {
 		cfg.SetTeamID(resCfgTeamID)
 	}
+
+	cfg.SetManagedEnvironments(managedEnvs)
 }
 
 func (a *agentResourceManager) onResourceChange() {
@@ -338,6 +339,10 @@ func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 		agentRes = res
 	case config.TraceabilityAgent:
 		res := management.NewTraceabilityAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
+		res.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = res
+	case config.ComplianceAgent:
+		res := management.NewComplianceAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
 		res.Spec.DataplaneType = config.AgentDataPlaneType
 		agentRes = res
 	}
@@ -380,6 +385,12 @@ func (a *agentResourceManager) checkAgentResource() (*v1.ResourceInstance, error
 		currDataplaneType = ta.Spec.DataplaneType
 		ta.Spec.DataplaneType = config.AgentDataPlaneType
 		agentRes = ta
+	} else if a.agentResource.Kind == management.ComplianceAgentGVK().Kind {
+		ca := management.NewComplianceAgent("", "")
+		ca.FromInstance(a.agentResource)
+		currDataplaneType = ca.Spec.DataplaneType
+		ca.Spec.DataplaneType = config.AgentDataPlaneType
+		agentRes = ca
 	}
 
 	// nothing to update
@@ -412,6 +423,8 @@ func (a *agentResourceManager) mergeResourceWithConfig() {
 		mergeDiscoveryAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	case management.TraceabilityAgentGVK().Kind:
 		mergeTraceabilityAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
+	case management.ComplianceAgentGVK().Kind:
+		mergeComplianceAgentWithConfig(a.GetAgentResource(), a.cfg.(*config.CentralConfiguration))
 	default:
 		panic(ErrUnsupportedAgentType)
 	}
