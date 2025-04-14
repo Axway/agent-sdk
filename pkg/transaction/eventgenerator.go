@@ -124,6 +124,12 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		logger.WithField("transactionID", eventReport.GetDetailEvents()[0].TransactionID)
 	}
 
+	// See if the uri is in the api exceptions list
+	if e.isInAPIExceptionsList(eventReport.GetDetailEvents()) {
+		logger.Debug("found api path in traceability api exceptions list, ignore transaction event")
+		return events, nil
+	}
+
 	bytes := e.getBytesSent(eventReport.GetDetailEvents())
 	if eventReport.ShouldTrackMetrics() && eventReport.GetSummaryEvent() != (LogEvent{}) {
 		e.trackMetrics(eventReport.GetSummaryEvent(), int64(bytes))
@@ -131,12 +137,6 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 
 	if eventReport.ShouldOnlyTrackMetrics() {
 		logger.Trace("not generating events, only tracking for metrics")
-		return events, nil
-	}
-
-	// See if the uri is in the api exceptions list
-	if e.isInAPIExceptionsList(eventReport.GetDetailEvents()) {
-		logger.Debug("found api path in traceability api exceptions list, ignore transaction event")
 		return events, nil
 	}
 
