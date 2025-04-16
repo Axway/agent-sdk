@@ -135,6 +135,10 @@ func (j *credentialValidator) validateCredential(credKey string, now time.Time) 
 }
 
 func registerCredentialChecker() *credentialValidator {
+	if agent.cfg.GetAgentType() != config.DiscoveryAgent {
+		return nil
+	}
+
 	c := newCredentialChecker(agent.cacheManager, agent.apicClient)
 
 	err := agent.cfg.SetWatchResourceFilters([]config.ResourceFilter{

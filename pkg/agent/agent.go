@@ -19,6 +19,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
@@ -43,9 +44,6 @@ const (
 	// RedirectURLsField -
 	RedirectURLsField = "redirectURLs"
 )
-
-// AgentResourceType - Holds the type for agent resource in Central
-var AgentResourceType string
 
 // APIValidator - Callback for validating the API
 type APIValidator func(apiID, stageName string) bool
@@ -180,7 +178,9 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 
 	// call the metric services.
 	metricServicesConfigs := agentFeaturesCfg.GetMetricServicesConfigs()
-	agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+	if agent.cfg.GetAgentType() != config.ComplianceAgent {
+		agent.customUnitHandler = customunit.NewCustomUnitHandler(metricServicesConfigs, agent.cacheManager, centralCfg.GetAgentType())
+	}
 
 	if !agent.isInitialized {
 		err = handleInitialization()
@@ -220,6 +220,11 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 		} else {
 			agent.agentResourceManager.OnConfigChange(agent.cfg, agent.apicClient)
 		}
+	}
+
+	// update the managed envs from the agent resource config
+	if centralCfg.GetAgentType() == config.ComplianceAgent {
+		resource.MergeComplianceAgentWithConfig(agent.agentResourceManager.GetAgentResource(), centralCfg)
 	}
 
 	return nil
@@ -281,7 +286,7 @@ func registerExternalIDPs() error {
 		return nil
 	}
 
-	if agent.cfg.GetAgentType() != config.TraceabilityAgent {
+	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		idPCfg := agent.agentFeaturesCfg.GetExternalIDPConfig()
 		if idPCfg == nil {
 			return nil
@@ -766,27 +771,40 @@ func newHandlers() []handler.Handler {
 		handler.NewAPISvcHandler(agent.cacheManager, envName),
 		handler.NewInstanceHandler(agent.cacheManager, envName),
 		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling()),
-		handler.NewWatchResourceHandler(agent.cacheManager, agent.cfg),
 		agent.proxyResourceHandler,
 	}
 
-	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
+	switch agent.cfg.GetAgentType() {
+	case config.DiscoveryAgent:
 		handlers = append(
 			handlers,
+			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
 		)
-	}
-
-	// Register managed application and access handler for traceability agent
-	// For discovery agent, the handlers gets registered while setting up provisioner
-	if agent.cfg.GetAgentType() == config.TraceabilityAgent {
+	case config.TraceabilityAgent:
+		// Register managed application and access handler for traceability agent
+		// For discovery agent, the handlers gets registered while setting up provisioner
 		handlers = append(
 			handlers,
+			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
 			handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient),
 			handler.NewTraceManagedApplicationHandler(agent.cacheManager),
+		)
+	case config.ComplianceAgent:
+		handlers = append(
+			handlers,
+			handler.NewWatchResourceHandler(agent.cacheManager,
+				handler.WithWatchTopicFeatures(agent.cfg),
+				handler.WithWatchTopicGroupKind(
+					[]apiV1.GroupKind{
+						management.EnvironmentGVK().GroupKind,
+						management.APIServiceInstanceGVK().GroupKind,
+					},
+				),
+			),
 		)
 	}
 

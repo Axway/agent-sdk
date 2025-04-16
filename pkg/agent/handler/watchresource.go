@@ -23,20 +23,39 @@ func getWatchResourceKey(group, kind string) string {
 	return fmt.Sprintf("%s:%s", group, kind)
 }
 
+type watchTopicOptions func(s *watchResourceHandler)
+
+func WithWatchTopicFeatures(feature watchTopicFeatures) watchTopicOptions {
+	return func(w *watchResourceHandler) {
+		filters := feature.GetWatchResourceFilters()
+		for _, filter := range filters {
+			key := getWatchResourceKey(filter.Group, filter.Kind)
+			w.watchGroupKindMap[key] = filter.IsCachedResource
+		}
+	}
+}
+
+func WithWatchTopicGroupKind(groupKinds []v1.GroupKind) watchTopicOptions {
+	return func(w *watchResourceHandler) {
+		for _, gk := range groupKinds {
+			key := getWatchResourceKey(gk.Group, gk.Kind)
+			w.watchGroupKindMap[key] = true
+		}
+	}
+}
+
 // NewWatchResourceHandler creates a Handler for custom watch resources to store resource in agent cache
-func NewWatchResourceHandler(agentCacheManager agentcache.Manager, feature watchTopicFeatures) Handler {
-	watchGroupKindMap := make(map[string]bool)
-
-	filters := feature.GetWatchResourceFilters()
-	for _, filter := range filters {
-		key := getWatchResourceKey(filter.Group, filter.Kind)
-		watchGroupKindMap[key] = filter.IsCachedResource
-	}
-
-	return &watchResourceHandler{
+func NewWatchResourceHandler(agentCacheManager agentcache.Manager, opts ...watchTopicOptions) Handler {
+	w := &watchResourceHandler{
 		agentCacheManager: agentCacheManager,
-		watchGroupKindMap: watchGroupKindMap,
+		watchGroupKindMap: map[string]bool{},
 	}
+
+	for _, o := range opts {
+		o(w)
+	}
+
+	return w
 }
 
 func (h *watchResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {

@@ -91,6 +91,23 @@ func createTraceabilityAgentRes(id, name, dataplane string, processHeaders bool)
 	return instance
 }
 
+func createComplianceAgentRes(id, name, dataplane string) *v1.ResourceInstance {
+	res := &management.ComplianceAgent{
+		ResourceMeta: v1.ResourceMeta{
+			Name: name,
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+		},
+		Spec: management.ComplianceAgentSpec{
+			DataplaneType: dataplane,
+			Config:        management.ComplianceAgentSpecConfig{},
+		},
+	}
+	instance, _ := res.AsInstance()
+	return instance
+}
+
 type TestConfig struct {
 	resourceChanged bool
 }
@@ -104,6 +121,7 @@ func TestAgentInitialize(t *testing.T) {
 	const (
 		daName = "discovery"
 		taName = "traceability"
+		caName = "compliance"
 	)
 
 	teams := []definitions.PlatformTeam{
@@ -122,6 +140,7 @@ func TestAgentInitialize(t *testing.T) {
 	}
 	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
 	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+	complianceAgentRes := createComplianceAgentRes("111", caName, "ca-dataplane")
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
@@ -139,6 +158,13 @@ func TestAgentInitialize(t *testing.T) {
 
 		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
 			buf, err := json.Marshal(traceabilityAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/complianceagents/"+caName) {
+			buf, err := json.Marshal(complianceAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
@@ -176,7 +202,6 @@ func TestAgentInitialize(t *testing.T) {
 	assert.Nil(t, da)
 
 	cfg.AgentType = config.DiscoveryAgent
-	AgentResourceType = management.DiscoveryAgentResourceName
 	cfg.AgentName = daName
 	resetResources()
 	err = Initialize(cfg)
@@ -185,8 +210,16 @@ func TestAgentInitialize(t *testing.T) {
 	da = GetAgentResource()
 	assertResource(t, da, discoveryAgentRes)
 
+	cfg.AgentType = config.ComplianceAgent
+	cfg.AgentName = caName
+	resetResources()
+	err = Initialize(cfg)
+	assert.Nil(t, err)
+
+	ca := GetAgentResource()
+	assertResource(t, ca, complianceAgentRes)
+
 	cfg.AgentType = config.TraceabilityAgent
-	AgentResourceType = management.TraceabilityAgentResourceName
 	cfg.AgentName = taName
 	resetResources()
 	err = Initialize(cfg)
@@ -340,7 +373,6 @@ func TestAgentConfigOverride(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "v7")
 
-	AgentResourceType = management.DiscoveryAgentResourceName
 	cfg.AgentName = "discovery"
 	resetResources()
 	err := Initialize(cfg)

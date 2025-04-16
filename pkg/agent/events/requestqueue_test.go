@@ -34,7 +34,7 @@ func TestRequestQueue(t *testing.T) {
 			if tc.queueActivated {
 				wg.Add(1)
 				q.Start()
-				time.Sleep(1 * time.Second)
+				time.Sleep(time.Second)
 				go func() {
 					receivedReq = <-requestCh
 					q.Stop()
@@ -57,6 +57,7 @@ func TestRequestQueue(t *testing.T) {
 
 			wg.Wait()
 			assert.Equal(t, req, receivedReq)
+			time.Sleep(time.Millisecond * 500)
 			assert.False(t, q.IsActive())
 		})
 	}

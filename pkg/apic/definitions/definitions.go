@@ -41,6 +41,7 @@ const (
 	Subscription                     = "Subscription"
 	MarketplaceMigration             = "marketplace-migration"
 	InstanceMigration                = "instance-migration"
+	ComplianceAgentTrigger           = "triggerProcessing"
 )
 
 // market place provisioning migration

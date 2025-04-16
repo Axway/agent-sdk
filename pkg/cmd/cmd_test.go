@@ -128,6 +128,26 @@ func TestRootCmdFlags(t *testing.T) {
 	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
 	assertBooleanCmdFlag(t, rootCmd, "central.migration.cleanInstances", "centralMigrationCleanInstances", false, "Set this to clean all but latest instance, per stage, within an API Service")
 
+	// Compliance Agent
+	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.ComplianceAgent)
+	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "", "Amplify Central")       // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
+	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
+	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
+	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
+	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
+	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
+	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
+	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
 	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "", "Amplify Central")       // assert to empty "" - set by region settings
@@ -228,6 +248,22 @@ func TestRootCmdConfigDefault(t *testing.T) {
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
 	assert.Contains(t, "Test return error from init config handler, Discovery Agent", errBuf.String())
+
+	// Compliance
+	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.ComplianceAgent)
+	viper.AddConfigPath("./testdata")
+	err = rootCmd.Execute()
+
+	// should NOT be FileNotFound error
+	assert.NotNil(t, err, err.Error())
+	if err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+	}
+
+	errBuf = new(bytes.Buffer)
+	rootCmd.RootCmd().SetErr(errBuf)
+	assert.Contains(t, "Test return error from init config handler, Compliance Agent", errBuf.String())
 
 	// Traceability
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.TraceabilityAgent)

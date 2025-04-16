@@ -52,7 +52,7 @@ func TestWatchResourceHandler(t *testing.T) {
 	}}
 
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	handler := NewWatchResourceHandler(cm, features)
+	handler := NewWatchResourceHandler(cm, WithWatchTopicFeatures(features))
 
 	res := createWatchResource(mv1.SecretGVK().Group, mv1.SecretGVK().Kind, "secret-id-1", "secret-name-1")
 	// not cached resource
