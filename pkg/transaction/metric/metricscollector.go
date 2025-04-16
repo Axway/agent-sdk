@@ -244,6 +244,10 @@ func (c *collector) Execute() error {
 	defer c.cleanup()
 	c.generateEvents()
 	c.publishEvents()
+
+	// initialize batch after publish
+	// publish
+
 	return nil
 }
 

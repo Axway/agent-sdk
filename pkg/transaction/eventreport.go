@@ -4,12 +4,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 type EventReport interface {
 	GetSummaryEvent() LogEvent
 	GetDetailEvents() []LogEvent
+	GetMetricDetail() metric.MetricDetail
 	GetEventTime() time.Time
 	GetMetadata() common.MapStr
 	GetFields() common.MapStr
@@ -21,8 +24,11 @@ type EventReport interface {
 }
 
 type eventReport struct {
-	summaryEvent LogEvent
+	summaryEvent *LogEvent
+	proxy        *Proxy
+	app          *Application
 	detailEvents []LogEvent
+	metricDetail metric.MetricDetail
 	eventTime    time.Time
 	metadata     common.MapStr
 	fields       common.MapStr
@@ -34,7 +40,10 @@ type eventReport struct {
 }
 
 func (e *eventReport) GetSummaryEvent() LogEvent {
-	return e.summaryEvent
+	if e.summaryEvent == nil {
+		return LogEvent{}
+	}
+	return *e.summaryEvent
 }
 
 func (e *eventReport) GetDetailEvents() []LogEvent {
@@ -42,6 +51,10 @@ func (e *eventReport) GetDetailEvents() []LogEvent {
 		e.detailEvents = []LogEvent{}
 	}
 	return e.detailEvents
+}
+
+func (e *eventReport) GetMetricDetail() metric.MetricDetail {
+	return e.metricDetail
 }
 
 func (e *eventReport) GetEventTime() time.Time {
@@ -85,6 +98,7 @@ func (e *eventReport) ShouldOnlyTrackMetrics() bool {
 type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
+	SetMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder
 	SetEventTime(eventTime time.Time) EventReportBuilder
 	SetMetadata(metadata common.MapStr) EventReportBuilder
 	SetFields(fields common.MapStr) EventReportBuilder
@@ -98,7 +112,6 @@ type EventReportBuilder interface {
 
 func NewEventReportBuilder() EventReportBuilder {
 	return &eventReport{
-		summaryEvent: LogEvent{},
 		detailEvents: []LogEvent{},
 		eventTime:    time.Now(),
 		metadata:     common.MapStr{},
@@ -108,12 +121,27 @@ func NewEventReportBuilder() EventReportBuilder {
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
-	e.summaryEvent = summaryEvent
+	e.summaryEvent = &summaryEvent
+	return e
+}
+
+func (e *eventReport) SetProxy(proxy Proxy) EventReportBuilder {
+	e.proxy = &proxy
+	return e
+}
+
+func (e *eventReport) SetApplication(app Application) EventReportBuilder {
+	e.app = &app
 	return e
 }
 
 func (e *eventReport) SetDetailEvents(detailEvents []LogEvent) EventReportBuilder {
 	e.detailEvents = detailEvents
+	return e
+}
+
+func (e *eventReport) SetMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder {
+	e.metricDetail = metricDetail
 	return e
 }
 
@@ -161,5 +189,23 @@ func (e *eventReport) Build() (EventReport, error) {
 	if e.skipTracking && e.trackOnly {
 		return nil, errors.New("can't set skip tracking and track only in a single event")
 	}
+
+	if e.summaryEvent == nil && (e.proxy == nil || e.app == nil) {
+		return nil, errors.New("need api and app info to create summary event")
+	}
+
+	// create summary event
+	if e.summaryEvent == nil && e.proxy != nil && e.app != nil {
+		e.summaryEvent = &LogEvent{
+			TransactionSummary: &Summary{
+				Proxy: e.proxy,
+				Team: &Team{
+					ID: agent.GetCentralConfig().GetTeamID(),
+				},
+				Application: e.app,
+			},
+		}
+	}
+
 	return e, nil
 }

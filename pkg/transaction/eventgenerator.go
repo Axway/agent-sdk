@@ -30,6 +30,7 @@ type EventGenerator interface {
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 	CreateFromEventReport(eventReport EventReport) (events []beat.Event, err error)
+	AddAPIMetricDetailFromEventReport(eventReport EventReport) error
 }
 
 // Generator - Create the events to be published to Condor
@@ -182,6 +183,23 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 
 	events = append(events, newEvent)
 	return append(events, detailEvents...), nil
+}
+
+func (e *Generator) AddAPIMetricDetailFromEventReport(eventReport EventReport) error {
+	logger := e.logger
+	logger.Trace("adding metric detail to metric collector")
+
+	metricDetail := eventReport.GetMetricDetail()
+	if metricDetail != (metric.MetricDetail{}) {
+		logger = logger.WithField("apiName", metricDetail.APIDetails.Name).WithField("appName", metricDetail.AppDetails.Name)
+		collector := metric.GetMetricCollector()
+		if collector != nil {
+			collector.AddAPIMetricDetail(metricDetail)
+			logger.Trace("metric detail added")
+		}
+	}
+
+	return nil
 }
 
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
