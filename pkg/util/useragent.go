@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	agentInfoRe   = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([a-z0-9]*?) SDK/(\d*.\d*.\d.*) ([a-z][a-zA-Z0-9-]*) ([a-z][a-zA-Z0-9-]*) (binary|docker)[ ]?(reactive)?`)
-	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([-a-z0-9A-Z]*?) \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_.]*)\) ??(grpc-go.*\/\d*.\d*.\d*)?$`)
+	agentInfoRe   = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([a-z0-9]*?) SDK/(\d*.\d*.\d.*) ([a-z][a-zA-Z0-9-]*) ([a-z][a-zA-Z0-9-.]*) (binary|docker)[ ]?(reactive)?`)
+	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([-a-z0-9A-Z]*?) \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-.]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_.]*)\) ??(grpc-go.*\/\d*.\d*.\d*)?$`)
 )
 
 type CentralUserAgent struct {

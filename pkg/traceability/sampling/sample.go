@@ -1,67 +1,129 @@
 package sampling
 
 import (
-	"fmt"
 	"sync"
+	"time"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
 // sample - private struct that is used to keep track of the samples being taken
 type sample struct {
-	config        Sampling
-	currentCounts map[string]int
-	counterLock   sync.Mutex
+	config             Sampling
+	currentCounts      map[string]int
+	samplingLock       sync.Mutex
+	samplingCounter    int32
+	counterResetPeriod time.Duration
+	counterResetStopCh chan struct{}
+	disableSamplingCh  chan struct{}
+	enabled            bool
+	endTime            time.Time
+	limit              int32
+}
+
+func NewSample(counterResetPeriod time.Duration) *sample {
+	if counterResetPeriod == 0 {
+		counterResetPeriod = time.Minute
+	}
+
+	sampler := &sample{
+		disableSamplingCh:  make(chan struct{}),
+		counterResetStopCh: make(chan struct{}),
+		counterResetPeriod: counterResetPeriod,
+	}
+
+	return sampler
+}
+
+func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
+	s.samplingLock.Lock()
+	s.enabled = true
+	s.samplingLock.Unlock()
+
+	s.endTime = samplingEndTime
+	s.limit = samplingLimit
+
+	s.resetSamplingCounter()
+
+	// start limit reset job; limit is reset every minute
+	go s.samplingCounterReset()
+
+	// disable sampling at endTime
+	go s.disableSampling()
+}
+
+func (s *sample) DisableSampling() {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+	if s.enabled {
+		s.disableSamplingCh <- struct{}{}
+	}
+}
+
+func (s *sample) disableSampling() {
+	disableTimer := time.NewTimer(time.Until(s.endTime))
+	select {
+	case <-disableTimer.C:
+	case <-s.disableSamplingCh:
+	}
+
+	s.samplingLock.Lock()
+	s.enabled = false
+	s.samplingLock.Unlock()
+
+	// stop limit reset job when sampling is disabled
+	s.counterResetStopCh <- struct{}{}
+}
+
+func (s *sample) samplingCounterReset() {
+	nextLimiterPeriod := time.Now().Round(s.counterResetPeriod)
+	<-time.NewTimer(time.Until(nextLimiterPeriod)).C
+	s.resetSamplingCounter()
+
+	ticker := time.NewTicker(s.counterResetPeriod)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.counterResetStopCh:
+			return
+		case <-ticker.C:
+			s.resetSamplingCounter()
+		}
+	}
+}
+
+func (s *sample) resetSamplingCounter() {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+	s.samplingCounter = 0
 }
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+
+	// check if sampling is enabled
+	if !s.enabled {
+		return false
+	}
+
+	// sampling limit per minute exceeded
+
+	if s.limit <= s.samplingCounter {
+		return false
+	}
+
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && s.config.OnlyErrors {
 		return false
 	}
 
-	sampleGlobal := s.shouldSampleWithCounter(globalCounter)
-	perAPIEnabled := s.config.PerAPI && details.APIID != ""
+	s.samplingCounter++
 
-	if s.config.PerSub && details.SubID != "" {
-		apiSamp := false
-		if perAPIEnabled {
-			apiSamp = s.shouldSampleWithCounter(details.APIID)
-		}
-		return s.shouldSampleWithCounter(fmt.Sprintf("%s-%s", details.APIID, details.SubID)) || apiSamp
-	}
-
-	if perAPIEnabled {
-		return s.shouldSampleWithCounter(details.APIID)
-	}
-
-	return sampleGlobal
-}
-
-func (s *sample) shouldSampleWithCounter(counterName string) bool {
-	s.counterLock.Lock()
-	defer s.counterLock.Unlock()
-	// check if counter needs initiated
-	if _, found := s.currentCounts[counterName]; !found {
-		s.currentCounts[counterName] = 0
-	}
-
-	// Only sampling on percentage, not currently looking at the details
-	shouldSample := false
-	if s.currentCounts[counterName] < s.config.shouldSampleMax {
-		shouldSample = true
-	}
-	s.currentCounts[counterName]++
-
-	// reset the count once we hit 100 * 10^(nb_decimals) messages
-	if s.currentCounts[counterName] == s.config.countMax {
-		s.currentCounts[counterName] = 0
-	}
-
-	// return if we should sample this transaction
-	return shouldSample
+	return true
 }
 
 // FilterEvents - returns an array of events that are part of the sample
@@ -78,4 +140,8 @@ func (s *sample) FilterEvents(events []publisher.Event) []publisher.Event {
 	}
 
 	return sampledEvents
+}
+
+func (s *sample) GetSamplePercentage() float64 {
+	return s.config.Percentage
 }

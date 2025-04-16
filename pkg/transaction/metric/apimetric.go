@@ -61,3 +61,47 @@ func (a *APIMetric) GetLogFields() logrus.Fields {
 	fields = a.Quota.GetLogFields(fields)
 	return fields
 }
+
+func (a *APIMetric) GetSubscriptionID() string {
+	return a.Subscription.ID
+}
+
+func (a *APIMetric) GetAppInfo() (string, string) {
+	return a.App.ID, a.App.ConsumerOrgID
+}
+
+func (a *APIMetric) GetProductInfo() (string, string) {
+	return a.Product.ID, a.Product.VersionID
+}
+
+func (a *APIMetric) GetAPIInfo() (string, string) {
+	return a.API.ID, a.API.Name
+}
+
+func (a *APIMetric) GetAssetResourceID() string {
+	return a.AssetResource.ID
+}
+
+func (a *APIMetric) GetProductPlanID() string {
+	return a.ProductPlan.ID
+}
+
+func (a *APIMetric) GetStatus() string {
+	return a.Status
+}
+
+func (a *APIMetric) GetCount() int64 {
+	return a.Count
+}
+
+func (a *APIMetric) GetResponseMetrics() *ResponseMetrics {
+	return &a.Response
+}
+
+func (a *APIMetric) GetQuotaID() string {
+	return a.Quota.ID
+}
+
+func (a *APIMetric) GetObservation() *models.ObservationDetails {
+	return &a.Observation
+}

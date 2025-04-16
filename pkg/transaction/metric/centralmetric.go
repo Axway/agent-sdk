@@ -46,6 +46,86 @@ func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
 	return g.counters[key]
 }
 
+type CentralMetricBuilder struct {
+	*centralMetric
+}
+
+func NewCentralMetricBuilder() *CentralMetricBuilder {
+	return &CentralMetricBuilder{
+		centralMetric: &centralMetric{},
+	}
+}
+
+func (b *CentralMetricBuilder) SetSubscription(sub *models.ResourceReference) *CentralMetricBuilder {
+	b.Subscription = sub
+	return b
+}
+
+func (b *CentralMetricBuilder) SetApp(app *models.ApplicationResourceReference) *CentralMetricBuilder {
+	b.App = app
+	return b
+}
+
+func (b *CentralMetricBuilder) SetProduct(product *models.ProductResourceReference) *CentralMetricBuilder {
+	b.Product = product
+	return b
+}
+
+func (b *CentralMetricBuilder) SetAPI(api *models.APIResourceReference) *CentralMetricBuilder {
+	b.API = api
+	return b
+}
+
+func (b *CentralMetricBuilder) SetAssetResource(asset *models.ResourceReference) *CentralMetricBuilder {
+	b.AssetResource = asset
+	return b
+}
+
+func (b *CentralMetricBuilder) SetProductPlan(plan *models.ResourceReference) *CentralMetricBuilder {
+	b.ProductPlan = plan
+	return b
+}
+
+func (b *CentralMetricBuilder) SetUnits(units *Units) *CentralMetricBuilder {
+	b.Units = units
+	return b
+}
+
+func (b *CentralMetricBuilder) SetQuota(quota *models.ResourceReference) *CentralMetricBuilder {
+	if b.Units != nil && b.Units.Transactions != nil {
+		b.Units.Transactions.Quota = quota
+	} else if b.Units == nil {
+		b.Units = &Units{
+			Transactions: &Transactions{
+				UnitCount: UnitCount{
+					Quota: quota,
+				},
+			},
+		}
+	} else if b.Units.Transactions == nil {
+		b.Units.Transactions = &Transactions{
+			UnitCount: UnitCount{
+				Quota: quota,
+			},
+		}
+	}
+	return b
+}
+
+func (b *CentralMetricBuilder) SetObservation(obs *models.ObservationDetails) *CentralMetricBuilder {
+	b.Observation = obs
+	return b
+}
+
+func (b *CentralMetricBuilder) SetEventID(id string) *CentralMetricBuilder {
+	b.EventID = id
+	return b
+}
+
+func (b *CentralMetricBuilder) Build() *centralMetric {
+	return b.centralMetric
+}
+
 type centralMetric struct {
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
 	App           *models.ApplicationResourceReference `json:"application,omitempty"`
@@ -183,4 +263,81 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		}
 	}
 	return cacheM
+}
+
+func (a *centralMetric) GetSubscriptionID() string {
+	if a.Subscription != nil {
+		return a.Subscription.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetAppInfo() (string, string) {
+	if a.App != nil {
+		return a.App.ID, a.App.ConsumerOrgID
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetProductInfo() (string, string) {
+	if a.Product != nil {
+		return a.Product.ID, a.Product.VersionID
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetAPIInfo() (string, string) {
+	if a.API != nil {
+		return a.API.ID, a.API.Name
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetAssetResourceID() string {
+	if a.AssetResource != nil {
+		return a.AssetResource.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetProductPlanID() string {
+	if a.ProductPlan != nil {
+		return a.ProductPlan.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetStatus() string {
+	if a.Units != nil && a.Units.Transactions != nil {
+		return a.Units.Transactions.Status
+	}
+	return ""
+}
+
+func (a *centralMetric) GetCount() int64 {
+	if a.Units != nil && a.Units.Transactions != nil {
+		return a.Units.Transactions.Count
+	}
+	return -1
+}
+
+func (a *centralMetric) GetResponseMetrics() *ResponseMetrics {
+	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Response != nil {
+		return a.Units.Transactions.Response
+	}
+	return &ResponseMetrics{}
+}
+
+func (a *centralMetric) GetQuotaID() string {
+	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Quota != nil {
+		return a.Units.Transactions.Quota.ID
+	}
+	return ""
+}
+
+func (a *centralMetric) GetObservation() *models.ObservationDetails {
+	if a.Observation != nil {
+		return a.Observation
+	}
+	return &models.ObservationDetails{}
 }

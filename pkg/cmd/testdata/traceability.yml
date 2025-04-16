@@ -1,0 +1,97 @@
+traceability:
+  central:
+    url: ${CENTRAL_URL:https://apicentral.axway.com}
+    region: ${CENTRAL_REGION}
+    organizationID: ${CENTRAL_ORGANIZATIONID:""}
+    team: ${CENTRAL_TEAM:""}
+    deployment: ${CENTRAL_DEPLOYMENT:prod}
+    environment: ${CENTRAL_ENVIRONMENT:""}
+    agentName: ${CENTRAL_AGENTNAME:""}
+    platformURL: ${CENTRAL_PLATFORMURL:https://platform.axway.com}
+    reportActivityFrequency: ${CENTRAL_REPORTACTIVITYFREQUENCY:5m}
+    clientTimeout: ${CENTRAL_CLIENTTIMEOUT:60s}
+    metricReporting:
+      publish: ${CENTRAL_METRICREPORTING_PUBLISH}
+    usageReporting:
+      publish: false
+    auth:
+      url: ${CENTRAL_AUTH_URL:https://login.axway.com/auth}
+      realm: ${CENTRAL_AUTH_REALM:Broker}
+      clientId: ${CENTRAL_AUTH_CLIENTID:""}
+      privateKey: ${CENTRAL_AUTH_PRIVATEKEY:/keys/private_key.pem}
+      publicKey: ${CENTRAL_AUTH_PUBLICKEY:/keys/public_key.pem}
+      keyPassword: ${CENTRAL_AUTH_KEYPASSWORD:""}
+    ssl:
+      minVersion: ${CENTRAL_SSL_MINVERSION:""}
+      maxVersion: ${CENTRAL_SSL_MAXVERSION:""}
+      nextProtos: ${CENTRAL_SSL_NEXTPROTOS:[]}
+      cipherSuites: ${CENTRAL_SSL_CIPHERSUITES:[]}
+      insecureSkipVerify: ${CENTRAL_SSL_INSECURESKIPVERIFY:false}
+    grpc:
+      enabled: ${CENTRAL_GRPC_ENABLED}
+      host: ${CENTRAL_GRPC_HOST}
+      port: ${CENTRAL_GRPC_PORT}
+  agentFeatures:
+    persistCache: ${AGENTFEATURES_PERSISTCACHE}
+    versionChecker: false
+    processSystemSignals: ${AGENTFEATURES_PROCESSSYSTEMSIGNALS}
+    connectToCentral: true
+  status:
+    port: ${STATUS_PORT:8990}
+    healthCheckPeriod: ${STATUS_HEALTHCHECKPERIOD:3m}
+    healthCheckInterval: ${STATUS_HEALTHCHECKINTERVAL:30s}
+  log:
+    level: ${LOG_LEVEL:info}
+    format: ${LOG_FORMAT:json}
+    output: ${LOG_OUTPUT:stdout}
+    file:
+      name: ${LOG_FILE_NAME:traceable_agent.log}
+      path: ${LOG_FILE_PATH:logs}
+    metricfile:
+      enabled: ${LOG_METRICFILE_ENABLED:true}
+      name: ${LOG_METRICFILE_NAME:metrics.log}
+      keepfiles: ${LOG_METRICFILE_KEEPFILES:7}
+      rotateeverybytes: ${LOG_METRICFILE_ROTATEEVERYBYTES:10485760}
+      cleanbackups: ${LOG_METRICFILE_CLEANBACKUPS:0}
+
+# Send output to Central Database
+output.traceability:
+  enabled: true
+  hosts: ${TRACEABILITY_HOST:ingestion.datasearch.axway.com:5044}
+  protocol: ${TRACEABILITY_PROTOCOL:"tcp"}
+  compression_level: ${TRACEABILITY_COMPRESSIONLEVEL:3}
+  bulk_max_size: ${TRACEABILITY_BULKMAXSIZE:100}
+  client_timeout: ${TRACEABILITY_CLIENTTIMEOUT:60s}
+  pipelining: ${TRACEABILITY_PIPELINING:0}
+  worker: ${TRACEABILITY_WORKER:1}
+  loadbalance: ${TRACEABILITY_LOADBALANCE:true}
+  slow_start: ${TRACEABILITY_SLOWSTART:true}
+  ssl:
+    enabled: ${TRACEABILITY_ENABLE_SSL:true}
+    verification_mode: none
+    cipher_suites:
+      - "ECDHE-ECDSA-AES-128-GCM-SHA256"
+      - "ECDHE-ECDSA-AES-256-GCM-SHA384"
+      - "ECDHE-ECDSA-AES-128-CBC-SHA256"
+      - "ECDHE-ECDSA-CHACHA20-POLY1305"
+      - "ECDHE-RSA-AES-128-CBC-SHA256"
+      - "ECDHE-RSA-AES-128-GCM-SHA256"
+      - "ECDHE-RSA-AES-256-GCM-SHA384"
+  proxy_url: ${TRACEABILITY_PROXYURL:""}
+
+queue:
+  mem:
+    events: ${QUEUE_MEM_EVENTS:2048}
+    flush:
+      min_events: ${QUEUE_MEM_FLUSH_MINEVENTS:100}
+      timeout: ${QUEUE_MEM_FLUSH_TIMEOUT:1s}
+
+logging:
+  metrics:
+    enabled: false
+  files:
+    permissions: 0600
+    name: ${LOG_FILE_NAME:traceable_agent.log}
+    path: ${LOG_FILE_PATH:logs}
+    keepfiles: ${LOG_FILE_KEEPFILES:7}
+    rotateeverybytes: ${LOG_FILE_ROTATEEVERYBYTES:10485760}

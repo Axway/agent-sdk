@@ -13,71 +13,69 @@ import (
 )
 
 var (
-	TraceabilityAgentCtx log.ContextField = "traceabilityAgent"
+	ComplianceAgentCtx log.ContextField = "complianceAgent"
 
-	_TraceabilityAgentGVK = apiv1.GroupVersionKind{
+	_ComplianceAgentGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "management",
-			Kind:  "TraceabilityAgent",
+			Kind:  "ComplianceAgent",
 		},
 		APIVersion: "v1alpha1",
 	}
 
-	TraceabilityAgentScopes = []string{"Environment"}
+	ComplianceAgentScopes = []string{"Environment"}
 )
 
 const (
-	TraceabilityAgentResourceName                 = "traceabilityagents"
-	TraceabilityAgentAgentstateSubResourceName    = "agentstate"
-	TraceabilityAgentDataplaneSubResourceName     = "dataplane"
-	TraceabilityAgentSampletriggerSubResourceName = "sampletrigger"
-	TraceabilityAgentStatusSubResourceName        = "status"
+	ComplianceAgentResourceName              = "complianceagents"
+	ComplianceAgentAgentstateSubResourceName = "agentstate"
+	ComplianceAgentDataplaneSubResourceName  = "dataplane"
+	ComplianceAgentStatusSubResourceName     = "status"
 )
 
-func TraceabilityAgentGVK() apiv1.GroupVersionKind {
-	return _TraceabilityAgentGVK
+func ComplianceAgentGVK() apiv1.GroupVersionKind {
+	return _ComplianceAgentGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_TraceabilityAgentGVK, TraceabilityAgentScopes[0], TraceabilityAgentResourceName)
-	log.RegisterContextField(TraceabilityAgentCtx)
+	apiv1.RegisterGVK(_ComplianceAgentGVK, ComplianceAgentScopes[0], ComplianceAgentResourceName)
+	log.RegisterContextField(ComplianceAgentCtx)
 }
 
-// TraceabilityAgent Resource
-type TraceabilityAgent struct {
+// ComplianceAgent Resource
+type ComplianceAgent struct {
 	apiv1.ResourceMeta
-	Agentstate    TraceabilityAgentAgentstate    `json:"agentstate"`
-	Dataplane     TraceabilityAgentDataplane     `json:"dataplane"`
-	Owner         *apiv1.Owner                   `json:"owner"`
-	Sampletrigger TraceabilityAgentSampletrigger `json:"sampletrigger"`
-	Spec          TraceabilityAgentSpec          `json:"spec"`
-	Status        TraceabilityAgentStatus        `json:"status"`
+	Agentstate ComplianceAgentAgentstate `json:"agentstate"`
+	Dataplane  ComplianceAgentDataplane  `json:"dataplane"`
+	Owner      *apiv1.Owner              `json:"owner"`
+	Spec       ComplianceAgentSpec       `json:"spec"`
+	Status     ComplianceAgentStatus     `json:"status"`
 }
 
-// NewTraceabilityAgent creates an empty *TraceabilityAgent
-func NewTraceabilityAgent(name, scopeName string) *TraceabilityAgent {
-	return &TraceabilityAgent{
+// NewComplianceAgent creates an empty *ComplianceAgent
+func NewComplianceAgent(name, scopeName string) *ComplianceAgent {
+	return &ComplianceAgent{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _TraceabilityAgentGVK,
+			GroupVersionKind: _ComplianceAgentGVK,
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Name: scopeName,
-					Kind: TraceabilityAgentScopes[0],
+					Kind: ComplianceAgentScopes[0],
 				},
 			},
 		},
 	}
 }
 
-// TraceabilityAgentFromInstanceArray converts a []*ResourceInstance to a []*TraceabilityAgent
-func TraceabilityAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*TraceabilityAgent, error) {
-	newArray := make([]*TraceabilityAgent, 0)
+// ComplianceAgentFromInstanceArray converts a []*ResourceInstance to a []*ComplianceAgent
+func ComplianceAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*ComplianceAgent, error) {
+	newArray := make([]*ComplianceAgent, 0)
 	for _, item := range fromArray {
-		res := &TraceabilityAgent{}
+		res := &ComplianceAgent{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*TraceabilityAgent, 0), err
+			return make([]*ComplianceAgent, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -85,10 +83,10 @@ func TraceabilityAgentFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]
 	return newArray, nil
 }
 
-// AsInstance converts a TraceabilityAgent to a ResourceInstance
-func (res *TraceabilityAgent) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a ComplianceAgent to a ResourceInstance
+func (res *ComplianceAgent) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = TraceabilityAgentGVK()
+	meta.GroupVersionKind = ComplianceAgentGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -105,8 +103,8 @@ func (res *TraceabilityAgent) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a TraceabilityAgent
-func (res *TraceabilityAgent) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a ComplianceAgent
+func (res *ComplianceAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -128,7 +126,7 @@ func (res *TraceabilityAgent) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
+func (res *ComplianceAgent) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -143,7 +141,6 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 	out["agentstate"] = res.Agentstate
 	out["dataplane"] = res.Dataplane
 	out["owner"] = res.Owner
-	out["sampletrigger"] = res.Sampletrigger
 	out["spec"] = res.Spec
 	out["status"] = res.Status
 
@@ -151,7 +148,7 @@ func (res *TraceabilityAgent) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
+func (res *ComplianceAgent) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -203,20 +200,6 @@ func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshalling subresource Sampletrigger
-	if v, ok := aux.SubResources["sampletrigger"]; ok {
-		sr, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		delete(aux.SubResources, "sampletrigger")
-		err = json.Unmarshal(sr, &res.Sampletrigger)
-		if err != nil {
-			return err
-		}
-	}
-
 	// marshalling subresource Status
 	if v, ok := aux.SubResources["status"]; ok {
 		sr, err = json.Marshal(v)
@@ -235,6 +218,6 @@ func (res *TraceabilityAgent) UnmarshalJSON(data []byte) error {
 }
 
 // PluralName returns the plural name of the resource
-func (res *TraceabilityAgent) PluralName() string {
-	return TraceabilityAgentResourceName
+func (res *ComplianceAgent) PluralName() string {
+	return ComplianceAgentResourceName
 }
