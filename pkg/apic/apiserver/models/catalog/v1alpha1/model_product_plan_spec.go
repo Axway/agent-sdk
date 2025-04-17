@@ -15,8 +15,8 @@ type ProductPlanSpec struct {
 	// description of the Plan.
 	Description string `json:"description,omitempty"`
 	// The type of the Plan.
-	Type    string                 `json:"type"`
-	Billing ProductPlanSpecBilling `json:"billing,omitempty"`
+	Type    string                  `json:"type"`
+	Billing *ProductPlanSpecBilling `json:"billing,omitempty"`
 	// Defines all features supported by the Plan.
 	Features     []ProductPlanSpecFeatures   `json:"features,omitempty"`
 	Subscription ProductPlanSpecSubscription `json:"subscription,omitempty"`

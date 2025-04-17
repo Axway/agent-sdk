@@ -15,6 +15,6 @@ type AssetSpec struct {
 	Description string `json:"description,omitempty"`
 	Type        string `json:"type"`
 	// list of categories for the asset.
-	Categories  []string             `json:"categories,omitempty"`
-	AutoRelease AssetSpecAutoRelease `json:"autoRelease,omitempty"`
+	Categories  []string              `json:"categories,omitempty"`
+	AutoRelease *AssetSpecAutoRelease `json:"autoRelease,omitempty"`
 }
