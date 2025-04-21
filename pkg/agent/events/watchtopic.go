@@ -283,10 +283,9 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 // NewComplianceWatchTopic creates a WatchTopic template string
 func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
 	kinds := []kindValues{
-		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
+		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
-		{GroupKind: management.ComplianceAgentGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 	}
 
 	for _, env := range features.GetManagedEnvironments() {
