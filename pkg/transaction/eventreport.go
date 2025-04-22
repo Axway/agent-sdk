@@ -12,7 +12,7 @@ import (
 type EventReport interface {
 	GetSummaryEvent() LogEvent
 	GetDetailEvents() []LogEvent
-	GetMetricDetail() metric.MetricDetail
+	GetMetricDetails() []metric.MetricDetail
 	GetEventTime() time.Time
 	GetMetadata() common.MapStr
 	GetFields() common.MapStr
@@ -24,19 +24,19 @@ type EventReport interface {
 }
 
 type eventReport struct {
-	summaryEvent *LogEvent
-	proxy        *Proxy
-	app          *Application
-	detailEvents []LogEvent
-	metricDetail metric.MetricDetail
-	eventTime    time.Time
-	metadata     common.MapStr
-	fields       common.MapStr
-	privateData  interface{}
-	skipSampling bool
-	forceSample  bool
-	skipTracking bool
-	trackOnly    bool
+	summaryEvent  *LogEvent
+	proxy         *Proxy
+	app           *Application
+	detailEvents  []LogEvent
+	metricDetails []metric.MetricDetail
+	eventTime     time.Time
+	metadata      common.MapStr
+	fields        common.MapStr
+	privateData   interface{}
+	skipSampling  bool
+	forceSample   bool
+	skipTracking  bool
+	trackOnly     bool
 }
 
 func (e *eventReport) GetSummaryEvent() LogEvent {
@@ -53,8 +53,8 @@ func (e *eventReport) GetDetailEvents() []LogEvent {
 	return e.detailEvents
 }
 
-func (e *eventReport) GetMetricDetail() metric.MetricDetail {
-	return e.metricDetail
+func (e *eventReport) GetMetricDetails() []metric.MetricDetail {
+	return e.metricDetails
 }
 
 func (e *eventReport) GetEventTime() time.Time {
@@ -98,7 +98,7 @@ func (e *eventReport) ShouldOnlyTrackMetrics() bool {
 type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
-	SetMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder
+	AddMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder
 	SetEventTime(eventTime time.Time) EventReportBuilder
 	SetMetadata(metadata common.MapStr) EventReportBuilder
 	SetFields(fields common.MapStr) EventReportBuilder
@@ -112,11 +112,12 @@ type EventReportBuilder interface {
 
 func NewEventReportBuilder() EventReportBuilder {
 	return &eventReport{
-		detailEvents: []LogEvent{},
-		eventTime:    time.Now(),
-		metadata:     common.MapStr{},
-		fields:       common.MapStr{},
-		privateData:  nil,
+		detailEvents:  []LogEvent{},
+		metricDetails: []metric.MetricDetail{},
+		eventTime:     time.Now(),
+		metadata:      common.MapStr{},
+		fields:        common.MapStr{},
+		privateData:   nil,
 	}
 }
 
@@ -140,8 +141,8 @@ func (e *eventReport) SetDetailEvents(detailEvents []LogEvent) EventReportBuilde
 	return e
 }
 
-func (e *eventReport) SetMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder {
-	e.metricDetail = metricDetail
+func (e *eventReport) AddMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder {
+	e.metricDetails = append(e.metricDetails, metricDetail)
 	return e
 }
 
@@ -188,6 +189,11 @@ func (e *eventReport) SetOnlyTrackMetrics(trackOnly bool) EventReportBuilder {
 func (e *eventReport) Build() (EventReport, error) {
 	if e.skipTracking && e.trackOnly {
 		return nil, errors.New("can't set skip tracking and track only in a single event")
+	}
+
+	// if only metrics are reported, no need to check for summary
+	if e.trackOnly {
+		return e, nil
 	}
 
 	if e.summaryEvent == nil && (e.proxy == nil || e.app == nil) {
