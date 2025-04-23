@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -11,7 +12,7 @@ import (
 type EventReport interface {
 	GetSummaryEvent() LogEvent
 	GetDetailEvents() []LogEvent
-	GetMetricDetails() []interface{}
+	GetMetricsBatch() []interface{}
 	GetEventTime() time.Time
 	GetMetadata() common.MapStr
 	GetFields() common.MapStr
@@ -24,19 +25,20 @@ type EventReport interface {
 }
 
 type eventReport struct {
-	summaryEvent  *LogEvent
-	proxy         *Proxy
-	app           *Application
-	detailEvents  []LogEvent
-	metricDetails []interface{}
-	eventTime     time.Time
-	metadata      common.MapStr
-	fields        common.MapStr
-	privateData   interface{}
-	skipSampling  bool
-	forceSample   bool
-	skipTracking  bool
-	trackOnly     bool
+	summaryEvent     *LogEvent
+	proxy            *Proxy
+	app              *Application
+	detailEvents     []LogEvent
+	metricsBatch     []interface{}
+	metricsBatchLock sync.Mutex
+	eventTime        time.Time
+	metadata         common.MapStr
+	fields           common.MapStr
+	privateData      interface{}
+	skipSampling     bool
+	forceSample      bool
+	skipTracking     bool
+	trackOnly        bool
 }
 
 func (e *eventReport) GetSummaryEvent() LogEvent {
@@ -53,8 +55,21 @@ func (e *eventReport) GetDetailEvents() []LogEvent {
 	return e.detailEvents
 }
 
-func (e *eventReport) GetMetricDetails() []interface{} {
-	return e.metricDetails
+func (e *eventReport) GetMetricsBatch() []interface{} {
+	e.metricsBatchLock.Lock()
+	defer e.metricsBatchLock.Unlock()
+
+	// reset metrics batch
+	metricsBatch := e.metricsBatch
+	e.metricsBatch = make([]interface{}, 0)
+
+	return metricsBatch
+}
+
+func (e *eventReport) AddMetricDetail(metricDetail interface{}) {
+	e.metricsBatchLock.Lock()
+	defer e.metricsBatchLock.Unlock()
+	e.metricsBatch = append(e.metricsBatch, metricDetail)
 }
 
 func (e *eventReport) GetEventTime() time.Time {
@@ -95,10 +110,6 @@ func (e *eventReport) ShouldOnlyTrackMetrics() bool {
 	return e.trackOnly
 }
 
-func (e *eventReport) AddMetricDetail(metricDetail interface{}) {
-	e.metricDetails = append(e.metricDetails, metricDetail)
-}
-
 type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
@@ -115,12 +126,13 @@ type EventReportBuilder interface {
 
 func NewEventReportBuilder() EventReportBuilder {
 	return &eventReport{
-		detailEvents:  []LogEvent{},
-		metricDetails: []interface{}{},
-		eventTime:     time.Now(),
-		metadata:      common.MapStr{},
-		fields:        common.MapStr{},
-		privateData:   nil,
+		detailEvents:     []LogEvent{},
+		metricsBatch:     make([]interface{}, 0),
+		metricsBatchLock: sync.Mutex{},
+		eventTime:        time.Now(),
+		metadata:         common.MapStr{},
+		fields:           common.MapStr{},
+		privateData:      nil,
 	}
 }
 

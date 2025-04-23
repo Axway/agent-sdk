@@ -151,10 +151,10 @@ func (e *Generator) AddMetricDetailsFromEventReport(eventReport EventReport) err
 	logger := e.logger
 	logger.Trace("adding metric detail to metric collector")
 
-	metricDetails := eventReport.GetMetricDetails()
-	if len(metricDetails) > 0 {
+	metricsBatch := eventReport.GetMetricsBatch()
+	if len(metricsBatch) > 0 {
 		collector := metric.GetMetricCollector()
-		for _, metricDetail := range metricDetails {
+		for _, metricDetail := range metricsBatch {
 			switch metric := metricDetail.(type) {
 			case metric.Detail:
 				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name)
