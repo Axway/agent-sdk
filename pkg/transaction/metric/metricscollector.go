@@ -50,13 +50,11 @@ func ExitMetricInit() {
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddCustomMetricDetail(metric models.CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
-	Publish()
 	ShutdownPublish()
 }
 
@@ -245,16 +243,7 @@ func (c *collector) Execute() error {
 	c.generateEvents()
 	c.publishEvents()
 
-	// initialize batch after publish
-	// publish
-
 	return nil
-}
-
-func (c *collector) InitializeBatch() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.metricBatch = NewEventBatch(c)
 }
 
 func (c *collector) updateStartTime() {
@@ -381,10 +370,6 @@ func (c *collector) addMetric(metric *centralMetric) {
 		return
 	}
 	c.metricBatch.AddEventWithoutHistogram(pubEvent)
-}
-
-func (c *collector) Publish() {
-	c.metricBatch.Publish()
 }
 
 func (c *collector) ShutdownPublish() {
