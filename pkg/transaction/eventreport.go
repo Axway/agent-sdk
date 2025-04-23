@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 type EventReport interface {
 	GetSummaryEvent() LogEvent
 	GetDetailEvents() []LogEvent
-	GetMetricDetails() []metric.MetricDetail
+	GetMetricDetails() []interface{}
 	GetEventTime() time.Time
 	GetMetadata() common.MapStr
 	GetFields() common.MapStr
@@ -28,7 +27,7 @@ type eventReport struct {
 	proxy         *Proxy
 	app           *Application
 	detailEvents  []LogEvent
-	metricDetails []metric.MetricDetail
+	metricDetails []interface{}
 	eventTime     time.Time
 	metadata      common.MapStr
 	fields        common.MapStr
@@ -53,7 +52,7 @@ func (e *eventReport) GetDetailEvents() []LogEvent {
 	return e.detailEvents
 }
 
-func (e *eventReport) GetMetricDetails() []metric.MetricDetail {
+func (e *eventReport) GetMetricDetails() []interface{} {
 	return e.metricDetails
 }
 
@@ -98,7 +97,7 @@ func (e *eventReport) ShouldOnlyTrackMetrics() bool {
 type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
-	AddMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder
+	AddMetricDetail(metricDetail interface{}) EventReportBuilder
 	SetEventTime(eventTime time.Time) EventReportBuilder
 	SetMetadata(metadata common.MapStr) EventReportBuilder
 	SetFields(fields common.MapStr) EventReportBuilder
@@ -113,7 +112,7 @@ type EventReportBuilder interface {
 func NewEventReportBuilder() EventReportBuilder {
 	return &eventReport{
 		detailEvents:  []LogEvent{},
-		metricDetails: []metric.MetricDetail{},
+		metricDetails: []interface{}{},
 		eventTime:     time.Now(),
 		metadata:      common.MapStr{},
 		fields:        common.MapStr{},
@@ -141,7 +140,7 @@ func (e *eventReport) SetDetailEvents(detailEvents []LogEvent) EventReportBuilde
 	return e
 }
 
-func (e *eventReport) AddMetricDetail(metricDetail metric.MetricDetail) EventReportBuilder {
+func (e *eventReport) AddMetricDetail(metricDetail interface{}) EventReportBuilder {
 	e.metricDetails = append(e.metricDetails, metricDetail)
 	return e
 }

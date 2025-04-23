@@ -28,7 +28,7 @@ type EventGenerator interface {
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 	CreateFromEventReport(eventReport EventReport) (events []beat.Event, err error)
-	AddAPIMetricDetailsFromEventReport(eventReport EventReport) error
+	AddMetricDetailsFromEventReport(eventReport EventReport) error
 }
 
 // Generator - Create the events to be published to Condor
@@ -147,7 +147,7 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 	return append(events, detailEvents...), nil
 }
 
-func (e *Generator) AddAPIMetricDetailsFromEventReport(eventReport EventReport) error {
+func (e *Generator) AddMetricDetailsFromEventReport(eventReport EventReport) error {
 	logger := e.logger
 	logger.Trace("adding metric detail to metric collector")
 
@@ -155,10 +155,21 @@ func (e *Generator) AddAPIMetricDetailsFromEventReport(eventReport EventReport) 
 	if len(metricDetails) > 0 {
 		collector := metric.GetMetricCollector()
 		for _, metricDetail := range metricDetails {
-			logger = logger.WithField("apiName", metricDetail.APIDetails.Name).WithField("appName", metricDetail.AppDetails.Name)
-			if collector != nil {
-				collector.AddAPIMetricDetail(metricDetail)
-				logger.Trace("metric detail added")
+			switch metric := metricDetail.(type) {
+			case metric.Detail:
+				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name)
+				if collector != nil {
+					collector.AddMetricDetail(metric)
+					logger.Trace("detail added")
+				}
+			case metric.MetricDetail:
+				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name)
+				if collector != nil {
+					collector.AddAPIMetricDetail(metric)
+					logger.Trace("api metric detail added")
+				}
+			default:
+				logger.Debug("unknown metric type")
 			}
 		}
 	}
