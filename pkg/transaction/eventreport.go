@@ -20,6 +20,7 @@ type EventReport interface {
 	ShouldHandleSampling() bool
 	ShouldTrackMetrics() bool
 	ShouldOnlyTrackMetrics() bool
+	AddMetricDetail(metricDetail interface{})
 }
 
 type eventReport struct {
@@ -94,10 +95,13 @@ func (e *eventReport) ShouldOnlyTrackMetrics() bool {
 	return e.trackOnly
 }
 
+func (e *eventReport) AddMetricDetail(metricDetail interface{}) {
+	e.metricDetails = append(e.metricDetails, metricDetail)
+}
+
 type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
-	AddMetricDetail(metricDetail interface{}) EventReportBuilder
 	SetEventTime(eventTime time.Time) EventReportBuilder
 	SetMetadata(metadata common.MapStr) EventReportBuilder
 	SetFields(fields common.MapStr) EventReportBuilder
@@ -137,11 +141,6 @@ func (e *eventReport) SetApplication(app Application) EventReportBuilder {
 
 func (e *eventReport) SetDetailEvents(detailEvents []LogEvent) EventReportBuilder {
 	e.detailEvents = detailEvents
-	return e
-}
-
-func (e *eventReport) AddMetricDetail(metricDetail interface{}) EventReportBuilder {
-	e.metricDetails = append(e.metricDetails, metricDetail)
 	return e
 }
 
