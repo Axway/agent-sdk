@@ -24,7 +24,7 @@ type baseJob struct {
 	backoff          atomic.Value          // atomic.Value to store the backoff (thread-safe)
 	isStopped        atomic.Bool           // atomic boolean to track if the job is stopped
 	failChan         chan string           // channel to send signal to pool of failure
-	jobLock          *sync.Mutex           // lock used for signalling that the job is being executed
+	jobLock          sync.Mutex            // lock used for signalling that the job is being executed
 	consecutiveFails atomic.Int32          // atomic counter for consecutive failures
 	stopReadyChan    chan int
 	timeout          time.Duration
@@ -43,11 +43,11 @@ func newBaseJob(newJob Job, failJobChan chan string, name string) (JobExecution,
 	thisJob := createBaseJob(newJob, failJobChan, name, JobTypeSingleRun)
 
 	go thisJob.start()
-	return &thisJob, nil
+	return thisJob, nil
 }
 
 // createBaseJob - creates a single run job and returns it
-func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) baseJob {
+func createBaseJob(newJob Job, failJobChan chan string, name string, jobType string) *baseJob {
 	id := newUUID()
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.jobs").
@@ -58,12 +58,11 @@ func createBaseJob(newJob Job, failJobChan chan string, name string, jobType str
 
 	backoff := newBackoffTimeout(10*time.Millisecond, 10*time.Minute, 2)
 
-	job := baseJob{
+	job := &baseJob{
 		id:            id,
 		name:          name,
 		job:           newJob,
 		jobType:       jobType,
-		jobLock:       &sync.Mutex{},
 		failChan:      failJobChan,
 		stopReadyChan: make(chan int, 1),
 		logger:        logger,

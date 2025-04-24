@@ -13,35 +13,36 @@ func TestBackoffTimeout(t *testing.T) {
 	factor := 2
 	newBT := newBackoffTimeout(start, max, factor)
 
-	assert.Equal(t, start, newBT.base)
-	assert.Equal(t, max, newBT.max)
+	// Verify initial values using getter methods
+	assert.Equal(t, start, newBT.getBaseTimeout())
+	assert.Equal(t, max, newBT.getMaxTimeout())
 	assert.Equal(t, factor, newBT.factor)
 	assert.Equal(t, start, newBT.getCurrentTimeout())
 
-	// increase the timeout, 2 milliseconds
+	// Increase the timeout, should double the current timeout
 	newBT.increaseTimeout()
-	assert.Equal(t, start, newBT.base)
-	assert.Equal(t, max, newBT.max)
+	assert.Equal(t, start, newBT.getBaseTimeout())
+	assert.Equal(t, max, newBT.getMaxTimeout())
 	assert.Equal(t, factor, newBT.factor)
 	assert.Equal(t, start*2, newBT.getCurrentTimeout())
 
-	// increase the timeout again, 4 milliseconds
+	// Increase the timeout again, should double again
 	newBT.increaseTimeout()
 	assert.Equal(t, start*2*2, newBT.getCurrentTimeout())
 
-	// increase the timeout 2 more times to exceed max, should be reset to base
+	// Increase the timeout 2 more times to exceed max, should reset to base
 	newBT.increaseTimeout()
 	newBT.increaseTimeout()
 	assert.Equal(t, start, newBT.getCurrentTimeout())
 
-	// reset the timeout
+	// Reset the timeout, should set current timeout to base
 	newBT.reset()
 	assert.Equal(t, start, newBT.getCurrentTimeout())
 
-	// call sleep
+	// Call sleep, ensure no changes to timeouts
 	newBT.sleep()
-	assert.Equal(t, start, newBT.base)
-	assert.Equal(t, max, newBT.max)
+	assert.Equal(t, start, newBT.getBaseTimeout())
+	assert.Equal(t, max, newBT.getMaxTimeout())
 	assert.Equal(t, factor, newBT.factor)
 	assert.Equal(t, start, newBT.getCurrentTimeout())
 }
