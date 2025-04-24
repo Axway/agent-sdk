@@ -9,7 +9,7 @@ type retryJobProps struct {
 }
 
 type retryJob struct {
-	baseJob
+	*baseJob
 	retryJobProps
 }
 

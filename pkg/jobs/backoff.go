@@ -1,49 +1,52 @@
 package jobs
 
 import (
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
 func newBackoffTimeout(startingTimeout time.Duration, maxTimeout time.Duration, increaseFactor int) *backoff {
-	return &backoff{
-		base:         startingTimeout,
-		max:          maxTimeout,
-		current:      startingTimeout,
-		factor:       increaseFactor,
-		backoffMutex: &sync.Mutex{},
+	b := &backoff{
+		factor: increaseFactor,
 	}
+	b.base.Store(startingTimeout)
+	b.max.Store(maxTimeout)
+	b.current.Store(startingTimeout)
+	return b
 }
 
 type backoff struct {
-	base         time.Duration
-	max          time.Duration
-	current      time.Duration
-	factor       int
-	backoffMutex *sync.Mutex
+	base    atomic.Value // atomic.Value to store the base timeout (thread-safe)
+	max     atomic.Value // atomic.Value to store the max timeout (thread-safe)
+	current atomic.Value // atomic.Value to store the current timeout (thread-safe)
+	factor  int          // multiplier factor for increasing the timeout
 }
 
 func (b *backoff) increaseTimeout() {
-	b.backoffMutex.Lock()
-	defer b.backoffMutex.Unlock()
-	b.current = b.current * time.Duration(b.factor)
-	if b.current > b.max {
-		b.current = b.base // reset to base timeout
+	current := b.getCurrentTimeout()
+	newTimeout := current * time.Duration(b.factor)
+	if newTimeout > b.getMaxTimeout() {
+		newTimeout = b.getBaseTimeout() // reset to base timeout
 	}
+	b.current.Store(newTimeout)
 }
 
 func (b *backoff) reset() {
-	b.backoffMutex.Lock()
-	defer b.backoffMutex.Unlock()
-	b.current = b.base
+	b.current.Store(b.getBaseTimeout())
 }
 
 func (b *backoff) sleep() {
-	time.Sleep(b.current)
+	time.Sleep(b.getCurrentTimeout())
 }
 
 func (b *backoff) getCurrentTimeout() time.Duration {
-	b.backoffMutex.Lock()
-	defer b.backoffMutex.Unlock()
-	return b.current
+	return b.current.Load().(time.Duration)
+}
+
+func (b *backoff) getBaseTimeout() time.Duration {
+	return b.base.Load().(time.Duration)
+}
+
+func (b *backoff) getMaxTimeout() time.Duration {
+	return b.max.Load().(time.Duration)
 }

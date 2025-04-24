@@ -16,7 +16,7 @@ type scheduleJobProps struct {
 }
 
 type scheduleJob struct {
-	baseJob
+	*baseJob
 	scheduleJobProps
 	cronLock *sync.Mutex
 }
@@ -39,7 +39,7 @@ func newScheduledJob(newJob Job, schedule, name string, failJobChan chan string,
 	}
 
 	for _, o := range opts {
-		o(&thisJob.baseJob)
+		o(thisJob.baseJob)
 	}
 
 	go thisJob.start()

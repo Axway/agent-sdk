@@ -10,7 +10,7 @@ type intervalJobProps struct {
 }
 
 type intervalJob struct {
-	baseJob
+	*baseJob
 	intervalJobProps
 }
 
@@ -25,7 +25,7 @@ func newIntervalJob(newJob Job, interval time.Duration, name string, failJobChan
 	}
 
 	for _, o := range opts {
-		o(&thisJob.baseJob)
+		o(thisJob.baseJob)
 	}
 
 	go thisJob.start()
