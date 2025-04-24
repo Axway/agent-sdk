@@ -229,9 +229,7 @@ func createInitialRequestLock() *initialRequestLock {
 }
 
 func (l *initialRequestLock) done(err error) {
-	l.lock.Lock()
-	l.err = err
-	l.lock.Unlock()
+	l.setError(err)
 
 	if !l.waitDone {
 		l.wg.Done()
@@ -241,7 +239,16 @@ func (l *initialRequestLock) done(err error) {
 
 func (l *initialRequestLock) wait() error {
 	l.wg.Wait()
+	return l.getError()
+}
 
+func (l *initialRequestLock) setError(err error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.err = err
+}
+
+func (l *initialRequestLock) getError() error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	return l.err
