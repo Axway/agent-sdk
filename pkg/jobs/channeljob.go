@@ -45,9 +45,10 @@ func (b *channelJob) handleExecution() {
 		b.setExecutionError()
 		b.baseJob.logger.Error(b.err)
 		b.stop() // stop the job on error
-		b.consecutiveFails++
+		b.incrementConsecutiveFails()
+		return
 	}
-	b.setConsecutiveFails(0)
+	b.resetConsecutiveFails()
 }
 
 // start - calls the Execute function from the Job definition

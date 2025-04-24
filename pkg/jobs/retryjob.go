@@ -34,7 +34,7 @@ func (b *retryJob) start() {
 	b.SetStatus(JobStatusRunning)
 	for i := 0; i < b.retries; i++ {
 		b.executeJob()
-		if b.err == nil {
+		if b.err.Load() == nil {
 			// job was successful
 			b.SetStatus(JobStatusFinished)
 			return
@@ -52,5 +52,5 @@ func (b *retryJob) stop() {
 }
 
 func (b *retryJob) setExecutionRetryError() {
-	b.err = errors.Wrap(ErrExecutingRetryJob, b.err.Error()).FormatError(b.jobType, b.id, b.retries)
+	b.setError(errors.Wrap(ErrExecutingJob, b.getError().Error()).FormatError(b.jobType, b.id))
 }

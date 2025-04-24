@@ -38,10 +38,11 @@ func (b *intervalJob) handleExecution() {
 	if b.getError() != nil {
 		b.setExecutionError()
 		b.logger.Error(b.getError())
-		b.setConsecutiveFails(b.getConsecutiveFails() + 1)
+		b.stop() // stop the job on error
+		b.incrementConsecutiveFails()
 		return
 	}
-	b.setConsecutiveFails(0)
+	b.resetConsecutiveFails()
 }
 
 // start - calls the Execute function from the Job definition
