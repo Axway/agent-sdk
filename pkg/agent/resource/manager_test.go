@@ -62,6 +62,25 @@ func createTraceabilityAgentRes(id, name, dataplane, teamID string) *v1.Resource
 	return instance
 }
 
+func createComplianceAgentRes(id, name, dataplane, env string) *v1.ResourceInstance {
+	res := &management.ComplianceAgent{
+		ResourceMeta: v1.ResourceMeta{
+			Name: name,
+			Metadata: v1.Metadata{
+				ID: id,
+			},
+		},
+		Spec: management.ComplianceAgentSpec{
+			DataplaneType: dataplane,
+			Config: management.ComplianceAgentSpecConfig{
+				ManagedEnvironments: []string{env},
+			},
+		},
+	}
+	instance, _ := res.AsInstance()
+	return instance
+}
+
 func TestNewManager(t *testing.T) {
 	cfg := &config.CentralConfiguration{}
 	m, err := NewAgentResourceManager(cfg, nil, nil)
@@ -118,6 +137,13 @@ func TestAgentConfigOverride(t *testing.T) {
 			agentName:       "Test-TA",
 			resource:        createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", ""),
 			updatedResource: createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", "TestTeam"),
+		},
+		{
+			name:            "ComplianceAgent override",
+			agentType:       config.ComplianceAgent,
+			agentName:       "Test-CA",
+			resource:        createComplianceAgentRes("111", "Test-TA", "test-dataplane", ""),
+			updatedResource: createComplianceAgentRes("111", "Test-TA", "test-dataplane", "reference-env"),
 		},
 	}
 
@@ -186,6 +212,12 @@ func TestAgentUpdateStatus(t *testing.T) {
 			resource:  createTraceabilityAgentRes("111", "Test-TA", "test-dataplane", ""),
 		},
 		{
+			name:      "ComplianceAgent override",
+			agentType: config.ComplianceAgent,
+			agentName: "Test-CA",
+			resource:  createComplianceAgentRes("111", "Test-CA", "test-dataplane", ""),
+		},
+		{
 			name:      "Create DA resource",
 			agentType: config.DiscoveryAgent,
 			agentName: "env-da",
@@ -195,6 +227,12 @@ func TestAgentUpdateStatus(t *testing.T) {
 			name:      "Create TA resource",
 			agentType: config.TraceabilityAgent,
 			agentName: "env-ta",
+			resource:  nil,
+		},
+		{
+			name:      "Create CA resource",
+			agentType: config.ComplianceAgent,
+			agentName: "env-ca",
 			resource:  nil,
 		},
 	}
