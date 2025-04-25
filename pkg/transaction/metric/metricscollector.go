@@ -859,7 +859,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 		logger := logger.WithField("status", k)
 		metric, ok := groupMap[k]
 		if !ok {
-			logger.Error("no metrics in map for status")
+			logger.Info("no metrics in map for status")
 			continue
 		}
 		c.setMetricsFromHistogram(metric, histo)

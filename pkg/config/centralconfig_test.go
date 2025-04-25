@@ -90,6 +90,91 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	cleanupFiles(tmpFile.Name())
 }
 
+func TestComplianceAgentConfig(t *testing.T) {
+	cfg := NewCentralConfig(ComplianceAgent)
+	centralConfig := cfg.(*CentralConfiguration)
+
+	// Setup Auth config to ignore auth validation errors for this test
+	authCfg := centralConfig.Auth.(*AuthConfiguration)
+	authCfg.URL = "test"
+	authCfg.Realm = "Broker"
+	authCfg.ClientID = "aaaa"
+	tmpFile, _ := os.CreateTemp(".", "test*")
+	authCfg.PrivateKey = "./" + tmpFile.Name()
+	authCfg.PublicKey = "./" + tmpFile.Name()
+
+	cfgValidator, ok := cfg.(IConfigValidator)
+	assert.True(t, ok)
+	assert.NotNil(t, cfgValidator)
+	err := cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.organizationID, please set and/or check its value", err.Error())
+
+	centralConfig.TenantID = "1111"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.url, please set and/or check its value", err.Error())
+
+	centralConfig.URL = "aaa"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.url, please set and/or check its value", err.Error())
+
+	centralConfig.URL = "http://localhost.com"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.deployment, please set and/or check its value", err.Error())
+
+	centralConfig.APICDeployment = "aaa"
+	err = cfgValidator.ValidateCfg()
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.environment, please set and/or check its value", err.Error())
+
+	centralConfig.Environment = "111111"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.auth.url, please set and/or check its value", err.Error())
+
+	authCfg.URL = "http://localhost.com:8080"
+
+	centralConfig.SingleURL = "malformed.singleURL.com"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
+	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+
+	centralConfig.ReportActivityFrequency = 0
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.reportActivityFrequency, please set and/or check its value", err.Error())
+	centralConfig.ReportActivityFrequency = time.Minute
+
+	centralConfig.APIValidationCronSchedule = ""
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
+
+	centralConfig.APIValidationCronSchedule = "* * * * *"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
+
+	centralConfig.APIValidationCronSchedule = "*/59 * * * *"
+	err = cfgValidator.ValidateCfg()
+	assert.NotNil(t, err)
+	assert.Equal(t, "[Error Code 1401] - error with config central.apiValidationCronSchedule, please set and/or check its value", err.Error())
+
+	centralConfig.APIValidationCronSchedule = "@daily"
+	err = cfgValidator.ValidateCfg()
+	assert.Nil(t, err)
+	cleanupFiles(tmpFile.Name())
+}
+
 func TestTraceabilityAgentConfig(t *testing.T) {
 	cfg := NewCentralConfig(TraceabilityAgent)
 	centralConfig := cfg.(*CentralConfiguration)
@@ -205,6 +290,7 @@ func TestTeamConfig(t *testing.T) {
 	authCfg.Realm = "Broker"
 	authCfg.ClientID = "aaaa"
 	tmpFile, _ := os.CreateTemp(".", "test*")
+	defer cleanupFiles(tmpFile.Name())
 	authCfg.PrivateKey = "./" + tmpFile.Name()
 	authCfg.PublicKey = "./" + tmpFile.Name()
 	centralConfig.TenantID = "1111"
@@ -219,8 +305,6 @@ func TestTeamConfig(t *testing.T) {
 	teamID := "abc12:34567:def89:12345:67890"
 	centralConfig.SetTeamID(teamID)
 	assert.Equal(t, teamID, centralConfig.GetTeamID(), "The Team ID was not set appropriately")
-
-	cleanupFiles(tmpFile.Name())
 }
 
 func cleanupFiles(fileName string) {
