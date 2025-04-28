@@ -212,6 +212,10 @@ func (p *oas3SpecProcessor) GetDescription() string {
 }
 
 func (p *oas3SpecProcessor) StripSpecAuth() {
+	if p.spec.Components == nil {
+		p.spec.Components = &openapi3.Components{}
+	}
+
 	p.spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 }
 
