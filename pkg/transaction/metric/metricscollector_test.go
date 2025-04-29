@@ -56,7 +56,6 @@ func getFutureTime() time.Time {
 }
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
-
 	cfg := config.NewCentralConfig(config.TraceabilityAgent).(*config.CentralConfiguration)
 	cfg.URL = url
 	cfg.SingleURL = url

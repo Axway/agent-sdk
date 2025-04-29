@@ -61,12 +61,17 @@ func TestCreateWatchTopic(t *testing.T) {
 }
 
 type mockWatchTopicFeatures struct {
-	agentType  config.AgentType
-	filterList []config.ResourceFilter
+	agentType   config.AgentType
+	managedEnvs []string
+	filterList  []config.ResourceFilter
 }
 
 func (m *mockWatchTopicFeatures) GetAgentType() config.AgentType {
 	return m.agentType
+}
+
+func (m *mockWatchTopicFeatures) GetManagedEnvironments() []string {
+	return m.managedEnvs
 }
 
 func (m *mockWatchTopicFeatures) GetWatchResourceFilters() []config.ResourceFilter {
@@ -104,11 +109,12 @@ func Test_parseWatchTopic(t *testing.T) {
 
 func TestGetOrCreateWatchTopic(t *testing.T) {
 	tests := []struct {
-		name       string
-		client     *mockAPIClient
-		hasErr     bool
-		agentType  config.AgentType
-		filterList []config.ResourceFilter
+		name        string
+		client      *mockAPIClient
+		hasErr      bool
+		agentType   config.AgentType
+		filterList  []config.ResourceFilter
+		managedEnvs []string
 	}{
 		{
 			name:      "should retrieve a watch topic if it exists",
@@ -136,6 +142,21 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 				},
 			},
 			filterList: []config.ResourceFilter{},
+		},
+		{
+			name:      "should create a watch topic for a compliance agent if it does not exist",
+			agentType: config.ComplianceAgent,
+			hasErr:    false,
+			client: &mockAPIClient{
+				getErr: fmt.Errorf("not found"),
+				ri: &apiv1.ResourceInstance{
+					ResourceMeta: apiv1.ResourceMeta{
+						Name: "wt-name",
+					},
+				},
+			},
+			filterList:  []config.ResourceFilter{},
+			managedEnvs: []string{"managedEnv1", "managedEnv2"},
 		},
 		{
 			name:      "should create a watch topic for a discovery agent if it does not exist",
@@ -181,7 +202,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "agent-name"
-			features := &mockWatchTopicFeatures{agentType: tc.agentType, filterList: tc.filterList}
+			features := &mockWatchTopicFeatures{agentType: tc.agentType, filterList: tc.filterList, managedEnvs: tc.managedEnvs}
 
 			wt, err := getOrCreateWatchTopic(name, "scope", tc.client, features)
 			if tc.hasErr == true {
@@ -204,6 +225,23 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 					}
 				}
 				assert.True(t, found)
+			}
+			// validate watch topic filter for compliance agent managed env filters
+			if len(tc.managedEnvs) > 0 && tc.agentType == config.ComplianceAgent {
+				for _, env := range tc.managedEnvs {
+					foundEnv := false
+					foundAPIS := false
+					for _, wtFilter := range wt.Spec.Filters {
+						if wtFilter.Group == management.EnvironmentGVK().Group && wtFilter.Kind == management.EnvironmentGVK().Kind && wtFilter.Name == env {
+							foundEnv = true
+						}
+						if wtFilter.Group == management.APIServiceInstanceGVK().Group && wtFilter.Kind == management.APIServiceInstanceGVK().Kind && wtFilter.Scope.Name == env {
+							foundAPIS = true
+						}
+					}
+					assert.Truef(t, foundEnv, "managed env, %s, environment filter not found", env)
+					assert.Truef(t, foundAPIS, "managed env, %s, api service instance filter not found", env)
+				}
 			}
 		})
 	}

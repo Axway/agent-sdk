@@ -24,6 +24,7 @@ func TestSpecDiscovery(t *testing.T) {
 		inputType    string
 		parseErr     bool
 		expectedType string
+		stripAuth    bool
 	}{
 		{
 			name:      "Protobuf input type with OAS3 Spec",
@@ -126,6 +127,13 @@ func TestSpecDiscovery(t *testing.T) {
 			parseErr:     true,
 			expectedType: Unstructured,
 		},
+		{
+			name:         "OAS3 Spec with no component for stripping security schemes",
+			inputFile:    "./testdata/openapi3-no-component.json",
+			expectedType: Oas3,
+			inputType:    Oas3,
+			stripAuth:    true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -146,7 +154,7 @@ func TestSpecDiscovery(t *testing.T) {
 			switch tc.expectedType {
 			case Oas3:
 				_, ok = specProcessor.(*oas3SpecProcessor)
-				ValidateOAS3Processors(t, specParser)
+				ValidateOAS3Processors(t, specParser, tc.stripAuth)
 			case Oas2:
 				_, ok = specProcessor.(*oas2SpecProcessor)
 				ValidateOAS2Processors(t, specParser, tc.inputFile)
@@ -185,7 +193,7 @@ func TestLoadRamlAsYaml(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser) {
+func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAuth bool) {
 	// JSON OAS3 specification
 	specProcessor := specParser.GetSpecProcessor()
 	endPoints, err := specProcessor.GetEndpoints()
@@ -201,6 +209,13 @@ func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser) {
 	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
 	assert.Equal(t, int32(443), endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
 	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
+
+	processor, _ := specProcessor.(*oas3SpecProcessor)
+	if stripAuth {
+		processor.StripSpecAuth()
+		assert.NotNil(t, processor.spec.Components)
+		assert.Empty(t, processor.spec.Components.SecuritySchemes)
+	}
 
 	specParser, err = createSpecParser("./testdata/petstore-openapi3-template-urls.json", Oas3)
 	assert.Nil(t, err)

@@ -29,7 +29,7 @@ func newEventSync() (*EventSync, error) {
 	migrations := []migrate.Migrator{}
 
 	// Make sure only DA agents run migration processes
-	runMigrations := agent.cfg.GetAgentType() != config.TraceabilityAgent
+	runMigrations := agent.cfg.GetAgentType() == config.DiscoveryAgent
 
 	if runMigrations {
 		// add attribute migration to migrations
