@@ -276,7 +276,8 @@ MODELS=`find ${OUTDIR}/models -type f -name "*.go" \
     ! -name 'AmplifyRuntimeConfig.go' \
     ! -name 'AssetMapping.go' \
     ! -name 'DiscoveryAgent.go' \
-    ! -name 'TraceabilityAgent.go'`
+    ! -name 'TraceabilityAgent.go' \
+    ! -name 'ComplianceAgent.go'`
 
 SEARCH="\s*Status.*\s*\`json:\"status\"\`$"
 REPLACE="Status *apiv1.ResourceStatus \`json:\"status\"\`"
