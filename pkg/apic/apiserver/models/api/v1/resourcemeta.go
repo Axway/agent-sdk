@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -26,7 +27,7 @@ type Meta interface {
 	SetTags([]string)
 	GetSubResource(key string) interface{}
 	SetSubResource(key string, resource interface{})
-	GetSubResourceHash(key string) (float64, bool)
+	GetSubResourceHash(key string) (string, bool)
 	GetReferenceByGVK(GroupVersionKind) Reference
 }
 
@@ -179,17 +180,14 @@ func (rm *ResourceMeta) GetSubResource(key string) interface{} {
 	return rm.SubResources[key]
 }
 
-func (rm *ResourceMeta) GetSubResourceHash(key string) (float64, bool) {
+func (rm *ResourceMeta) GetSubResourceHash(key string) (string, bool) {
 	if rm == nil || rm.SubResources == nil {
-		return 0, false
+		return "", false
 	}
-
-	if h, ok := rm.SubResourceHashes[key].(uint64); ok {
-		return float64(h), ok
-	} else if h, ok := rm.SubResourceHashes[key].(float64); ok {
-		return h, ok
+	if h, ok := rm.SubResourceHashes[key]; ok {
+		return fmt.Sprint(h), ok
 	}
-	return 0, false
+	return "", false
 }
 
 // SetSubResource saves a value to a sub resource by name and overrides the current value.
@@ -384,7 +382,7 @@ func (rm *ResourceMeta) CreateHashes() {
 		if err != nil {
 			continue
 		}
-		rm.SubResourceHashes[subName] = float64(hash)
+		rm.SubResourceHashes[subName] = fmt.Sprint(hash)
 	}
 }
 

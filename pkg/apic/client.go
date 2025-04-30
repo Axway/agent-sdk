@@ -640,7 +640,7 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 	for subName, sub := range subs {
 		if existingHash, ok := rm.GetSubResourceHash(subName); ok {
 			hash, err := util.ComputeHash(sub)
-			if err == nil && float64(hash) == existingHash {
+			if err == nil && fmt.Sprint(hash) == existingHash {
 				c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Trace("hash found, skipping createSubResource")
 				continue
 			}
