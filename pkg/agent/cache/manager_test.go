@@ -211,6 +211,15 @@ func TestSequenceCache(t *testing.T) {
 // create manager initialized with persisted cache
 // validate all original cached items exists
 func TestCachePersistenc(t *testing.T) {
+	removeCache := func() {
+		_, err := os.Stat("./data")
+		if !os.IsExist(err) {
+			os.RemoveAll("./data")
+		}
+	}
+	removeCache()
+	defer removeCache()
+
 	m := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 	assert.NotNil(t, m)
 
@@ -222,14 +231,6 @@ func TestCachePersistenc(t *testing.T) {
 	m.AddAPIServiceInstance(instance1)
 
 	m.AddSequence("watch1", 1)
-
-	defer func() {
-		// Remove file if it exists
-		_, err := os.Stat("./data")
-		if !os.IsExist(err) {
-			os.RemoveAll("./data")
-		}
-	}()
 
 	m.SaveCache()
 
