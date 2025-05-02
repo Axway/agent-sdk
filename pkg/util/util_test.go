@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"net/url"
 	"os"
 	"reflect"
@@ -11,14 +12,80 @@ import (
 )
 
 func TestComputeHash(t *testing.T) {
-	val, err := ComputeHash("this is a test")
-	assert.Nil(t, err)
-	val1, err := ComputeHash("this is a test1")
-	assert.Nil(t, err)
-	assert.NotEqual(t, val, val1)
-	val, err = ComputeHash("this is a test1")
-	assert.Nil(t, err)
-	assert.Equal(t, val, val1)
+	type input struct {
+		B int `json:"b"`
+		A int `json:"a"`
+	}
+
+	testCases := map[string]struct {
+		skip           bool
+		input1         interface{}
+		input2         interface{}
+		expectErr      bool
+		expectSame     bool
+		expectDiffJson bool
+	}{
+		"expect hashes to be different with different data": {
+			skip:   false,
+			input1: "this is a test",
+			input2: "this is a test1",
+		},
+		"expect hashes to be same with same data": {
+			skip:       false,
+			input1:     "this is a test1",
+			input2:     "this is a test1",
+			expectSame: true,
+		},
+		"expect hashes to be different with different data types": {
+			skip:   false,
+			input1: "this is a test",
+			input2: 123456,
+		},
+		"expect hashes to be same with same data types": {
+			skip:       false,
+			input1:     123456,
+			input2:     123456,
+			expectSame: true,
+		},
+		"expect hashes to be different with different data types and values": {
+			skip:   false,
+			input1: 123456,
+			input2: "123456",
+		},
+		"expect hashes to be same when json data would be unequal": {
+			skip:           false,
+			input1:         input{A: 1, B: 2},
+			input2:         map[string]interface{}{"b": 2, "a": 1},
+			expectDiffJson: true,
+			expectSame:     true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
+			val1, err1 := ComputeHash(tc.input1)
+			val2, err2 := ComputeHash(tc.input2)
+			if tc.expectErr {
+				assert.NotNil(t, err1)
+				assert.NotNil(t, err2)
+				return
+			}
+			if tc.expectDiffJson {
+				json1, _ := json.Marshal(tc.input1)
+				json2, _ := json.Marshal(tc.input2)
+				assert.NotEqual(t, string(json1), string(json2))
+			}
+			assert.Nil(t, err1)
+			assert.Nil(t, err2)
+			if tc.expectSame {
+				assert.Equal(t, val1, val2)
+			} else {
+				assert.NotEqual(t, val1, val2)
+			}
+		})
+	}
 }
 
 func TestStringSliceContains(t *testing.T) {

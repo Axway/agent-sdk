@@ -37,11 +37,26 @@ const (
 	CentralHealthCheckEndpoint = "central"
 )
 
+// Remarshal - remarshal the bytes to remove any extra spaces and consistent key order
+func Remarshal(data []byte) ([]byte, error) {
+	var temp interface{}
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(temp)
+}
+
 // ComputeHash - get the hash of the byte array sent in
 func ComputeHash(data interface{}) (uint64, error) {
+	// marshall the data in and out
 	dataB, err := json.Marshal(data)
 	if err != nil {
-		return 0, fmt.Errorf("could not marshal data to bytes")
+		return 0, err
+	}
+	dataB, err = Remarshal(dataB)
+	if err != nil {
+		return 0, err
 	}
 
 	h := fnv.New64a()
