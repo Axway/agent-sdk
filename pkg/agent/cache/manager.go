@@ -125,6 +125,12 @@ type Manager interface {
 	ReleaseResourceReadLock()
 }
 
+type cacheLoader interface {
+	loaded(c cache.Cache)
+	unmarshaller(data []byte) (interface{}, error)
+	getkey() string
+}
+
 type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
@@ -161,14 +167,8 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		isPersistedCacheEnabled: persistCacheEnabled,
 		migrators:               []cacheMigrate{},
 	}
+	// add migrators here if needed
 
-	if m.isPersistedCacheEnabled {
-		m.migrators = []cacheMigrate{
-			m.migrateAccessRequest,
-			m.migrateInstanceCount,
-			m.migrateManagedApplications,
-		}
-	}
 	m.initializeCache(cfg)
 
 	return m
@@ -181,39 +181,76 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		cacheMap.Load(c.cacheFilename)
 	}
 
-	cacheKeys := map[string]func(cache.Cache){
-		apiServicesKey:         func(loaded cache.Cache) { c.apiMap = loaded },
-		apiServiceInstancesKey: func(loaded cache.Cache) { c.instanceMap = loaded },
-		instanceCountKey:       func(loaded cache.Cache) { c.instanceCountMap = loaded },
-		credReqDefKey:          func(loaded cache.Cache) { c.crdMap = loaded },
-		accReqDefKey:           func(loaded cache.Cache) { c.ardMap = loaded },
-		appProfDefKey:          func(loaded cache.Cache) { c.apdMap = loaded },
-		teamsKey:               func(loaded cache.Cache) { c.teams = loaded },
-		managedAppKey:          func(loaded cache.Cache) { c.managedApplicationMap = loaded },
-		subscriptionsKey:       func(loaded cache.Cache) { c.subscriptionMap = loaded },
-		accReqKey:              func(loaded cache.Cache) { c.accessRequestMap = loaded },
-		watchSequenceKey:       func(loaded cache.Cache) { c.sequenceCache = loaded },
-		watchResourceKey:       func(loaded cache.Cache) { c.watchResourceMap = loaded },
+	cacheLoaders := []cacheLoader{
+		createResourceLoader(c.setLoadedCache, apiServicesKey),
+		createResourceLoader(c.setLoadedCache, apiServiceInstancesKey),
+		createResourceLoader(c.setLoadedCache, credReqDefKey),
+		createResourceLoader(c.setLoadedCache, accReqDefKey),
+		createResourceLoader(c.setLoadedCache, appProfDefKey),
+		createResourceLoader(c.setLoadedCache, managedAppKey),
+		createResourceLoader(c.setLoadedCache, subscriptionsKey),
+		createResourceLoader(c.setLoadedCache, accReqKey),
+		createResourceLoader(c.setLoadedCache, watchResourceKey),
+		createInstanceCountLoader(c.setLoadedCache, instanceCountKey),
+		createTeamLoader(c.setLoadedCache, teamsKey),
+		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 	}
 
 	c.isPersistedCacheLoaded = true
 	c.isCacheUpdated = false
-	for key := range cacheKeys {
-		loadedMap, isNew := c.loadPersistedResourceInstanceCache(cacheMap, key)
-		if isNew {
+	for _, loader := range cacheLoaders {
+		loadedMap, loadNew := c.loadPersistedResourceInstanceCache(cacheMap, loader)
+		if loadNew {
 			c.isPersistedCacheLoaded = false
 		}
-		cacheKeys[key](loadedMap)
+		cacheMap.Set(loader.getkey(), loadedMap)
+		loader.loaded(loadedMap)
 	}
 
-	// after loading check for migrations
-	for key := range cacheKeys {
-		c.migratePersistentCache(key)
+	if c.isPersistedCacheLoaded {
+		// after loading, successfully, check for migrations
+		for _, loader := range cacheLoaders {
+			c.migratePersistentCache(loader.getkey())
+		}
+	} else {
+		// flush all caches if the persisted cache is not loaded properly for any
+		c.Flush()
 	}
 
 	c.persistedCache = cacheMap
 	if c.isPersistedCacheEnabled && util.IsNotTest() {
 		jobs.RegisterIntervalJobWithName(c, cfg.GetCacheStorageInterval(), "Agent cache persistence")
+	}
+}
+
+func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
+	switch key {
+	case apiServicesKey:
+		c.apiMap = lc
+	case apiServiceInstancesKey:
+		c.instanceMap = lc
+	case instanceCountKey:
+		c.instanceCountMap = lc
+	case credReqDefKey:
+		c.crdMap = lc
+	case accReqDefKey:
+		c.ardMap = lc
+	case appProfDefKey:
+		c.apdMap = lc
+	case teamsKey:
+		c.teams = lc
+	case managedAppKey:
+		c.managedApplicationMap = lc
+	case subscriptionsKey:
+		c.subscriptionMap = lc
+	case accReqKey:
+		c.accessRequestMap = lc
+	case watchResourceKey:
+		c.watchResourceMap = lc
+	case watchSequenceKey:
+		c.sequenceCache = lc
+	default:
+		c.logger.WithField("cacheKey", key).Error("unknown cache key")
 	}
 }
 
@@ -230,6 +267,10 @@ func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
 }
 
 func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) (cache.Cache, bool) {
+	if !c.isPersistedCacheLoaded {
+		// return as soon as possible
+		return cache.New(), true
+	}
 	itemCache, _ := cacheMap.Get(key)
 	if itemCache != nil {
 		raw, _ := json.Marshal(itemCache)
@@ -238,27 +279,40 @@ func (c *cacheManager) loadPersistedCache(cacheMap cache.Cache, key string) (cac
 	return cache.New(), true
 }
 
-func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, cacheKey string) (cache.Cache, bool) {
-	riCache, isNew := c.loadPersistedCache(cacheMap, cacheKey)
-	keys := riCache.GetKeys()
-	for _, key := range keys {
-		item, _ := riCache.Get(key)
-		rawResource, _ := json.Marshal(item)
-		// If instance count then use apiServiceToInstanceCount type
-		if cacheKey == instanceCountKey {
-			ic := apiServiceToInstanceCount{}
-			if err := json.Unmarshal(rawResource, &ic); err == nil {
-				riCache.Set(key, ic)
-			}
-		} else {
-			ri := &v1.ResourceInstance{}
-			if json.Unmarshal(rawResource, ri) == nil {
-				riCache.Set(key, ri)
-			}
-		}
+func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, loader cacheLoader) (cache.Cache, bool) {
+	riCache, isNew := c.loadPersistedCache(cacheMap, loader.getkey())
+	if isNew {
+		return riCache, isNew
 	}
 
-	cacheMap.Set(cacheKey, riCache)
+	// If the cache is not new, we need to load the data from the persisted store
+	keys := riCache.GetKeys()
+	logger := c.logger.WithField("cacheKey", loader.getkey())
+	logger.Debug("loading cache from persisted store")
+	for _, key := range keys {
+		logger = logger.WithField("key", key)
+		logger.Trace("loading data for key")
+		item, err := riCache.Get(key)
+		if err != nil {
+			logger.WithError(err).Error("reading item from cache, refreshing cache")
+			riCache = cache.New()
+			return riCache, true
+		}
+		rawResource, err := json.Marshal(item)
+		if err != nil {
+			logger.WithError(err).Error("reading data from cache, refreshing cache")
+			riCache = cache.New()
+			return riCache, true
+		}
+		toCache, err := loader.unmarshaller(rawResource)
+		if err != nil {
+			c.logger.WithError(err).Errorf("failed to load resource instance for key %s", key)
+			riCache = cache.New()
+			return riCache, true
+		}
+		riCache.Set(key, toCache)
+	}
+
 	return riCache, isNew
 }
 
