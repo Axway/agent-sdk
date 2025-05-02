@@ -167,8 +167,8 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		isPersistedCacheEnabled: persistCacheEnabled,
 		migrators:               []cacheMigrate{},
 	}
-	// add migrators here if needed
 
+	// add migrators here if needed
 	m.initializeCache(cfg)
 
 	return m
@@ -213,7 +213,8 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 			c.migratePersistentCache(loader.getkey())
 		}
 	} else {
-		// flush all caches if the persisted cache is not loaded properly for any
+		// flush all caches if any of the persisted caches failed loaded properly
+		c.logger.Info("persisted store failed to load, refreshing cache")
 		c.Flush()
 	}
 
@@ -224,6 +225,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 }
 
 func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
+	c.logger.WithField("cacheKey", key).Debug("cache loaded")
 	switch key {
 	case apiServicesKey:
 		c.apiMap = lc
@@ -263,6 +265,7 @@ func (c *cacheManager) getCacheFileName(cfg config.CentralConfig) string {
 	if cfg.GetAgentName() != "" {
 		return cachePath + "/" + cfg.GetAgentName() + ".cache"
 	}
+	c.logger = c.logger.WithField("cachePath", cachePath)
 	return cachePath + "/" + cfg.GetEnvironmentName() + ".cache"
 }
 
@@ -306,7 +309,7 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 		}
 		toCache, err := loader.unmarshaller(rawResource)
 		if err != nil {
-			c.logger.WithError(err).Errorf("failed to load resource instance for key %s", key)
+			c.logger.WithError(err).Errorf("failed to load data into cache")
 			riCache = cache.New()
 			return riCache, true
 		}
