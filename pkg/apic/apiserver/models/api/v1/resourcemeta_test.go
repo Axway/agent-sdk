@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -233,7 +234,7 @@ func TestResourceMetaHashes(t *testing.T) {
 	assert.True(t, ok)
 	hashedReal, err := util.ComputeHash("sth")
 	assert.Nil(t, err)
-	assert.Equal(t, hashVal, float64(hashedReal))
+	assert.Equal(t, hashVal, fmt.Sprint(hashedReal))
 
 	meta3 := &ResourceMeta{}
 	meta3.ClearHashes()

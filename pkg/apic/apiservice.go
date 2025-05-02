@@ -49,7 +49,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 		},
 		Spec:   buildAPIServiceSpec(serviceBody),
 		Owner:  owner,
-		Status: buildAPIServiceStatusSubResource(ownerErr),
+		Status: buildAPIServiceStatusSubResource(&apiv1.ResourceStatus{}, ownerErr),
 	}
 
 	buildAPIServiceSourceSubResource(svc, serviceBody)
@@ -90,7 +90,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = owner
 	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)
-	svc.Status = buildAPIServiceStatusSubResource(ownerErr)
+	svc.Status = buildAPIServiceStatusSubResource(svc.Status, ownerErr)
 	buildAPIServiceSourceSubResource(svc, serviceBody)
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
@@ -149,26 +149,32 @@ func buildAPIServiceSourceSubResource(svc *management.APIService, serviceBody *S
 	}
 }
 
-func buildAPIServiceStatusSubResource(ownerErr error) *apiv1.ResourceStatus {
+func buildAPIServiceStatusSubResource(status *apiv1.ResourceStatus, ownerErr error) *apiv1.ResourceStatus {
 	// only set status if ownerErr != nil
-	if ownerErr != nil {
-		// get current time
-		activityTime := time.Now()
-		newV1Time := apiv1.Time(activityTime)
-		message := ownerErr.Error()
-		level := "Error"
-		return &apiv1.ResourceStatus{
-			Level: level,
-			Reasons: []apiv1.ResourceStatusReason{
-				{
-					Type:      level,
-					Detail:    message,
-					Timestamp: newV1Time,
-				},
-			},
-		}
+	if ownerErr == nil {
+		return nil
 	}
-	return nil
+
+	// if the top reason is the same then return the existing status
+	if len(status.Reasons) > 0 && status.Reasons[0].Detail == ownerErr.Error() {
+		return status
+	}
+
+	// get current time
+	activityTime := time.Now()
+	newV1Time := apiv1.Time(activityTime)
+	message := ownerErr.Error()
+	level := "Error"
+	return &apiv1.ResourceStatus{
+		Level: level,
+		Reasons: []apiv1.ResourceStatusReason{
+			{
+				Type:      level,
+				Detail:    message,
+				Timestamp: newV1Time,
+			},
+		},
+	}
 }
 
 // processService -
