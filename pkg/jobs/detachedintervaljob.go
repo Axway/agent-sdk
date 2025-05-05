@@ -15,7 +15,7 @@ func newDetachedIntervalJob(newJob Job, interval time.Duration, name string, opt
 	}
 
 	for _, o := range opts {
-		o(&thisJob.baseJob)
+		o(thisJob.baseJob)
 	}
 
 	go thisJob.start()

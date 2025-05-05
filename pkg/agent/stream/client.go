@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/harvester"
@@ -52,7 +53,7 @@ type StreamerClient struct {
 	harvester          harvester.Harvest
 	onEventSyncError   func()
 	mutex              sync.RWMutex
-	isInitialized      bool
+	isInitialized      atomic.Bool
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -140,6 +141,7 @@ func (s *StreamerClient) Start() error {
 	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
 
 	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	s.listener = s.newListener(
 		eventCh,
@@ -159,9 +161,7 @@ func (s *StreamerClient) Start() error {
 	}
 
 	s.manager = manager
-	s.isInitialized = false
-
-	s.mutex.Unlock()
+	s.isInitialized.Store(false)
 
 	listenCh := s.listener.Listen()
 	s.requestQueue.Start()
@@ -170,10 +170,7 @@ func (s *StreamerClient) Start() error {
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
-
-	s.mutex.Lock()
-	s.isInitialized = true
-	s.mutex.Unlock()
+	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
@@ -189,9 +186,7 @@ func (s *StreamerClient) Start() error {
 
 // Status returns the health status
 func (s *StreamerClient) Status() error {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	if !s.isInitialized {
+	if !s.isInitialized.Load() {
 		return nil
 	}
 
