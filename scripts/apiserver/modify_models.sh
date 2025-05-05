@@ -20,10 +20,23 @@ if [[ "$OS" == "Darwin" ]] ; then
     }
 fi
 
-
+######################
+# For model_traceability_agent_agentstate.go, we want to turn 	"Sampling TraceabilityAgentAgentstateSampling `json:"sampling,omitempty"`" into
+# "Sampling *TraceabilityAgentAgentstateSampling `json:"sampling,omitempty"`"
+######################
+SEARCH="\s*Sampling\s*TraceabilityAgentAgentstateSampling.*"
+REPLACE="Sampling *TraceabilityAgentAgentstateSampling \`json:\"sampling,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_traceability_agent_agentstate.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_traceability_agent_agentstate.go
+# add in the new line we want
+$SED -i "/TraceabilityAgentAgentstateSampling/a ${REPLACE}" ${MODEL_PATH}/model_traceability_agent_agentstate.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_traceability_agent_agentstate.go
 
 ######################
-# For model_watch_topic_spec_filters.go.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
+# For model_watch_topic_spec_filters.go, we want to turn 	"Scope WatchTopicSpecScope `json:"scope,omitempty"`" into
 # "Scope *WatchTopicSpecScope `json:"scope,omitempty"`"
 ######################
 SEARCH="\s*Scope\s*WatchTopicSpecScope.*"

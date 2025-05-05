@@ -16,4 +16,6 @@ type SubscriptionApproval struct {
 	Reason string `json:"reason,omitempty"`
 	// Id of the user that approved or reject the subscription.
 	UserId string `json:"userId,omitempty"`
+	// Read only property that is computed based on the state prior to the last approval update.
+	PreviousState string `json:"previousState,omitempty"`
 }
