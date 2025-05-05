@@ -1,7 +1,6 @@
 package watchmanager
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -177,10 +176,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	}
 	go client.processEvents()
 
-	m.mutex.Lock()
-	m.clientMap[subID] = client
-	m.mutex.Unlock()
-
+	m.addClient(subID, client)
 	m.logger.
 		WithField("id", subID).
 		WithField("watchtopic", link).
@@ -191,16 +187,14 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 
 // CloseWatch closes the specified watch stream by id
 func (m *watchManager) CloseWatch(id string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	client, ok := m.clientMap[id]
-	if !ok {
-		return errors.New("invalid watch subscription ID")
+	client, err := m.getClient(id)
+	if err != nil {
+		return err
 	}
+
 	m.logger.WithField("watch-id", id).Info("closing connection for subscription")
 	client.cancelStreamCtx()
-	delete(m.clientMap, id)
+	m.deleteClients([]string{id})
 	return nil
 }
 
@@ -209,29 +203,30 @@ func (m *watchManager) CloseConn() {
 	m.logger.Info("closing watch service connection")
 
 	m.connection.Close()
-	for id := range m.clientMap {
-		delete(m.clientMap, id)
+	clientsToRemove := make([]string, 0)
+	for id := range m.getClients() {
+		clientsToRemove = append(clientsToRemove, id)
 	}
+	m.deleteClients(clientsToRemove)
 }
 
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
+	clients := m.getClients()
 	ok := true
-
-	if len(m.clientMap) == 0 {
+	if len(clients) == 0 {
 		ok = false
 	}
 
-	for k, c := range m.clientMap {
-		if !c.isRunning {
+	clientsToRemove := make([]string, 0)
+	for k, c := range clients {
+		if c != nil && !c.isRunning {
 			m.logger.Debug("watch client is not running")
 			ok = false
-			delete(m.clientMap, k)
+			clientsToRemove = append(clientsToRemove, k)
 		}
 	}
+	m.deleteClients(clientsToRemove)
 
 	return ok && m.connection.GetState() == connectivity.Ready
 }
@@ -241,4 +236,42 @@ func (m *watchManager) onHarvesterErr() {
 		return
 	}
 	m.options.onEventSyncError()
+}
+
+func (m *watchManager) addClient(id string, client *watchClient) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.clientMap[id] = client
+	m.logger.WithField("watch-id", id).Trace("added client to watch manager")
+}
+
+func (m *watchManager) getClient(id string) (*watchClient, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	client, ok := m.clientMap[id]
+	if !ok {
+		return nil, fmt.Errorf("invalid watch subscription ID")
+	}
+	return client, nil
+}
+
+func (m *watchManager) getClients() map[string]*watchClient {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	clients := make(map[string]*watchClient)
+	for k, v := range m.clientMap {
+		clients[k] = v
+	}
+	return clients
+}
+
+func (m *watchManager) deleteClients(ids []string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	for _, id := range ids {
+		delete(m.clientMap, id)
+	}
 }
