@@ -12,4 +12,8 @@ package catalog
 // AssetRequestApproval  (catalog.v1alpha1.AssetRequest)
 type AssetRequestApproval struct {
 	State AssetRequestApprovalState `json:"state"`
+	// Read only id of the user that approved or reject the asset request.
+	UserId string `json:"userId,omitempty"`
+	// Read only property that is computed based on the state prior to the last approval update.
+	PreviousState map[string]interface{} `json:"previousState,omitempty"`
 }
