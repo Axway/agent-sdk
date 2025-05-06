@@ -50,13 +50,11 @@ func ExitMetricInit() {
 
 // Collector - interface for collecting metrics
 type Collector interface {
-	InitializeBatch()
 	AddMetric(apiDetails models.APIDetails, statusCode string, duration, bytes int64, appName string)
 	AddCustomMetricDetail(metric models.CustomMetricDetail)
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
-	Publish()
 	ShutdownPublish()
 }
 
@@ -244,13 +242,8 @@ func (c *collector) Execute() error {
 	defer c.cleanup()
 	c.generateEvents()
 	c.publishEvents()
-	return nil
-}
 
-func (c *collector) InitializeBatch() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.metricBatch = NewEventBatch(c)
+	return nil
 }
 
 func (c *collector) updateStartTime() {
@@ -274,7 +267,6 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
 	c.createOrUpdateHistogram(metricDetail)
-
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -283,20 +275,16 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		return
 	}
 
-	transactionCtx := transactionContext{
-		APIDetails: detail.APIDetails,
-		AppDetails: detail.AppDetails,
-		Status:     detail.StatusCode,
+	for range int(detail.Count) {
+		metric := Detail{
+			APIDetails: detail.APIDetails,
+			AppDetails: detail.AppDetails,
+			StatusCode: detail.StatusCode,
+			Duration:   int64(detail.Response.Avg),
+		}
+
+		c.AddMetricDetail(metric)
 	}
-	metric := c.createMetric(transactionCtx)
-
-	// update the new metric with all the necessary details
-	metric.Units.Transactions.Count = detail.Count
-	metric.Units.Transactions.Response = &detail.Response
-	metric.Observation = &detail.Observation
-
-	c.updateStartTime()
-	c.addMetric(metric)
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
@@ -377,10 +365,6 @@ func (c *collector) addMetric(metric *centralMetric) {
 		return
 	}
 	c.metricBatch.AddEventWithoutHistogram(pubEvent)
-}
-
-func (c *collector) Publish() {
-	c.metricBatch.Publish()
 }
 
 func (c *collector) ShutdownPublish() {

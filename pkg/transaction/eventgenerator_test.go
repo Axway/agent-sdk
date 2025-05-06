@@ -86,8 +86,9 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	eventFields["someKey.2"] = "someVal.2"
 	eventFields["message"] = "existingMessage"
 
-	event, _ := eventGenerator.CreateEvent(dummyLogEvent, time.Now(), nil, eventFields, nil)
-	assert.NotNil(t, event)
+	events, _ := eventGenerator.CreateEvents(LogEvent{}, []LogEvent{dummyLogEvent}, time.Now(), nil, eventFields, nil)
+	assert.NotNil(t, events)
+	event := events[0]
 	// Validate that existing fields are added to generated event
 	assert.Equal(t, "someVal.1", event.Fields["someKey.1"])
 	assert.Equal(t, "someVal.2", event.Fields["someKey.2"])
@@ -120,7 +121,7 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 		EnvironmentID: cfg.Central.GetEnvironmentID(),
 	}
 
-	_, err := eventGenerator.CreateEvent(dummyLogEvent, time.Now(), nil, nil, nil)
+	_, err := eventGenerator.CreateEvents(LogEvent{}, []LogEvent{dummyLogEvent}, time.Now(), nil, nil, nil)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad response from AxwayId: 403 Forbidden", err.Error())
 }
