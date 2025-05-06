@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 	"time"
 
@@ -26,10 +25,10 @@ import (
 
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
-	CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (event beat.Event, err error) // DEPRECATED
 	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
 	CreateFromEventReport(eventReport EventReport) (events []beat.Event, err error)
+	AddMetricDetailsFromEventReport(eventReport EventReport) error
 }
 
 // Generator - Create the events to be published to Condor
@@ -57,42 +56,6 @@ func NewEventGenerator() EventGenerator {
 // SetUseTrafficForAggregation - set the flag to use traffic events for aggregation.
 func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 	e.shouldUseTrafficForAggregation = useTrafficForAggregation
-}
-
-// CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
-func (e *Generator) CreateEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
-	builder := NewEventReportBuilder().
-		SetEventTime(eventTime).
-		SetMetadata(metaData).
-		SetFields(eventFields).
-		SetPrivateData(privateData).
-		SetForceSample()
-
-	// set the proper log event type
-	if logEvent.TransactionSummary != nil {
-		builder = builder.SetSummaryEvent(logEvent)
-	} else {
-		builder = builder.SetDetailEvents([]LogEvent{logEvent}).SetSkipMetricTracking()
-	}
-
-	report, err := builder.Build()
-	if err != nil {
-		return beat.Event{}, err
-	}
-
-	events, err := e.CreateFromEventReport(report)
-	if err != nil {
-		return beat.Event{}, err
-	}
-	if len(events) == 0 {
-		return beat.Event{}, errors.New("an event was not created")
-	}
-	if len(events) > 1 {
-		return events[0], errors.New("unexpectedly, more than one event was created, only returning the first")
-	}
-
-	// will only ever have 1 beat event returned
-	return events[0], nil
 }
 
 // CreateEvents - Creates new events to be sent to Amplify Observability
@@ -182,6 +145,36 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 
 	events = append(events, newEvent)
 	return append(events, detailEvents...), nil
+}
+
+func (e *Generator) AddMetricDetailsFromEventReport(eventReport EventReport) error {
+	logger := e.logger
+	logger.Trace("adding metric detail to metric collector")
+
+	metricsBatch := eventReport.GetMetricsBatch()
+	if len(metricsBatch) > 0 {
+		collector := metric.GetMetricCollector()
+		for _, metricDetail := range metricsBatch {
+			switch metric := metricDetail.(type) {
+			case metric.Detail:
+				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name)
+				if collector != nil {
+					collector.AddMetricDetail(metric)
+					logger.Trace("detail added")
+				}
+			case metric.MetricDetail:
+				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name)
+				if collector != nil {
+					collector.AddAPIMetricDetail(metric)
+					logger.Trace("api metric detail added")
+				}
+			default:
+				logger.Debug("unknown metric type")
+			}
+		}
+	}
+
+	return nil
 }
 
 func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {

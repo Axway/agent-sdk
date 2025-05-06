@@ -1,8 +1,6 @@
 module github.com/Axway/agent-sdk
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.23.3
 
 require (
 	github.com/elastic/beats/v7 v7.17.23
@@ -84,7 +82,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/spf13/afero v1.8.2 // indirect
+	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	go.elastic.co/apm v1.15.0 // indirect

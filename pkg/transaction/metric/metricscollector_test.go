@@ -480,7 +480,6 @@ func TestMetricCollector(t *testing.T) {
 				traceStatus = test.hcStatus
 			}
 			runTestHealthcheck()
-			myCollector.InitializeBatch()
 			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)

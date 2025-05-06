@@ -2,14 +2,17 @@ package transaction
 
 import (
 	"errors"
+	"sync"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 type EventReport interface {
 	GetSummaryEvent() LogEvent
 	GetDetailEvents() []LogEvent
+	GetMetricsBatch() []interface{}
 	GetEventTime() time.Time
 	GetMetadata() common.MapStr
 	GetFields() common.MapStr
@@ -18,23 +21,31 @@ type EventReport interface {
 	ShouldHandleSampling() bool
 	ShouldTrackMetrics() bool
 	ShouldOnlyTrackMetrics() bool
+	AddMetricDetail(metricDetail interface{})
 }
 
 type eventReport struct {
-	summaryEvent LogEvent
-	detailEvents []LogEvent
-	eventTime    time.Time
-	metadata     common.MapStr
-	fields       common.MapStr
-	privateData  interface{}
-	skipSampling bool
-	forceSample  bool
-	skipTracking bool
-	trackOnly    bool
+	summaryEvent     *LogEvent
+	proxy            *Proxy
+	app              *Application
+	detailEvents     []LogEvent
+	metricsBatch     []interface{}
+	metricsBatchLock sync.Mutex
+	eventTime        time.Time
+	metadata         common.MapStr
+	fields           common.MapStr
+	privateData      interface{}
+	skipSampling     bool
+	forceSample      bool
+	skipTracking     bool
+	trackOnly        bool
 }
 
 func (e *eventReport) GetSummaryEvent() LogEvent {
-	return e.summaryEvent
+	if e.summaryEvent == nil {
+		return LogEvent{}
+	}
+	return *e.summaryEvent
 }
 
 func (e *eventReport) GetDetailEvents() []LogEvent {
@@ -42,6 +53,23 @@ func (e *eventReport) GetDetailEvents() []LogEvent {
 		e.detailEvents = []LogEvent{}
 	}
 	return e.detailEvents
+}
+
+func (e *eventReport) GetMetricsBatch() []interface{} {
+	e.metricsBatchLock.Lock()
+	defer e.metricsBatchLock.Unlock()
+
+	// reset metrics batch
+	metricsBatch := e.metricsBatch
+	e.metricsBatch = make([]interface{}, 0)
+
+	return metricsBatch
+}
+
+func (e *eventReport) AddMetricDetail(metricDetail interface{}) {
+	e.metricsBatchLock.Lock()
+	defer e.metricsBatchLock.Unlock()
+	e.metricsBatch = append(e.metricsBatch, metricDetail)
 }
 
 func (e *eventReport) GetEventTime() time.Time {
@@ -98,17 +126,28 @@ type EventReportBuilder interface {
 
 func NewEventReportBuilder() EventReportBuilder {
 	return &eventReport{
-		summaryEvent: LogEvent{},
-		detailEvents: []LogEvent{},
-		eventTime:    time.Now(),
-		metadata:     common.MapStr{},
-		fields:       common.MapStr{},
-		privateData:  nil,
+		detailEvents:     []LogEvent{},
+		metricsBatch:     make([]interface{}, 0),
+		metricsBatchLock: sync.Mutex{},
+		eventTime:        time.Now(),
+		metadata:         common.MapStr{},
+		fields:           common.MapStr{},
+		privateData:      nil,
 	}
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
-	e.summaryEvent = summaryEvent
+	e.summaryEvent = &summaryEvent
+	return e
+}
+
+func (e *eventReport) SetProxy(proxy Proxy) EventReportBuilder {
+	e.proxy = &proxy
+	return e
+}
+
+func (e *eventReport) SetApplication(app Application) EventReportBuilder {
+	e.app = &app
 	return e
 }
 
@@ -161,5 +200,28 @@ func (e *eventReport) Build() (EventReport, error) {
 	if e.skipTracking && e.trackOnly {
 		return nil, errors.New("can't set skip tracking and track only in a single event")
 	}
+
+	// if only metrics are reported, no need to check for summary
+	if e.trackOnly {
+		return e, nil
+	}
+
+	if e.summaryEvent == nil && (e.proxy == nil || e.app == nil) {
+		return nil, errors.New("need api and app info to create summary event")
+	}
+
+	// create summary event
+	if e.summaryEvent == nil && e.proxy != nil && e.app != nil {
+		e.summaryEvent = &LogEvent{
+			TransactionSummary: &Summary{
+				Proxy: e.proxy,
+				Team: &Team{
+					ID: agent.GetCentralConfig().GetTeamID(),
+				},
+				Application: e.app,
+			},
+		}
+	}
+
 	return e, nil
 }
