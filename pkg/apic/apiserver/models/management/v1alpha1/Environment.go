@@ -27,12 +27,13 @@ var (
 )
 
 const (
-	EnvironmentResourceName                   = "environments"
-	EnvironmentCompliancetasksSubResourceName = "compliancetasks"
-	EnvironmentPoliciesSubResourceName        = "policies"
-	EnvironmentReferencesSubResourceName      = "references"
-	EnvironmentStagesSubResourceName          = "stages"
-	EnvironmentTraceableSubResourceName       = "traceable"
+	EnvironmentResourceName                           = "environments"
+	EnvironmentComplianceruntimeresultSubResourceName = "complianceruntimeresult"
+	EnvironmentCompliancetasksSubResourceName         = "compliancetasks"
+	EnvironmentPoliciesSubResourceName                = "policies"
+	EnvironmentReferencesSubResourceName              = "references"
+	EnvironmentStagesSubResourceName                  = "stages"
+	EnvironmentTraceableSubResourceName               = "traceable"
 )
 
 func EnvironmentGVK() apiv1.GroupVersionKind {
@@ -47,15 +48,16 @@ func init() {
 // Environment Resource
 type Environment struct {
 	apiv1.ResourceMeta
-	Compliancetasks EnvironmentCompliancetasks `json:"compliancetasks"`
-	Owner           *apiv1.Owner               `json:"owner"`
-	Policies        EnvironmentPolicies        `json:"policies"`
-	References      EnvironmentReferences      `json:"references"`
-	Spec            EnvironmentSpec            `json:"spec"`
-	Stages          EnvironmentStages          `json:"stages"`
+	Complianceruntimeresult interface{}                `json:"complianceruntimeresult"`
+	Compliancetasks         EnvironmentCompliancetasks `json:"compliancetasks"`
+	Owner                   *apiv1.Owner               `json:"owner"`
+	Policies                EnvironmentPolicies        `json:"policies"`
+	References              EnvironmentReferences      `json:"references"`
+	Spec                    EnvironmentSpec            `json:"spec"`
+	Stages                  EnvironmentStages          `json:"stages"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Traceable       EnvironmentTraceable       `json:"traceable"`
+	//	Traceable               EnvironmentTraceable       `json:"traceable"`
 	Traceable *EnvironmentTraceable `json:"traceable,omitempty"`
 }
 
@@ -139,6 +141,7 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["compliancetasks"] = res.Compliancetasks
 	out["owner"] = res.Owner
 	out["policies"] = res.Policies
@@ -173,6 +176,20 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Complianceruntimeresult
+	if v, ok := aux.SubResources["complianceruntimeresult"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "complianceruntimeresult")
+		err = json.Unmarshal(sr, &res.Complianceruntimeresult)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Compliancetasks
