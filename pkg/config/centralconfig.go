@@ -420,6 +420,14 @@ func (c *CentralConfiguration) GetTraceabilityProtocol() string {
 	if c.isRegionSet {
 		return c.RegionSettings.TraceabilityProtocol
 	}
+	if c.SingleURL != "" {
+		// Using single URL and not region, find the expected protocol
+		for _, region := range regionalSettingsMap {
+			if region.SingleURL == c.SingleURL {
+				return region.TraceabilityProtocol
+			}
+		}
+	}
 	return ""
 }
 
