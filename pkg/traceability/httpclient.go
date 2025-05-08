@@ -232,7 +232,7 @@ func (conn *Connection) execRequest(url string, body io.Reader, headers map[stri
 		}
 	}
 
-	err := conn.addHeaders(headers, eventTime)
+	err := conn.addHeaders(headers, body != nil, eventTime)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -247,7 +247,7 @@ func (conn *Connection) execRequest(url string, body io.Reader, headers map[stri
 	return conn.execHTTPRequest(req)
 }
 
-func (conn *Connection) addHeaders(headers map[string]string, eventTime time.Time) error {
+func (conn *Connection) addHeaders(headers map[string]string, hasBody bool, eventTime time.Time) error {
 	token, err := agent.GetCentralAuthToken()
 	if err != nil {
 		return err
@@ -257,6 +257,10 @@ func (conn *Connection) addHeaders(headers map[string]string, eventTime time.Tim
 	headers["Capture-Org-ID"] = agent.GetCentralConfig().GetTenantID()
 	headers["User-Agent"] = conn.userAgent
 	headers["Timestamp"] = strconv.FormatInt(eventTime.UTC().Unix(), 10)
+
+	if hasBody {
+		conn.encoder.AddHeader(headers)
+	}
 
 	return nil
 }

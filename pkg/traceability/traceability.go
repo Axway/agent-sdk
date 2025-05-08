@@ -256,6 +256,9 @@ func validateProtocolPort() {
 	}
 
 	// Validate that the port matches the
+	if len(traceCfg.Hosts) == 0 {
+		return
+	}
 	h, p := splitHostPort()
 	if p == tcpPort && IsHTTPTransport() {
 		traceCfg.Hosts[0] = fmt.Sprintf("%s:%s", h, defaultPort)
@@ -481,6 +484,9 @@ func registerHealthCheckers(config *Config) error {
 
 func splitHostPort() (string, string) {
 	// Split the host and port from the URL
+	if len(traceCfg.Hosts) == 0 {
+		return "", fmt.Sprint(defaultPort)
+	}
 	host, port, err := net.SplitHostPort(traceCfg.Hosts[0])
 	if err != nil {
 		return "", fmt.Sprint(defaultPort)

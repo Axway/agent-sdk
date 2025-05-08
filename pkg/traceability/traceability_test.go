@@ -197,6 +197,7 @@ func TestCreateLogstashClient(t *testing.T) {
 	assert.Nil(t, group.Clients)
 	assert.False(t, logstashClientCreateCalled)
 	testConfig := DefaultConfig()
+	testConfig.Protocol = "tcp"
 
 	group, err = createTransport(testConfig)
 	assert.NotNil(t, err)
@@ -231,7 +232,7 @@ func TestCreateLogstashClient(t *testing.T) {
 
 func TestCreateLogstashClientWithSingleEntry(t *testing.T) {
 	cfg := createCentralCfg("http://localhost:8888", "v7")
-	cfg.SingleURL = "http://localhost:9999"
+	cfg.SingleURL = "https://ingestion.platform.axway.com"
 	agent.Initialize(cfg)
 	logstashClientCreateCalled = false
 
@@ -274,7 +275,6 @@ func TestCreateHTTPClient(t *testing.T) {
 	agent.Initialize(cfg)
 
 	testConfig := DefaultConfig()
-	testConfig.Protocol = "http"
 
 	testConfig.Hosts = []string{
 		"somehost:invalidport",
