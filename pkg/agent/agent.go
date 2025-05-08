@@ -152,11 +152,14 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	singleEntryFilter := []string{
-		// Traceability host URL will be added by the traceability factory
 		centralCfg.GetURL(),
 		centralCfg.GetPlatformURL(),
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
+	}
+	if centralCfg.GetTraceabilityProtocol() == "https" {
+		// add the traceability host to the single entry filter for https only
+		singleEntryFilter = append(singleEntryFilter, fmt.Sprintf("https://%s", centralCfg.GetTraceabilityHost()))
 	}
 	api.SetConfigAgent(
 		GetUserAgent(),
