@@ -189,36 +189,36 @@ func makeTraceabilityAgent(
 	var transportGroup outputs.Group
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 
-	// For Single entry point register dialer factory for sni scheme and set the
-	// proxy url with sni scheme. When libbeat will register its dialer and sees
-	// proxy url with sni scheme, it will invoke the factory to construct the dialer
-	// The dialer will be invoked as proxy dialer in the libbeat dialer chain
-	// (proxy dialer, stat dialer, tls dialer).
-	if isSingleEntry {
-		// Register dialer factory with sni scheme for single entry point
-		proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
-		// If real proxy configured(not the sni proxy set here), validate the scheme
-		// since libbeats proxy dialer will not be invoked.
-		if traceCfg.Proxy.URL != "" {
-			proxCfg := &transport.ProxyConfig{
-				URL:          traceCfg.Proxy.URL,
-				LocalResolve: traceCfg.Proxy.LocalResolve,
-			}
-			err := proxCfg.Validate()
-			if err != nil {
-				logger.WithError(err).Error("validating proxy config")
-				outputs.Fail(err)
-			}
-		}
-		// Replace the proxy URL to sni by setting the environment variable
-		// Libbeat parses the yaml file and replaces the value from yaml
-		// with overridden environment variable.
-		// Set the sni host to the ingestion service host to allow the
-		// single entry dialer to receive the target address
-		os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
-	}
-
 	if IsTCPTransport() {
+		// For Single entry point register dialer factory for sni scheme and set the
+		// proxy url with sni scheme. When libbeat will register its dialer and sees
+		// proxy url with sni scheme, it will invoke the factory to construct the dialer
+		// The dialer will be invoked as proxy dialer in the libbeat dialer chain
+		// (proxy dialer, stat dialer, tls dialer).
+		if isSingleEntry {
+			// Register dialer factory with sni scheme for single entry point
+			proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
+			// If real proxy configured(not the sni proxy set here), validate the scheme
+			// since libbeats proxy dialer will not be invoked.
+			if traceCfg.Proxy.URL != "" {
+				proxCfg := &transport.ProxyConfig{
+					URL:          traceCfg.Proxy.URL,
+					LocalResolve: traceCfg.Proxy.LocalResolve,
+				}
+				err := proxCfg.Validate()
+				if err != nil {
+					logger.WithError(err).Error("validating proxy config")
+					outputs.Fail(err)
+				}
+			}
+			// Replace the proxy URL to sni by setting the environment variable
+			// Libbeat parses the yaml file and replaces the value from yaml
+			// with overridden environment variable.
+			// Set the sni host to the ingestion service host to allow the
+			// single entry dialer to receive the target address
+			os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
+		}
+
 		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg)
 	} else {
 		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts, agent.GetUserAgent(), isSingleEntry)
