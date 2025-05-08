@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	log "github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -238,7 +238,7 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 		NextProtos:         c.NextProtos,
 	}
 	if c.RootCertificatePath != "" {
-		caCert, err := ioutil.ReadFile(c.RootCertificatePath)
+		caCert, err := os.ReadFile(c.RootCertificatePath)
 		if err == nil { // config validated in ValidateCfg
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(caCert)
@@ -353,7 +353,7 @@ func (c *TLSConfiguration) validateConfig() {
 		exception.Throw(errors.New("ssl.cipherSuites not valid in config"))
 	}
 	if c.RootCertificatePath != "" {
-		_, err := ioutil.ReadFile(c.RootCertificatePath)
+		_, err := os.ReadFile(c.RootCertificatePath)
 		if err != nil {
 			exception.Throw(errors.New("ssl.rootCertificatePath not valid in config"))
 		}
