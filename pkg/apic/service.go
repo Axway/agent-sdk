@@ -89,7 +89,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 		}
 	}
 	ri, _ := apiSvc.AsInstance()
-	c.caches.AddAPIService(ri)
+	err = c.caches.AddAPIService(ri)
 	if err != nil {
 		logger.WithError(err).Error("adding service to cache")
 	}
