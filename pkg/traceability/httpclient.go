@@ -39,6 +39,7 @@ type HTTPClient struct {
 	headers          map[string]string
 	beatInfo         beat.Info
 	logger           log.FieldLogger
+	timeout          time.Duration
 }
 
 // HTTPClientSettings struct
@@ -61,7 +62,6 @@ type HTTPClientSettings struct {
 type Connection struct {
 	sync.Mutex
 	URL       string
-	http      *http.Client
 	api       api.Client
 	connected bool
 	encoder   bodyEncoder
@@ -106,6 +106,7 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		headers:          s.Headers,
 		beatInfo:         s.BeatInfo,
 		logger:           logger,
+		timeout:          s.Timeout,
 	}
 
 	return client, nil
@@ -147,7 +148,7 @@ func (client *HTTPClient) Clone() *HTTPClient {
 			URL:              client.URL,
 			Proxy:            client.proxyURL,
 			TLS:              client.tlsConfig,
-			Timeout:          client.http.Timeout,
+			Timeout:          client.timeout,
 			CompressionLevel: client.compressionLevel,
 			Headers:          client.headers,
 		},
