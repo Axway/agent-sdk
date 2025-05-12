@@ -27,12 +27,14 @@ var (
 )
 
 const (
-	APIServiceInstanceResourceName              = "apiserviceinstances"
-	ApiServiceInstanceComplianceSubResourceName = "compliance"
-	ApiServiceInstanceLifecycleSubResourceName  = "lifecycle"
-	ApiServiceInstanceReferencesSubResourceName = "references"
-	ApiServiceInstanceSourceSubResourceName     = "source"
-	ApiServiceInstanceTraceableSubResourceName  = "traceable"
+	APIServiceInstanceResourceName                 = "apiserviceinstances"
+	ApiServiceInstanceComplianceSubResourceName    = "compliance"
+	ApiServiceInstanceLifecycleSubResourceName     = "lifecycle"
+	ApiServiceInstanceReferencesSubResourceName    = "references"
+	ApiServiceInstanceSamplestateSubResourceName   = "samplestate"
+	ApiServiceInstanceSampletriggerSubResourceName = "sampletrigger"
+	ApiServiceInstanceSourceSubResourceName        = "source"
+	ApiServiceInstanceTraceableSubResourceName     = "traceable"
 )
 
 func APIServiceInstanceGVK() apiv1.GroupVersionKind {
@@ -49,17 +51,19 @@ type APIServiceInstance struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance ApiServiceInstanceCompliance `json:"compliance"`
+	//	Compliance    ApiServiceInstanceCompliance    `json:"compliance"`
 	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Lifecycle  ApiServiceInstanceLifecycle   `json:"lifecycle"`
-	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
-	Owner      *apiv1.Owner                 `json:"owner"`
-	References ApiServiceInstanceReferences `json:"references"`
+	//	Lifecycle     ApiServiceInstanceLifecycle     `json:"lifecycle"`
+	Lifecycle     *ApiServiceInstanceLifecycle    `json:"lifecycle,omitempty"`
+	Owner         *apiv1.Owner                    `json:"owner"`
+	References    ApiServiceInstanceReferences    `json:"references"`
+	Samplestate   ApiServiceInstanceSamplestate   `json:"samplestate"`
+	Sampletrigger ApiServiceInstanceSampletrigger `json:"sampletrigger"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source     ApiServiceInstanceSource     `json:"source"`
+	//	Source        ApiServiceInstanceSource        `json:"source"`
 	Source *ApiServiceInstanceSource `json:"source,omitempty"`
 	Spec   ApiServiceInstanceSpec    `json:"spec"`
 	// GENERATE: The following code has been modified after code generation
@@ -158,6 +162,8 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 	out["lifecycle"] = res.Lifecycle
 	out["owner"] = res.Owner
 	out["references"] = res.References
+	out["samplestate"] = res.Samplestate
+	out["sampletrigger"] = res.Sampletrigger
 	out["source"] = res.Source
 	out["spec"] = res.Spec
 	out["traceable"] = res.Traceable
@@ -227,6 +233,34 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Samplestate
+	if v, ok := aux.SubResources["samplestate"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "samplestate")
+		err = json.Unmarshal(sr, &res.Samplestate)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Sampletrigger
+	if v, ok := aux.SubResources["sampletrigger"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "sampletrigger")
+		err = json.Unmarshal(sr, &res.Sampletrigger)
 		if err != nil {
 			return err
 		}
