@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -68,9 +70,23 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 
 // processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
+	revisions := make([]*management.APIServiceRevision, 0)
+	tagsUpdated := false
+
 	if serviceBody.serviceContext.serviceAction == updateAPI {
 		// get the count of revisions
-		serviceBody.serviceContext.revisionCount = c.getRevisionCount("metadata.references.id==" + serviceBody.serviceContext.serviceID)
+		queriedRevisions, count, err := c.getRevisions(("metadata.references.id==" + serviceBody.serviceContext.serviceID))
+		if err != nil {
+			return err
+		}
+		revisions = queriedRevisions
+		serviceBody.serviceContext.revisionCount = count
+
+		if len(revisions) > 0 {
+			// get the latest revision
+			latestRevision := revisions[len(revisions)-1]
+			tagsUpdated = c.shouldUpdateTags(serviceBody.Tags, latestRevision.GetTags())
+		}
 	}
 
 	// check if a revision with the same hash was already published
@@ -78,9 +94,16 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		name := revName.(string)
 
 		// check that the revision still exists
-		if c.getRevisionCount("name=="+name) == 1 {
-			serviceBody.serviceContext.revisionName = name
-			return nil
+		for _, revision := range revisions {
+			if revision.Name == name {
+				// revision exists, but check if tags have been updated. If tags aren't updated, return.  If tags are updated, update the revision
+				if !tagsUpdated {
+					serviceBody.serviceContext.revisionName = name
+					return nil
+				}
+				// name found but tags still need to be updated. So break out and update revision
+				break
+			}
 		}
 	}
 
@@ -101,25 +124,35 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	return nil
 }
 
-func (c *ServiceClient) getRevisionCount(queryString string) int {
+// verify last revision tags against the servicebody tags that are coming in to see if they are equal or not
+func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{}, revisionTags []string) bool {
+	// Extract values from map and convert to []string
+	var mapValues []string
+	for _, v := range serviceBodyTags {
+		if strVal, ok := v.(string); ok {
+			mapValues = append(mapValues, strVal)
+		}
+	}
+
+	// Sort both slices to allow unordered comparison
+	sort.Strings(mapValues)
+	sort.Strings(revisionTags)
+
+	// Compare
+	equal := reflect.DeepEqual(mapValues, revisionTags)
+	return !equal
+}
+
+func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServiceRevision, int, error) {
 	queryParams := map[string]string{
 		"query":    queryString,
-		"fields":   "id",
+		"fields":   "metadata.id,name,tags",
 		"page":     "1",
-		"pageSize": "1",
+		"pageSize": "100", // get more than one
 	}
-	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
-	if err != nil {
-		return 0
-	}
-	if _, found := res.Headers["X-Axway-Total-Count"]; !found {
-		return 0
-	}
-	count, err := strconv.Atoi(res.Headers["X-Axway-Total-Count"][0])
-	if err != nil {
-		return 0
-	}
-	return count
+
+	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), "")
+	return revisions, len(revisions), err
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
