@@ -24,6 +24,8 @@ type TraceabilityAgentAgentstateSampling struct {
 	EndTime time.Time `json:"endTime,omitempty"`
 	// The upper limit of transactions, in a 1 minute period, the agent may sample
 	Limit int32 `json:"limit,omitempty"`
-	// The time after which the sampling can be triggered again
+	// The time after which the sampling can be triggered again for this TraceabilityAgent
 	DisabledUntil time.Time `json:"disabledUntil,omitempty"`
+	// The endpoints that the agent will sample
+	Endpoints []TraceabilityAgentAgentstateSamplingEndpoints `json:"endpoints,omitempty"`
 }
