@@ -88,7 +88,7 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		CentralURL:           "https://engage.eu-fr.axway.com",
 		AuthURL:              "https://login.eu-fr.axway.com/auth",
 		PlatformURL:          "https://platform.eu-fr.axway.com",
-		TraceabilityHost:     "ingestion.visibility.eu-fr.axway.com:443",
+		TraceabilityHost:     "phoenix.eu-fr.axway.com:443",
 		TraceabilityProtocol: "https",
 		Deployment:           "prod-eu2",
 	},
