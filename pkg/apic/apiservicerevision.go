@@ -91,12 +91,12 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 		for _, apiServiceRevision := range apiServiceRevisions {
 			if apiServiceRevision.Name == name {
-				// check to see if the tags have changed from the latest version
+				// check to see if the tags have changed from the latest
 				if !c.shouldUpdateTags(serviceBody.Tags, apiServiceRevision.Tags) {
 					serviceBody.serviceContext.revisionName = name
 					return nil
 				}
-				break // tags have changed. Break out and update apiServiceRevision with the latest tags
+				break // tags have changed. Break and update apiServiceRevision with the latest tags
 			}
 		}
 	}
