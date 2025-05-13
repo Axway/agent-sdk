@@ -70,44 +70,37 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 
 // processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
-	revisions := make([]*management.APIServiceRevision, 0)
-	tagsUpdated := false
+	logProcess := "Creating"
 
+	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		// get the count of revisions
-		queriedRevisions, count, err := c.getRevisions(("metadata.references.id==" + serviceBody.serviceContext.serviceID))
+		logProcess = "Updating"
+
+		// get current revisions
+		revisions, totalCount, err := c.getRevisions("metadata.references.id==" + serviceBody.serviceContext.serviceID)
 		if err != nil {
 			return err
 		}
-		revisions = queriedRevisions
-		serviceBody.serviceContext.revisionCount = count
-
-		if len(revisions) > 0 {
-			// get the latest revision
-			latestRevision := revisions[len(revisions)-1]
-			tagsUpdated = c.shouldUpdateTags(serviceBody.Tags, latestRevision.GetTags())
-		}
+		serviceBody.serviceContext.revisionCount = totalCount
+		apiServiceRevisions = revisions
 	}
 
 	// check if a revision with the same hash was already published
 	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
 		name := revName.(string)
 
-		// check that the revision still exists
-		for _, revision := range revisions {
-			if revision.Name == name {
-				// revision exists, but check if tags have been updated. If tags aren't updated, return.  If tags are updated, update the revision
-				if !tagsUpdated {
+		for _, apiServiceRevision := range apiServiceRevisions {
+			if apiServiceRevision.Name == name {
+				if !c.shouldUpdateTags(serviceBody.Tags, apiServiceRevision.Tags) {
 					serviceBody.serviceContext.revisionName = name
 					return nil
 				}
-				// name found but tags still need to be updated. So break out and update revision
-				break
+				break // tags have changed. Update apiServiceRevision with the latest tags
 			}
 		}
 	}
 
-	log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+	log.Infof("%s API Service revision for %v-%v in environment %v", logProcess, serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
 	rev, err := c.CreateOrUpdateResource(c.buildAPIServiceRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
@@ -122,6 +115,27 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.revisionName = rev.Name
 
 	return nil
+}
+
+func (c *ServiceClient) getRevisionCount(queryString string) int {
+	queryParams := map[string]string{
+		"query":    queryString,
+		"fields":   "id",
+		"page":     "1",
+		"pageSize": "1",
+	}
+	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
+	if err != nil {
+		return 0
+	}
+	if _, found := res.Headers["X-Axway-Total-Count"]; !found {
+		return 0
+	}
+	count, err := strconv.Atoi(res.Headers["X-Axway-Total-Count"][0])
+	if err != nil {
+		return 0
+	}
+	return count
 }
 
 // verify last revision tags against the servicebody tags that are coming in to see if they are equal or not
@@ -144,15 +158,33 @@ func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{},
 }
 
 func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServiceRevision, int, error) {
+	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
+
 	queryParams := map[string]string{
 		"query":    queryString,
 		"fields":   "metadata.id,name,tags",
 		"page":     "1",
-		"pageSize": "100", // get more than one
+		"pageSize": "50",
+		"sort":     "metadata.audit.createTimestamp,DESC",
+	}
+	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
+	if err != nil {
+		return apiServiceRevisions, 0, err
+	}
+	var count int
+	if totalCount, found := res.Headers["X-Axway-Total-Count"]; found {
+		count, err = strconv.Atoi(totalCount[0])
+		if err != nil {
+			return apiServiceRevisions, 0, err
+		}
 	}
 
-	revisions, err := c.GetAPIServiceRevisions(queryParams, c.cfg.GetRevisionsURL(), "")
-	return revisions, len(revisions), err
+	err = json.Unmarshal(res.Body, &apiServiceRevisions)
+	if err != nil {
+		return nil, count, err
+	}
+
+	return apiServiceRevisions, count, nil
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
