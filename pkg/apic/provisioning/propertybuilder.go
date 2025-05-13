@@ -53,6 +53,7 @@ type propertyDefinition struct {
 	Widget             string                               `json:"x-axway-widget,omitempty"`
 	IsCopyable         bool                                 `json:"x-axway-copyable,omitempty"`
 	UniqueItems        bool                                 `json:"uniqueItems,omitempty"`
+	XCustomField       interface{}                          `json:"x-custom-field"`
 	Name               string                               `json:"-"`
 	Required           bool                                 `json:"-"`
 }
