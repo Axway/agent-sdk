@@ -91,11 +91,12 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 
 		for _, apiServiceRevision := range apiServiceRevisions {
 			if apiServiceRevision.Name == name {
+				// check to see if the tags have changed from the latest version
 				if !c.shouldUpdateTags(serviceBody.Tags, apiServiceRevision.Tags) {
 					serviceBody.serviceContext.revisionName = name
 					return nil
 				}
-				break // tags have changed. Update apiServiceRevision with the latest tags
+				break // tags have changed. Break out and update apiServiceRevision with the latest tags
 			}
 		}
 	}
@@ -115,46 +116,6 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	serviceBody.serviceContext.revisionName = rev.Name
 
 	return nil
-}
-
-func (c *ServiceClient) getRevisionCount(queryString string) int {
-	queryParams := map[string]string{
-		"query":    queryString,
-		"fields":   "id",
-		"page":     "1",
-		"pageSize": "1",
-	}
-	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
-	if err != nil {
-		return 0
-	}
-	if _, found := res.Headers["X-Axway-Total-Count"]; !found {
-		return 0
-	}
-	count, err := strconv.Atoi(res.Headers["X-Axway-Total-Count"][0])
-	if err != nil {
-		return 0
-	}
-	return count
-}
-
-// verify last revision tags against the servicebody tags that are coming in to see if they are equal or not
-func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{}, revisionTags []string) bool {
-	// Extract values from map and convert to []string
-	var mapValues []string
-	for _, v := range serviceBodyTags {
-		if strVal, ok := v.(string); ok {
-			mapValues = append(mapValues, strVal)
-		}
-	}
-
-	// Sort both slices to allow unordered comparison
-	sort.Strings(mapValues)
-	sort.Strings(revisionTags)
-
-	// Compare
-	equal := reflect.DeepEqual(mapValues, revisionTags)
-	return !equal
 }
 
 func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServiceRevision, int, error) {
@@ -185,6 +146,25 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 	}
 
 	return apiServiceRevisions, count, nil
+}
+
+// verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not
+func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{}, revisionTags []string) bool {
+	// Extract values from map and convert to []string
+	var mapValues []string
+	for _, v := range serviceBodyTags {
+		if strVal, ok := v.(string); ok {
+			mapValues = append(mapValues, strVal)
+		}
+	}
+
+	// Sort both slices to allow unordered comparison
+	sort.Strings(mapValues)
+	sort.Strings(revisionTags)
+
+	// Compare
+	equal := reflect.DeepEqual(mapValues, revisionTags)
+	return !equal
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
