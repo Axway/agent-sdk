@@ -276,7 +276,17 @@ func (conn *Connection) execHTTPRequest(req api.Request) (int, []byte, error) {
 
 func (client *HTTPClient) makeHTTPEvent(v *beat.Event) json.RawMessage {
 	var eventData json.RawMessage
-	msg := v.Fields["message"].(string)
+	if v.Fields == nil {
+		return eventData
+	}
+	msgData, ok := v.Fields["message"]
+	if !ok {
+		return eventData
+	}
+	msg, ok := msgData.(string)
+	if !ok {
+		return eventData
+	}
 	json.Unmarshal([]byte(msg), &eventData)
 
 	return eventData

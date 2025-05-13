@@ -153,20 +153,6 @@ func makeTraceabilityAgent(
 		return outputs.Fail(err)
 	}
 
-	defer func() {
-		if err != nil {
-			// skip hc register if err hit making agent
-			return
-		}
-
-		if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
-			err := registerHealthCheckers(traceCfg)
-			if err != nil {
-				logger.WithError(err).Error("could not register healthcheck")
-			}
-		}
-	}()
-
 	validateProtocolPort()
 	logger = logger.WithField("config", traceCfg)
 
@@ -244,6 +230,15 @@ func makeTraceabilityAgent(
 		addClient(outputClient)
 	}
 	traceabilityGroup.Clients = clients
+
+	if !agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode() && util.IsNotTest() {
+		err := registerHealthCheckers(traceCfg)
+		if err != nil {
+			logger.WithError(err).Error("could not register healthcheck")
+			return outputs.Group{}, err
+		}
+	}
+
 	return traceabilityGroup, nil
 }
 
@@ -468,9 +463,15 @@ func updateEvent(batch publisher.Batch, events []publisher.Event) {
 }
 
 func registerHealthCheckers(config *Config) error {
-	hcJob := newTraceabilityHealthCheckJob()
+	hcJob := newTraceabilityHealthCheckJob(agent.GetCentralConfig().GetOrganizationID())
 
-	_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Health Check")
+	// execute healthcheck now to return error on startup, if any
+	err := hcJob.Execute()
+	if err != nil {
+		return err
+	}
+
+	_, err = jobs.RegisterIntervalJobWithName(hcJob, agent.GetCentralConfig().GetPollInterval(), "Traceability Health Check")
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -12,13 +13,15 @@ import (
 type traceabilityHealthCheck struct {
 	jobs.Job
 	logger  log.FieldLogger
+	orgID   string
 	ready   bool
 	prevErr error
 }
 
-func newTraceabilityHealthCheckJob() *traceabilityHealthCheck {
+func newTraceabilityHealthCheckJob(orgID string) *traceabilityHealthCheck {
 	return &traceabilityHealthCheck{
 		logger: log.NewFieldLogger().WithComponent("traceabilityHealthCheck").WithPackage(traceabilityStr),
+		orgID:  orgID,
 	}
 }
 
@@ -64,8 +67,22 @@ func (j *traceabilityHealthCheck) checkConnections() error {
 	j.prevErr = client.Connect()
 	if j.prevErr != nil {
 		j.logger.WithError(j.prevErr).Error("connection failed")
-	} else {
-		j.logger.Trace("connection to traceability succeeded")
+		return j.prevErr
 	}
-	return j.prevErr
+
+	// validate sending test event
+	testBatch := newPingBatch(c.orgID)
+	j.prevErr = client.Publish(context.Background(), testBatch)
+	if j.prevErr != nil {
+		j.logger.WithError(j.prevErr).Error("could not validate publishing")
+		return j.prevErr
+	}
+	if !testBatch.acked {
+		j.prevErr = fmt.Errorf("could not validate publishing")
+		j.logger.WithError(j.prevErr).Error("error publishing")
+		return j.prevErr
+	}
+
+	j.logger.Trace("connection to traceability succeeded")
+	return nil
 }
