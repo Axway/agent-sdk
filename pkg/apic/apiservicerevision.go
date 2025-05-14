@@ -90,14 +90,21 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
 		name := revName.(string)
 
+		// check to see if the tags have changed from the latest
 		for _, apiServiceRevision := range apiServiceRevisions {
 			if apiServiceRevision.Name == name {
-				// check to see if the tags have changed from the latest
-				if !c.shouldUpdateTags(serviceBody.Tags, apiServiceRevision.Tags) {
-					serviceBody.serviceContext.revisionName = name
-					return nil
+				updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
+				if len(updatedTags) > 0 {
+					updatedRevision := c.buildAPIServiceRevision(serviceBody)
+					updatedRevision.Name = apiServiceRevision.Name
+					updatedRevision.Metadata = apiServiceRevision.Metadata
+					_, err := c.UpdateResourceInstance(updatedRevision)
+					if err != nil {
+						return err
+					}
 				}
-				break // tags have changed. Break and update apiServiceRevision with the latest tags
+				serviceBody.serviceContext.revisionName = name
+				return nil
 			}
 		}
 	}
@@ -130,7 +137,7 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 
 	queryParams := map[string]string{
 		"query":    queryString,
-		"fields":   "name,tags",
+		"fields":   "metadata,name,tags",
 		"page":     "1",
 		"pageSize": "50",
 		"sort":     "metadata.audit.createTimestamp,DESC",
@@ -155,8 +162,9 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 	return apiServiceRevisions, count, nil
 }
 
-// verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not
-func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{}, revisionTags []string) bool {
+// verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not.  If they are not, return an empty[].  If they are
+// different, return the updated tags
+func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
 	// Extract values from map and convert to []string
 	var mapValues []string
 	for _, v := range serviceBodyTags {
@@ -170,8 +178,16 @@ func (c *ServiceClient) shouldUpdateTags(serviceBodyTags map[string]interface{},
 	sort.Strings(revisionTags)
 
 	// Compare
-	equal := reflect.DeepEqual(mapValues, revisionTags)
-	return !equal
+	if reflect.DeepEqual(mapValues, revisionTags) {
+		return []string{} // return empty string slice if equal
+	}
+
+	// If not equal, return the keys from serviceBodyTags
+	var keys []string
+	for k := range serviceBodyTags {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
