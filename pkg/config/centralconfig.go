@@ -84,7 +84,7 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		Deployment:           "prod-ap",
 	},
 	EU2: {
-		SingleURL:            "https://ingestion-eu-fr.platform.axway.com",
+		SingleURL:            "https://entry.eu-fr.axway.com",
 		CentralURL:           "https://engage.eu-fr.axway.com",
 		AuthURL:              "https://login.eu-fr.axway.com/auth",
 		PlatformURL:          "https://platform.eu-fr.axway.com",
