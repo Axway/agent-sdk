@@ -70,6 +70,7 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 
 // processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
+	log := c.logger
 	logProcess := "Creating"
 
 	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
@@ -101,7 +102,13 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		}
 	}
 
-	log.Infof("%s API Service revision for %v-%v in environment %v", logProcess, serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+	log.
+		WithField("action", logProcess).
+		WithField("service", serviceBody.APIName).
+		WithField("version", serviceBody.Version).
+		WithField("environment", c.cfg.GetEnvironmentName()).
+		Info("process revision")
+
 	rev, err := c.CreateOrUpdateResource(c.buildAPIServiceRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
@@ -123,7 +130,7 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 
 	queryParams := map[string]string{
 		"query":    queryString,
-		"fields":   "metadata.id,name,tags",
+		"fields":   "name,tags",
 		"page":     "1",
 		"pageSize": "50",
 		"sort":     "metadata.audit.createTimestamp,DESC",
