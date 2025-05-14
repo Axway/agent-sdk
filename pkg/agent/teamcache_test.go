@@ -15,14 +15,14 @@ import (
 )
 
 func TestTeamCache(t *testing.T) {
-	testCases := []struct {
-		name                 string
+	testCases := map[string]struct {
+		skip                 bool
 		teams                []*definitions.PlatformTeam
 		cached               []*definitions.PlatformTeam
 		expectedTeamsInCache int
 	}{
-		{
-			name:                 "Should save one team to the cache",
+		"Should save one team to the cache": {
+			skip:                 false,
 			expectedTeamsInCache: 1,
 			cached:               []*definitions.PlatformTeam{},
 			teams: []*definitions.PlatformTeam{
@@ -33,8 +33,8 @@ func TestTeamCache(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:                 "Should save two teams to the cache, and remove a team that was added",
+		"Should save two teams to the cache, and remove a team that was added": {
+			skip:                 false,
 			expectedTeamsInCache: 2,
 			cached: []*definitions.PlatformTeam{
 				{
@@ -56,8 +56,8 @@ func TestTeamCache(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:                 "Should save 4 teams in the cache",
+		"Should save 4 teams in the cache": {
+			skip:                 false,
 			expectedTeamsInCache: 4,
 			cached: []*definitions.PlatformTeam{
 				{
@@ -101,9 +101,11 @@ func TestTeamCache(t *testing.T) {
 		},
 	}
 
-	for _, test := range testCases {
-
-		t.Run(test.name, func(t *testing.T) {
+	for name, test := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if test.skip {
+				t.Skip("Skipping test")
+			}
 			s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				switch {
 				case strings.Contains(req.RequestURI, "/auth"):
