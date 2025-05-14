@@ -20,6 +20,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -97,7 +98,10 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 				if len(updatedTags) > 0 {
 					updatedRevision := c.buildAPIServiceRevision(serviceBody)
 					updatedRevision.Name = apiServiceRevision.Name
-					updatedRevision.Metadata = apiServiceRevision.Metadata
+					updatedRevision.Metadata.Scope = v1.MetadataScope{
+						Kind: management.EnvironmentGVK().Kind,
+						Name: c.cfg.GetEnvironmentName(),
+					}
 					_, err := c.UpdateResourceInstance(updatedRevision)
 					if err != nil {
 						return err
@@ -137,7 +141,7 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 
 	queryParams := map[string]string{
 		"query":    queryString,
-		"fields":   "metadata,name,tags",
+		"fields":   "name,tags",
 		"page":     "1",
 		"pageSize": "50",
 		"sort":     "metadata.audit.createTimestamp,DESC",
