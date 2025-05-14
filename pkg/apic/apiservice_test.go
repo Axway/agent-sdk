@@ -288,7 +288,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: "./testdata/apiservice.json", // for call to update the service subresource
+			FileName: "./testdata/servicerevisionlist.json", // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 		{
