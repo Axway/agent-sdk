@@ -95,7 +95,7 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 		return err
 	}
 
-	if !ta.Agentstate.Sampling.Enabled {
+	if ta.Agentstate.Sampling == nil || !ta.Agentstate.Sampling.Enabled {
 		return nil
 	}
 
