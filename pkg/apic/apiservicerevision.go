@@ -187,11 +187,8 @@ func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}
 	}
 
 	// If not equal, return the keys from serviceBodyTags
-	var keys []string
-	for k := range serviceBodyTags {
-		keys = append(keys, k)
-	}
-	return keys
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
+	return tags
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter
