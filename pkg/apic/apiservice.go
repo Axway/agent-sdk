@@ -151,7 +151,7 @@ func buildAPIServiceSourceSubResource(svc *management.APIService, serviceBody *S
 
 func buildAPIServiceStatusSubResource(status *apiv1.ResourceStatus, ownerErr error) *apiv1.ResourceStatus {
 	// only set status if ownerErr != nil
-	if ownerErr == nil {
+	if ownerErr == nil || status == nil {
 		return nil
 	}
 
