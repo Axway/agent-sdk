@@ -57,7 +57,6 @@ type Environment struct {
 	Stages                  EnvironmentStages          `json:"stages"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Traceable               EnvironmentTraceable       `json:"traceable"`
 	Traceable *EnvironmentTraceable `json:"traceable,omitempty"`
 }
 

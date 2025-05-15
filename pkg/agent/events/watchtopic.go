@@ -286,12 +286,14 @@ func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.Group
 		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: management.ComplianceRuntimeResultGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 	}
 
 	for _, env := range features.GetManagedEnvironments() {
 		kinds = append(kinds, []kindValues{
-			{GroupKind: management.EnvironmentGVK().GroupKind, Name: env, EventTypes: all},                                                          // watch environments
-			{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all}, // watch api service instances
+			{GroupKind: management.EnvironmentGVK().GroupKind, Name: env, EventTypes: all},                                                               // watch environments
+			{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all},      // watch api service instances
+			{GroupKind: management.ComplianceRuntimeResultGVK().GroupKind, ScopeKind: management.EnvironmentGVK().Kind, ScopeName: env, EventTypes: all}, // watch compliance runtime results
 		}...)
 	}
 

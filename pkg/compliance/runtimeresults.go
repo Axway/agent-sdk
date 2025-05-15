@@ -5,8 +5,8 @@ import (
 )
 
 type RuntimeResult struct {
-	APIServiceInstance string  `json:"apiServiceInstance"`
-	RiskScore          float64 `json:"riskScore"`
+	ComplianceRuntimeResult string  `json:"complianceRuntimeResult"`
+	RiskScore               float64 `json:"riskScore"`
 }
 
 type RuntimeResults interface {
@@ -22,5 +22,5 @@ func (r *runtimeResults) AddRuntimeResult(result RuntimeResult) {
 	if r.items == nil {
 		r.items = make(map[string]RuntimeResult)
 	}
-	r.items[result.APIServiceInstance] = result
+	r.items[result.ComplianceRuntimeResult] = result
 }
