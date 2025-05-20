@@ -12,16 +12,15 @@ import (
 type RegisterAccessRequestDefinition func(accessRequestDefinition *management.AccessRequestDefinition) (*management.AccessRequestDefinition, error)
 
 type accessRequestDef struct {
-	name                             string
-	title                            string
-	appProfDef                       string
-	provisionSchema                  map[string]interface{}
-	requestSchema                    map[string]interface{}
-	requestSchemaWihtoutCustomFields map[string]interface{}
-	provisionEqualsRequest           bool
-	transferable                     bool
-	registerFunc                     RegisterAccessRequestDefinition
-	err                              error
+	name                   string
+	title                  string
+	appProfDef             string
+	provisionSchema        map[string]interface{}
+	requestSchema          map[string]interface{}
+	provisionEqualsRequest bool
+	transferable           bool
+	registerFunc           RegisterAccessRequestDefinition
+	err                    error
 }
 
 // AccessRequestBuilder - aids in creating a new access request
@@ -68,7 +67,7 @@ func (a *accessRequestDef) SetRequestSchema(schema SchemaBuilder) AccessRequestB
 	}
 
 	if schema != nil {
-		a.requestSchema, a.requestSchemaWihtoutCustomFields, a.err = schema.Build()
+		a.requestSchema, a.err = schema.Build()
 	} else {
 		a.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -98,7 +97,7 @@ func (a *accessRequestDef) SetProvisionSchema(schema SchemaBuilder) AccessReques
 	}
 
 	if schema != nil {
-		a.provisionSchema, _, a.err = schema.Build()
+		a.provisionSchema, a.err = schema.Build()
 	} else {
 		a.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -119,14 +118,14 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 	}
 
 	if a.requestSchema == nil {
-		a.requestSchema, a.requestSchemaWihtoutCustomFields, _ = NewSchemaBuilder().Build()
+		a.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
 	if a.provisionSchema == nil {
 		if a.provisionEqualsRequest {
 			a.provisionSchema = util.MergeMapStringInterface(a.requestSchema)
 		} else {
-			a.provisionSchema, _, _ = NewSchemaBuilder().Build()
+			a.provisionSchema, _ = NewSchemaBuilder().Build()
 		}
 	}
 
@@ -135,7 +134,7 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 	}
 
 	spec := management.AccessRequestDefinitionSpec{
-		Schema: a.requestSchemaWihtoutCustomFields,
+		Schema: a.requestSchema,
 		Provision: &management.AccessRequestDefinitionSpecProvision{
 			Schema: a.provisionSchema,
 		},

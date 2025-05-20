@@ -2,7 +2,6 @@ package provisioning
 
 import (
 	"encoding/json"
-	"slices"
 	"sort"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -29,7 +28,7 @@ type SchemaBuilder interface {
 	AddProperty(property PropertyBuilder) SchemaBuilder
 	AddUniqueKey(keyName string) SchemaBuilder
 	// Build builds the json schema - this is called automatically by the resource builder
-	Build() (map[string]interface{}, map[string]interface{}, error)
+	Build() (map[string]interface{}, error)
 }
 
 // schemaBuilder - holds all the details needs to create a subscription schema
@@ -132,9 +131,9 @@ func (s *schemaBuilder) AddUniqueKey(keyName string) SchemaBuilder {
 }
 
 // Register - build and register the subscription schema
-func (s *schemaBuilder) Build() (map[string]interface{}, map[string]interface{}, error) {
+func (s *schemaBuilder) Build() (map[string]interface{}, error) {
 	if s.err != nil {
-		return nil, nil, s.err
+		return nil, s.err
 	}
 
 	// validate that the property added is in the property order set by the implementation
@@ -186,64 +185,15 @@ func (s *schemaBuilder) Build() (map[string]interface{}, map[string]interface{},
 
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	schemaMap := map[string]interface{}{}
 	err = json.Unmarshal(schemaBytes, &schemaMap)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	schemaWithoutCustomFields := s.createSchemaWithoutCustomFields()
-	schemaWithoutCustomFields.Required = required
-	schemaWithoutCustomFieldsBytes, err := json.Marshal(schemaWithoutCustomFields)
-	if err != nil {
-		return nil, nil, err
-	}
-	schemaWithoutCustomFieldsMap := map[string]interface{}{}
-	err = json.Unmarshal(schemaWithoutCustomFieldsBytes, &schemaWithoutCustomFieldsMap)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return schemaMap, schemaWithoutCustomFieldsMap, nil
-}
-
-func (s *schemaBuilder) createSchemaWithoutCustomFields() *jsonSchema {
-	schemaWithoutCustomFields := &jsonSchema{
-		SubscriptionName:  s.name,
-		SchemaType:        "object",
-		SchemaVersion:     s.schemaVersion,
-		SchemaDescription: s.description,
-		Dependencies:      s.dependencies,
-	}
-
-	properties := s.properties
-	propertyOrder := s.propertyOrder
-
-	keysToRemove := make(map[string]string, 0)
-	orderedKeys := make(map[string]int, 0)
-	for key, prop := range properties {
-		if prop.XCustomField != nil {
-			keysToRemove[key] = key
-		}
-	}
-
-	for index, propOrder := range propertyOrder {
-		if _, ok := keysToRemove[propOrder]; ok {
-			orderedKeys[propOrder] = index
-		}
-	}
-
-	for _, key := range keysToRemove {
-		delete(properties, key)
-		propertyOrder = slices.Delete(propertyOrder, orderedKeys[key], orderedKeys[key]+1)
-	}
-
-	schemaWithoutCustomFields.Properties = properties
-	schemaWithoutCustomFields.PropertyOrder = propertyOrder
-
-	return schemaWithoutCustomFields
+	return schemaMap, nil
 }
 
 func (s *schemaParser) Parse(schemaBytes []byte) (map[string]PropertyDefinition, error) {

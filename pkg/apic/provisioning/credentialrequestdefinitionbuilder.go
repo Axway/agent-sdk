@@ -12,19 +12,18 @@ import (
 type RegisterCredentialRequestDefinition func(credentialRequestDefinition *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error)
 
 type credentialRequestDef struct {
-	name                             string
-	title                            string
-	provisionSchema                  map[string]interface{}
-	requestSchema                    map[string]interface{}
-	requestSchemaWithoutCustomFields map[string]interface{}
-	webhooks                         []string
-	actions                          []string
-	registerFunc                     RegisterCredentialRequestDefinition
-	err                              error
-	agentDetails                     map[string]interface{}
-	renewable                        bool
-	suspendable                      bool
-	period                           int
+	name            string
+	title           string
+	provisionSchema map[string]interface{}
+	requestSchema   map[string]interface{}
+	webhooks        []string
+	actions         []string
+	registerFunc    RegisterCredentialRequestDefinition
+	err             error
+	agentDetails    map[string]interface{}
+	renewable       bool
+	suspendable     bool
+	period          int
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -78,7 +77,7 @@ func (c *credentialRequestDef) SetRequestSchema(schema SchemaBuilder) Credential
 	}
 
 	if schema != nil {
-		c.requestSchema, c.requestSchemaWithoutCustomFields, c.err = schema.Build()
+		c.requestSchema, c.err = schema.Build()
 	} else {
 		c.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -93,7 +92,7 @@ func (c *credentialRequestDef) SetProvisionSchema(schema SchemaBuilder) Credenti
 	}
 
 	if schema != nil {
-		c.provisionSchema, _, c.err = schema.Build()
+		c.provisionSchema, c.err = schema.Build()
 	} else {
 		c.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -146,11 +145,11 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	}
 
 	if c.requestSchema == nil {
-		c.requestSchema, c.requestSchemaWithoutCustomFields, _ = NewSchemaBuilder().Build()
+		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
 	spec := management.CredentialRequestDefinitionSpec{
-		Schema: c.requestSchemaWithoutCustomFields,
+		Schema: c.requestSchema,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
 			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{

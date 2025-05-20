@@ -26,7 +26,7 @@ func TestNewSchemaBuilder(t *testing.T) {
 }
 
 func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
-	_, _, err := NewSchemaBuilder().
+	_, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		AddProperty(NewSchemaPropertyBuilder().
@@ -39,7 +39,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	_, _, err = NewSchemaBuilder().
+	_, err = NewSchemaBuilder().
 		SetName("name1").
 		SetDescription("description1").
 		AddUniqueKey("key").
@@ -55,7 +55,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// set property order - property order takes precedence
-	schemaMap1, _, err := NewSchemaBuilder().
+	schemaMap1, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		SetPropertyOrder([]string{"name3", "name2", "name1"}).
@@ -90,7 +90,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	assert.Equal(t, propertyOrder[2].(string), "name1")
 
 	// do no set property order.  property order appended as each property is added
-	schemaMap2, _, err := NewSchemaBuilder().
+	schemaMap2, err := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		AddProperty(NewSchemaPropertyBuilder().
@@ -123,7 +123,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 	assert.Contains(t, schemaMap2[axwayOrder], "name1")
 
 	// set property order, however, no properties were added to match any properties in property order
-	schemaMap3, _, _ := NewSchemaBuilder().
+	schemaMap3, _ := NewSchemaBuilder().
 		SetName("name").
 		AddUniqueKey("key").
 		SetPropertyOrder([]string{"name3", "name2", "name1"}).
@@ -147,7 +147,7 @@ func TestSubscriptionSchemaBuilderSetters(t *testing.T) {
 
 func TestSchemaBuilderWithDependenciesProperties(t *testing.T) {
 	// set dependent property - dependent property definition error
-	_, _, err := NewSchemaBuilder().
+	_, err := NewSchemaBuilder().
 		SetName("sch").
 		AddProperty(NewSchemaPropertyBuilder().
 			SetName("dep").
@@ -160,7 +160,7 @@ func TestSchemaBuilderWithDependenciesProperties(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// set dependent property - good path
-	s, _, err := NewSchemaBuilder().
+	s, err := NewSchemaBuilder().
 		SetName("sch").
 		AddProperty(NewSchemaPropertyBuilder().
 			SetName("prop").

@@ -12,12 +12,11 @@ import (
 type RegisterApplicationProfileDefinition func(applicationProfileDefinition *management.ApplicationProfileDefinition) (*management.ApplicationProfileDefinition, error)
 
 type applicationProfileDef struct {
-	name                             string
-	title                            string
-	requestSchema                    map[string]interface{}
-	requestSchemaWihtoutCustomFields map[string]interface{}
-	registerFunc                     RegisterApplicationProfileDefinition
-	err                              error
+	name          string
+	title         string
+	requestSchema map[string]interface{}
+	registerFunc  RegisterApplicationProfileDefinition
+	err           error
 }
 
 // ApplicationProfileBuilder - aids in creating a new access request
@@ -54,7 +53,7 @@ func (a *applicationProfileDef) SetRequestSchema(schema SchemaBuilder) Applicati
 	}
 
 	if schema != nil {
-		a.requestSchema, a.requestSchemaWihtoutCustomFields, a.err = schema.Build()
+		a.requestSchema, a.err = schema.Build()
 	} else {
 		a.err = fmt.Errorf("expected a SchemaBuilder argument but received nil")
 	}
@@ -69,7 +68,7 @@ func (a *applicationProfileDef) Register() (*management.ApplicationProfileDefini
 	}
 
 	if a.requestSchema == nil {
-		a.requestSchema, a.requestSchemaWihtoutCustomFields, _ = NewSchemaBuilder().Build()
+		a.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
 	if a.title == "" {
@@ -77,7 +76,7 @@ func (a *applicationProfileDef) Register() (*management.ApplicationProfileDefini
 	}
 
 	spec := management.ApplicationProfileDefinitionSpec{
-		Schema: a.requestSchemaWihtoutCustomFields,
+		Schema: a.requestSchema,
 	}
 
 	hashInt, _ := util.ComputeHash(spec)
