@@ -22,6 +22,6 @@ type ApiSpecLintingJobState struct {
 	Name string `json:"name"`
 	// Details of the state.
 	Message string `json:"message,omitempty"`
-	// Time when the update occurred.
+	// Time when the update occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`
 }

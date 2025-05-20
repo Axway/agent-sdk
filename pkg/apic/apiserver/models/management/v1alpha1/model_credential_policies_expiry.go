@@ -18,6 +18,6 @@ import (
 
 // CredentialPoliciesExpiry  (management.v1alpha1.Credential)
 type CredentialPoliciesExpiry struct {
-	// Time when the Credential is set to be expired.
+	// Time when the Credential is set to be expired in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp"`
 }

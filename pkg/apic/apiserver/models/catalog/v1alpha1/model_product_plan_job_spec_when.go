@@ -18,6 +18,6 @@ import (
 
 // ProductPlanJobSpecWhen Describes when to execute the action. (catalog.v1alpha1.ProductPlanJob)
 type ProductPlanJobSpecWhen struct {
-	// Time when the migration should execute.
+	// Time when the migration should execute in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`
 }

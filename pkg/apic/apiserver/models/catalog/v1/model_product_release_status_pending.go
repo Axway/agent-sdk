@@ -19,7 +19,7 @@ import (
 // ProductReleaseStatusPending struct for ProductReleaseStatusPending
 type ProductReleaseStatusPending struct {
 	Type string `json:"type"`
-	// Time when the change occured.
+	// Time when the change occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp"`
 	// Reason for being in Pending.
 	Detail string                          `json:"detail"`
