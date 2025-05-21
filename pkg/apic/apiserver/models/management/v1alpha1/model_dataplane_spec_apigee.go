@@ -13,7 +13,7 @@ package management
 type DataplaneSpecApigee struct {
 	Type string `json:"type"`
 	// The service endpoint is a base URL that specifies the network address of an API service
-	ServiceEndpoint string `json:"serviceEndpoint"`
+	ServiceEndpointLocation string `json:"serviceEndpointLocation"`
 	// The Project ID on GCP that Apigee is configured in
 	ProjectId string `json:"projectId"`
 	// The Developer that will own all Apigee Applications created by the agent
