@@ -2,8 +2,10 @@ package compliance
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -48,32 +50,43 @@ func (j *runtimeComplianceJob) Execute() error {
 func (j *runtimeComplianceJob) publishResources(results *runtimeResults) {
 	cacheManager := agent.GetCacheManager()
 	for complianceName, result := range results.items {
+		crr := &management.ComplianceRuntimeResult{}
 		ri, err := cacheManager.GetComplianceRuntimeResultByName(complianceName)
 		if err != nil {
-			j.logger.WithError(err).WithField("complianceRuntimeResultName", complianceName).Warn("skipping compliance runtime result")
-			continue
+			j.logger.WithError(err).WithField("complianceRuntimeResultName", complianceName).Debug("compliance runtime result not existing")
+			crr = management.NewComplianceRuntimeResult(complianceName, result.ComplianceScopedEnv)
+		} else {
+			crr.FromInstance(ri)
 		}
 
-		crr := &management.ComplianceRuntimeResult{}
-		crr.FromInstance(ri)
-		updateSpecResultsAndHash(crr, result)
-
+		updateSpec(crr, result)
 		logger := j.logger.
-			WithField("crrId", ri.GetMetadata().ID).
 			WithField("crrName", crr.GetName()).
 			WithField("riskScore", result.RiskScore)
 
-		logger.Debug("updating compliance runtime result")
+		logger.Debug("creating/updating compliance runtime result")
 		_, err = agent.GetCentralClient().CreateOrUpdateResource(crr)
 		if err != nil {
-			logger.WithError(err).Error("failed to updated runtime compliance result")
+			logger.WithError(err).Error("failed to create/update runtime compliance result")
+			continue
 		}
+		crrName := fmt.Sprintf("%s/%s", result.ComplianceScopedEnv, crr.Name)
+		linkComplianceSubresource(logger, result, crrName)
 	}
 }
 
-func updateSpecResultsAndHash(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
+func updateSpec(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
 	defer func() {
 		hashInt, _ := util.ComputeHash(crr.Spec)
+		if crr.Spec.ComplianceAgent == "" {
+			crr.Spec.ComplianceAgent = result.ComplianceAgentName
+		}
+		if time.Now().Add(-6 * time.Hour).After(time.Time(crr.Spec.Timestamp)) {
+			crr.Spec.Timestamp = v1.Time(time.Now())
+		}
+		if crr.Spec.Type == "" {
+			crr.Spec.Type = result.ComplianceAgentType
+		}
 		util.SetAgentDetailsKey(crr, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 	}()
 
@@ -83,6 +96,7 @@ func updateSpecResultsAndHash(crr *management.ComplianceRuntimeResult, result Ru
 				"runtime": map[string]interface{}{
 					"riskScore": result.RiskScore,
 				},
+				"type": result.ComplianceAgentType,
 			},
 		}
 		return
@@ -92,6 +106,7 @@ func updateSpecResultsAndHash(crr *management.ComplianceRuntimeResult, result Ru
 	if !ok {
 		return
 	}
+	defer func() { res["type"] = result.ComplianceAgentType }()
 
 	runtime, ok := res["runtime"].(map[string]interface{})
 	if !ok {
@@ -101,4 +116,17 @@ func updateSpecResultsAndHash(crr *management.ComplianceRuntimeResult, result Ru
 		return
 	}
 	runtime["riskScore"] = result.RiskScore
+}
+
+func linkComplianceSubresource(logger log.FieldLogger, result RuntimeResult, linkedComplianceName string) {
+	if result.ApiServiceInstance == nil {
+		return
+	}
+
+	subRes := map[string]interface{}{
+		management.ApiServiceInstanceComplianceruntimeresultSubResourceName: linkedComplianceName,
+	}
+	if err := agent.GetCentralClient().CreateSubResource(result.ApiServiceInstance.ResourceMeta, subRes); err != nil {
+		logger.WithError(err).Error("updating compliance runtime result subResource reference for api service instance")
+	}
 }
