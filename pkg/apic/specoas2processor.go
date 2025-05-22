@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"bytes"
 	"encoding/json"
 	"net"
 	"sort"
@@ -28,7 +27,6 @@ type oas2SpecProcessor struct {
 	scopes       map[string]string
 	authPolicies []string
 	apiKeyInfo   []APIKeyInfo
-	compacted    bool
 }
 
 func newOas2Processor(oas2Spec *openapi2.T) *oas2SpecProcessor {
@@ -160,12 +158,6 @@ func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{
 
 func (p *oas2SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
-	if len(s) > tenMB && !p.compacted {
-		p.compacted = true
-		buf := bytes.NewBuffer(nil)
-		json.Compact(buf, s)
-		s = buf.Bytes()
-	}
 	return s
 }
 

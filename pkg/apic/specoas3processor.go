@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -21,7 +20,6 @@ type oas3SpecProcessor struct {
 	scopes       map[string]string
 	authPolicies []string
 	apiKeyInfo   []APIKeyInfo
-	compacted    bool
 }
 
 func newOas3Processor(oas3Obj *openapi3.T) *oas3SpecProcessor {
@@ -223,12 +221,6 @@ func (p *oas3SpecProcessor) StripSpecAuth() {
 
 func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
-	if len(s) > tenMB && !p.compacted {
-		p.compacted = true
-		buf := bytes.NewBuffer(nil)
-		json.Compact(buf, s)
-		s = buf.Bytes()
-	}
 	return s
 }
 
