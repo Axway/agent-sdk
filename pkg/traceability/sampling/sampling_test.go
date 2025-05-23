@@ -143,30 +143,30 @@ func TestShouldSample(t *testing.T) {
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    40,
+			expectedSampled:    20,
 			limit:              10,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second,
+			counterResetPeriod: time.Second / 2,
 		},
 		{
 			name: "Limit sampling to 100 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    400,
+			expectedSampled:    200,
 			limit:              100,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second,
+			counterResetPeriod: time.Second / 2,
 		},
 		{
 			name: "Limit sampling to 1000 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    4000,
+			expectedSampled:    2000,
 			limit:              1000,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second,
+			counterResetPeriod: time.Second / 2,
 		},
 		{
 			name: "Limit sampling to 0",
@@ -175,8 +175,8 @@ func TestShouldSample(t *testing.T) {
 			},
 			expectedSampled:    0,
 			limit:              0,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second,
+			counterResetPeriod: time.Second / 2,
 		},
 	}
 
@@ -187,6 +187,8 @@ func TestShouldSample(t *testing.T) {
 
 			err := SetupSampling(test.config, false, "")
 			endTime := time.Now().Truncate(test.counterResetPeriod).Add(test.duration)
+			done := time.NewTicker(time.Until(endTime))
+			defer done.Stop()
 
 			agentSamples.counterResetPeriod = test.counterResetPeriod
 			agentSamples.EnableSampling(test.limit, endTime)
@@ -235,6 +237,7 @@ func TestShouldSample(t *testing.T) {
 			}
 
 			waitGroup.Wait()
+			<-done.C
 			assert.Nil(t, err)
 			assert.LessOrEqual(t, test.expectedSampled, sampled)
 			assert.GreaterOrEqual(t, test.expectedSampled+int(test.limit), sampled)
