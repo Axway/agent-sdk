@@ -2,6 +2,7 @@ package sampling
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -13,7 +14,7 @@ type sample struct {
 	currentCounts      map[string]int
 	samplingLock       sync.Mutex
 	samplingCounter    int32
-	counterResetPeriod time.Duration
+	counterResetPeriod *atomic.Int64
 	counterResetStopCh chan struct{}
 	disableSamplingCh  chan struct{}
 	enabled            bool
@@ -29,8 +30,9 @@ func NewSample(counterResetPeriod time.Duration) *sample {
 	sampler := &sample{
 		disableSamplingCh:  make(chan struct{}),
 		counterResetStopCh: make(chan struct{}),
-		counterResetPeriod: counterResetPeriod,
+		counterResetPeriod: &atomic.Int64{},
 	}
+	sampler.counterResetPeriod.Store(int64(counterResetPeriod))
 
 	return sampler
 }
@@ -76,11 +78,12 @@ func (s *sample) disableSampling() {
 }
 
 func (s *sample) samplingCounterReset() {
-	nextLimiterPeriod := time.Now().Round(s.counterResetPeriod)
+	resetPeriod := time.Duration(s.counterResetPeriod.Load())
+	nextLimiterPeriod := time.Now().Round(time.Duration(resetPeriod))
 	<-time.NewTimer(time.Until(nextLimiterPeriod)).C
 	s.resetSamplingCounter()
 
-	ticker := time.NewTicker(s.counterResetPeriod)
+	ticker := time.NewTicker(resetPeriod)
 
 	defer ticker.Stop()
 	for {

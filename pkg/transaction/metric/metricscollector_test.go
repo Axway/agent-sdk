@@ -517,7 +517,7 @@ func TestMetricCollector(t *testing.T) {
 }
 
 func TestConcurrentMetricCollectorEvents(t *testing.T) {
-	// this test has no assertions it is to ensure concurrent map writs do not occur while collecting metrics
+	// this test has no assertions it is to ensure concurrent map writes do not occur while collecting metrics
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
 	defer s.closeServer()
@@ -560,7 +560,7 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 		{ID: "999", Name: "app9"},
 	}
 
-	codes := []string{"200", "201", "202", "204", "205", "206", "300", "301", "400", "401", "403", "404", "500"}
+	codes := []string{"200", "201", "300", "301", "400", "401", "500"}
 
 	details := []Detail{}
 

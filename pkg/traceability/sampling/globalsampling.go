@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -49,11 +50,13 @@ func GetGlobalSamplingPercentage() (float64, error) {
 
 // GetGlobalSampling -
 func GetGlobalSampling() *sample {
+	period := &atomic.Int64{}
+	period.Store(int64(time.Minute))
 	if agentSamples == nil {
 		agentSamples = &sample{
 			currentCounts:      make(map[string]int),
 			samplingLock:       sync.Mutex{},
-			counterResetPeriod: time.Minute,
+			counterResetPeriod: period,
 			counterResetStopCh: make(chan struct{}),
 			disableSamplingCh:  make(chan struct{}),
 		}
@@ -101,11 +104,13 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 	}
 
 	if agentSamples == nil {
+		period := &atomic.Int64{}
+		period.Store(int64(time.Minute))
 		agentSamples = &sample{
 			config:             cfg,
 			currentCounts:      make(map[string]int),
 			samplingLock:       sync.Mutex{},
-			counterResetPeriod: time.Minute,
+			counterResetPeriod: period,
 			counterResetStopCh: make(chan struct{}),
 			disableSamplingCh:  make(chan struct{}),
 		}
