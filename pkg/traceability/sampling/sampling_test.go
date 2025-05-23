@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -143,30 +144,30 @@ func TestShouldSample(t *testing.T) {
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    20,
+			expectedSampled:    50,
 			limit:              10,
-			duration:           time.Second,
-			counterResetPeriod: time.Second / 2,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 100 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    200,
+			expectedSampled:    500,
 			limit:              100,
-			duration:           time.Second,
-			counterResetPeriod: time.Second / 2,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 1000 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    2000,
+			expectedSampled:    5000,
 			limit:              1000,
-			duration:           time.Second,
-			counterResetPeriod: time.Second / 2,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 0",
@@ -175,8 +176,8 @@ func TestShouldSample(t *testing.T) {
 			},
 			expectedSampled:    0,
 			limit:              0,
-			duration:           time.Second,
-			counterResetPeriod: time.Second / 2,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 	}
 
@@ -190,7 +191,9 @@ func TestShouldSample(t *testing.T) {
 			done := time.NewTicker(time.Until(endTime))
 			defer done.Stop()
 
-			agentSamples.counterResetPeriod = test.counterResetPeriod
+			period := &atomic.Int64{}
+			period.Store(int64(test.counterResetPeriod))
+			agentSamples.counterResetPeriod = period
 			agentSamples.EnableSampling(test.limit, endTime)
 			assert.Nil(t, err)
 
