@@ -841,6 +841,11 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			return existingRI, nil
 		}
 
+		// update new crd/ard with existing custom field properties
+		if data.Kind == management.AccessRequestDefinitionGVK().Kind || data.Kind == management.CredentialRequestDefinitionGVK().Kind {
+			data = addCustomFieldsToNewRequestSchema(c.logger, data, existingRI)
+		}
+
 		// Update the spec and agent details subresource, if they exist in incoming data
 		existingRI.Spec = data.Spec
 		existingRI.SubResources = data.SubResources

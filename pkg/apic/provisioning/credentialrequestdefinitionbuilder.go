@@ -167,12 +167,16 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 
 	hashInt, _ := util.ComputeHash(spec)
 
+	// put back in spec the complete request schema
+	spec.Schema = c.requestSchema
+
 	if c.title == "" {
 		c.title = c.name
 	}
 
 	crd := management.NewCredentialRequestDefinition(c.name, "")
 	crd.Title = c.title
+
 	crd.Spec = spec
 
 	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))

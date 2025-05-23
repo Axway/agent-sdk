@@ -148,6 +148,9 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 
 	hashInt, _ := util.ComputeHash(spec)
 
+	// put back in spec the complete request schema
+	spec.Schema = a.requestSchema
+
 	if a.name == "" {
 		a.name = util.ConvertUnitToString(hashInt)
 	}
