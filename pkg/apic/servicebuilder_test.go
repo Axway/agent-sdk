@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -184,4 +186,67 @@ func TestServiceBodyWithParseError(t *testing.T) {
 
 	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.Nil(t, err)
+}
+
+func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
+	// Setup test data
+	specPath := filepath.Join("testdata", "petstore-openapi3-large.json")
+	specBytes, err := os.ReadFile(specPath)
+	assert.Nil(t, err, "failed to read petstore spec file")
+
+	// Test building service body with minimum required fields
+	serviceBuilder := NewServiceBodyBuilder().
+		SetResourceType(Oas3).
+		SetAPISpec(specBytes).
+		SetTitle("Petstore API").
+		SetVersion("1.0.0")
+
+	sb, err := serviceBuilder.Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+
+	// Test with all optional fields
+	endpoints := []EndpointDefinition{
+		{
+			Protocol: "https",
+			Host:     "petstore.swagger.io",
+			Port:     443,
+			BasePath: "/v2",
+		},
+	}
+
+	tags := map[string]interface{}{
+		"category": "pets",
+		"status":   "active",
+	}
+
+	sb, err = serviceBuilder.
+		SetDescription("A sample Petstore server based on OpenAPI 3.0").
+		SetAPIName("petstore").
+		SetAuthPolicy("pass-through").
+		SetStatus(PublishedStatus).
+		SetState(PublishedState).
+		SetServiceEndpoints(endpoints).
+		SetTags(tags).
+		SetTeamName("pet-team").
+		Build()
+
+	// Assertions
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, "Petstore API", sb.NameToPush)
+	assert.Equal(t, "petstore", sb.APIName)
+	assert.Equal(t, "1.0.0", sb.Version)
+	assert.Equal(t, "verify-api-key", sb.AuthPolicy)
+	assert.Equal(t, PublishedStatus, sb.Status)
+	assert.Equal(t, PublishedState, sb.State)
+	assert.Equal(t, "pet-team", sb.TeamName)
+	assert.Equal(t, endpoints, sb.Endpoints)
+	assert.Equal(t, tags, sb.Tags)
+	assert.NotEmpty(t, sb.SpecDefinition)
+	assert.Equal(t, Oas3, sb.ResourceType)
+
+	// Verify spec size constraints
+	assert.Less(t, len(sb.SpecDefinition), len(specBytes), "processed spec should be smaller than original")
+	assert.Less(t, len(sb.SpecDefinition), tenMB, "spec should be under 10MB limit")
 }

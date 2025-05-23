@@ -133,6 +133,7 @@ func (p *oas2SpecProcessor) StripSpecAuth() {
 func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 	return newSpecSecurityBuilder(oas2)
 }
+
 func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{}) {
 	// order authSchemas by name
 	for _, name := range util.OrderedKeys(authSchemes) {
