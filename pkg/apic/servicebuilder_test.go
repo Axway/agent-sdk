@@ -1,6 +1,8 @@
 package apic
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -184,4 +186,26 @@ func TestServiceBodyWithParseError(t *testing.T) {
 
 	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
 	assert.Nil(t, err)
+}
+
+func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
+	// Adjust the path as needed for your test environment
+	specPath := filepath.Join("testdata", "petstore-openapi3-large.json")
+	specBytes, err := os.ReadFile(specPath)
+	assert.Nil(t, err, "failed to read petstore-openapi3-large.json")
+
+	serviceBuilder := NewServiceBodyBuilder().
+		SetResourceType(Oas3).
+		SetAPISpec(specBytes).
+		SetTitle("Petstore Large").
+		SetVersion("1.0.0")
+
+	sb, err := serviceBuilder.Build()
+	assert.Nil(t, err, "expected no error building service body with valid OpenAPI 3 spec")
+	assert.NotNil(t, sb)
+	assert.Equal(t, "Petstore Large", sb.NameToPush)
+	assert.Equal(t, "1.0.0", sb.Version)
+	assert.NotEmpty(t, sb.SpecDefinition)
+	assert.Less(t, len(sb.SpecDefinition), len(specBytes), "spec definition should be smaller than original spec")
+	assert.Less(t, len(sb.SpecDefinition), tenMB, "spec definition should be less than 10MB")
 }
