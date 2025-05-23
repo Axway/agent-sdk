@@ -62,9 +62,6 @@ func NewDialer(proxyURL *url.URL, singleEntryHostMap map[string]string) Dialer {
 // Dial- manages the connections to proxy and single entry point for tcp transports
 func (d *dialer) Dial(network string, addr string) (net.Conn, error) {
 	conn, err := d.DialContext(context.Background(), network, addr)
-	if err == nil && len(d.singleEntryHostMap) > 0 && addr != conn.RemoteAddr().String() {
-		log.Tracef("routing the traffic for %s via %s", addr, conn.RemoteAddr().String())
-	}
 	return conn, err
 }
 
@@ -101,6 +98,9 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 				return nil, err
 			}
 		}
+	}
+	if originalAddr != addr {
+		log.Tracef("routing the traffic for %s via %s", originalAddr, addr)
 	}
 	return conn, nil
 }
