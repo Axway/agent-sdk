@@ -21,7 +21,7 @@ type QuotaStatusError struct {
 	Type string `json:"type"`
 	// Details of the error.
 	Detail string `json:"detail"`
-	// Time when the update occurred.
+	// Time when the update occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time                         `json:"timestamp"`
 	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

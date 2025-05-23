@@ -27,7 +27,7 @@ type DiscoveryAgentStatus struct {
 	PreviousState string `json:"previousState,omitempty"`
 	// A way to communicate details about the current status by the agent
 	Message string `json:"message,omitempty"`
-	// The last updated event timestamp provided by the agent
+	// The last updated event timestamp provided by the agent in ISO 8601 format with numeric timezone offset
 	LastActivityTime time.Time `json:"lastActivityTime,omitempty"`
 	// Version name for the SDK revision.
 	SdkVersion string `json:"sdkVersion,omitempty"`
