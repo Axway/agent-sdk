@@ -56,11 +56,17 @@ type APIServiceInstance struct {
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Lifecycle     ApiServiceInstanceLifecycle     `json:"lifecycle"`
-	Lifecycle     *ApiServiceInstanceLifecycle    `json:"lifecycle,omitempty"`
-	Owner         *apiv1.Owner                    `json:"owner"`
-	References    ApiServiceInstanceReferences    `json:"references"`
-	Samplestate   ApiServiceInstanceSamplestate   `json:"samplestate"`
-	Sampletrigger ApiServiceInstanceSampletrigger `json:"sampletrigger"`
+	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
+	Owner      *apiv1.Owner                 `json:"owner"`
+	References ApiServiceInstanceReferences `json:"references"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Samplestate ApiServiceInstanceSamplestate `json:"samplestate"`
+	Samplestate *ApiServiceInstanceSamplestate `json:"samplestate,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Sampletrigger ApiServiceInstanceSampletrigger `json:"sampletrigger"`
+	Sampletrigger *ApiServiceInstanceSampletrigger `json:"sampletrigger,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Source        ApiServiceInstanceSource        `json:"source"`
