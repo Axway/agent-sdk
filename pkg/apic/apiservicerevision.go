@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -18,6 +20,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -68,23 +71,55 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 
 // processRevision -
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
+	log := c.logger
+	logProcess := "Creating"
+
+	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
 	if serviceBody.serviceContext.serviceAction == updateAPI {
-		// get the count of revisions
-		serviceBody.serviceContext.revisionCount = c.getRevisionCount("metadata.references.id==" + serviceBody.serviceContext.serviceID)
+		logProcess = "Updating"
+
+		// get current revisions
+		revisions, totalCount, err := c.getRevisions("metadata.references.id==" + serviceBody.serviceContext.serviceID)
+		if err != nil {
+			return err
+		}
+		serviceBody.serviceContext.revisionCount = totalCount
+		apiServiceRevisions = revisions
 	}
 
 	// check if a revision with the same hash was already published
 	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
 		name := revName.(string)
 
-		// check that the revision still exists
-		if c.getRevisionCount("name=="+name) == 1 {
-			serviceBody.serviceContext.revisionName = name
-			return nil
+		// check to see if the tags have changed from the latest
+		for _, apiServiceRevision := range apiServiceRevisions {
+			if apiServiceRevision.Name == name {
+				updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
+				if len(updatedTags) > 0 {
+					updatedRevision := c.buildAPIServiceRevision(serviceBody)
+					updatedRevision.Name = apiServiceRevision.Name
+					updatedRevision.Metadata.Scope = v1.MetadataScope{
+						Kind: management.EnvironmentGVK().Kind,
+						Name: c.cfg.GetEnvironmentName(),
+					}
+					_, err := c.UpdateResourceInstance(updatedRevision)
+					if err != nil {
+						return err
+					}
+				}
+				serviceBody.serviceContext.revisionName = name
+				return nil
+			}
 		}
 	}
 
-	log.Infof("Creating API Service revision for %v-%v in environment %v", serviceBody.APIName, serviceBody.Version, c.cfg.GetEnvironmentName())
+	log.
+		WithField("action", logProcess).
+		WithField("service", serviceBody.APIName).
+		WithField("version", serviceBody.Version).
+		WithField("environment", c.cfg.GetEnvironmentName()).
+		Info("process revision")
+
 	rev, err := c.CreateOrUpdateResource(c.buildAPIServiceRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
@@ -101,25 +136,59 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	return nil
 }
 
-func (c *ServiceClient) getRevisionCount(queryString string) int {
+func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServiceRevision, int, error) {
+	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
+
 	queryParams := map[string]string{
 		"query":    queryString,
-		"fields":   "id",
+		"fields":   "name,tags",
 		"page":     "1",
-		"pageSize": "1",
+		"pageSize": "50",
+		"sort":     "metadata.audit.createTimestamp,DESC",
 	}
 	res, err := c.executeAPI(coreapi.GET, c.cfg.GetRevisionsURL(), queryParams, nil, nil)
 	if err != nil {
-		return 0
+		return apiServiceRevisions, 0, err
 	}
-	if _, found := res.Headers["X-Axway-Total-Count"]; !found {
-		return 0
+	var count int
+	if totalCount, found := res.Headers["X-Axway-Total-Count"]; found {
+		count, err = strconv.Atoi(totalCount[0])
+		if err != nil {
+			return apiServiceRevisions, 0, err
+		}
 	}
-	count, err := strconv.Atoi(res.Headers["X-Axway-Total-Count"][0])
+
+	err = json.Unmarshal(res.Body, &apiServiceRevisions)
 	if err != nil {
-		return 0
+		return nil, count, err
 	}
-	return count
+
+	return apiServiceRevisions, count, nil
+}
+
+// verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not.  If they are not, return an empty[].  If they are
+// different, return the updated tags
+func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
+	// Extract values from map and convert to []string
+	var mapValues []string
+	for _, v := range serviceBodyTags {
+		if strVal, ok := v.(string); ok {
+			mapValues = append(mapValues, strVal)
+		}
+	}
+
+	// Sort both slices to allow unordered comparison
+	sort.Strings(mapValues)
+	sort.Strings(revisionTags)
+
+	// Compare
+	if reflect.DeepEqual(mapValues, revisionTags) {
+		return []string{} // return empty string slice if equal
+	}
+
+	// If not equal, return the keys from serviceBodyTags
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
+	return tags
 }
 
 // GetAPIRevisions - Returns the list of API revisions for the specified filter

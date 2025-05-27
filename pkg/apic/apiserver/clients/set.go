@@ -40,6 +40,7 @@ type Set struct {
 	IdentityProviderSecretManagementV1alpha1       *management_v1alpha1.UnscopedIdentityProviderSecretClient
 	ApplicationProfileDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedApplicationProfileDefinitionClient
 	ManagedApplicationProfileManagementV1alpha1    *management_v1alpha1.UnscopedManagedApplicationProfileClient
+	ComplianceRuntimeResultManagementV1alpha1      *management_v1alpha1.UnscopedComplianceRuntimeResultClient
 	AssetMappingManagementV1alpha1                 *management_v1alpha1.UnscopedAssetMappingClient
 	WebhookManagementV1alpha1                      *management_v1alpha1.UnscopedWebhookClient
 	BatchJobManagementV1alpha1                     *management_v1alpha1.UnscopedBatchJobClient
@@ -223,6 +224,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ManagedApplicationProfileManagementV1alpha1, err = management_v1alpha1.NewManagedApplicationProfileClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ManagedApplicationProfile: %s", err))
+	}
+	s.ComplianceRuntimeResultManagementV1alpha1, err = management_v1alpha1.NewComplianceRuntimeResultClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.ComplianceRuntimeResult: %s", err))
 	}
 	s.AssetMappingManagementV1alpha1, err = management_v1alpha1.NewAssetMappingClient(b)
 	if err != nil {

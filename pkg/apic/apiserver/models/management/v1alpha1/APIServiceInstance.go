@@ -27,14 +27,15 @@ var (
 )
 
 const (
-	APIServiceInstanceResourceName                 = "apiserviceinstances"
-	ApiServiceInstanceComplianceSubResourceName    = "compliance"
-	ApiServiceInstanceLifecycleSubResourceName     = "lifecycle"
-	ApiServiceInstanceReferencesSubResourceName    = "references"
-	ApiServiceInstanceSamplestateSubResourceName   = "samplestate"
-	ApiServiceInstanceSampletriggerSubResourceName = "sampletrigger"
-	ApiServiceInstanceSourceSubResourceName        = "source"
-	ApiServiceInstanceTraceableSubResourceName     = "traceable"
+	APIServiceInstanceResourceName                           = "apiserviceinstances"
+	ApiServiceInstanceComplianceSubResourceName              = "compliance"
+	ApiServiceInstanceComplianceruntimeresultSubResourceName = "complianceruntimeresult"
+	ApiServiceInstanceLifecycleSubResourceName               = "lifecycle"
+	ApiServiceInstanceReferencesSubResourceName              = "references"
+	ApiServiceInstanceSamplestateSubResourceName             = "samplestate"
+	ApiServiceInstanceSampletriggerSubResourceName           = "sampletrigger"
+	ApiServiceInstanceSourceSubResourceName                  = "source"
+	ApiServiceInstanceTraceableSubResourceName               = "traceable"
 )
 
 func APIServiceInstanceGVK() apiv1.GroupVersionKind {
@@ -51,11 +52,12 @@ type APIServiceInstance struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance    ApiServiceInstanceCompliance    `json:"compliance"`
-	Compliance *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
+	//	Compliance              ApiServiceInstanceCompliance `json:"compliance"`
+	Compliance              *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
+	Complianceruntimeresult interface{}                   `json:"complianceruntimeresult"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Lifecycle     ApiServiceInstanceLifecycle     `json:"lifecycle"`
+	//	Lifecycle               ApiServiceInstanceLifecycle   `json:"lifecycle"`
 	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
@@ -165,6 +167,7 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 	}
 
 	out["compliance"] = res.Compliance
+	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["lifecycle"] = res.Lifecycle
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -211,6 +214,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "compliance")
 		err = json.Unmarshal(sr, &res.Compliance)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Complianceruntimeresult
+	if v, ok := aux.SubResources["complianceruntimeresult"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "complianceruntimeresult")
+		err = json.Unmarshal(sr, &res.Complianceruntimeresult)
 		if err != nil {
 			return err
 		}
