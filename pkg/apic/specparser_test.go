@@ -80,6 +80,11 @@ func TestSpecDiscovery(t *testing.T) {
 			expectedType: Oas3,
 		},
 		{
+			name:         "No input type OAS3 Spec",
+			inputFile:    "./testdata/petstore-openapi3-path-servers.json",
+			expectedType: Oas3,
+		},
+		{
 			name:         "No input type OAS2 Spec",
 			inputFile:    "./testdata/petstore-openapi2.yaml",
 			expectedType: Oas2,

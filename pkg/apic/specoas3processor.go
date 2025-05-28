@@ -46,10 +46,41 @@ func (p *oas3SpecProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 		}
 		return endPoints, nil
 	}
+
+	// look in the paths to find the endpoints
+	for _, path := range p.spec.Paths.Map() {
+		// Parse the path to get the URL
+		pathEndpoints, err := p.parseEndpoints(path.Servers)
+		if err != nil {
+			continue // skip this path if there is an error
+		}
+		endPoints = append(endPoints, pathEndpoints...)
+	}
+
 	if len(endPoints) == 0 {
 		return nil, coreerrors.Wrap(ErrSetSpecEndPoints, "no server endpoints defined")
 	}
-	return endPoints, nil
+	return p.uniqueEndpoints(endPoints), nil
+}
+
+func (p *oas3SpecProcessor) uniqueEndpoints(endpoints []EndpointDefinition) []EndpointDefinition {
+	seen := make(map[string]bool)
+	unique := []EndpointDefinition{}
+
+	for _, endpoint := range endpoints {
+		// Create a unique key based on endpoint properties
+		key := fmt.Sprintf("%s://%s:%d%s",
+			endpoint.Protocol,
+			endpoint.Host,
+			endpoint.Port,
+			endpoint.BasePath)
+
+		if !seen[key] {
+			seen[key] = true
+			unique = append(unique, endpoint)
+		}
+	}
+	return unique
 }
 
 func (p *oas3SpecProcessor) parseEndpoints(servers []*openapi3.Server) ([]EndpointDefinition, error) {
