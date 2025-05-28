@@ -20,8 +20,8 @@ import (
 type ComponentSpecLatest struct {
 	// A version for the component
 	Version string `json:"version"`
-	// The date this version was released
+	// The date this version was released in ISO 8601 format with numeric timezone offset.
 	ReleaseDate time.Time `json:"releaseDate"`
-	// The date that support for this version will cease
+	// The date that support for this version will cease in ISO 8601 format with numeric timezone offset.
 	EndOfSupportDate time.Time `json:"endOfSupportDate,omitempty"`
 }

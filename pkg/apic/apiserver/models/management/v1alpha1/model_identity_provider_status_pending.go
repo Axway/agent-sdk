@@ -19,7 +19,7 @@ import (
 // IdentityProviderStatusPending struct for IdentityProviderStatusPending
 type IdentityProviderStatusPending struct {
 	Type string `json:"type"`
-	// Time when the change occurred.
+	// Time when the change occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp"`
 	// message of the pending status
 	Detail string                            `json:"detail"`

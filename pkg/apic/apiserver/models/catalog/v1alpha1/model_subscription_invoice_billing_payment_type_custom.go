@@ -23,9 +23,9 @@ type SubscriptionInvoiceBillingPaymentTypeCustom struct {
 	Id string `json:"id,omitempty"`
 	// Custom Invoice number.
 	Number string `json:"number,omitempty"`
-	// Due date of the invoice.
+	// Due date of the invoice in ISO 8601 format with numeric timezone offset.
 	DueDate time.Time `json:"dueDate,omitempty"`
-	// Issue date of the invoice.
+	// Issue date of the invoice in ISO 8601 format with numeric timezone offset.
 	IssueDate time.Time                                         `json:"issueDate,omitempty"`
 	Amount    SubscriptionInvoiceBillingPaymentTypeCustomAmount `json:"amount,omitempty"`
 	// Link where the payment can be done.

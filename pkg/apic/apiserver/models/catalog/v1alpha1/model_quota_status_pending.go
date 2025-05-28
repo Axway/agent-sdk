@@ -21,7 +21,7 @@ type QuotaStatusPending struct {
 	Type string `json:"type"`
 	// Details of the Pending status.
 	Detail string `json:"detail"`
-	// Time when the resource moved to Pending.
+	// Time when the resource moved to Pending in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time                         `json:"timestamp"`
 	Meta      map[string]map[string]interface{} `json:"meta,omitempty"`
 }

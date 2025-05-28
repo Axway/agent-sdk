@@ -18,7 +18,7 @@ import (
 
 // ApiServiceInstanceSourceRuntimeStatusResult APIServiceInstance runtime results.
 type ApiServiceInstanceSourceRuntimeStatusResult struct {
-	// Time when the update occurred.
+	// Time when the update occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	// The average risk score in the runtime compliance result.
 	// GENERATE: The following code has been modified after code generation
