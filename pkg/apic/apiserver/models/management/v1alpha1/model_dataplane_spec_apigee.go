@@ -13,7 +13,7 @@ package management
 type DataplaneSpecApigee struct {
 	Type string `json:"type"`
 	// The physical location, specified during provisioning, at which Apigee control plane data will be stored
-	ControlPlaneRegion string `json:"controlPlaneRegion"`
+	ControlPlaneRegion string `json:"controlPlaneRegion,omitempty"`
 	// The Project ID on GCP that Apigee is configured in
 	ProjectId string `json:"projectId"`
 	// The Developer that will own all Apigee Applications created by the agent
