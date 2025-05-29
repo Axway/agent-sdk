@@ -837,7 +837,6 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	objectSliceProps = []string{agentCfg.osProp[0]["prop1"].(string), agentCfg.osProp[1]["prop1"].(string)}
 	slices.Sort(objectSliceProps)
 	assert.Equal(t, []string{"", "secretValue"}, objectSliceProps)
-	assert.Equal(t, "", agentCfg.osProp[1]["prop1"])
 	assert.Equal(t, false, cmdHandlerInvoked)
 
 	// Case 4 : Successful secret resolution - use value in secret key

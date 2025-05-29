@@ -30,6 +30,7 @@ const (
 	accReqKey              = "accReq"
 	watchSequenceKey       = "watchSequence"
 	watchResourceKey       = "watchResource"
+	complianceRuntimeKey   = "compRunRes"
 )
 
 // Manager - interface to manage agent resource
@@ -76,6 +77,13 @@ type Manager interface {
 	GetApplicationProfileDefinitionByName(name string) (*v1.ResourceInstance, error)
 	GetApplicationProfileDefinitionByID(id string) (*v1.ResourceInstance, error)
 	DeleteApplicationProfileDefinition(id string) error
+
+	// ComplianceRuntimeResult cache related methods
+	AddComplianceRuntimeResult(resource *v1.ResourceInstance)
+	GetComplianceRuntimeResultKeys() []string
+	GetComplianceRuntimeResultByName(name string) (*v1.ResourceInstance, error)
+	GetComplianceRuntimeResultByID(id string) (*v1.ResourceInstance, error)
+	DeleteComplianceRuntimeResult(id string) error
 
 	// AccessRequestDefinition cache related methods
 	AddAccessRequestDefinition(resource *v1.ResourceInstance)
@@ -149,6 +157,7 @@ type cacheManager struct {
 	ardMap                  cache.Cache
 	apdMap                  cache.Cache
 	crdMap                  cache.Cache
+	crrMap                  cache.Cache
 	cacheFilename           string
 	isPersistedCacheLoaded  bool
 	isCacheUpdated          bool
@@ -194,6 +203,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createInstanceCountLoader(c.setLoadedCache, instanceCountKey),
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
+		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
 	}
 
 	c.isPersistedCacheLoaded = true
@@ -251,6 +261,8 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.watchResourceMap = lc
 	case watchSequenceKey:
 		c.sequenceCache = lc
+	case complianceRuntimeKey:
+		c.crrMap = lc
 	default:
 		c.logger.WithField("cacheKey", key).Error("unknown cache key")
 	}
@@ -402,6 +414,7 @@ func (c *cacheManager) Flush() {
 	c.apiMap.Flush()
 	c.ardMap.Flush()
 	c.apdMap.Flush()
+	c.crrMap.Flush()
 	c.crdMap.Flush()
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()

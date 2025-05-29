@@ -52,12 +52,10 @@ type APIServiceInstance struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance              ApiServiceInstanceCompliance `json:"compliance"`
 	Compliance              *ApiServiceInstanceCompliance `json:"compliance,omitempty"`
 	Complianceruntimeresult interface{}                   `json:"complianceruntimeresult"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Lifecycle               ApiServiceInstanceLifecycle   `json:"lifecycle"`
 	Lifecycle  *ApiServiceInstanceLifecycle `json:"lifecycle,omitempty"`
 	Owner      *apiv1.Owner                 `json:"owner"`
 	References ApiServiceInstanceReferences `json:"references"`
@@ -76,7 +74,6 @@ type APIServiceInstance struct {
 	Spec   ApiServiceInstanceSpec    `json:"spec"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Traceable ApiServiceInstanceTraceable `json:"traceable"`
 	Traceable *ApiServiceInstanceTraceable `json:"traceable,omitempty"`
 }
 
