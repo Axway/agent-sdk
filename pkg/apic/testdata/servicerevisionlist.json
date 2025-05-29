@@ -1,0 +1,47 @@
+[
+  {
+    "group": "management",
+    "apiVersion": "v1alpha1",
+    "kind": "APIServiceRevision",
+    "name": "daleapi",
+    "title": "DaleAPI (V7)",
+    "metadata": {
+      "id": "e4ecaab773cb08300173dab5a322026e",
+      "audit": {
+        "createTimestamp": "2020-08-10T23:30:03.685+0000",
+        "createUserId": "DOSA_84aee3c17e0043fc86e66b2cc1d3a8c7",
+        "modifyTimestamp": "2020-08-10T23:30:03.685+0000",
+        "modifyUserId": "DOSA_84aee3c17e0043fc86e66b2cc1d3a8c7"
+      },
+      "scope": {
+        "id": "e4ecaab773cb08300173dab49e130259",
+        "kind": "Environment",
+        "name": "v7envandcat"
+      },
+      "resourceVersion": "2041",
+      "references": [
+        {
+          "id": "e4ecaab773cb08300173dab5a261026a",
+          "kind": "APIService",
+          "name": "daleapi",
+          "type": "hard"
+        }
+      ]
+    },
+    "attributes": {},
+    "tags": [
+      "APIID_c0a5f4f7-766b-4026-9e69-27896cd93f17"
+    ],
+    "spec": {
+      "apiService": "daleapi",
+      "definition": {
+        "type": "oas2",
+        "value": "ewogICJzd2FnZ2VyIiA6ICIyLjAiLAogICJpbmZvIiA6IHsKICAgICJkZXNjcmlwdGlvbiIgOiAiIiwKICAgICJ2ZXJzaW9uIiA6ICIxLjAiLAogICAgInRpdGxlIiA6ICJEYWxlQVBJIgogIH0sCiAgImhvc3QiIDogImFwaXY3OjgwNjUiLAogICJiYXNlUGF0aCIgOiAiL2FwaSIsCiAgInNjaGVtZXMiIDogWyAiaHR0cHMiIF0sCiAgInNlY3VyaXR5IiA6IFsgewogICAgIkFQSSBLZXkiIDogWyBdCiAgfSBdLAogICJwYXRocyIgOiB7CiAgICAiLyIgOiB7CiAgICAgICJnZXQiIDogewogICAgICAgICJvcGVyYXRpb25JZCIgOiAiR0VUIiwKICAgICAgICAicGFyYW1ldGVycyIgOiBbIF0sCiAgICAgICAgInJlc3BvbnNlcyIgOiB7CiAgICAgICAgICAiZGVmYXVsdCIgOiB7CiAgICAgICAgICAgICJkZXNjcmlwdGlvbiIgOiAic3VjY2Vzc2Z1bCBvcGVyYXRpb24iCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICB9CiAgICB9CiAgfSwKICAic2VjdXJpdHlEZWZpbml0aW9ucyIgOiB7CiAgICAiQVBJIEtleSIgOiB7CiAgICAgICJkZXNjcmlwdGlvbiIgOiAiQVBJIEtleSIsCiAgICAgICJ0eXBlIiA6ICJhcGlLZXkiLAogICAgICAibmFtZSIgOiAiS2V5SWQiLAogICAgICAiaW4iIDogImhlYWRlciIKICAgIH0KICB9LAogICJ4LWF4d2F5IiA6IHsKICAgICJzZXJ2aWNlVHlwZSIgOiAicmVzdCIsCiAgICAiaW1hZ2UiIDogIi9hcGkvcG9ydGFsL3YxLjMvZGlzY292ZXJ5L3N3YWdnZXIvYXBpcy8yZjVmOTJmMC1mNWU0LTQ0ZmItYmM4NC01OTljMjdiMzQ5N2EvaW1hZ2UiLAogICAgImJhc2VQYXRocyIgOiBbICJodHRwczovL2FwaXY3OjgwNjUiIF0sCiAgICAiZXhwaXJlZCIgOiBmYWxzZSwKICAgICJyZXRpcmVtZW50RGF0ZSIgOiAwLAogICAgImNvcnNFbmFibGVkIiA6IHRydWUsCiAgICAiZGVwcmVjYXRlZCIgOiBmYWxzZSwKICAgICJhdmFpbGFibGVTREsiIDogewogICAgICAiaW9zLXN3aWZ0IiA6ICIvZGlzY292ZXJ5L3Nkay8yZjVmOTJmMC1mNWU0LTQ0ZmItYmM4NC01OTljMjdiMzQ5N2EvaW9zLXN3aWZ0IiwKICAgICAgInRpdGFuaXVtIiA6ICIvZGlzY292ZXJ5L3Nkay8yZjVmOTJmMC1mNWU0LTQ0ZmItYmM4NC01OTljMjdiMzQ5N2EvdGl0YW5pdW0iLAogICAgICAiYW5kcm9pZCIgOiAiL2Rpc2NvdmVyeS9zZGsvMmY1ZjkyZjAtZjVlNC00NGZiLWJjODQtNTk5YzI3YjM0OTdhL2FuZHJvaWQiLAogICAgICAibm9kZWpzIiA6ICIvZGlzY292ZXJ5L3Nkay8yZjVmOTJmMC1mNWU0LTQ0ZmItYmM4NC01OTljMjdiMzQ5N2Evbm9kZWpzIgogICAgfSwKICAgICJpZCIgOiAiMmY1ZjkyZjAtZjVlNC00NGZiLWJjODQtNTk5YzI3YjM0OTdhIiwKICAgICJzdGF0ZSIgOiAicHVibGlzaGVkIgogIH0KfQ=="
+      }
+    },
+    "x-agent-details": {
+      "createdBy": "",
+      "externalAPIID": "2f5f92f0-f5e4-44fb-bc84-599c27b3497a"
+    }
+  }
+]

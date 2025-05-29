@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -33,6 +32,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	if serviceBody.PrimaryKey != "" {
 		logger = logger.WithField("primaryKey", serviceBody.PrimaryKey)
 	}
+
 	// if the team is set in the config, use that team name and id for all services
 	if c.cfg.GetTeamName() != "" {
 		if teamID, found := c.getTeamFromCache(c.cfg.GetTeamName()); found {
@@ -43,7 +43,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	}
 
 	// there is a current envoy restriction with the payload size (10mb). Quick check on the size
-	if binary.Size(serviceBody.SpecDefinition) >= tenMB {
+	if len(serviceBody.SpecDefinition) >= tenMB {
 		// if greater than 10mb, return
 		err := fmt.Errorf("service %s carries a payload greater than 10mb. Service not created", serviceBody.APIName)
 		logger.WithError(err).Error("error processing service")
@@ -89,7 +89,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 		}
 	}
 	ri, _ := apiSvc.AsInstance()
-	c.caches.AddAPIService(ri)
+	err = c.caches.AddAPIService(ri)
 	if err != nil {
 		logger.WithError(err).Error("adding service to cache")
 	}
@@ -100,10 +100,7 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 // DeleteServiceByName -
 func (c *ServiceClient) DeleteServiceByName(name string) error {
 	_, err := c.apiServiceDeployAPI(http.MethodDelete, c.cfg.GetServicesURL()+"/"+name, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // DeleteAPIServiceInstance deletes an api service instance in central by name

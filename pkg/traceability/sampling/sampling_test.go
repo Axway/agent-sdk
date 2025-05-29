@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -143,30 +144,30 @@ func TestShouldSample(t *testing.T) {
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    40,
+			expectedSampled:    50,
 			limit:              10,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 100 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    400,
+			expectedSampled:    500,
 			limit:              100,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 1000 per period",
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    4000,
+			expectedSampled:    5000,
 			limit:              1000,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 		{
 			name: "Limit sampling to 0",
@@ -175,8 +176,8 @@ func TestShouldSample(t *testing.T) {
 			},
 			expectedSampled:    0,
 			limit:              0,
-			duration:           4 * time.Second,
-			counterResetPeriod: 1 * time.Second,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
 		},
 	}
 
@@ -187,8 +188,12 @@ func TestShouldSample(t *testing.T) {
 
 			err := SetupSampling(test.config, false, "")
 			endTime := time.Now().Truncate(test.counterResetPeriod).Add(test.duration)
+			done := time.NewTicker(time.Until(endTime))
+			defer done.Stop()
 
-			agentSamples.counterResetPeriod = test.counterResetPeriod
+			period := &atomic.Int64{}
+			period.Store(int64(test.counterResetPeriod))
+			agentSamples.counterResetPeriod = period
 			agentSamples.EnableSampling(test.limit, endTime)
 			assert.Nil(t, err)
 
@@ -235,6 +240,7 @@ func TestShouldSample(t *testing.T) {
 			}
 
 			waitGroup.Wait()
+			<-done.C
 			assert.Nil(t, err)
 			assert.LessOrEqual(t, test.expectedSampled, sampled)
 			assert.GreaterOrEqual(t, test.expectedSampled+int(test.limit), sampled)

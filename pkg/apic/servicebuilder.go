@@ -386,6 +386,15 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		}
 	}
 
+	// get the spec from the specProcessor, which will compact the json content
+	if len(b.serviceBody.SpecDefinition) >= tenMB {
+		b.serviceBody.SpecDefinition = specProcessor.GetSpecBytes()
+		// check that the spec definition is not too large still
+		if len(b.serviceBody.SpecDefinition) >= tenMB {
+			return ServiceBody{}, fmt.Errorf("service %s carries a payload greater than 10mb. Service not created", b.serviceBody.APIName)
+		}
+	}
+
 	return b.serviceBody, nil
 }
 
