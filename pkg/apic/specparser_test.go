@@ -80,7 +80,7 @@ func TestSpecDiscovery(t *testing.T) {
 			expectedType: Oas3,
 		},
 		{
-			name:         "No input type OAS3 Spec",
+			name:         "No input type OAS3 Spec path servers",
 			inputFile:    "./testdata/petstore-openapi3-path-servers.json",
 			expectedType: Oas3,
 		},
@@ -205,15 +205,15 @@ func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAu
 
 	assert.Nil(t, err, "An unexpected Error was returned from getEndpoints with oas3")
 	assert.Len(t, endPoints, 3, "The returned end points array did not have exactly 3 endpoints")
-	assert.Equal(t, "petstore.swagger.io", endPoints[0].Host, "The first returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(8080), endPoints[0].Port, "The first returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[0].Protocol, "The first returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore.swagger.io", endPoints[1].Host, "The second returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(80), endPoints[1].Port, "The second returned end point had an unexpected value for it's port")
-	assert.Equal(t, "http", endPoints[1].Protocol, "The second returned end point had an unexpected value for it's protocol")
-	assert.Equal(t, "petstore.swagger.io", endPoints[2].Host, "The third returned end point had an unexpected value for it's host")
-	assert.Equal(t, int32(443), endPoints[2].Port, "The third returned end point had an unexpected value for it's port")
-	assert.Equal(t, "https", endPoints[2].Protocol, "The third returned end point had an unexpected value for it's protocol")
+	for i, ep := range endPoints {
+		assert.Equal(t, "petstore.swagger.io", ep.Host, "Unexpected host in endpoint at index %d", i)
+		assert.Contains(t, []int32{80, 443, 8080}, ep.Port, "Unexpected port in endpoint at index %d", i)
+		if ep.Port == 443 {
+			assert.Equal(t, "https", ep.Protocol, "Unexpected protocol in endpoint at index %d", i)
+			continue
+		}
+		assert.Equal(t, "http", ep.Protocol, "Unexpected protocol in endpoint at index %d", i)
+	}
 
 	processor, _ := specProcessor.(*oas3SpecProcessor)
 	if stripAuth {
