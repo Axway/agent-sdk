@@ -78,7 +78,7 @@ func DefaultConfig() *Config {
 			Max:  60 * time.Second,
 		},
 		EscapeHTML: false,
-		Protocol:   "tcp",
+		Protocol:   "https",
 		Redaction:  redaction.DefaultConfig(),
 		Sampling:   sampling.DefaultConfig(),
 	}
@@ -96,8 +96,8 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 		return nil, err
 	}
 
-	if agent.GetCentralConfig().GetTraceabilityHost() != "" {
-		outputConfig.Protocol = "tcp"
+	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
+		outputConfig.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
 		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
 	}
 
@@ -148,6 +148,14 @@ func IsHTTPTransport() bool {
 		return false
 	}
 	return (outputConfig.Protocol == "https" || outputConfig.Protocol == "http")
+}
+
+// IsTCPTransport - Returns true if the protocol is set to tcp
+func IsTCPTransport() bool {
+	if outputConfig == nil {
+		return false
+	}
+	return outputConfig.Protocol == "tcp"
 }
 
 // GetMaxRetries - Returns the max retries configured for transport

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/url"
 	"os"
 	"path"
@@ -44,7 +45,8 @@ var pathDataMutex sync.Mutex = sync.Mutex{}
 const (
 	minWindowSize             int = 1
 	defaultStartMaxWindowSize int = 10
-	defaultPort                   = 5044
+	defaultPort                   = "443"
+	tcpPort                       = "5044"
 	traceabilityStr               = "traceability"
 	HealthCheckEndpoint           = traceabilityStr
 )
@@ -145,6 +147,11 @@ func makeTraceabilityAgent(
 
 	logger.Trace("reading config")
 	traceCfg, err = readConfig(libbeatCfg, beat)
+	if err != nil {
+		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
+		logger.WithError(err).Error("reading config")
+		return outputs.Fail(err)
+	}
 
 	defer func() {
 		if err != nil {
@@ -160,11 +167,7 @@ func makeTraceabilityAgent(
 		}
 	}()
 
-	if err != nil {
-		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
-		logger.WithError(err).Error("reading config")
-		return outputs.Fail(err)
-	}
+	validateProtocolPort()
 	logger = logger.WithField("config", traceCfg)
 
 	if err := libbeatCfg.Merge(HostConfig{Hosts: traceCfg.Hosts, Protocol: traceCfg.Protocol}); err != nil {
@@ -174,30 +177,25 @@ func makeTraceabilityAgent(
 	}
 
 	hosts, err := outputs.ReadHostList(libbeatCfg)
-
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		logger.WithError(err).Error("reading hosts")
 		return outputs.Fail(err)
 	}
-	logger = logger.WithField("hosts", hosts)
+
+	logger = logger.WithField("hosts", hosts).WithField("config", traceCfg)
+	logger.Tracef("initializing traceability client")
 
 	var transportGroup outputs.Group
-	logger.Tracef("initializing traceability client")
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
-	if !isSingleEntry && IsHTTPTransport() {
-		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts, agent.GetUserAgent())
-	} else {
+
+	if IsTCPTransport() {
 		// For Single entry point register dialer factory for sni scheme and set the
 		// proxy url with sni scheme. When libbeat will register its dialer and sees
 		// proxy url with sni scheme, it will invoke the factory to construct the dialer
 		// The dialer will be invoked as proxy dialer in the libbeat dialer chain
 		// (proxy dialer, stat dialer, tls dialer).
 		if isSingleEntry {
-			if IsHTTPTransport() {
-				traceCfg.Protocol = "tcp"
-				logger.Warn("switching to tcp protocol instead of http because agent will use single entry endpoint")
-			}
 			// Register dialer factory with sni scheme for single entry point
 			proxy.RegisterDialerType("sni", ingestionSingleEntryDialer)
 			// If real proxy configured(not the sni proxy set here), validate the scheme
@@ -220,7 +218,10 @@ func makeTraceabilityAgent(
 			// single entry dialer to receive the target address
 			os.Setenv("TRACEABILITY_PROXYURL", "sni://"+traceCfg.Hosts[0])
 		}
+
 		transportGroup, err = makeLogstashClient(indexManager, beat, observer, libbeatCfg)
+	} else {
+		transportGroup, err = makeHTTPClient(beat, observer, traceCfg, hosts, agent.GetUserAgent(), isSingleEntry)
 	}
 
 	if err != nil {
@@ -244,6 +245,26 @@ func makeTraceabilityAgent(
 	}
 	traceabilityGroup.Clients = clients
 	return traceabilityGroup, nil
+}
+
+// validateProtocolPort - validate the protocol matches the port
+func validateProtocolPort() {
+	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
+	if isSingleEntry {
+		// get the expected protocol for single entry host
+		traceCfg.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
+	}
+
+	// Validate that the port matches the
+	if len(traceCfg.Hosts) == 0 {
+		return
+	}
+	h, p := splitHostPort()
+	if p == tcpPort && IsHTTPTransport() {
+		traceCfg.Hosts[0] = fmt.Sprintf("%s:%s", h, defaultPort)
+	} else if p == defaultPort && IsTCPTransport() {
+		traceCfg.Hosts[0] = fmt.Sprintf("%s:%s", h, tcpPort)
+	}
 }
 
 func makeLogstashClient(indexManager outputs.IndexManager,
@@ -290,7 +311,7 @@ func ingestionSingleEntryDialer(proxyURL *url.URL, parentDialer proxy.Dialer) (p
 	return dialer, nil
 }
 
-func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string, userAgent string) (outputs.Group, error) {
+func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config, hosts []string, userAgent string, isSingleEntry bool) (outputs.Group, error) {
 	tls, err := tlscommon.LoadTLSConfig(traceCfg.TLS)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
@@ -317,6 +338,7 @@ func makeHTTPClient(beat beat.Info, observer outputs.Observer, traceCfg *Config,
 			CompressionLevel: traceCfg.CompressionLevel,
 			Observer:         observer,
 			UserAgent:        userAgent,
+			IsSingleEntry:    isSingleEntry,
 		})
 
 		if err != nil {
@@ -458,4 +480,16 @@ func registerHealthCheckers(config *Config) error {
 		return err
 	}
 	return nil
+}
+
+func splitHostPort() (string, string) {
+	// Split the host and port from the URL
+	if len(traceCfg.Hosts) == 0 {
+		return "", fmt.Sprint(defaultPort)
+	}
+	host, port, err := net.SplitHostPort(traceCfg.Hosts[0])
+	if err != nil {
+		return "", fmt.Sprint(defaultPort)
+	}
+	return host, port
 }
