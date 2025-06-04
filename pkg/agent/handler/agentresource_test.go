@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -19,7 +20,7 @@ type fakeSampler struct {
 	enabled bool
 }
 
-func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
+func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
 	f.enabled = true
 }
 
@@ -253,7 +254,8 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 
 			sampler := &fakeSampler{}
-			handler := NewAgentResourceHandler(resourceManager, sampler)
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			handler := NewAgentResourceHandler(resourceManager, sampler, cm)
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), &proto.EventMeta{Subresource: tc.subresName}, tc.resource)
 			if tc.hasError {

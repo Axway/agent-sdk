@@ -2,18 +2,23 @@ package handler
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+const remoteAPIID = "remoteApiId_"
+
 type sampling interface {
-	EnableSampling(samplingLimit int32, samplingEndTime time.Time)
+	EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints)
 }
 
 type TraceabilityTriggerHandler interface {
@@ -32,16 +37,20 @@ type AgentResourceUpdateHandler interface {
 type agentTypeHandler func(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error
 
 type agentResourceHandler struct {
+	logger               log.FieldLogger
 	agentResourceManager resource.Manager
 	sampler              sampling
 	agentTypeHandler     map[string]agentTypeHandler
+	cache                agentcache.Manager
 }
 
 // NewAgentResourceHandler - creates a Handler for Agent resources
-func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling) Handler {
+func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling, cache agentcache.Manager) Handler {
 	h := &agentResourceHandler{
+		logger:               log.NewFieldLogger().WithComponent("agentResourceHandler").WithPackage("handler"),
 		agentResourceManager: agentResourceManager,
 		sampler:              sampler,
+		cache:                cache,
 	}
 	h.agentTypeHandler = map[string]agentTypeHandler{
 		management.DiscoveryAgentGVK().Kind:    h.handleDiscovery,
@@ -99,7 +108,9 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 		return nil
 	}
 
-	h.sampler.EnableSampling(ta.Agentstate.Sampling.Limit, time.Time(ta.Agentstate.Sampling.EndTime))
+	endpointsInfo := h.handleEndpointsSampling(ta.Agentstate.Sampling.Endpoints)
+	h.sampler.EnableSampling(ta.Agentstate.Sampling.Limit, time.Time(ta.Agentstate.Sampling.EndTime), endpointsInfo)
+
 	if traceabilityTriggerHandler, ok := h.agentResourceManager.GetHandler().(TraceabilityTriggerHandler); ok {
 		traceabilityTriggerHandler.TriggerTraceability()
 	}
@@ -124,4 +135,53 @@ func (h *agentResourceHandler) handleComplianceProcessing(resource *v1.ResourceI
 		complianceAgentHandler.TriggerProcessing()
 	}
 	return nil
+}
+
+func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.TraceabilityAgentAgentstateSamplingEndpoints) map[string]management.TraceabilityAgentAgentstateSamplingEndpoints {
+	endpointsInfo := make(map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) // apiID -> endpoints
+	apiSIInfo := make(map[string]string)                                                      // basepath -> apiID
+
+	apiSIRIs := h.cache.ListAPIServiceInstances()
+	if len(apiSIRIs) == 0 {
+		return endpointsInfo
+	}
+
+	for _, apiSIRI := range apiSIRIs {
+		apiSI := management.NewAPIServiceInstance("", "")
+		err := apiSI.FromInstance(apiSIRI)
+		if err != nil {
+			h.logger.WithError(err).Errorf("failed to convert API Service Instance %s to management APIServiceInstance", apiSIRI.Metadata.ID)
+			continue
+		}
+
+		apiSIAgentDetails := util.GetAgentDetails(apiSI)
+		if apiSIAgentDetails == nil {
+			h.logger.Warnf("API Service Instance %s does not have agent details", apiSIRI.Metadata.ID)
+			continue
+		}
+		apiIDI, ok := apiSIAgentDetails[definitions.AttrExternalAPIID]
+		if !ok || apiIDI == "" {
+			h.logger.Warnf("API Service Instance %s does not have external API ID", apiSIRI.Metadata.ID)
+			continue
+		}
+
+		apiID := apiIDI.(string)
+		apiID = strings.TrimPrefix(apiID, remoteAPIID)
+
+		for _, endpoint := range apiSI.Spec.Endpoint {
+			if _, ok := apiSIInfo[endpoint.Routing.BasePath]; ok {
+				// if the basepath is already mapped to an apiID, skip this endpoint
+				continue
+			}
+			apiSIInfo[endpoint.Routing.BasePath] = apiID
+		}
+	}
+
+	for _, endpoint := range endpoints {
+		if apiID, ok := apiSIInfo[endpoint.BasePath]; ok {
+			endpointsInfo[apiID] = endpoint
+		}
+	}
+
+	return endpointsInfo
 }

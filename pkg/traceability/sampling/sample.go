@@ -5,8 +5,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
+
+type endpointsSampling struct {
+	enabled       bool
+	endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
+	endpointsLock sync.Mutex
+}
 
 // sample - private struct that is used to keep track of the samples being taken
 type sample struct {
@@ -16,28 +23,18 @@ type sample struct {
 	samplingCounter    int32
 	counterResetPeriod *atomic.Int64
 	counterResetStopCh chan struct{}
-	disableSamplingCh  chan struct{}
 	enabled            bool
 	endTime            time.Time
+	endpointsSampling  endpointsSampling
 	limit              int32
 }
 
-func NewSample(counterResetPeriod time.Duration) *sample {
-	if counterResetPeriod == 0 {
-		counterResetPeriod = time.Minute
+func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
+	if len(endpointsInfo) > 0 {
+		s.endpointsSampling.enabled = true
+		s.endpointsSampling.endpointsInfo = endpointsInfo
 	}
 
-	sampler := &sample{
-		disableSamplingCh:  make(chan struct{}),
-		counterResetStopCh: make(chan struct{}),
-		counterResetPeriod: &atomic.Int64{},
-	}
-	sampler.counterResetPeriod.Store(int64(counterResetPeriod))
-
-	return sampler
-}
-
-func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
 	s.samplingLock.Lock()
 	s.enabled = true
 	s.samplingLock.Unlock()
@@ -50,28 +47,48 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time) 
 	// start limit reset job; limit is reset every minute
 	go s.samplingCounterReset()
 
-	// disable sampling at endTime
-	go s.disableSampling()
-}
-
-func (s *sample) DisableSampling() {
-	s.samplingLock.Lock()
-	defer s.samplingLock.Unlock()
-	if s.enabled {
-		s.disableSamplingCh <- struct{}{}
+	if s.endpointsSampling.enabled {
+		go s.disableEndpointsSampling()
+	} else {
+		go s.disableSampling()
 	}
 }
 
 func (s *sample) disableSampling() {
 	disableTimer := time.NewTimer(time.Until(s.endTime))
-	select {
-	case <-disableTimer.C:
-	case <-s.disableSamplingCh:
-	}
+
+	<-disableTimer.C
 
 	s.samplingLock.Lock()
 	s.enabled = false
 	s.samplingLock.Unlock()
+
+	// stop limit reset job when sampling is disabled
+	s.counterResetStopCh <- struct{}{}
+}
+
+func (s *sample) disableEndpointsSampling() {
+	wg := sync.WaitGroup{}
+
+	for apiID, endpoint := range s.endpointsSampling.endpointsInfo {
+		wg.Add(1)
+		go func(apiID string, endpoint management.TraceabilityAgentAgentstateSamplingEndpoints) {
+			disableTimer := time.NewTimer(time.Until(time.Time(endpoint.EndTime)))
+			defer wg.Done()
+
+			<-disableTimer.C
+
+			s.endpointsSampling.endpointsLock.Lock()
+			delete(s.endpointsSampling.endpointsInfo, apiID)
+			s.endpointsSampling.endpointsLock.Unlock()
+		}(apiID, endpoint)
+	}
+
+	wg.Wait()
+
+	s.endpointsSampling.endpointsLock.Lock()
+	s.endpointsSampling.enabled = false
+	s.endpointsSampling.endpointsLock.Unlock()
 
 	// stop limit reset job when sampling is disabled
 	s.counterResetStopCh <- struct{}{}
@@ -107,9 +124,20 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	s.samplingLock.Lock()
 	defer s.samplingLock.Unlock()
 
+	s.endpointsSampling.endpointsLock.Lock()
+	defer s.endpointsSampling.endpointsLock.Unlock()
+
+	onlyErrors := s.config.OnlyErrors
+
 	// check if sampling is enabled
-	if !s.enabled {
+	if !s.enabled && !s.endpointsSampling.enabled {
 		return false
+	} else if s.endpointsSampling.enabled {
+		if endpoint, ok := s.endpointsSampling.endpointsInfo[details.APIID]; !ok {
+			return false
+		} else {
+			onlyErrors = endpoint.OnlyErrors
+		}
 	}
 
 	// sampling limit per minute exceeded
@@ -120,7 +148,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
-	if !hasFailedStatus && s.config.OnlyErrors {
+	if !hasFailedStatus && onlyErrors {
 		return false
 	}
 
