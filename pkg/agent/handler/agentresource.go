@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -18,6 +17,11 @@ import (
 
 type sampling interface {
 	EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints)
+}
+
+type apiServiceInstanceCache interface {
+	// ListAPIServiceInstances returns a list of API Service Instances
+	ListAPIServiceInstances() []*v1.ResourceInstance
 }
 
 type TraceabilityTriggerHandler interface {
@@ -40,11 +44,11 @@ type agentResourceHandler struct {
 	agentResourceManager resource.Manager
 	sampler              sampling
 	agentTypeHandler     map[string]agentTypeHandler
-	cache                agentcache.Manager
+	cache                apiServiceInstanceCache
 }
 
 // NewAgentResourceHandler - creates a Handler for Agent resources
-func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling, cache agentcache.Manager) Handler {
+func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling, cache apiServiceInstanceCache) Handler {
 	h := &agentResourceHandler{
 		logger:               log.NewFieldLogger().WithComponent("agentResourceHandler").WithPackage("handler"),
 		agentResourceManager: agentResourceManager,
