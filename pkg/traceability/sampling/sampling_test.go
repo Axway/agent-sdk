@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -194,7 +195,7 @@ func TestShouldSample(t *testing.T) {
 			period := &atomic.Int64{}
 			period.Store(int64(test.counterResetPeriod))
 			agentSamples.counterResetPeriod = period
-			agentSamples.EnableSampling(test.limit, endTime)
+			agentSamples.EnableSampling(test.limit, endTime, map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{})
 			assert.Nil(t, err)
 
 			sampled := 0

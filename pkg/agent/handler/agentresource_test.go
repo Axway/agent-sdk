@@ -19,7 +19,7 @@ type fakeSampler struct {
 	enabled bool
 }
 
-func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
+func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
 	f.enabled = true
 }
 
@@ -34,6 +34,14 @@ func (f *fakeAgent) TriggerProcessing() {
 
 func (f *fakeAgent) TriggerTraceability() {
 	f.triggeredTraceability = true
+}
+
+type mockApiServiceInstanceCache struct {
+	apiSIs []*v1.ResourceInstance
+}
+
+func (m *mockApiServiceInstanceCache) ListAPIServiceInstances() []*v1.ResourceInstance {
+	return m.apiSIs
 }
 
 func TestAgentResourceHandler(t *testing.T) {
@@ -253,7 +261,8 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 
 			sampler := &fakeSampler{}
-			handler := NewAgentResourceHandler(resourceManager, sampler)
+			cm := &mockApiServiceInstanceCache{}
+			handler := NewAgentResourceHandler(resourceManager, sampler, cm)
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), &proto.EventMeta{Subresource: tc.subresName}, tc.resource)
 			if tc.hasError {
