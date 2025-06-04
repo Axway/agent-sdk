@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -35,6 +34,14 @@ func (f *fakeAgent) TriggerProcessing() {
 
 func (f *fakeAgent) TriggerTraceability() {
 	f.triggeredTraceability = true
+}
+
+type mockApiServiceInstanceCache struct {
+	apiSIs []*v1.ResourceInstance
+}
+
+func (m *mockApiServiceInstanceCache) ListAPIServiceInstances() []*v1.ResourceInstance {
+	return m.apiSIs
 }
 
 func TestAgentResourceHandler(t *testing.T) {
@@ -254,7 +261,7 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 
 			sampler := &fakeSampler{}
-			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			cm := &mockApiServiceInstanceCache{}
 			handler := NewAgentResourceHandler(resourceManager, sampler, cm)
 
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), &proto.EventMeta{Subresource: tc.subresName}, tc.resource)
