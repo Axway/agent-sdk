@@ -10,12 +10,11 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/transaction/util"
+	sdkUtil "github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
-
-const remoteAPIID = "remoteApiId_"
 
 type sampling interface {
 	EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints)
@@ -129,7 +128,7 @@ func (h *agentResourceHandler) handleCompliance(action proto.Event_Type, subres 
 }
 
 func (h *agentResourceHandler) handleComplianceProcessing(resource *v1.ResourceInstance) error {
-	trigger, _ := util.GetAgentDetailsValue(resource, definitions.ComplianceAgentTrigger)
+	trigger, _ := sdkUtil.GetAgentDetailsValue(resource, definitions.ComplianceAgentTrigger)
 	if complianceAgentHandler, ok := h.agentResourceManager.GetHandler().(ComplianceAgentHandler); ok && trigger == "true" {
 		defer h.agentResourceManager.AddUpdateAgentDetails(definitions.ComplianceAgentTrigger, "false")
 		complianceAgentHandler.TriggerProcessing()
@@ -154,7 +153,7 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 			continue
 		}
 
-		apiSIAgentDetails := util.GetAgentDetails(apiSI)
+		apiSIAgentDetails := sdkUtil.GetAgentDetails(apiSI)
 		if apiSIAgentDetails == nil {
 			h.logger.Warnf("API Service Instance %s does not have agent details", apiSIRI.Metadata.ID)
 			continue
@@ -166,7 +165,7 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 		}
 
 		apiID := apiIDI.(string)
-		apiID = strings.TrimPrefix(apiID, remoteAPIID)
+		apiID = strings.TrimPrefix(apiID, util.SummaryEventProxyIDPrefix)
 
 		for _, endpoint := range apiSI.Spec.Endpoint {
 			if _, ok := apiSIInfo[endpoint.Routing.BasePath]; ok {

@@ -1,11 +1,13 @@
 package sampling
 
 import (
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
@@ -133,7 +135,8 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	if !s.enabled && !s.endpointsSampling.enabled {
 		return false
 	} else if s.endpointsSampling.enabled {
-		if endpoint, ok := s.endpointsSampling.endpointsInfo[details.APIID]; !ok {
+		apiID := strings.TrimPrefix(details.APIID, util.SummaryEventProxyIDPrefix)
+		if endpoint, ok := s.endpointsSampling.endpointsInfo[apiID]; !ok {
 			return false
 		} else {
 			onlyErrors = endpoint.OnlyErrors
@@ -141,7 +144,6 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 
 	// sampling limit per minute exceeded
-
 	if s.limit <= s.samplingCounter {
 		return false
 	}
