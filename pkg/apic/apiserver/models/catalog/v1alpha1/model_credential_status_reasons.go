@@ -22,7 +22,7 @@ type CredentialStatusReasons struct {
 	Type string `json:"type"`
 	// Details of the type.
 	Detail string `json:"detail"`
-	// Time when the update occurred.
+	// Time when the update occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp"`
 	//  (catalog.v1alpha1.Credential)
 	Meta map[string]map[string]interface{} `json:"meta,omitempty"`

@@ -18,6 +18,6 @@ import (
 
 // ApiServiceInstanceSamplestate  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSamplestate struct {
-	// The time in which sampling may be requested for this api service instance again
+	// The time in which sampling may be requested for this api service instance again in ISO 8601 format with numeric timezone offset
 	DisabledUntil time.Time `json:"disabledUntil,omitempty"`
 }
