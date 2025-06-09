@@ -478,6 +478,7 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 	basicAuthOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.BasicAuthCRD),
 		WithCRDTitle("Basic Auth"),
+		WithCRDType("HTTPBasic"),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.BasicAuthUsername).
@@ -502,6 +503,7 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	oauthOptions := []func(*crdBuilderOptions){
+		WithCRDType("Oauth"),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthClientID).
