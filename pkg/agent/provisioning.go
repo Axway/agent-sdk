@@ -37,10 +37,6 @@ func createOrUpdateCredentialRequestDefinition(data *management.CredentialReques
 	if ri == nil || err != nil {
 		return nil, err
 	}
-	// Set the Type in the spec if credType is set
-	if data.Spec.Type == "" && data.Name != "" {
-		data.Spec.Type = data.Name
-	}
 
 	err = data.FromInstance(ri)
 	return data, err
@@ -458,7 +454,7 @@ func NewAPIKeyCredentialRequestBuilder(options ...func(*crdBuilderOptions)) prov
 	apiKeyOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.APIKeyCRD),
 		WithCRDTitle("API Key"),
-		WithCRDType("APIKey"),
+		WithCRDType(provisioning.CrdTypeAPIKey),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.APIKey).
@@ -478,7 +474,7 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 	basicAuthOptions := []func(*crdBuilderOptions){
 		WithCRDName(provisioning.BasicAuthCRD),
 		WithCRDTitle("Basic Auth"),
-		WithCRDType("HTTPBasic"),
+		WithCRDType(provisioning.CrdTypeHTTPBasic),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.BasicAuthUsername).
@@ -503,7 +499,7 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	oauthOptions := []func(*crdBuilderOptions){
-		WithCRDType("Oauth"),
+		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
 				SetName(provisioning.OauthClientID).
