@@ -102,10 +102,10 @@ func (s *sample) handleEndpointsSampling(endpoints map[string]management.Traceab
 }
 
 func (s *sample) resetEndpointSampling() {
+	s.endpointsSampling.endpointsLock.Lock()
 	if len(s.endpointsSampling.endpointsInfo) > 0 {
 		return
 	}
-	s.endpointsSampling.endpointsLock.Lock()
 	s.endpointsSampling.enabled = false
 	s.endpointsSampling.endpointsLock.Unlock()
 	// stop limit reset job when sampling is disabled
