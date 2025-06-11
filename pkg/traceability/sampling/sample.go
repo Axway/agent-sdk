@@ -11,9 +11,15 @@ import (
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
+type endpointSamplingInfo struct {
+	enabled bool
+	lock    sync.Mutex
+	info    management.TraceabilityAgentAgentstateSamplingEndpoints
+}
+
 type endpointsSampling struct {
 	enabled       bool
-	endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
+	endpointsInfo map[string]*endpointSamplingInfo
 	endpointsLock sync.Mutex
 }
 
@@ -33,8 +39,18 @@ type sample struct {
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
 	if len(endpointsInfo) > 0 {
+		s.endpointsSampling.endpointsLock.Lock()
 		s.endpointsSampling.enabled = true
-		s.endpointsSampling.endpointsInfo = endpointsInfo
+		for apiID, endpoint := range endpointsInfo {
+			if _, ok := s.endpointsSampling.endpointsInfo[apiID]; !ok {
+				s.endpointsSampling.endpointsInfo[apiID] = &endpointSamplingInfo{
+					enabled: false,
+					info:    endpoint,
+					lock:    sync.Mutex{},
+				}
+			}
+		}
+		s.endpointsSampling.endpointsLock.Unlock()
 	}
 
 	s.samplingLock.Lock()
@@ -73,9 +89,21 @@ func (s *sample) disableEndpointsSampling() {
 	wg := sync.WaitGroup{}
 
 	for apiID, endpoint := range s.endpointsSampling.endpointsInfo {
+		// check if sampling is already enabled for this endpoint
+		endpoint.lock.Lock()
+		samplingEnabledForEndpoint := endpoint.enabled
+		endpoint.lock.Unlock()
+		if samplingEnabledForEndpoint {
+			continue // skip if sampling already started for this endpoint
+		}
+
+		endpoint.lock.Lock()
+		endpoint.enabled = true
+		endpoint.lock.Unlock()
+
 		wg.Add(1)
-		go func(apiID string, endpoint management.TraceabilityAgentAgentstateSamplingEndpoints) {
-			disableTimer := time.NewTimer(time.Until(time.Time(endpoint.EndTime)))
+		go func(apiID string, endpointEndTime time.Time) {
+			disableTimer := time.NewTimer(time.Until(endpointEndTime))
 			defer wg.Done()
 
 			<-disableTimer.C
@@ -83,7 +111,7 @@ func (s *sample) disableEndpointsSampling() {
 			s.endpointsSampling.endpointsLock.Lock()
 			delete(s.endpointsSampling.endpointsInfo, apiID)
 			s.endpointsSampling.endpointsLock.Unlock()
-		}(apiID, endpoint)
+		}(apiID, time.Time(endpoint.info.EndTime))
 	}
 
 	wg.Wait()
@@ -98,7 +126,7 @@ func (s *sample) disableEndpointsSampling() {
 
 func (s *sample) samplingCounterReset() {
 	resetPeriod := time.Duration(s.counterResetPeriod.Load())
-	nextLimiterPeriod := time.Now().Round(time.Duration(resetPeriod))
+	nextLimiterPeriod := time.Now().Round(resetPeriod)
 	<-time.NewTimer(time.Until(nextLimiterPeriod)).C
 	s.resetSamplingCounter()
 
@@ -136,10 +164,14 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	} else if s.endpointsSampling.enabled {
 		apiID := strings.TrimPrefix(details.APIID, util.SummaryEventProxyIDPrefix)
-		if endpoint, ok := s.endpointsSampling.endpointsInfo[apiID]; !ok {
+		endpoint, ok := s.endpointsSampling.endpointsInfo[apiID]
+		if !ok || !endpoint.enabled {
+			// if endpoint is not found or sampling is not enabled for this endpoint, return false
 			return false
 		} else {
-			onlyErrors = endpoint.OnlyErrors
+			endpoint.lock.Lock()
+			onlyErrors = endpoint.info.OnlyErrors
+			endpoint.lock.Unlock()
 		}
 	}
 

@@ -145,9 +145,6 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 	apiSIInfo := make(map[string]string)                                                      // basepath -> apiID
 
 	apiSIRIs := h.cache.ListAPIServiceInstances()
-	if len(apiSIRIs) == 0 {
-		return endpointsInfo
-	}
 
 	for _, apiSIRI := range apiSIRIs {
 		apiSI := management.NewAPIServiceInstance("", "")
@@ -157,18 +154,11 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 			continue
 		}
 
-		apiSIAgentDetails := sdkUtil.GetAgentDetails(apiSI)
-		if apiSIAgentDetails == nil {
-			h.logger.Warnf("API Service Instance %s does not have agent details", apiSIRI.Metadata.ID)
+		apiID, err := sdkUtil.GetAgentDetailsValue(apiSI, definitions.AttrExternalAPIID)
+		if err != nil || apiID == "" {
+			h.logger.WithError(err).Warnf("API Service Instance %s does not have external API ID", apiSIRI.Metadata.ID)
 			continue
 		}
-		apiIDI, ok := apiSIAgentDetails[definitions.AttrExternalAPIID]
-		if !ok || apiIDI == "" {
-			h.logger.Warnf("API Service Instance %s does not have external API ID", apiSIRI.Metadata.ID)
-			continue
-		}
-
-		apiID := apiIDI.(string)
 		apiID = strings.TrimPrefix(apiID, util.SummaryEventProxyIDPrefix)
 
 		for _, endpoint := range apiSI.Spec.Endpoint {
