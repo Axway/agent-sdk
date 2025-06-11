@@ -224,7 +224,7 @@ func TestShouldSample(t *testing.T) {
 				"id5": {successCount: 1000},
 				"id6": {successCount: 1000},
 			},
-			maxSampled:         800,
+			maxSampled:         600,
 			limit:              100,
 			duration:           time.Second / 2,
 			counterResetPeriod: time.Second / 10,
