@@ -339,6 +339,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		return err
 	}
 	crd, err := NewOAuthCredentialRequestBuilder(
+		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
 		WithCRDOAuthSecret(),

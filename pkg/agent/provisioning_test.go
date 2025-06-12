@@ -10,6 +10,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -63,11 +64,11 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 			var crd *management.CredentialRequestDefinition
 			switch test.expectedName {
 			case "http-basic":
-				crd, err = NewBasicAuthCredentialRequestBuilder().Register()
+				crd, err = NewBasicAuthCredentialRequestBuilder(WithCRDType(provisioning.CrdTypeHTTPBasic)).Register()
 			case "api-key":
-				crd, err = NewAPIKeyCredentialRequestBuilder().Register()
+				crd, err = NewAPIKeyCredentialRequestBuilder(WithCRDType(provisioning.CrdTypeAPIKey)).Register()
 			case "oauth":
-				crd, err = NewOAuthCredentialRequestBuilder().Register()
+				crd, err = NewOAuthCredentialRequestBuilder(WithCRDType(provisioning.CrdTypeOauth)).Register()
 			case "oauth-external":
 				cfg := &config.IDPConfiguration{
 					Name:        "test",
@@ -87,6 +88,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 
 				p, _ := oauth.NewProvider(cfg, config.NewTLSConfig(), "", 30*time.Second)
 				crd, err = NewOAuthCredentialRequestBuilder(
+					WithCRDType(provisioning.CrdTypeOauth),
 					WithCRDOAuthSecret(),
 					WithCRDForIDP(p, []string{}),
 				).Register()

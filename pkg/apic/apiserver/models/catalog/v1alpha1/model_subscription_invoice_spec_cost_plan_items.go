@@ -24,9 +24,9 @@ type SubscriptionInvoiceSpecCostPlanItems struct {
 	Units int32 `json:"units,omitempty"`
 	// The cost of a billed unit for the quota or specific quota interval.
 	ItemCost float64 `json:"itemCost,omitempty"`
-	// Start time of the invoice item.
+	// Start time of the invoice item in ISO 8601 format with numeric timezone offset.
 	From time.Time `json:"from,omitempty"`
-	// End time of the invoice item.
+	// End time of the invoice item in ISO 8601 format with numeric timezone offset.
 	To time.Time `json:"to,omitempty"`
 	// The description of the invoice item for the quota.
 	Description string `json:"description,omitempty"`

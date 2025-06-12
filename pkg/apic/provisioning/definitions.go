@@ -43,6 +43,14 @@ const (
 	CredExpDetail = "Agent: CredentialExpired"
 )
 
+// CrdType - the type of credential request definition
+const (
+	CrdTypeOauth     = "OAuth"
+	CrdTypeHTTPBasic = "HTTPBasic"
+	CrdTypeAPIKey    = "APIKey"
+	CrdTypeMTLS      = "MutualTLS"
+)
+
 // RequestType - the type of credential request being sent
 type RequestType int
 

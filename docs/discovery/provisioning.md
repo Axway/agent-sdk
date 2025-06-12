@@ -108,12 +108,14 @@ func createCredentialRequestDefinitions() {
       SetEnumValues([]{"Public","Confidential"}) // add an enumeration
 
   agent.NewOAuthCredentialRequestBuilder(             // Oauth CRD builder helper, adds client id field
+    agent.WithCRDType("OAuth"),                    // Credential type for Marketplace rendering (APIKey, Oauth, HTTPBasic, MutualTLS)
     agent.WithCRDOAuthSecret(),                       // its a secret based credential, add client secret field
     agent.WithCRDRequestSchemaProperty(oAuthTypeProp) // add a request schema property
     agent.WithIsRenewable(), // set that this credential type may be renewed
   ).Register() 
     
   agent.NewOAuthCredentialRequestBuilder(              // Oauth CRD builder helper, adds client id field
+    agent.WithCRDType("OAuth"),                    // Credential type for Marketplace rendering (APIKey, Oauth, HTTPBasic, MutualTLS)
     agent.WithCRDOAuthPublicKey(),                     // its a key based credential, add public key request property
     agent.WithCRDRequestSchemaProperty(oAuthTypeProp), // add a request schema property
     agent.WithIsSuspendable(), // set that this credential type may be suspended
@@ -666,6 +668,7 @@ func registerCRDForOAuthProvider(crdName string, tokenURL, apiScopes string) err
   }
 
   agent.NewOAuthCredentialRequestBuilder(
+    agent.WithCRDType("OAuth"),  
     agent.WithCRDForIDP(p, scopes),
     agent.WithCRDName(crdName),
   ).Register()

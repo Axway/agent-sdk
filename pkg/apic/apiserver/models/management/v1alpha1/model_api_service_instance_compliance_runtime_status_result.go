@@ -18,7 +18,7 @@ import (
 
 // ApiServiceInstanceComplianceRuntimeStatusResult APIServiceInstance runtime results.
 type ApiServiceInstanceComplianceRuntimeStatusResult struct {
-	// Time when the update occurred.
+	// Time when the update occurred in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	// Grade result from the results summary.
 	Grade string `json:"grade,omitempty"`

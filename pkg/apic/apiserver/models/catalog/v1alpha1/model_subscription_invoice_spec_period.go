@@ -18,8 +18,8 @@ import (
 
 // SubscriptionInvoiceSpecPeriod Describes the period for which the invoice was created. Initial invoice for a subscription does not contain a period. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceSpecPeriod struct {
-	// Start time of the invoice.
+	// Start time of the invoice in ISO 8601 format with numeric timezone offset.
 	From time.Time `json:"from"`
-	// End time of the invoice.
+	// End time of the invoice in ISO 8601 format with numeric timezone offset.
 	To time.Time `json:"to"`
 }
