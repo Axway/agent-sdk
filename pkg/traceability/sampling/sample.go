@@ -59,10 +59,7 @@ func (s *sample) disableSampling() {
 	s.enabled.Store(false)
 	// stop limit reset job when sampling is disabled
 
-	if !s.resetterRunning.Load() {
-		return // resetter already stopped
-	}
-	s.counterResetStopCh <- struct{}{}
+	s.stopCounterResetter()
 }
 
 func (s *sample) handleEndpointsSampling(endpoints map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
@@ -124,11 +121,13 @@ func (s *sample) resetEndpointSampling() {
 		return
 	}
 	s.endpointsSampling.enabled.Store(false)
+	s.stopCounterResetter()
+}
 
+func (s *sample) stopCounterResetter() {
 	if !s.resetterRunning.Load() {
 		return // resetter already stopped
 	}
-	// stop limit reset job when sampling is disabled
 	s.counterResetStopCh <- struct{}{}
 }
 
@@ -136,6 +135,7 @@ func (s *sample) samplingCounterReset() {
 	if s.resetterRunning.Load() {
 		return // resetter is already running
 	}
+
 	s.resetterRunning.Store(true)
 	resetPeriod := time.Duration(s.counterResetPeriod.Load())
 	nextLimiterPeriod := time.Now().Round(resetPeriod)
@@ -180,9 +180,11 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 
 	// sampling limit per minute exceeded
+	s.samplingLock.Lock()
 	if s.limit <= s.samplingCounter {
 		return false
 	}
+	defer s.samplingLock.Unlock()
 
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
