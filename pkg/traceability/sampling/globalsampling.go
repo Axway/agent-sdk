@@ -59,7 +59,7 @@ func GetGlobalSampling() *sample {
 			counterResetPeriod: period,
 			counterResetStopCh: make(chan struct{}),
 			endpointsSampling: endpointsSampling{
-				enabled:       false,
+				enabled:       atomic.Bool{},
 				endpointsInfo: make(map[string]bool, 0),
 				endpointsLock: sync.Mutex{},
 			},
@@ -117,7 +117,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 			counterResetPeriod: period,
 			counterResetStopCh: make(chan struct{}),
 			endpointsSampling: endpointsSampling{
-				enabled:       false,
+				enabled:       atomic.Bool{},
 				endpointsInfo: make(map[string]bool, 0),
 				endpointsLock: sync.Mutex{},
 			},
