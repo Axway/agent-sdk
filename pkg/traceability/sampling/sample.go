@@ -181,10 +181,10 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	// sampling limit per minute exceeded
 	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
 	if s.limit <= s.samplingCounter {
 		return false
 	}
-	defer s.samplingLock.Unlock()
 
 	hasFailedStatus := details.Status == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
@@ -192,8 +192,6 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 
-	s.samplingLock.Lock()
-	defer s.samplingLock.Unlock()
 	s.samplingCounter++
 
 	return true
