@@ -11,15 +11,9 @@ import (
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
-type endpointSamplingInfo struct {
-	enabled bool
-	lock    sync.Mutex
-	info    management.TraceabilityAgentAgentstateSamplingEndpoints
-}
-
 type endpointsSampling struct {
-	enabled       bool
-	endpointsInfo map[string]*endpointSamplingInfo
+	enabled       atomic.Bool
+	endpointsInfo map[string]bool
 	endpointsLock sync.Mutex
 }
 
@@ -31,75 +25,53 @@ type sample struct {
 	samplingCounter    int32
 	counterResetPeriod *atomic.Int64
 	counterResetStopCh chan struct{}
-	enabled            bool
+	enabled            atomic.Bool
 	endTime            time.Time
 	endpointsSampling  endpointsSampling
 	limit              int32
+	resetterRunning    atomic.Bool
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
 	if len(endpointsInfo) > 0 {
-		s.endpointsSampling.endpointsLock.Lock()
-		s.endpointsSampling.enabled = true
-		for apiID, endpoint := range endpointsInfo {
-			if _, ok := s.endpointsSampling.endpointsInfo[apiID]; !ok {
-				s.endpointsSampling.endpointsInfo[apiID] = &endpointSamplingInfo{
-					enabled: false,
-					info:    endpoint,
-					lock:    sync.Mutex{},
-				}
-			}
-		}
-		s.endpointsSampling.endpointsLock.Unlock()
+		go s.handleEndpointsSampling(endpointsInfo)
 	}
 
-	s.samplingLock.Lock()
-	s.enabled = true
-	s.samplingLock.Unlock()
+	if time.Now().Before(samplingEndTime) {
+		// only enable sampling if the end time is in the future
+		s.enabled.Store(true)
 
-	s.endTime = samplingEndTime
+		s.endTime = samplingEndTime
+		go s.disableSampling()
+	}
+
 	s.limit = samplingLimit
-
 	s.resetSamplingCounter()
 
 	// start limit reset job; limit is reset every minute
 	go s.samplingCounterReset()
-
-	if s.endpointsSampling.enabled {
-		go s.disableEndpointsSampling()
-	} else {
-		go s.disableSampling()
-	}
 }
 
 func (s *sample) disableSampling() {
 	disableTimer := time.NewTimer(time.Until(s.endTime))
-
 	<-disableTimer.C
 
-	s.samplingLock.Lock()
-	s.enabled = false
-	s.samplingLock.Unlock()
-
+	s.enabled.Store(false)
 	// stop limit reset job when sampling is disabled
-	s.counterResetStopCh <- struct{}{}
+
+	s.stopCounterResetter()
 }
 
-func (s *sample) disableEndpointsSampling() {
+func (s *sample) handleEndpointsSampling(endpoints map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
+	s.endpointsSampling.enabled.Store(true)
+
 	wg := sync.WaitGroup{}
 
-	for apiID, endpoint := range s.endpointsSampling.endpointsInfo {
-		// check if sampling is already enabled for this endpoint
-		endpoint.lock.Lock()
-		samplingEnabledForEndpoint := endpoint.enabled
-		endpoint.lock.Unlock()
-		if samplingEnabledForEndpoint {
-			continue // skip if sampling already started for this endpoint
+	for apiID, endpoint := range endpoints {
+		if !s.addEndpointSampling(apiID, endpoint.OnlyErrors) {
+			// skip if endpoint already exists
+			continue
 		}
-
-		endpoint.lock.Lock()
-		endpoint.enabled = true
-		endpoint.lock.Unlock()
 
 		wg.Add(1)
 		go func(apiID string, endpointEndTime time.Time) {
@@ -108,23 +80,63 @@ func (s *sample) disableEndpointsSampling() {
 
 			<-disableTimer.C
 
-			s.endpointsSampling.endpointsLock.Lock()
-			delete(s.endpointsSampling.endpointsInfo, apiID)
-			s.endpointsSampling.endpointsLock.Unlock()
-		}(apiID, time.Time(endpoint.info.EndTime))
+			s.removeEndpointSampling(apiID)
+		}(apiID, time.Time(endpoint.EndTime))
 	}
 
 	wg.Wait()
+	s.resetEndpointSampling()
+}
 
+func (s *sample) addEndpointSampling(apiID string, onlyErrors bool) bool {
 	s.endpointsSampling.endpointsLock.Lock()
-	s.endpointsSampling.enabled = false
-	s.endpointsSampling.endpointsLock.Unlock()
+	defer s.endpointsSampling.endpointsLock.Unlock()
+	if _, ok := s.endpointsSampling.endpointsInfo[apiID]; ok {
+		// endpoint already exists, no need to add it again
+		return false
+	}
+	s.endpointsSampling.endpointsInfo[apiID] = onlyErrors
+	return true
+}
 
-	// stop limit reset job when sampling is disabled
+func (s *sample) removeEndpointSampling(apiID string) {
+	s.endpointsSampling.endpointsLock.Lock()
+	defer s.endpointsSampling.endpointsLock.Unlock()
+	delete(s.endpointsSampling.endpointsInfo, apiID)
+}
+
+func (s *sample) sampleEndpointAndOnlyErrors(apiID string) (bool, bool) {
+	s.endpointsSampling.endpointsLock.Lock()
+	defer s.endpointsSampling.endpointsLock.Unlock()
+	if _, ok := s.endpointsSampling.endpointsInfo[apiID]; !ok {
+		return false, false // endpoint not found
+	}
+	return true, s.endpointsSampling.endpointsInfo[apiID] // endpoint found, return onlyErrors
+}
+
+func (s *sample) resetEndpointSampling() {
+	s.endpointsSampling.endpointsLock.Lock()
+	defer s.endpointsSampling.endpointsLock.Unlock()
+	if len(s.endpointsSampling.endpointsInfo) > 0 {
+		return
+	}
+	s.endpointsSampling.enabled.Store(false)
+	s.stopCounterResetter()
+}
+
+func (s *sample) stopCounterResetter() {
+	if !s.resetterRunning.Load() {
+		return // resetter already stopped
+	}
 	s.counterResetStopCh <- struct{}{}
 }
 
 func (s *sample) samplingCounterReset() {
+	if s.resetterRunning.Load() {
+		return // resetter is already running
+	}
+
+	s.resetterRunning.Store(true)
 	resetPeriod := time.Duration(s.counterResetPeriod.Load())
 	nextLimiterPeriod := time.Now().Round(resetPeriod)
 	<-time.NewTimer(time.Until(nextLimiterPeriod)).C
@@ -136,6 +148,7 @@ func (s *sample) samplingCounterReset() {
 	for {
 		select {
 		case <-s.counterResetStopCh:
+			s.resetterRunning.Store(false)
 			return
 		case <-ticker.C:
 			s.resetSamplingCounter()
@@ -151,31 +164,24 @@ func (s *sample) resetSamplingCounter() {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
-	s.samplingLock.Lock()
-	defer s.samplingLock.Unlock()
-
-	s.endpointsSampling.endpointsLock.Lock()
-	defer s.endpointsSampling.endpointsLock.Unlock()
-
 	onlyErrors := s.config.OnlyErrors
 
 	// check if sampling is enabled
-	if !s.enabled && !s.endpointsSampling.enabled {
+	if !s.enabled.Load() && !s.endpointsSampling.enabled.Load() {
 		return false
-	} else if s.endpointsSampling.enabled {
+	} else if s.endpointsSampling.enabled.Load() {
 		apiID := strings.TrimPrefix(details.APIID, util.SummaryEventProxyIDPrefix)
-		endpoint, ok := s.endpointsSampling.endpointsInfo[apiID]
-		if !ok || !endpoint.enabled {
+		var found bool
+		found, onlyErrors = s.sampleEndpointAndOnlyErrors(apiID)
+		if !found {
 			// if endpoint is not found or sampling is not enabled for this endpoint, return false
 			return false
-		} else {
-			endpoint.lock.Lock()
-			onlyErrors = endpoint.info.OnlyErrors
-			endpoint.lock.Unlock()
 		}
 	}
 
 	// sampling limit per minute exceeded
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
 	if s.limit <= s.samplingCounter {
 		return false
 	}
