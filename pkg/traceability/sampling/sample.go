@@ -166,15 +166,15 @@ func (s *sample) resetSamplingCounter() {
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	onlyErrors := s.config.OnlyErrors
 
-	// check if sampling is enabled
+	// if both are disabled, skip. if endpoints is enabled and sampling is disabled, check if the endpoint is found
 	if !s.enabled.Load() && !s.endpointsSampling.enabled.Load() {
 		return false
-	} else if s.endpointsSampling.enabled.Load() {
+	} else if s.endpointsSampling.enabled.Load() && !s.enabled.Load() {
 		apiID := strings.TrimPrefix(details.APIID, util.SummaryEventProxyIDPrefix)
 		var found bool
 		found, onlyErrors = s.sampleEndpointAndOnlyErrors(apiID)
 		if !found {
-			// if endpoint is not found or sampling is not enabled for this endpoint, return false
+			// if endpoint is not found and sampling is not enabled for this endpoint, return false
 			return false
 		}
 	}

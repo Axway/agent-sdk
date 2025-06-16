@@ -137,7 +137,6 @@ func TestShouldSample(t *testing.T) {
 		globalSampling           bool
 		apiTransactions          map[string]transactionCount
 		maxSampled               int
-		config                   Sampling
 		subIDs                   map[string]string
 		limit                    int32
 		duration                 time.Duration
@@ -253,7 +252,7 @@ func TestShouldSample(t *testing.T) {
 			done := time.NewTicker(time.Until(testEnd))
 			defer done.Stop()
 
-			err := SetupSampling(test.config, false, "")
+			err := SetupSampling(Sampling{}, false, "")
 			endTime := time.Now().Add(-1 * time.Second) // reset endTime to avoid issues with the test
 			if test.globalSampling {
 				endTime = testEnd
@@ -450,6 +449,43 @@ func TestFilterEvents(t *testing.T) {
 			assert.Len(t, filterEvents, test.eventsExpected)
 		})
 	}
+}
+
+func TestBothSamplingsEnabled(t *testing.T) {
+	SetupSampling(Sampling{}, false, "")
+	endTime := time.Now().Add(10 * time.Second)
+
+	period := &atomic.Int64{}
+	period.Store(time.Second.Milliseconds())
+	agentSamples.counterResetPeriod = period
+	// update the endtime in the endpoints
+	agentSamples.EnableSampling(100, endTime, map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+		"endpoint1": {
+			BasePath: "/api/v1",
+			EndTime:  v1Time.Time(time.Now().Add(500 * time.Millisecond)),
+		},
+	})
+	testDetails := TransactionDetails{
+		Status: "Failure",
+		APIID:  "endpoint1",
+		SubID:  "sub1",
+	}
+	sample, _ := ShouldSampleTransaction(testDetails)
+	assert.True(t, sample)
+
+	agentSamples.EnableSampling(100, endTime, map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+		"endpoint1": {
+			BasePath: "/api/v1",
+			EndTime:  v1Time.Time(time.Now().Add(500 * time.Millisecond)),
+		},
+	})
+	testDetails = TransactionDetails{
+		Status: "Failure",
+		APIID:  "sthElse",
+		SubID:  "sub2",
+	}
+	sample, _ = ShouldSampleTransaction(testDetails)
+	assert.True(t, sample)
 }
 
 func Test_SamplingPercentageDecimals(t *testing.T) {
