@@ -17,6 +17,23 @@ type endpointsSampling struct {
 	endpointsLock sync.Mutex
 }
 
+type concurrentTime struct {
+	endTime time.Time
+	mu      sync.RWMutex
+}
+
+func (ct *concurrentTime) SetEndTime(endTime time.Time) {
+	ct.mu.Lock()
+	defer ct.mu.Unlock()
+	ct.endTime = endTime
+}
+
+func (ct *concurrentTime) GetEndTime() time.Time {
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
+	return ct.endTime
+}
+
 // sample - private struct that is used to keep track of the samples being taken
 type sample struct {
 	config             Sampling
@@ -26,7 +43,7 @@ type sample struct {
 	counterResetPeriod *atomic.Int64
 	counterResetStopCh chan struct{}
 	enabled            atomic.Bool
-	endTime            time.Time
+	samplingTime       concurrentTime
 	endpointsSampling  endpointsSampling
 	limit              int32
 	resetterRunning    atomic.Bool
@@ -40,8 +57,7 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, 
 	if time.Now().Before(samplingEndTime) {
 		// only enable sampling if the end time is in the future
 		s.enabled.Store(true)
-
-		s.endTime = samplingEndTime
+		s.samplingTime.SetEndTime(samplingEndTime)
 		go s.disableSampling()
 	}
 
@@ -53,7 +69,7 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, 
 }
 
 func (s *sample) disableSampling() {
-	disableTimer := time.NewTimer(time.Until(s.endTime))
+	disableTimer := time.NewTimer(time.Until(s.samplingTime.GetEndTime()))
 	<-disableTimer.C
 
 	s.enabled.Store(false)

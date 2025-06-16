@@ -63,6 +63,10 @@ func GetGlobalSampling() *sample {
 				endpointsInfo: make(map[string]bool, 0),
 				endpointsLock: sync.Mutex{},
 			},
+			samplingTime: concurrentTime{
+				endTime: time.Time{},
+				mu:      sync.RWMutex{},
+			},
 		}
 	}
 	return agentSamples
@@ -120,6 +124,10 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 				enabled:       atomic.Bool{},
 				endpointsInfo: make(map[string]bool, 0),
 				endpointsLock: sync.Mutex{},
+			},
+			samplingTime: concurrentTime{
+				endTime: time.Time{},
+				mu:      sync.RWMutex{},
 			},
 		}
 	} else {
