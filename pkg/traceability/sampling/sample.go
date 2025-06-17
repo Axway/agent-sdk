@@ -182,6 +182,8 @@ func (s *sample) resetSamplingCounter() {
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	onlyErrors := s.config.OnlyErrors
 
+	statusText := GetStatusFromCodeString(details.Status)
+
 	// if both are disabled, skip. if endpoints is enabled and sampling is disabled, check if the endpoint is found
 	if !s.enabled.Load() && !s.endpointsSampling.enabled.Load() {
 		return false
@@ -202,7 +204,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 
-	hasFailedStatus := details.Status == "Failure"
+	hasFailedStatus := statusText == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && onlyErrors {
 		return false

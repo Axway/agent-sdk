@@ -21,6 +21,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/traceability"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -411,7 +412,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 				UnitCount: UnitCount{
 					Quota: c.getQuota(accessRequest, defaultUnit),
 				},
-				Status: c.getStatusText(detail.Status),
+				Status: GetStatusText(detail.Status),
 			},
 		}
 	} else if detail.UnitName != "" {
@@ -1074,6 +1075,6 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 		Info("Published metrics report for API")
 }
 
-func (c *collector) getStatusText(statusCode string) string {
-	return getStatusFromCodeString(statusCode).String()
+func GetStatusText(statusCode string) string {
+	return sampling.GetStatusFromCodeString(statusCode).String()
 }
