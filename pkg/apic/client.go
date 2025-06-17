@@ -787,6 +787,8 @@ func (c *ServiceClient) getCachedResource(data *apiv1.ResourceInstance) (*apiv1.
 		return c.caches.GetApplicationProfileDefinitionByName(data.Name)
 	case management.APIServiceInstanceGVK().Kind:
 		return c.caches.GetAPIServiceInstanceByName(data.Name)
+	case management.ComplianceRuntimeResultGVK().Kind:
+		return c.caches.GetComplianceRuntimeResultByName(data.Name)
 	}
 	return nil, nil
 }
@@ -841,6 +843,13 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			return existingRI, nil
 		}
 
+		// update new crd/ard/apd with existing custom field properties
+		if data.Kind == management.AccessRequestDefinitionGVK().Kind ||
+			data.Kind == management.CredentialRequestDefinitionGVK().Kind ||
+			data.Kind == management.ApplicationProfileDefinitionGVK().Kind {
+			data = addCustomFieldsToNewRequestSchema(c.logger, data, existingRI)
+		}
+
 		// Update the spec and agent details subresource, if they exist in incoming data
 		existingRI.Spec = data.Spec
 		existingRI.SubResources = data.SubResources
@@ -888,9 +897,10 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	return newRI, err
 }
 
-// CreateOrUpdateResource deletes a resource
 func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
-	data.SetScopeName(c.cfg.GetEnvironmentName())
+	if data.GetMetadata().Scope.Name == "" {
+		data.SetScopeName(c.cfg.GetEnvironmentName())
+	}
 	ri, err := data.AsInstance()
 	if err != nil {
 		return nil, err

@@ -24,6 +24,7 @@ type credentialRequestDef struct {
 	renewable       bool
 	suspendable     bool
 	period          int
+	credType        string
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -39,6 +40,7 @@ type CredentialRequestBuilder interface {
 	IsSuspendable() CredentialRequestBuilder
 	SetExpirationDays(days int) CredentialRequestBuilder
 	SetDeprovisionExpired() CredentialRequestBuilder
+	SetType(crdType string) CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
@@ -138,6 +140,12 @@ func (c *credentialRequestDef) SetDeprovisionExpired() CredentialRequestBuilder 
 	return c
 }
 
+// SetType - set the credential type for the request
+func (c *credentialRequestDef) SetType(credType string) CredentialRequestBuilder {
+	c.credType = credType
+	return c
+}
+
 // Register - create the credential request definition and send it to Central
 func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
@@ -149,6 +157,7 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	}
 
 	spec := management.CredentialRequestDefinitionSpec{
+		Type:   c.credType,
 		Schema: c.requestSchema,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
@@ -167,12 +176,16 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 
 	hashInt, _ := util.ComputeHash(spec)
 
+	// put back in spec the complete request schema
+	spec.Schema = c.requestSchema
+
 	if c.title == "" {
 		c.title = c.name
 	}
 
 	crd := management.NewCredentialRequestDefinition(c.name, "")
 	crd.Title = c.title
+
 	crd.Spec = spec
 
 	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))

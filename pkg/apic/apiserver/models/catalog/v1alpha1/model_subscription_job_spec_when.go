@@ -18,6 +18,6 @@ import (
 
 // SubscriptionJobSpecWhen Describes when to execute the action. (catalog.v1alpha1.SubscriptionJob)
 type SubscriptionJobSpecWhen struct {
-	// Time when the migration should execute.
+	// Time when the migration should execute in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`
 }

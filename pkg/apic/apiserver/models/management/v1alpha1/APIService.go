@@ -27,12 +27,13 @@ var (
 )
 
 const (
-	APIServiceResourceName              = "apiservices"
-	ApiServiceComplianceSubResourceName = "compliance"
-	ApiServiceDetailsSubResourceName    = "details"
-	ApiServiceReferencesSubResourceName = "references"
-	ApiServiceSourceSubResourceName     = "source"
-	ApiServiceStatusSubResourceName     = "status"
+	APIServiceResourceName                           = "apiservices"
+	ApiServiceComplianceSubResourceName              = "compliance"
+	ApiServiceComplianceruntimeresultSubResourceName = "complianceruntimeresult"
+	ApiServiceDetailsSubResourceName                 = "details"
+	ApiServiceReferencesSubResourceName              = "references"
+	ApiServiceSourceSubResourceName                  = "source"
+	ApiServiceStatusSubResourceName                  = "status"
 )
 
 func APIServiceGVK() apiv1.GroupVersionKind {
@@ -49,14 +50,15 @@ type APIService struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance ApiServiceCompliance `json:"compliance"`
-	Compliance *ApiServiceCompliance `json:"compliance,omitempty"`
-	Details    ApiServiceDetails     `json:"details"`
-	Owner      *apiv1.Owner          `json:"owner"`
-	References ApiServiceReferences  `json:"references"`
+	//	Compliance              ApiServiceCompliance `json:"compliance"`
+	Compliance              *ApiServiceCompliance `json:"compliance,omitempty"`
+	Complianceruntimeresult interface{}           `json:"complianceruntimeresult"`
+	Details                 ApiServiceDetails     `json:"details"`
+	Owner                   *apiv1.Owner          `json:"owner"`
+	References              ApiServiceReferences  `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source     ApiServiceSource      `json:"source"`
+	//	Source                  ApiServiceSource      `json:"source"`
 	Source *ApiServiceSource `json:"source,omitempty"`
 	Spec   ApiServiceSpec    `json:"spec"`
 	// Status ApiServiceStatus  `json:"status"`
@@ -150,6 +152,7 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 	}
 
 	out["compliance"] = res.Compliance
+	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["details"] = res.Details
 	out["owner"] = res.Owner
 	out["references"] = res.References
@@ -194,6 +197,20 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "compliance")
 		err = json.Unmarshal(sr, &res.Compliance)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Complianceruntimeresult
+	if v, ok := aux.SubResources["complianceruntimeresult"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "complianceruntimeresult")
+		err = json.Unmarshal(sr, &res.Complianceruntimeresult)
 		if err != nil {
 			return err
 		}

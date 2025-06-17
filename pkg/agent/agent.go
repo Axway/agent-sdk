@@ -342,6 +342,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		return err
 	}
 	crd, err := NewOAuthCredentialRequestBuilder(
+		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
 		WithCRDOAuthSecret(),
@@ -805,9 +806,11 @@ func newHandlers() []handler.Handler {
 					[]apiV1.GroupKind{
 						management.EnvironmentGVK().GroupKind,
 						management.APIServiceInstanceGVK().GroupKind,
+						management.ComplianceRuntimeResultGVK().GroupKind,
 					},
 				),
 			),
+			handler.NewCRRHandler(agent.cacheManager),
 		)
 	}
 

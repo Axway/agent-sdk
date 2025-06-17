@@ -20,10 +20,12 @@ import (
 type TraceabilityAgentAgentstateSampling struct {
 	// When sampling is approved by the controller, enabled will be set to true then automatically set to false after the time period
 	Enabled bool `json:"enabled,omitempty"`
-	// The time that the agent will stop sampling
+	// The time that the agent will stop sampling in ISO 8601 format with numeric timezone offset
 	EndTime time.Time `json:"endTime,omitempty"`
 	// The upper limit of transactions, in a 1 minute period, the agent may sample
 	Limit int32 `json:"limit,omitempty"`
-	// The time after which the sampling can be triggered again
+	// The time after which the sampling can be triggered again in ISO 8601 format with numeric timezone offset
 	DisabledUntil time.Time `json:"disabledUntil,omitempty"`
+	// The endpoints that the agent will sample
+	Endpoints []TraceabilityAgentAgentstateSamplingEndpoints `json:"endpoints,omitempty"`
 }

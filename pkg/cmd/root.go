@@ -449,6 +449,10 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 // Run health check ticker for every 5 seconds
 // If after 5 minutes, the health checker still returns HC status !OK, exit the agent.  Otherwise, return true and continue processing
 func (c *agentRootCommand) healthCheckTicker() {
+	if !util.IsNotTest() {
+		log.Trace("Skipping health check ticker in test mode")
+		return
+	}
 	log.Trace("run health checker ticker to check health status on RunChecks")
 	ticker := time.NewTicker(5 * time.Second)
 	tickerTimeout := time.NewTicker(5 * time.Minute)

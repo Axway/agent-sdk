@@ -191,6 +191,36 @@ $SED -i "/ApiServiceInstanceTraceable\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceIn
 go fmt ${MODEL_PATH}/APIServiceInstance.go
 
 ######################
+# For APIServiceInstance.go, we want to turn    "Sampletrigger ApiServiceInstanceSampletrigger `json:"sampletrigger"`" into
+# "Sampletrigger *ApiServiceInstanceSampletrigger `json:"sampletrigger,omitempty"`"
+######################
+SEARCH="\s*Sampletrigger\s*ApiServiceInstanceSampletrigger.*"
+REPLACE="Sampletrigger *ApiServiceInstanceSampletrigger \`json:\"sampletrigger,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceSampletrigger\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
+
+######################
+# For APIServiceInstance.go, we want to turn    "Samplestate   ApiServiceInstanceSamplestate   `json:"samplestate"`" into
+# "Samplestate   *ApiServiceInstanceSamplestate   `json:"samplestate,omitempty"`"
+######################
+SEARCH="\s*Samplestate\s*ApiServiceInstanceSamplestate.*"
+REPLACE="Samplestate *ApiServiceInstanceSamplestate \`json:\"samplestate,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceInstance.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceInstance.go
+# add in the new line we want
+$SED -i "/ApiServiceInstanceSamplestate\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceInstance.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIServiceInstance.go
+
+######################
 # For model_api_service_instance_spec.go, we want to turn "Mock ApiServiceInstanceSpecMock `json:"mock,omitempty"`" into
 # Mock     *ApiServiceInstanceSpecMock `json:"mock,omitempty"`"
 ######################

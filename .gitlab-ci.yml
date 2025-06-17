@@ -26,10 +26,10 @@ variables:
 ############################################################
 include:
   - project: "apigov/gitlabci"
-    ref: master
+    ref: $GITLAB_CICD_BLUE
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_BLUE
+    ref: $BEANO_CICD_GREEN
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
@@ -44,7 +44,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_BLUE
+    ref: $BEANO_CICD_GREEN
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"
@@ -53,8 +53,7 @@ include:
 stages:
   - test
   - qa-test
-  - sonar-preview
-  - sonar-publish
+  - sonar
   - security-scans
   - security-review
   - update-dep

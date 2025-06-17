@@ -317,8 +317,16 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	// sanitize version
 	b.serviceBody.specVersion = util.SanitizeServiceVersion(b.serviceBody.Version)
 
-	// Check if the type is unstructured to gather more info
+	// get the spec from the specProcessor, which will compact the json content
+	if len(b.serviceBody.SpecDefinition) >= tenMB {
+		b.serviceBody.SpecDefinition = specProcessor.GetSpecBytes()
+		// check that the spec definition is not too large still
+		if len(b.serviceBody.SpecDefinition) >= tenMB {
+			return ServiceBody{}, fmt.Errorf("service %s carries a payload greater than 10mb. Service not created", b.serviceBody.APIName)
+		}
+	}
 
+	// Check if the type is unstructured to gather more info
 	if len(b.serviceBody.Endpoints) == 0 {
 		endPoints, err := specProcessor.GetEndpoints()
 		if err != nil {
