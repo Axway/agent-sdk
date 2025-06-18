@@ -771,7 +771,7 @@ func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager, envName),
 		handler.NewInstanceHandler(agent.cacheManager, envName),
-		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling()),
+		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager),
 		agent.proxyResourceHandler,
 	}
 
