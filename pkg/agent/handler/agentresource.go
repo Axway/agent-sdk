@@ -19,9 +19,13 @@ type sampling interface {
 	EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints)
 }
 
-type apiServiceInstanceCache interface {
-	// ListAPIServiceInstances returns a list of API Service Instances
+type agentCache interface {
+	AddTeam(team *definitions.PlatformTeam)
 	ListAPIServiceInstances() []*v1.ResourceInstance
+}
+
+type apicClient interface {
+	GetTeam(map[string]string) ([]definitions.PlatformTeam, error)
 }
 
 type TraceabilityTriggerHandler interface {
@@ -44,16 +48,18 @@ type agentResourceHandler struct {
 	agentResourceManager resource.Manager
 	sampler              sampling
 	agentTypeHandler     map[string]agentTypeHandler
-	cache                apiServiceInstanceCache
+	cache                agentCache
+	apicClient           apicClient
 }
 
 // NewAgentResourceHandler - creates a Handler for Agent resources
-func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling, cache apiServiceInstanceCache) Handler {
+func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler sampling, cache agentCache, apiClient apicClient) Handler {
 	h := &agentResourceHandler{
 		logger:               log.NewFieldLogger().WithComponent("agentResourceHandler").WithPackage("handler"),
 		agentResourceManager: agentResourceManager,
 		sampler:              sampler,
 		cache:                cache,
+		apicClient:           apiClient,
 	}
 	h.agentTypeHandler = map[string]agentTypeHandler{
 		management.DiscoveryAgentGVK().Kind:    h.handleDiscovery,
@@ -74,9 +80,20 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	action := GetActionFromContext(ctx)
-	if f, ok := h.agentTypeHandler[resource.Kind]; ok {
-		return f(action, subres, resource)
+	handlerFunc, ok := h.agentTypeHandler[resource.Kind]
+	if !ok {
+		return nil
 	}
+
+	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
+		if triggerUpdate, ok := resource.GetSubResource(definitions.XAgentDetails).(map[string]interface{}); ok {
+			if update, _ := triggerUpdate[definitions.TriggerTeamUpdate].(bool); update {
+				RefreshTeamCache(h.apicClient, h.cache)
+				return nil
+			}
+		}
+	}
+	handlerFunc(action, subres, resource)
 
 	return nil
 }
@@ -177,4 +194,15 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 	}
 
 	return endpointsInfo
+}
+
+func RefreshTeamCache(apicClient apicClient, cache agentCache) {
+	platformTeams, err := apicClient.GetTeam(map[string]string{})
+	if err != nil || len(platformTeams) == 0 {
+		return
+	}
+
+	for _, team := range platformTeams {
+		cache.AddTeam(&team)
+	}
 }
