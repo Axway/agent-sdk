@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,7 +99,16 @@ func (h *agentResourceHandler) handleUpdateTrigger(resource *v1.ResourceInstance
 	if !ok {
 		return
 	}
-	update, _ := agentDetails[definitions.TriggerTeamUpdate].(bool)
+	// try to handle both bool and string cases: true, "true"
+	update, ok := agentDetails[definitions.TriggerTeamUpdate].(bool)
+	if !ok {
+		updateStr, ok := agentDetails[definitions.TriggerTeamUpdate].(string)
+		if !ok {
+			return
+		}
+		update, _ = strconv.ParseBool(updateStr)
+	}
+
 	if !update {
 		return
 	}

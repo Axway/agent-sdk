@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
@@ -62,8 +63,15 @@ func (m *mockApicClient) GetTeam(_ map[string]string) ([]definitions.PlatformTea
 
 func (m *mockApicClient) CreateSubResource(_ v1.ResourceMeta, sub map[string]interface{}) error {
 	if details, ok := sub[definitions.XAgentDetails].(map[string]interface{}); ok {
-		if trigger, exists := details[definitions.TriggerTeamUpdate].(bool); exists {
+		trigger, exists := details[definitions.TriggerTeamUpdate].(bool)
+		if exists {
 			m.triggerValue = trigger
+			m.subResUpdate = true
+			return nil
+		}
+		triggerStr, exists := details[definitions.TriggerTeamUpdate].(string)
+		if exists {
+			m.triggerValue, _ = strconv.ParseBool(triggerStr)
 			m.subResUpdate = true
 		}
 	}
@@ -124,7 +132,7 @@ func TestAgentResourceHandler(t *testing.T) {
 		expectTraceabilityProcessing bool
 	}{
 		{
-			name:     "should add platform team to cache",
+			name:     "should add platform team to cache, triggerUpdate bool",
 			hasError: false,
 			action:   proto.Event_SUBRESOURCEUPDATED,
 			resource: &management.DiscoveryAgent{
@@ -132,6 +140,27 @@ func TestAgentResourceHandler(t *testing.T) {
 					SubResources: map[string]interface{}{
 						definitions.XAgentDetails: map[string]interface{}{
 							definitions.TriggerTeamUpdate: true,
+						},
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.ComplianceAgentGVK().Kind,
+						},
+					},
+				},
+			},
+			expectTeamUpdate: true,
+			subresName:       definitions.XAgentDetails,
+		},
+		{
+			name:     "should add platform team to cache, triggerUpdate string",
+			hasError: false,
+			action:   proto.Event_SUBRESOURCEUPDATED,
+			resource: &management.DiscoveryAgent{
+				ResourceMeta: v1.ResourceMeta{
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.TriggerTeamUpdate: "true",
 						},
 					},
 					GroupVersionKind: v1.GroupVersionKind{
