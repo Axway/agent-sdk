@@ -26,6 +26,7 @@ type agentCache interface {
 
 type apicClient interface {
 	GetTeam(map[string]string) ([]definitions.PlatformTeam, error)
+	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
 type TraceabilityTriggerHandler interface {
@@ -84,18 +85,30 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if !ok {
 		return nil
 	}
-
 	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
-		if triggerUpdate, ok := resource.GetSubResource(definitions.XAgentDetails).(map[string]interface{}); ok {
-			if update, _ := triggerUpdate[definitions.TriggerTeamUpdate].(bool); update {
-				RefreshTeamCache(h.apicClient, h.cache)
-				return nil
-			}
-		}
+		h.handleUpdateTrigger(resource)
 	}
 	handlerFunc(action, subres, resource)
 
 	return nil
+}
+
+func (h *agentResourceHandler) handleUpdateTrigger(resource *v1.ResourceInstance) {
+	agentDetails, ok := resource.GetSubResource(definitions.XAgentDetails).(map[string]interface{})
+	if !ok {
+		return
+	}
+	update, _ := agentDetails[definitions.TriggerTeamUpdate].(bool)
+	if !update {
+		return
+	}
+
+	agentDetails[definitions.TriggerTeamUpdate] = false
+	subs := map[string]interface{}{definitions.XAgentDetails: agentDetails}
+	if err := h.apicClient.CreateSubResource(resource.ResourceMeta, subs); err != nil {
+		h.logger.WithError(err).WithField("name", resource.Name).Errorf("failed to reset the agent details triggerUpdate")
+	}
+	RefreshTeamCache(h.apicClient, h.cache)
 }
 
 func (h *agentResourceHandler) handleDiscovery(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error {

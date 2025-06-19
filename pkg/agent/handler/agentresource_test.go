@@ -51,11 +51,23 @@ func (m *mockAgentCache) AddTeam(team *definitions.PlatformTeam) {
 }
 
 type mockApicClient struct {
-	teams []definitions.PlatformTeam
+	teams        []definitions.PlatformTeam
+	subResUpdate bool
+	triggerValue bool
 }
 
 func (m *mockApicClient) GetTeam(_ map[string]string) ([]definitions.PlatformTeam, error) {
 	return m.teams, nil
+}
+
+func (m *mockApicClient) CreateSubResource(_ v1.ResourceMeta, sub map[string]interface{}) error {
+	if details, ok := sub[definitions.XAgentDetails].(map[string]interface{}); ok {
+		if trigger, exists := details[definitions.TriggerTeamUpdate].(bool); exists {
+			m.triggerValue = trigger
+			m.subResUpdate = true
+		}
+	}
+	return nil
 }
 
 type EventSyncCache interface {
@@ -124,7 +136,7 @@ func TestAgentResourceHandler(t *testing.T) {
 					},
 					GroupVersionKind: v1.GroupVersionKind{
 						GroupKind: v1.GroupKind{
-							Kind: management.DiscoveryAgentGVK().Kind,
+							Kind: management.ComplianceAgentGVK().Kind,
 						},
 					},
 				},
@@ -347,6 +359,7 @@ func TestAgentResourceHandler(t *testing.T) {
 						Name: "TeamA",
 					},
 				},
+				triggerValue: true,
 			}
 			handler := NewAgentResourceHandler(resourceManager, sampler, cm, client)
 			// marshal and unmarshal the resource to simulate the resource coming from API server
@@ -361,6 +374,8 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 			if tc.expectTeamUpdate {
 				assert.True(t, len(cm.teams) > 0)
+				assert.True(t, client.subResUpdate)
+				assert.False(t, client.triggerValue)
 				return
 			}
 			defer func() { cm.teams = []*definitions.PlatformTeam{} }() // reset teams after test
