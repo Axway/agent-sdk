@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -131,9 +132,7 @@ func TestTeamCache(t *testing.T) {
 			assert.Nil(t, err)
 			assert.NotNil(t, agent.apicClient)
 
-			job := centralTeamsCache{}
-
-			job.Execute()
+			handler.RefreshTeamCache(agent.apicClient, agent.cacheManager)
 			teams := agent.cacheManager.GetTeamCache().GetKeys()
 			assert.Equal(t, test.expectedTeamsInCache, len(teams))
 		})
