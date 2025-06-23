@@ -21,6 +21,7 @@ import (
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/cache"
@@ -810,4 +811,20 @@ func newHandlers() []handler.Handler {
 	}
 
 	return handlers
+}
+
+// GetTeamByName - Returns the PlatformTeam associated with the name
+func GetTeamByName(name string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByName(name)
+	}
+	return nil
+}
+
+// GetTeamByID - Returns the PlatformTeam associated with the id
+func GetTeamByID(id string) *definitions.PlatformTeam {
+	if agent.cacheManager != nil {
+		return agent.cacheManager.GetTeamByID(id)
+	}
+	return nil
 }
