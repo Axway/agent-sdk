@@ -88,7 +88,7 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 
 	opts := []api.ClientOpt{api.WithTimeout(s.Timeout)}
 	if s.IsSingleEntry {
-		opts = append(opts, api.WithSingleURL())
+		opts = append(opts, api.WithSingleURLFor(s.URL))
 	}
 
 	tlsCfg := config.NewTLSConfig().(*config.TLSConfiguration)

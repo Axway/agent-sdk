@@ -252,7 +252,11 @@ func validateProtocolPort() {
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 	if isSingleEntry {
 		// get the expected protocol for single entry host
-		traceCfg.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
+		protocol := agent.GetCentralConfig().GetTraceabilityProtocol()
+		// non-production environments
+		if protocol != "" {
+			traceCfg.Protocol = protocol
+		}
 	}
 
 	// Validate that the port matches the

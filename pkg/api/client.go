@@ -110,6 +110,19 @@ func WithSingleURL() func(*httpClient) {
 	}
 }
 
+func WithSingleURLFor(address string) func(*httpClient) {
+	return func(h *httpClient) {
+		h.singleURL = ""
+		if cfgAgent != nil {
+			cfgAgent.singleEntryFilter = append(cfgAgent.singleEntryFilter, address)
+			h.singleURL = cfgAgent.singleURL
+			if h.singleURL != "" {
+				h.singleEntryHostMap = initializeSingleEntryMapping(h.singleURL, cfgAgent.singleEntryFilter)
+			}
+		}
+	}
+}
+
 // NewClient - creates a new HTTP client
 func NewClient(tlsCfg config.TLSConfig, proxyURL string, options ...ClientOpt) Client {
 	timeout := getTimeoutFromEnvironment()
