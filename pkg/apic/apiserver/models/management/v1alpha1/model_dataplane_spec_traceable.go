@@ -13,6 +13,7 @@ package management
 type DataplaneSpecTraceable struct {
 	Type string `json:"type,omitempty"`
 	// The Traceable region that this dataplane refers to
-	Region       string                             `json:"region"`
-	Environments DataplaneSpecTraceableEnvironments `json:"environments"`
+	Region string `json:"region"`
+	// Used to run conformance analysis of specs found in central environment against endpoints found in Traceable environment
+	Environments []DataplaneSpecTraceableEnvironments `json:"environments"`
 }

@@ -9,10 +9,10 @@
 
 package management
 
-// DataplaneSpecTraceableEnvironments Used to run conformance analysis of specs found in central environment against endpoints found in Traceable environment
+// DataplaneSpecTraceableEnvironments struct for DataplaneSpecTraceableEnvironments
 type DataplaneSpecTraceableEnvironments struct {
 	// The Traceable environment name
 	Traceable string `json:"traceable,omitempty"`
-	// The Central environment name
+	// The Engage environment name
 	Environment string `json:"environment,omitempty"`
 }
