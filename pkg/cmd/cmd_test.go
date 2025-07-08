@@ -558,7 +558,8 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	scanner := bufio.NewScanner(r)
 
 	level := "info"
-	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
+	agent := "test_with_non_defaults"
+	msg := "starting agent"
 
 	for scanner.Scan() {
 		out := scanner.Text()
@@ -573,6 +574,9 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 
 	assert.Equal(t, level, logData["level"])
 	assert.Equal(t, msg, logData["message"])
+	assert.Equal(t, agent, logData["agent"])
+	assert.Contains(t, logData, "version")
+	assert.Contains(t, logData, "sdkVersion")
 }
 
 func TestRootCommandLoggerFile(t *testing.T) {
@@ -614,7 +618,8 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	var logData map[string]string
 	level := "info"
-	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
+	agent := "test_with_non_defaults"
+	msg := "starting agent"
 
 	for scanner.Scan() {
 		out := scanner.Text()
@@ -627,6 +632,9 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	assert.Equal(t, level, logData["level"])
 	assert.Equal(t, msg, logData["message"])
+	assert.Equal(t, agent, logData["agent"])
+	assert.Contains(t, logData, "version")
+	assert.Contains(t, logData, "sdkVersion")
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
