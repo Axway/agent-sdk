@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"math/rand"
 	"net/url"
 	"os"
 	"strings"
@@ -60,6 +59,7 @@ type AgentRootCmd interface {
 
 // agentRootCommand - Represents the agent root command
 type agentRootCommand struct {
+	logger            log.FieldLogger
 	agentName         string
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
@@ -87,8 +87,6 @@ func init() {
 	}
 
 	config.SDKVersion = SDKBuildVersion
-	// initalize the global Source used by rand.Intn() and other functions of the rand package using rand.Seed().
-	rand.Seed(time.Now().UnixNano())
 }
 
 func buildCmdVersion(desc string) string {
@@ -108,6 +106,7 @@ func WithFinalizeAgentInitFunc(f FinalizeAgentInitHandler) NewCommandOption {
 // NewRootCmd - Creates a new Agent Root Command
 func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
 	c := &agentRootCommand{
+		logger:            log.NewFieldLogger().WithPackage("sdk.cmd").WithComponent("root"),
 		agentName:         exeName,
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
@@ -152,6 +151,7 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 // NewCmd - Creates a new Agent Root Command using existing cmd
 func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
 	c := &agentRootCommand{
+		logger:            log.NewFieldLogger().WithPackage("sdk.cmd").WithComponent("root"),
 		agentName:         exeName,
 		commandHandler:    commandHandler,
 		initConfigHandler: initConfigHandler,
@@ -264,7 +264,7 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Debugf("Config file changed : %s", e.Name)
+		c.logger.WithField("filename", e.Name).Debug("config file changed")
 		c.onConfigChange()
 	})
 
@@ -380,6 +380,7 @@ func (c *agentRootCommand) initConfig() error {
 }
 
 func (c *agentRootCommand) finishInit() error {
+	c.logger.Trace("agent finishing initialization")
 	agent.SetFinalizeAgentFunc(c.finalizeAgentInit)
 
 	err := agent.CacheInitSync()
@@ -391,8 +392,7 @@ func (c *agentRootCommand) finishInit() error {
 	startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 
 	if util.IsNotTest() {
-		healthCheckServer := hc.NewServer(c.httpprofile)
-		healthCheckServer.HandleRequests()
+		hc.StartNewServer(c.httpprofile)
 	}
 
 	return nil
@@ -413,7 +413,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			os.Exit(exitcode)
 		}
 
-		log.Infof("Starting %s", buildAgentInfo(c.rootCmd.Short))
+		c.logger.WithField("agentInfo", buildAgentInfo(c.rootCmd.Short)).Info("starting agent")
 		if c.commandHandler != nil {
 			// Setup logp to use beats logger.
 			// Setting up late here as log entries for agent/command initialization are not logged
@@ -431,12 +431,13 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 
 			err = c.commandHandler()
 			if err != nil {
-				log.Error(err.Error())
 				statusText = err.Error()
+				c.logger.Error(statusText)
 			}
 		}
 	} else {
 		statusText = err.Error()
+		c.logger.Error(statusText)
 	}
 	status := agent.AgentStopped
 	if statusText != "" {
@@ -450,10 +451,10 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 // If after 5 minutes, the health checker still returns HC status !OK, exit the agent.  Otherwise, return true and continue processing
 func (c *agentRootCommand) healthCheckTicker() {
 	if !util.IsNotTest() {
-		log.Trace("Skipping health check ticker in test mode")
+		c.logger.Trace("skipping health check ticker in test mode")
 		return
 	}
-	log.Trace("run health checker ticker to check health status on RunChecks")
+	c.logger.Trace("run health checker ticker to check health status on RunChecks")
 	ticker := time.NewTicker(5 * time.Second)
 	tickerTimeout := time.NewTicker(5 * time.Minute)
 
@@ -463,17 +464,16 @@ func (c *agentRootCommand) healthCheckTicker() {
 	for {
 		select {
 		case <-tickerTimeout.C:
-			log.Error("healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
+			c.logger.Error("healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
 			agent.UpdateStatus(agent.AgentFailed, "healthchecks on startup failed")
 			os.Exit(0)
 		case <-ticker.C:
 			status := hc.RunChecks()
 			if status == hc.OK {
-				log.Trace("healthcheck on startup is OK. Continue processing")
+				c.logger.Trace("healthcheck on startup is OK. Continue processing")
 				return
-			} else {
-				log.Warn("healthchecks on startup are still processing")
 			}
+			c.logger.Warn("healthchecks on startup are still processing")
 		}
 	}
 }

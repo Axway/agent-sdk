@@ -3,11 +3,9 @@ package healthcheck
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/pprof"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,7 +69,7 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 	globalHealthChecker.Checks[endpoint] = newChecker
 	statusServer := globalHealthChecker.statusServer
 	if statusServer != nil {
-		statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), checkHandler)
+		statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), statusServer.checkHandler)
 	}
 
 	if util.IsNotTest() {
@@ -151,16 +149,20 @@ func (check *statusCheck) executeCheck() {
 
 // Server contains an http server for health checks.
 type Server struct {
+	logger   log.FieldLogger
 	router   *http.ServeMux
 	httpprof bool
 }
 
-func NewServer(httpprof bool) *Server {
+func StartNewServer(httpprof bool) {
 	globalHealthChecker.statusServer = &Server{
+		logger: log.NewFieldLogger().
+			WithPackage("sdk.util.healthcheck").
+			WithComponent("healthChecker"),
 		router:   http.NewServeMux(),
 		httpprof: httpprof,
 	}
-	return globalHealthChecker.statusServer
+	globalHealthChecker.statusServer.handleRequests()
 }
 
 func (s *Server) registerHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
@@ -168,11 +170,11 @@ func (s *Server) registerHandler(path string, handler func(http.ResponseWriter, 
 }
 
 // HandleRequests - starts the http server
-func (s *Server) HandleRequests() {
+func (s *Server) handleRequests() {
 	if !globalHealthChecker.registered {
-		s.registerHandler("/status", statusHandler)
+		s.registerHandler("/status", s.statusHandler)
 		for _, statusChecks := range globalHealthChecker.Checks {
-			s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), checkHandler)
+			s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), s.checkHandler)
 		}
 		globalHealthChecker.registered = true
 	}
@@ -189,10 +191,78 @@ func (s *Server) HandleRequests() {
 }
 
 func (s *Server) startHealthCheckServer() {
-	if statusConfig != nil && statusConfig.GetPort() > 0 {
-		addr := fmt.Sprintf(":%d", statusConfig.GetPort())
-		go http.ListenAndServe(addr, s.router)
+	if statusConfig == nil {
+		s.logger.Error("status config is not set, cannot start health check server")
+		return
 	}
+	if statusConfig.GetPort() <= 0 {
+		s.logger.Error("status port is not set or invalid, cannot start health check server")
+		return
+	}
+
+	go func() {
+		addr := fmt.Sprintf(":%d", statusConfig.GetPort())
+		s.logger.WithField("address", addr).Info("starting health check server")
+		err := http.ListenAndServe(addr, s.router)
+		s.logger.WithError(err).Error("health check server stopped")
+	}()
+}
+
+func (s *Server) statusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	s.logger.Trace("checking health status")
+
+	// Return the data
+	data, err := json.Marshal(globalHealthChecker)
+	if err != nil {
+		s.logger.WithError(err).Error("could not marshal the health check data")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// If any of the checks failed change the return code to 500
+	if globalHealthChecker.Status == FAIL {
+		s.logger.Error("health check failed, returning 503")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+
+	w.Write(data)
+}
+
+func (s *Server) checkHandler(w http.ResponseWriter, r *http.Request) {
+	// Run the checks to get the latest results
+	path := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if len(path) != 2 || path[0] != "status" {
+		s.logger.WithField("path", r.URL.Path).Error("could not get status for path", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Get the check object
+	endpoint := path[1]
+	logger := s.logger.WithField("endpoint", endpoint)
+	logger.Trace("checking endpoint status")
+	thisCheck, ok := globalHealthChecker.Checks[endpoint]
+	if !ok {
+		logger.Error("unknown endpoint")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	// If check failed change return code to 500
+	if thisCheck.Status.Result == FAIL {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+
+	// Return data
+	data, err := json.Marshal(globalHealthChecker.Checks[endpoint].Status)
+	if err != nil {
+		logger.WithError(err).Error("could not marshal the health check data")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(data)
 }
 
 // CheckIsRunning - Checks if another instance is already running by looking at the healthcheck.
@@ -252,68 +322,4 @@ func GetHealthcheckOutput(url string) (string, error) {
 		return string(output), fmt.Errorf("healthcheck failed %s", resp.Status)
 	}
 	return string(output), nil
-}
-
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	// Return the data
-	data, err := json.Marshal(globalHealthChecker)
-	if err != nil {
-		logger.WithError(err).Errorf("Error hit marshalling the health check data to json")
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		// If any of the checks failed change the return code to 500
-		if globalHealthChecker.Status == FAIL {
-			w.WriteHeader(http.StatusServiceUnavailable)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}
-
-	io.WriteString(w, string(data))
-}
-
-func checkHandler(w http.ResponseWriter, r *http.Request) {
-	// Run the checks to get the latest results
-	path := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	if len(path) != 2 || path[0] != "status" {
-		logger.Errorf("Error getting status for path %s, expected /status/[endpoint]", r.URL.Path)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Get the check object
-	endpoint := path[1]
-	thisCheck, ok := globalHealthChecker.Checks[endpoint]
-	if !ok {
-		logger.Errorf("Check with endpoint of %s is not known", endpoint)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// If check failed change return code to 500
-	if thisCheck.Status.Result == FAIL {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}
-
-	// Return data
-	data, _ := json.Marshal(globalHealthChecker.Checks[endpoint].Status)
-	io.WriteString(w, string(data))
-}
-
-// QueryForStatus - create a URL string and call teh GetHealthcheckOutput func
-func QueryForStatus(port int) (statusOut string) {
-	var err error
-	urlObj := url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("localhost:%d", port),
-		Path:   "status",
-	}
-	statusOut, err = GetHealthcheckOutput(urlObj.String())
-	if err != nil {
-		statusOut = fmt.Sprintf("Error querying for the status: %v", err.Error())
-	}
-	return
 }

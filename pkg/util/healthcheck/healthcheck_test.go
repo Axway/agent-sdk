@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -187,7 +188,8 @@ func TestHTTPRequests(t *testing.T) {
 	}
 
 	//########################## statusHandler ################################
-	server = httptest.NewServer(http.HandlerFunc(statusHandler))
+	s := &Server{logger: log.NewFieldLogger().WithPackage("sdk.util.healthcheck")}
+	server = httptest.NewServer(http.HandlerFunc(s.statusHandler))
 
 	hcValues["hc1"] = false
 	hcValues["hc2"] = false
@@ -227,7 +229,7 @@ func TestHTTPRequests(t *testing.T) {
 	assert.Equal(t, string(indentResult), output)
 
 	//########################## checkHandler ################################
-	server = httptest.NewServer(http.HandlerFunc(checkHandler))
+	server = httptest.NewServer(http.HandlerFunc(s.checkHandler))
 	var checkRes Status
 
 	// Bad path
