@@ -56,7 +56,6 @@ stages:
   - sonar
   - security-scans
   - security-review
-  - update-dep
 
 twistlock-discovery:on-schedule:
   rules:
