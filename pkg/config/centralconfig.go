@@ -90,7 +90,7 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		PlatformURL:          "https://platform.eu-fr.axway.com",
 		TraceabilityHost:     "phoenix.eu-fr.axway.com:443",
 		TraceabilityProtocol: "https",
-		Deployment:           "prod-eu2",
+		Deployment:           "prod-eu-regional",
 	},
 }
 
