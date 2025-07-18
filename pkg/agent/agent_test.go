@@ -34,6 +34,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
 	cfg.URL = url
 	cfg.SingleURL = url
+	cfg.PlatformURL = url
 	cfg.TenantID = "123456"
 	cfg.Environment = env
 	cfg.APICDeployment = "apic"
@@ -131,6 +132,7 @@ func TestAgentInitialize(t *testing.T) {
 			Default: true,
 		},
 	}
+	entitlements := definitions.SessionEntitlements{}
 	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
@@ -178,6 +180,12 @@ func TestAgentInitialize(t *testing.T) {
 
 		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
 			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/org/123456/subscription") {
+			buf, _ := json.Marshal(entitlements)
 			resp.Write(buf)
 			return
 		}
@@ -249,6 +257,108 @@ func TestAgentInitialize(t *testing.T) {
 	da = GetAgentResource()
 	assertResource(t, da, traceabilityAgentRes)
 	assert.Equal(t, 0, agentResChangeHandlerCall)
+}
+
+func TestAgentEntitlements(t *testing.T) {
+	const daName = "discovery"
+
+	teams := []definitions.PlatformTeam{}
+	entitlements := definitions.SessionEntitlements{
+		Success: true,
+		Result: []definitions.EntitlementProduct{
+			{
+				ID:         "123a",
+				Product:    "Axway API Management",
+				Plan:       "Enterprise",
+				Tier:       "Enterprise",
+				Governance: "Governance",
+				StartDate:  "2023-01-01",
+				EndDate:    "2024-01-01",
+				Source:     "Central",
+				Entitlements: []definitions.EntitlementEntry{
+					{Key: "traceability", Value: true},
+					{Key: "discovery", Value: true},
+					{Key: "compliance", Value: true},
+				},
+				Expired:     false,
+				ProductName: "Axway API Management",
+			},
+			{
+				ID:         "123b",
+				Product:    "Axway API Management",
+				Plan:       "Enterprise",
+				Tier:       "Enterprise",
+				Governance: "Governance",
+				StartDate:  "2023-01-01",
+				EndDate:    "2024-01-01",
+				Source:     "Central",
+				Entitlements: []definitions.EntitlementEntry{
+					{Key: "expired", Value: true},
+				},
+				Expired:     true,
+				ProductName: "Axway API Management",
+			},
+		},
+	}
+	environmentRes := &management.Environment{
+		ResourceMeta: v1.ResourceMeta{
+			Metadata: v1.Metadata{ID: "123"},
+			Name:     "v7",
+			Title:    "v7",
+		},
+	}
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.RequestURI, "/auth") {
+			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			resp.Write([]byte(token))
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+			buf, err := json.Marshal(discoveryAgentRes)
+			log.Error(err)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+			buf, _ := json.Marshal(environmentRes)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+			buf, _ := json.Marshal(teams)
+			resp.Write(buf)
+			return
+		}
+
+		if strings.Contains(req.RequestURI, "/api/v1/org/123456/subscription") {
+			buf, _ := json.Marshal(entitlements)
+			resp.Write(buf)
+			return
+		}
+	}))
+
+	defer s.Close()
+
+	cfg := createCentralCfg(s.URL, "v7")
+	// initialize the agnet and validated the expected entitlements
+	resetResources()
+	err := Initialize(cfg)
+	assert.Nil(t, err)
+	da := GetAgentResource()
+	assert.Nil(t, da)
+
+	// Validate the entitlements
+	assert.NotNil(t, agent.entitlements)
+	assert.Len(t, agent.entitlements, 3)
+	assert.NotContains(t, agent.entitlements, "expired")
+	assert.Contains(t, agent.entitlements, "discovery")
+	assert.Contains(t, agent.entitlements, "traceability")
+	assert.Contains(t, agent.entitlements, "compliance")
 }
 
 func TestInitEnvironment(t *testing.T) {

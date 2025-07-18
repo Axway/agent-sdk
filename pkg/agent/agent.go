@@ -83,6 +83,8 @@ type agentData struct {
 	status                       string
 	applicationProfileDefinition string
 
+	entitlements map[string]interface{}
+
 	// profiling
 	profileDone chan struct{}
 }
@@ -167,6 +169,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if err != nil {
 			return err
 		}
+
 		if postCfgProcessor != nil {
 			err = postCfgProcessor(centralCfg, agentFeaturesCfg)
 			if err != nil {
@@ -225,6 +228,13 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 	if centralCfg.GetAgentType() == config.ComplianceAgent {
 		resource.MergeComplianceAgentWithConfig(agent.agentResourceManager.GetAgentResource(), centralCfg)
 	}
+
+	// pull the entitlements for the org
+	entitlements, err := agent.apicClient.GetEntitlements()
+	if err != nil {
+		return err
+	}
+	agent.entitlements = entitlements
 
 	return nil
 }
