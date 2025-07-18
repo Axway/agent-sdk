@@ -907,25 +907,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	// check if CENTRAL_SINGLEURL is explicitly empty
 	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
 
-	var metricReporting MetricReportingConfig
-	var usageReporting UsageReportingConfig
-	if supportsTraceability(agentType) {
-		metricReporting = ParseMetricReportingConfig(props)
-		usageReporting = ParseUsageReportingConfig(props)
-		if usageReporting.IsOfflineMode() {
-			// Check if this is offline usage reporting only
-			cfg := &CentralConfiguration{
-				AgentName:       props.StringPropertyValue(pathAgentName),
-				AgentType:       agentType,
-				UsageReporting:  usageReporting,
-				MetricReporting: metricReporting,
-			}
-			// only need the environment ID in offline mode
-			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
-			return cfg, nil
-		}
-	}
-
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 
 	cfg := &CentralConfiguration{
@@ -978,11 +959,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 	cfg.CredentialConfig = newCredentialConfig()
-	if supportsTraceability(agentType) {
-		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
-		cfg.UsageReporting = usageReporting
-		cfg.MetricReporting = metricReporting
-	} else {
+	if !supportsTraceability(agentType) {
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
@@ -993,6 +970,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
+
+	// if the region env var is set use all of the region specific values
 	if regionSet {
 		regSet := regionalSettingsMap[region]
 		cfg.RegionSettings = regSet
@@ -1005,9 +984,26 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.URL = regSet.CentralURL
 		cfg.PlatformURL = regSet.PlatformURL
 		cfg.APICDeployment = regSet.Deployment
+		cfg.setRegionBasedEnvironmentVars()
 	}
 
-	cfg.setRegionBasedEnvironmentVars()
+	if supportsTraceability(agentType) {
+		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+		cfg.MetricReporting = ParseMetricReportingConfig(props)
+		cfg.UsageReporting = ParseUsageReportingConfig(props, cfg.GetPlatformURL())
+		if cfg.UsageReporting.IsOfflineMode() {
+			// Check if this is offline usage reporting only
+			cfg := &CentralConfiguration{
+				AgentName:       props.StringPropertyValue(pathAgentName),
+				AgentType:       agentType,
+				UsageReporting:  cfg.UsageReporting,
+				MetricReporting: cfg.MetricReporting,
+			}
+			// only need the environment ID in offline mode
+			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
+			return cfg, nil
+		}
+	}
 	return cfg, nil
 }
 
