@@ -1007,7 +1007,26 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.APICDeployment = regSet.Deployment
 	}
 
+	cfg.setRegionBasedEnvironmentVars()
 	return cfg, nil
+}
+
+func (c *CentralConfiguration) setRegionBasedEnvironmentVars() {
+	// Set the environment variables for the agent
+	envGetters := map[string]func() string{
+		"CENTRAL_SINGLEURL":     c.GetSingleURL,
+		"CENTRAL_URL":           c.GetURL,
+		"CENTRAL_AUTH_URL":      c.GetAuthConfig().GetTokenURL,
+		"TRACEABILITY_HOST":     c.GetTraceabilityHost,
+		"TRACEABILITY_PROTOCOL": c.GetTraceabilityProtocol,
+		"CENTRAL_PLATFORMURL":   c.GetPlatformURL,
+		"CENTRAL_DEPLOYMENT":    c.GetAPICDeployment,
+	}
+	for envVar, getter := range envGetters {
+		if _, set := os.LookupEnv(envVar); getter() != "" && !set {
+			os.Setenv(envVar, getter())
+		}
+	}
 }
 
 func supportsTraceability(agentType AgentType) bool {
