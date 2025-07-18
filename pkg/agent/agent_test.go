@@ -132,7 +132,6 @@ func TestAgentInitialize(t *testing.T) {
 			Default: true,
 		},
 	}
-	entitlements := definitions.SessionEntitlements{}
 	environmentRes := &management.Environment{
 		ResourceMeta: v1.ResourceMeta{
 			Metadata: v1.Metadata{ID: "123"},
@@ -180,12 +179,6 @@ func TestAgentInitialize(t *testing.T) {
 
 		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
 			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
-			return
-		}
-
-		if strings.Contains(req.RequestURI, "/api/v1/org/123456/subscription") {
-			buf, _ := json.Marshal(entitlements)
 			resp.Write(buf)
 			return
 		}
