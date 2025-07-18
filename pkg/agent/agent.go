@@ -229,6 +229,14 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 		resource.MergeComplianceAgentWithConfig(agent.agentResourceManager.GetAgentResource(), centralCfg)
 	}
 
+	// do not get entitlements in test
+	if !util.IsNotTest() {
+		return nil
+	}
+	return getEntitlements()
+}
+
+func getEntitlements() error {
 	// pull the entitlements for the org
 	entitlements, err := agent.apicClient.GetEntitlements()
 	if err != nil {

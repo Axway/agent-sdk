@@ -352,6 +352,9 @@ func TestAgentEntitlements(t *testing.T) {
 	da := GetAgentResource()
 	assert.Nil(t, da)
 
+	// get the entitlements from the agent
+	getEntitlements()
+
 	// Validate the entitlements
 	assert.NotNil(t, agent.entitlements)
 	assert.Len(t, agent.entitlements, 3)
