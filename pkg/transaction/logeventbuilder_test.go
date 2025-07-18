@@ -450,4 +450,21 @@ func TestLogRedactionOverride(t *testing.T) {
 	assert.False(t, redactionConfig.requestHeadersRedactionCalled)
 	assert.False(t, redactionConfig.responseHeadersRedactionCalled)
 	assert.False(t, redactionConfig.jmsPropertiesRedactionCalled)
+
+	// Test case for transactions with no API ID or API Name (should use UnknownAPIID)
+	logEvent, err = NewTransactionSummaryBuilder().
+		SetTransactionID("33333").
+		SetTimestamp(timeStamp).
+		SetStatus(TxSummaryStatusSuccess, "200").
+		SetDuration(10).
+		SetProxy("", "", 1). // Both proxyID and proxyName are empty
+		SetEntryPoint("http", "GET", "/unknown-api", "somehost.com").
+		Build()
+
+	assert.Nil(t, err)
+	assert.NotNil(t, logEvent)
+	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
+	assert.Equal(t, "unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 }

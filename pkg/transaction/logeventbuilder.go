@@ -512,7 +512,14 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	if b.err != nil {
 		return b
 	}
-	if proxyID == "" {
+	// If both proxyID and proxyName are empty, this transaction has no API ID or API Name
+	// and should be added to the Unknown API ID bucket
+	if proxyID == "" && proxyName == "" {
+		proxyID = UnknownAPIID
+	} else if proxyID == "" {
+		// If only proxyID is empty but proxyName exists, use "unknown" as before
+		// This maintains existing behavior for cases where Gateway has API Name but
+		// agent hasn't discovered the API yet (should use sanitized API Name as ID)
 		proxyID = "unknown"
 	}
 	b.logEvent.TransactionSummary.Proxy = &Proxy{

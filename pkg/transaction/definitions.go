@@ -49,6 +49,8 @@ const (
 
 const (
 	unknown = "unknown"
+	// UnknownAPIID - Constant for transactions with no API ID or API Name
+	UnknownAPIID = "unknown-api-id"
 )
 
 // LogEvent - Log event to be sent to Condor
