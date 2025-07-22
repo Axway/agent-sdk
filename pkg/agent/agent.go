@@ -244,6 +244,7 @@ func getEntitlements() error {
 	}
 	agent.entitlements = entitlements
 
+	logger.WithField("entitlements", agent.entitlements).Trace("retrieved entitlements")
 	return nil
 }
 
