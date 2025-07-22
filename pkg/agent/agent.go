@@ -55,7 +55,6 @@ type ConfigChangeHandler func()
 type ShutdownHandler func()
 type agentData struct {
 	agentResourceManager resource.Manager
-	teamJob              *centralTeamsCache
 	apicClient           apic.Client
 	cfg                  config.CentralConfig
 	agentFeaturesCfg     config.AgentFeaturesConfig
@@ -514,8 +513,7 @@ func startTeamACLCache() {
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		registerAccessControlListHandler()
 	}
-
-	registerTeamMapCacheJob()
+	handler.RefreshTeamCache(agent.apicClient, agent.cacheManager)
 }
 
 func isRunningInDockerContainer() bool {
@@ -774,7 +772,7 @@ func newHandlers() []handler.Handler {
 	handlers := []handler.Handler{
 		handler.NewAPISvcHandler(agent.cacheManager, envName),
 		handler.NewInstanceHandler(agent.cacheManager, envName),
-		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling()),
+		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager, agent.apicClient),
 		agent.proxyResourceHandler,
 	}
 

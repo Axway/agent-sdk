@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,7 +21,7 @@ type fakeSampler struct {
 	enabled bool
 }
 
-func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time) {
+func (f *fakeSampler) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
 	f.enabled = true
 }
 
@@ -36,18 +38,141 @@ func (f *fakeAgent) TriggerTraceability() {
 	f.triggeredTraceability = true
 }
 
+type mockAgentCache struct {
+	teams  []*definitions.PlatformTeam
+	apiSIs []*v1.ResourceInstance
+}
+
+func (m *mockAgentCache) ListAPIServiceInstances() []*v1.ResourceInstance {
+	return m.apiSIs
+}
+
+func (m *mockAgentCache) AddTeam(team *definitions.PlatformTeam) {
+	m.teams = append(m.teams, team)
+}
+
+type mockApicClient struct {
+	teams        []definitions.PlatformTeam
+	subResUpdate bool
+	triggerValue bool
+}
+
+func (m *mockApicClient) GetTeam(_ map[string]string) ([]definitions.PlatformTeam, error) {
+	return m.teams, nil
+}
+
+func (m *mockApicClient) CreateSubResource(_ v1.ResourceMeta, sub map[string]interface{}) error {
+	if details, ok := sub[definitions.XAgentDetails].(map[string]interface{}); ok {
+		trigger, exists := details[definitions.TriggerTeamUpdate].(bool)
+		if exists {
+			m.triggerValue = trigger
+			m.subResUpdate = true
+			return nil
+		}
+		triggerStr, exists := details[definitions.TriggerTeamUpdate].(string)
+		if exists {
+			m.triggerValue, _ = strconv.ParseBool(triggerStr)
+			m.subResUpdate = true
+		}
+	}
+	return nil
+}
+
+type EventSyncCache interface {
+	RebuildCache()
+}
+
+type mockResourceManager struct {
+	resource     *v1.ResourceInstance
+	rebuildCache resource.EventSyncCache
+	fakeHandler  interface{}
+}
+
+func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstance) {
+	m.resource = agentResource
+}
+
+func (m *mockResourceManager) GetAgentResource() *v1.ResourceInstance {
+	return m.resource
+}
+
+func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Client) {}
+
+func (m *mockResourceManager) FetchAgentResource() error { return nil }
+
+func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return nil }
+
+func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
+	return "", nil
+}
+
+func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
+
+func (m *mockResourceManager) SetRebuildCacheFunc(rebuildCache resource.EventSyncCache) {
+	m.rebuildCache = rebuildCache
+}
+
+func (m *mockResourceManager) RegisterHandler(handler interface{}) {}
+
+func (m *mockResourceManager) GetHandler() interface{} {
+	return m.fakeHandler
+}
+
 func TestAgentResourceHandler(t *testing.T) {
 	tests := []struct {
 		name                         string
 		hasError                     bool
-		resource                     *v1.ResourceInstance
+		resource                     v1.Interface
 		expectResourceUpdate         bool
+		expectTeamUpdate             bool
 		subresName                   string
 		action                       proto.Event_Type
 		fakeAgentHandler             *fakeAgent
 		expectComplianceProcessing   bool
 		expectTraceabilityProcessing bool
 	}{
+		{
+			name:     "should add platform team to cache, triggerUpdate bool",
+			hasError: false,
+			action:   proto.Event_SUBRESOURCEUPDATED,
+			resource: &management.DiscoveryAgent{
+				ResourceMeta: v1.ResourceMeta{
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.TriggerTeamUpdate: true,
+						},
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.ComplianceAgentGVK().Kind,
+						},
+					},
+				},
+			},
+			expectTeamUpdate: true,
+			subresName:       definitions.XAgentDetails,
+		},
+		{
+			name:     "should add platform team to cache, triggerUpdate string",
+			hasError: false,
+			action:   proto.Event_SUBRESOURCEUPDATED,
+			resource: &management.DiscoveryAgent{
+				ResourceMeta: v1.ResourceMeta{
+					SubResources: map[string]interface{}{
+						definitions.XAgentDetails: map[string]interface{}{
+							definitions.TriggerTeamUpdate: "true",
+						},
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.ComplianceAgentGVK().Kind,
+						},
+					},
+				},
+			},
+			expectTeamUpdate: true,
+			subresName:       definitions.XAgentDetails,
+		},
 		{
 			name:     "should save DiscoveryAgent",
 			hasError: false,
@@ -253,17 +378,41 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 
 			sampler := &fakeSampler{}
-			handler := NewAgentResourceHandler(resourceManager, sampler)
+			cm := &mockAgentCache{
+				teams:  []*definitions.PlatformTeam{},
+				apiSIs: []*v1.ResourceInstance{},
+			}
+			client := &mockApicClient{
+				teams: []definitions.PlatformTeam{
+					{
+						Name: "TeamA",
+					},
+				},
+				triggerValue: true,
+			}
+			handler := NewAgentResourceHandler(resourceManager, sampler, cm, client)
+			// marshal and unmarshal the resource to simulate the resource coming from API server
+			ri := &v1.ResourceInstance{}
+			b, _ := json.Marshal(tc.resource)
+			json.Unmarshal(b, ri)
 
-			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.Kind, tc.resource.Name), &proto.EventMeta{Subresource: tc.subresName}, tc.resource)
+			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.GetGroupVersionKind().Kind, tc.resource.GetName()), &proto.EventMeta{Subresource: tc.subresName}, ri)
 			if tc.hasError {
 				assert.Nil(t, err)
 				assert.Nil(t, resourceManager.resource)
 			}
+			if tc.expectTeamUpdate {
+				assert.True(t, len(cm.teams) > 0)
+				assert.True(t, client.subResUpdate)
+				assert.False(t, client.triggerValue)
+				return
+			}
+			defer func() { cm.teams = []*definitions.PlatformTeam{} }() // reset teams after test
+
 			// resource update
 			if tc.expectResourceUpdate {
 				assert.Nil(t, err)
-				assert.Equal(t, resourceManager.resource, tc.resource)
+				assert.Equal(t, resourceManager.resource, ri)
 			}
 
 			// agent processing
@@ -283,45 +432,4 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 		})
 	}
-
-}
-
-type EventSyncCache interface {
-	RebuildCache()
-}
-
-type mockResourceManager struct {
-	resource     *v1.ResourceInstance
-	rebuildCache resource.EventSyncCache
-	fakeHandler  interface{}
-}
-
-func (m *mockResourceManager) SetAgentResource(agentResource *v1.ResourceInstance) {
-	m.resource = agentResource
-}
-
-func (m *mockResourceManager) GetAgentResource() *v1.ResourceInstance {
-	return m.resource
-}
-
-func (m *mockResourceManager) OnConfigChange(_ config.CentralConfig, _ apic.Client) {}
-
-func (m *mockResourceManager) FetchAgentResource() error { return nil }
-
-func (m *mockResourceManager) UpdateAgentStatus(_, _, _ string) error { return nil }
-
-func (m *mockResourceManager) GetAgentResourceVersion() (string, error) {
-	return "", nil
-}
-
-func (m *mockResourceManager) AddUpdateAgentDetails(key, value string) {}
-
-func (m *mockResourceManager) SetRebuildCacheFunc(rebuildCache resource.EventSyncCache) {
-	m.rebuildCache = rebuildCache
-}
-
-func (m *mockResourceManager) RegisterHandler(handler interface{}) {}
-
-func (m *mockResourceManager) GetHandler() interface{} {
-	return m.fakeHandler
 }

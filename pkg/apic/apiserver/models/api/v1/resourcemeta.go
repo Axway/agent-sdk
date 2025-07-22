@@ -21,6 +21,7 @@ type Meta interface {
 	GetGroupVersionKind() GroupVersionKind
 	GetMetadata() Metadata
 	SetScopeName(string)
+	GetSelfLink() string
 	GetAttributes() map[string]string
 	SetAttributes(map[string]string)
 	GetTags() []string

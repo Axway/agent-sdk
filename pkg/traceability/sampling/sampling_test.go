@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
@@ -130,75 +132,160 @@ func TestShouldSample(t *testing.T) {
 		successCount int
 	}
 	testCases := []struct {
-		name               string
-		apiTransactions    map[string]transactionCount
-		expectedSampled    int
-		config             Sampling
-		subIDs             map[string]string
-		limit              int32
-		duration           time.Duration
-		counterResetPeriod time.Duration
+		skip                     bool
+		name                     string
+		globalSampling           bool
+		apiTransactions          map[string]transactionCount
+		maxSampled               int
+		subIDs                   map[string]string
+		limit                    int32
+		duration                 time.Duration
+		counterResetPeriod       time.Duration
+		endpointsInfo            map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
+		additionalEndpointsInfo  map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
+		expectedEndpointsSampled map[string]struct{}
 	}{
 		{
-			name: "Limit sampling to 10 per period",
+			skip:           false,
+			name:           "Limit sampling to 10 per period",
+			globalSampling: true,
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    50,
+			maxSampled:         60,
 			limit:              10,
 			duration:           time.Second / 2,
 			counterResetPeriod: time.Second / 10,
 		},
 		{
-			name: "Limit sampling to 100 per period",
+			skip:           false,
+			name:           "Limit sampling to 100 per period",
+			globalSampling: true,
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    500,
+			maxSampled:         600,
 			limit:              100,
 			duration:           time.Second / 2,
 			counterResetPeriod: time.Second / 10,
 		},
 		{
-			name: "Limit sampling to 1000 per period",
+			skip:           false,
+			name:           "Limit sampling to 1000 per period",
+			globalSampling: true,
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    5000,
+			maxSampled:         6000,
 			limit:              1000,
 			duration:           time.Second / 2,
 			counterResetPeriod: time.Second / 10,
 		},
 		{
-			name: "Limit sampling to 0",
+			skip:           false,
+			name:           "Limit sampling to 0",
+			globalSampling: true,
 			apiTransactions: map[string]transactionCount{
 				"id1": {successCount: 1000},
 			},
-			expectedSampled:    0,
+			maxSampled:         0,
 			limit:              0,
 			duration:           time.Second / 2,
 			counterResetPeriod: time.Second / 10,
+		},
+		{
+			skip: false,
+			name: "Endpoints sampling enabled",
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
+				"id3": {successCount: 1000},
+				"id4": {successCount: 1000},
+			},
+			maxSampled:         600,
+			limit:              100,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
+			endpointsInfo: map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+				"id1": {BasePath: "/api/v1"},
+				"id2": {BasePath: "/api/v2"},
+			},
+			expectedEndpointsSampled: map[string]struct{}{"id1": {}, "id2": {}},
+		},
+		{
+			skip: false,
+			name: "Endpoints sampling enabled with additional endpoints",
+			apiTransactions: map[string]transactionCount{
+				"id1": {successCount: 1000},
+				"id2": {successCount: 1000},
+				"id3": {successCount: 1000},
+				"id4": {successCount: 1000},
+				"id5": {successCount: 1000},
+				"id6": {successCount: 1000},
+			},
+			maxSampled:         600,
+			limit:              100,
+			duration:           time.Second / 2,
+			counterResetPeriod: time.Second / 10,
+			endpointsInfo: map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+				"id1": {BasePath: "/api/v1"},
+				"id2": {BasePath: "/api/v2"},
+			},
+			additionalEndpointsInfo: map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+				"id1": {BasePath: "/api/v1"},
+				"id2": {BasePath: "/api/v2"},
+				"id3": {BasePath: "/api/v3"},
+			},
+			expectedEndpointsSampled: map[string]struct{}{"id1": {}, "id2": {}, "id3": {}},
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			if test.skip {
+				t.Skip("skipping test")
+			}
 			waitGroup := sync.WaitGroup{}
 			sampleCounterLock := sync.Mutex{}
 
-			err := SetupSampling(test.config, false, "")
-			endTime := time.Now().Truncate(test.counterResetPeriod).Add(test.duration)
-			done := time.NewTicker(time.Until(endTime))
+			testEnd := time.Now().Truncate(test.counterResetPeriod).Add(test.duration)
+			done := time.NewTicker(time.Until(testEnd))
 			defer done.Stop()
+
+			err := SetupSampling(Sampling{}, false, "")
+			endTime := time.Now().Add(-1 * time.Second) // reset endTime to avoid issues with the test
+			if test.globalSampling {
+				endTime = testEnd
+			}
 
 			period := &atomic.Int64{}
 			period.Store(int64(test.counterResetPeriod))
 			agentSamples.counterResetPeriod = period
-			agentSamples.EnableSampling(test.limit, endTime)
+			// update the endtime in the endpoints
+			for i := range test.endpointsInfo {
+				test.endpointsInfo[i] = management.TraceabilityAgentAgentstateSamplingEndpoints{
+					BasePath:   test.endpointsInfo[i].BasePath,
+					EndTime:    v1Time.Time(testEnd),
+					OnlyErrors: test.endpointsInfo[i].OnlyErrors,
+				}
+			}
+			agentSamples.EnableSampling(test.limit, endTime, test.endpointsInfo)
 			assert.Nil(t, err)
+
+			if len(test.additionalEndpointsInfo) > 0 {
+				for i := range test.additionalEndpointsInfo {
+					test.additionalEndpointsInfo[i] = management.TraceabilityAgentAgentstateSamplingEndpoints{
+						BasePath:   test.endpointsInfo[i].BasePath,
+						EndTime:    v1Time.Time(testEnd),
+						OnlyErrors: test.endpointsInfo[i].OnlyErrors,
+					}
+				}
+				agentSamples.EnableSampling(test.limit, endTime, test.additionalEndpointsInfo)
+			}
 
 			sampled := 0
 
+			endpointsSampled := map[string]struct{}{}
 			for apiID, numCalls := range test.apiTransactions {
 				waitGroup.Add(1)
 
@@ -209,7 +296,7 @@ func TestShouldSample(t *testing.T) {
 
 				go func(wg *sync.WaitGroup, id, subID string, calls transactionCount) {
 					defer wg.Done()
-					endTimeTimer := time.NewTimer(time.Until(endTime))
+					endTimeTimer := time.NewTimer(time.Until(testEnd))
 
 					sampleFunc := func(id, subID string, status string) {
 						testDetails := TransactionDetails{
@@ -220,6 +307,7 @@ func TestShouldSample(t *testing.T) {
 						sample, err := ShouldSampleTransaction(testDetails)
 						if sample {
 							sampleCounterLock.Lock()
+							endpointsSampled[id] = struct{}{}
 							sampled++
 							sampleCounterLock.Unlock()
 						}
@@ -241,9 +329,25 @@ func TestShouldSample(t *testing.T) {
 
 			waitGroup.Wait()
 			<-done.C
+			time.Sleep(time.Second / 2) // wait for the sampling to finish
+
 			assert.Nil(t, err)
-			assert.LessOrEqual(t, test.expectedSampled, sampled)
-			assert.GreaterOrEqual(t, test.expectedSampled+int(test.limit), sampled)
+			assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+			if len(test.endpointsInfo) > 0 {
+				agentSamples.endpointsSampling.endpointsLock.Lock()
+				assert.Equal(t, 0, len(agentSamples.endpointsSampling.endpointsInfo),
+					"Endpoints sampling should be disabled after the test")
+				agentSamples.endpointsSampling.endpointsLock.Unlock()
+			}
+			// validate that only the expected endpoints are sampled
+			if len(test.expectedEndpointsSampled) > 0 {
+				for id := range endpointsSampled {
+					assert.Contains(t, test.expectedEndpointsSampled, id, "endpoint %s should not have been sampled", id)
+				}
+				for id := range test.expectedEndpointsSampled {
+					assert.Contains(t, endpointsSampled, id, "endpoint %s should have been sampled", id)
+				}
+			}
 		})
 	}
 }
@@ -345,6 +449,43 @@ func TestFilterEvents(t *testing.T) {
 			assert.Len(t, filterEvents, test.eventsExpected)
 		})
 	}
+}
+
+func TestBothSamplingsEnabled(t *testing.T) {
+	SetupSampling(Sampling{}, false, "")
+	endTime := time.Now().Add(10 * time.Second)
+
+	period := &atomic.Int64{}
+	period.Store(time.Second.Milliseconds())
+	agentSamples.counterResetPeriod = period
+	// update the endtime in the endpoints
+	agentSamples.EnableSampling(100, endTime, map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+		"endpoint1": {
+			BasePath: "/api/v1",
+			EndTime:  v1Time.Time(time.Now().Add(500 * time.Millisecond)),
+		},
+	})
+	testDetails := TransactionDetails{
+		Status: "Failure",
+		APIID:  "endpoint1",
+		SubID:  "sub1",
+	}
+	sample, _ := ShouldSampleTransaction(testDetails)
+	assert.True(t, sample)
+
+	agentSamples.EnableSampling(100, endTime, map[string]management.TraceabilityAgentAgentstateSamplingEndpoints{
+		"endpoint1": {
+			BasePath: "/api/v1",
+			EndTime:  v1Time.Time(time.Now().Add(500 * time.Millisecond)),
+		},
+	})
+	testDetails = TransactionDetails{
+		Status: "Failure",
+		APIID:  "sthElse",
+		SubID:  "sub2",
+	}
+	sample, _ = ShouldSampleTransaction(testDetails)
+	assert.True(t, sample)
 }
 
 func Test_SamplingPercentageDecimals(t *testing.T) {

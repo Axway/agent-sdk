@@ -5,6 +5,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
@@ -31,7 +32,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	if in.Unit == nil {
 		status := in.Status
 		if status == "" {
-			status = getStatusFromCodeString(in.StatusCode).String()
+			status = sampling.GetStatusFromCodeString(in.StatusCode).String()
 		}
 		// transaction units
 		out.Units = &Units{
