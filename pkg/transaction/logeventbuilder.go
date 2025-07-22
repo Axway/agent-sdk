@@ -513,7 +513,13 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 		return b
 	}
 	if proxyID == "" {
-		proxyID = "unknown"
+		if proxyName == "" {
+			// Both proxyID and proxyName are empty - use UnknownAPIID
+			proxyID = UnknownAPIID
+		} else {
+			// Only proxyID is empty but proxyName exists - use "unknown"
+			proxyID = unknown
+		}
 	}
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
 		ID:       proxyID,

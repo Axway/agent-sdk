@@ -451,3 +451,15 @@ func TestLogRedactionOverride(t *testing.T) {
 	assert.False(t, redactionConfig.responseHeadersRedactionCalled)
 	assert.False(t, redactionConfig.jmsPropertiesRedactionCalled)
 }
+
+func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *testing.T) {
+	builder := NewTransactionSummaryBuilder()
+	builder.SetProxyWithStageVersion("", "", "stage", "version", 1)
+
+	logEvent := builder.(*transactionSummaryBuilder).logEvent
+	assert.Equal(t, "unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, "stage", logEvent.TransactionSummary.Proxy.Stage)
+	assert.Equal(t, "version", logEvent.TransactionSummary.Proxy.Version)
+	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
+}
