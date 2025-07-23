@@ -101,6 +101,8 @@ type Client interface {
 
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
+
+	GetEntitlements() (map[string]interface{}, error)
 }
 
 // New creates a new Client
@@ -450,6 +452,47 @@ func (c *ServiceClient) GetCentralTeamByName(name string) (*defs.PlatformTeam, e
 	}
 
 	return &team, nil
+}
+
+// GetEntitlements - returns the entitlements for the organization
+func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
+	headers, err := c.createHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	platformURL := fmt.Sprintf("%s/api/v1/org/%s/subscription", c.cfg.GetPlatformURL(), c.cfg.GetTenantID())
+
+	response, reqErr := c.sendServerRequest(platformURL, headers, map[string]string{})
+	if reqErr != nil {
+		return nil, reqErr
+	}
+
+	var sessionEntitlements definitions.SessionEntitlements
+	err = json.Unmarshal(response, &sessionEntitlements)
+	if err != nil {
+		return nil, err
+	}
+	entitlements := map[string]interface{}{}
+
+	for _, entitlement := range sessionEntitlements.Result {
+		if entitlement.Expired {
+			continue
+		}
+		for _, entry := range entitlement.Entitlements {
+			if v, ok := entry.Value.(bool); ok && !v {
+				// Skip any entitlements that are false
+				continue
+			}
+			if v, ok := entry.Value.(float64); ok && v == 0 {
+				// Skip any entitlements that are 0
+				continue
+			}
+			entitlements[entry.Key] = entry.Value
+		}
+	}
+
+	return entitlements, nil
 }
 
 // GetTeam - returns the team ID based on filter
