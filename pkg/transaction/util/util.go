@@ -24,7 +24,13 @@ const (
 
 // GetAccessRequest -
 func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage, version string) *management.AccessRequest {
-	if managedApp == nil {
+	if managedApp == nil || cacheManager == nil {
+		if managedApp == nil {
+			log.Trace("managedApp is nil")
+		}
+		if cacheManager == nil {
+			log.Trace("cacheManager is nil")
+		}
 		return nil
 	}
 
@@ -35,7 +41,10 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	if ri == nil {
 		return nil
 	}
-	accessReq.FromInstance(ri)
+	if err := accessReq.FromInstance(ri); err != nil {
+		log.Errorf("failed to convert resource instance to access request: %v", err)
+		return nil
+	}
 	return accessReq
 }
 
@@ -55,11 +64,16 @@ func GetConsumerOrgID(ri *v1.ResourceInstance) string {
 
 	// Lookup Subscription
 	app := &management.ManagedApplication{}
-	app.FromInstance(ri)
+	if err := app.FromInstance(ri); err != nil {
+		log.Errorf("failed to convert resource instance to managed application: %v", err)
+		return ""
+	}
 
 	if app.Marketplace.Resource.Owner != nil {
+		log.Trace("retrieving consumer org ID from managed application marketplace owner")
 		return app.Marketplace.Resource.Owner.Organization.ID
 	}
+	log.Trace("retrieving consumer org ID from managed application metadata")
 	return ""
 }
 
