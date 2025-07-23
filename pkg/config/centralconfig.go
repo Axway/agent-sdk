@@ -24,18 +24,21 @@ const (
 	US Region = iota + 1
 	EU
 	AP
+	EU2
 )
 
 var regionNamesMap = map[Region]string{
-	US: "US",
-	EU: "EU",
-	AP: "AP",
+	US:  "US",
+	EU:  "EU",
+	AP:  "AP",
+	EU2: "EU2",
 }
 
 var nameToRegionMap = map[string]Region{
-	"US": US,
-	"EU": EU,
-	"AP": AP,
+	"US":  US,
+	"EU":  EU,
+	"AP":  AP,
+	"EU2": EU2,
 }
 
 func (r Region) ToString() string {
@@ -43,38 +46,51 @@ func (r Region) ToString() string {
 }
 
 type regionalSettings struct {
-	SingleURL        string
-	CentralURL       string
-	AuthURL          string
-	PlatformURL      string
-	TraceabilityHost string
-	Deployment       string
+	SingleURL            string
+	CentralURL           string
+	AuthURL              string
+	PlatformURL          string
+	TraceabilityHost     string
+	TraceabilityProtocol string
+	Deployment           string
 }
 
 var regionalSettingsMap = map[Region]regionalSettings{
 	US: {
-		SingleURL:        "https://ingestion.platform.axway.com",
-		CentralURL:       "https://apicentral.axway.com",
-		AuthURL:          "https://login.axway.com/auth",
-		PlatformURL:      "https://platform.axway.com",
-		TraceabilityHost: "ingestion.datasearch.axway.com:5044",
-		Deployment:       "prod",
+		SingleURL:            "https://ingestion.platform.axway.com",
+		CentralURL:           "https://apicentral.axway.com",
+		AuthURL:              "https://login.axway.com/auth",
+		PlatformURL:          "https://platform.axway.com",
+		TraceabilityHost:     "ingestion.datasearch.axway.com:5044",
+		TraceabilityProtocol: "tcp",
+		Deployment:           "prod",
 	},
 	EU: {
-		SingleURL:        "https://ingestion-eu.platform.axway.com",
-		CentralURL:       "https://central.eu-fr.axway.com",
-		AuthURL:          "https://login.axway.com/auth",
-		PlatformURL:      "https://platform.axway.com",
-		TraceabilityHost: "ingestion.visibility.eu-fr.axway.com:5044",
-		Deployment:       "prod-eu",
+		SingleURL:            "https://ingestion-eu.platform.axway.com",
+		CentralURL:           "https://central.eu-fr.axway.com",
+		AuthURL:              "https://login.axway.com/auth",
+		PlatformURL:          "https://platform.axway.com",
+		TraceabilityHost:     "ingestion.visibility.eu-fr.axway.com:5044",
+		TraceabilityProtocol: "tcp",
+		Deployment:           "prod-eu",
 	},
 	AP: {
-		SingleURL:        "https://ingestion-ap-sg.platform.axway.com",
-		CentralURL:       "https://central.ap-sg.axway.com",
-		AuthURL:          "https://login.axway.com/auth",
-		PlatformURL:      "https://platform.axway.com",
-		TraceabilityHost: "ingestion.visibility.ap-sg.axway.com:5044",
-		Deployment:       "prod-ap",
+		SingleURL:            "https://ingestion-ap-sg.platform.axway.com",
+		CentralURL:           "https://central.ap-sg.axway.com",
+		AuthURL:              "https://login.axway.com/auth",
+		PlatformURL:          "https://platform.axway.com",
+		TraceabilityHost:     "ingestion.visibility.ap-sg.axway.com:5044",
+		TraceabilityProtocol: "tcp",
+		Deployment:           "prod-ap",
+	},
+	EU2: {
+		SingleURL:            "https://entry.eu-fr.axway.com",
+		CentralURL:           "https://engage.eu-fr.axway.com",
+		AuthURL:              "https://login.eu-fr.axway.com/auth",
+		PlatformURL:          "https://platform.eu-fr.axway.com",
+		TraceabilityHost:     "phoenix.eu-fr.axway.com:443",
+		TraceabilityProtocol: "https",
+		Deployment:           "prod-eu-regional",
 	},
 }
 
@@ -164,6 +180,7 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetTraceabilityHost() string
+	GetTraceabilityProtocol() string
 	GetPlatformURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
@@ -394,6 +411,22 @@ func (c *CentralConfiguration) GetURL() string {
 func (c *CentralConfiguration) GetTraceabilityHost() string {
 	if c.isRegionSet {
 		return c.RegionSettings.TraceabilityHost
+	}
+	return ""
+}
+
+// GetTraceabilityProtocol - Returns the central traceability protocol
+func (c *CentralConfiguration) GetTraceabilityProtocol() string {
+	if c.isRegionSet {
+		return c.RegionSettings.TraceabilityProtocol
+	}
+	if c.SingleURL != "" {
+		// Using single URL and not region, find the expected protocol
+		for _, region := range regionalSettingsMap {
+			if region.SingleURL == c.SingleURL {
+				return region.TraceabilityProtocol
+			}
+		}
 	}
 	return ""
 }
@@ -874,25 +907,6 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	// check if CENTRAL_SINGLEURL is explicitly empty
 	_, set := os.LookupEnv("CENTRAL_SINGLEURL")
 
-	var metricReporting MetricReportingConfig
-	var usageReporting UsageReportingConfig
-	if supportsTraceability(agentType) {
-		metricReporting = ParseMetricReportingConfig(props)
-		usageReporting = ParseUsageReportingConfig(props)
-		if usageReporting.IsOfflineMode() {
-			// Check if this is offline usage reporting only
-			cfg := &CentralConfiguration{
-				AgentName:       props.StringPropertyValue(pathAgentName),
-				AgentType:       agentType,
-				UsageReporting:  usageReporting,
-				MetricReporting: metricReporting,
-			}
-			// only need the environment ID in offline mode
-			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
-			return cfg, nil
-		}
-	}
-
 	proxyURL := props.StringPropertyValue(pathProxyURL)
 
 	cfg := &CentralConfiguration{
@@ -945,11 +959,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	cfg.APIServerVersion = props.StringPropertyValue(pathAPIServerVersion)
 	cfg.APIServiceRevisionPattern = props.StringPropertyValue(pathAPIServiceRevisionPattern)
 	cfg.CredentialConfig = newCredentialConfig()
-	if supportsTraceability(agentType) {
-		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
-		cfg.UsageReporting = usageReporting
-		cfg.MetricReporting = metricReporting
-	} else {
+	if !supportsTraceability(agentType) {
 		cfg.TeamName = props.StringPropertyValue(pathTeam)
 		cfg.TagsToPublish = props.StringPropertyValue(pathAdditionalTags)
 		cfg.AppendEnvironmentToTitle = props.BoolPropertyValue(pathAppendEnvironmentToTitle)
@@ -960,6 +970,8 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
 	}
+
+	// if the region env var is set use all of the region specific values
 	if regionSet {
 		regSet := regionalSettingsMap[region]
 		cfg.RegionSettings = regSet
@@ -972,9 +984,45 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.URL = regSet.CentralURL
 		cfg.PlatformURL = regSet.PlatformURL
 		cfg.APICDeployment = regSet.Deployment
+		cfg.setRegionBasedEnvironmentVars()
 	}
 
+	if supportsTraceability(agentType) {
+		cfg.APICDeployment = props.StringPropertyValue(pathDeployment)
+		cfg.MetricReporting = ParseMetricReportingConfig(props)
+		cfg.UsageReporting = ParseUsageReportingConfig(props, cfg.GetPlatformURL())
+		if cfg.UsageReporting.IsOfflineMode() {
+			// Check if this is offline usage reporting only
+			cfg := &CentralConfiguration{
+				AgentName:       props.StringPropertyValue(pathAgentName),
+				AgentType:       agentType,
+				UsageReporting:  cfg.UsageReporting,
+				MetricReporting: cfg.MetricReporting,
+			}
+			// only need the environment ID in offline mode
+			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
+			return cfg, nil
+		}
+	}
 	return cfg, nil
+}
+
+func (c *CentralConfiguration) setRegionBasedEnvironmentVars() {
+	// Set the environment variables for the agent
+	envGetters := map[string]func() string{
+		"CENTRAL_SINGLEURL":     c.GetSingleURL,
+		"CENTRAL_URL":           c.GetURL,
+		"CENTRAL_AUTH_URL":      c.GetAuthConfig().GetTokenURL,
+		"TRACEABILITY_HOST":     c.GetTraceabilityHost,
+		"TRACEABILITY_PROTOCOL": c.GetTraceabilityProtocol,
+		"CENTRAL_PLATFORMURL":   c.GetPlatformURL,
+		"CENTRAL_DEPLOYMENT":    c.GetAPICDeployment,
+	}
+	for envVar, getter := range envGetters {
+		if _, set := os.LookupEnv(envVar); getter() != "" && !set {
+			os.Setenv(envVar, getter())
+		}
+	}
 }
 
 func supportsTraceability(agentType AgentType) bool {

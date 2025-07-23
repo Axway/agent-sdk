@@ -67,14 +67,14 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 
 	expected := defaultExpected
 
-	cfg := ParseUsageReportingConfig(props)
+	cfg := ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err := validateUsageReporting(cfg)
 	assert.Nil(t, err)
 	validateconfig(t, expected, cfg)
 
 	expected = defaultExpected
-	cfg = ParseUsageReportingConfig(props)
+	cfg = ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
@@ -85,7 +85,7 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	expected = defaultExpected
 	expected.publish = false
 
-	cfg = ParseUsageReportingConfig(props)
+	cfg = ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
@@ -95,7 +95,7 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	os.Setenv(newUsageReportingPublishEnvVar, strconv.FormatBool(defaultExpected.publish))
 
 	expected = defaultExpected
-	cfg = ParseUsageReportingConfig(props)
+	cfg = ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
@@ -105,14 +105,14 @@ func TestUsageReportingConfigEnvVarMigration(t *testing.T) {
 	os.Setenv(oldUsageReportingPublishMetricEnvVar, "true")
 	expected = defaultExpected
 
-	cfg = ParseUsageReportingConfig(props)
+	cfg = ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
 	validateconfig(t, expected, cfg)
 
 	expected = defaultExpected
-	cfg = ParseUsageReportingConfig(props)
+	cfg = ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 	err = validateUsageReporting(cfg)
 	assert.Nil(t, err)
@@ -129,7 +129,7 @@ func TestUsageReportingConfigProperties(t *testing.T) {
 	// Test default config
 	AddUsageReportingProperties(props)
 
-	cfg := ParseUsageReportingConfig(props)
+	cfg := ParseUsageReportingConfig(props, "")
 	assert.NotNil(t, cfg)
 
 	err := validateUsageReporting(cfg)

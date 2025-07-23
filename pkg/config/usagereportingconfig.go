@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -228,9 +227,8 @@ func AddUsageReportingProperties(props properties.Properties) {
 }
 
 // ParseUsageReportingConfig - Parses the Usage Reporting Config values from the command line
-func ParseUsageReportingConfig(props properties.Properties) UsageReportingConfig {
+func ParseUsageReportingConfig(props properties.Properties, platformURL string) UsageReportingConfig {
 	// Start with the default config
-	platformURL := strings.TrimRight(props.StringPropertyValue(pathPlatformURL), urlCutSet)
 	cfg := NewUsageReporting(platformURL).(*UsageReportingConfiguration)
 
 	// update the config

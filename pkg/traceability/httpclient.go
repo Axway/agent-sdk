@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/outputs"
 	"github.com/elastic/beats/v7/libbeat/outputs/outil"
 	"github.com/elastic/beats/v7/libbeat/outputs/transport"
 	"github.com/elastic/beats/v7/libbeat/publisher"
-	"github.com/google/uuid"
 )
 
 const (
@@ -39,6 +39,7 @@ type HTTPClient struct {
 	headers          map[string]string
 	beatInfo         beat.Info
 	logger           log.FieldLogger
+	timeout          time.Duration
 }
 
 // HTTPClientSettings struct
@@ -54,13 +55,14 @@ type HTTPClientSettings struct {
 	Observer         outputs.Observer
 	Headers          map[string]string
 	UserAgent        string
+	IsSingleEntry    bool
 }
 
 // Connection struct
 type Connection struct {
 	sync.Mutex
 	URL       string
-	http      *http.Client
+	api       api.Client
 	connected bool
 	encoder   bodyEncoder
 	userAgent string
@@ -84,16 +86,18 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		WithPackage("sdk.traceability").
 		WithComponent("HTTPClient")
 
+	opts := []api.ClientOpt{api.WithTimeout(s.Timeout)}
+	if s.IsSingleEntry {
+		opts = append(opts, api.WithSingleURL())
+	}
+
+	tlsCfg := config.NewTLSConfig().(*config.TLSConfiguration)
+	tlsCfg.LoadFrom(s.TLS.ToConfig())
+
 	client := &HTTPClient{
 		Connection: Connection{
-			URL: s.URL,
-			http: &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: s.TLS.ToConfig(),
-					Proxy:           util.GetProxyURL(s.Proxy),
-				},
-				Timeout: s.Timeout,
-			},
+			URL:       s.URL,
+			api:       api.NewClient(tlsCfg, s.Proxy.String(), opts...),
 			encoder:   encoder,
 			userAgent: s.UserAgent,
 		},
@@ -102,6 +106,7 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		headers:          s.Headers,
 		beatInfo:         s.BeatInfo,
 		logger:           logger,
+		timeout:          s.Timeout,
 	}
 
 	return client, nil
@@ -143,7 +148,7 @@ func (client *HTTPClient) Clone() *HTTPClient {
 			URL:              client.URL,
 			Proxy:            client.proxyURL,
 			TLS:              client.tlsConfig,
-			Timeout:          client.http.Timeout,
+			Timeout:          client.timeout,
 			CompressionLevel: client.compressionLevel,
 			Headers:          client.headers,
 		},
@@ -219,67 +224,54 @@ func (conn *Connection) request(body interface{}, headers map[string]string, eve
 }
 
 func (conn *Connection) execRequest(url string, body io.Reader, headers map[string]string, eventTime time.Time) (int, []byte, error) {
-	req, err := http.NewRequest("POST", url, body)
-	if log.IsHTTPLogTraceEnabled() {
-		req = log.NewRequestWithTraceContext(uuid.New().String(), req)
+	data := make([]byte, 0)
+	if body != nil {
+		var err error
+		data, err = io.ReadAll(body)
+		if err != nil {
+			return 0, nil, err
+		}
 	}
 
+	err := conn.addHeaders(headers, body != nil, eventTime)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	err = conn.addHeaders(&req.Header, body, eventTime)
-	if err != nil {
-		return 0, nil, err
+	req := api.Request{
+		Method:  http.MethodPost,
+		URL:     url,
+		Body:    data,
+		Headers: headers,
 	}
 
-	return conn.execHTTPRequest(req, headers)
+	return conn.execHTTPRequest(req)
 }
 
-func (conn *Connection) addHeaders(header *http.Header, body io.Reader, eventTime time.Time) error {
+func (conn *Connection) addHeaders(headers map[string]string, hasBody bool, eventTime time.Time) error {
 	token, err := agent.GetCentralAuthToken()
 	if err != nil {
 		return err
 	}
 
-	header.Add("Authorization", "Bearer "+token)
-	header.Add("Capture-Org-ID", agent.GetCentralConfig().GetTenantID())
-	header.Add("User-Agent", conn.userAgent)
-	header.Add("Timestamp", strconv.FormatInt(eventTime.UTC().Unix(), 10))
+	headers["Authorization"] = "Bearer " + token
+	headers["Capture-Org-ID"] = agent.GetCentralConfig().GetTenantID()
+	headers["User-Agent"] = conn.userAgent
+	headers["Timestamp"] = strconv.FormatInt(eventTime.UTC().Unix(), 10)
 
-	if body != nil {
-		conn.encoder.AddHeader(header)
+	if hasBody {
+		conn.encoder.AddHeader(headers)
 	}
+
 	return nil
 }
 
-func (conn *Connection) execHTTPRequest(req *http.Request, headers map[string]string) (int, []byte, error) {
-	for key, value := range headers {
-		req.Header.Add(key, value)
-	}
-
-	resp, err := conn.http.Do(req)
+func (conn *Connection) execHTTPRequest(req api.Request) (int, []byte, error) {
+	resp, err := conn.api.Send(req)
 	if err != nil {
-		conn.updateConnected(false)
 		return 0, nil, err
 	}
-	defer closing(resp.Body)
-
-	status := resp.StatusCode
-	if status >= 300 {
-		conn.updateConnected(false)
-		return status, nil, fmt.Errorf("%v", resp.Status)
-	}
-	obj, err := io.ReadAll(resp.Body)
-	if err != nil {
-		conn.updateConnected(false)
-		return status, nil, err
-	}
-	return status, obj, nil
-}
-
-func closing(c io.Closer) {
-	c.Close()
+	return resp.Code, resp.Body, nil
 }
 
 func (client *HTTPClient) makeHTTPEvent(v *beat.Event) json.RawMessage {
