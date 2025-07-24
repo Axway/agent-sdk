@@ -420,7 +420,10 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 				log.SetIsLogP()
 			}
 
-			agent.GetHealthcheckManager().InitialHealthCheck()
+			err := agent.GetHealthcheckManager().InitialHealthCheck()
+			if err != nil {
+				os.Exit(1)
+			}
 
 			if util.IsNotTest() && c.agentFeaturesCfg.AgentStatusUpdatesEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 				agent.StartAgentStatusUpdate()
