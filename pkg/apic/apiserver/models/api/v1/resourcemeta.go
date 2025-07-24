@@ -118,7 +118,7 @@ func (rm *ResourceMeta) GetKindLink() string {
 			scopePlural, _ := GetPluralFromKind(scope)
 			pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
 		}
-	} else {
+	} else if rm.Metadata.Scope.Name != "" {
 		scopePlural, _ := GetPluralFromKind(rm.Metadata.Scope.Kind)
 		pathItems = append(pathItems, []string{scopePlural, rm.Metadata.Scope.Name}...)
 	}
