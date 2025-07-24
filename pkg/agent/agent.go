@@ -86,6 +86,8 @@ type agentData struct {
 	hcmMutex                     sync.RWMutex
 	applicationProfileDefinition string
 
+	entitlements map[string]interface{}
+
 	// profiling
 	profileDone chan struct{}
 }
@@ -156,11 +158,14 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	}
 
 	singleEntryFilter := []string{
-		// Traceability host URL will be added by the traceability factory
 		centralCfg.GetURL(),
 		centralCfg.GetPlatformURL(),
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
+	}
+	if centralCfg.GetTraceabilityProtocol() == "https" {
+		// add the traceability host to the single entry filter for https only
+		singleEntryFilter = append(singleEntryFilter, fmt.Sprintf("https://%s", centralCfg.GetTraceabilityHost()))
 	}
 	api.SetConfigAgent(
 		GetUserAgent(),
@@ -172,6 +177,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		if err != nil {
 			return err
 		}
+
 		if postCfgProcessor != nil {
 			err = postCfgProcessor(centralCfg, agentFeaturesCfg)
 			if err != nil {
@@ -263,6 +269,22 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 		resource.MergeComplianceAgentWithConfig(agent.agentResourceManager.GetAgentResource(), centralCfg)
 	}
 
+	// do not get entitlements in test
+	if !util.IsNotTest() {
+		return nil
+	}
+	return getEntitlements()
+}
+
+func getEntitlements() error {
+	// pull the entitlements for the org
+	entitlements, err := agent.apicClient.GetEntitlements()
+	if err != nil {
+		return err
+	}
+	agent.entitlements = entitlements
+
+	logger.WithField("entitlements", agent.entitlements).Trace("retrieved entitlements")
 	return nil
 }
 

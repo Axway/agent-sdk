@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -118,7 +117,7 @@ func newMockHTTPServer() *mockHTTPServer {
 				if contentEncoding != nil && contentEncoding[0] == "gzip" {
 					body, _ = mockServer.decompressGzipContent(req.Body)
 				} else {
-					body, _ = ioutil.ReadAll(req.Body)
+					body, _ = io.ReadAll(req.Body)
 				}
 				json.Unmarshal(body, &mockServer.serverMessages)
 				resp.Write([]byte("ok"))
@@ -153,7 +152,7 @@ func (s *mockHTTPServer) decompressGzipContent(gzipBufferReader io.Reader) ([]by
 	if err != nil {
 		return nil, err
 	}
-	plainContent, err := ioutil.ReadAll(gzipReader)
+	plainContent, err := io.ReadAll(gzipReader)
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +197,7 @@ func TestCreateLogstashClient(t *testing.T) {
 	assert.Nil(t, group.Clients)
 	assert.False(t, logstashClientCreateCalled)
 	testConfig := DefaultConfig()
+	testConfig.Protocol = "tcp"
 
 	group, err = createTransport(testConfig)
 	assert.NotNil(t, err)
@@ -232,7 +232,7 @@ func TestCreateLogstashClient(t *testing.T) {
 
 func TestCreateLogstashClientWithSingleEntry(t *testing.T) {
 	cfg := createCentralCfg("http://localhost:8888", "v7")
-	cfg.SingleURL = "http://localhost:9999"
+	cfg.SingleURL = "https://ingestion.platform.axway.com"
 	agent.Initialize(cfg)
 	logstashClientCreateCalled = false
 
@@ -275,7 +275,6 @@ func TestCreateHTTPClient(t *testing.T) {
 	agent.Initialize(cfg)
 
 	testConfig := DefaultConfig()
-	testConfig.Protocol = "http"
 
 	testConfig.Hosts = []string{
 		"somehost:invalidport",

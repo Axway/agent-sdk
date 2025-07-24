@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"io"
-	"net/http"
 )
 
 type bodyEncoder interface {
@@ -15,7 +14,7 @@ type bodyEncoder interface {
 }
 
 type bulkBodyEncoder interface {
-	AddHeader(*http.Header)
+	AddHeader(header map[string]string)
 	Reset()
 }
 
@@ -39,8 +38,8 @@ func (b *jsonEncoder) Reset() {
 	b.buf.Reset()
 }
 
-func (b *jsonEncoder) AddHeader(header *http.Header) {
-	header.Add("Content-Type", "application/json; charset=UTF-8")
+func (b *jsonEncoder) AddHeader(header map[string]string) {
+	header["Content-Type"] = "application/json; charset=UTF-8"
 }
 
 func (b *jsonEncoder) Reader() io.Reader {
@@ -75,9 +74,9 @@ func (b *gzipEncoder) Reader() io.Reader {
 	return b.buf
 }
 
-func (b *gzipEncoder) AddHeader(header *http.Header) {
-	header.Add("Content-Type", "application/json; charset=UTF-8")
-	header.Add("Content-Encoding", "gzip")
+func (b *gzipEncoder) AddHeader(header map[string]string) {
+	header["Content-Type"] = "application/json; charset=UTF-8"
+	header["Content-Encoding"] = "gzip"
 }
 
 func (b *gzipEncoder) Marshal(obj interface{}) error {

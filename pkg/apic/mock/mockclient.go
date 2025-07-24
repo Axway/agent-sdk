@@ -45,6 +45,7 @@ type Client struct {
 	UpdateResourceMock                        func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizerMock               func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
 	CreateOrUpdateResourceMock                func(v1.Interface) (*v1.ResourceInstance, error)
+	GetEntitlementsMock                       func() (map[string]interface{}, error)
 }
 
 // GetEnvironment -
@@ -313,6 +314,14 @@ func (m *Client) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, de
 func (m *Client) CreateOrUpdateResource(iface v1.Interface) (*v1.ResourceInstance, error) {
 	if m.CreateOrUpdateResourceMock != nil {
 		return m.CreateOrUpdateResourceMock(iface)
+	}
+	return nil, nil
+}
+
+// GetEntitlements -
+func (m *Client) GetEntitlements() (map[string]interface{}, error) {
+	if m.GetEntitlementsMock != nil {
+		return m.GetEntitlementsMock()
 	}
 	return nil, nil
 }
