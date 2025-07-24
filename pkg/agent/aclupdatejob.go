@@ -32,12 +32,12 @@ func newACLUpdateJob() *aclUpdateJob {
 }
 
 func (j *aclUpdateJob) Ready() bool {
-	status, _ := hc.GetGlobalStatus()
+	status, _ := GetHealthcheckManager().GetAgentStatus()
 	return status == string(hc.OK)
 }
 
 func (j *aclUpdateJob) Status() error {
-	if status, _ := hc.GetGlobalStatus(); status != string(hc.OK) {
+	if status, _ := GetHealthcheckManager().GetAgentStatus(); status != string(hc.OK) {
 		err := fmt.Errorf("agent is marked as not running")
 		j.logger.WithError(err).Trace("status failed")
 		return err

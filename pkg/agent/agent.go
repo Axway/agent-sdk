@@ -81,6 +81,9 @@ type agentData struct {
 	ardLock           sync.Mutex
 
 	status                       string
+	statusConfig                 *config.StatusConfiguration
+	healthcheckManager           *hc.Manager
+	hcmMutex                     sync.RWMutex
 	applicationProfileDefinition string
 
 	// profiling
@@ -99,6 +102,7 @@ func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 	agentMutex = sync.RWMutex{}
 	agent.publishingLock = &sync.Mutex{}
+	agent.statusConfig = config.NewStatusConfig()
 }
 
 // Initialize - Initializes the agent
@@ -114,6 +118,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.teamMap = cache.New()
 	}
 
+	setupHHealthcheckManager()
 	err := checkRunningAgent()
 	if err != nil {
 		return err
@@ -192,6 +197,38 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	return nil
 }
 
+func setupHHealthcheckManager() {
+	agent.hcmMutex.Lock()
+	defer agent.hcmMutex.Unlock()
+
+	hcOpts := []hc.Option{
+		hc.SetAsGlobalHealthCheckManager(),
+		hc.WithPort(agent.statusConfig.GetPort()),
+		hc.WithInterval(agent.statusConfig.GetHealthCheckInterval()),
+		hc.WithPeriod(agent.statusConfig.GetHealthCheckPeriod()),
+		hc.WithName(agent.statusConfig.Name),
+		hc.WithVersion(agent.statusConfig.Version),
+	}
+
+	if !util.IsNotTest() {
+		hcOpts = append(hcOpts, hc.IsUnitTest())
+	}
+	if agent.statusConfig.HTTPProfile {
+		hcOpts = append(hcOpts, hc.WithPprof())
+	}
+	agent.healthcheckManager = hc.NewManager(hcOpts...)
+}
+
+func SetStatusConfig(statusConfig *config.StatusConfiguration) {
+	agent.statusConfig = statusConfig
+}
+
+func GetHealthcheckManager() *hc.Manager {
+	agent.hcmMutex.Lock()
+	defer agent.hcmMutex.Unlock()
+	return agent.healthcheckManager
+}
+
 func handleCentralConfig(centralCfg config.CentralConfig) error {
 	err := initializeTokenRequester(centralCfg)
 	if err != nil {
@@ -231,10 +268,6 @@ func handleCentralConfig(centralCfg config.CentralConfig) error {
 
 func handleInitialization() error {
 	setupSignalProcessor()
-	// only do the periodic health check stuff if NOT in unit tests and running binary agents
-	if util.IsNotTest() {
-		hc.StartPeriodicHealthCheck()
-	}
 
 	if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
 		// if credentials can expire and need to be deprovisioned then start the credential checker
@@ -276,6 +309,8 @@ func finalizeInitialization() error {
 			return err
 		}
 	}
+
+	agent.healthcheckManager.StartServer()
 	agent.isFinalized = true
 	return nil
 }
@@ -412,8 +447,8 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 
 func checkRunningAgent() error {
 	// Check only on startup of binary agents
-	if !agent.isInitialized && util.IsNotTest() && !isRunningInDockerContainer() {
-		return hc.CheckIsRunning()
+	if !agent.isInitialized && !isRunningInDockerContainer() {
+		return agent.healthcheckManager.CheckIsRunning()
 	}
 	return nil
 }

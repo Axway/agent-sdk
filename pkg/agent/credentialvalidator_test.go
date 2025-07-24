@@ -80,7 +80,6 @@ func TestCredentialValidatorExecute(t *testing.T) {
 }
 
 type mockClient struct {
-	apicClient
 	t                   *testing.T
 	expectedState       string
 	expectedStateReason string

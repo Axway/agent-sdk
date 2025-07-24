@@ -43,6 +43,7 @@ type agentStatusUpdate struct {
 	prevStatusDetail      string
 	logger                log.FieldLogger
 	initialExecution      bool
+	getAgentStatus        func() (string, string)
 }
 
 var periodicStatusUpdate *agentStatusUpdate
@@ -137,8 +138,9 @@ func StartAgentStatusUpdate() {
 func startPeriodicStatusUpdate(logger log.FieldLogger) {
 	interval := agent.cfg.GetReportActivityFrequency()
 	periodicStatusUpdate = &agentStatusUpdate{
-		typeOfStatusUpdate: periodic,
 		logger:             logger.WithField("statusCheck", periodic),
+		typeOfStatusUpdate: periodic,
+		getAgentStatus:     agent.healthcheckManager.GetAgentStatus,
 	}
 	_, err := jobs.RegisterIntervalJobWithName(periodicStatusUpdate, interval, "Status Update")
 
@@ -152,9 +154,10 @@ func startPeriodicStatusUpdate(logger log.FieldLogger) {
 func startImmediateStatusUpdate(logger log.FieldLogger) {
 	interval := 10 * time.Second
 	immediateStatusUpdate = &agentStatusUpdate{
-		immediateStatusChange: true,
-		typeOfStatusUpdate:    immediate,
 		logger:                logger.WithField("statusCheck", immediate),
+		typeOfStatusUpdate:    immediate,
+		getAgentStatus:        agent.healthcheckManager.GetAgentStatus,
+		immediateStatusChange: true,
 	}
 	_, err := jobs.RegisterDetachedIntervalJobWithName(immediateStatusUpdate, interval, "Immediate Status Update")
 
@@ -212,7 +215,7 @@ func (su *agentStatusUpdate) getJobPoolStatus(ctx context.Context) string {
 // getHealthcheckStatus
 func (su *agentStatusUpdate) getHealthcheckStatus(ctx context.Context) (string, string) {
 	log := ctx.Value(ctxLogger).(log.FieldLogger)
-	hcStatus, hcStatusDetail := hc.GetGlobalStatus()
+	hcStatus, hcStatusDetail := su.getAgentStatus()
 	log.
 		WithField("status", hcStatus).
 		WithField("detail", hcStatusDetail).

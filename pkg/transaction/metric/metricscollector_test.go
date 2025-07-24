@@ -43,7 +43,6 @@ var (
 		Stage:              "",
 		Version:            "",
 	}
-	traceStatus = healthcheck.OK
 	appDetails1 = models.AppDetails{
 		ID:            "111",
 		Name:          "111",
@@ -81,15 +80,15 @@ var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0
 var teamID = "team123"
 
 type testHTTPServer struct {
-	lighthouseEventCount int
-	transactionCount     int
-	transactionVolume    int
-	failUsageEvent       bool
-	failUsageResponse    *UsageResponse
-	server               *httptest.Server
-	reportCount          int
-	givenGranularity     int
-	eventTimestamp       ISO8601Time
+	usageEventCount   int
+	transactionCount  int
+	transactionVolume int
+	failUsageEvent    bool
+	failUsageResponse *UsageResponse
+	server            *httptest.Server
+	reportCount       int
+	givenGranularity  int
+	eventTimestamp    ISO8601Time
 }
 
 func (s *testHTTPServer) startServer() {
@@ -109,7 +108,7 @@ func (s *testHTTPServer) startServer() {
 				resp.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			s.lighthouseEventCount++
+			s.usageEventCount++
 			req.ParseMultipartForm(1 << 20)
 			for _, fileHeaders := range req.MultipartForm.File {
 				for _, fileHeader := range fileHeaders {
@@ -147,7 +146,7 @@ func (s *testHTTPServer) closeServer() {
 }
 
 func (s *testHTTPServer) resetConfig() {
-	s.lighthouseEventCount = 0
+	s.usageEventCount = 0
 	s.transactionCount = 0
 	s.transactionVolume = 0
 	s.failUsageEvent = false
@@ -265,16 +264,6 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 	return ri
 }
 
-func runTestHealthcheck() {
-	// register a healthcheck
-	healthcheck.RegisterHealthcheck("Traceability", traceability.HealthCheckEndpoint,
-		func(name string) *healthcheck.Status {
-			return &healthcheck.Status{Result: traceStatus}
-		},
-	)
-	healthcheck.RunChecks()
-}
-
 func TestMetricCollector(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
@@ -300,6 +289,7 @@ func TestMetricCollector(t *testing.T) {
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
+	myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 
 	testCases := []struct {
 		name                      string
@@ -476,10 +466,6 @@ func TestMetricCollector(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			if test.hcStatus != "" {
-				traceStatus = test.hcStatus
-			}
-			runTestHealthcheck()
 			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)
@@ -532,8 +518,7 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 	agent.Initialize(cfg)
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
-	traceStatus = healthcheck.OK
-	runTestHealthcheck()
+	myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 
 	apiDetails := []models.APIDetails{
 		{ID: "000", Name: "000", Revision: 1, TeamID: teamID},
@@ -614,9 +599,6 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
 	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
 
-	traceStatus = healthcheck.OK
-	runTestHealthcheck()
-
 	testCases := []struct {
 		name                      string
 		transactionsPerReport     []int
@@ -650,6 +632,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			cfg.SetAxwayManaged(false)
 			setupMockClient(0)
 			myCollector := createMetricCollector()
+			myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 			metricCollector := myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
@@ -677,9 +660,6 @@ func TestMetricCollectorCache(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 
-	traceStatus = healthcheck.OK
-	runTestHealthcheck()
-
 	testCases := []struct {
 		name        string
 		trackVolume bool
@@ -705,6 +685,7 @@ func TestMetricCollectorCache(t *testing.T) {
 
 			traceability.SetDataDirPath(".")
 			myCollector := createMetricCollector()
+			myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 			metricCollector := myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
@@ -720,7 +701,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			// No event generation/publish, store the cache
 			metricCollector.storage.save()
 			// Validate only one usage report sent with first 2 transactions
-			assert.Equal(t, 1, s.lighthouseEventCount)
+			assert.Equal(t, 1, s.usageEventCount)
 			assert.Equal(t, 2, s.transactionCount)
 			if test.trackVolume {
 				assert.Equal(t, 20, s.transactionVolume)
@@ -729,6 +710,7 @@ func TestMetricCollectorCache(t *testing.T) {
 
 			// Recreate the collector that loads the stored metrics, so 3 transactions
 			myCollector = createMetricCollector()
+			myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 			metricCollector = myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
@@ -742,7 +724,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			metricCollector.Execute()
 			metricCollector.usagePublisher.Execute()
 			// Validate only one usage report sent with 3 previous transactions and 5 new transactions
-			assert.Equal(t, 1, s.lighthouseEventCount)
+			assert.Equal(t, 1, s.usageEventCount)
 			assert.Equal(t, 8, s.transactionCount)
 			if test.trackVolume {
 				assert.Equal(t, 80, s.transactionVolume)
@@ -751,13 +733,14 @@ func TestMetricCollectorCache(t *testing.T) {
 			s.resetConfig()
 			// Recreate the collector that loads the stored metrics, 0 transactions
 			myCollector = createMetricCollector()
+			myCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel { return healthcheck.OK })
 			metricCollector = myCollector.(*collector)
 			metricCollector.usagePublisher.schedule = "* * * * *"
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.Execute()
 			// Validate only no usage report sent as no previous or new transactions
-			assert.Equal(t, 0, s.lighthouseEventCount)
+			assert.Equal(t, 0, s.usageEventCount)
 			assert.Equal(t, 0, s.transactionCount)
 			if test.trackVolume {
 				assert.Equal(t, 0, s.transactionVolume)
@@ -772,9 +755,6 @@ func TestOfflineMetricCollector(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 	traceability.SetDataDirPath(".")
-
-	traceStatus = healthcheck.OK
-	runTestHealthcheck()
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
@@ -902,9 +882,7 @@ func TestCustomMetrics(t *testing.T) {
 	defer s.closeServer()
 	s.startServer()
 
-	traceStatus = healthcheck.OK
 	traceability.SetDataDirPath(".")
-	runTestHealthcheck()
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/usage"

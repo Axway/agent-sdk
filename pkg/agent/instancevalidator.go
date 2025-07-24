@@ -30,14 +30,14 @@ func newInstanceValidator() *instanceValidator {
 
 // Ready -
 func (j *instanceValidator) Ready() bool {
-	status, _ := hc.GetGlobalStatus()
+	status, _ := GetHealthcheckManager().GetAgentStatus()
 	return status == string(hc.OK)
 }
 
 // Status -
 func (j *instanceValidator) Status() error {
 	j.logger.Trace("status check")
-	if status, _ := hc.GetGlobalStatus(); status != string(hc.OK) {
+	if status, _ := GetHealthcheckManager().GetAgentStatus(); status != string(hc.OK) {
 		err := fmt.Errorf("agent is marked as not running")
 		j.logger.WithError(err).Trace("status failed")
 		return err
@@ -84,8 +84,6 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		if externalAPIID == "" {
 			logger.Trace("could not get instance external id")
 			continue // skip service instances without external api id
-		} else if err != nil {
-			logger.WithError(err).Trace("could not get instance external id")
 		}
 		logger = logger.WithField("externalAPIID", externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)

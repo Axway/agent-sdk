@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -61,13 +60,14 @@ type AgentRootCmd interface {
 type agentRootCommand struct {
 	logger            log.FieldLogger
 	agentName         string
+	version           string
 	rootCmd           *cobra.Command
 	commandHandler    CommandHandler
 	initConfigHandler InitConfigHandler
 	finalizeAgentInit FinalizeAgentInitHandler
 	agentType         config.AgentType
 	props             properties.Properties
-	statusCfg         config.StatusConfig
+	statusCfg         *config.StatusConfiguration
 	agentFeaturesCfg  config.AgentFeaturesConfig
 	centralCfg        config.CentralConfig
 	agentCfg          interface{}
@@ -105,6 +105,11 @@ func WithFinalizeAgentInitFunc(f FinalizeAgentInitHandler) NewCommandOption {
 
 // NewRootCmd - Creates a new Agent Root Command
 func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
+	// use the description from the build if available
+	if BuildAgentDescription != "" {
+		desc = BuildAgentDescription
+	}
+
 	c := &agentRootCommand{
 		logger:            log.NewFieldLogger().WithPackage("sdk.cmd").WithComponent("root"),
 		agentName:         exeName,
@@ -113,21 +118,17 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
 		initialized:       false,
+		version:           buildCmdVersion(desc),
 	}
 
 	for _, o := range opts {
 		o(c)
 	}
 
-	// use the description from the build if available
-	if BuildAgentDescription != "" {
-		desc = BuildAgentDescription
-	}
-
 	c.rootCmd = &cobra.Command{
 		Use:     c.agentName,
 		Short:   desc,
-		Version: buildCmdVersion(desc),
+		Version: c.version,
 		RunE:    c.run,
 		PreRunE: c.initialize,
 	}
@@ -142,14 +143,17 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	config.AddStatusConfigProperties(c.props)
 	config.AddAgentFeaturesConfigProperties(c.props)
 
-	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
-
 	// Call the config add props
 	return c
 }
 
 // NewCmd - Creates a new Agent Root Command using existing cmd
 func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler InitConfigHandler, commandHandler CommandHandler, agentType config.AgentType, opts ...NewCommandOption) AgentRootCmd {
+	// use the description from the build if available
+	if BuildAgentDescription != "" {
+		desc = BuildAgentDescription
+	}
+
 	c := &agentRootCommand{
 		logger:            log.NewFieldLogger().WithPackage("sdk.cmd").WithComponent("root"),
 		agentName:         exeName,
@@ -158,21 +162,17 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 		agentType:         agentType,
 		secretResolver:    resolver.NewSecretResolver(),
 		initialized:       false,
+		version:           buildCmdVersion(desc),
 	}
 
 	for _, o := range opts {
 		o(c)
 	}
 
-	// use the description from the build if available
-	if BuildAgentDescription != "" {
-		desc = BuildAgentDescription
-	}
-
 	c.rootCmd = rootCmd
 	c.rootCmd.Use = c.agentName
 	c.rootCmd.Short = desc
-	c.rootCmd.Version = buildCmdVersion(desc)
+	c.rootCmd.Version = c.version
 	c.rootCmd.RunE = c.run
 	c.rootCmd.PreRunE = c.initialize
 
@@ -187,8 +187,6 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)
 	config.AddAgentFeaturesConfigProperties(c.props)
-
-	hc.SetNameAndVersion(exeName, c.rootCmd.Version)
 
 	removeBeatSubCommands(c.rootCmd)
 	// Call the config add props
@@ -321,11 +319,12 @@ func (c *agentRootCommand) initConfig() error {
 		return err
 	}
 
-	c.statusCfg, _ = config.ParseStatusConfig(c.GetProperties())
+	c.statusCfg = config.ParseStatusConfig(c.GetProperties(), c.agentName, c.version, c.httpprofile)
 	err = c.statusCfg.ValidateCfg()
 	if err != nil {
 		return err
 	}
+	agent.SetStatusConfig(c.statusCfg)
 
 	// Init Agent Features Config
 	c.agentFeaturesCfg, err = config.ParseAgentFeaturesConfig(c.GetProperties())
@@ -340,7 +339,6 @@ func (c *agentRootCommand) initConfig() error {
 	}
 
 	// must set the hc config now, because the healthchecker loop starts in agent.Initialize
-	hc.SetStatusConfig(c.statusCfg)
 
 	err = agent.InitializeWithAgentFeatures(c.centralCfg, c.agentFeaturesCfg, c.postCentralConfigProcessing)
 	if err != nil {
@@ -391,10 +389,6 @@ func (c *agentRootCommand) finishInit() error {
 	// Start the initial and recurring version check jobs
 	startVersionCheckJobs(c.centralCfg, c.agentFeaturesCfg)
 
-	if util.IsNotTest() {
-		hc.StartNewServer(c.httpprofile)
-	}
-
 	return nil
 }
 
@@ -426,7 +420,7 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 				log.SetIsLogP()
 			}
 
-			c.healthCheckTicker()
+			agent.GetHealthcheckManager().InitialHealthCheck()
 
 			if util.IsNotTest() && c.agentFeaturesCfg.AgentStatusUpdatesEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {
 				agent.StartAgentStatusUpdate()
@@ -448,37 +442,6 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 	}
 	agent.UpdateStatusWithPrevious(status, agent.AgentRunning, statusText)
 	return
-}
-
-// Run health check ticker for every 5 seconds
-// If after 5 minutes, the health checker still returns HC status !OK, exit the agent.  Otherwise, return true and continue processing
-func (c *agentRootCommand) healthCheckTicker() {
-	if !util.IsNotTest() {
-		c.logger.Trace("skipping health check ticker in test mode")
-		return
-	}
-	c.logger.Trace("run health checker ticker to check health status on RunChecks")
-	ticker := time.NewTicker(5 * time.Second)
-	tickerTimeout := time.NewTicker(5 * time.Minute)
-
-	defer ticker.Stop()
-	defer tickerTimeout.Stop()
-
-	for {
-		select {
-		case <-tickerTimeout.C:
-			c.logger.Error("healthcheck run checks failing. Stopping agent - Check docs.axway.com for more info on the reported error code")
-			agent.UpdateStatus(agent.AgentFailed, "healthchecks on startup failed")
-			os.Exit(0)
-		case <-ticker.C:
-			status := hc.RunChecks()
-			if status == hc.OK {
-				c.logger.Trace("healthcheck on startup is OK. Continue processing")
-				return
-			}
-			c.logger.Warn("healthchecks on startup are still processing")
-		}
-	}
 }
 
 func (c *agentRootCommand) RootCmd() *cobra.Command {

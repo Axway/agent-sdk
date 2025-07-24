@@ -21,6 +21,7 @@ import (
 )
 
 func NewConfig() *config.CentralConfiguration {
+	hc.NewManager(hc.SetAsGlobalHealthCheckManager(), hc.IsUnitTest())
 	return &config.CentralConfiguration{
 		AgentType:     1,
 		TenantID:      "12345",
@@ -40,6 +41,7 @@ func TestNewStreamer(t *testing.T) {
 	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
+	hcm := hc.NewManager(hc.IsUnitTest(), hc.SetAsGlobalHealthCheckManager())
 
 	streamer, err := NewStreamerClient(
 		httpClient,
@@ -78,7 +80,7 @@ func TestNewStreamer(t *testing.T) {
 	err = <-errCh
 	assert.Nil(t, err)
 
-	assert.Equal(t, hc.OK, hc.RunChecks())
+	assert.Equal(t, hc.OK, hcm.RunChecks())
 	streamer.manager = nil
 	streamer.listener = nil
 
@@ -94,7 +96,7 @@ func TestNewStreamer(t *testing.T) {
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
-	assert.Equal(t, hc.FAIL, hc.RunChecks())
+	assert.Equal(t, hc.FAIL, hcm.RunChecks())
 }
 
 func TestClientOptions(t *testing.T) {

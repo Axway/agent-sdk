@@ -56,33 +56,35 @@ type Collector interface {
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
+	SetTraceabilityHealthCheck(func() healthcheck.StatusLevel)
 	ShutdownPublish()
 }
 
 // collector - collects the metrics for transactions events
 type collector struct {
 	jobs.Job
-	usageStartTime   time.Time
-	usageEndTime     time.Time
-	metricStartTime  time.Time
-	metricEndTime    time.Time
-	orgGUID          string
-	agentName        string
-	lock             *sync.Mutex
-	batchLock        *sync.Mutex
-	registry         registry
-	metricBatch      *EventBatch
-	metricMap        map[string]map[string]map[string]map[string]*centralMetric
-	metricMapLock    *sync.Mutex
-	publishItemQueue []publishQueueItem
-	jobID            string
-	usagePublisher   *usagePublisher
-	storage          storageCache
-	reports          *usageReportCache
-	metricConfig     config.MetricReportingConfig
-	usageConfig      config.UsageReportingConfig
-	logger           log.FieldLogger
-	metricLogger     log.FieldLogger
+	usageStartTime          time.Time
+	usageEndTime            time.Time
+	metricStartTime         time.Time
+	metricEndTime           time.Time
+	orgGUID                 string
+	agentName               string
+	lock                    *sync.Mutex
+	batchLock               *sync.Mutex
+	registry                registry
+	metricBatch             *EventBatch
+	metricMap               map[string]map[string]map[string]map[string]*centralMetric
+	metricMapLock           *sync.Mutex
+	publishItemQueue        []publishQueueItem
+	jobID                   string
+	usagePublisher          *usagePublisher
+	storage                 storageCache
+	reports                 *usageReportCache
+	metricConfig            config.MetricReportingConfig
+	usageConfig             config.UsageReportingConfig
+	logger                  log.FieldLogger
+	metricLogger            log.FieldLogger
+	traceabilityHealthCheck func() healthcheck.StatusLevel
 }
 
 type publishQueueItem interface {
@@ -149,6 +151,9 @@ func GetMetricCollector() Collector {
 		if agent.GetCustomUnitHandler() != nil {
 			agent.GetCustomUnitHandler().HandleMetricReporting(globalMetricCollector)
 		}
+		globalMetricCollector.SetTraceabilityHealthCheck(func() healthcheck.StatusLevel {
+			return agent.GetHealthcheckManager().GetCheckStatus(traceability.HealthCheckEndpoint)
+		})
 	}
 	return globalMetricCollector
 }
@@ -196,6 +201,10 @@ func createMetricCollector() Collector {
 	return metricCollector
 }
 
+func (c *collector) SetTraceabilityHealthCheck(checkFunc func() healthcheck.StatusLevel) {
+	c.traceabilityHealthCheck = checkFunc
+}
+
 // Status - returns the status of the metric collector
 func (c *collector) Status() error {
 	return nil
@@ -215,7 +224,7 @@ func (c *collector) Execute() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if !c.usagePublisher.offline && healthcheck.GetStatus(traceability.HealthCheckEndpoint) != healthcheck.OK {
+	if !c.usagePublisher.offline && c.traceabilityHealthCheck() != healthcheck.OK {
 		c.logger.Warn("traceability is not connected, can not publish metrics at this time")
 		return nil
 	}

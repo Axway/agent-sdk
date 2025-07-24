@@ -6,27 +6,21 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 )
 
-// StatusConfig - Interface for status config
-type StatusConfig interface {
-	GetPort() int
-	GetHealthCheckPeriod() time.Duration
-	GetHealthCheckInterval() time.Duration
-	ValidateCfg() error
-}
-
 // StatusConfiguration -
 type StatusConfiguration struct {
-	StatusConfig
+	Name                string
+	Version             string
+	HTTPProfile         bool
 	Port                int           `config:"port"`
 	HealthCheckPeriod   time.Duration `config:"healthCheckPeriod"`
 	HealthCheckInterval time.Duration `config:"healthCheckInterval"` // this for binary agents only
 }
 
 // NewStatusConfig - create a new status config
-func NewStatusConfig() StatusConfig {
+func NewStatusConfig() *StatusConfiguration {
 	return &StatusConfiguration{
 		Port:                8989,
-		HealthCheckPeriod:   3 * time.Minute,
+		HealthCheckPeriod:   5 * time.Minute,
 		HealthCheckInterval: 30 * time.Second,
 	}
 }
@@ -55,19 +49,21 @@ const (
 // AddStatusConfigProperties - Adds the command properties needed for Status Config
 func AddStatusConfigProperties(props properties.Properties) {
 	props.AddIntProperty(pathPort, 8989, "The port that will serve the status endpoints")
-	props.AddDurationProperty(pathHealthcheckPeriod, 3*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
+	props.AddDurationProperty(pathHealthcheckPeriod, 5*time.Minute, "Time in minutes allotted for services to be ready before exiting discovery agent")
 	props.AddDurationProperty(pathHealthcheckInterval, 30*time.Second, "Time between running periodic health checker. Can be between 30 seconds and 5 minutes (binary agents only)")
 	props.AddBoolFlag("status", "Get the status of all the Health Checks")
 }
 
 // ParseStatusConfig - Parses the Status Config values form teh command line
-func ParseStatusConfig(props properties.Properties) (StatusConfig, error) {
-	cfg := &StatusConfiguration{
+func ParseStatusConfig(props properties.Properties, name, version string, httpprofile bool) *StatusConfiguration {
+	return &StatusConfiguration{
+		Name:                name,
+		Version:             version,
+		HTTPProfile:         httpprofile,
 		Port:                props.IntPropertyValue(pathPort),
 		HealthCheckPeriod:   props.DurationPropertyValue(pathHealthcheckPeriod),
 		HealthCheckInterval: props.DurationPropertyValue(pathHealthcheckInterval),
 	}
-	return cfg, nil
 }
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
