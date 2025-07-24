@@ -59,8 +59,6 @@
 | 1600 | error registering job                                                                                       | pkg/jobs/ErrRegisteringJob                       |
 | 1601 | error executing job                                                                                         | pkg/jobs/ErrExecutingJob                         |
 | 1602 | error executing retry job                                                                                   | pkg/jobs/ErrExecutingRetryJob                    |
-|      | 1613 - errors in healthcheck library                                                                        |                                                  |
-| 1613 | terminating agent, another instance of agent already running                                                | pkg/util/healthcheck/ErrAlreadyRunning           |
 |      | 1900-1910 - errors managing agent service                                                                   |                                                  |
 | 1900 | unsupported system for service installation                                                                 | pkg/cmd/service/daemon/ErrUnsupportedSystem      |
 | 1901 | systemd is required for service installation                                                                | pkg/cmd/service/daemon/ErrNeedSystemd            |
