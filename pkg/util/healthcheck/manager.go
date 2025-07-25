@@ -257,6 +257,7 @@ func (m *Manager) RegisterHealthcheck(name, endpoint string, check CheckStatus) 
 func (m *Manager) runChecks() {
 	m.logger.Trace("running health checks")
 	status := Status{Result: OK}
+	statusMutex := &sync.Mutex{}
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(m.getChecks()))
@@ -264,12 +265,16 @@ func (m *Manager) runChecks() {
 		go func(c *statusCheck) {
 			defer wg.Done()
 			check.executeCheck()
+			statusMutex.Lock()
+			defer statusMutex.Unlock()
 			if check.Status.Result == FAIL && status.Result == OK {
-				m.setStatusAndDetail(status.Result, status.Details)
+				status.Result = FAIL
+				status.Details = check.Status.Details
 			}
 		}(check)
 	}
 	wg.Wait()
+	m.setStatusAndDetail(status.Result, status.Details)
 }
 
 func (m *Manager) RunChecks() StatusLevel {
