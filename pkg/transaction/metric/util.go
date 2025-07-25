@@ -10,6 +10,11 @@ import (
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
 
+const (
+	// unknownAPIID - Constant for transactions with no API ID or API Name
+	unknownAPIID = "unknown-api-id"
+)
+
 func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	if in == nil {
 		return nil
@@ -93,7 +98,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 		}
 	}
 
-	if in.API.ID != unknown && in.API.ID != "" {
+	if in.API.ID != unknown && in.API.ID != unknownAPIID && in.API.ID != "" {
 		out.API = &models.APIResourceReference{
 			ResourceReference: models.ResourceReference{
 				ID: in.API.ID,

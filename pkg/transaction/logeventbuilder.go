@@ -3,6 +3,7 @@ package transaction
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -512,9 +513,16 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	if b.err != nil {
 		return b
 	}
-	if proxyID == "" {
-		proxyID = "unknown"
+
+	// Strip the SummaryEventProxyIDPrefix if present
+	proxyID = strings.TrimPrefix(proxyID, SummaryEventProxyIDPrefix)
+
+	if proxyID == "" && proxyName != "" {
+		proxyID = proxyName
+	} else if proxyID == "" && proxyName == "" {
+		proxyID = UnknownAPIID
 	}
+
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
 		ID:       proxyID,
 		Revision: proxyRevision,
@@ -612,7 +620,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 
 	if b.logEvent.TransactionSummary.Proxy == nil {
 		b.logEvent.TransactionSummary.Proxy = &Proxy{
-			ID: "unknown",
+			ID: UnknownAPIID,
 		}
 	}
 
