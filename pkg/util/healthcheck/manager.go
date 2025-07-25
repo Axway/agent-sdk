@@ -177,10 +177,12 @@ func (m *Manager) setStatusAndDetail(status StatusLevel, detail string) {
 
 func (m *Manager) InitialHealthCheck() error {
 	if m.unittest {
-		m.logger.Trace("skipping health check ticker in test mode")
+		// m.logger.Trace("skipping health check ticker in test mode")
+		m.logger.Info("skipping health check ticker in test mode")
 		return nil
 	}
-	m.logger.Trace("run health checker ticker to check health status on RunChecks")
+	// m.logger.Trace("run health checker ticker to check health status on RunChecks")
+	m.logger.Info("run health checker ticker to check health status on RunChecks")
 	ticker := time.NewTicker(m.initialInterval)
 	tickerTimeout := time.NewTicker(m.period)
 
@@ -197,10 +199,12 @@ func (m *Manager) InitialHealthCheck() error {
 			m.runChecks()
 			status, _ := m.getStatusAndDetail()
 			if status == OK {
-				m.logger.Debug("start up health check on successful")
+				// m.logger.Debug("start up health check on successful")
+				m.logger.Info("start up health check on successful")
 				return nil
 			}
-			m.logger.Trace("start up health checks still failing, will retry")
+			// m.logger.Trace("start up health checks still failing, will retry")
+			m.logger.Info("start up health checks still failing, will retry")
 		}
 	}
 }
@@ -215,25 +219,30 @@ func (m *Manager) StartServer() {
 // RegisterHealthcheck - register a new dependency with this service
 func (m *Manager) RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
 	logger := m.logger.WithField("name", name).WithField("endpoint", endpoint)
-	logger.Debug("registering health check")
+	// logger.Debug("registering health check")
+	logger.Info("registering health check")
 	if m.getCheck(endpoint) != nil {
+		logger.Error("a check with the endpoint already exists")
 		return "", fmt.Errorf("a check with the endpoint of %s already exists", endpoint)
 	}
 
 	newID := uuid.NewString()
+
+	logger = logger.WithField("id", newID)
 	newChecker := &statusCheck{
-		Name:        name,
-		ID:          newID,
-		Endpoint:    endpoint,
-		Status:      &Status{},
-		checker:     check,
-		statusMutex: &sync.Mutex{},
+		Name:     name,
+		ID:       newID,
+		Endpoint: endpoint,
+		Status:   &Status{},
+		logger:   logger.WithComponent("statusCheck"),
+		checker:  check,
 	}
 
 	m.addCheck(endpoint, newChecker)
 	statusServer := hcm.statusServer
 	if statusServer != nil {
-		logger.Debug("registering endpoint with health check server")
+		// logger.Debug("registering endpoint with health check server")
+		logger.Info("registering endpoint with health check server")
 		statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), statusServer.checkHandler)
 	}
 
@@ -241,22 +250,26 @@ func (m *Manager) RegisterHealthcheck(name, endpoint string, check CheckStatus) 
 		newChecker.executeCheck()
 	}
 
-	logger.WithField("id", newID).Infof("health check registered for")
+	logger.Info("health check registered")
 	return newID, nil
 }
 
 func (m *Manager) runChecks() {
 	m.logger.Trace("running health checks")
 	status := Status{Result: OK}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(m.getChecks()))
 	for _, check := range m.getChecks() {
-		check.executeCheck()
-		if check.Status.Result == FAIL && status.Result == OK {
-			// only update status if it was previously OK
-			status.Result = check.Status.Result
-			status.Details = check.Status.Details
-		}
+		go func(c *statusCheck) {
+			defer wg.Done()
+			check.executeCheck()
+			if check.Status.Result == FAIL && status.Result == OK {
+				m.setStatusAndDetail(status.Result, status.Details)
+			}
+		}(check)
 	}
-	m.setStatusAndDetail(status.Result, status.Details)
+	wg.Wait()
 }
 
 func (m *Manager) RunChecks() StatusLevel {
@@ -270,7 +283,8 @@ func (m *Manager) GetCheckStatus(endpoint string) StatusLevel {
 	statusCheck := m.getCheck(endpoint)
 	logger := m.logger.WithField("endpoint", endpoint)
 	if statusCheck == nil {
-		logger.Debug("health check endpoint not found in global health checker")
+		// logger.Debug("health check endpoint not found in global health checker")
+		logger.Info("health check endpoint not found in global health checker")
 		return FAIL
 	}
 	if statusCheck.Status.Result != OK {
@@ -296,7 +310,8 @@ func (m *Manager) CheckIsRunning() error {
 		}
 
 		if res.Code == 200 {
-			m.logger.WithField("port", m.port).Trace("healthcheck port conflict detected")
+			m.logger.WithField("port", m.port).Info("healthcheck port conflict detected")
+			// m.logger.WithField("port", m.port).Trace("healthcheck port conflict detected")
 			return fmt.Errorf("healthcheck port, %d, conflict detected", m.port)
 		}
 	}

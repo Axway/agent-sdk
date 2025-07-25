@@ -18,7 +18,7 @@ type server struct {
 	registered bool
 }
 
-// 1
+// NewServer creates a new health check server.
 func newStartNewServer(hc *Manager) *server {
 	return &server{
 		logger: log.NewFieldLogger().
@@ -30,20 +30,26 @@ func newStartNewServer(hc *Manager) *server {
 }
 
 func (s *server) registerHandler(path string, handler func(http.ResponseWriter, *http.Request)) {
+	s.logger.WithField("path", path).Info("registering health check handler")
 	s.router.HandleFunc(path, handler)
 }
 
 // HandleRequests - starts the http server
 func (s *server) handleRequests() {
-	if !s.registered {
-		s.registerHandler("/status", s.statusHandler)
-		for _, statusChecks := range s.hc.Checks {
-			s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), s.checkHandler)
-		}
-		s.registered = true
+	if s.registered {
+		s.logger.Info("health check server already registered")
+		return
 	}
 
+	s.logger.Info("starting health check server")
+	s.registerHandler("/status", s.statusHandler)
+	for _, statusChecks := range s.hc.Checks {
+		s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), s.checkHandler)
+	}
+	s.registered = true
+
 	if s.hc.pprof {
+		s.logger.Info("registering pprof handlers")
 		s.router.HandleFunc("/debug/pprof/", pprof.Index)
 		s.router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		s.router.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -56,6 +62,11 @@ func (s *server) handleRequests() {
 
 func (s *server) startHealthCheckServer() {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.WithField("error", r).Error("health check server panicked")
+			}
+		}()
 		addr := fmt.Sprintf(":%d", s.hc.port)
 		s.logger.WithField("address", addr).Info("starting health check server")
 		err := http.ListenAndServe(addr, s.router)
@@ -65,7 +76,8 @@ func (s *server) startHealthCheckServer() {
 
 func (s *server) statusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	s.logger.Trace("checking health status")
+	// s.logger.Trace("checking health status")
+	s.logger.Info("checking health status")
 
 	// Return the data
 	data, err := json.Marshal(s.hc)

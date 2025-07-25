@@ -1,6 +1,8 @@
 package healthcheck
 
-import "sync"
+import (
+	"github.com/Axway/agent-sdk/pkg/util/log"
+)
 
 // Status - the status of this healthcheck
 type Status struct {
@@ -13,32 +15,29 @@ type CheckStatus func(name string) *Status
 
 // statusCheck - the status check
 type statusCheck struct {
-	ID          string  `json:"-"`
-	Name        string  `json:"name"`
-	Endpoint    string  `json:"endpoint"`
-	Status      *Status `json:"status"`
-	checker     CheckStatus
-	statusMutex *sync.Mutex
+	ID       string  `json:"-"`
+	Name     string  `json:"name"`
+	Endpoint string  `json:"endpoint"`
+	Status   *Status `json:"status"`
+	logger   log.FieldLogger
+	checker  CheckStatus
 }
 
-func (check *statusCheck) setStatus(s *Status) {
-	check.Status = s
+func (c *statusCheck) setStatus(s *Status) {
+	c.Status = s
 }
 
-func (check *statusCheck) executeCheck() {
-	s := check.checker(check.Name)
-	check.setStatus(s)
+func (c *statusCheck) executeCheck() {
+	// c.logger.Trace("executing health check")
+	c.logger.Info("executing health check")
+	s := c.checker(c.Name)
+	c.setStatus(s)
 
-	if check.Status.Result == OK {
-		hcm.logger.
-			WithField("check", check.Name).
-			WithField("result", check.Status.Result).
-			Trace("health check is OK")
+	logger := c.logger.WithField("result", s.Result)
+	if s.Result == OK {
+		// logger.Trace("health check executed successfully")
+		logger.Info("health check executed successfully")
 	} else {
-		hcm.logger.
-			WithField("check", check.Name).
-			WithField("result", check.Status.Result).
-			WithField("details", check.Status.Details).
-			Error("health check failed")
+		logger.WithField("details", s.Details).Error("health check execution failed")
 	}
 }
