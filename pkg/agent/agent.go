@@ -120,7 +120,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		agent.teamMap = cache.New()
 	}
 
-	setupHHealthcheckManager()
+	setupHealthcheckManager()
 	err := checkRunningAgent()
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	return nil
 }
 
-func setupHHealthcheckManager() {
+func setupHealthcheckManager() {
 	agent.hcmMutex.Lock()
 	defer agent.hcmMutex.Unlock()
 

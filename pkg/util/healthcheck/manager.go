@@ -28,6 +28,7 @@ const (
 )
 
 var hcm *Manager
+var hcmMutex sync.Mutex
 
 type Manager struct {
 	logger          log.FieldLogger
@@ -131,6 +132,8 @@ func NewManager(opts ...Option) *Manager {
 	}
 
 	if nhc.global {
+		hcmMutex.Lock()
+		defer hcmMutex.Unlock()
 		if hcm != nil {
 			nhc.logger.Warn("global health check manager already exists, overwriting it")
 		}
@@ -239,11 +242,10 @@ func (m *Manager) RegisterHealthcheck(name, endpoint string, check CheckStatus) 
 	}
 
 	m.addCheck(endpoint, newChecker)
-	statusServer := hcm.statusServer
-	if statusServer != nil {
+	if m.statusServer != nil {
 		// logger.Debug("registering endpoint with health check server")
 		logger.Info("registering endpoint with health check server")
-		statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), statusServer.checkHandler)
+		m.statusServer.registerHandler(fmt.Sprintf("/status/%s", endpoint), m.statusServer.checkHandler)
 	}
 
 	if util.IsNotTest() {
@@ -348,6 +350,8 @@ func (m *Manager) Execute() error {
 
 // RegisterHealthcheck - register a new dependency with this service
 func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
+	hcmMutex.Lock()
+	defer hcmMutex.Unlock()
 	if hcm == nil {
 		return "", fmt.Errorf("healthcheck manager is not initialized")
 	}
@@ -355,6 +359,8 @@ func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, erro
 }
 
 func GetStatus(endpoint string) StatusLevel {
+	hcmMutex.Lock()
+	defer hcmMutex.Unlock()
 	if hcm == nil {
 		return FAIL
 	}
