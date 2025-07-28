@@ -457,7 +457,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *test
 	builder.SetProxyWithStageVersion("", "", "stage", "version", 1)
 
 	logEvent := builder.(*transactionSummaryBuilder).logEvent
-	assert.Equal(t, "unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, UnknownAPIID, logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, "stage", logEvent.TransactionSummary.Proxy.Stage)
 	assert.Equal(t, "version", logEvent.TransactionSummary.Proxy.Version)
