@@ -289,7 +289,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Team.ID)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
-	assert.Equal(t, "proxy", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_proxy", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "proxy", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 
@@ -344,6 +344,7 @@ func TestSummaryBuilder(t *testing.T) {
 		SetEnvironmentName("env2").
 		SetEnvironmentID("2222").
 		SetAPICDeployment("bbb").
+		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).
@@ -369,7 +370,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Nil(t, logEvent.TransactionSummary.Team)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
-	assert.Equal(t, UnknownAPIID, logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 
@@ -457,9 +458,211 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *test
 	builder.SetProxyWithStageVersion("", "", "stage", "version", 1)
 
 	logEvent := builder.(*transactionSummaryBuilder).logEvent
-	assert.Equal(t, UnknownAPIID, logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, "stage", logEvent.TransactionSummary.Proxy.Stage)
 	assert.Equal(t, "version", logEvent.TransactionSummary.Proxy.Version)
 	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
+}
+
+func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
+	builder := &transactionSummaryBuilder{}
+
+	tests := []struct {
+		name        string
+		proxyID     string
+		proxyName   string
+		expected    string
+		description string
+	}{
+		{
+			name:        "ProxyID with content after prefix and proxyName provided",
+			proxyID:     "remoteApiId_shane",
+			proxyName:   "bolosan",
+			expected:    "remoteApiId_shane",
+			description: "Should return original proxyID when it has content after prefix, ignoring proxyName",
+		},
+		{
+			name:        "ProxyID with content after prefix and proxyName empty",
+			proxyID:     "remoteApiId_shane",
+			proxyName:   "",
+			expected:    "remoteApiId_shane",
+			description: "Should return original proxyID when it has content after prefix, even with empty proxyName",
+		},
+		{
+			name:        "ProxyID is just prefix and proxyName provided",
+			proxyID:     "remoteApiId_",
+			proxyName:   "bolosan",
+			expected:    "remoteApiId_bolosan",
+			description: "Should use proxyName with prefix when proxyID is just the prefix",
+		},
+		{
+			name:        "Both proxyID and proxyName are empty",
+			proxyID:     "",
+			proxyName:   "",
+			expected:    "remoteApiId_unknown-api-id",
+			description: "Should use UnknownAPIID with prefix when both are empty",
+		},
+		{
+			name:        "ProxyID is just prefix and proxyName is empty",
+			proxyID:     "remoteApiId_",
+			proxyName:   "",
+			expected:    "remoteApiId_unknown-api-id",
+			description: "Should use UnknownAPIID with prefix when proxyID is just prefix and proxyName is empty",
+		},
+		{
+			name:        "ProxyID is empty and proxyName provided",
+			proxyID:     "",
+			proxyName:   "bolosan",
+			expected:    "remoteApiId_bolosan",
+			description: "Should use proxyName with prefix when proxyID is empty",
+		},
+		{
+			name:        "ProxyID without prefix and proxyName provided",
+			proxyID:     "shane",
+			proxyName:   "bolosan",
+			expected:    "shane",
+			description: "Should return original proxyID when it doesn't start with prefix",
+		},
+		{
+			name:        "ProxyID with different prefix and proxyName provided",
+			proxyID:     "differentPrefix_shane",
+			proxyName:   "bolosan",
+			expected:    "differentPrefix_shane",
+			description: "Should return original proxyID when it has a different prefix",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := builder.resolveProxyID(tt.proxyID, tt.proxyName)
+			assert.Equal(t, tt.expected, result, tt.description)
+		})
+	}
+}
+
+func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		proxyID      string
+		proxyName    string
+		proxyStage   string
+		proxyVersion string
+		revision     int
+		expectedID   string
+	}{
+		{
+			name:         "Complete proxy information with content after prefix",
+			proxyID:      "remoteApiId_shane",
+			proxyName:    "bolosan",
+			proxyStage:   "prod",
+			proxyVersion: "v1.0",
+			revision:     1,
+			expectedID:   "remoteApiId_shane",
+		},
+		{
+			name:         "Proxy ID is just prefix, use proxyName",
+			proxyID:      "remoteApiId_",
+			proxyName:    "bolosan",
+			proxyStage:   "test",
+			proxyVersion: "v2.0",
+			revision:     2,
+			expectedID:   "remoteApiId_bolosan",
+		},
+		{
+			name:         "Empty proxy information, use unknown",
+			proxyID:      "",
+			proxyName:    "",
+			proxyStage:   "",
+			proxyVersion: "",
+			revision:     0,
+			expectedID:   "remoteApiId_unknown-api-id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+
+			result := builder.SetProxyWithStageVersion(tt.proxyID, tt.proxyName, tt.proxyStage, tt.proxyVersion, tt.revision)
+
+			// Verify the builder returned correctly
+			assert.Equal(t, builder, result)
+
+			// Verify the proxy was set correctly
+			assert.NotNil(t, builder.logEvent.TransactionSummary.Proxy)
+			assert.Equal(t, tt.expectedID, builder.logEvent.TransactionSummary.Proxy.ID)
+			assert.Equal(t, tt.proxyName, builder.logEvent.TransactionSummary.Proxy.Name)
+			assert.Equal(t, tt.proxyStage, builder.logEvent.TransactionSummary.Proxy.Stage)
+			assert.Equal(t, tt.proxyVersion, builder.logEvent.TransactionSummary.Proxy.Version)
+			assert.Equal(t, tt.revision, builder.logEvent.TransactionSummary.Proxy.Revision)
+		})
+	}
+}
+
+func TestTransactionSummaryBuilder_SetProxy_ChainedCalls(t *testing.T) {
+	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+
+	// Test that SetProxy calls SetProxyWithStage with empty stage
+	result := builder.SetProxy("remoteApiId_shane", "proxyName", 1)
+	assert.Equal(t, builder, result)
+	assert.Equal(t, "remoteApiId_shane", builder.logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Stage)
+	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
+	assert.Equal(t, 1, builder.logEvent.TransactionSummary.Proxy.Revision)
+}
+
+func TestTransactionSummaryBuilder_SetProxyWithStage_ChainedCalls(t *testing.T) {
+	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+
+	// Test that SetProxyWithStage calls SetProxyWithStageVersion with empty version
+	result := builder.SetProxyWithStage("remoteApiId_shane", "proxyName", "prod", 1)
+	assert.Equal(t, builder, result)
+	assert.Equal(t, "remoteApiId_shane", builder.logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
+	assert.Equal(t, "prod", builder.logEvent.TransactionSummary.Proxy.Stage)
+	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
+	assert.Equal(t, 1, builder.logEvent.TransactionSummary.Proxy.Revision)
+}
+
+func TestTransactionSummaryBuilder_ResolveProxyID_EdgeCases(t *testing.T) {
+	builder := &transactionSummaryBuilder{}
+
+	tests := []struct {
+		name        string
+		proxyID     string
+		proxyName   string
+		expected    string
+		description string
+	}{
+		{
+			name:        "ProxyID with multiple underscores",
+			proxyID:     "remoteApiId_shane_test_api",
+			proxyName:   "bolosan",
+			expected:    "remoteApiId_shane_test_api",
+			description: "Should preserve full proxyID with multiple underscores",
+		},
+		{
+			name:        "ProxyName with special characters",
+			proxyID:     "",
+			proxyName:   "proxy-name.with.dots",
+			expected:    "remoteApiId_proxy-name.with.dots",
+			description: "Should handle proxyName with special characters",
+		},
+		{
+			name:        "ProxyID equals exactly the prefix",
+			proxyID:     SummaryEventProxyIDPrefix,
+			proxyName:   "fallback",
+			expected:    SummaryEventProxyIDPrefix + "fallback",
+			description: "Should treat proxyID that equals prefix as empty content",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := builder.resolveProxyID(tt.proxyID, tt.proxyName)
+			assert.Equal(t, tt.expected, result, tt.description)
+		})
+	}
 }

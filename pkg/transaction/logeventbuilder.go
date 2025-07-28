@@ -514,23 +514,30 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 		return b
 	}
 
-	// Strip the SummaryEventProxyIDPrefix if present
-	proxyID = strings.TrimPrefix(proxyID, SummaryEventProxyIDPrefix)
-
-	if proxyID == "" && proxyName != "" {
-		proxyID = proxyName
-	} else if proxyID == "" && proxyName == "" {
-		proxyID = UnknownAPIID
-	}
-
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
-		ID:       proxyID,
+		ID:       b.resolveProxyID(proxyID, proxyName),
 		Revision: proxyRevision,
 		Name:     proxyName,
 		Stage:    proxyStage,
 		Version:  proxyVersion,
 	}
 	return b
+}
+
+// resolveProxyID determines the appropriate proxy ID based on input values
+func (b *transactionSummaryBuilder) resolveProxyID(proxyID, proxyName string) string {
+	// If proxyID has content beyond the prefix, keep it as-is
+	if trimmed := strings.TrimPrefix(proxyID, SummaryEventProxyIDPrefix); trimmed != "" {
+		return proxyID
+	}
+
+	// ProxyID is empty or just the prefix - use fallback with prefix
+	fallback := proxyName
+	if fallback == "" {
+		fallback = UnknownAPIID
+	}
+
+	return SummaryEventProxyIDPrefix + fallback
 }
 
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
@@ -620,7 +627,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 
 	if b.logEvent.TransactionSummary.Proxy == nil {
 		b.logEvent.TransactionSummary.Proxy = &Proxy{
-			ID: UnknownAPIID,
+			ID: SummaryEventProxyIDPrefix + UnknownAPIID,
 		}
 	}
 
