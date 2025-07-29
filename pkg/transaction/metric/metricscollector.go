@@ -433,11 +433,8 @@ func (c *collector) createOrUpdateHistogram(detail Detail) *centralMetric {
 		return nil // no need to update metrics with publish off
 	}
 
-	// Apply the same ID resolution logic as SetProxyWithStageVersion
-	resolvedAPIID := transutil.ResolveIDWithPrefix(detail.APIDetails.ID, detail.APIDetails.Name)
-
 	// Update the detail with the resolved API ID
-	detail.APIDetails.ID = resolvedAPIID
+	detail.APIDetails.ID = transutil.ResolveIDWithPrefix(detail.APIDetails.ID, detail.APIDetails.Name)
 
 	transactionCtx := transactionContext{
 		APIDetails: detail.APIDetails,

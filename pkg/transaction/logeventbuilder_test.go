@@ -8,6 +8,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -466,8 +467,6 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *test
 }
 
 func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
-	builder := &transactionSummaryBuilder{}
-
 	tests := []struct {
 		name        string
 		proxyID     string
@@ -535,7 +534,7 @@ func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := builder.resolveProxyID(tt.proxyID, tt.proxyName)
+			result := transutil.ResolveIDWithPrefix(tt.proxyID, tt.proxyName)
 			assert.Equal(t, tt.expected, result, tt.description)
 		})
 	}
@@ -627,8 +626,6 @@ func TestTransactionSummaryBuilder_SetProxyWithStage_ChainedCalls(t *testing.T) 
 }
 
 func TestTransactionSummaryBuilder_ResolveProxyID_EdgeCases(t *testing.T) {
-	builder := &transactionSummaryBuilder{}
-
 	tests := []struct {
 		name        string
 		proxyID     string
@@ -661,7 +658,7 @@ func TestTransactionSummaryBuilder_ResolveProxyID_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := builder.resolveProxyID(tt.proxyID, tt.proxyName)
+			result := transutil.ResolveIDWithPrefix(tt.proxyID, tt.proxyName)
 			assert.Equal(t, tt.expected, result, tt.description)
 		})
 	}

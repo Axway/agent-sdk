@@ -515,7 +515,7 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	}
 
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
-		ID:       b.resolveProxyID(proxyID, proxyName),
+		ID:       transutil.ResolveIDWithPrefix(proxyID, proxyName),
 		Revision: proxyRevision,
 		Name:     proxyName,
 		Stage:    proxyStage,
@@ -523,12 +523,6 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	}
 	return b
 }
-
-// resolveProxyID determines the appropriate proxy ID based on input values
-func (b *transactionSummaryBuilder) resolveProxyID(proxyID, proxyName string) string {
-	return transutil.ResolveIDWithPrefix(proxyID, proxyName)
-}
-
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
 	if b.err != nil {
 		return b
