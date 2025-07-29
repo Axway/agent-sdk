@@ -370,7 +370,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Nil(t, logEvent.TransactionSummary.Team)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
-	assert.Equal(t, "remoteApiId_unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_unknown", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 
@@ -458,7 +458,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *test
 	builder.SetProxyWithStageVersion("", "", "stage", "version", 1)
 
 	logEvent := builder.(*transactionSummaryBuilder).logEvent
-	assert.Equal(t, "remoteApiId_unknown-api-id", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_unknown", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, "stage", logEvent.TransactionSummary.Proxy.Stage)
 	assert.Equal(t, "version", logEvent.TransactionSummary.Proxy.Version)
@@ -500,15 +500,15 @@ func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
 			name:        "Both proxyID and proxyName are empty",
 			proxyID:     "",
 			proxyName:   "",
-			expected:    "remoteApiId_unknown-api-id",
-			description: "Should use UnknownAPIID with prefix when both are empty",
+			expected:    "remoteApiId_unknown",
+			description: "Should use unknown with prefix when both are empty",
 		},
 		{
 			name:        "ProxyID is just prefix and proxyName is empty",
 			proxyID:     "remoteApiId_",
 			proxyName:   "",
-			expected:    "remoteApiId_unknown-api-id",
-			description: "Should use UnknownAPIID with prefix when proxyID is just prefix and proxyName is empty",
+			expected:    "remoteApiId_unknown",
+			description: "Should use unknown with prefix when proxyID is just prefix and proxyName is empty",
 		},
 		{
 			name:        "ProxyID is empty and proxyName provided",
@@ -576,7 +576,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 			proxyStage:   "",
 			proxyVersion: "",
 			revision:     0,
-			expectedID:   "remoteApiId_unknown-api-id",
+			expectedID:   "remoteApiId_unknown",
 		},
 	}
 

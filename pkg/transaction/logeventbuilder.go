@@ -534,7 +534,7 @@ func (b *transactionSummaryBuilder) resolveProxyID(proxyID, proxyName string) st
 	// ProxyID is empty or just the prefix - use fallback with prefix
 	fallback := proxyName
 	if fallback == "" {
-		fallback = UnknownAPIID
+		fallback = unknown
 	}
 
 	return SummaryEventProxyIDPrefix + fallback
@@ -627,7 +627,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 
 	if b.logEvent.TransactionSummary.Proxy == nil {
 		b.logEvent.TransactionSummary.Proxy = &Proxy{
-			ID: SummaryEventProxyIDPrefix + UnknownAPIID,
+			ID: SummaryEventProxyIDPrefix + unknown,
 		}
 	}
 

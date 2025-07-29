@@ -48,8 +48,7 @@ const (
 )
 
 const (
-	unknown      = "unknown"
-	UnknownAPIID = "unknown-api-id"
+	unknown = "unknown"
 )
 
 // LogEvent - Log event to be sent to Condor
