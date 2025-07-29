@@ -477,23 +477,23 @@ func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
 	}{
 		{
 			name:        "ProxyID with content after prefix and proxyName provided",
-			proxyID:     "remoteApiId_shane",
-			proxyName:   "bolosan",
-			expected:    "remoteApiId_shane",
+			proxyID:     "remoteApiId_dwight",
+			proxyName:   "schrute",
+			expected:    "remoteApiId_dwight",
 			description: "Should return original proxyID when it has content after prefix, ignoring proxyName",
 		},
 		{
 			name:        "ProxyID with content after prefix and proxyName empty",
-			proxyID:     "remoteApiId_shane",
+			proxyID:     "remoteApiId_dwight",
 			proxyName:   "",
-			expected:    "remoteApiId_shane",
+			expected:    "remoteApiId_dwight",
 			description: "Should return original proxyID when it has content after prefix, even with empty proxyName",
 		},
 		{
 			name:        "ProxyID is just prefix and proxyName provided",
 			proxyID:     "remoteApiId_",
-			proxyName:   "bolosan",
-			expected:    "remoteApiId_bolosan",
+			proxyName:   "schrute",
+			expected:    "remoteApiId_schrute",
 			description: "Should use proxyName with prefix when proxyID is just the prefix",
 		},
 		{
@@ -513,22 +513,22 @@ func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
 		{
 			name:        "ProxyID is empty and proxyName provided",
 			proxyID:     "",
-			proxyName:   "bolosan",
-			expected:    "remoteApiId_bolosan",
+			proxyName:   "schrute",
+			expected:    "remoteApiId_schrute",
 			description: "Should use proxyName with prefix when proxyID is empty",
 		},
 		{
 			name:        "ProxyID without prefix and proxyName provided",
-			proxyID:     "shane",
-			proxyName:   "bolosan",
-			expected:    "shane",
+			proxyID:     "dwight",
+			proxyName:   "schrute",
+			expected:    "dwight",
 			description: "Should return original proxyID when it doesn't start with prefix",
 		},
 		{
 			name:        "ProxyID with different prefix and proxyName provided",
-			proxyID:     "differentPrefix_shane",
-			proxyName:   "bolosan",
-			expected:    "differentPrefix_shane",
+			proxyID:     "differentPrefix_dwight",
+			proxyName:   "schrute",
+			expected:    "differentPrefix_dwight",
 			description: "Should return original proxyID when it has a different prefix",
 		},
 	}
@@ -553,21 +553,21 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 	}{
 		{
 			name:         "Complete proxy information with content after prefix",
-			proxyID:      "remoteApiId_shane",
-			proxyName:    "bolosan",
+			proxyID:      "remoteApiId_dwight",
+			proxyName:    "schrute",
 			proxyStage:   "prod",
 			proxyVersion: "v1.0",
 			revision:     1,
-			expectedID:   "remoteApiId_shane",
+			expectedID:   "remoteApiId_dwight",
 		},
 		{
 			name:         "Proxy ID is just prefix, use proxyName",
 			proxyID:      "remoteApiId_",
-			proxyName:    "bolosan",
+			proxyName:    "schrute",
 			proxyStage:   "test",
 			proxyVersion: "v2.0",
 			revision:     2,
-			expectedID:   "remoteApiId_bolosan",
+			expectedID:   "remoteApiId_schrute",
 		},
 		{
 			name:         "Empty proxy information, use unknown",
@@ -604,9 +604,9 @@ func TestTransactionSummaryBuilder_SetProxy_ChainedCalls(t *testing.T) {
 	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
 
 	// Test that SetProxy calls SetProxyWithStage with empty stage
-	result := builder.SetProxy("remoteApiId_shane", "proxyName", 1)
+	result := builder.SetProxy("remoteApiId_dwight", "proxyName", 1)
 	assert.Equal(t, builder, result)
-	assert.Equal(t, "remoteApiId_shane", builder.logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_dwight", builder.logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Stage)
 	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
@@ -617,9 +617,9 @@ func TestTransactionSummaryBuilder_SetProxyWithStage_ChainedCalls(t *testing.T) 
 	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
 
 	// Test that SetProxyWithStage calls SetProxyWithStageVersion with empty version
-	result := builder.SetProxyWithStage("remoteApiId_shane", "proxyName", "prod", 1)
+	result := builder.SetProxyWithStage("remoteApiId_dwight", "proxyName", "prod", 1)
 	assert.Equal(t, builder, result)
-	assert.Equal(t, "remoteApiId_shane", builder.logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiId_dwight", builder.logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, "prod", builder.logEvent.TransactionSummary.Proxy.Stage)
 	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
@@ -638,9 +638,9 @@ func TestTransactionSummaryBuilder_ResolveProxyID_EdgeCases(t *testing.T) {
 	}{
 		{
 			name:        "ProxyID with multiple underscores",
-			proxyID:     "remoteApiId_shane_test_api",
-			proxyName:   "bolosan",
-			expected:    "remoteApiId_shane_test_api",
+			proxyID:     "remoteApiId_dwight_test_api",
+			proxyName:   "schrute",
+			expected:    "remoteApiId_dwight_test_api",
 			description: "Should preserve full proxyID with multiple underscores",
 		},
 		{
