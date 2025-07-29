@@ -3,12 +3,12 @@ package transaction
 import (
 	"errors"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -526,18 +526,7 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 
 // resolveProxyID determines the appropriate proxy ID based on input values
 func (b *transactionSummaryBuilder) resolveProxyID(proxyID, proxyName string) string {
-	// If proxyID has content beyond the prefix, keep it as-is
-	if trimmed := strings.TrimPrefix(proxyID, SummaryEventProxyIDPrefix); trimmed != "" {
-		return proxyID
-	}
-
-	// ProxyID is empty or just the prefix - use fallback with prefix
-	fallback := proxyName
-	if fallback == "" {
-		fallback = unknown
-	}
-
-	return SummaryEventProxyIDPrefix + fallback
+	return transutil.ResolveIDWithPrefix(proxyID, proxyName)
 }
 
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {

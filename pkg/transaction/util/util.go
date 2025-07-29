@@ -29,7 +29,7 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	}
 
 	// Lookup Access Request
-	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
+	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
 	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
 	if ri == nil {
@@ -229,4 +229,20 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		Trace("published product information")
 
 	return consumerDetails
+}
+
+// ResolveIDWithPrefix determines the appropriate ID based on input values and prefix
+func ResolveIDWithPrefix(id, name string) string {
+	// If ID has content beyond the prefix, keep it as-is
+	if trimmed := strings.TrimPrefix(id, SummaryEventProxyIDPrefix); trimmed != "" {
+		return id
+	}
+
+	// ID is empty or just the prefix - use fallback with prefix
+	fallback := name
+	if fallback == "" {
+		fallback = unknown
+	}
+
+	return SummaryEventProxyIDPrefix + fallback
 }
