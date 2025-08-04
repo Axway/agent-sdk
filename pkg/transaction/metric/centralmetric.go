@@ -127,6 +127,7 @@ func (b *CentralMetricBuilder) Build() *centralMetric {
 }
 
 type centralMetric struct {
+	Marketplace   *models.MarketplaceReference         `json:"marketplace,omitempty"`
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
 	App           *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product       *models.ProductResourceReference     `json:"product,omitempty"`
