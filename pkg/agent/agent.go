@@ -235,6 +235,10 @@ func GetHealthcheckManager() *hc.Manager {
 	return agent.healthcheckManager
 }
 
+func RegisterHealthcheck(name, endpoint string, check hc.CheckStatus) (string, error) {
+	return agent.healthcheckManager.RegisterHealthcheck(name, endpoint, check)
+}
+
 func handleCentralConfig(centralCfg config.CentralConfig) error {
 	err := initializeTokenRequester(centralCfg)
 	if err != nil {
