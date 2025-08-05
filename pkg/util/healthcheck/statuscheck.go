@@ -37,7 +37,7 @@ func (c *statusCheck) executeCheck() {
 	if s.Result == OK {
 		// logger.Trace("health check executed successfully")
 		logger.Info("health check executed successfully")
-	} else {
-		logger.WithField("details", s.Details).Error("health check execution failed")
+		return
 	}
+	logger.WithField("details", s.Details).Error("health check execution failed")
 }

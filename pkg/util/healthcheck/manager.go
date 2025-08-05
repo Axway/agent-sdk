@@ -27,23 +27,25 @@ const (
 	FAIL StatusLevel = "FAIL"
 )
 
+// TODO - remove the use of these globals once all agents access health check manager via agents package
 var hcm *Manager
 var hcmMutex sync.Mutex
 
 type Manager struct {
 	logger          log.FieldLogger
-	Name            string      `json:"name"`
-	Version         string      `json:"version,omitempty"`
-	HCStatus        StatusLevel `json:"status"`
-	HCStatusDetail  string      `json:"statusDetail,omitempty"`
-	statusMutex     *sync.RWMutex
+	Name            string                  `json:"name"`
+	Version         string                  `json:"version,omitempty"`
+	HCStatus        StatusLevel             `json:"status"`
+	HCStatusDetail  string                  `json:"statusDetail,omitempty"`
 	Checks          map[string]*statusCheck `json:"statusChecks"`
+	statusMutex     *sync.RWMutex
 	checksMutex     *sync.Mutex
 	statusServer    *server
 	port            int
 	period          time.Duration
 	interval        time.Duration
 	initialInterval time.Duration
+	jobID           string
 	unittest        bool
 	global          bool
 	pprof           bool
@@ -106,7 +108,7 @@ func WithVersion(version string) Option {
 }
 
 func NewManager(opts ...Option) *Manager {
-	nhc := &Manager{
+	healthCheckManager := &Manager{
 		logger: log.NewFieldLogger().
 			WithComponent("manager").
 			WithPackage("sdk.util.healthcheck"),
@@ -121,27 +123,27 @@ func NewManager(opts ...Option) *Manager {
 		checksMutex:     &sync.Mutex{},
 	}
 	for _, opt := range opts {
-		opt(nhc)
+		opt(healthCheckManager)
 	}
 
-	if !nhc.unittest {
+	if !healthCheckManager.unittest {
 		// register the periodic health check job
-		jobs.RegisterDetachedIntervalJobWithName(nhc, nhc.interval, "Periodic Health Check")
+		healthCheckManager.jobID, _ = jobs.RegisterDetachedIntervalJobWithName(healthCheckManager, healthCheckManager.interval, "Periodic Health Check")
 		// start the health check server
-		nhc.statusServer = newStartNewServer(nhc)
+		healthCheckManager.statusServer = newStartNewServer(healthCheckManager)
 	}
 
-	if nhc.global {
+	if healthCheckManager.global {
 		hcmMutex.Lock()
 		defer hcmMutex.Unlock()
 		if hcm != nil {
-			nhc.logger.Warn("global health check manager already exists, overwriting it")
+			healthCheckManager.logger.Warn("global health check manager already exists, overwriting it")
 		}
-		hcm = nhc
+		hcm = healthCheckManager
 		return hcm
 	}
 
-	return nhc
+	return healthCheckManager
 }
 
 func (m *Manager) getCheck(endpoint string) *statusCheck {
