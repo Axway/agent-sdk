@@ -56,6 +56,11 @@ func NewCentralMetricBuilder() *CentralMetricBuilder {
 	}
 }
 
+func (b *CentralMetricBuilder) SetMarketplace(marketplace *models.MarketplaceReference) *CentralMetricBuilder {
+	b.Marketplace = marketplace
+	return b
+}
+
 func (b *CentralMetricBuilder) SetSubscription(sub *models.ResourceReference) *CentralMetricBuilder {
 	b.Subscription = sub
 	return b
