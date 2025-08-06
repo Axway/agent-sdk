@@ -28,6 +28,7 @@ var (
 
 const (
 	APIServiceInstanceResourceName                           = "apiserviceinstances"
+	ApiServiceInstanceAkamaiSubResourceName                  = "akamai"
 	ApiServiceInstanceComplianceSubResourceName              = "compliance"
 	ApiServiceInstanceComplianceruntimeresultSubResourceName = "complianceruntimeresult"
 	ApiServiceInstanceLifecycleSubResourceName               = "lifecycle"
@@ -50,6 +51,7 @@ func init() {
 // APIServiceInstance Resource
 type APIServiceInstance struct {
 	apiv1.ResourceMeta
+	Akamai ApiServiceInstanceAkamai `json:"akamai"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Compliance              ApiServiceInstanceCompliance    `json:"compliance"`
@@ -166,6 +168,7 @@ func (res *APIServiceInstance) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["akamai"] = res.Akamai
 	out["compliance"] = res.Compliance
 	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["lifecycle"] = res.Lifecycle
@@ -203,6 +206,20 @@ func (res *APIServiceInstance) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Akamai
+	if v, ok := aux.SubResources["akamai"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "akamai")
+		err = json.Unmarshal(sr, &res.Akamai)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Compliance

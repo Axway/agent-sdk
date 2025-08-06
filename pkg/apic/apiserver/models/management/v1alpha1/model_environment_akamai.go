@@ -9,10 +9,8 @@
 
 package management
 
-// ComplianceRuntimeResultSpecTraceable The Traceable structure for a compliance runtime result
-type ComplianceRuntimeResultSpecTraceable struct {
-	Type    string                                   `json:"type,omitempty"`
-	Runtime ComplianceRuntimeResultSpecAkamaiRuntime `json:"runtime,omitempty"`
+// EnvironmentAkamai Subresource that will be added only by Akamai Agents for Conformance Analysis results (management.v1alpha1.Environment)
+type EnvironmentAkamai struct {
 	// The number of matched endpoints with issues
 	Issues int32 `json:"issues,omitempty"`
 	// The number of shadow endpoints
@@ -21,6 +19,6 @@ type ComplianceRuntimeResultSpecTraceable struct {
 	Orphans int32 `json:"orphans,omitempty"`
 	// The number of matched endpoints without issues
 	NoIssues int32 `json:"noIssues,omitempty"`
-	// The URL for the Conformance analysis job
+	// The URL for the Conformance analysis job on Akamai
 	JobURL string `json:"jobURL,omitempty"`
 }

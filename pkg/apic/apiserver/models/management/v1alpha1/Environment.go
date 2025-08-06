@@ -28,6 +28,7 @@ var (
 
 const (
 	EnvironmentResourceName                           = "environments"
+	EnvironmentAkamaiSubResourceName                  = "akamai"
 	EnvironmentComplianceruntimeresultSubResourceName = "complianceruntimeresult"
 	EnvironmentCompliancetasksSubResourceName         = "compliancetasks"
 	EnvironmentPoliciesSubResourceName                = "policies"
@@ -48,6 +49,7 @@ func init() {
 // Environment Resource
 type Environment struct {
 	apiv1.ResourceMeta
+	Akamai                  EnvironmentAkamai          `json:"akamai"`
 	Complianceruntimeresult interface{}                `json:"complianceruntimeresult"`
 	Compliancetasks         EnvironmentCompliancetasks `json:"compliancetasks"`
 	Owner                   *apiv1.Owner               `json:"owner"`
@@ -141,6 +143,7 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["akamai"] = res.Akamai
 	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["compliancetasks"] = res.Compliancetasks
 	out["owner"] = res.Owner
@@ -176,6 +179,20 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Akamai
+	if v, ok := aux.SubResources["akamai"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "akamai")
+		err = json.Unmarshal(sr, &res.Akamai)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Complianceruntimeresult

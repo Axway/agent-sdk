@@ -14,6 +14,7 @@ type CredentialRequestDefinitionSpecProvisionPolicies struct {
 	// Defines on if Credentials using this definitions can be renewed.
 	Renewable bool `json:"renewable,omitempty"`
 	// Defines on if Credentials can be suspended.
-	Suspendable bool                                                   `json:"suspendable,omitempty"`
-	Expiry      CredentialRequestDefinitionSpecProvisionPoliciesExpiry `json:"expiry,omitempty"`
+	Suspendable bool                                                       `json:"suspendable,omitempty"`
+	Expiry      CredentialRequestDefinitionSpecProvisionPoliciesExpiry     `json:"expiry,omitempty"`
+	Visibility  CredentialRequestDefinitionSpecProvisionPoliciesVisibility `json:"visibility,omitempty"`
 }
