@@ -393,6 +393,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
 	me := &centralMetric{
+		Marketplace:   transutil.GetMarketplaceDetails(managedApp),
 		Subscription:  c.createSubscriptionDetail(accessRequest),
 		App:           c.createAppDetail(managedApp),
 		Product:       c.getProduct(accessRequest),
@@ -591,7 +592,8 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		ResourceReference: models.ResourceReference{
 			ID: api.ID,
 		},
-		Name: api.Name,
+		Name:       api.Name,
+		APIOwnerID: api.TeamID,
 	}
 	svc := agent.GetCacheManager().GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
 	if svc != nil {
