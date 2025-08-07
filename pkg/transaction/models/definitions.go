@@ -159,7 +159,7 @@ func (a Unit) GetLogFields(fields logrus.Fields) logrus.Fields {
 type MarketplaceReference struct {
 	GUID           string `json:"guid,omitempty"`
 	ConsumerOrgID  string `json:"consumerOrgId,omitempty"`
-	ConsumerTeamID string `json:"consumerTeamId,omitempty"`
+	ConsumerTeamID string `json:"-"`
 }
 
 type CustomMetricDetail struct {

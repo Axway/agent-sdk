@@ -220,7 +220,7 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		log.
 			WithField("marketplaceGUID", consumerDetails.Marketplace.GUID).
 			WithField("consumerOrgId", consumerDetails.Marketplace.ConsumerOrgID).
-			WithField("consumerTeamId", consumerDetails.Marketplace.ConsumerTeamID).
+			// WithField("consumerTeamId", consumerDetails.Marketplace.ConsumerTeamID).
 			Trace("marketplace details")
 	} else {
 		log.Debug("could not get marketplace details from managed app, trying to get consumer org ID from access request")
