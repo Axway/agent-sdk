@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
@@ -137,6 +138,13 @@ func NewEventReportBuilder() EventReportBuilder {
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
+	// sanitize ID in the event that ID is not set - but only if Proxy exists
+	if summaryEvent.TransactionSummary != nil && summaryEvent.TransactionSummary.Proxy != nil {
+		summaryEvent.TransactionSummary.Proxy.ID = transutil.ResolveIDWithPrefix(
+			summaryEvent.TransactionSummary.Proxy.ID,
+			summaryEvent.TransactionSummary.Proxy.Name,
+		)
+	}
 	e.summaryEvent = &summaryEvent
 	return e
 }

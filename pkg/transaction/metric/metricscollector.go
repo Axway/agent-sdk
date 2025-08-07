@@ -433,6 +433,9 @@ func (c *collector) createOrUpdateHistogram(detail Detail) *centralMetric {
 		return nil // no need to update metrics with publish off
 	}
 
+	// Update the detail with the resolved API ID
+	detail.APIDetails.ID = transutil.ResolveIDWithPrefix(detail.APIDetails.ID, detail.APIDetails.Name)
+
 	transactionCtx := transactionContext{
 		APIDetails: detail.APIDetails,
 		AppDetails: detail.AppDetails,

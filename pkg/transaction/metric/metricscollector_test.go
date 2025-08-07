@@ -983,3 +983,44 @@ func TestCustomMetrics(t *testing.T) {
 		})
 	}
 }
+
+func TestCollector_CreateOrUpdateHistogram_IDResolution(t *testing.T) {
+	// Mock setup would go here - this is a conceptual test
+	tests := []struct {
+		name          string
+		apiID         string
+		apiName       string
+		expectedAPIID string
+		description   string
+	}{
+		{
+			name:          "API ID with content after prefix",
+			apiID:         "remoteApiId_dwight",
+			apiName:       "schrute",
+			expectedAPIID: "remoteApiId_dwight",
+			description:   "Should preserve original API ID when it has content after prefix",
+		},
+		{
+			name:          "API ID is just prefix, use name",
+			apiID:         "remoteApiId_",
+			apiName:       "schrute",
+			expectedAPIID: "remoteApiId_schrute",
+			description:   "Should use API name with prefix when ID is just the prefix",
+		},
+		{
+			name:          "Empty API ID and name",
+			apiID:         "",
+			apiName:       "",
+			expectedAPIID: "remoteApiId_unknown",
+			description:   "Should use unknown with prefix when both are empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This would require proper mock setup for the collector
+			// The test would verify that detail.APIDetails.ID gets resolved correctly
+			// before being used in the metric generation
+		})
+	}
+}

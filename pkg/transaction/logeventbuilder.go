@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -512,11 +513,9 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	if b.err != nil {
 		return b
 	}
-	if proxyID == "" {
-		proxyID = "unknown"
-	}
+
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
-		ID:       proxyID,
+		ID:       transutil.ResolveIDWithPrefix(proxyID, proxyName),
 		Revision: proxyRevision,
 		Name:     proxyName,
 		Stage:    proxyStage,
@@ -524,7 +523,6 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	}
 	return b
 }
-
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
 	if b.err != nil {
 		return b
@@ -612,7 +610,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 
 	if b.logEvent.TransactionSummary.Proxy == nil {
 		b.logEvent.TransactionSummary.Proxy = &Proxy{
-			ID: "unknown",
+			ID: SummaryEventProxyIDPrefix + unknown,
 		}
 	}
 
