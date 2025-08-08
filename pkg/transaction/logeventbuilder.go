@@ -529,14 +529,13 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	// Also set the API object that gets serialized (json:"proxy,omitempty")
 	if b.logEvent.TransactionSummary.API == nil {
 		b.logEvent.TransactionSummary.API = &models.APIDetails{}
+		b.logEvent.TransactionSummary.API.Stage = proxyStage
+		b.logEvent.TransactionSummary.API.Version = proxyVersion
 	}
+	// Always update core fields regardless of whether API existed
 	b.logEvent.TransactionSummary.API.ID = resolvedID
 	b.logEvent.TransactionSummary.API.Name = proxyName
-	b.logEvent.TransactionSummary.API.Revision = proxyRevision // ✅ This field exists!
-	// Note: Stage and Version have json:"-" in APIDetails, so they won't serialize
-	// but we can still set them for internal use if needed
-	b.logEvent.TransactionSummary.API.Stage = proxyStage
-	b.logEvent.TransactionSummary.API.Version = proxyVersion
+	b.logEvent.TransactionSummary.API.Revision = proxyRevision
 
 	return b
 }
