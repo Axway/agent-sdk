@@ -12,10 +12,6 @@ package management
 // DataplaneSpecAkamai The configuration common to all Akamai agents that use this dataplane
 type DataplaneSpecAkamai struct {
 	Type string `json:"type,omitempty"`
-	// The Akamai client ID for authentication
-	Clientid string `json:"clientid"`
-	// The Akamai API endpoint URL
-	Url string `json:"url"`
 	// Used to map Akamai groups to Amplify environments for conformance analysis and API discovery
 	Groups []DataplaneSpecAkamaiGroups `json:"groups"`
 }
