@@ -16,6 +16,6 @@ type DataplaneSpecAkamai struct {
 	Clientid string `json:"clientid"`
 	// The Akamai API endpoint URL
 	Url string `json:"url"`
-	// Used to run conformance analysis of specs found in central environment against endpoints found in Akamai environment
-	Environments []DataplaneSpecAkamaiEnvironments `json:"environments"`
+	// Used to map Akamai groups to Amplify environments for conformance analysis and API discovery
+	Groups []DataplaneSpecAkamaiGroups `json:"groups"`
 }
