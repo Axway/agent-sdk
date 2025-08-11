@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
@@ -137,6 +139,25 @@ func NewEventReportBuilder() EventReportBuilder {
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
+	// The ID resolution should already be handled by the builder
+	// But keep this as a safety net for edge cases
+	if summaryEvent.TransactionSummary != nil {
+		if summaryEvent.TransactionSummary.Proxy != nil {
+			// Resolve proxy ID
+			resolvedID := transutil.ResolveIDWithPrefix(
+				summaryEvent.TransactionSummary.Proxy.ID,
+				summaryEvent.TransactionSummary.Proxy.Name,
+			)
+			summaryEvent.TransactionSummary.Proxy.ID = resolvedID
+
+			// Sync to API object
+			if summaryEvent.TransactionSummary.API == nil {
+				summaryEvent.TransactionSummary.API = &models.APIDetails{}
+			}
+			summaryEvent.TransactionSummary.API.ID = resolvedID
+			summaryEvent.TransactionSummary.API.Name = summaryEvent.TransactionSummary.Proxy.Name
+		}
+	}
 	e.summaryEvent = &summaryEvent
 	return e
 }

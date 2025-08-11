@@ -312,14 +312,14 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	stage := summaryEvent.TransactionSummary.Proxy.Stage
 	version := summaryEvent.TransactionSummary.Proxy.Version
 	e.logger.
-		WithField("api-id", apiID).
+		WithField("apiId", apiID).
 		WithField("stage", stage).
 		Trace("transaction summary proxy information")
 
 	if summaryEvent.TransactionSummary.Application != nil {
 		appName = summaryEvent.TransactionSummary.Application.Name
 		e.logger.
-			WithField("app-name", appName).
+			WithField("appName", appName).
 			Trace("transaction summary dataplane details application name")
 	}
 
@@ -327,13 +327,13 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 	managedApp := cacheManager.GetManagedApplicationByName(appName)
 	if managedApp == nil {
 		e.logger.
-			WithField("app-name", appName).
+			WithField("appName", appName).
 			Trace("could not get managed application by name, no consumer information attached")
 		return nil, nil
 	}
 	e.logger.
-		WithField("app-name", appName).
-		WithField("managed-app-name", managedApp.Name).
+		WithField("appName", appName).
+		WithField("managedAppName", managedApp.Name).
 		Trace("managed application info")
 
 	// get the access request
@@ -344,10 +344,10 @@ func (e *Generator) getAccessRequest(cacheManager cache.Manager, summaryEvent Lo
 		return nil, nil
 	}
 	e.logger.
-		WithField("managed-app-name", managedApp.Name).
-		WithField("api-id", apiID).
+		WithField("managedAppName", managedApp.Name).
+		WithField("apiId", apiID).
 		WithField("stage", stage).
-		WithField("access-request-name", accessRequest.Name).
+		WithField("accessRequestName", accessRequest.Name).
 		Trace("managed application info")
 
 	return accessRequest, managedApp
@@ -509,10 +509,10 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.Product.VersionName = productReleaseRef.Name
 	}
 	log.
-		WithField("product-id", summaryEvent.Product.ID).
-		WithField("product-name", summaryEvent.Product.Name).
-		WithField("product-version-id", summaryEvent.Product.VersionID).
-		WithField("product-version-name", summaryEvent.Product.VersionName).
+		WithField("productId", summaryEvent.Product.ID).
+		WithField("productName", summaryEvent.Product.Name).
+		WithField("productVersionId", summaryEvent.Product.VersionID).
+		WithField("productVersionName", summaryEvent.Product.VersionName).
 		Trace("product information")
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
@@ -523,8 +523,8 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.AssetResource.Name = assetResourceRef.Name
 	}
 	log.
-		WithField("asset-resource-id", summaryEvent.AssetResource.ID).
-		WithField("asset-resource-name", summaryEvent.AssetResource.Name).
+		WithField("assetResourceId", summaryEvent.AssetResource.ID).
+		WithField("assetResourceName", summaryEvent.AssetResource.Name).
 		Trace("asset resource information")
 
 	api := &models.APIDetails{
@@ -536,11 +536,11 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 	}
 	summaryEvent.API = api
 	log.
-		WithField("proxy-id", summaryEvent.Proxy.ID).
-		WithField("proxy-name", summaryEvent.Proxy.Name).
-		WithField("proxy-revision", summaryEvent.Proxy.Revision).
-		WithField("proxy-team-id", summaryEvent.Team.ID).
-		WithField("apiservice", accessRequest.Spec.ApiServiceInstance).
+		WithField("proxyId", summaryEvent.Proxy.ID).
+		WithField("proxyName", summaryEvent.Proxy.Name).
+		WithField("proxyRevision", summaryEvent.Proxy.Revision).
+		WithField("proxyTeamId", summaryEvent.Team.ID).
+		WithField("apiService", accessRequest.Spec.ApiServiceInstance).
 		Trace("api details information")
 
 	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
@@ -550,7 +550,7 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.ProductPlan.ID = productPlanRef.ID
 	}
 	log.
-		WithField("product-plan-id", summaryEvent.ProductPlan.ID).
+		WithField("productPlanId", summaryEvent.ProductPlan.ID).
 		Trace("product plan ID information")
 
 	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
@@ -560,7 +560,7 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.Quota.ID = quotaRef.ID
 	}
 	log.
-		WithField("quota-id", summaryEvent.Quota.ID).
+		WithField("quotaId", summaryEvent.Quota.ID).
 		Trace("quota ID information")
 
 	return summaryEvent

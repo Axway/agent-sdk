@@ -268,11 +268,12 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 	link = meta.GetSelfLink()
 	assert.Equal(t, "/group/v1/kinds/name", link)
 
-	meta.Metadata.Scope = MetadataScope{
-		Name: "scope",
-		Kind: "scopeKind",
-	}
+	// no scope name
+	meta.Metadata.Scope.Kind = "scopeKind"
+	link = meta.GetSelfLink()
+	assert.Equal(t, "/group/v1/kinds/name", link)
 
+	meta.Metadata.Scope.Name = "scope"
 	scopeKindMap[meta.GroupKind] = "scopeKind"
 
 	// no scope kind
