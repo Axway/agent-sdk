@@ -11,14 +11,18 @@ package management
 
 // ApiServiceInstanceAkamai Subresource that will be added only by Akamai Agents for Conformance Analysis results (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceAkamai struct {
-	// The number of matched endpoints with issues
-	Issues int32 `json:"issues,omitempty"`
-	// The number of shadow endpoints
-	Shadow int32 `json:"shadow,omitempty"`
-	// The number of orphaned endpoints
-	Orphans int32 `json:"orphans,omitempty"`
-	// The number of matched endpoints without issues
-	NoIssues int32 `json:"noIssues,omitempty"`
-	// The URL for the Conformance analysis job on Akamai
-	JobURL string `json:"jobURL,omitempty"`
+	// Spec and traffic match
+	Matched int32 `json:"matched,omitempty"`
+	// Spec and traffic differences but not a risk
+	NoRisk int32 `json:"noRisk,omitempty"`
+	// Undocumented sensitive fields found in the traffic that are not in the spec
+	Sensitive int32 `json:"sensitive,omitempty"`
+	// Undocumented required fields found in the traffic that are not in the spec
+	Required int32 `json:"required,omitempty"`
+	// Spec documents this endpoint but it has not been seen in the traffic
+	NotMatched int32 `json:"notMatched,omitempty"`
+	// Endpoint matches multiple specs
+	Conflicting int32 `json:"conflicting,omitempty"`
+	// Endpoint has not be analyzed for conformance
+	Pending int32 `json:"pending,omitempty"`
 }

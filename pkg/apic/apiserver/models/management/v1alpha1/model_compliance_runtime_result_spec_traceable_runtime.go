@@ -9,11 +9,11 @@
 
 package management
 
-// ComplianceRuntimeResultSpecAkamaiRuntime struct for ComplianceRuntimeResultSpecAkamaiRuntime
-type ComplianceRuntimeResultSpecAkamaiRuntime struct {
+// ComplianceRuntimeResultSpecTraceableRuntime struct for ComplianceRuntimeResultSpecTraceableRuntime
+type ComplianceRuntimeResultSpecTraceableRuntime struct {
 	// Grade result from the compliance runtime result.
-	ComplianceGrade string `json:"complianceGrade,omitempty"`
+	Grade string `json:"grade,omitempty"`
 	// The average risk score in the compliance runtime result.
 	// GENERATE: The following code has been modified after code generation
-	AverageRiskScore float64 `json:"averageRiskScore,omitempty"`
+	RiskScore float64 `json:"riskScore,omitempty"`
 }

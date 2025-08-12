@@ -139,27 +139,30 @@ func NewEventReportBuilder() EventReportBuilder {
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
-	// The ID resolution should already be handled by the builder
-	// But keep this as a safety net for edge cases
-	if summaryEvent.TransactionSummary != nil {
-		if summaryEvent.TransactionSummary.Proxy != nil {
-			// Resolve proxy ID
-			resolvedID := transutil.ResolveIDWithPrefix(
-				summaryEvent.TransactionSummary.Proxy.ID,
-				summaryEvent.TransactionSummary.Proxy.Name,
-			)
-			summaryEvent.TransactionSummary.Proxy.ID = resolvedID
-
-			// Sync to API object
-			if summaryEvent.TransactionSummary.API == nil {
-				summaryEvent.TransactionSummary.API = &models.APIDetails{}
-			}
-			summaryEvent.TransactionSummary.API.ID = resolvedID
-			summaryEvent.TransactionSummary.API.Name = summaryEvent.TransactionSummary.Proxy.Name
-		}
-	}
+	e.syncProxyToAPI(summaryEvent.TransactionSummary)
 	e.summaryEvent = &summaryEvent
 	return e
+}
+
+// Helper method that handles all the proxy-to-API synchronization
+func (e *eventReport) syncProxyToAPI(summary *Summary) {
+	// Guard clauses for early return
+	if summary == nil || summary.Proxy == nil {
+		return
+	}
+
+	proxy := summary.Proxy
+
+	// Resolve proxy ID
+	resolvedID := transutil.ResolveIDWithPrefix(proxy.ID, proxy.Name)
+	proxy.ID = resolvedID
+
+	// Sync to API object
+	if summary.API == nil {
+		summary.API = &models.APIDetails{}
+	}
+	summary.API.ID = resolvedID
+	summary.API.Name = proxy.Name
 }
 
 func (e *eventReport) SetProxy(proxy Proxy) EventReportBuilder {

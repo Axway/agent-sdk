@@ -11,8 +11,8 @@ package management
 
 // ComplianceRuntimeResultSpecTraceable The Traceable structure for a compliance runtime result
 type ComplianceRuntimeResultSpecTraceable struct {
-	Type    string                                   `json:"type,omitempty"`
-	Runtime ComplianceRuntimeResultSpecAkamaiRuntime `json:"runtime,omitempty"`
+	Type    string                                      `json:"type,omitempty"`
+	Runtime ComplianceRuntimeResultSpecTraceableRuntime `json:"runtime,omitempty"`
 	// The number of matched endpoints with issues
 	Issues int32 `json:"issues,omitempty"`
 	// The number of shadow endpoints

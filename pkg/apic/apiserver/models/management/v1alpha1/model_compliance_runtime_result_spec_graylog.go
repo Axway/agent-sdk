@@ -11,6 +11,6 @@ package management
 
 // ComplianceRuntimeResultSpecGraylog The Graylog structure for a compliance runtime result
 type ComplianceRuntimeResultSpecGraylog struct {
-	Type    string                                   `json:"type,omitempty"`
-	Runtime ComplianceRuntimeResultSpecAkamaiRuntime `json:"runtime,omitempty"`
+	Type    string                                      `json:"type,omitempty"`
+	Runtime ComplianceRuntimeResultSpecTraceableRuntime `json:"runtime,omitempty"`
 }

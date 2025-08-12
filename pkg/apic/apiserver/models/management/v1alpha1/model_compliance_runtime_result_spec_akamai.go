@@ -14,13 +14,17 @@ type ComplianceRuntimeResultSpecAkamai struct {
 	Type    string                                   `json:"type,omitempty"`
 	Runtime ComplianceRuntimeResultSpecAkamaiRuntime `json:"runtime,omitempty"`
 	// The number of matched endpoints with issues
-	Issues int32 `json:"issues,omitempty"`
+	Matched int32 `json:"matched,omitempty"`
 	// The number of shadow endpoints
-	Shadow int32 `json:"shadow,omitempty"`
+	NoRisk int32 `json:"noRisk,omitempty"`
 	// The number of orphaned endpoints
-	Orphans int32 `json:"orphans,omitempty"`
+	Sensitive int32 `json:"sensitive,omitempty"`
 	// The number of matched endpoints without issues
-	NoIssues int32 `json:"noIssues,omitempty"`
-	// The URL for the Conformance analysis job
-	JobURL string `json:"jobURL,omitempty"`
+	Required int32 `json:"required,omitempty"`
+	// The number of not matched endpoints
+	NotMatched int32 `json:"notMatched,omitempty"`
+	// The number of conflicting endpoints
+	Conflicting int32 `json:"conflicting,omitempty"`
+	// The number of pending endpoints
+	Pending int32 `json:"pending,omitempty"`
 }

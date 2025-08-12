@@ -11,8 +11,8 @@ package management
 
 // DataplaneSpecAkamaiGroups struct for DataplaneSpecAkamaiGroups
 type DataplaneSpecAkamaiGroups struct {
-	// The Akamai group ID (from /api/v3/groups)
-	GroupId string `json:"groupId,omitempty"`
+	// The Akamai group name
+	GroupName string `json:"groupName"`
 	// The Amplify environment name to map this group to
-	Environment string `json:"environment,omitempty"`
+	Environment string `json:"environment"`
 }
