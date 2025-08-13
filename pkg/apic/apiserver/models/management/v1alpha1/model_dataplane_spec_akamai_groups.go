@@ -12,7 +12,7 @@ package management
 // DataplaneSpecAkamaiGroups struct for DataplaneSpecAkamaiGroups
 type DataplaneSpecAkamaiGroups struct {
 	// The Akamai group name
-	GroupName string `json:"groupName"`
+	Name string `json:"name"`
 	// The Amplify environment name to map this group to
 	Environment string `json:"environment"`
 }
