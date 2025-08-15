@@ -4,9 +4,10 @@ import "github.com/sirupsen/logrus"
 
 // ConsumerDetails  - Represents the consumer details in the transaction summary event
 type ConsumerDetails struct {
-	Application      *AppDetails   `json:"application,omitempty"` // marketplace application
-	PublishedProduct *Product      `json:"publishedProduct,omitempty"`
-	Subscription     *Subscription `json:"subscription,omitempty"`
+	Application      *AppDetails           `json:"application,omitempty"` // marketplace application
+	PublishedProduct *Product              `json:"publishedProduct,omitempty"`
+	Marketplace      *MarketplaceReference `json:"marketplace,omitempty"`
+	Subscription     *Subscription         `json:"subscription,omitempty"`
 }
 
 type ResourceReference struct {
@@ -24,6 +25,7 @@ type APIResourceReference struct {
 	ResourceReference
 	Name         string `json:"name,omitempty"`
 	APIServiceID string `json:"apiServiceId,omitempty"`
+	APIOwnerID   string `json:"apiTeamId,omitempty"`
 }
 
 type ApplicationResourceReference struct {
@@ -152,6 +154,12 @@ func (a Unit) GetLogFields(fields logrus.Fields) logrus.Fields {
 		fields["unitName"] = a.Name
 	}
 	return fields
+}
+
+type MarketplaceReference struct {
+	GUID           string `json:"guid,omitempty"`
+	ConsumerOrgID  string `json:"consumerOrgId,omitempty"`
+	ConsumerTeamID string `json:"-"`
 }
 
 type CustomMetricDetail struct {

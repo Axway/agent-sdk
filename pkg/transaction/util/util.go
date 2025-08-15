@@ -29,7 +29,7 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	}
 
 	// Lookup Access Request
-	apiID = strings.TrimPrefix(apiID, "remoteApiId_")
+	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
 	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
 	if ri == nil {
@@ -47,20 +47,29 @@ func GetSubscriptionID(subscription *v1.ResourceInstance) string {
 	return subscription.Metadata.ID
 }
 
-// GetConsumerOrgID -
-func GetConsumerOrgID(ri *v1.ResourceInstance) string {
+// GetMarketplaceDetails -
+func GetMarketplaceDetails(ri *v1.ResourceInstance) *models.MarketplaceReference {
 	if ri == nil {
-		return ""
+		return nil
 	}
 
-	// Lookup Subscription
+	// Get Application Marketplace details
 	app := &management.ManagedApplication{}
-	app.FromInstance(ri)
+	err := app.FromInstance(ri)
+	if err != nil {
+		return nil
+	}
+
+	mr := &models.MarketplaceReference{
+		GUID: app.Marketplace.Name,
+	}
 
 	if app.Marketplace.Resource.Owner != nil {
-		return app.Marketplace.Resource.Owner.Organization.ID
+		mr.ConsumerTeamID = app.Marketplace.Resource.Owner.ID
+		mr.ConsumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
 	}
-	return ""
+
+	return mr
 }
 
 // GetConsumerApplication -
@@ -186,8 +195,8 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 		consumerDetails.Subscription.Name = subRef.Name
 	}
 	log.
-		WithField("subscription-id", consumerDetails.Subscription.ID).
-		WithField("subscription-name", consumerDetails.Subscription.Name).
+		WithField("subscriptionId", consumerDetails.Subscription.ID).
+		WithField("subscriptionName", consumerDetails.Subscription.Name).
 		Trace("subscription information")
 
 	appRef := accessRequest.GetReferenceByGVK(catalog.ApplicationGVK())
@@ -199,21 +208,23 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 	}
 
 	log.
-		WithField("application-id", consumerDetails.Application.ID).
-		WithField("application-name", consumerDetails.Application.Name).
+		WithField("applicationId", consumerDetails.Application.ID).
+		WithField("applicationName", consumerDetails.Application.Name).
 		Trace("application information")
 
 	// try to get consumer org ID from the managed app first
-
-	consumerOrgID := GetConsumerOrgID(managedApp)
-	if consumerOrgID == "" {
-		log.Debug("could not get consumer org ID from the managed app, try getting consumer org ID from subscription")
+	mpDetails := GetMarketplaceDetails(managedApp)
+	if mpDetails != nil {
+		consumerDetails.Marketplace = mpDetails
+		consumerDetails.Application.ConsumerOrgID = mpDetails.ConsumerOrgID
+		log.
+			WithField("marketplaceGUID", consumerDetails.Marketplace.GUID).
+			WithField("consumerOrgId", consumerDetails.Marketplace.ConsumerOrgID).
+			// WithField("consumerTeamId", consumerDetails.Marketplace.ConsumerTeamID).
+			Trace("marketplace details")
 	} else {
-		consumerDetails.Application.ConsumerOrgID = consumerOrgID
+		log.Debug("could not get marketplace details from managed app, trying to get consumer org ID from access request")
 	}
-	log.
-		WithField("consumer-org-id", consumerDetails.Application.ConsumerOrgID).
-		Trace("consumer org ID ")
 
 	publishProductRef := accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())
 	if publishProductRef.ID == "" || publishProductRef.Name == "" {
@@ -224,9 +235,25 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 	}
 
 	log.
-		WithField("published-product-id", consumerDetails.PublishedProduct.ID).
-		WithField("published-product-name", consumerDetails.PublishedProduct.Name).
+		WithField("publishedProductId", consumerDetails.PublishedProduct.ID).
+		WithField("publishedProductName", consumerDetails.PublishedProduct.Name).
 		Trace("published product information")
 
 	return consumerDetails
+}
+
+// ResolveIDWithPrefix determines the appropriate ID based on input values and prefix
+func ResolveIDWithPrefix(id, name string) string {
+	// If ID has content beyond the prefix, keep it as-is
+	if trimmed := strings.TrimPrefix(id, SummaryEventProxyIDPrefix); trimmed != "" {
+		return id
+	}
+
+	// ID is empty or just the prefix - use fallback with prefix
+	fallback := name
+	if fallback == "" {
+		fallback = unknown
+	}
+
+	return SummaryEventProxyIDPrefix + fallback
 }

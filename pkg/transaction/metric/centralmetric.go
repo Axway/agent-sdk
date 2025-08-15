@@ -56,6 +56,11 @@ func NewCentralMetricBuilder() *CentralMetricBuilder {
 	}
 }
 
+func (b *CentralMetricBuilder) SetMarketplace(marketplace *models.MarketplaceReference) *CentralMetricBuilder {
+	b.Marketplace = marketplace
+	return b
+}
+
 func (b *CentralMetricBuilder) SetSubscription(sub *models.ResourceReference) *CentralMetricBuilder {
 	b.Subscription = sub
 	return b
@@ -127,6 +132,7 @@ func (b *CentralMetricBuilder) Build() *centralMetric {
 }
 
 type centralMetric struct {
+	Marketplace   *models.MarketplaceReference         `json:"marketplace,omitempty"`
 	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
 	App           *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product       *models.ProductResourceReference     `json:"product,omitempty"`

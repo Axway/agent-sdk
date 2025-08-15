@@ -6,6 +6,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // constants for retry interval for stream job
@@ -25,6 +26,7 @@ type eventsJob interface {
 
 // eventProcessorJob job wrapper for a streamerClient that starts a stream and an event manager.
 type eventProcessorJob struct {
+	logger        log.FieldLogger
 	streamer      eventsJob
 	stop          chan interface{}
 	jobID         string
@@ -37,6 +39,7 @@ type eventProcessorJob struct {
 // newEventProcessorJob creates a job for the streamerClient
 func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 	streamJob := &eventProcessorJob{
+		logger:        log.NewFieldLogger().WithComponent("eventProcessorJob").WithPackage("agent"),
 		streamer:      eventJob,
 		stop:          make(chan interface{}, 1),
 		retryInterval: defaultRetryInterval,
@@ -92,16 +95,22 @@ func (j *eventProcessorJob) renewRegistration() {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
 
-	if j.jobID != "" {
-		jobs.UnregisterJob(j.jobID)
-		j.jobID = ""
-		j.numRetry++
-		if j.numRetry == maxNumRetryForInterval {
-			j.numRetry = 0
-			j.retryInterval = j.retryInterval * 2
-			if j.retryInterval > maxRetryInterval {
-				j.retryInterval = defaultRetryInterval
-			}
+	if j.jobID == "" {
+		j.logger.Info("registering")
+		return
+	}
+
+	j.logger.WithField("jobID", j.jobID).Trace("unregistering")
+	defer j.logger.Info("renewing registration")
+	jobs.UnregisterJob(j.jobID)
+
+	j.jobID = ""
+	j.numRetry++
+	if j.numRetry == maxNumRetryForInterval {
+		j.numRetry = 0
+		j.retryInterval = j.retryInterval * 2
+		if j.retryInterval > maxRetryInterval {
+			j.retryInterval = maxRetryInterval
 		}
 	}
 }

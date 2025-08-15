@@ -75,13 +75,13 @@ type Summary struct {
 	StatusDetail    string                  `json:"statusDetail,omitempty"`
 	Duration        int                     `json:"duration"`
 	Team            *Team                   `json:"team,omitempty"`
-	Proxy           *Proxy                  `json:"proxy,omitempty"`
+	API             *models.APIDetails      `json:"proxy,omitempty"`
+	Proxy           *Proxy                  `json:"-"`
 	Runtime         *Runtime                `json:"runtime,omitempty"`
 	EntryPoint      *EntryPoint             `json:"entryPoint,omitempty"`
 	IsInMetricEvent bool                    `json:"isInMetricEvent,omitempty"`
 	Application     *Application            `json:"application,omitempty"`
 	AssetResource   *models.AssetResource   `json:"assetResource,omitempty"`
-	API             *models.APIDetails      `json:"api,omitempty"`
 	Product         *models.Product         `json:"product,omitempty"`
 	ProductPlan     *models.ProductPlan     `json:"productPlan,omitempty"`
 	Quota           *models.Quota           `json:"quota,omitempty"`

@@ -8,6 +8,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -512,19 +513,32 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 	if b.err != nil {
 		return b
 	}
-	if proxyID == "" {
-		proxyID = "unknown"
-	}
+
+	// Resolve the ID using the shared logic
+	resolvedID := transutil.ResolveIDWithPrefix(proxyID, proxyName)
+
+	// Set the internal Proxy object (json:"-")
 	b.logEvent.TransactionSummary.Proxy = &Proxy{
-		ID:       proxyID,
+		ID:       resolvedID,
 		Revision: proxyRevision,
 		Name:     proxyName,
-		Stage:    proxyStage,
-		Version:  proxyVersion,
+		Stage:    proxyStage,   // These don't serialize from Proxy
+		Version:  proxyVersion, // These don't serialize from Proxy
 	}
+
+	// Also set the API object that gets serialized (json:"proxy,omitempty")
+	if b.logEvent.TransactionSummary.API == nil {
+		b.logEvent.TransactionSummary.API = &models.APIDetails{}
+		b.logEvent.TransactionSummary.API.Stage = proxyStage
+		b.logEvent.TransactionSummary.API.Version = proxyVersion
+	}
+	// Always update core fields regardless of whether API existed
+	b.logEvent.TransactionSummary.API.ID = resolvedID
+	b.logEvent.TransactionSummary.API.Name = proxyName
+	b.logEvent.TransactionSummary.API.Revision = proxyRevision
+
 	return b
 }
-
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
 	if b.err != nil {
 		return b
@@ -612,7 +626,7 @@ func (b *transactionSummaryBuilder) Build() (*LogEvent, error) {
 
 	if b.logEvent.TransactionSummary.Proxy == nil {
 		b.logEvent.TransactionSummary.Proxy = &Proxy{
-			ID: "unknown",
+			ID: SummaryEventProxyIDPrefix + unknown,
 		}
 	}
 

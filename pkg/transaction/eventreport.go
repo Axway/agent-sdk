@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/common"
 )
 
@@ -137,8 +139,30 @@ func NewEventReportBuilder() EventReportBuilder {
 }
 
 func (e *eventReport) SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder {
+	e.syncProxyToAPI(summaryEvent.TransactionSummary)
 	e.summaryEvent = &summaryEvent
 	return e
+}
+
+// Helper method that handles all the proxy-to-API synchronization
+func (e *eventReport) syncProxyToAPI(summary *Summary) {
+	// Guard clauses for early return
+	if summary == nil || summary.Proxy == nil {
+		return
+	}
+
+	proxy := summary.Proxy
+
+	// Resolve proxy ID
+	resolvedID := transutil.ResolveIDWithPrefix(proxy.ID, proxy.Name)
+	proxy.ID = resolvedID
+
+	// Sync to API object
+	if summary.API == nil {
+		summary.API = &models.APIDetails{}
+	}
+	summary.API.ID = resolvedID
+	summary.API.Name = proxy.Name
 }
 
 func (e *eventReport) SetProxy(proxy Proxy) EventReportBuilder {
