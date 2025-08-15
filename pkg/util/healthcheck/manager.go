@@ -27,10 +27,6 @@ const (
 	FAIL StatusLevel = "FAIL"
 )
 
-// TODO - remove the use of these globals once all agents access health check manager via agents package
-var hcm *Manager
-var hcmMutex sync.Mutex
-
 type Manager struct {
 	logger          log.FieldLogger
 	Name            string                  `json:"name"`
@@ -47,7 +43,6 @@ type Manager struct {
 	initialInterval time.Duration
 	jobID           string
 	unittest        bool
-	global          bool
 	pprof           bool
 }
 
@@ -56,12 +51,6 @@ type Option func(*Manager)
 func IsUnitTest() Option {
 	return func(o *Manager) {
 		o.unittest = true
-	}
-}
-
-func SetAsGlobalHealthCheckManager() Option {
-	return func(o *Manager) {
-		o.global = true
 	}
 }
 
@@ -131,16 +120,6 @@ func NewManager(opts ...Option) *Manager {
 		healthCheckManager.jobID, _ = jobs.RegisterDetachedIntervalJobWithName(healthCheckManager, healthCheckManager.interval, "Periodic Health Check")
 		// start the health check server
 		healthCheckManager.statusServer = newStartNewServer(healthCheckManager)
-	}
-
-	if healthCheckManager.global {
-		hcmMutex.Lock()
-		defer hcmMutex.Unlock()
-		if hcm != nil {
-			healthCheckManager.logger.Warn("global health check manager already exists, overwriting it")
-		}
-		hcm = healthCheckManager
-		return hcm
 	}
 
 	return healthCheckManager
@@ -348,25 +327,6 @@ func (m *Manager) Execute() error {
 		m.logger.WithField("status", status).Warn("periodicHealthCheck status is not OK")
 	}
 	return nil
-}
-
-// RegisterHealthcheck - register a new dependency with this service
-func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
-	hcmMutex.Lock()
-	defer hcmMutex.Unlock()
-	if hcm == nil {
-		return "", fmt.Errorf("healthcheck manager is not initialized")
-	}
-	return hcm.RegisterHealthcheck(name, endpoint, check)
-}
-
-func GetStatus(endpoint string) StatusLevel {
-	hcmMutex.Lock()
-	defer hcmMutex.Unlock()
-	if hcm == nil {
-		return FAIL
-	}
-	return hcm.GetCheckStatus(endpoint)
 }
 
 // GetHealthcheckOutput - query the http endpoint and return the body

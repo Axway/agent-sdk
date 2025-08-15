@@ -9,6 +9,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/config"
+	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -67,14 +68,16 @@ func TestPollClientOptions(t *testing.T) {
 		&mock.Client{}, cfg, nil,
 		WithHarvester(&mockHarvester{}, &mockSequence{}, "/self/link"),
 		WithOnClientStop(func() {}),
-		WithOnConnect(),
+		WithHealthCheckRegister(func(string, string, hc.CheckStatus) (string, error) {
+			return "", nil
+		}),
 	)
 
 	assert.NotNil(t, pc.harvesterConfig.hClient)
 	assert.NotNil(t, pc.harvesterConfig.sequence)
 	assert.NotNil(t, pc.harvesterConfig.topicSelfLink)
 	assert.NotNil(t, pc.onClientStop)
-	assert.NotNil(t, pc.onStreamConnection)
+	assert.NotNil(t, pc.hcRegister)
 }
 
 type mockSequence struct{}

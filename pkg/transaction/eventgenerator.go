@@ -48,7 +48,7 @@ func NewEventGenerator() EventGenerator {
 		shouldUseTrafficForAggregation: true,
 		logger:                         logger,
 	}
-	hc.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
+	agent.RegisterHealthcheck("Event Generator", "eventgen", eventGen.healthcheck)
 
 	return eventGen
 }

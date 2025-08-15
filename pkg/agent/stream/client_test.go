@@ -21,7 +21,7 @@ import (
 )
 
 func NewConfig() *config.CentralConfiguration {
-	hc.NewManager(hc.SetAsGlobalHealthCheckManager(), hc.IsUnitTest())
+	hc.NewManager(hc.IsUnitTest())
 	return &config.CentralConfiguration{
 		AgentType:     1,
 		TenantID:      "12345",
@@ -41,14 +41,16 @@ func TestNewStreamer(t *testing.T) {
 	httpClient := &mockAPIClient{}
 	cfg := NewConfig()
 	cacheManager := agentcache.NewAgentCacheManager(cfg, false)
-	hcm := hc.NewManager(hc.IsUnitTest(), hc.SetAsGlobalHealthCheckManager())
+	hcm := hc.NewManager(hc.IsUnitTest())
 
 	streamer, err := NewStreamerClient(
 		httpClient,
 		cfg,
 		getToken,
 		nil,
-		WithOnStreamConnection(),
+		WithHealthCheckRegister(func(s1, s2 string, cs hc.CheckStatus) (string, error) {
+			return "", nil
+		}),
 		WithCacheManager(cacheManager),
 		WithWatchTopic(wt),
 	)
@@ -96,7 +98,7 @@ func TestNewStreamer(t *testing.T) {
 	manager.status = false
 
 	assert.NotNil(t, streamer.Status())
-	assert.Equal(t, hc.FAIL, hcm.RunChecks())
+	assert.Equal(t, hc.OK, hcm.RunChecks())
 }
 
 func TestClientOptions(t *testing.T) {
@@ -110,12 +112,14 @@ func TestClientOptions(t *testing.T) {
 		WithHarvester(&mockHarvester{}, sequence),
 		WithEventSyncError(func() {
 		}),
-		WithOnStreamConnection(),
+		WithHealthCheckRegister(func(s1, s2 string, cs hc.CheckStatus) (string, error) {
+			return "", nil
+		}),
 	)
 	assert.NotNil(t, sc.harvester)
 	assert.NotNil(t, sc.sequence)
 	assert.NotNil(t, sc.onEventSyncError)
-	assert.NotNil(t, sc.onStreamConnection)
+	assert.NotNil(t, sc.hcRegister)
 }
 
 func TestStatusUpdates(t *testing.T) {

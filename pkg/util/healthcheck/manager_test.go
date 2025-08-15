@@ -17,7 +17,6 @@ func TestHealthCheckManager(t *testing.T) {
 		WithPprof(),
 		WithPeriod(100000),
 		WithPort(8080),
-		SetAsGlobalHealthCheckManager(),
 	)
 
 	jobs.UnregisterJob(testManager.jobID)
@@ -41,8 +40,8 @@ func TestHealthCheckManager(t *testing.T) {
 			return &Status{Result: test1Status, Details: "test-1 passed"}
 		},
 	)
-	// register via the global health check manager
-	RegisterHealthcheck("test-2", "test2",
+	// register a second health check
+	testManager.RegisterHealthcheck("test-2", "test2",
 		func(name string) *Status {
 			return &Status{Result: OK, Details: "test-2 passed"}
 		},
@@ -60,10 +59,6 @@ func TestHealthCheckManager(t *testing.T) {
 	// get the status of test-1
 	test1StatusResult := testManager.GetCheckStatus("test3")
 	assert.Equal(t, test1StatusResult, FAIL, "Health check status should be FAIL")
-
-	// test the Global GetStatus method
-	globalStatus := GetStatus("test1")
-	assert.Equal(t, globalStatus, FAIL, "Global health check status should be FAIL")
 
 	// get the status of test-2
 	test2StatusResult := testManager.GetCheckStatus("test2")

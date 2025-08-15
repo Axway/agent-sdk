@@ -168,7 +168,7 @@ func (es *EventSync) startPollMode() error {
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
 		poller.WithOnClientStop(es.RebuildCache),
-		poller.WithOnConnect(),
+		poller.WithHealthCheckRegister(RegisterHealthcheck),
 	)
 
 	if err != nil {
@@ -190,7 +190,7 @@ func (es *EventSync) startStreamMode() error {
 		agent.cfg,
 		agent.tokenRequester,
 		handlers,
-		stream.WithOnStreamConnection(),
+		stream.WithHealthCheckRegister(RegisterHealthcheck),
 		stream.WithEventSyncError(es.RebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),

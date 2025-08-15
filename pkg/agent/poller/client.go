@@ -8,25 +8,28 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+type healthCheckRegister func(string, string, hc.CheckStatus) (string, error)
+
 // PollClient is a client for polling harvester
 type PollClient struct {
-	apiClient          events.APIClient
-	handlers           []handler.Handler
-	interval           time.Duration
-	listener           events.Listener
-	newListener        events.NewListenerFunc
-	onClientStop       onClientStopCb
-	onStreamConnection func()
-	poller             *pollExecutor
-	newPollManager     newPollExecutorFunc
-	harvesterConfig    harvesterConfig
-	mutex              sync.RWMutex
-	initialized        bool
+	apiClient       events.APIClient
+	handlers        []handler.Handler
+	interval        time.Duration
+	listener        events.Listener
+	newListener     events.NewListenerFunc
+	onClientStop    onClientStopCb
+	hcRegister      healthCheckRegister
+	poller          *pollExecutor
+	newPollManager  newPollExecutorFunc
+	harvesterConfig harvesterConfig
+	mutex           sync.RWMutex
+	initialized     bool
 }
 
 type harvesterConfig struct {
@@ -83,8 +86,8 @@ func (p *PollClient) Start() error {
 	listenCh := p.listener.Listen()
 	p.poller.RegisterWatch(eventCh, eventErrorCh)
 
-	if p.onStreamConnection != nil {
-		p.onStreamConnection()
+	if p.hcRegister != nil {
+		p.hcRegister(util.AmplifyCentral, util.CentralHealthCheckEndpoint, p.Healthcheck)
 	}
 
 	p.mutex.Lock()

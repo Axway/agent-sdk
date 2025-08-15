@@ -31,29 +31,31 @@ import (
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 )
 
+type healthCheckRegister func(string, string, hc.CheckStatus) (string, error)
+
 // StreamerClient client for starting a watch controller stream and handling the events
 type StreamerClient struct {
-	apiClient          events.APIClient
-	handlers           []handler.Handler
-	listener           *events.EventListener
-	manager            wm.Manager
-	newListener        events.NewListenerFunc
-	newManager         wm.NewManagerFunc
-	requestQueue       events.RequestQueue
-	newRequestQueue    events.NewRequestQueueFunc
-	onStreamConnection func()
-	sequence           events.SequenceProvider
-	topicSelfLink      string
-	watchCfg           *wm.Config
-	watchOpts          []wm.Option
-	cacheManager       agentcache.Manager
-	logger             log.FieldLogger
-	environmentURL     string
-	wt                 *management.WatchTopic
-	harvester          harvester.Harvest
-	onEventSyncError   func()
-	mutex              sync.RWMutex
-	isInitialized      atomic.Bool
+	apiClient        events.APIClient
+	handlers         []handler.Handler
+	listener         *events.EventListener
+	manager          wm.Manager
+	newListener      events.NewListenerFunc
+	newManager       wm.NewManagerFunc
+	requestQueue     events.RequestQueue
+	newRequestQueue  events.NewRequestQueueFunc
+	hcRegister       healthCheckRegister
+	sequence         events.SequenceProvider
+	topicSelfLink    string
+	watchCfg         *wm.Config
+	watchOpts        []wm.Option
+	cacheManager     agentcache.Manager
+	logger           log.FieldLogger
+	environmentURL   string
+	wt               *management.WatchTopic
+	harvester        harvester.Harvest
+	onEventSyncError func()
+	mutex            sync.RWMutex
+	isInitialized    atomic.Bool
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -167,8 +169,8 @@ func (s *StreamerClient) Start() error {
 	s.requestQueue.Start()
 
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
-	if s.onStreamConnection != nil {
-		s.onStreamConnection()
+	if s.hcRegister != nil {
+		s.hcRegister(util.AmplifyCentral, util.CentralHealthCheckEndpoint, s.Healthcheck)
 	}
 	s.isInitialized.Store(true)
 

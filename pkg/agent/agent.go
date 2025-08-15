@@ -208,7 +208,6 @@ func setupHealthcheckManager() {
 	defer agent.hcmMutex.Unlock()
 
 	hcOpts := []hc.Option{
-		hc.SetAsGlobalHealthCheckManager(),
 		hc.WithPort(agent.statusConfig.GetPort()),
 		hc.WithInterval(agent.statusConfig.GetHealthCheckInterval()),
 		hc.WithPeriod(agent.statusConfig.GetHealthCheckPeriod()),

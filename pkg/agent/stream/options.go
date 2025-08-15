@@ -5,8 +5,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/harvester"
-	"github.com/Axway/agent-sdk/pkg/util"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
 // StreamerOpt func for setting fields on the StreamerClient
@@ -49,11 +47,9 @@ func WithEventSyncError(cb func()) StreamerOpt {
 	}
 }
 
-// WithOnStreamConnection func to execute when a connection to central is made
-func WithOnStreamConnection() StreamerOpt {
+// WithHealthCheckRegister func to execute when a connection to central is made
+func WithHealthCheckRegister(register healthCheckRegister) StreamerOpt {
 	return func(pc *StreamerClient) {
-		pc.onStreamConnection = func() {
-			hc.RegisterHealthcheck(util.AmplifyCentral, util.CentralHealthCheckEndpoint, pc.Healthcheck)
-		}
+		pc.hcRegister = register
 	}
 }

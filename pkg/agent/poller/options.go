@@ -3,8 +3,6 @@ package poller
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/harvester"
-	"github.com/Axway/agent-sdk/pkg/util"
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
 // ClientOpt func for setting fields on the PollClient
@@ -27,11 +25,9 @@ func WithOnClientStop(cb func()) ClientOpt {
 }
 
 // WithOnConnect func to execute when a connection to central is made
-func WithOnConnect() ClientOpt {
+func WithHealthCheckRegister(register healthCheckRegister) ClientOpt {
 	return func(pc *PollClient) {
-		pc.onStreamConnection = func() {
-			hc.RegisterHealthcheck(util.AmplifyCentral, util.CentralHealthCheckEndpoint, pc.Healthcheck)
-		}
+		pc.hcRegister = register
 	}
 }
 

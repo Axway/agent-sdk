@@ -25,8 +25,6 @@ import (
 	"github.com/elastic/beats/v7/libbeat/paths"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"golang.org/x/net/proxy"
-
-	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 )
 
 const (
@@ -475,7 +473,7 @@ func registerHealthCheckers(config *Config) error {
 		return err
 	}
 
-	_, err = hc.RegisterHealthcheck("Traceability Agent", HealthCheckEndpoint, hcJob.healthcheck)
+	_, err = agent.RegisterHealthcheck("Traceability Agent", HealthCheckEndpoint, hcJob.healthcheck)
 	if err != nil {
 		return err
 	}

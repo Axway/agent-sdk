@@ -47,7 +47,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
-func createOfflineCentralCfg(url, env string) *config.CentralConfiguration {
+func createOfflineCentralCfg() *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.TraceabilityAgent).(*config.CentralConfiguration)
 	cfg.EnvironmentID = "abc123"
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).Offline = true
@@ -186,7 +186,7 @@ func TestAgentInitialize(t *testing.T) {
 
 	defer s.Close()
 
-	cfg := createOfflineCentralCfg(s.URL, "v7")
+	cfg := createOfflineCentralCfg()
 	// Test with offline mode
 	resetResources()
 	err := Initialize(cfg)
