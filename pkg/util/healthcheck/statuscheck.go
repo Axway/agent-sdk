@@ -1,6 +1,8 @@
 package healthcheck
 
 import (
+	"sync"
+
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -15,15 +17,18 @@ type CheckStatus func(name string) *Status
 
 // statusCheck - the status check
 type statusCheck struct {
-	ID       string  `json:"-"`
-	Name     string  `json:"name"`
-	Endpoint string  `json:"endpoint"`
-	Status   *Status `json:"status"`
-	logger   log.FieldLogger
-	checker  CheckStatus
+	ID          string  `json:"-"`
+	Name        string  `json:"name"`
+	Endpoint    string  `json:"endpoint"`
+	Status      *Status `json:"status"`
+	logger      log.FieldLogger
+	checker     CheckStatus
+	statusMutex sync.Mutex
 }
 
 func (c *statusCheck) setStatus(s *Status) {
+	c.statusMutex.Lock()
+	defer c.statusMutex.Unlock()
 	c.Status = s
 }
 
