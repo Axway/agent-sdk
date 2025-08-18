@@ -88,7 +88,7 @@ func (s *server) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the checks failed change the return code to 500
-	if s.hc.HCStatus == FAIL {
+	if status, _ := s.hc.GetAgentStatus(); status == string(FAIL) {
 		s.logger.Error("health check failed, returning 503")
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}

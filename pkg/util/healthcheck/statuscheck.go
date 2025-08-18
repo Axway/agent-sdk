@@ -27,7 +27,7 @@ func (c *statusCheck) setStatus(s *Status) {
 	c.Status = s
 }
 
-func (c *statusCheck) executeCheck() {
+func (c *statusCheck) executeCheck() (StatusLevel, string) {
 	// c.logger.Trace("executing health check")
 	c.logger.Info("executing health check")
 	s := c.checker(c.Name)
@@ -37,7 +37,8 @@ func (c *statusCheck) executeCheck() {
 	if s.Result == OK {
 		// logger.Trace("health check executed successfully")
 		logger.Info("health check executed successfully")
-		return
+		return OK, ""
 	}
 	logger.WithField("details", s.Details).Error("health check execution failed")
+	return FAIL, s.Details
 }

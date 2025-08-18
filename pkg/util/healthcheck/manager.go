@@ -159,6 +159,13 @@ func (m *Manager) setStatusAndDetail(status StatusLevel, detail string) {
 	m.HCStatusDetail = detail
 }
 
+func (m *Manager) GetJSON() []byte {
+	m.statusMutex.RLock()
+	defer m.statusMutex.RUnlock()
+	data, _ := json.Marshal(m)
+	return data
+}
+
 func (m *Manager) InitialHealthCheck() error {
 	if m.unittest {
 		// m.logger.Trace("skipping health check ticker in test mode")
@@ -247,12 +254,12 @@ func (m *Manager) runChecks() {
 	for _, check := range m.getChecks() {
 		go func(c *statusCheck) {
 			defer wg.Done()
-			check.executeCheck()
+			res, detail := check.executeCheck()
 			statusMutex.Lock()
 			defer statusMutex.Unlock()
-			if check.Status.Result == FAIL && status.Result == OK {
+			if res == FAIL && status.Result == OK {
 				status.Result = FAIL
-				status.Details = check.Status.Details
+				status.Details = detail
 			}
 		}(check)
 	}

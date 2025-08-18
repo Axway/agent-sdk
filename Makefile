@@ -1,7 +1,6 @@
 .PHONY: all build
 
 WORKSPACE ?= $$(pwd)
-RACEFLAG ?= -race
 
 GO_TEST_LIST := $(shell go list ./... | grep -v /mock)
 
@@ -29,7 +28,7 @@ dep: resolve-dependencies
 
 test: dep
 	@go vet ${GO_TEST_LIST}
-	@go test -short ${RACEFLAG} -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
+	@go test -short -race -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_TEST_LIST}
 
 test-sonar: dep
 	@go vet ${GO_PKG_LIST}
