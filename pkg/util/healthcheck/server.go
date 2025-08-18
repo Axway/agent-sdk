@@ -79,21 +79,14 @@ func (s *server) statusHandler(w http.ResponseWriter, r *http.Request) {
 	// s.logger.Trace("checking health status")
 	s.logger.Info("checking health status")
 
-	// Return the data
-	data, err := json.Marshal(s.hc)
-	if err != nil {
-		s.logger.WithError(err).Error("could not marshal the health check data")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	// If any of the checks failed change the return code to 500
 	if status, _ := s.hc.GetAgentStatus(); status == string(FAIL) {
 		s.logger.Error("health check failed, returning 503")
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	w.Write(data)
+	// Return the data
+	w.Write(s.hc.GetJSON())
 }
 
 func (s *server) checkHandler(w http.ResponseWriter, r *http.Request) {

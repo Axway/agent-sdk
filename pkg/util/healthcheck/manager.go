@@ -34,6 +34,7 @@ type Manager struct {
 	HCStatus        StatusLevel             `json:"status"`
 	HCStatusDetail  string                  `json:"statusDetail,omitempty"`
 	Checks          map[string]*statusCheck `json:"statusChecks"`
+	keys            []string
 	statusMutex     *sync.RWMutex
 	checksMutex     *sync.Mutex
 	statusServer    *server
@@ -104,6 +105,7 @@ func NewManager(opts ...Option) *Manager {
 		Name:            "agent",
 		Checks:          map[string]*statusCheck{},
 		HCStatus:        OK,
+		keys:            []string{},
 		port:            8989,
 		period:          5 * time.Minute,
 		interval:        30 * time.Second,
@@ -140,10 +142,17 @@ func (m *Manager) getChecks() map[string]*statusCheck {
 	return m.Checks
 }
 
+func (m *Manager) getKeys() []string {
+	m.checksMutex.Lock()
+	defer m.checksMutex.Unlock()
+	return m.keys
+}
+
 func (m *Manager) addCheck(name string, check *statusCheck) {
 	m.checksMutex.Lock()
 	defer m.checksMutex.Unlock()
 	m.Checks[name] = check
+	m.keys = append(m.keys, name)
 }
 
 func (m *Manager) getStatusAndDetail() (StatusLevel, string) {
@@ -250,18 +259,19 @@ func (m *Manager) runChecks() {
 	statusMutex := &sync.Mutex{}
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(m.getChecks()))
-	for _, check := range m.getChecks() {
-		go func(c *statusCheck) {
+	keys := m.getKeys()
+	wg.Add(len(keys))
+	for _, key := range keys {
+		go func(k string) {
 			defer wg.Done()
-			res, detail := check.executeCheck()
+			res, detail := m.getCheck(k).executeCheck()
 			statusMutex.Lock()
 			defer statusMutex.Unlock()
 			if res == FAIL && status.Result == OK {
 				status.Result = FAIL
 				status.Details = detail
 			}
-		}(check)
+		}(key)
 	}
 	wg.Wait()
 	m.setStatusAndDetail(status.Result, status.Details)

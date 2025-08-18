@@ -1,6 +1,7 @@
 package healthcheck
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -32,17 +33,25 @@ func TestHealthCheckManager(t *testing.T) {
 
 	testManager.StartServer()
 
+	t1Mutex := &sync.Mutex{}
+	t2Mutex := &sync.Mutex{}
+	t1Mutex.Lock()
 	test1Status := OK
+	t1Mutex.Unlock()
 
 	// register a new health check
 	testManager.RegisterHealthcheck("test-1", "test1",
 		func(name string) *Status {
+			t1Mutex.Lock()
+			defer t1Mutex.Unlock()
 			return &Status{Result: test1Status, Details: "test-1 passed"}
 		},
 	)
 	// register a second health check
 	testManager.RegisterHealthcheck("test-2", "test2",
 		func(name string) *Status {
+			t2Mutex.Lock()
+			defer t2Mutex.Unlock()
 			return &Status{Result: OK, Details: "test-2 passed"}
 		},
 	)
@@ -52,7 +61,9 @@ func TestHealthCheckManager(t *testing.T) {
 	assert.Equal(t, status, OK, "Health check status should be OK")
 
 	// update the status of test-1 to FAIL
+	t1Mutex.Lock()
 	test1Status = FAIL
+	t1Mutex.Unlock()
 	status = testManager.RunChecks()
 	assert.Equal(t, status, FAIL, "Health check status should be FAIL after test-1 fails")
 
@@ -82,7 +93,9 @@ func TestHealthCheckManager(t *testing.T) {
 	assert.Contains(t, string(output), "OK", "Health check output should contain OK")
 
 	// update the status of test-1 to OK
+	t1Mutex.Lock()
 	test1Status = OK
+	t1Mutex.Unlock()
 	// run the checks again
 	testManager.RunChecks()
 	// ensure the GetHealthcheckOutput reflects the change
