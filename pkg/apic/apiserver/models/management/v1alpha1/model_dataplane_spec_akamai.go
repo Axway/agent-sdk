@@ -16,6 +16,8 @@ type DataplaneSpecAkamai struct {
 	ClientId string `json:"clientId"`
 	// The base URL for Akamai API endpoints
 	BaseUrl string `json:"baseUrl"`
+	// The segment index (zero-based) of the API path to use for grouping APIs by basepath. For example, a value of 1 will use the first segment after the leading slash.
+	Segment int32 `json:"segment"`
 	// Used to map Akamai groups to Amplify environments for conformance analysis and API discovery
 	Groups []DataplaneSpecAkamaiGroups `json:"groups"`
 }
