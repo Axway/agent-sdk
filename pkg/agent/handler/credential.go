@@ -399,7 +399,8 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 			return cred
 		}
 
-		if action != prov.Suspend && provCreds.IsIDPCredential() {
+		// if IDP and rotate the agent will register a new client
+		if action == prov.Rotate && provCreds.IsIDPCredential() {
 			err := provCreds.idpProvisioner.RegisterClient()
 			if err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
