@@ -11,6 +11,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/gorhill/cronexpr"
@@ -913,7 +914,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		AgentType:                 agentType,
 		RegionSettings:            regSet,
 		Region:                    region,
-		TenantID:                  props.StringPropertyValue(pathTenantID),
+		TenantID:                  util.EnsureStringIsNotFloat(props.StringPropertyValue(pathTenantID)),
 		PollInterval:              props.DurationPropertyValue(pathPollInterval),
 		ReportActivityFrequency:   props.DurationPropertyValue(pathReportActivityFrequency),
 		APIValidationCronSchedule: props.StringPropertyValue(pathAPIValidationCronSchedule),
