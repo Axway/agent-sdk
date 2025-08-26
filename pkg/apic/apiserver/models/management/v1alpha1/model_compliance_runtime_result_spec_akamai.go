@@ -11,8 +11,8 @@ package management
 
 // ComplianceRuntimeResultSpecAkamai The Akamai structure for a compliance runtime result
 type ComplianceRuntimeResultSpecAkamai struct {
-	Type    string                                   `json:"type,omitempty"`
-	Runtime ComplianceRuntimeResultSpecAkamaiRuntime `json:"runtime,omitempty"`
+	Type    string                                      `json:"type,omitempty"`
+	Runtime ComplianceRuntimeResultSpecTraceableRuntime `json:"runtime,omitempty"`
 	// The number of matched endpoints with issues
 	Matched int32 `json:"matched,omitempty"`
 	// The number of shadow endpoints
