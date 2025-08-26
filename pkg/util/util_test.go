@@ -435,6 +435,23 @@ func TestGetStringArrayFromMapInterface(t *testing.T) {
 	}
 }
 
+func TestEnsureStringIsNotFloat(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"3.15480851843079e+14", "315480851843079"},
+		{"315480851843079", "315480851843079"},
+		{"not-a-number", "not-a-number"},
+		{"315480", "315480"},
+	}
+
+	for _, tc := range testCases {
+		result := EnsureStringIsNotFloat(tc.input)
+		assert.Equal(t, tc.expected, result, "input: %s", tc.input)
+	}
+}
+
 func TestConvertToDomainNameCompliant(t *testing.T) {
 	name := ConvertToDomainNameCompliant("Abc.Def")
 	assert.Equal(t, "abc.def", name)

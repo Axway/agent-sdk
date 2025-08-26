@@ -576,3 +576,11 @@ func SanitizeServiceVersion(version string) string {
 	}
 	return sanitizedVersion
 }
+
+// EnsureStringIsNotFloat - ensures the string is not a float representation but a whole number
+func EnsureStringIsNotFloat(in string) string {
+	if fResult, err := strconv.ParseFloat(in, 64); err == nil {
+		return fmt.Sprintf("%.0f", fResult)
+	}
+	return in
+}
