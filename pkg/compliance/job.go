@@ -119,14 +119,29 @@ func updateSpec(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
 }
 
 func linkComplianceSubresource(logger log.FieldLogger, result RuntimeResult, linkedComplianceName string) {
-	if result.ApiServiceInstance == nil {
-		return
+	if result.ApiServiceInstance != nil {
+		subRes := map[string]interface{}{
+			management.ApiServiceInstanceComplianceruntimeresultSubResourceName: linkedComplianceName,
+		}
+		if err := agent.GetCentralClient().CreateSubResource(result.ApiServiceInstance.ResourceMeta, subRes); err != nil {
+			logger.WithError(err).Error("updating compliance runtime result subResource reference for api service instance")
+		}
+	}
+	if result.Environment != nil {
+		subRes := map[string]interface{}{
+			management.EnvironmentComplianceruntimeresultSubResourceName: linkedComplianceName,
+		}
+		if err := agent.GetCentralClient().CreateSubResource(result.Environment.ResourceMeta, subRes); err != nil {
+			logger.WithError(err).Error("updating compliance runtime result subResource reference for environment")
+		}
+	}
+	if result.ApiService != nil {
+		subRes := map[string]interface{}{
+			management.ApiServiceComplianceruntimeresultSubResourceName: linkedComplianceName,
+		}
+		if err := agent.GetCentralClient().CreateSubResource(result.ApiService.ResourceMeta, subRes); err != nil {
+			logger.WithError(err).Error("updating compliance runtime result subResource reference for environment")
+		}
 	}
 
-	subRes := map[string]interface{}{
-		management.ApiServiceInstanceComplianceruntimeresultSubResourceName: linkedComplianceName,
-	}
-	if err := agent.GetCentralClient().CreateSubResource(result.ApiServiceInstance.ResourceMeta, subRes); err != nil {
-		logger.WithError(err).Error("updating compliance runtime result subResource reference for api service instance")
-	}
 }

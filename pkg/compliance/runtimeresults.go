@@ -7,6 +7,8 @@ import (
 
 type RuntimeResult struct {
 	ApiServiceInstance      *management.APIServiceInstance
+	Environment             *management.Environment
+	ApiService              *management.APIService
 	ComplianceScopedEnv     string
 	ComplianceRuntimeResult string
 	ComplianceAgentName     string
