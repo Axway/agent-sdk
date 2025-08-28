@@ -44,7 +44,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: APIGOV-30317
+    ref: APIGOV-31317
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"
