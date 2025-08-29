@@ -50,6 +50,7 @@ const (
 	Backstage  DataplaneType = "Backstage"
 
 	// Discovery and Traceability
+	Akamai       DataplaneType = "Akamai"
 	APIConnect   DataplaneType = "APIConnect"
 	Apigee       DataplaneType = "Apigee"
 	APIM         DataplaneType = "APIM"
