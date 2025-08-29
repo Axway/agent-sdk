@@ -163,10 +163,12 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	// using discovery agent status here, but all agent status resources have the same structure
 	agentStatus := newDAStatus(agentInstance.ResourceMeta, status, prevStatus, message)
 
-	// See if we need to rebuildCache
-	timeToRebuild, _ := a.shouldRebuildCache()
-	if timeToRebuild && a.rebuildCache != nil {
-		a.rebuildCache.RebuildCache()
+	// Only perform periodic/self-healing cache rebuild for non-gRPC agents
+	if a.cfg != nil && !a.cfg.IsUsingGRPC() {
+		timeToRebuild, _ := a.shouldRebuildCache()
+		if timeToRebuild && a.rebuildCache != nil {
+			a.rebuildCache.RebuildCache()
+		}
 	}
 
 	subResources := make(map[string]interface{})

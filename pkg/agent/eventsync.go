@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -147,8 +148,23 @@ func (es *EventSync) RebuildCache() {
 	PublishingLock()
 	defer PublishingUnlock()
 
-	if err := es.initCache(); err != nil {
-		logger.WithError(err).Error("failed to rebuild cache")
+	es.waitForCacheRebuild()
+}
+
+// waitForCacheRebuild continuously attempts to rebuild the cache until successful
+func (es *EventSync) waitForCacheRebuild() {
+	adjustment := 2
+	maxBackoff := 5 * time.Minute
+	currentBackoff := 30 * time.Second
+	for {
+		err := es.initCache()
+		if err == nil {
+			return
+		}
+
+		logger.WithError(err).WithField("waitTime", currentBackoff).Error("failed to rebuild cache, retrying after waitTime")
+		time.Sleep(currentBackoff)
+		currentBackoff = time.Duration(math.Min(float64(maxBackoff), float64(currentBackoff)*float64(adjustment)))
 	}
 }
 

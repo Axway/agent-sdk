@@ -239,12 +239,14 @@ func TestSend(t *testing.T) {
 		agentName         string
 		isDocker          bool
 		isGRPC            bool
+		runtimeID         string
 	}{
 		{
-			name:   "invalid-url",
-			url:    "socks://invalid-url",
-			method: GET,
-			isErr:  true,
+			name:      "invalid-url",
+			url:       "socks://invalid-url",
+			method:    GET,
+			isErr:     true,
+			runtimeID: "af17ec18-3fb3-4571-9914-300eb5224865",
 		},
 		{
 			name:              "get-request-with-queryparam-header",
@@ -257,8 +259,9 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          false,
 			isGRPC:            true,
+			runtimeID:         "af17ec18-3fb3-4571-9914-300eb5224865",
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s) runtimeID/af17ec18-3fb3-4571-9914-300eb5224865", hostname),
 		},
 		{
 			name:              "post-request-with-response",
@@ -270,7 +273,8 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          true,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
+			runtimeID:         "af17ec18-3fb3-4571-9914-300eb5224865",
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s) runtimeID/af17ec18-3fb3-4571-9914-300eb5224865", hostname),
 		},
 		{
 			name:              "override-user-agent",
@@ -282,6 +286,7 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          true,
 			agentName:         "agent",
+			runtimeID:         "af17ec18-3fb3-4571-9914-300eb5224865",
 			expectedUserAgent: "test",
 		},
 	}
@@ -293,7 +298,9 @@ func TestSend(t *testing.T) {
 				config.SDKVersion,
 				tc.envName,
 				tc.agentName,
-				tc.isGRPC).FormatUserAgent()
+				tc.isGRPC,
+				tc.runtimeID,
+			).FormatUserAgent()
 			SetConfigAgent(ua, httpServer.server.URL, []string{"http://test"})
 			httpServer.reset()
 			httpServer.respBody = tc.respBody

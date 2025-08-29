@@ -31,6 +31,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/google/uuid"
 )
 
 // AgentStatus - status for Agent resource
@@ -91,8 +92,8 @@ type agentData struct {
 
 var agent agentData
 var agentMutex sync.RWMutex
-
 var logger log.FieldLogger
+var runtimeID string
 
 func init() {
 	logger = log.NewFieldLogger().
@@ -101,6 +102,7 @@ func init() {
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 	agentMutex = sync.RWMutex{}
 	agent.publishingLock = &sync.Mutex{}
+	runtimeID = uuid.New().String()
 }
 
 // Initialize - Initializes the agent
@@ -589,13 +591,16 @@ func GetUserAgent() string {
 		agentName = agent.cfg.GetAgentName()
 		isGRPC = agent.cfg.IsUsingGRPC()
 	}
-	return util.NewUserAgent(
+	ua := util.NewUserAgent(
 		config.AgentTypeName,
 		config.AgentVersion,
 		config.SDKVersion,
 		envName,
 		agentName,
-		isGRPC).FormatUserAgent()
+		isGRPC,
+		GetRuntimeID()).FormatUserAgent()
+
+	return ua
 }
 
 // setCentralConfig - Sets the central config
@@ -626,6 +631,10 @@ func GetResourceManager() resource.Manager {
 		return nil
 	}
 	return agent.agentResourceManager
+}
+
+func GetRuntimeID() string {
+	return runtimeID
 }
 
 // GetAgentResource - Returns Agent resource

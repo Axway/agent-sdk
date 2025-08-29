@@ -13,6 +13,7 @@ func TestFormatUserAgents(t *testing.T) {
 	agentVersion := "1.0.0"
 	sdkVersion := "1.0.0"
 	hostname, _ := os.Hostname()
+
 	tests := []struct {
 		name              string
 		userAgent         string
@@ -22,6 +23,7 @@ func TestFormatUserAgents(t *testing.T) {
 		agentVersion      string
 		sdkVersion        string
 		isGRPC            bool
+		runtimeID         string
 	}{
 		{
 			name:              "test-1",
@@ -30,7 +32,8 @@ func TestFormatUserAgents(t *testing.T) {
 			agentName:         "agent",
 			agentVersion:      "v1.0.0-125678e",
 			sdkVersion:        "v1.1.100",
-			expectedUserAgent: fmt.Sprintf("Test/1.0.0-125678e (sdkVer:1.1.100; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+			runtimeID:         "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
+			expectedUserAgent: fmt.Sprintf("Test/1.0.0-125678e (sdkVer:1.1.100; env:env; agent:agent; reactive:true; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname),
 		},
 		{
 			name:              "test-1",
@@ -39,7 +42,8 @@ func TestFormatUserAgents(t *testing.T) {
 			agentName:         "agent",
 			agentVersion:      agentVersion,
 			sdkVersion:        sdkVersion,
-			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+			runtimeID:         "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
+			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname),
 		},
 		{
 			name:              "test-2",
@@ -47,7 +51,8 @@ func TestFormatUserAgents(t *testing.T) {
 			agentName:         "agent",
 			agentVersion:      agentVersion,
 			sdkVersion:        sdkVersion,
-			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
+			runtimeID:         "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
+			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname),
 		},
 		{
 			name:              "test-3",
@@ -55,7 +60,8 @@ func TestFormatUserAgents(t *testing.T) {
 			agentName:         "agent.da.test",
 			agentVersion:      agentVersion,
 			sdkVersion:        sdkVersion,
-			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent.da.test; reactive:false; hostname:%s)", hostname),
+			runtimeID:         "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
+			expectedUserAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent.da.test; reactive:false; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname),
 		},
 	}
 	for _, tc := range tests {
@@ -66,7 +72,9 @@ func TestFormatUserAgents(t *testing.T) {
 				tc.sdkVersion,
 				tc.envName,
 				tc.agentName,
-				tc.isGRPC)
+				tc.isGRPC,
+				tc.runtimeID,
+			)
 			formattedUserAgent := ua.FormatUserAgent()
 			assert.Equal(t, tc.expectedUserAgent, formattedUserAgent)
 		})
@@ -82,8 +90,11 @@ func TestParseUserAgents(t *testing.T) {
 		expectedUA *CentralUserAgent
 	}{
 		{
-			name:      "test-1",
-			userAgent: fmt.Sprintf("Test/1.0.0-7e7eb72d (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
+			name: "test-1",
+			userAgent: fmt.Sprintf(
+				"Test/1.0.0-7e7eb72d (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5",
+				hostname,
+			),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
@@ -94,6 +105,7 @@ func TestParseUserAgents(t *testing.T) {
 				IsGRPC:              true,
 				HostName:            hostname,
 				UseGRPCStatusUpdate: true,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 			},
 		},
 		{
@@ -112,7 +124,7 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-3",
-			userAgent: fmt.Sprintf("Test/1.0.0-APIGOV-Test (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0-APIGOV-Test (sdkVer:1.0.0; env:env; agent:agent; reactive:false; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
@@ -121,6 +133,7 @@ func TestParseUserAgents(t *testing.T) {
 				Environment:         "env",
 				AgentName:           "agent",
 				IsGRPC:              false,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 				HostName:            hostname,
 				UseGRPCStatusUpdate: false,
 			},
@@ -135,6 +148,7 @@ func TestParseUserAgents(t *testing.T) {
 				Environment:         "env",
 				AgentName:           "agent",
 				IsGRPC:              true,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 				UseGRPCStatusUpdate: false,
 			},
 		},
@@ -148,6 +162,7 @@ func TestParseUserAgents(t *testing.T) {
 				Environment:         "env",
 				AgentName:           "agent",
 				IsGRPC:              false,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 				UseGRPCStatusUpdate: false,
 			},
 		},
@@ -173,7 +188,7 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-7",
-			userAgent: fmt.Sprintf("WSO2DiscoveryAgent/1.0.0-65a0b4c (sdkVer:1.1.110; env:wso2; agent:wso2-da; reactive:true; hostname:%s)", hostname2),
+			userAgent: fmt.Sprintf("WSO2DiscoveryAgent/1.0.0-65a0b4c (sdkVer:1.1.110; env:wso2; agent:wso2-da; reactive:true; hostname:%s) runtimeID/c2f4113f-8cf7-41c7-af66-3121d493d3c5", hostname2),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "WSO2DiscoveryAgent",
 				Version:             "1.0.0",
@@ -182,6 +197,7 @@ func TestParseUserAgents(t *testing.T) {
 				Environment:         "wso2",
 				AgentName:           "wso2-da",
 				IsGRPC:              true,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 				HostName:            hostname2,
 				UseGRPCStatusUpdate: true,
 			},
@@ -197,6 +213,7 @@ func TestParseUserAgents(t *testing.T) {
 				Environment:         "wso2",
 				AgentName:           "wso2.da.test",
 				IsGRPC:              true,
+				RuntimeID:           "c2f4113f-8cf7-41c7-af66-3121d493d3c5",
 				HostName:            hostname2,
 				UseGRPCStatusUpdate: true,
 			},

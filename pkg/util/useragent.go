@@ -22,9 +22,10 @@ type CentralUserAgent struct {
 	IsGRPC              bool   `json:"reactive"`
 	HostName            string `json:"hostname,omitempty"`
 	UseGRPCStatusUpdate bool   `json:"-"`
+	RuntimeID           string `json:"runtimeId,omitempty"`
 }
 
-func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool) *CentralUserAgent {
+func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool, runtimeID string) *CentralUserAgent {
 	return &CentralUserAgent{
 		AgentType:   agentType,
 		Version:     strings.TrimPrefix(version, "v"),
@@ -32,6 +33,7 @@ func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName str
 		Environment: environmentName,
 		AgentName:   agentName,
 		IsGRPC:      isGRPC,
+		RuntimeID:   runtimeID,
 	}
 }
 
@@ -44,11 +46,22 @@ func (ca *CentralUserAgent) FormatUserAgent() string {
 			reactive = "true"
 		}
 		ua = fmt.Sprintf("%s/%s (sdkVer:%s; env:%s; agent:%s; reactive:%s; hostname:%s)", ca.AgentType, ca.Version, ca.SDKVersion, ca.Environment, ca.AgentName, reactive, hostName)
+		if ca.RuntimeID != "" {
+			ua = ua + " runtimeID/" + ca.RuntimeID
+		}
 	}
 	return ua
 }
 
 func ParseUserAgent(userAgent string) *CentralUserAgent {
+	// for backward compatibility on older/current user agents
+	runtimeID := ""
+	parts := strings.Split(userAgent, " runtimeID/")
+	if len(parts) == 2 {
+		userAgent = parts[0]
+		runtimeID = parts[1]
+	}
+
 	matches := agentInfoReV2.FindStringSubmatch(userAgent)
 	if len(matches) == 0 {
 		// backward compatible user agent
@@ -63,6 +76,7 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 				Environment: matches[5],
 				AgentName:   matches[6],
 				IsGRPC:      isGRPC,
+				RuntimeID:   runtimeID,
 			}
 		}
 	}
@@ -78,6 +92,7 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 			IsGRPC:              isGRPC,
 			HostName:            matches[8],
 			UseGRPCStatusUpdate: isGRPC,
+			RuntimeID:           runtimeID,
 		}
 	}
 
