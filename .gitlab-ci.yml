@@ -21,7 +21,7 @@ variables:
   # just to be sure we don't do vendoring
   GOFLAGS: "-mod=mod"
 
-############################################################
+#############################################################
 # Section for external includes
 ############################################################
 include:
@@ -29,7 +29,7 @@ include:
     ref: $GITLAB_CICD_BLUE
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_GREEN
+    ref: $BEANO_CICD_BLUE
     # the order of these include files is important
     file:
       - "/gitlabci/variables.yml"
@@ -44,7 +44,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_GREEN
+    ref: $BEANO_CICD_BLUE
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"

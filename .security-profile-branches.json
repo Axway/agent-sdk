@@ -1,0 +1,17 @@
+{
+    "project": "Amplify - APIC Agent SDK",
+    "repo_url": "https://github.com/Axway/agent-sdk",
+      "security_guide": "https://docs.axway.com/bundle/axway_resources/page/amplify_api_management_platform_security_white_paper.html",
+    "requirements": {
+      "fortify": false,
+      "irius-risk": false,
+      "pentest": false,
+      "twistlock": false,
+      "blackduck": true,
+      "third-party-policy-violation": false,
+      "appspider": false,
+      "insightvm": false
+    },
+    "suppressions": [
+    ]
+  }
