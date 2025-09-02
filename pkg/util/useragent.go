@@ -46,6 +46,7 @@ func (ca *CentralUserAgent) FormatUserAgent() string {
 			reactive = "true"
 		}
 		ua = fmt.Sprintf("%s/%s (sdkVer:%s; env:%s; agent:%s; reactive:%s; hostname:%s)", ca.AgentType, ca.Version, ca.SDKVersion, ca.Environment, ca.AgentName, reactive, hostName)
+		// runtimeID is only included if it's set
 		if ca.RuntimeID != "" {
 			ua = ua + " runtimeID/" + ca.RuntimeID
 		}
