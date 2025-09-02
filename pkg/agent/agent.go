@@ -591,7 +591,7 @@ func GetUserAgent() string {
 		agentName = agent.cfg.GetAgentName()
 		isGRPC = agent.cfg.IsUsingGRPC()
 	}
-	ua := util.NewUserAgent(
+	return util.NewUserAgent(
 		config.AgentTypeName,
 		config.AgentVersion,
 		config.SDKVersion,
@@ -599,8 +599,6 @@ func GetUserAgent() string {
 		agentName,
 		isGRPC,
 		GetRuntimeID()).FormatUserAgent()
-
-	return ua
 }
 
 // setCentralConfig - Sets the central config

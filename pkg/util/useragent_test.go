@@ -296,13 +296,13 @@ func TestParseUserAgents(t *testing.T) {
 		},
 		{
 			name:      "test-10",
-			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent; reactive:true; hostname:%s) runtimeID/test-runtimeID-123", hostname),
+			userAgent: fmt.Sprintf("Test/1.0.0 (sdkVer:1.0.0; env:env; agent:agent.da.test; reactive:true; hostname:%s) runtimeID/test-runtimeID-123", hostname),
 			expectedUA: &CentralUserAgent{
 				AgentType:           "Test",
 				Version:             "1.0.0",
 				SDKVersion:          "1.0.0",
 				Environment:         "env",
-				AgentName:           "agent",
+				AgentName:           "agent.da.test",
 				IsGRPC:              true,
 				HostName:            hostname,
 				UseGRPCStatusUpdate: true,
