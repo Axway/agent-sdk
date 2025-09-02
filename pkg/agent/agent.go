@@ -88,21 +88,24 @@ type agentData struct {
 
 	// profiling
 	profileDone chan struct{}
+
+	// runtimeID is a unique identifier for the agent instance
+	runtimeID string
 }
 
 var agent agentData
 var agentMutex sync.RWMutex
 var logger log.FieldLogger
-var runtimeID string
 
 func init() {
-	logger = log.NewFieldLogger().
-		WithPackage("sdk.agent").
-		WithComponent("agent")
 	agent.proxyResourceHandler = handler.NewStreamWatchProxyHandler()
 	agentMutex = sync.RWMutex{}
 	agent.publishingLock = &sync.Mutex{}
-	runtimeID = uuid.New().String()
+	agent.runtimeID = uuid.New().String()
+	logger = log.NewFieldLogger().
+		WithPackage("sdk.agent").
+		WithComponent("agent").
+		WithField("runtimeID", agent.runtimeID)
 }
 
 // Initialize - Initializes the agent
@@ -598,7 +601,7 @@ func GetUserAgent() string {
 		envName,
 		agentName,
 		isGRPC,
-		GetRuntimeID()).FormatUserAgent()
+		getRuntimeID()).FormatUserAgent()
 }
 
 // setCentralConfig - Sets the central config
@@ -631,8 +634,8 @@ func GetResourceManager() resource.Manager {
 	return agent.agentResourceManager
 }
 
-func GetRuntimeID() string {
-	return runtimeID
+func getRuntimeID() string {
+	return agent.runtimeID
 }
 
 // GetAgentResource - Returns Agent resource

@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -225,6 +224,7 @@ func TestSend(t *testing.T) {
 	config.SDKVersion = "1.0"
 	httpServer := newMockHTTPServer()
 	hostname, _ := os.Hostname()
+	runtimeID := uuid.New().String()
 
 	tests := []struct {
 		name              string
@@ -236,19 +236,16 @@ func TestSend(t *testing.T) {
 		respBody          []byte
 		respCode          int
 		expectedUserAgent string
-		isErr             bool
 		envName           string
 		agentName         string
 		isDocker          bool
 		isGRPC            bool
-		expectRuntimeID   bool
 		runtimeID         string
 	}{
 		{
 			name:   "invalid-url",
 			url:    "socks://invalid-url",
 			method: GET,
-			isErr:  true,
 		},
 		{
 			name:              "get-request-with-queryparam-header",
@@ -262,9 +259,8 @@ func TestSend(t *testing.T) {
 			isDocker:          false,
 			isGRPC:            true,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
-			expectRuntimeID:   false,
-			runtimeID:         "",
+			runtimeID:         runtimeID,
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s; runtimeID:%s)", hostname, runtimeID),
 		},
 		{
 			name:              "post-request-with-response",
@@ -276,9 +272,9 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          true,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
-			expectRuntimeID:   false,
-			runtimeID:         "",
+			isGRPC:            false,
+			runtimeID:         runtimeID,
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s; runtimeID:%s)", hostname, runtimeID),
 		},
 		{
 			name:              "override-user-agent",
@@ -290,9 +286,9 @@ func TestSend(t *testing.T) {
 			envName:           "env",
 			isDocker:          true,
 			agentName:         "agent",
+			isGRPC:            false,
+			runtimeID:         runtimeID,
 			expectedUserAgent: "test",
-			expectRuntimeID:   false,
-			runtimeID:         "",
 		},
 		{
 			name:              "get-request-with-runtimeID",
@@ -306,9 +302,8 @@ func TestSend(t *testing.T) {
 			isDocker:          false,
 			isGRPC:            true,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
-			expectRuntimeID:   true,
-			runtimeID:         uuid.New().String(),
+			runtimeID:         runtimeID,
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s; runtimeID:%s)", hostname, runtimeID),
 		},
 		{
 			name:              "post-request-with-runtimeID",
@@ -321,9 +316,8 @@ func TestSend(t *testing.T) {
 			isDocker:          false,
 			isGRPC:            true,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s)", hostname),
-			expectRuntimeID:   true,
-			runtimeID:         uuid.New().String(),
+			runtimeID:         runtimeID,
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:true; hostname:%s; runtimeID:%s)", hostname, runtimeID),
 		},
 		{
 			name:              "non-grpc-with-runtimeID",
@@ -335,9 +329,8 @@ func TestSend(t *testing.T) {
 			isDocker:          false,
 			isGRPC:            false,
 			agentName:         "agent",
-			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s)", hostname),
-			expectRuntimeID:   true,
-			runtimeID:         uuid.New().String(),
+			runtimeID:         runtimeID,
+			expectedUserAgent: fmt.Sprintf("Test/1.0 (sdkVer:1.0; env:env; agent:agent; reactive:false; hostname:%s; runtimeID:%s)", hostname, runtimeID),
 		},
 	}
 	for _, tc := range tests {
@@ -370,7 +363,7 @@ func TestSend(t *testing.T) {
 			}
 
 			res, err := c.Send(req)
-			if tc.isErr {
+			if tc.name == "invalid-url" {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
@@ -379,19 +372,11 @@ func TestSend(t *testing.T) {
 				assert.Equal(t, tc.respBody, res.Body)
 				assert.Equal(t, tc.method, httpServer.reqMethod)
 
-				if tc.expectRuntimeID {
-					assert.Contains(t, httpServer.reqUserAgent, tc.expectedUserAgent)
-					assert.Contains(t, httpServer.reqUserAgent, "runtimeID/")
+				// Always check for the new user agent pattern with runtimeID
+				if tc.expectedUserAgent == "test" {
+					assert.Equal(t, tc.expectedUserAgent, httpServer.reqUserAgent)
 				} else {
-					// Allow for optional runtimeID suffix
-					if httpServer.reqUserAgent == tc.expectedUserAgent {
-						assert.Equal(t, tc.expectedUserAgent, httpServer.reqUserAgent)
-					} else {
-						assert.True(t,
-							strings.HasPrefix(httpServer.reqUserAgent, tc.expectedUserAgent+" "),
-							"User-Agent should start with expected value. Got: %s, Expected prefix: %s", httpServer.reqUserAgent, tc.expectedUserAgent)
-						assert.Contains(t, httpServer.reqUserAgent, "runtimeID/")
-					}
+					assert.Equal(t, tc.expectedUserAgent, httpServer.reqUserAgent)
 				}
 
 				assert.True(t, httpServer.processedHeaders)
