@@ -601,7 +601,7 @@ func GetUserAgent() string {
 		envName,
 		agentName,
 		isGRPC,
-		getRuntimeID()).FormatUserAgent()
+		agent.runtimeID).FormatUserAgent()
 }
 
 // setCentralConfig - Sets the central config
@@ -632,10 +632,6 @@ func GetResourceManager() resource.Manager {
 		return nil
 	}
 	return agent.agentResourceManager
-}
-
-func getRuntimeID() string {
-	return agent.runtimeID
 }
 
 // GetAgentResource - Returns Agent resource
