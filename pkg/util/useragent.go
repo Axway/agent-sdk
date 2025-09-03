@@ -22,10 +22,10 @@ type CentralUserAgent struct {
 	IsGRPC              bool   `json:"reactive"`
 	HostName            string `json:"hostname,omitempty"`
 	UseGRPCStatusUpdate bool   `json:"-"`
-	RuntimeId           string `json:"runtimeId,omitempty"`
+	RuntimeID           string `json:"runtimeId,omitempty"`
 }
 
-func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool, runtimeId string) *CentralUserAgent {
+func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool, runtimeID string) *CentralUserAgent {
 	return &CentralUserAgent{
 		AgentType:   agentType,
 		Version:     strings.TrimPrefix(version, "v"),
@@ -33,7 +33,7 @@ func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName str
 		Environment: environmentName,
 		AgentName:   agentName,
 		IsGRPC:      isGRPC,
-		RuntimeId:   runtimeId,
+		RuntimeID:   runtimeID,
 	}
 }
 
@@ -53,7 +53,7 @@ func (ca *CentralUserAgent) FormatUserAgent() string {
 		ca.AgentName,
 		reactive,
 		hostName,
-		ca.RuntimeId,
+		ca.RuntimeID,
 	)
 	return ua
 }
@@ -88,7 +88,7 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 			IsGRPC:              isGRPC,
 			HostName:            matches[8],
 			UseGRPCStatusUpdate: isGRPC,
-			RuntimeId:           matches[10],
+			RuntimeID:           matches[10],
 		}
 	}
 
