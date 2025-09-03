@@ -13,7 +13,9 @@ var typeToComponent = map[string]map[string]string{
 	Backstage.String(): {
 		management.DiscoveryAgentGVK().Kind: "backstage-discovery-agent",
 	},
-
+	Akamai.String(): {
+		management.TraceabilityAgentGVK().Kind: "akamai-agent",
+	},
 	APIConnect.String(): {
 		management.DiscoveryAgentGVK().Kind:    "ibm-apiconnect-discovery-agent",
 		management.TraceabilityAgentGVK().Kind: "ibm-apiconnect-traceability-agent",
