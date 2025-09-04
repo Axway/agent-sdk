@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"os"
 	"sync"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -422,4 +423,6 @@ func (c *cacheManager) Flush() {
 	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
 	c.SaveCache()
+	// delete the cache file in case the agent is restarted here
+	os.Remove(c.cacheFilename)
 }

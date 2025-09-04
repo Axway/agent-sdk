@@ -162,7 +162,10 @@ func (es *EventSync) waitForCacheRebuild() {
 			return
 		}
 
-		logger.WithError(err).WithField("waitTime", currentBackoff).Error("failed to rebuild cache, retrying after waitTime")
+		logger.
+			WithError(err).
+			WithField("waitTime", currentBackoff.String()).
+			Error("failed to rebuild cache, retrying after waitTime")
 		time.Sleep(currentBackoff)
 		currentBackoff = time.Duration(math.Min(float64(maxBackoff), float64(currentBackoff)*float64(adjustment)))
 	}
