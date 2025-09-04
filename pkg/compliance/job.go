@@ -119,29 +119,34 @@ func updateSpec(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
 }
 
 func linkComplianceSubresource(logger log.FieldLogger, result RuntimeResult, linkedComplianceName string) {
+	type resourceToUpdate struct {
+		subResName string
+		rm         v1.ResourceMeta
+	}
+	resourcesToUpdate := []resourceToUpdate{}
+
 	if result.ApiServiceInstance != nil {
-		subRes := map[string]interface{}{
-			management.ApiServiceInstanceComplianceruntimeresultSubResourceName: linkedComplianceName,
-		}
-		if err := agent.GetCentralClient().CreateSubResource(result.ApiServiceInstance.ResourceMeta, subRes); err != nil {
-			logger.WithError(err).Error("updating compliance runtime result subResource reference for api service instance")
-		}
+		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
+			subResName: management.ApiServiceInstanceComplianceruntimeresultSubResourceName,
+			rm:         result.ApiServiceInstance.ResourceMeta,
+		})
 	}
 	if result.Environment != nil {
-		subRes := map[string]interface{}{
-			management.EnvironmentComplianceruntimeresultSubResourceName: linkedComplianceName,
-		}
-		if err := agent.GetCentralClient().CreateSubResource(result.Environment.ResourceMeta, subRes); err != nil {
-			logger.WithError(err).Error("updating compliance runtime result subResource reference for environment")
-		}
+		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
+			subResName: management.EnvironmentComplianceruntimeresultSubResourceName,
+			rm:         result.Environment.ResourceMeta,
+		})
 	}
 	if result.ApiService != nil {
-		subRes := map[string]interface{}{
-			management.ApiServiceComplianceruntimeresultSubResourceName: linkedComplianceName,
-		}
-		if err := agent.GetCentralClient().CreateSubResource(result.ApiService.ResourceMeta, subRes); err != nil {
-			logger.WithError(err).Error("updating compliance runtime result subResource reference for environment")
+		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
+			subResName: management.ApiServiceComplianceruntimeresultSubResourceName,
+			rm:         result.ApiService.ResourceMeta,
+		})
+	}
+	for _, resource := range resourcesToUpdate {
+		subRes := map[string]interface{}{resource.subResName: linkedComplianceName}
+		if err := agent.GetCentralClient().CreateSubResource(resource.rm, subRes); err != nil {
+			logger.WithField("resourceType", resource.rm.GetGroupVersionKind().Kind).WithError(err).Error("updating compliance runtime result subResource")
 		}
 	}
-
 }
