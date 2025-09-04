@@ -119,34 +119,20 @@ func updateSpec(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
 }
 
 func linkComplianceSubresource(logger log.FieldLogger, result RuntimeResult, linkedComplianceName string) {
-	type resourceToUpdate struct {
-		subResName string
-		rm         v1.ResourceMeta
+	createSubResource := func(resourceMeta v1.ResourceMeta, subResName string) {
+		subRes := map[string]interface{}{subResName: linkedComplianceName}
+		if err := agent.GetCentralClient().CreateSubResource(resourceMeta, subRes); err != nil {
+			logger.WithField("resourceType", resourceMeta.GetGroupVersionKind().Kind).WithError(err).Errorf("updating compliance runtime result subResource")
+		}
 	}
-	resourcesToUpdate := []resourceToUpdate{}
 
 	if result.ApiServiceInstance != nil {
-		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
-			subResName: management.ApiServiceInstanceComplianceruntimeresultSubResourceName,
-			rm:         result.ApiServiceInstance.ResourceMeta,
-		})
+		createSubResource(result.ApiServiceInstance.ResourceMeta, management.ApiServiceInstanceComplianceruntimeresultSubResourceName)
 	}
 	if result.Environment != nil {
-		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
-			subResName: management.EnvironmentComplianceruntimeresultSubResourceName,
-			rm:         result.Environment.ResourceMeta,
-		})
+		createSubResource(result.Environment.ResourceMeta, management.EnvironmentComplianceruntimeresultSubResourceName)
 	}
 	if result.ApiService != nil {
-		resourcesToUpdate = append(resourcesToUpdate, resourceToUpdate{
-			subResName: management.ApiServiceComplianceruntimeresultSubResourceName,
-			rm:         result.ApiService.ResourceMeta,
-		})
-	}
-	for _, resource := range resourcesToUpdate {
-		subRes := map[string]interface{}{resource.subResName: linkedComplianceName}
-		if err := agent.GetCentralClient().CreateSubResource(resource.rm, subRes); err != nil {
-			logger.WithField("resourceType", resource.rm.GetGroupVersionKind().Kind).WithError(err).Error("updating compliance runtime result subResource")
-		}
+		createSubResource(result.ApiService.ResourceMeta, management.ApiServiceComplianceruntimeresultSubResourceName)
 	}
 }

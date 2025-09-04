@@ -32,30 +32,32 @@ func TestCompliance(t *testing.T) {
 	subResReqCount := 0
 
 	apicMockCli.CreateSubResourceMock = func(rm v1.ResourceMeta, subs map[string]interface{}) error {
-		ri := &v1.ResourceInstance{}
+		var ri *v1.ResourceInstance
 		var err error
-		if rm.GetGroupVersionKind().Kind == management.APIServiceInstanceGVK().Kind {
+
+		switch rm.GetGroupVersionKind().Kind {
+		case management.APIServiceInstanceGVK().Kind:
 			ri, err = agent.GetCacheManager().GetAPIServiceInstanceByName(rm.Name)
 			if ri == nil {
 				return err
 			}
 			defer agent.GetCacheManager().AddAPIServiceInstance(ri)
-		} else if rm.GetGroupVersionKind().Kind == management.EnvironmentGVK().Kind {
+		case management.EnvironmentGVK().Kind:
 			ri = agent.GetCacheManager().GetWatchResourceByName(management.EnvironmentGVK().Group, management.EnvironmentGVK().Kind, rm.Name)
 			if ri == nil {
 				return errors.New("err")
 			}
 			defer agent.GetCacheManager().AddWatchResource(ri)
-		} else if rm.GetGroupVersionKind().Kind == management.APIServiceGVK().Kind {
+		case management.APIServiceGVK().Kind:
 			ri = agent.GetCacheManager().GetWatchResourceByName(management.APIServiceGVK().Group, management.APIServiceGVK().Kind, rm.Name)
 			if ri == nil {
 				return errors.New("err")
 			}
 			defer agent.GetCacheManager().AddWatchResource(ri)
 		}
+
 		ri.SubResources = subs
 		subResReqCount++
-
 		return nil
 	}
 
