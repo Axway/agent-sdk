@@ -846,6 +846,8 @@ func (c *ServiceClient) addResourceToCache(data *apiv1.ResourceInstance) {
 		c.caches.AddApplicationProfileDefinition(data)
 	case management.APIServiceInstanceGVK().Kind:
 		c.caches.AddAPIServiceInstance(data)
+	case management.ComplianceRuntimeResultGVK().Kind:
+		c.caches.AddComplianceRuntimeResult(data)
 	}
 }
 
