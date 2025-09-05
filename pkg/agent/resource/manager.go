@@ -184,6 +184,11 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 // 1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
 // 2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
 func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
+	// Only perform periodic/self-healing cache rebuild for non-gRPC agents
+	if a.cfg != nil && a.cfg.IsUsingGRPC() {
+		return false, nil
+	}
+
 	rebuildCache := false
 	agentInstance := a.GetAgentResource()
 	agentDetails := agentInstance.GetSubResource(definitions.XAgentDetails)

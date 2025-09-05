@@ -10,6 +10,7 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/google/uuid"
 
 	"github.com/sirupsen/logrus"
 
@@ -141,7 +142,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		Port:        uint32(ccfg.GRPCCfg.Port),
 		TenantID:    config.TenantID,
 		TokenGetter: ta.GetToken,
-		UserAgent:   util.NewUserAgent("SampleClient", "0.0.1", "0.0.1", "testenvironment", "testagent", true).FormatUserAgent(),
+		UserAgent:   util.NewUserAgent("SampleClient", "0.0.1", "0.0.1", "testenvironment", "testagent", true, uuid.New().String()).FormatUserAgent(),
 	}
 
 	w, err := wm.New(cfg, watchOptions...)

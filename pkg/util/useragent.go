@@ -9,7 +9,7 @@ import (
 
 var (
 	agentInfoRe   = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([a-z0-9]*?) SDK/(\d*.\d*.\d.*) ([a-z][a-zA-Z0-9-]*) ([a-z][a-zA-Z0-9-.]*) (binary|docker)[ ]?(reactive)?`)
-	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([-a-z0-9A-Z]*?) \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-.]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_.]*)\) ??(grpc-go.*\/\d*.\d*.\d*)?$`)
+	agentInfoReV2 = regexp.MustCompile(`^([a-zA-Z0-9]*)\/(\d*.\d*.\d*)[-]?([-a-z0-9A-Z]*?) \(sdkVer:(\d*.\d*.\d.*)\; env:([a-zA-Z0-9-]*)\; agent:([a-zA-Z0-9-.]*)\; reactive:(true|false)\; hostname:([a-zA-Z0-9-_.]*)(; runtimeId:([a-zA-Z0-9-_.]*))?\) ??(grpc-go.*\/\d*.\d*.\d*)?$`)
 )
 
 type CentralUserAgent struct {
@@ -22,9 +22,10 @@ type CentralUserAgent struct {
 	IsGRPC              bool   `json:"reactive"`
 	HostName            string `json:"hostname,omitempty"`
 	UseGRPCStatusUpdate bool   `json:"-"`
+	RuntimeID           string `json:"runtimeId,omitempty"`
 }
 
-func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool) *CentralUserAgent {
+func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName string, isGRPC bool, runtimeID string) *CentralUserAgent {
 	return &CentralUserAgent{
 		AgentType:   agentType,
 		Version:     strings.TrimPrefix(version, "v"),
@@ -32,19 +33,28 @@ func NewUserAgent(agentType, version, sdkVersion, environmentName, agentName str
 		Environment: environmentName,
 		AgentName:   agentName,
 		IsGRPC:      isGRPC,
+		RuntimeID:   runtimeID,
 	}
 }
 
 func (ca *CentralUserAgent) FormatUserAgent() string {
-	ua := ""
 	hostName, _ := os.Hostname()
-	if ca.AgentType != "" && ca.Version != "" && ca.SDKVersion != "" {
-		reactive := "false"
-		if ca.IsGRPC {
-			reactive = "true"
-		}
-		ua = fmt.Sprintf("%s/%s (sdkVer:%s; env:%s; agent:%s; reactive:%s; hostname:%s)", ca.AgentType, ca.Version, ca.SDKVersion, ca.Environment, ca.AgentName, reactive, hostName)
+	reactive := "false"
+	if ca.IsGRPC {
+		reactive = "true"
 	}
+
+	ua := fmt.Sprintf(
+		"%s/%s (sdkVer:%s; env:%s; agent:%s; reactive:%s; hostname:%s; runtimeId:%s)",
+		ca.AgentType,
+		ca.Version,
+		ca.SDKVersion,
+		ca.Environment,
+		ca.AgentName,
+		reactive,
+		hostName,
+		ca.RuntimeID,
+	)
 	return ua
 }
 
@@ -66,7 +76,7 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 			}
 		}
 	}
-	if len(matches) > 8 {
+	if len(matches) > 9 {
 		isGRPC := matches[7] == "true"
 		return &CentralUserAgent{
 			AgentType:           matches[1],
@@ -78,6 +88,7 @@ func ParseUserAgent(userAgent string) *CentralUserAgent {
 			IsGRPC:              isGRPC,
 			HostName:            matches[8],
 			UseGRPCStatusUpdate: isGRPC,
+			RuntimeID:           matches[10],
 		}
 	}
 
