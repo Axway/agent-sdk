@@ -73,7 +73,7 @@ var typeToComponent = map[string]map[string]string{
 	},
 	Sensedia.String(): {
 		management.DiscoveryAgentGVK().Kind:    "sensedia-discovery-agent",
-		management.TraceabilityAgentGVK().Kind: "sensedia-agent",
+		management.TraceabilityAgentGVK().Kind: "sensedia-traceability-agent",
 	},
 }
 
