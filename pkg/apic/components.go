@@ -71,6 +71,10 @@ var typeToComponent = map[string]map[string]string{
 		management.DiscoveryAgentGVK().Kind:    "wso2-discovery-agent",
 		management.TraceabilityAgentGVK().Kind: "wso2-traceability-agent",
 	},
+	Sensedia.String(): {
+		management.DiscoveryAgentGVK().Kind:    "sensedia-discovery-agent",
+		management.TraceabilityAgentGVK().Kind: "sensedia-agent",
+	},
 }
 
 func GetComponent(dataplaneType, agentResourceKind string) (string, error) {
