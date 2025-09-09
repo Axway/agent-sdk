@@ -119,14 +119,20 @@ func updateSpec(crr *management.ComplianceRuntimeResult, result RuntimeResult) {
 }
 
 func linkComplianceSubresource(logger log.FieldLogger, result RuntimeResult, linkedComplianceName string) {
-	if result.ApiServiceInstance == nil {
-		return
+	createSubResource := func(resourceMeta v1.ResourceMeta, subResName string) {
+		subRes := map[string]interface{}{subResName: linkedComplianceName}
+		if err := agent.GetCentralClient().CreateSubResource(resourceMeta, subRes); err != nil {
+			logger.WithField("resourceType", resourceMeta.GetGroupVersionKind().Kind).WithError(err).Errorf("updating compliance runtime result subResource")
+		}
 	}
 
-	subRes := map[string]interface{}{
-		management.ApiServiceInstanceComplianceruntimeresultSubResourceName: linkedComplianceName,
+	if result.ApiServiceInstance != nil {
+		createSubResource(result.ApiServiceInstance.ResourceMeta, management.ApiServiceInstanceComplianceruntimeresultSubResourceName)
 	}
-	if err := agent.GetCentralClient().CreateSubResource(result.ApiServiceInstance.ResourceMeta, subRes); err != nil {
-		logger.WithError(err).Error("updating compliance runtime result subResource reference for api service instance")
+	if result.Environment != nil {
+		createSubResource(result.Environment.ResourceMeta, management.EnvironmentComplianceruntimeresultSubResourceName)
+	}
+	if result.ApiService != nil {
+		createSubResource(result.ApiService.ResourceMeta, management.ApiServiceComplianceruntimeresultSubResourceName)
 	}
 }
