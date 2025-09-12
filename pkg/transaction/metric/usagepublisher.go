@@ -22,15 +22,16 @@ import (
 )
 
 type usagePublisher struct {
-	apiClient   api.Client
-	storage     storageCache
-	report      *usageReportCache
-	jobID       string
-	schedule    string
-	ready       bool
-	offline     bool
-	logger      log.FieldLogger
-	usageLogger log.FieldLogger
+	apiClient       api.Client
+	storage         storageCache
+	report          *usageReportCache
+	jobID           string
+	schedule        string
+	ready           bool
+	offline         bool
+	logger          log.FieldLogger
+	usageLogger     log.FieldLogger
+	updateStartTime func()
 }
 
 func (c *usagePublisher) publishEvent(event interface{}) error {
@@ -167,17 +168,18 @@ func (c *usagePublisher) createFilePart(w *multipart.Writer, filename string) (i
 }
 
 // newUsagePublisher - Creates publisher job
-func newUsagePublisher(storage storageCache, report *usageReportCache) *usagePublisher {
+func newUsagePublisher(storage storageCache, report *usageReportCache, updateStartTime func()) *usagePublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &usagePublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
 			api.WithTimeout(centralCfg.GetClientTimeout()),
 			api.WithSingleURL()),
-		storage:     storage,
-		report:      report,
-		offline:     agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
-		logger:      log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
-		usageLogger: log.NewUsageFieldLogger(),
+		storage:         storage,
+		report:          report,
+		offline:         agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(),
+		logger:          log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
+		usageLogger:     log.NewUsageFieldLogger(),
+		updateStartTime: updateStartTime,
 	}
 
 	publisher.usageLogger.Info("usage logger started")
@@ -239,7 +241,11 @@ func (c *usagePublisher) Execute() error {
 		if c.offline {
 			return c.report.saveReport()
 		}
-		return c.report.sendReport(c.publishToPlatformUsage)
+		err := c.report.sendReport(c.publishToPlatformUsage)
+		if err == nil {
+			c.updateStartTime()
+		}
+		return err
 	}
 	return nil
 }

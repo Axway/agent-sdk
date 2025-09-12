@@ -665,6 +665,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			assert.Equal(t, 1, s.reportCount)
 			assert.Equal(t, test.expectedGranularity, s.givenGranularity)
 			assert.Equal(t, ISO8601Time(now()), s.eventTimestamp)
+			assert.Equal(t, metricCollector.usageStartTime, now().Truncate(time.Minute))
 			s.resetConfig()
 		})
 	}
