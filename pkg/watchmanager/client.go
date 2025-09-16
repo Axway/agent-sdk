@@ -170,8 +170,7 @@ func (c *watchClient) handleError(err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	running := c.isRunning
-	if running {
+	if c.isRunning {
 		c.isRunning = false
 		c.timer.Stop()
 		if c.cfg.ctx.Err() != nil {
