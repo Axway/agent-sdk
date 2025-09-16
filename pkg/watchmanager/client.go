@@ -19,6 +19,8 @@ const (
 )
 
 type clientConfig struct {
+	ctx           context.Context
+	cancel        context.CancelFunc
 	errors        chan error
 	events        chan *proto.Event
 	tokenGetter   TokenGetter
@@ -45,20 +47,24 @@ type getTokenExpFunc func(token string) (time.Duration, error)
 func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClient newWatchClientFunc) (*watchClient, error) {
 	svcClient := newClient(cc)
 
-	streamCtx, streamCancel := context.WithCancel(context.Background())
-	stream, err := svcClient.Subscribe(streamCtx)
+	// If no context is provided, create a new one
+	if clientCfg.ctx == nil {
+		clientCfg.ctx, clientCfg.cancel = context.WithCancel(context.Background())
+	}
+
+	stream, err := svcClient.Subscribe(clientCfg.ctx)
 	if err != nil {
-		streamCancel()
+		clientCfg.cancel()
 		return nil, err
 	}
 
 	client := &watchClient{
-		cancelStreamCtx:        streamCancel,
+		cancelStreamCtx:        clientCfg.cancel,
 		cfg:                    clientCfg,
 		getTokenExpirationTime: getTokenExpirationTime,
 		isRunning:              true,
 		stream:                 stream,
-		streamCtx:              streamCtx,
+		streamCtx:              clientCfg.ctx,
 		timer:                  time.NewTimer(initDuration),
 	}
 

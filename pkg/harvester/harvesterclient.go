@@ -1,6 +1,7 @@
 package harvester
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -33,8 +34,8 @@ func (e *ErrSeqGone) Error() string {
 
 // Harvest is an interface for retrieving harvester events
 type Harvest interface {
-	EventCatchUp(link string, events chan *proto.Event) error
-	ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error)
+	EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error
+	ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error)
 }
 
 // Config for harvester
@@ -105,7 +106,7 @@ func NewClient(cfg *Config) *Client {
 }
 
 // ReceiveSyncEvents fetches events based on the sequence id and watch topic self link, and publishes the events to the event channel
-func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+func (h *Client) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
 	h.logger.Tracef("receive sync events based on sequence id %v, and self link %v", sequenceID, topicSelfLink)
 	var lastID int64
 	token, err := h.Cfg.TokenGetter()
@@ -168,6 +169,10 @@ func (h *Client) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, event
 
 		for _, event := range pagedEvents {
 			lastID = event.Metadata.GetSequenceID()
+			if ctx.Err() != nil {
+				h.logger.WithError(ctx.Err()).Error("context was cancelled, stopping event processing")
+				return lastID, ctx.Err()
+			}
 			if !h.skipPublish && eventCh != nil {
 				eventCh <- event.toProtoEvent()
 			}
@@ -198,7 +203,7 @@ func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]st
 }
 
 // EventCatchUp syncs all events
-func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
+func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	h.logger.Trace("event catchup, to sync all events")
 	if h.Client == nil || h.Cfg.SequenceProvider == nil {
 		return nil
@@ -207,7 +212,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 	sequenceID := h.Cfg.SequenceProvider.GetSequence()
 	if sequenceID > 0 {
 		var err error
-		lastSequenceID, err := h.ReceiveSyncEvents(link, sequenceID, events)
+		lastSequenceID, err := h.ReceiveSyncEvents(ctx, link, sequenceID, events)
 		if err != nil {
 			if _, ok := err.(*ErrSeqGone); ok {
 				// Set the max sequence returned from 410 to sequence provider as processed
@@ -229,7 +234,7 @@ func (h *Client) EventCatchUp(link string, events chan *proto.Event) error {
 		return nil
 	}
 
-	return h.EventCatchUp(link, events)
+	return h.EventCatchUp(ctx, link, events)
 }
 
 func newSingleEntryClient(cfg *Config) api.Client {

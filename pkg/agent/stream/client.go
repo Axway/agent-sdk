@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -138,23 +139,20 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (s *StreamerClient) Start() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.listener = s.newListener(
-		eventCh,
-		s.apiClient,
-		s.sequence,
-		s.handlers...,
-	)
+	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
 	defer s.listener.Stop()
 
-	s.requestQueue = s.newRequestQueue(requestCh)
-	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh))
+	s.requestQueue = s.newRequestQueue(ctx, cancel, requestCh)
 	defer s.requestQueue.Stop()
 
+	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh), wm.WithContext(ctx, cancel))
 	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
 		return err
@@ -163,7 +161,7 @@ func (s *StreamerClient) Start() error {
 	s.manager = manager
 	s.isInitialized.Store(false)
 
-	listenCh := s.listener.Listen()
+	s.listener.Listen()
 	s.requestQueue.Start()
 
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
@@ -177,10 +175,10 @@ func (s *StreamerClient) Start() error {
 	}
 
 	select {
-	case err := <-listenCh:
-		return err
 	case err := <-eventErrorCh:
 		return err
+	case <-ctx.Done():
+		return fmt.Errorf("stream client context has been closed")
 	}
 }
 

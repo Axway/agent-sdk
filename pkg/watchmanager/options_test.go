@@ -1,6 +1,7 @@
 package watchmanager
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -51,12 +52,12 @@ func TestWatchOptions(t *testing.T) {
 
 type mockHarvester struct{}
 
-func (m mockHarvester) EventCatchUp(link string, events chan *proto.Event) error {
+func (m mockHarvester) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
 	// TODO implement me
 	panic("implement me")
 }

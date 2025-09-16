@@ -19,8 +19,8 @@ type RequestQueue interface {
 
 // requestQueue
 type requestQueue struct {
-	cancel    context.CancelFunc
 	ctx       context.Context
+	cancel    context.CancelFunc
 	logger    log.FieldLogger
 	requestCh chan *proto.Request
 	receiveCh chan *proto.Request
@@ -29,18 +29,17 @@ type requestQueue struct {
 }
 
 // NewRequestQueueFunc type for creating a new request queue
-type NewRequestQueueFunc func(requestCh chan *proto.Request) RequestQueue
+type NewRequestQueueFunc func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue
 
 // NewRequestQueue creates a new queue for the requests to be sent for watch subscription
-func NewRequestQueue(requestCh chan *proto.Request) RequestQueue {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewRequestQueue(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue {
 	logger := log.NewFieldLogger().
 		WithComponent("requestQueue").
 		WithPackage("sdk.agent.events")
 
 	return &requestQueue{
-		cancel:    cancel,
 		ctx:       ctx,
+		cancel:    cancel,
 		logger:    logger,
 		requestCh: requestCh,
 		receiveCh: make(chan *proto.Request, 1),
@@ -93,6 +92,9 @@ func (q *requestQueue) Start() {
 
 		for {
 			if q.process() {
+				break
+			}
+			if q.ctx.Err() != nil {
 				break
 			}
 		}

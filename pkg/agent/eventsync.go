@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strconv"
@@ -109,7 +110,7 @@ func (es *EventSync) registerInstanceValidator() error {
 }
 
 func (es *EventSync) initCache() error {
-	seqID, err := es.harvester.ReceiveSyncEvents(es.watchTopic.GetSelfLink(), 0, nil)
+	seqID, err := es.harvester.ReceiveSyncEvents(context.Background(), es.watchTopic.GetSelfLink(), 0, nil)
 	if err != nil {
 		return err
 	}

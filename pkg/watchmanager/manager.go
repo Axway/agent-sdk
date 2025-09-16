@@ -126,7 +126,7 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 		return nil
 	}
 
-	err := m.options.harvester.EventCatchUp(link, events)
+	err := m.options.harvester.EventCatchUp(m.options.ctx, link, events)
 	if err != nil {
 		return err
 	}
@@ -139,6 +139,8 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
+			ctx:           m.options.ctx,
+			cancel:        m.options.cancel,
 			errors:        errors,
 			events:        events,
 			tokenGetter:   m.cfg.TokenGetter,
@@ -170,7 +172,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	}
 
 	if err := client.processRequest(); err != nil {
-		m.logger.WithError(err).Error("failed to connect with watch service")
 		m.CloseWatch(subID)
 		return subID, err
 	}

@@ -190,12 +190,14 @@ func Test_watchClient_processRequest(t *testing.T) {
 	getter := &mockTokenGetter{
 		err: nil,
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	cfg := clientConfig{
+		ctx:         ctx,
+		cancel:      cancel,
 		events:      make(chan *proto.Event),
 		errors:      make(chan error),
 		tokenGetter: getter.GetToken,
 	}
-	ctx, cancel := context.WithCancel(context.Background())
 	stream := &mockStream{
 		event:   &proto.Event{},
 		err:     fmt.Errorf("err"),

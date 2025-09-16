@@ -160,10 +160,10 @@ type hClient struct {
 	err error
 }
 
-func (h hClient) EventCatchUp(link string, events chan *proto.Event) error {
+func (h hClient) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	return h.err
 }
 
-func (h hClient) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+func (h hClient) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
 	return 0, nil
 }
