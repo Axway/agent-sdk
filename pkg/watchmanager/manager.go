@@ -163,7 +163,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		m.onHarvesterErr()
 		return subID, err
 	}
-
 	if err := m.eventCatchUp(link, events); err != nil {
 		m.logger.WithError(err).Error("failed to sync events from harvester")
 		m.CloseWatch(subID)
@@ -181,7 +180,7 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 	m.logger.
 		WithField("id", subID).
 		WithField("watchtopic", link).
-		Infof("registered watch client")
+		Info("registered watch client")
 
 	return subID, nil
 }
@@ -193,8 +192,8 @@ func (m *watchManager) CloseWatch(id string) error {
 		return err
 	}
 
-	m.logger.WithField("watch-id", id).Info("closing connection for subscription")
-	client.cancelStreamCtx()
+	m.logger.WithField("watchID", id).Info("closing connection for subscription")
+	client.cfg.cancel()
 	m.deleteClients([]string{id})
 	return nil
 }
@@ -243,7 +242,7 @@ func (m *watchManager) addClient(id string, client *watchClient) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.clientMap[id] = client
-	m.logger.WithField("watch-id", id).Trace("added client to watch manager")
+	m.logger.WithField("watchID", id).Trace("added client to watch manager")
 }
 
 func (m *watchManager) getClient(id string) (*watchClient, error) {

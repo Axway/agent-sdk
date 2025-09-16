@@ -29,12 +29,10 @@ type clientConfig struct {
 }
 
 type watchClient struct {
-	cancelStreamCtx        context.CancelFunc
 	cfg                    clientConfig
 	getTokenExpirationTime getTokenExpFunc
 	isRunning              bool
 	stream                 proto.Watch_SubscribeClient
-	streamCtx              context.Context
 	timer                  *time.Timer
 	mutex                  sync.Mutex
 }
@@ -59,12 +57,10 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 	}
 
 	client := &watchClient{
-		cancelStreamCtx:        clientCfg.cancel,
 		cfg:                    clientCfg,
 		getTokenExpirationTime: getTokenExpirationTime,
 		isRunning:              true,
 		stream:                 stream,
-		streamCtx:              clientCfg.ctx,
 		timer:                  time.NewTimer(initDuration),
 	}
 
@@ -124,8 +120,8 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 
 	for {
 		select {
-		case <-c.streamCtx.Done():
-			c.handleError(c.streamCtx.Err())
+		case <-c.cfg.ctx.Done():
+			c.handleError(c.cfg.ctx.Err())
 			return
 		case <-c.stream.Context().Done():
 			c.handleError(c.stream.Context().Err())
@@ -174,12 +170,17 @@ func (c *watchClient) handleError(err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if c.isRunning {
+	running := c.isRunning
+	if running {
 		c.isRunning = false
 		c.timer.Stop()
+		if c.cfg.ctx.Err() != nil {
+			return
+		}
 		c.cfg.errors <- err
-		c.cancelStreamCtx()
+		c.cfg.cancel()
 	}
+
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
