@@ -179,7 +179,6 @@ func (c *watchClient) handleError(err error) {
 		c.cfg.errors <- err
 		c.cfg.cancel()
 	}
-
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {

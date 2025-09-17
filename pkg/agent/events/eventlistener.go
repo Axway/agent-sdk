@@ -116,6 +116,8 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	ri, err := em.getEventResource(event)
 	if err != nil {
+		// stop the listener if there is an error getting the resource, to ensure cache consistency
+		defer em.Stop()
 		return err
 	}
 
