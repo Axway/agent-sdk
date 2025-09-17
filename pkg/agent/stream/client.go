@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"sync"
 	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -53,8 +52,9 @@ type StreamerClient struct {
 	wt                 *management.WatchTopic
 	harvester          harvester.Harvest
 	onEventSyncError   func()
-	mutex              sync.RWMutex
 	isInitialized      atomic.Bool
+	isRunning          atomic.Bool
+	cancel             context.CancelFunc
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -139,31 +139,46 @@ func getWatchServiceHostPort(cfg config.CentralConfig) (string, int) {
 
 // Start creates and starts everything needed for a stream connection to central.
 func (s *StreamerClient) Start() error {
+	if s.isRunning.Load() {
+		s.logger.Error("------- stream client is already running")
+		return nil
+	}
+
+	s.isRunning.Store(true)
+	defer s.isRunning.Store(false)
+	s.logger.Info("------- starting stream client")
+	defer s.logger.Info("------- stream client stopped")
+
 	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
 	defer cancel()
 	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
 
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
+	s.logger.Info("------- creating stream listener")
 	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
 	defer s.listener.Stop()
 
+	s.logger.Info("------- creating request queue")
 	s.requestQueue = s.newRequestQueue(ctx, cancel, requestCh)
 	defer s.requestQueue.Stop()
 
+	s.logger.Info("------- creating stream manager")
 	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh), wm.WithContext(ctx, cancel))
 	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
 		return err
 	}
+	defer manager.CloseConn()
 
 	s.manager = manager
 	s.isInitialized.Store(false)
 
+	s.logger.Info("------- starting stream listener")
 	s.listener.Listen()
+	s.logger.Info("------- starting request queue")
 	s.requestQueue.Start()
 
+	s.logger.Info("------- registering watch via manager")
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
@@ -174,6 +189,7 @@ func (s *StreamerClient) Start() error {
 		return err
 	}
 
+	s.logger.Info("------- waiting for error or context done")
 	select {
 	case err := <-eventErrorCh:
 		return err
@@ -200,9 +216,9 @@ func (s *StreamerClient) Status() error {
 
 // Stop stops the StreamerClient
 func (s *StreamerClient) Stop() {
-	s.manager.CloseConn()
-	s.listener.Stop()
-	s.requestQueue.Stop()
+	if s.cancel != nil {
+		s.cancel()
+	}
 }
 
 // Healthcheck - health check for stream client

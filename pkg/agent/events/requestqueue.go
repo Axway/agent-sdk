@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 	"errors"
-	"sync"
+	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -24,8 +24,7 @@ type requestQueue struct {
 	logger    log.FieldLogger
 	requestCh chan *proto.Request
 	receiveCh chan *proto.Request
-	isActive  bool
-	lock      *sync.Mutex
+	isActive  atomic.Bool
 }
 
 // NewRequestQueueFunc type for creating a new request queue
@@ -43,31 +42,26 @@ func NewRequestQueue(ctx context.Context, cancel context.CancelFunc, requestCh c
 		logger:    logger,
 		requestCh: requestCh,
 		receiveCh: make(chan *proto.Request, 1),
-		lock:      &sync.Mutex{},
+		isActive:  atomic.Bool{},
 	}
 }
 
 func (q *requestQueue) Stop() {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
+	if q.receiveCh != nil {
+		close(q.receiveCh)
+		q.receiveCh = nil
+	}
 	if q.cancel != nil {
 		q.cancel()
 	}
 }
 
 func (q *requestQueue) IsActive() bool {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
-	return q.isActive
+	return q.isActive.Load()
 }
 
 func (q *requestQueue) Write(request *proto.Request) error {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
-	if !q.isActive {
+	if !q.isActive.Load() {
 		return errors.New("request queue is not active")
 	}
 
@@ -80,21 +74,14 @@ func (q *requestQueue) Write(request *proto.Request) error {
 
 func (q *requestQueue) Start() {
 	go func() {
-		q.lock.Lock()
-		q.isActive = true
-		q.lock.Unlock()
-
-		defer func() {
-			q.lock.Lock()
-			defer q.lock.Unlock()
-			q.isActive = false
-		}()
+		log.Info("------- starting request queue")
+		defer log.Info("------- request queue stopped")
+		q.isActive.Store(true)
+		defer q.isActive.Store(false)
 
 		for {
 			if q.process() {
-				break
-			}
-			if q.ctx.Err() != nil {
+				q.Stop()
 				break
 			}
 		}
@@ -102,21 +89,18 @@ func (q *requestQueue) Start() {
 }
 
 func (q *requestQueue) process() bool {
-	done := false
 	select {
 	case req := <-q.receiveCh:
-		q.logger.WithField("requestType", req.RequestType).Trace("forwarding stream request")
-		q.requestCh <- req
-		q.logger.WithField("requestType", req.RequestType).Trace("stream request forwarded")
-	case <-q.ctx.Done():
-		q.logger.Trace("stream request queue has been gracefully stopped")
-		done = true
-		if q.receiveCh != nil {
-			close(q.receiveCh)
+		if q.ctx.Err() != nil {
 			q.receiveCh = nil
+			return true
 		}
-		break
+		q.logger.WithField("requestType", req.RequestType).Info("------- forwarding stream request")
+		q.requestCh <- req
+		q.logger.WithField("requestType", req.RequestType).Info("------- stream request forwarded")
+		return false
+	case <-q.ctx.Done():
+		q.logger.Info("------- stream request queue has been gracefully stopped")
+		return true
 	}
-
-	return done
 }
