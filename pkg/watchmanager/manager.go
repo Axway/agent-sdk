@@ -136,6 +136,7 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
+
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{

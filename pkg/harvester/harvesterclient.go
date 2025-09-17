@@ -205,10 +205,21 @@ func (h *Client) buildParams(sequenceID int64, page, pageSize int) map[string]st
 // EventCatchUp syncs all events
 func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	h.logger.Trace("event catchup, to sync all events")
+	// TODO REMOVE THESE LOG LINES
+	// Will remove after testing
+	h.logger.Info("--------- starting event catchup to sync all events")
+	defer h.logger.Info("--------- finished event catchup to sync all events")
 	if h.Client == nil || h.Cfg.SequenceProvider == nil {
 		return nil
 	}
 
+	// allow up to a minute to sync events
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	return h.syncEvents(ctx, link, events)
+}
+
+func (h *Client) syncEvents(ctx context.Context, link string, events chan *proto.Event) error {
 	sequenceID := h.Cfg.SequenceProvider.GetSequence()
 	if sequenceID > 0 {
 		var err error
@@ -222,14 +233,17 @@ func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *pro
 			return err
 		}
 
+		// TODO REMOVE THESE LOG LINES
+		// Will remove after testing
 		if lastSequenceID > 0 {
 			// wait for all current sequences to be processed before processing new ones
 			for sequenceID < lastSequenceID {
 				if ctx.Err() != nil {
-					h.logger.WithError(ctx.Err()).Error("context was cancelled, stopping event processing")
+					h.logger.WithError(ctx.Err()).Error("--------- context was cancelled, stopping event processing")
 					return ctx.Err()
 				}
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
+				h.logger.Info("--------- looping to wait for sequence to be processed, current: ", sequenceID, " last: ", lastSequenceID)
 			}
 		} else {
 			return nil
@@ -238,7 +252,7 @@ func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *pro
 		return nil
 	}
 
-	return h.EventCatchUp(ctx, link, events)
+	return h.syncEvents(ctx, link, events)
 }
 
 func newSingleEntryClient(cfg *Config) api.Client {
