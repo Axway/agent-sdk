@@ -74,8 +74,6 @@ func (q *requestQueue) Write(request *proto.Request) error {
 
 func (q *requestQueue) Start() {
 	go func() {
-		log.Info("------- starting request queue")
-		defer log.Info("------- request queue stopped")
 		q.isActive.Store(true)
 		defer q.isActive.Store(false)
 
@@ -94,12 +92,12 @@ func (q *requestQueue) process() bool {
 		if q.ctx.Err() != nil {
 			return true
 		}
-		q.logger.WithField("requestType", req.RequestType).Info("------- forwarding stream request")
+		q.logger.WithField("requestType", req.RequestType).Trace("forwarding stream request")
 		q.requestCh <- req
-		q.logger.WithField("requestType", req.RequestType).Info("------- stream request forwarded")
+		q.logger.WithField("requestType", req.RequestType).Trace("stream request forwarded")
 		return false
 	case <-q.ctx.Done():
-		q.logger.Info("------- stream request queue has been gracefully stopped")
+		q.logger.Trace("stream request queue has been gracefully stopped")
 		return true
 	}
 }
