@@ -213,6 +213,7 @@ func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *pro
 		return nil
 	}
 
+	// TODO should this timeout duration be changed?
 	// allow up to a minute to sync events
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
