@@ -47,12 +47,14 @@ func NewRequestQueue(ctx context.Context, cancel context.CancelFunc, requestCh c
 }
 
 func (q *requestQueue) Stop() {
-	if q.receiveCh != nil {
-		close(q.receiveCh)
-		q.receiveCh = nil
+	if !q.isActive.Load() {
+		return
 	}
+
+	defer q.isActive.Store(false)
 	if q.cancel != nil {
 		q.cancel()
+		close(q.receiveCh)
 	}
 }
 
@@ -65,10 +67,8 @@ func (q *requestQueue) Write(request *proto.Request) error {
 		return errors.New("request queue is not active")
 	}
 
-	if q.receiveCh != nil {
-		q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
-		q.receiveCh <- request
-	}
+	q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
+	q.receiveCh <- request
 	return nil
 }
 
@@ -92,7 +92,6 @@ func (q *requestQueue) process() bool {
 	select {
 	case req := <-q.receiveCh:
 		if q.ctx.Err() != nil {
-			q.receiveCh = nil
 			return true
 		}
 		q.logger.WithField("requestType", req.RequestType).Info("------- forwarding stream request")
