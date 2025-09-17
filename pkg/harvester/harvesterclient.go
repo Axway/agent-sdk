@@ -244,6 +244,7 @@ func (h *Client) syncEvents(ctx context.Context, link string, events chan *proto
 				}
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
 				h.logger.Info("--------- looping to wait for sequence to be processed, current: ", sequenceID, " last: ", lastSequenceID)
+				time.Sleep(100 * time.Millisecond)
 			}
 		} else {
 			return nil
