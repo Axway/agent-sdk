@@ -225,6 +225,10 @@ func (h *Client) EventCatchUp(ctx context.Context, link string, events chan *pro
 		if lastSequenceID > 0 {
 			// wait for all current sequences to be processed before processing new ones
 			for sequenceID < lastSequenceID {
+				if ctx.Err() != nil {
+					h.logger.WithError(ctx.Err()).Error("context was cancelled, stopping event processing")
+					return ctx.Err()
+				}
 				sequenceID = h.Cfg.SequenceProvider.GetSequence()
 			}
 		} else {
