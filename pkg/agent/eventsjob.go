@@ -54,7 +54,26 @@ func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 	streamJob.jobID.Store(jobID)
 	jobs.RegisterIntervalJobWithName(newCentralHealthCheckJob(eventJob), time.Second*3, "Central Health Check")
 
+	go streamJob.statusChecker()
+
 	return streamJob
+}
+
+func (j *eventProcessorJob) statusChecker() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	reportGood := false
+	for range ticker.C {
+		statusErr := j.Status()
+		if statusErr != nil {
+			j.logger.WithError(statusErr).Error("event processor job status check failed")
+			reportGood = true
+		} else if reportGood {
+			j.logger.Info("event processor job status is good")
+			reportGood = false
+		}
+	}
 }
 
 // Execute starts the stream
