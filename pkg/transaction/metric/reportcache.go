@@ -253,7 +253,7 @@ func (c *usageReportCache) sendReport(publishFunc func(event UsageEvent) error) 
 	savedEvents = c.validateReport(savedEvents)
 	if err := publishFunc(savedEvents); err != nil {
 		c.logger.Error("could not publish usage, will send at next scheduled publishing")
-		return nil
+		return err
 	}
 
 	// update the publish time

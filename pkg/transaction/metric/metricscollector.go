@@ -179,7 +179,7 @@ func createMetricCollector() Collector {
 	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
 	metricCollector.reports = newReportCache()
-	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports)
+	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports, metricCollector.updateUsageStartTime)
 
 	if util.IsNotTest() {
 		var err error
@@ -1030,10 +1030,15 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 		if volume, ok := itemVolumeMetric.(metrics.Counter); ok {
 			volume.Clear()
 		}
-		c.usageStartTime = c.usageEndTime
 		c.storage.updateUsage(0)
 		c.storage.updateVolume(0)
 	}
+}
+
+func (c *collector) updateUsageStartTime() {
+	// called after usage report publishing job is executed
+	c.usageStartTime = now().Truncate(time.Minute)
+	c.storage.updateUsage(0)
 }
 
 func (c *collector) logMetric(msg string, metric *centralMetric) {
