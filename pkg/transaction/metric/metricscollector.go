@@ -219,7 +219,7 @@ func (c *collector) metricCheck() {
 // Execute - process the metric collection and generation of usage/metric event
 func (c *collector) Execute() error {
 	c.lock.Lock()
-	defer c.lock.Unlock()\
+	defer c.lock.Unlock()
 
 	if !c.usagePublisher.offline && healthcheck.GetStatus(traceability.HealthCheckEndpoint) != healthcheck.OK {
 		c.logger.Warn("traceability is not connected, can not publish metrics at this time")
