@@ -238,6 +238,8 @@ func (c *usagePublisher) Ready() bool {
 // Execute - process the offline report generation
 func (c *usagePublisher) Execute() error {
 	if c.report.shouldPublish(c.schedule) {
+		// wait for any inflight events, metric processing, to be added to the cache
+		time.Sleep(5 * time.Second)
 		if c.offline {
 			return c.report.saveReport()
 		}
