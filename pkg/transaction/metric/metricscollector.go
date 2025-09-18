@@ -1038,6 +1038,7 @@ func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 func (c *collector) updateUsageStartTime() {
 	// called after usage report publishing job is executed
 	c.usageStartTime = now().Truncate(time.Minute)
+	c.storage.updateUsage(0)
 }
 
 func (c *collector) logMetric(msg string, metric *centralMetric) {
