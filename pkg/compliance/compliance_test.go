@@ -1,6 +1,7 @@
 package compliance
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
@@ -31,12 +32,31 @@ func TestCompliance(t *testing.T) {
 	subResReqCount := 0
 
 	apicMockCli.CreateSubResourceMock = func(rm v1.ResourceMeta, subs map[string]interface{}) error {
-		ri, err := agent.GetCacheManager().GetAPIServiceInstanceByName(rm.Name)
-		if ri == nil {
-			return err
+		var ri *v1.ResourceInstance
+		var err error
+
+		switch rm.GetGroupVersionKind().Kind {
+		case management.APIServiceInstanceGVK().Kind:
+			ri, err = agent.GetCacheManager().GetAPIServiceInstanceByName(rm.Name)
+			if ri == nil {
+				return err
+			}
+			defer agent.GetCacheManager().AddAPIServiceInstance(ri)
+		case management.EnvironmentGVK().Kind:
+			ri = agent.GetCacheManager().GetWatchResourceByName(management.EnvironmentGVK().Group, management.EnvironmentGVK().Kind, rm.Name)
+			if ri == nil {
+				return errors.New("err")
+			}
+			defer agent.GetCacheManager().AddWatchResource(ri)
+		case management.APIServiceGVK().Kind:
+			ri = agent.GetCacheManager().GetWatchResourceByName(management.APIServiceGVK().Group, management.APIServiceGVK().Kind, rm.Name)
+			if ri == nil {
+				return errors.New("err")
+			}
+			defer agent.GetCacheManager().AddWatchResource(ri)
 		}
+
 		ri.SubResources = subs
-		agent.GetCacheManager().AddAPIServiceInstance(ri)
 		subResReqCount++
 		return nil
 	}
@@ -83,12 +103,34 @@ func TestCompliance(t *testing.T) {
 			skipAddingCRR: true,
 		},
 		{
-			name: "collect and publish, 1 result, link CRR to env",
+			name: "collect and publish, 1 result, link CRR to API Service Instance",
 			runtimeResults: []RuntimeResult{
 				{
 					ComplianceRuntimeResult: "test-1",
 					RiskScore:               10,
-					ApiServiceInstance:      management.NewAPIServiceInstance("api1", "env"),
+					ApiServiceInstance:      management.NewAPIServiceInstance("apisi1", "env"),
+					ComplianceScopedEnv:     "env",
+				},
+			},
+		},
+		{
+			name: "collect and publish, 1 result, link CRR to Environment",
+			runtimeResults: []RuntimeResult{
+				{
+					ComplianceRuntimeResult: "test-1",
+					RiskScore:               10,
+					Environment:             management.NewEnvironment("env"),
+					ComplianceScopedEnv:     "env",
+				},
+			},
+		},
+		{
+			name: "collect and publish, 1 result, link CRR to API Service",
+			runtimeResults: []RuntimeResult{
+				{
+					ComplianceRuntimeResult: "test-1",
+					RiskScore:               10,
+					ApiService:              management.NewAPIService("apis1", "env"),
 					ComplianceScopedEnv:     "env",
 				},
 			},
@@ -164,6 +206,12 @@ func TestCompliance(t *testing.T) {
 				if result.ApiServiceInstance != nil {
 					apisiRI, _ := result.ApiServiceInstance.AsInstance()
 					agent.GetCacheManager().AddAPIServiceInstance(apisiRI)
+				} else if result.Environment != nil {
+					envRI, _ := result.Environment.AsInstance()
+					agent.GetCacheManager().AddWatchResource(envRI)
+				} else if result.ApiService != nil {
+					apisRI, _ := result.ApiService.AsInstance()
+					agent.GetCacheManager().AddWatchResource(apisRI)
 				}
 			}
 			cm := GetManager()
@@ -190,6 +238,14 @@ func TestCompliance(t *testing.T) {
 				specHash, _ := util.GetAgentDetailsValue(crr, definitions.AttrSpecHash)
 				assert.NotEmpty(t, specHash)
 				if result.ApiServiceInstance != nil {
+					expectedSubResCount++
+					assert.Equal(t, result.ComplianceRuntimeResult, crr.Name)
+				}
+				if result.ApiService != nil {
+					expectedSubResCount++
+					assert.Equal(t, result.ComplianceRuntimeResult, crr.Name)
+				}
+				if result.Environment != nil {
 					expectedSubResCount++
 					assert.Equal(t, result.ComplianceRuntimeResult, crr.Name)
 				}
