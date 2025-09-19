@@ -179,7 +179,7 @@ func createMetricCollector() Collector {
 	metricCollector.storage = newStorageCache(metricCollector)
 	metricCollector.storage.initialize()
 	metricCollector.reports = newReportCache()
-	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports, metricCollector.updateUsageStartTime)
+	metricCollector.usagePublisher = newUsagePublisher(metricCollector.storage, metricCollector.reports, metricCollector.updateUsageStartTime, metricCollector.metricCheck)
 
 	if util.IsNotTest() {
 		var err error
@@ -208,6 +208,12 @@ func (c *collector) Ready() bool {
 		return false
 	}
 	return agent.GetCentralConfig().GetEnvironmentID() != ""
+}
+
+// metricCheck - lock to wait for any inflight metric processing to complete
+func (c *collector) metricCheck() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 }
 
 // Execute - process the metric collection and generation of usage/metric event

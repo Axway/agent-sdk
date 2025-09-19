@@ -32,6 +32,7 @@ type usagePublisher struct {
 	logger          log.FieldLogger
 	usageLogger     log.FieldLogger
 	updateStartTime func()
+	metricCheck     func()
 }
 
 func (c *usagePublisher) publishEvent(event interface{}) error {
@@ -168,7 +169,7 @@ func (c *usagePublisher) createFilePart(w *multipart.Writer, filename string) (i
 }
 
 // newUsagePublisher - Creates publisher job
-func newUsagePublisher(storage storageCache, report *usageReportCache, updateStartTime func()) *usagePublisher {
+func newUsagePublisher(storage storageCache, report *usageReportCache, updateStartTime func(), metricCheck func()) *usagePublisher {
 	centralCfg := agent.GetCentralConfig()
 	publisher := &usagePublisher{
 		apiClient: api.NewClient(centralCfg.GetTLSConfig(), centralCfg.GetProxyURL(),
@@ -180,6 +181,7 @@ func newUsagePublisher(storage storageCache, report *usageReportCache, updateSta
 		logger:          log.NewFieldLogger().WithComponent("usagePublisher").WithPackage("metric"),
 		usageLogger:     log.NewUsageFieldLogger(),
 		updateStartTime: updateStartTime,
+		metricCheck:     metricCheck,
 	}
 
 	publisher.usageLogger.Info("usage logger started")
@@ -238,8 +240,7 @@ func (c *usagePublisher) Ready() bool {
 // Execute - process the offline report generation
 func (c *usagePublisher) Execute() error {
 	if c.report.shouldPublish(c.schedule) {
-		// wait for any inflight events, metric processing, to be added to the cache
-		time.Sleep(5 * time.Second)
+		c.metricCheck()
 		if c.offline {
 			return c.report.saveReport()
 		}
