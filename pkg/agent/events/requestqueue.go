@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 	"errors"
-	"sync"
+	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
@@ -19,80 +19,67 @@ type RequestQueue interface {
 
 // requestQueue
 type requestQueue struct {
-	cancel    context.CancelFunc
 	ctx       context.Context
+	cancel    context.CancelFunc
 	logger    log.FieldLogger
 	requestCh chan *proto.Request
 	receiveCh chan *proto.Request
-	isActive  bool
-	lock      *sync.Mutex
+	isActive  atomic.Bool
 }
 
 // NewRequestQueueFunc type for creating a new request queue
-type NewRequestQueueFunc func(requestCh chan *proto.Request) RequestQueue
+type NewRequestQueueFunc func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue
 
 // NewRequestQueue creates a new queue for the requests to be sent for watch subscription
-func NewRequestQueue(requestCh chan *proto.Request) RequestQueue {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewRequestQueue(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue {
 	logger := log.NewFieldLogger().
 		WithComponent("requestQueue").
 		WithPackage("sdk.agent.events")
 
 	return &requestQueue{
-		cancel:    cancel,
 		ctx:       ctx,
+		cancel:    cancel,
 		logger:    logger,
 		requestCh: requestCh,
 		receiveCh: make(chan *proto.Request, 1),
-		lock:      &sync.Mutex{},
+		isActive:  atomic.Bool{},
 	}
 }
 
 func (q *requestQueue) Stop() {
-	q.lock.Lock()
-	defer q.lock.Unlock()
+	if !q.isActive.Load() {
+		return
+	}
 
+	defer q.isActive.Store(false)
 	if q.cancel != nil {
 		q.cancel()
+		close(q.receiveCh)
 	}
 }
 
 func (q *requestQueue) IsActive() bool {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
-	return q.isActive
+	return q.isActive.Load()
 }
 
 func (q *requestQueue) Write(request *proto.Request) error {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
-	if !q.isActive {
+	if !q.isActive.Load() {
 		return errors.New("request queue is not active")
 	}
 
-	if q.receiveCh != nil {
-		q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
-		q.receiveCh <- request
-	}
+	q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
+	q.receiveCh <- request
 	return nil
 }
 
 func (q *requestQueue) Start() {
 	go func() {
-		q.lock.Lock()
-		q.isActive = true
-		q.lock.Unlock()
-
-		defer func() {
-			q.lock.Lock()
-			defer q.lock.Unlock()
-			q.isActive = false
-		}()
+		q.isActive.Store(true)
+		defer q.isActive.Store(false)
 
 		for {
 			if q.process() {
+				q.Stop()
 				break
 			}
 		}
@@ -100,21 +87,17 @@ func (q *requestQueue) Start() {
 }
 
 func (q *requestQueue) process() bool {
-	done := false
 	select {
 	case req := <-q.receiveCh:
+		if q.ctx.Err() != nil {
+			return true
+		}
 		q.logger.WithField("requestType", req.RequestType).Trace("forwarding stream request")
 		q.requestCh <- req
 		q.logger.WithField("requestType", req.RequestType).Trace("stream request forwarded")
+		return false
 	case <-q.ctx.Done():
 		q.logger.Trace("stream request queue has been gracefully stopped")
-		done = true
-		if q.receiveCh != nil {
-			close(q.receiveCh)
-			q.receiveCh = nil
-		}
-		break
+		return true
 	}
-
-	return done
 }

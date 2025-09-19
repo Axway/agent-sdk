@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -28,7 +29,8 @@ func TestRequestQueue(t *testing.T) {
 	for _, tc := range cases {
 		requestCh := make(chan *proto.Request, 1)
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewRequestQueue(requestCh)
+			ctx, cancel := context.WithCancel(context.Background())
+			q := NewRequestQueue(ctx, cancel, requestCh)
 			var receivedReq *proto.Request
 			wg := sync.WaitGroup{}
 			if tc.queueActivated {

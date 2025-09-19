@@ -40,8 +40,8 @@ func TestEventListener_start(t *testing.T) {
 		},
 
 		{
-			name:     "should not return an error, even if the request for a ResourceClient fails",
-			hasError: false,
+			name:     "should return an error, when the request for a ResourceClient fails",
+			hasError: true,
 			events:   make(chan *proto.Event),
 			client:   &mockAPIClient{getErr: fmt.Errorf("failed")},
 			handler:  &mockHandler{},
@@ -59,7 +59,8 @@ func TestEventListener_start(t *testing.T) {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			listener := NewEventListener(tc.events, tc.client, sequenceManager, tc.handler)
+			ctx, cancel := context.WithCancel(context.Background())
+			listener := NewEventListener(ctx, cancel, tc.events, tc.client, sequenceManager, tc.handler)
 
 			errCh := make(chan error)
 			go func() {
@@ -99,17 +100,19 @@ func TestEventListener_Listen(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
-	listener := NewEventListener(events, &mockAPIClient{}, sequenceManager, &mockHandler{})
-	errCh := listener.Listen()
-	go listener.Stop()
-	err := <-errCh
-	assert.Nil(t, err)
-
-	listener = NewEventListener(events, &mockAPIClient{}, sequenceManager, &mockHandler{})
-	errCh = listener.Listen()
-	close(events)
-	err = <-errCh
+	ctx, cancel := context.WithCancel(context.Background())
+	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
+	listener.Listen()
+	listener.Stop()
+	err := ctx.Err()
 	assert.NotNil(t, err)
+
+	ctx, cancel = context.WithCancel(context.Background())
+	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
+	listener.Listen()
+	close(events)
+	err = ctx.Err()
+	assert.Nil(t, err)
 }
 
 func TestEventListener_handleEvent(t *testing.T) {
@@ -170,7 +173,8 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			listener := NewEventListener(make(chan *proto.Event), tc.client, sequenceManager, tc.handler)
+			ctx, cancel := context.WithCancel(context.Background())
+			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, sequenceManager, tc.handler)
 
 			err := listener.handleEvent(event)
 

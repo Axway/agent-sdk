@@ -1,6 +1,8 @@
 package poller
 
 import (
+	"context"
+
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -48,5 +50,12 @@ func withHarvester(cfg harvesterConfig) executorOpt {
 func withOnStop(cb onClientStopCb) executorOpt {
 	return func(m *pollExecutor) {
 		m.onStop = cb
+	}
+}
+
+func WithContext(ctx context.Context, cancel context.CancelFunc) executorOpt {
+	return func(m *pollExecutor) {
+		m.ctx = ctx
+		m.cancel = cancel
 	}
 }

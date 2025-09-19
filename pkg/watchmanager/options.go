@@ -46,6 +46,8 @@ type keepAliveOption struct {
 
 // watchOptions options to use when creating a stream
 type watchOptions struct {
+	ctx              context.Context
+	cancel           context.CancelFunc
 	tlsCfg           *tls.Config
 	proxyURL         string
 	singleEntryAddr  string
@@ -59,7 +61,12 @@ type watchOptions struct {
 
 // newWatchOptions returns the default watchOptions
 func newWatchOptions() *watchOptions {
+	// Default context and cancel function
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &watchOptions{
+		ctx:         ctx,
+		cancel:      cancel,
 		loggerEntry: logrus.NewEntry(log.Get()),
 		tlsCfg:      defaultTLSConfig(),
 		keepAlive: keepAliveOption{
@@ -124,6 +131,13 @@ func WithHarvester(harvester harvester.Harvest, sequence events.SequenceProvider
 func WithRequestChannel(requestCh chan *proto.Request) Option {
 	return funcOption(func(o *watchOptions) {
 		o.requestCh = requestCh
+	})
+}
+
+func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
+	return funcOption(func(o *watchOptions) {
+		o.ctx = ctx
+		o.cancel = cancel
 	})
 }
 

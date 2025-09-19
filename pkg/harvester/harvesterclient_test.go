@@ -1,6 +1,7 @@
 package harvester
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -69,7 +70,7 @@ func TestReceiveSyncEvents(t *testing.T) {
 	}()
 	s.responseStatus = 200
 	s.harvesterResponse = []resourceEntryExternalEvent{}
-	_, err := client.ReceiveSyncEvents("/test", 1, eventCh)
+	_, err := client.ReceiveSyncEvents(context.Background(), "/test", 1, eventCh)
 	assert.Nil(t, err)
 	stopCh <- true
 	assert.Equal(t, 0, len(events))

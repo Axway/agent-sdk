@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -76,7 +77,7 @@ func TestNewStreamer(t *testing.T) {
 	streamer.listener.Stop()
 
 	err = <-errCh
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 
 	assert.Equal(t, hc.OK, hc.RunChecks())
 	streamer.manager = nil
@@ -168,7 +169,7 @@ func TestStatusUpdates(t *testing.T) {
 			}
 			requestQueue := &mockRequestQueue{active: tc.queueActive}
 
-			streamer.newRequestQueue = func(requestCh chan *proto.Request) events.RequestQueue {
+			streamer.newRequestQueue = func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) events.RequestQueue {
 				return requestQueue
 			}
 			streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
@@ -184,7 +185,7 @@ func TestStatusUpdates(t *testing.T) {
 			defer func() {
 				streamer.Stop()
 				err = <-errCh
-				assert.Nil(t, err)
+				assert.NotNil(t, err)
 			}()
 
 			// wait for stream ready
@@ -213,7 +214,7 @@ func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 	streamer.listener.Stop()
 
 	err := <-errCh
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 }
 
 type mockManager struct {
@@ -277,11 +278,11 @@ func (m *mockTokenGetter) GetToken() (string, error) {
 
 type mockHarvester struct{}
 
-func (m mockHarvester) EventCatchUp(link string, events chan *proto.Event) error {
+func (m mockHarvester) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	return nil
 }
 
-func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
 	return 0, nil
 }
 

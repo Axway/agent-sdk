@@ -13,7 +13,7 @@ import (
 
 // Listener starts the EventListener
 type Listener interface {
-	Listen() chan error
+	Listen()
 	Stop()
 }
 
@@ -27,9 +27,9 @@ type APIClient interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
+	ctx             context.Context
 	cancel          context.CancelFunc
 	client          APIClient
-	ctx             context.Context
 	handlers        []handler.Handler
 	logger          log.FieldLogger
 	sequenceManager SequenceProvider
@@ -37,23 +37,18 @@ type EventListener struct {
 }
 
 // NewListenerFunc type for creating a new listener
-type NewListenerFunc func(
-	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
-) *EventListener
+type NewListenerFunc func(ctx context.Context, cancel context.CancelFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(
-	source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler,
-) *EventListener {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewEventListener(ctx context.Context, cancel context.CancelFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
 
 	return &EventListener{
+		ctx:             ctx,
 		cancel:          cancel,
 		client:          client,
-		ctx:             ctx,
 		handlers:        cbs,
 		logger:          logger,
 		sequenceManager: sequenceManager,
@@ -69,24 +64,22 @@ func (em *EventListener) Stop() {
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
-func (em *EventListener) Listen() chan error {
-	errCh := make(chan error)
+func (em *EventListener) Listen() {
 	go func() {
+		defer em.Stop()
 		for {
 			done, err := em.start()
 			if done && err == nil {
-				errCh <- nil
+				em.logger.Trace("stream event listener has been gracefully stopped")
 				break
 			}
 
 			if err != nil {
-				errCh <- err
+				em.logger.WithError(err).Error("stream event listener error")
 				break
 			}
 		}
 	}()
-
-	return errCh
 }
 
 func (em *EventListener) start() (done bool, err error) {
@@ -98,8 +91,7 @@ func (em *EventListener) start() (done bool, err error) {
 			break
 		}
 
-		err := em.handleEvent(event)
-		if err != nil {
+		if err := em.handleEvent(event); err != nil {
 			em.logger.WithError(err).Error("stream event listener error")
 		}
 	case <-em.ctx.Done():
