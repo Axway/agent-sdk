@@ -52,10 +52,8 @@ func (q *requestQueue) Stop() {
 	}
 
 	defer q.isActive.Store(false)
-	if q.cancel != nil {
-		q.cancel()
-		close(q.receiveCh)
-	}
+	q.cancel()
+	close(q.receiveCh)
 }
 
 func (q *requestQueue) IsActive() bool {
@@ -79,7 +77,6 @@ func (q *requestQueue) Start() {
 
 		for {
 			if q.process() {
-				q.Stop()
 				break
 			}
 		}
