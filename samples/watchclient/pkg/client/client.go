@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"time"
@@ -129,7 +130,7 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 	if config.UseHarvester {
 		hCfg := harvester.NewConfig(ccfg, ta, sm)
 		hClient := harvester.NewClient(hCfg)
-		seqID, err := hClient.ReceiveSyncEvents(config.TopicSelfLink, 0, nil)
+		seqID, err := hClient.ReceiveSyncEvents(context.Background(), config.TopicSelfLink, 0, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +170,7 @@ func (w WatchClient) Watch() {
 		return
 	}
 
-	log = log.WithField("subscription-id", subscriptionID)
+	log = log.WithField("subscriptionID", subscriptionID)
 	log.Infof("watch registered successfully")
 
 	for {

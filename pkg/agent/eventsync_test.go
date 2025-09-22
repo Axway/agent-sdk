@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -109,10 +110,10 @@ func TestEventSync_streamMode(t *testing.T) {
 
 type mockHarvester struct{}
 
-func (m mockHarvester) EventCatchUp(link string, events chan *proto.Event) error {
+func (m mockHarvester) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
 	return nil
 }
 
-func (m mockHarvester) ReceiveSyncEvents(topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
+func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
 	return 1, nil
 }

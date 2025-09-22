@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -29,11 +29,10 @@ type eventProcessorJob struct {
 	logger        log.FieldLogger
 	streamer      eventsJob
 	stop          chan interface{}
-	jobID         string
+	jobID         atomic.Value
 	retryInterval time.Duration
 	numRetry      int
 	name          string
-	mutex         sync.RWMutex
 }
 
 // newEventProcessorJob creates a job for the streamerClient
@@ -45,16 +44,36 @@ func newEventProcessorJob(eventJob eventsJob, name string) jobs.Job {
 		retryInterval: defaultRetryInterval,
 		numRetry:      0,
 		name:          name,
+		jobID:         atomic.Value{},
 	}
 
-	jobID, _ := jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
-	streamJob.mutex.Lock()
-	streamJob.jobID = jobID
-	streamJob.mutex.Unlock()
-
+	jobID, err := jobs.RegisterDetachedChannelJobWithName(streamJob, streamJob.stop, name)
+	if err != nil {
+		streamJob.logger.WithError(err).Error("failed to register")
+	}
+	streamJob.jobID.Store(jobID)
 	jobs.RegisterIntervalJobWithName(newCentralHealthCheckJob(eventJob), time.Second*3, "Central Health Check")
 
+	go streamJob.statusChecker()
+
 	return streamJob
+}
+
+func (j *eventProcessorJob) statusChecker() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	reportGood := false
+	for range ticker.C {
+		statusErr := j.Status()
+		if statusErr != nil {
+			j.logger.WithError(statusErr).Error("event processor job status check failed")
+			reportGood = true
+		} else if reportGood {
+			j.logger.Info("event processor job status is good")
+			reportGood = false
+		}
+	}
 }
 
 // Execute starts the stream
@@ -65,7 +84,11 @@ func (j *eventProcessorJob) Execute() error {
 		j.renewRegistration()
 	}()
 
-	return j.streamer.Start()
+	err := j.streamer.Start()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Status gets the status
@@ -85,26 +108,23 @@ func (j *eventProcessorJob) Ready() bool {
 
 func (j *eventProcessorJob) renewRegistration() {
 	defer time.AfterFunc(j.retryInterval, func() {
-		j.mutex.Lock()
-		defer j.mutex.Unlock()
-
-		jobID, _ := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
-		j.jobID = jobID
+		jobID, err := jobs.RegisterDetachedChannelJobWithName(j, j.stop, j.name)
+		if err != nil {
+			j.logger.WithError(err).Error("failed to re-register")
+		}
+		j.jobID.Store(jobID)
 	})
 
-	j.mutex.Lock()
-	defer j.mutex.Unlock()
-
-	if j.jobID == "" {
-		j.logger.Info("registering")
+	jobID := j.jobID.Load().(string)
+	if jobID == "" {
 		return
 	}
 
-	j.logger.WithField("jobID", j.jobID).Trace("unregistering")
+	j.logger.WithField("jobID", jobID).Trace("unregistering")
 	defer j.logger.Info("renewing registration")
-	jobs.UnregisterJob(j.jobID)
+	jobs.UnregisterJob(jobID)
 
-	j.jobID = ""
+	j.jobID.Store("")
 	j.numRetry++
 	if j.numRetry == maxNumRetryForInterval {
 		j.numRetry = 0

@@ -19,6 +19,8 @@ const (
 )
 
 type clientConfig struct {
+	ctx           context.Context
+	cancel        context.CancelFunc
 	errors        chan error
 	events        chan *proto.Event
 	tokenGetter   TokenGetter
@@ -27,12 +29,10 @@ type clientConfig struct {
 }
 
 type watchClient struct {
-	cancelStreamCtx        context.CancelFunc
 	cfg                    clientConfig
 	getTokenExpirationTime getTokenExpFunc
 	isRunning              bool
 	stream                 proto.Watch_SubscribeClient
-	streamCtx              context.Context
 	timer                  *time.Timer
 	mutex                  sync.Mutex
 }
@@ -45,20 +45,22 @@ type getTokenExpFunc func(token string) (time.Duration, error)
 func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClient newWatchClientFunc) (*watchClient, error) {
 	svcClient := newClient(cc)
 
-	streamCtx, streamCancel := context.WithCancel(context.Background())
-	stream, err := svcClient.Subscribe(streamCtx)
+	// If no context is provided, create a new one
+	if clientCfg.ctx == nil {
+		clientCfg.ctx, clientCfg.cancel = context.WithCancel(context.Background())
+	}
+
+	stream, err := svcClient.Subscribe(clientCfg.ctx)
 	if err != nil {
-		streamCancel()
+		clientCfg.cancel()
 		return nil, err
 	}
 
 	client := &watchClient{
-		cancelStreamCtx:        streamCancel,
 		cfg:                    clientCfg,
 		getTokenExpirationTime: getTokenExpirationTime,
 		isRunning:              true,
 		stream:                 stream,
-		streamCtx:              streamCtx,
 		timer:                  time.NewTimer(initDuration),
 	}
 
@@ -118,8 +120,8 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 
 	for {
 		select {
-		case <-c.streamCtx.Done():
-			c.handleError(c.streamCtx.Err())
+		case <-c.cfg.ctx.Done():
+			c.handleError(c.cfg.ctx.Err())
 			return
 		case <-c.stream.Context().Done():
 			c.handleError(c.stream.Context().Err())
@@ -171,8 +173,11 @@ func (c *watchClient) handleError(err error) {
 	if c.isRunning {
 		c.isRunning = false
 		c.timer.Stop()
+		if c.cfg.ctx.Err() != nil {
+			return
+		}
 		c.cfg.errors <- err
-		c.cancelStreamCtx()
+		c.cfg.cancel()
 	}
 }
 

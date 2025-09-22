@@ -158,12 +158,14 @@ func Test_watchClient_send(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // Should write an error to the error channel when calling processEvents
 func Test_watchClient_processEvents(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	cfg := clientConfig{
+		ctx:    ctx,
+		cancel: cancel,
 		events: make(chan *proto.Event),
 		errors: make(chan error),
 	}
@@ -185,17 +187,19 @@ func Test_watchClient_processEvents(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-// Should write an error to the error channel when the stream context is cancelled.
+// Stream should be cancelled and an error received over the context
 func Test_watchClient_processRequest(t *testing.T) {
 	getter := &mockTokenGetter{
 		err: nil,
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	cfg := clientConfig{
+		ctx:         ctx,
+		cancel:      cancel,
 		events:      make(chan *proto.Event),
 		errors:      make(chan error),
 		tokenGetter: getter.GetToken,
 	}
-	ctx, cancel := context.WithCancel(context.Background())
 	stream := &mockStream{
 		event:   &proto.Event{},
 		err:     fmt.Errorf("err"),
@@ -213,7 +217,7 @@ func Test_watchClient_processRequest(t *testing.T) {
 
 	cancel()
 
-	err = <-cfg.errors
+	err = ctx.Err()
 	assert.NotNil(t, err)
 }
 

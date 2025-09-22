@@ -1,6 +1,7 @@
 package poller
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -63,11 +64,11 @@ func TestPollClientStart(t *testing.T) {
 	assert.Nil(t, pollClient.Status())
 	assert.Equal(t, hc.OK, pollClient.Healthcheck("").Result)
 
-	// should stop the poller and write nil to the error channel
+	// should stop the poller and receive an error that it was closed
 	pollClient.Stop()
 
 	err = <-errCh
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 
 	assert.Equal(t, hc.FAIL, pollClient.Healthcheck("").Result)
 	assert.NotNil(t, pollClient.Status())
@@ -118,11 +119,11 @@ type mockHarvester struct {
 	readyCh chan struct{}
 }
 
-func (m mockHarvester) EventCatchUp(_ string, _ chan *proto.Event) error {
+func (m mockHarvester) EventCatchUp(_ context.Context, _ string, _ chan *proto.Event) error {
 	return nil
 }
 
-func (m mockHarvester) ReceiveSyncEvents(_ string, _ int64, _ chan *proto.Event) (int64, error) {
+func (m mockHarvester) ReceiveSyncEvents(_ context.Context, _ string, _ int64, _ chan *proto.Event) (int64, error) {
 	if m.readyCh != nil {
 		m.readyCh <- struct{}{}
 	}

@@ -13,13 +13,13 @@ import (
 )
 
 type pollExecutor struct {
+	ctx           context.Context
+	cancel        context.CancelFunc
 	harvester     harvester.Harvest
 	sequence      events.SequenceProvider
 	topicSelfLink string
 	logger        log.FieldLogger
 	timer         *time.Timer
-	ctx           context.Context
-	cancel        context.CancelFunc
 	interval      time.Duration
 	onStop        onClientStopCb
 	isReady       bool
@@ -34,7 +34,6 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 		WithPackage("sdk.agent.poller")
 
 	ctx, cancel := context.WithCancel(context.Background())
-
 	pm := &pollExecutor{
 		logger:   logger,
 		timer:    time.NewTimer(interval),
@@ -70,7 +69,7 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 		return
 	}
 
-	if err := m.harvester.EventCatchUp(m.topicSelfLink, eventChan); err != nil {
+	if err := m.harvester.EventCatchUp(m.ctx, m.topicSelfLink, eventChan); err != nil {
 		m.logger.WithError(err).Error("harvester returned an error when syncing events")
 		m.onHarvesterErr()
 		go func() {
@@ -118,7 +117,7 @@ func (m *pollExecutor) tick(topicSelfLink string, eventChan chan *proto.Event) (
 		}
 	}()
 
-	if lastSeqID, err := m.harvester.ReceiveSyncEvents(topicSelfLink, sequence, eventChan); err != nil {
+	if lastSeqID, err := m.harvester.ReceiveSyncEvents(m.ctx, topicSelfLink, sequence, eventChan); err != nil {
 		if _, ok := err.(*harvester.ErrSeqGone); ok {
 			m.sequence.SetSequence(lastSeqID)
 			return

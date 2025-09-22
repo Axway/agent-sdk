@@ -1,6 +1,8 @@
 package poller
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -63,24 +65,17 @@ func NewPollClient(
 
 // Start the polling client
 func (p *PollClient) Start() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
 
 	p.mutex.Lock()
 
-	p.listener = p.newListener(
-		eventCh,
-		p.apiClient,
-		p.harvesterConfig.sequence,
-		p.handlers...,
-	)
+	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.harvesterConfig.sequence, p.handlers...)
 
-	p.poller = p.newPollManager(
-		p.interval,
-		withOnStop(p.onClientStop),
-		withHarvester(p.harvesterConfig),
-	)
+	p.poller = p.newPollManager(p.interval, withOnStop(p.onClientStop), withHarvester(p.harvesterConfig), WithContext(ctx, cancel))
 	p.mutex.Unlock()
-	listenCh := p.listener.Listen()
+	p.listener.Listen()
 	p.poller.RegisterWatch(eventCh, eventErrorCh)
 
 	if p.onStreamConnection != nil {
@@ -92,10 +87,10 @@ func (p *PollClient) Start() error {
 	p.mutex.Unlock()
 
 	select {
-	case err := <-listenCh:
-		return err
 	case err := <-eventErrorCh:
 		return err
+	case <-ctx.Done():
+		return fmt.Errorf("poll client context has been closed")
 	}
 }
 
