@@ -156,9 +156,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
+	// clone and remove dependencies from the request schema for hashing
+	requestSchemaWithoutDependencies := c.requestSchema
+	delete(requestSchemaWithoutDependencies, "dependencies")
+
 	spec := management.CredentialRequestDefinitionSpec{
 		Type:   c.credType,
-		Schema: c.requestSchema,
+		Schema: requestSchemaWithoutDependencies,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
 			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{
