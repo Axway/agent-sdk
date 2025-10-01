@@ -138,7 +138,15 @@ func (p *oas2SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{
 	// order authSchemas by name
 	for _, name := range util.OrderedKeys(authSchemes) {
 		scheme := authSchemes[name]
-		p.spec.SecurityDefinitions[name], _ = scheme.(*openapi2.SecurityScheme)
+		if p.spec.SecurityDefinitions == nil {
+			p.spec.SecurityDefinitions = make(map[string]*openapi2.SecurityScheme)
+		}
+
+		var ok bool
+		p.spec.SecurityDefinitions[name], ok = scheme.(*openapi2.SecurityScheme)
+		if !ok {
+			continue
+		}
 
 		// get scopes in array
 		scopes := []string{}
