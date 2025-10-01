@@ -265,6 +265,9 @@ func (p *oas3SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{
 		if !ok {
 			continue
 		}
+		if p.spec.Components == nil {
+			p.spec.Components = &openapi3.Components{}
+		}
 		if p.spec.Components.SecuritySchemes == nil {
 			p.spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 		}
