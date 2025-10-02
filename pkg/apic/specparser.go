@@ -55,6 +55,7 @@ type OasSpecProcessor interface {
 	AddSecuritySchemes(map[string]interface{})
 	GetSpecBytes() []byte
 	GetResourceType() string
+	GetVersion() string
 }
 
 // SpecResourceParser -
