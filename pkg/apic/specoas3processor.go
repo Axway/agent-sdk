@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -250,6 +251,35 @@ func (p *oas3SpecProcessor) StripSpecAuth() {
 	p.spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 }
 
+func (p *oas3SpecProcessor) StripExtensions() {
+	p.spec.Extensions = map[string]any{}
+	if p.spec.Info != nil {
+		p.spec.Info.Extensions = map[string]any{}
+	}
+	if p.spec.ExternalDocs != nil {
+		p.spec.ExternalDocs.Extensions = map[string]any{}
+	}
+	if p.spec.Paths != nil {
+		for _, path := range p.spec.Paths.Map() {
+			cleanPathExtensions(path)
+		}
+		p.spec.Paths.Extensions = map[string]any{}
+	}
+	if p.spec.Components != nil {
+		p.spec.Components.Extensions = map[string]any{}
+	}
+	if p.spec.Tags != nil {
+		for i := range p.spec.Tags {
+			p.spec.Tags[i].Extensions = map[string]any{}
+		}
+	}
+	for _, server := range p.spec.Servers {
+		if server != nil {
+			server.Extensions = map[string]any{}
+		}
+	}
+}
+
 func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
 	return s
@@ -273,6 +303,37 @@ func (p *oas3SpecProcessor) AddSecuritySchemes(authSchemes map[string]interface{
 		}
 		p.spec.Components.SecuritySchemes[name] = &openapi3.SecuritySchemeRef{
 			Value: s,
+		}
+	}
+}
+
+// cleanPathExtensions cleans extensions from both OAS2 and OAS3 path items
+func cleanPathExtensions(path interface{}) {
+	if path == nil {
+		return
+	}
+
+	v := reflect.ValueOf(path)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return
+		}
+		v = v.Elem()
+	}
+
+	// Clear main Extensions field
+	if extField := v.FieldByName("Extensions"); extField.IsValid() && extField.CanSet() {
+		extField.Set(reflect.ValueOf(map[string]any{}))
+	}
+
+	// HTTP methods to check (covers both OAS2 and OAS3)
+	methods := []string{"Connect", "Delete", "Get", "Head", "Options", "Patch", "Post", "Put", "Trace"}
+
+	for _, method := range methods {
+		if methodField := v.FieldByName(method); methodField.IsValid() && !methodField.IsNil() {
+			if extField := methodField.Elem().FieldByName("Extensions"); extField.IsValid() && extField.CanSet() {
+				extField.Set(reflect.ValueOf(map[string]any{}))
+			}
 		}
 	}
 }

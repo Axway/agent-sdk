@@ -130,6 +130,43 @@ func (p *oas2SpecProcessor) StripSpecAuth() {
 	p.spec.Security = make(openapi2.SecurityRequirements, 0)
 }
 
+func (p *oas2SpecProcessor) StripExtensions() {
+	p.spec.Extensions = map[string]any{}
+	p.spec.Info.Extensions = map[string]any{}
+	if p.spec.ExternalDocs != nil {
+		p.spec.ExternalDocs.Extensions = map[string]any{}
+	}
+	for _, path := range p.spec.Paths {
+		cleanPathExtensions(path)
+	}
+	for _, def := range p.spec.Definitions {
+		if def != nil {
+			def.Extensions = map[string]any{}
+		}
+
+	}
+	for _, param := range p.spec.Parameters {
+		if param != nil {
+			param.Extensions = map[string]any{}
+		}
+	}
+	for _, resp := range p.spec.Responses {
+		if resp != nil {
+			resp.Extensions = map[string]any{}
+		}
+	}
+	for _, sd := range p.spec.SecurityDefinitions {
+		if sd != nil {
+			sd.Extensions = map[string]any{}
+		}
+	}
+	if p.spec.Tags != nil {
+		for i := range p.spec.Tags {
+			p.spec.Tags[i].Extensions = map[string]any{}
+		}
+	}
+}
+
 func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 	return newSpecSecurityBuilder(oas2)
 }

@@ -55,6 +55,7 @@ type ServiceBuilder interface {
 	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
 	SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder
 	SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
+	SetStripOASExtensions(strip bool) ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -374,6 +375,10 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		return b.serviceBody, err
 	}
 
+	if b.serviceBody.stripOASExtensions {
+		val.StripExtensions()
+	}
+
 	// only set ard name based on spec if not already set, use first auth we find
 	if b.serviceBody.ardName != "" {
 		return b.serviceBody, nil
@@ -418,6 +423,11 @@ func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName
 
 func (b *serviceBodyBuilder) SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder {
 	b.serviceBody.ignoreSpecBasesCreds = ignore
+	return b
+}
+
+func (b *serviceBodyBuilder) SetStripOASExtensions(strip bool) ServiceBuilder {
+	b.serviceBody.stripOASExtensions = strip
 	return b
 }
 

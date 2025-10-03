@@ -50,6 +50,7 @@ type OasSpecProcessor interface {
 	GetOAuthScopes() map[string]string
 	GetAuthPolicies() []string
 	StripSpecAuth()
+	StripExtensions()
 	GetTitle() string
 	GetSecurityBuilder() SecurityBuilder
 	AddSecuritySchemes(map[string]interface{})

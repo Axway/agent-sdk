@@ -34,7 +34,11 @@
       "externalDocs": {
         "description": "Find out more about our store",
         "url": "http://swagger.io"
-      }
+      },
+      "x-resource-name": "/breeds",
+      "x-api-broken": false,
+      "x-interceptors": {},
+      "x-destination": "https://catfact.ninja/breeds"
     }
   ],
   "schemes": [
@@ -81,7 +85,11 @@
           {
             "api_key": []
           }
-        ]
+        ],
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
       },
       "post": {
         "tags": [
@@ -133,7 +141,11 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
       },
       "delete": {
         "tags": [
@@ -234,7 +246,11 @@
             ]
           }
         ]
-      }
+      },
+      "x-resource-name": "/breeds",
+      "x-api-broken": false,
+      "x-interceptors": {},
+      "x-destination": "https://catfact.ninja/breeds"
     },
     "/pet": {
       "post": {
@@ -1049,5 +1065,24 @@
   "externalDocs": {
     "description": "Find out more about Swagger",
     "url": "http://swagger.io"
-  }
+  },
+  "x-resources": {
+    "/facts": {
+      "x-resource-description": "Cat Facts",
+      "x-interceptors": {},
+      "x-api-broken": false
+    },
+    "/breeds": {
+      "x-resource-description": "Breeds",
+      "x-interceptors": {},
+      "x-api-broken": false
+    },
+    "/fact": {
+      "x-resource-description": "Cat Facts",
+      "x-interceptors": {},
+      "x-api-broken": false
+    }
+  },
+  "x-api-broken": false,
+  "x-life-cycle": "Stage One"
 }

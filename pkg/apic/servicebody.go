@@ -55,6 +55,7 @@ type ServiceBody struct {
 	ardName                   string
 	uniqueARD                 bool
 	ignoreSpecBasesCreds      bool
+	stripOASExtensions        bool
 	specHash                  string
 	specVersion               string
 	accessRequestDefinition   *management.AccessRequestDefinition

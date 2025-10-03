@@ -11,15 +11,27 @@
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "version": "1.0.4"
+    "version": "1.0.4",
+    "x-resource-name": "/breeds",
+    "x-api-broken": false,
+    "x-interceptors": {},
+    "x-destination": "https://catfact.ninja/breeds"
   },
   "externalDocs": {
     "description": "Find out more about Swagger",
-    "url": "http://swagger.io"
+    "url": "http://swagger.io",
+    "x-resource-name": "/breeds",
+    "x-api-broken": false,
+    "x-interceptors": {},
+    "x-destination": "https://catfact.ninja/breeds"
   },
   "servers": [
     {
-      "url": "http://petstore.swagger.io:8080/api/v3"
+      "url": "http://petstore.swagger.io:8080/api/v3",
+      "x-resource-name": "/breeds",
+      "x-api-broken": false,
+      "x-interceptors": {},
+      "x-destination": "https://catfact.ninja/breeds"
     },
     {
       "url": "http://petstore.swagger.io/api/v3"
@@ -34,12 +46,24 @@
       "description": "Everything about your Pets",
       "externalDocs": {
         "description": "Find out more",
-        "url": "http://swagger.io"
-      }
+        "url": "http://swagger.io",
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
+      },
+      "x-resource-name": "/breeds",
+      "x-api-broken": false,
+      "x-interceptors": {},
+      "x-destination": "https://catfact.ninja/breeds"
     },
     {
       "name": "store",
-      "description": "Operations about user"
+      "description": "Operations about user",
+      "x-resource-name": "/breeds",
+      "x-api-broken": false,
+      "x-interceptors": {},
+      "x-destination": "https://catfact.ninja/breeds"
     },
     {
       "name": "user",
@@ -113,7 +137,11 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
       },
       "post": {
         "tags": [
@@ -170,7 +198,11 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
       }
     },
     "/pet/findByStatus": {
@@ -933,9 +965,17 @@
           "404": {
             "description": "User not found"
           }
-        }
+        },
+        "x-resource-name": "/breeds",
+        "x-api-broken": false,
+        "x-interceptors": {},
+        "x-destination": "https://catfact.ninja/breeds"
       }
-    }
+    },
+    "x-resource-name": "/breeds",
+    "x-api-broken": false,
+    "x-interceptors": {},
+    "x-destination": "https://catfact.ninja/breeds"
   },
   "components": {
     "schemas": {
@@ -1226,6 +1266,29 @@
         "name": "api_key",
         "in": "header"
       }
+    },
+    "x-resource-name": "/breeds",
+    "x-api-broken": false,
+    "x-interceptors": {},
+    "x-destination": "https://catfact.ninja/breeds"
+  },
+  "x-resources": {
+    "/facts": {
+      "x-resource-description": "Cat Facts",
+      "x-interceptors": {},
+      "x-api-broken": false
+    },
+    "/breeds": {
+      "x-resource-description": "Breeds",
+      "x-interceptors": {},
+      "x-api-broken": false
+    },
+    "/fact": {
+      "x-resource-description": "Cat Facts",
+      "x-interceptors": {},
+      "x-api-broken": false
     }
-  }
+  },
+  "x-api-broken": false,
+  "x-life-cycle": "Stage One"
 }
