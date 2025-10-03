@@ -130,6 +130,10 @@ func (p *oas2SpecProcessor) StripSpecAuth() {
 	p.spec.Security = make(openapi2.SecurityRequirements, 0)
 }
 
+func (p *oas2SpecProcessor) StripExtensions() {
+	p.spec.Extensions = map[string]any{}
+}
+
 func (p *oas2SpecProcessor) GetSecurityBuilder() SecurityBuilder {
 	return newSpecSecurityBuilder(oas2)
 }

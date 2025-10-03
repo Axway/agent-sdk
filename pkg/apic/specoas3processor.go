@@ -250,6 +250,10 @@ func (p *oas3SpecProcessor) StripSpecAuth() {
 	p.spec.Components.SecuritySchemes = openapi3.SecuritySchemes{}
 }
 
+func (p *oas3SpecProcessor) StripExtensions() {
+	p.spec.Extensions = map[string]any{}
+}
+
 func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
 	return s
