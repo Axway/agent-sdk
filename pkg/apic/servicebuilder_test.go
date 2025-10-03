@@ -83,6 +83,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetReferenceServiceName("refSvc", "refEnv").
 		SetReferenceInstanceName("refInstance", "refEnv").
 		SetIgnoreSpecBasedCreds(true).
+		SetStripOASExtensions(true).
 		SetInstanceLifecycle("stage", "active", "").
 		SetServiceEndpoints(ep)
 
@@ -134,6 +135,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "refEnv/refSvc", sb.GetReferencedServiceName())
 	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
 	assert.Equal(t, true, sb.ignoreSpecBasesCreds)
+	assert.Equal(t, true, sb.stripOASExtensions)
 	instanceLifecycle := sb.GetInstanceLifeCycle()
 	assert.NotNil(t, instanceLifecycle)
 	assert.Equal(t, "stage", instanceLifecycle.Stage)
