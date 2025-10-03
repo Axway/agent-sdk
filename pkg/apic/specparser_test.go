@@ -1,10 +1,13 @@
 package apic
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
 
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -19,12 +22,13 @@ func createSpecParser(specFile, specType string) (SpecResourceParser, error) {
 
 func TestSpecDiscovery(t *testing.T) {
 	tests := []struct {
-		name         string
-		inputFile    string
-		inputType    string
-		parseErr     bool
-		expectedType string
-		stripAuth    bool
+		name            string
+		inputFile       string
+		inputType       string
+		parseErr        bool
+		expectedType    string
+		stripAuth       bool
+		stripExtensions bool
 	}{
 		{
 			name:      "Protobuf input type with OAS3 Spec",
@@ -139,6 +143,27 @@ func TestSpecDiscovery(t *testing.T) {
 			inputType:    Oas3,
 			stripAuth:    true,
 		},
+		{
+			name:            "OAS3 Spec with strip extensions",
+			inputFile:       "./testdata/petstore-openapi3.json",
+			expectedType:    Oas3,
+			inputType:       Oas3,
+			stripExtensions: true,
+		},
+		{
+			name:            "OAS2 Spec with strip extensions",
+			inputFile:       "./testdata/petstore-swagger2.json",
+			expectedType:    Oas2,
+			inputType:       Oas2,
+			stripExtensions: true,
+		},
+		{
+			name:         "OAS2 Spec with strip auth",
+			inputFile:    "./testdata/petstore-swagger2.json",
+			expectedType: Oas2,
+			inputType:    Oas2,
+			stripAuth:    true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -159,10 +184,10 @@ func TestSpecDiscovery(t *testing.T) {
 			switch tc.expectedType {
 			case Oas3:
 				_, ok = specProcessor.(*oas3SpecProcessor)
-				ValidateOAS3Processors(t, specParser, tc.stripAuth)
+				ValidateOAS3Processors(t, specParser, tc.stripAuth, tc.stripExtensions)
 			case Oas2:
 				_, ok = specProcessor.(*oas2SpecProcessor)
-				ValidateOAS2Processors(t, specParser, tc.inputFile)
+				ValidateOAS2Processors(t, specParser, tc.inputFile, tc.stripExtensions, tc.stripAuth)
 			case Wsdl:
 				_, ok = specProcessor.(*wsdlProcessor)
 				ValidateWsdlProcessors(t, specParser)
@@ -198,7 +223,7 @@ func TestLoadRamlAsYaml(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAuth bool) {
+func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAuth, stripExtensions bool) {
 	// JSON OAS3 specification
 	specProcessor := specParser.GetSpecProcessor()
 	endPoints, err := specProcessor.GetEndpoints()
@@ -293,9 +318,50 @@ func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAu
 	for _, possibleEndpoint := range possibleEndpoints {
 		assert.True(t, possibleEndpoint.Found, "Did not find an endpoint with Host(%s), Port(%d), and Protocol(%s) in the returned endpoint array", possibleEndpoint.Host, possibleEndpoint.Port, possibleEndpoint.Protocol)
 	}
+
+	processor.AddSecuritySchemes(map[string]interface{}{fmt.Sprintf("OAuth"): &openapi3.SecurityScheme{}})
+	assert.NotEmpty(t, processor.spec.Components)
+	assert.NotEmpty(t, processor.spec.Components.SecuritySchemes)
+
+	processor.ParseAuthInfo()
+	assert.NotNil(t, processor.authPolicies)
+	assert.NotNil(t, processor.apiKeyInfo)
+	assert.NotNil(t, processor.scopes)
+
+	assert.Equal(t, processor.spec.Info.Title, processor.GetTitle())
+	assert.Equal(t, processor.spec.Info.Description, processor.GetDescription())
+
+	if !stripExtensions {
+		return
+	}
+
+	processor.StripExtensions()
+	assert.Empty(t, processor.spec.Extensions)
+	if processor.spec.Info != nil {
+		assert.Empty(t, processor.spec.Info.Extensions)
+	}
+	if processor.spec.ExternalDocs != nil {
+		assert.Empty(t, processor.spec.ExternalDocs.Extensions)
+	}
+	if processor.spec.Paths != nil {
+		assert.Empty(t, processor.spec.Paths.Extensions)
+	}
+	if processor.spec.Components != nil {
+		assert.Empty(t, processor.spec.Components.Extensions)
+	}
+	if processor.spec.Tags != nil {
+		for i := range processor.spec.Tags {
+			assert.Empty(t, processor.spec.Tags[i].Extensions)
+		}
+	}
+	for _, server := range processor.spec.Servers {
+		if server != nil {
+			assert.Empty(t, server.Extensions)
+		}
+	}
 }
 
-func ValidateOAS2Processors(t *testing.T, specParser SpecResourceParser, inputFile string) {
+func ValidateOAS2Processors(t *testing.T, specParser SpecResourceParser, inputFile string, stripExtensions, stripAuth bool) {
 	specProcessor := specParser.GetSpecProcessor()
 	endPoints, err := specProcessor.GetEndpoints()
 
@@ -310,6 +376,68 @@ func ValidateOAS2Processors(t *testing.T, specParser SpecResourceParser, inputFi
 		assert.Equal(t, int32(80), endPoints[0].Port, "The returned end point had an unexpected value for it's port")
 		assert.Equal(t, "http", endPoints[0].Protocol, "The returned end point had an unexpected value for it's protocol")
 		assert.Equal(t, "/v1", endPoints[0].BasePath, "The base path was not parsed from the JSON as expected")
+	}
+
+	processor, _ := specProcessor.(*oas2SpecProcessor)
+	processor.AddSecuritySchemes(map[string]interface{}{"oauth2_auth_code": &openapi2.SecurityScheme{Scopes: map[string]string{}}})
+	assert.NotEmpty(t, processor.spec.Security)
+	assert.NotEmpty(t, processor.spec.SecurityDefinitions)
+
+	processor.ParseAuthInfo()
+	assert.NotNil(t, processor.authPolicies)
+	assert.NotNil(t, processor.apiKeyInfo)
+	assert.NotNil(t, processor.scopes)
+
+	assert.Equal(t, processor.authPolicies, processor.GetAuthPolicies())
+	assert.Equal(t, processor.scopes, processor.GetOAuthScopes())
+	assert.Equal(t, processor.apiKeyInfo, processor.GetAPIKeyInfo())
+	assert.Equal(t, processor.spec.Info.Title, processor.GetTitle())
+	assert.Equal(t, processor.spec.Info.Description, processor.GetDescription())
+
+	if stripAuth {
+		processor.StripSpecAuth()
+		assert.NotNil(t, processor.spec.Security)
+		assert.Empty(t, processor.spec.SecurityDefinitions)
+	}
+	if !stripExtensions {
+		return
+	}
+
+	processor.StripExtensions()
+	assert.Empty(t, processor.spec.Extensions)
+	if processor.spec.ExternalDocs != nil {
+		assert.Empty(t, processor.spec.ExternalDocs.Extensions)
+	}
+	for _, path := range processor.spec.Paths {
+		if path != nil {
+			assert.Empty(t, path.Extensions)
+		}
+	}
+	for _, def := range processor.spec.Definitions {
+		if def != nil {
+			assert.Empty(t, def.Extensions)
+		}
+
+	}
+	for _, param := range processor.spec.Parameters {
+		if param != nil {
+			assert.Empty(t, param.Extensions)
+		}
+	}
+	for _, resp := range processor.spec.Responses {
+		if resp != nil {
+			assert.Empty(t, resp.Extensions)
+		}
+	}
+	for _, sd := range processor.spec.SecurityDefinitions {
+		if sd != nil {
+			assert.Empty(t, sd.Extensions)
+		}
+	}
+	if processor.spec.Tags != nil {
+		for i := range processor.spec.Tags {
+			assert.Empty(t, processor.spec.Tags[i].Extensions)
+		}
 	}
 }
 
