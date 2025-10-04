@@ -1,8 +1,6 @@
 module github.com/Axway/agent-sdk
 
-go 1.23.10
-
-toolchain go1.23.11
+go 1.24.7
 
 require (
 	github.com/elastic/beats/v7 v7.17.29
@@ -16,6 +14,7 @@ require (
 	github.com/invopop/yaml v0.3.1
 	github.com/lestrrat-go/jwx/v2 v2.0.21
 	github.com/opentracing/opentracing-go v1.2.0
+	github.com/pb33f/libopenapi v0.28.0
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.3
@@ -23,7 +22,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	github.com/subosito/gotenv v1.4.0
 	github.com/swaggest/go-asyncapi v0.8.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
@@ -39,6 +38,8 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/elastic/elastic-agent-client/v7 v7.17.2 // indirect
@@ -76,6 +77,8 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
+	github.com/pb33f/jsonpath v0.1.2 // indirect
+	github.com/pb33f/ordered-map/v2 v2.3.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
@@ -92,6 +95,7 @@ require (
 	go.elastic.co/fastjson v1.5.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
 	golang.org/x/mod v0.26.0 // indirect

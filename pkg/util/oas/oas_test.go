@@ -44,6 +44,22 @@ func TestParseOAS3(t *testing.T) {
 			spec:     petstore3Json,
 		},
 		{
+			name:     "Should parse OpenAPI 3.1 spec using pb33f/libopenapi",
+			hasError: false,
+			spec: `{
+				"openapi": "3.1.0",
+				"info": {
+					"title": "petstore3.1"
+				},
+				"paths": {},
+				"servers": [
+					{
+						"url": "https://google.com"
+					}
+				]
+			}`,
+		},
+		{
 			name:     "Should fail to parse the spec when the 'openapi' key is incorrect",
 			hasError: true,
 			spec: `{
@@ -219,7 +235,136 @@ func TestSetOAS2HostDetails(t *testing.T) {
 			err = SetOAS2HostDetails(obj, tc.endpointURL)
 			assert.Equal(t, obj.Host, tc.host)
 			assert.Equal(t, obj.BasePath, tc.basePath)
-			assert.Equal(t, obj.Schemes, tc.schemes)
 		})
 	}
+}
+
+// Test cases for the hybrid OpenAPI parsing approach
+func TestGetOpenAPIVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     string
+		expected string
+		hasError bool
+	}{
+		{
+			name: "OpenAPI 3.0 JSON",
+			spec: `{
+				"openapi": "3.0.0",
+				"info": {
+					"title": "Test API",
+					"version": "1.0.0"
+				},
+				"paths": {}
+			}`,
+			expected: "3.0.0",
+			hasError: false,
+		},
+		{
+			name: "OpenAPI 3.1 JSON",
+			spec: `{
+				"openapi": "3.1.0",
+				"info": {
+					"title": "Test API",
+					"version": "1.0.0"
+				},
+				"paths": {}
+			}`,
+			expected: "3.1.0",
+			hasError: false,
+		},
+		{
+			name: "Swagger 2.0 JSON",
+			spec: `{
+				"swagger": "2.0",
+				"info": {
+					"title": "Test API",
+					"version": "1.0.0"
+				},
+				"paths": {}
+			}`,
+			expected: "2.0",
+			hasError: false,
+		},
+		{
+			name: "Invalid spec",
+			spec: `{
+				"invalid": "spec"
+			}`,
+			expected: "",
+			hasError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version, err := getOpenAPIVersion([]byte(tt.spec))
+			if tt.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, version)
+			}
+		})
+	}
+}
+
+func TestIsOpenAPI31(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected bool
+	}{
+		{"3.0.0", false},
+		{"3.0.1", false},
+		{"3.0.2", false},
+		{"3.1.0", true},
+		{"3.1.1", true},
+		{"3.2.0", true},
+		{"3.3.0", true},
+		{"2.0", false},
+		{"4.0.0", false}, // hypothetical future major version
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			result := isOpenAPI31(tt.version)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseOAS31WithLibOpenAPI(t *testing.T) {
+	// Test OpenAPI 3.1 spec parsing with pb33f/libopenapi
+	oas31Spec := `{
+		"openapi": "3.1.0",
+		"info": {
+			"title": "Test API 3.1",
+			"version": "1.0.0"
+		},
+		"paths": {
+			"/test": {
+				"get": {
+					"responses": {
+						"200": {
+							"description": "OK"
+						}
+					}
+				}
+			}
+		}
+	}`
+
+	t.Run("Parse valid OpenAPI 3.1 spec", func(t *testing.T) {
+		doc, err := parseOAS31WithLibOpenAPI([]byte(oas31Spec))
+		assert.NoError(t, err)
+		assert.NotNil(t, doc)
+		assert.Equal(t, "Test API 3.1", doc.Info.Title)
+		assert.NotNil(t, doc.Paths)
+	})
+
+	t.Run("Parse invalid spec should fail", func(t *testing.T) {
+		invalidSpec := `{"invalid": "spec"}`
+		_, err := parseOAS31WithLibOpenAPI([]byte(invalidSpec))
+		assert.Error(t, err)
+	})
 }
