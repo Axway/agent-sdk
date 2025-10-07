@@ -70,21 +70,31 @@ type quota struct {
 
 // NewQuotaFromAccessRequest create a Quota interface from an access request or nil if no quota on access request
 func NewQuotaFromAccessRequest(ar *management.AccessRequest) Quota {
-	if ar.Spec.Quota == nil {
-		return nil
-	}
-	interval := quotaIntervalFromString(ar.Spec.Quota.Interval)
-	if interval == -1 {
-		return nil
-	}
-
 	planName := ""
 	planData := ar.GetReferenceByGVK(catalog.ProductPlanGVK())
 	if planData.Name != "" {
 		planName = planData.Name
 	}
+
+	// If there's no plan name, return nil
+	if planName == "" {
+		return nil
+	}
+
+	// Default values for when quota spec is missing
+	limit := int64(0)
+	interval := QuotaInterval(-1)
+
+	// Use actual quota values if available
+	if ar.Spec.Quota != nil {
+		limit = int64(ar.Spec.Quota.Limit)
+		if validInterval := quotaIntervalFromString(ar.Spec.Quota.Interval); validInterval != -1 {
+			interval = validInterval
+		}
+	}
+
 	return &quota{
-		limit:    int64(ar.Spec.Quota.Limit),
+		limit:    limit,
 		interval: interval,
 		planName: planName,
 	}
