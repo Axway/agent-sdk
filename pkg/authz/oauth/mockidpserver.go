@@ -24,6 +24,7 @@ type MockIDPServer interface {
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
 	SetUseRegistrationAccessToken(useRegistrationAccessToken bool)
+	SetRegistrationClientURI(registrationClientURI string)
 	GetTokenRequestHeaders() http.Header
 	GetTokenQueryParams() url.Values
 	GetTokenRequestValues() url.Values
@@ -38,6 +39,7 @@ type mockIDPServer struct {
 	registerResponseCode       int
 	useRegistrationAccessToken bool
 	accessToken                string
+	registrationClientURI      string
 	tokenExpiry                time.Duration
 	serverMetadata             *AuthorizationServerMetadata
 	server                     *httptest.Server
@@ -129,6 +131,9 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 			if m.useRegistrationAccessToken {
 				cl.RegistrationAccessToken = uuid.New().String()
 			}
+			if m.registrationClientURI != "" {
+				cl.RegistrationClientURI = m.registrationClientURI
+			}
 			clientBuf, _ = json.Marshal(cl)
 			resp.Write(clientBuf)
 		}
@@ -178,6 +183,10 @@ func (m *mockIDPServer) SetRegistrationResponseCode(statusCode int) {
 
 func (m *mockIDPServer) SetUseRegistrationAccessToken(useRegistrationAccessToken bool) {
 	m.useRegistrationAccessToken = useRegistrationAccessToken
+}
+
+func (m *mockIDPServer) SetRegistrationClientURI(registrationClientURI string) {
+	m.registrationClientURI = registrationClientURI
 }
 
 func (m *mockIDPServer) GetTokenRequestHeaders() http.Header {

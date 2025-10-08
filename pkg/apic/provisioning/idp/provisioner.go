@@ -147,6 +147,8 @@ func (p *provisioner) RegisterClient() error {
 	p.credentialData.clientID = resClientMetadata.GetClientID()
 	p.credentialData.clientSecret = resClientMetadata.GetClientSecret()
 
+	util.SetAgentDetailsKey(p.credential, "registrationClientURI", resClientMetadata.GetRegistrationClientURI())
+
 	return nil
 }
 
@@ -155,7 +157,9 @@ func (p *provisioner) UnregisterClient() error {
 		return nil
 	}
 
-	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken)
+	registrationClientURI, _ := util.GetAgentDetailsValue(p.credential, "registrationClientURI")
+
+	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken, registrationClientURI)
 	if err != nil {
 		return err
 	}

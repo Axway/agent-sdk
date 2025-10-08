@@ -46,6 +46,7 @@ type ClientMetadata interface {
 	GetTLSClientAuthSanIP() string
 	GetTLSClientAuthSanURI() string
 	GetRegistrationAccessToken() string
+	GetRegistrationClientURI() string
 }
 
 type clientMetadata struct {
@@ -72,6 +73,7 @@ type clientMetadata struct {
 	TLSClientAuthSanIP      string                 `json:"tls_client_auth_san_ip,omitempty"`
 	TLSClientAuthSanURI     string                 `json:"tls_client_auth_san_uri,omitempty"`
 	RegistrationAccessToken string                 `json:"registration_access_token,omitempty"`
+	RegistrationClientURI   string                 `json:"registration_client_uri,omitempty"`
 	extraProperties         map[string]string      `json:"-"`
 }
 
@@ -181,6 +183,10 @@ func (c *clientMetadata) GetTLSClientAuthSanURI() string {
 
 func (c *clientMetadata) GetRegistrationAccessToken() string {
 	return c.RegistrationAccessToken
+}
+
+func (c *clientMetadata) GetRegistrationClientURI() string {
+	return c.RegistrationClientURI
 }
 
 // MarshalJSON serialize the client metadata with provider metadata

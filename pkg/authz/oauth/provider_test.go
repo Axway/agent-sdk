@@ -146,6 +146,7 @@ func TestProvider(t *testing.T) {
 				extraProperties: map[string]string{
 					"key": "value",
 				},
+				RegistrationClientURI: "https://idp.example.com/clients/test-client-id",
 			},
 			authServerMetadata:         &AuthorizationServerMetadata{},
 			registrationResponseCode:   http.StatusCreated,
@@ -200,6 +201,11 @@ func TestProvider(t *testing.T) {
 			}
 
 			s.SetRegistrationResponseCode(tc.registrationResponseCode)
+
+			if tc.expectedClient != nil && tc.expectedClient.RegistrationClientURI != "" {
+				s.SetRegistrationClientURI(tc.expectedClient.RegistrationClientURI)
+			}
+
 			cr, err := p.RegisterClient(tc.clientRequest)
 			if tc.expectRegistrationErr {
 				assert.NotNil(t, err)
@@ -220,8 +226,9 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, strings.Join(tc.expectedClient.GetScopes(), ","), strings.Join(cr.GetScopes(), ","))
 			assert.Equal(t, tc.expectedClient.GetJwksURI(), cr.GetJwksURI())
 			assert.Equal(t, len(tc.expectedClient.GetExtraProperties()), len(cr.GetExtraProperties()))
+			assert.Equal(t, tc.expectedClient.RegistrationClientURI, cr.GetRegistrationClientURI())
 			s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken())
+			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), tc.expectedClient.GetRegistrationClientURI())
 			if tc.expectUnRegistrationErr {
 				assert.NotNil(t, err)
 				return
