@@ -492,6 +492,19 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		return err
 	}
 
+	// Some IDPs want client id as query param, not part of the URL
+	if response.Code == http.StatusNotFound {
+		request.QueryParams["clientId"] = clientID
+		if strings.Contains(request.URL, "/"+clientID) {
+			request.URL = strings.Replace(request.URL, "/"+clientID, "", 1)
+		}
+
+		response, err = p.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
+	}
+
 	if response.Code != http.StatusNoContent {
 		err := fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
 		p.logger.
