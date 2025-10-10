@@ -147,7 +147,9 @@ func (p *provisioner) RegisterClient() error {
 	p.credentialData.clientID = resClientMetadata.GetClientID()
 	p.credentialData.clientSecret = resClientMetadata.GetClientSecret()
 
-	util.SetAgentDetailsKey(p.credential, "registrationClientURI", resClientMetadata.GetRegistrationClientURI())
+	if resClientMetadata.GetRegistrationClientURI() != "" {
+		util.SetAgentDetailsKey(p.credential, "registrationClientURI", resClientMetadata.GetRegistrationClientURI())
+	}
 
 	return nil
 }

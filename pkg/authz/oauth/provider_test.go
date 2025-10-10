@@ -28,6 +28,7 @@ func TestProvider(t *testing.T) {
 		expectRegistrationErr      bool
 		expectUnRegistrationErr    bool
 		authServerMetadata         *AuthorizationServerMetadata
+		clientID                   string
 	}{
 		{
 			name:                 "IDP metadata bad request",
@@ -146,8 +147,8 @@ func TestProvider(t *testing.T) {
 				extraProperties: map[string]string{
 					"key": "value",
 				},
-				RegistrationClientURI: "https://idp.example.com/clients/test-client-id",
 			},
+			clientID:                   "test-client-id",
 			authServerMetadata:         &AuthorizationServerMetadata{},
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
@@ -202,8 +203,8 @@ func TestProvider(t *testing.T) {
 
 			s.SetRegistrationResponseCode(tc.registrationResponseCode)
 
-			if tc.expectedClient != nil && tc.expectedClient.RegistrationClientURI != "" {
-				s.SetRegistrationClientURI(tc.expectedClient.RegistrationClientURI)
+			if tc.clientID != "" {
+				s.SetClientID(tc.clientID)
 			}
 
 			cr, err := p.RegisterClient(tc.clientRequest)
@@ -226,9 +227,11 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, strings.Join(tc.expectedClient.GetScopes(), ","), strings.Join(cr.GetScopes(), ","))
 			assert.Equal(t, tc.expectedClient.GetJwksURI(), cr.GetJwksURI())
 			assert.Equal(t, len(tc.expectedClient.GetExtraProperties()), len(cr.GetExtraProperties()))
-			assert.Equal(t, tc.expectedClient.RegistrationClientURI, cr.GetRegistrationClientURI())
+			if tc.clientID != "" {
+				assert.Equal(t, s.GetUnregisterEndpoint(), cr.GetRegistrationClientURI())
+			}
 			s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), tc.expectedClient.GetRegistrationClientURI())
+			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint())
 			if tc.expectUnRegistrationErr {
 				assert.NotNil(t, err)
 				return
