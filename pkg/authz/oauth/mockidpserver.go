@@ -20,10 +20,12 @@ type MockIDPServer interface {
 	GetTokenURL() string
 	GetAuthEndpoint() string
 	GetRegistrationEndpoint() string
+	GetUnregisterEndpoint() string
 	SetMetadataResponseCode(statusCode int)
 	SetTokenResponse(accessToken string, expiry time.Duration, statusCode int)
 	SetRegistrationResponseCode(statusCode int)
 	SetUseRegistrationAccessToken(useRegistrationAccessToken bool)
+	SetClientID(clientID string)
 	GetTokenRequestHeaders() http.Header
 	GetTokenQueryParams() url.Values
 	GetTokenRequestValues() url.Values
@@ -38,6 +40,7 @@ type mockIDPServer struct {
 	registerResponseCode       int
 	useRegistrationAccessToken bool
 	accessToken                string
+	clientID                   string
 	tokenExpiry                time.Duration
 	serverMetadata             *AuthorizationServerMetadata
 	server                     *httptest.Server
@@ -129,6 +132,9 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 			if m.useRegistrationAccessToken {
 				cl.RegistrationAccessToken = uuid.New().String()
 			}
+			if m.clientID != "" {
+				cl.RegistrationClientURI = m.GetUnregisterEndpoint()
+			}
 			clientBuf, _ = json.Marshal(cl)
 			resp.Write(clientBuf)
 		}
@@ -162,6 +168,10 @@ func (m *mockIDPServer) GetRegistrationEndpoint() string {
 	return m.server.URL + "/register"
 }
 
+func (m *mockIDPServer) GetUnregisterEndpoint() string {
+	return m.server.URL + "/register/" + m.clientID
+}
+
 func (m *mockIDPServer) SetMetadataResponseCode(statusCode int) {
 	m.metadataResponseCode = statusCode
 }
@@ -178,6 +188,10 @@ func (m *mockIDPServer) SetRegistrationResponseCode(statusCode int) {
 
 func (m *mockIDPServer) SetUseRegistrationAccessToken(useRegistrationAccessToken bool) {
 	m.useRegistrationAccessToken = useRegistrationAccessToken
+}
+
+func (m *mockIDPServer) SetClientID(clientID string) {
+	m.clientID = clientID
 }
 
 func (m *mockIDPServer) GetTokenRequestHeaders() http.Header {

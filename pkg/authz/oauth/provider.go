@@ -30,7 +30,7 @@ type Provider interface {
 	GetSupportedTokenAuthMethods() []string
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
-	UnregisterClient(clientID, accessToken string) error
+	UnregisterClient(clientID, accessToken, registrationClientURI string) error
 	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
@@ -465,7 +465,7 @@ func addResponseType(clientRequest *clientMetadata, responseType string) {
 }
 
 // UnregisterClient - removes the OAuth client from IDP
-func (p *provider) UnregisterClient(clientID, accessToken string) error {
+func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string) error {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	if accessToken == "" {
 		token, err := p.getClientToken()
@@ -475,9 +475,14 @@ func (p *provider) UnregisterClient(clientID, accessToken string) error {
 		accessToken = token
 	}
 
+	unregisterURL := registrationClientURI
+	if unregisterURL == "" {
+		unregisterURL = p.getClientRegistrationEndpoint() + "/" + clientID
+	}
+
 	request := coreapi.Request{
 		Method:      coreapi.DELETE,
-		URL:         p.getClientRegistrationEndpoint() + "/" + clientID,
+		URL:         unregisterURL,
 		QueryParams: p.queryParameters,
 		Headers:     p.prepareHeaders(authPrefix, accessToken),
 	}
@@ -485,6 +490,19 @@ func (p *provider) UnregisterClient(clientID, accessToken string) error {
 	response, err := p.apiClient.Send(request)
 	if err != nil {
 		return err
+	}
+
+	// Some IDPs want client id as query param, not part of the URL
+	if response.Code == http.StatusNotFound {
+		request.QueryParams["clientId"] = clientID
+		if strings.Contains(request.URL, "/"+clientID) {
+			request.URL = strings.Replace(request.URL, "/"+clientID, "", 1)
+		}
+
+		response, err = p.apiClient.Send(request)
+		if err != nil {
+			return err
+		}
 	}
 
 	if response.Code != http.StatusNoContent {
