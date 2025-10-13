@@ -1,7 +1,7 @@
 package agentsync
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
@@ -18,7 +18,7 @@ type customAgentSync struct {
 func (c *customAgentSync) ProcessSynchronization() error {
 	c.syncCalled = true
 	if c.err != "" {
-		return fmt.Errorf("%s", c.err)
+		return errors.New(c.err)
 	}
 	return nil
 }

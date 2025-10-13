@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -125,7 +126,7 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 	}
 
 	if c.Responses[c.RespCount].ErrString != "" {
-		err = fmt.Errorf("%s", c.Responses[c.RespCount].ErrString)
+		err = errors.New(c.Responses[c.RespCount].ErrString)
 	}
 	c.RespCount++
 	return &response, err
