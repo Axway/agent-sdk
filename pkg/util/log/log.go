@@ -77,7 +77,7 @@ func Tracef(format string, args ...interface{}) {
 // Error -
 func Error(args ...interface{}) {
 	if isLogP {
-		logp.Err("%s", fmt.Sprint(args...))
+		logp.Err("%v", args...)
 	} else {
 		log.Error(args...)
 	}
@@ -95,7 +95,7 @@ func Errorf(format string, args ...interface{}) {
 // Debug -
 func Debug(args ...interface{}) {
 	if isLogP {
-		logp.Debug(debugSelector, "%s", fmt.Sprint(args...))
+		logp.Debug(debugSelector, "%v", args...)
 	} else {
 		log.Debug(args...)
 	}
@@ -113,7 +113,7 @@ func Debugf(format string, args ...interface{}) {
 // Info -
 func Info(args ...interface{}) {
 	if isLogP {
-		logp.Info("%s", fmt.Sprint(args...))
+		logp.Info("%v", args...)
 	} else {
 		log.Info(args...)
 	}
@@ -131,7 +131,7 @@ func Infof(format string, args ...interface{}) {
 // Warn -
 func Warn(args ...interface{}) {
 	if isLogP {
-		logp.Warn("%s", fmt.Sprint(args...))
+		logp.Warn("%v", args...)
 	} else {
 		log.Warn(args...)
 	}
