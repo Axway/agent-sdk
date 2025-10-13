@@ -18,7 +18,7 @@ type customAgentSync struct {
 func (c *customAgentSync) ProcessSynchronization() error {
 	c.syncCalled = true
 	if c.err != "" {
-		return fmt.Errorf(c.err)
+		return fmt.Errorf("%s", c.err)
 	}
 	return nil
 }
