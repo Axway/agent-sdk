@@ -117,7 +117,7 @@ func (p *oas3SpecProcessor) handleURLSubstitutions(server *openapi3.Server, allU
 		newURLs := []string{}
 		if serverVar.Default == "" {
 			err := fmt.Errorf("server variable in OAS3 %s does not have a default value, spec not valid", serverKey)
-			log.Errorf(err.Error())
+			log.Error(err.Error())
 			return "", nil, err
 		}
 		defaultURL = strings.ReplaceAll(defaultURL, fmt.Sprintf("{%s}", serverKey), serverVar.Default)
