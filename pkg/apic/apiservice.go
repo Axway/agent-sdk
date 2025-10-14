@@ -74,7 +74,7 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (
 	} else if warning {
 		// warning is only true when creating service, revision and instance will not print it
 		warnMsg := fmt.Sprintf("A team named %s does not exist on Amplify, not setting an owner of the API Service for %s", serviceBody.TeamName, serviceBody.APIName)
-		log.Warnf(warnMsg)
+		log.Warn(warnMsg)
 		return nil, errors.New(warnMsg)
 	}
 	return nil, nil
