@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/elastic/beats/v7/libbeat/logp"
@@ -55,7 +54,7 @@ func Trace(args ...interface{}) {
 	if isLogP {
 		// forward trace logs to logp debug with the trace selector
 		if log.Level == logrus.TraceLevel {
-			logp.Debug(traceSelector, "%s", fmt.Sprint(args...))
+			logp.Debug(traceSelector, "%v", args...)
 		}
 	} else {
 		log.Trace(args...)
