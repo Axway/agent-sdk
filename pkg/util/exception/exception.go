@@ -37,7 +37,7 @@ func (block Block) Do() {
 			if obj := recover(); obj != nil {
 				err := obj.(error)
 				if strings.Contains(err.Error(), "nil pointer dereference") {
-					block.Catch(fmt.Errorf("%s: \n err.Error() %s", err.Error(), string(debug.Stack())))
+					block.Catch(fmt.Errorf("%s: \n %s", err.Error(), string(debug.Stack())))
 				} else {
 					block.Catch(err)
 				}
