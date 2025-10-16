@@ -201,8 +201,21 @@ func (c *clientMetadata) MarshalJSON() ([]byte, error) {
 		return buf, nil
 	}
 
+	// Handle known boolean properties (e.g., pkce_required)
+	boolBaseKeys := make(map[string]struct{})
+
+	// Single loop: process all properties at once
 	for k, v := range c.extraProperties {
-		allFields[k] = v
+		if strings.HasSuffix(k, SuffixBool) {
+			// This is a boolean property (e.g., "pkce_required_bool")
+			baseKey := strings.TrimSuffix(k, SuffixBool)
+			boolBaseKeys[baseKey] = struct{}{}
+			allFields[baseKey] = (v == StringTrue)
+		} else if _, exists := c.extraProperties[k+SuffixBool]; !exists {
+			// This is a regular property with no boolean equivalent
+			allFields[k] = v
+		}
+		// Skip regular properties that have boolean equivalents
 	}
 
 	return json.Marshal(allFields)
