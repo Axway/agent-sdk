@@ -466,6 +466,12 @@ func addResponseType(clientRequest *clientMetadata, responseType string) {
 
 // UnregisterClient - removes the OAuth client from IDP
 func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string) error {
+	logger := p.logger.
+		WithField("provider", p.cfg.GetIDPName()).
+		WithField("client-id", clientID)
+
+	logger.Trace("starting client unregistration")
+
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	if accessToken == "" {
 		token, err := p.getClientToken()
@@ -475,14 +481,59 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
-	unregisterURL := registrationClientURI
-	if unregisterURL == "" {
-		unregisterURL = p.getClientRegistrationEndpoint() + "/" + clientID
+	// Try with registration client URI if not empty
+	if registrationClientURI != "" {
+		err := p.tryUnregisterWithURL(registrationClientURI, clientID, authPrefix, accessToken)
+		if err == nil {
+			logger.Info("unregistered client")
+			return nil
+		}
+		logger.
+			WithError(err).
+			WithField("registration-uri", registrationClientURI).
+			Debug("failed to unregister with registration client URI, trying fallback methods")
 	}
 
+	// Try with base url + clientID in path
+	// Check if registration url is different from standard URL to avoid duplicate attempts
+	standardURL := p.getClientRegistrationEndpoint() + "/" + clientID
+	if standardURL != registrationClientURI {
+		err := p.tryUnregisterWithURL(standardURL, clientID, authPrefix, accessToken)
+		if err == nil {
+			logger.Info("unregistered client")
+			return nil
+		}
+		logger.
+			WithError(err).
+			WithField("unregister-url", standardURL).
+			Debug("failed to unregister with standard URL, trying fallback method")
+	}
+
+	// Try with clientID as query parameter
+	baseURL := p.getClientRegistrationEndpoint()
+	if strings.Contains(standardURL, "/"+clientID) {
+		baseURL = strings.Replace(standardURL, "/"+clientID, "", 1)
+	}
+
+	err := p.tryUnregisterWithQueryParam(baseURL, clientID, authPrefix, accessToken)
+	if err == nil {
+		logger.Info("unregistered client")
+		return nil
+	}
+	// Log the attempt
+	logger.
+		WithError(err).
+		WithField("unregister-url", baseURL).
+		Debug("failed to unregister with clientID as query parameter")
+
+	return err
+}
+
+// tryUnregisterWithURL attempts to unregister using the provided URL
+func (p *provider) tryUnregisterWithURL(url, clientID, authPrefix, accessToken string) error {
 	request := coreapi.Request{
 		Method:      coreapi.DELETE,
-		URL:         unregisterURL,
+		URL:         url,
 		QueryParams: p.queryParameters,
 		Headers:     p.prepareHeaders(authPrefix, accessToken),
 	}
@@ -492,33 +543,38 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		return err
 	}
 
-	// Some IDPs want client id as query param, not part of the URL
-	if response.Code == http.StatusNotFound {
-		request.QueryParams["clientId"] = clientID
-		if strings.Contains(request.URL, "/"+clientID) {
-			request.URL = strings.Replace(request.URL, "/"+clientID, "", 1)
-		}
-
-		response, err = p.apiClient.Send(request)
-		if err != nil {
-			return err
-		}
+	if response.Code == http.StatusNoContent {
+		return nil
 	}
 
-	if response.Code != http.StatusNoContent {
-		err := fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
-		p.logger.
-			WithField("provider", p.cfg.GetIDPName()).
-			WithField("client-id", clientID).
-			Error(err.Error())
+	return fmt.Errorf("unregister failed with status code: %d, body: %s", response.Code, string(response.Body))
+}
+
+// tryUnregisterWithQueryParam attempts to unregister using clientID as query parameter
+func (p *provider) tryUnregisterWithQueryParam(baseURL, clientID, authPrefix, accessToken string) error {
+	queryParams := make(map[string]string)
+	for k, v := range p.queryParameters {
+		queryParams[k] = v
+	}
+	queryParams["clientId"] = clientID
+
+	request := coreapi.Request{
+		Method:      coreapi.DELETE,
+		URL:         baseURL,
+		QueryParams: queryParams,
+		Headers:     p.prepareHeaders(authPrefix, accessToken),
+	}
+
+	response, err := p.apiClient.Send(request)
+	if err != nil {
 		return err
 	}
 
-	p.logger.
-		WithField("provider", p.cfg.GetIDPName()).
-		WithField("client-id", clientID).
-		Info("unregistered client")
-	return nil
+	if response.Code == http.StatusNoContent {
+		return nil
+	}
+
+	return fmt.Errorf("unregister with query param failed with status code: %d, body: %s", response.Code, string(response.Body))
 }
 
 func (p *provider) getClientToken() (string, error) {
