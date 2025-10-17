@@ -481,9 +481,11 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
+	var err error
+
 	// Try with registration client URI if not empty
 	if registrationClientURI != "" {
-		err := p.tryUnregisterWithURL(registrationClientURI, clientID, authPrefix, accessToken)
+		err = p.tryUnregister(registrationClientURI, "", authPrefix, accessToken)
 		if err == nil {
 			logger.Info("unregistered client")
 			return nil
@@ -491,14 +493,14 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		logger.
 			WithError(err).
 			WithField("registration-uri", registrationClientURI).
-			Debug("failed to unregister with registration client URI, trying fallback methods")
+			Debug("failed to unregister with registration client URI")
 	}
 
 	// Try with base url + clientID in path
 	// Check if registration url is different from standard URL to avoid duplicate attempts
 	standardURL := p.getClientRegistrationEndpoint() + "/" + clientID
 	if standardURL != registrationClientURI {
-		err := p.tryUnregisterWithURL(standardURL, clientID, authPrefix, accessToken)
+		err = p.tryUnregister(standardURL, "", authPrefix, accessToken)
 		if err == nil {
 			logger.Info("unregistered client")
 			return nil
@@ -506,61 +508,45 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		logger.
 			WithError(err).
 			WithField("unregister-url", standardURL).
-			Debug("failed to unregister with standard URL, trying fallback method")
+			Debug("failed to unregister with standard URL")
 	}
 
 	// Try with clientID as query parameter
 	baseURL := p.getClientRegistrationEndpoint()
-	if strings.Contains(standardURL, "/"+clientID) {
-		baseURL = strings.Replace(standardURL, "/"+clientID, "", 1)
-	}
+	if baseURL != registrationClientURI {
+		if strings.Contains(standardURL, "/"+clientID) {
+			baseURL = strings.Replace(standardURL, "/"+clientID, "", 1)
+		}
 
-	err := p.tryUnregisterWithQueryParam(baseURL, clientID, authPrefix, accessToken)
-	if err == nil {
-		logger.Info("unregistered client")
-		return nil
+		err = p.tryUnregister(baseURL, clientID, authPrefix, accessToken)
+		if err == nil {
+			logger.Info("unregistered client")
+			return nil
+		}
+		logger.
+			WithError(err).
+			WithField("unregister-url", baseURL).
+			Debug("failed to unregister with clientID as query parameter")
 	}
-	// Log the attempt
-	logger.
-		WithError(err).
-		WithField("unregister-url", baseURL).
-		Debug("failed to unregister with clientID as query parameter")
 
 	return err
 }
 
-// tryUnregisterWithURL attempts to unregister using the provided URL
-func (p *provider) tryUnregisterWithURL(url, clientID, authPrefix, accessToken string) error {
-	request := coreapi.Request{
-		Method:      coreapi.DELETE,
-		URL:         url,
-		QueryParams: p.queryParameters,
-		Headers:     p.prepareHeaders(authPrefix, accessToken),
-	}
-
-	response, err := p.apiClient.Send(request)
-	if err != nil {
-		return err
-	}
-
-	if response.Code == http.StatusNoContent {
-		return nil
-	}
-
-	return fmt.Errorf("unregister failed with status code: %d, body: %s", response.Code, string(response.Body))
-}
-
-// tryUnregisterWithQueryParam attempts to unregister using clientID as query parameter
-func (p *provider) tryUnregisterWithQueryParam(baseURL, clientID, authPrefix, accessToken string) error {
+// tryUnregister attempts to unregister using the provided parameters
+func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToken string) error {
 	queryParams := make(map[string]string)
-	for k, v := range p.queryParameters {
-		queryParams[k] = v
+	if clientID != "" {
+		for k, v := range p.queryParameters {
+			queryParams[k] = v
+		}
+		queryParams["clientId"] = clientID
+	} else {
+		queryParams = p.queryParameters
 	}
-	queryParams["clientId"] = clientID
 
 	request := coreapi.Request{
 		Method:      coreapi.DELETE,
-		URL:         baseURL,
+		URL:         unregisterURL,
 		QueryParams: queryParams,
 		Headers:     p.prepareHeaders(authPrefix, accessToken),
 	}
@@ -574,7 +560,7 @@ func (p *provider) tryUnregisterWithQueryParam(baseURL, clientID, authPrefix, ac
 		return nil
 	}
 
-	return fmt.Errorf("unregister with query param failed with status code: %d, body: %s", response.Code, string(response.Body))
+	return fmt.Errorf("unregister failed with status code: %d, body: %s", response.Code, string(response.Body))
 }
 
 func (p *provider) getClientToken() (string, error) {
