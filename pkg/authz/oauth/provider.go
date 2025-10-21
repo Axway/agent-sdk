@@ -40,7 +40,7 @@ type provider struct {
 	logger             log.FieldLogger
 	cfg                corecfg.IDPConfig
 	metadataURL        string
-	extraProperties    map[string]string
+	extraProperties    map[string]interface{}
 	requestHeaders     map[string]string
 	queryParameters    map[string]string
 	apiClient          coreapi.Client

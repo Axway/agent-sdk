@@ -40,7 +40,7 @@ type ClientMetadata interface {
 	GetLogoURI() string
 	GetJwksURI() string
 	GetJwks() map[string]interface{}
-	GetExtraProperties() map[string]string
+	GetExtraProperties() map[string]interface{}
 	GetTLSClientAuthSanDNS() string
 	GetTLSClientAuthSanEmail() string
 	GetTLSClientAuthSanIP() string
@@ -72,7 +72,7 @@ type clientMetadata struct {
 	TLSClientAuthSanIP      string                 `json:"tls_client_auth_san_ip,omitempty"`
 	TLSClientAuthSanURI     string                 `json:"tls_client_auth_san_uri,omitempty"`
 	RegistrationAccessToken string                 `json:"registration_access_token,omitempty"`
-	extraProperties         map[string]string      `json:"-"`
+	extraProperties         map[string]interface{} `json:"-"`
 }
 
 var clientFields map[string]bool
@@ -159,7 +159,7 @@ func (c *clientMetadata) GetJwks() map[string]interface{} {
 	return c.Jwks
 }
 
-func (c *clientMetadata) GetExtraProperties() map[string]string {
+func (c *clientMetadata) GetExtraProperties() map[string]interface{} {
 	return c.extraProperties
 }
 
@@ -201,21 +201,9 @@ func (c *clientMetadata) MarshalJSON() ([]byte, error) {
 		return buf, nil
 	}
 
-	// Handle known boolean properties (e.g., pkce_required)
-	boolBaseKeys := make(map[string]struct{})
-
-	// Single loop: process all properties at once
+	// Add extra properties directly - they already have the correct types
 	for k, v := range c.extraProperties {
-		if strings.HasSuffix(k, SuffixBool) {
-			// This is a boolean property (e.g., "pkce_required_bool")
-			baseKey := strings.TrimSuffix(k, SuffixBool)
-			boolBaseKeys[baseKey] = struct{}{}
-			allFields[baseKey] = (v == StringTrue)
-		} else if _, exists := c.extraProperties[k+SuffixBool]; !exists {
-			// This is a regular property with no boolean equivalent
-			allFields[k] = v
-		}
-		// Skip regular properties that have boolean equivalents
+		allFields[k] = v
 	}
 
 	return json.Marshal(allFields)
@@ -240,12 +228,10 @@ func (c *clientMetadata) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	v.extraProperties = make(map[string]string)
+	v.extraProperties = make(map[string]interface{})
 	for key, value := range allFields {
 		if _, ok := clientFields[key]; !ok {
-			if strValue, ok := value.(string); ok {
-				v.extraProperties[key] = strValue
-			}
+			v.extraProperties[key] = value
 		}
 	}
 

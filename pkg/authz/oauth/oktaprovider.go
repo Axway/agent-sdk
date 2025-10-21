@@ -16,41 +16,22 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 
 func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 	if clientRequest.extraProperties == nil {
-		clientRequest.extraProperties = make(map[string]string)
+		clientRequest.extraProperties = make(map[string]interface{})
 	}
 
-	appType, ok := clientRequest.extraProperties[oktaApplicationType]
+	appType, ok := clientRequest.extraProperties[oktaApplicationType].(string)
 	if !ok {
 		appType = oktaAppTypeService
 	}
 
-	for _, grantType := range clientRequest.GrantTypes {
-		if grantType != GrantTypeClientCredentials {
-			// Allow "browser" to be set by user, otherwise default to "web"
-			if appType != OktaAppTypeBrowser {
-				appType = oktaAppTypeWeb
-			}
+	for _, grantTypes := range clientRequest.GrantTypes {
+		if grantTypes != GrantTypeClientCredentials {
+			appType = oktaAppTypeWeb
 		} else {
 			if len(clientRequest.ResponseTypes) == 0 {
 				clientRequest.ResponseTypes = []string{AuthResponseToken}
 			}
 		}
 	}
-
 	clientRequest.extraProperties[oktaApplicationType] = appType
-	convertStringBoolsToMarker(clientRequest.extraProperties)
-}
-
-// knownBoolPropsSet allows O(1) lookup and easy extension
-var knownBoolPropsSet = map[string]struct{}{
-	OktaPKCERequired: {},
-}
-
-func convertStringBoolsToMarker(m map[string]string) {
-	for prop := range knownBoolPropsSet {
-		if val, ok := m[prop]; ok && (val == StringTrue || val == StringFalse) {
-			delete(m, prop)
-			m[prop+SuffixBool] = val
-		}
-	}
 }

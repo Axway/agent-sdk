@@ -19,7 +19,7 @@ func TestClientMetadataSerialization(t *testing.T) {
 		SetScopes([]string{"scope1", "scope2"}).
 		SetLogoURI("http://localhost").
 		SetJWKSURI("http://localhost").
-		SetExtraProperties(map[string]string{"key": "value"}).
+		SetExtraProperties(map[string]interface{}{"key": "value"}).
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, c)

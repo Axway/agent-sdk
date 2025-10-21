@@ -128,12 +128,27 @@ func (e *externalIDPConfig) ValidateCfg() (err error) {
 }
 
 // ExtraProperties - type for representing extra IdP provider properties to be included in client request
-type ExtraProperties map[string]string
+type ExtraProperties map[string]interface{}
 
 // UnmarshalJSON - deserializes extra properties from env config
 func (e *ExtraProperties) UnmarshalJSON(data []byte) error {
-	ep := map[string]string(*e)
-	return parseKeyValuePairs(ep, data)
+	// Parse the JSON string wrapper if present
+	buf, err := strconv.Unquote(string(data))
+	if err != nil {
+		// Not a quoted string, use as-is
+		buf = string(data)
+	}
+
+	// Unmarshal into the map, preserving types
+	m := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(buf), &m); err != nil {
+		return err
+	}
+
+	for key, val := range m {
+		(*e)[key] = val
+	}
+	return nil
 }
 
 // IDPRequestHeaders - additional request headers for calls to IdP
@@ -226,7 +241,7 @@ type IDPConfig interface {
 	// GetAuthResponseType - default token response type to be used when registering the client
 	GetAuthResponseType() string
 	// GetExtraProperties - set of additional properties to be applied when registering the client
-	GetExtraProperties() map[string]string
+	GetExtraProperties() map[string]interface{}
 	// GetRequestHeaders - set of additional request headers to be applied when registering the client
 	GetRequestHeaders() map[string]string
 	// GetQueryParams - set of additional query parameters to be applied when registering the client
@@ -297,7 +312,7 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 }
 
 // GetExtraProperties - set of additional properties to be applied when registering the client
-func (i *IDPConfiguration) GetExtraProperties() map[string]string {
+func (i *IDPConfiguration) GetExtraProperties() map[string]interface{} {
 	return i.ExtraProperties
 }
 

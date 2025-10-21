@@ -8,8 +8,8 @@ import (
 )
 
 func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
-	props := map[string]string{
-		OktaPKCERequired: "true",
+	props := map[string]interface{}{
+		OktaPKCERequired: true,
 	}
 	c, err := NewClientMetadataBuilder().
 		SetClientName("okta-spa").
@@ -17,10 +17,6 @@ func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
 		Build()
 	assert.Nil(t, err)
 	cm := c.(*clientMetadata)
-
-	// Simulate OKTA provider logic
-	cm.extraProperties[OktaPKCERequired+SuffixBool] = cm.extraProperties[OktaPKCERequired]
-	delete(cm.extraProperties, OktaPKCERequired)
 
 	buf, err := json.Marshal(cm)
 	assert.Nil(t, err)
@@ -38,8 +34,8 @@ func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
 }
 
 func TestOktaPKCERequiredBooleanSerializationFalse(t *testing.T) {
-	props := map[string]string{
-		OktaPKCERequired: "false",
+	props := map[string]interface{}{
+		OktaPKCERequired: false,
 	}
 	c, err := NewClientMetadataBuilder().
 		SetClientName("okta-spa").
@@ -47,10 +43,6 @@ func TestOktaPKCERequiredBooleanSerializationFalse(t *testing.T) {
 		Build()
 	assert.Nil(t, err)
 	cm := c.(*clientMetadata)
-
-	// Simulate OKTA provider logic
-	cm.extraProperties[OktaPKCERequired+SuffixBool] = cm.extraProperties[OktaPKCERequired]
-	delete(cm.extraProperties, OktaPKCERequired)
 
 	buf, err := json.Marshal(cm)
 	assert.Nil(t, err)
