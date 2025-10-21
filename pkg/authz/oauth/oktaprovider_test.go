@@ -7,12 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	oktaPKCERequired = "pkce_required"
+	oktaSpa          = "okta-spa"
+)
+
 func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
 	props := map[string]interface{}{
-		OktaPKCERequired: true,
+		oktaPKCERequired: true,
 	}
 	c, err := NewClientMetadataBuilder().
-		SetClientName("okta-spa").
+		SetClientName(oktaSpa).
 		SetExtraProperties(props).
 		Build()
 	assert.Nil(t, err)
@@ -27,7 +32,7 @@ func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Should be a boolean, not a string
-	val, ok := out[OktaPKCERequired]
+	val, ok := out[oktaPKCERequired]
 	assert.True(t, ok)
 	assert.IsType(t, true, val)
 	assert.Equal(t, true, val)
@@ -35,10 +40,10 @@ func TestOktaPKCERequiredBooleanSerialization(t *testing.T) {
 
 func TestOktaPKCERequiredBooleanSerializationFalse(t *testing.T) {
 	props := map[string]interface{}{
-		OktaPKCERequired: false,
+		oktaPKCERequired: false,
 	}
 	c, err := NewClientMetadataBuilder().
-		SetClientName("okta-spa").
+		SetClientName(oktaSpa).
 		SetExtraProperties(props).
 		Build()
 	assert.Nil(t, err)
@@ -53,7 +58,7 @@ func TestOktaPKCERequiredBooleanSerializationFalse(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Should be a boolean, not a string
-	val, ok := out[OktaPKCERequired]
+	val, ok := out[oktaPKCERequired]
 	assert.True(t, ok)
 	assert.IsType(t, false, val)
 	assert.Equal(t, false, val)

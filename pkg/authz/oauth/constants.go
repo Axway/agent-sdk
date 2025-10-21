@@ -1,14 +1,5 @@
 package oauth
 
-// Common property keys and values for OKTA/IDP registration
-const (
-	SuffixBool         = "_bool"
-	OktaAppTypeBrowser = "browser"
-	OktaPKCERequired   = "pkce_required"
-	StringTrue         = "true"
-	StringFalse        = "false"
-)
-
 // Provider types
 const (
 	Generic ProviderType = iota + 1
