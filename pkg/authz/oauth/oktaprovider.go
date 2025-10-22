@@ -37,13 +37,11 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 				clientRequest.ResponseTypes = []string{AuthResponseToken}
 			}
 		default:
-			if appType == oktaAppTypeService {
-				if pkceRequired {
-					appType = oktaAppTypeBrowser
-					clientRequest.TokenEndpointAuthMethod = "none"
-				} else {
-					appType = oktaAppTypeWeb
-				}
+			if pkceRequired {
+				appType = oktaAppTypeBrowser
+				clientRequest.TokenEndpointAuthMethod = "none"
+			} else if appType == oktaAppTypeService {
+				appType = oktaAppTypeWeb
 			}
 		}
 	}

@@ -90,13 +90,14 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			expectedResponseTypes: []string{AuthResponseToken},
 		},
 		{
-			name:       "Explicit browser type should be preserved",
+			name:       "Explicit browser type should be preserved with PKCE",
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaApplicationType: oktaAppTypeBrowser,
 				oktaPKCERequired:    true,
 			},
-			expectedAppType: oktaAppTypeBrowser,
+			expectedAppType:    oktaAppTypeBrowser,
+			expectedAuthMethod: "none",
 		},
 		{
 			name:       "Implicit flow without PKCE should use web type",
