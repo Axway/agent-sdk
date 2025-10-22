@@ -28,6 +28,7 @@ func TestProvider(t *testing.T) {
 		expectRegistrationErr      bool
 		expectUnRegistrationErr    bool
 		authServerMetadata         *AuthorizationServerMetadata
+		clientID                   string
 	}{
 		{
 			name:                 "IDP metadata bad request",
@@ -62,7 +63,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				ExtraProperties: map[string]interface{}{
 					"key":               "value",
 					oktaApplicationType: oktaAppTypeWeb,
 				},
@@ -89,7 +90,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseToken},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				ExtraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -118,7 +119,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				ExtraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -143,10 +144,11 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				ExtraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
+			clientID:                   "test-client-id",
 			authServerMetadata:         &AuthorizationServerMetadata{},
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
@@ -200,6 +202,11 @@ func TestProvider(t *testing.T) {
 			}
 
 			s.SetRegistrationResponseCode(tc.registrationResponseCode)
+
+			if tc.clientID != "" {
+				s.SetClientID(tc.clientID)
+			}
+
 			cr, err := p.RegisterClient(tc.clientRequest)
 			if tc.expectRegistrationErr {
 				assert.NotNil(t, err)
@@ -220,8 +227,11 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, strings.Join(tc.expectedClient.GetScopes(), ","), strings.Join(cr.GetScopes(), ","))
 			assert.Equal(t, tc.expectedClient.GetJwksURI(), cr.GetJwksURI())
 			assert.Equal(t, len(tc.expectedClient.GetExtraProperties()), len(cr.GetExtraProperties()))
+			if tc.clientID != "" {
+				assert.Equal(t, s.GetUnregisterEndpoint(), cr.GetRegistrationClientURI())
+			}
 			s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken())
+			err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint())
 			if tc.expectUnRegistrationErr {
 				assert.NotNil(t, err)
 				return

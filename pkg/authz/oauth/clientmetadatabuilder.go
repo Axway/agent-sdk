@@ -129,7 +129,7 @@ func (b *clientBuilder) SetTLSClientAuthSanURI(tlsClientAuthSanURI string) Clien
 }
 
 func (b *clientBuilder) SetExtraProperties(extraProperties map[string]interface{}) ClientBuilder {
-	b.idpClientMetadata.extraProperties = extraProperties
+	b.idpClientMetadata.ExtraProperties = extraProperties
 	return b
 }
 

@@ -46,6 +46,7 @@ type ClientMetadata interface {
 	GetTLSClientAuthSanIP() string
 	GetTLSClientAuthSanURI() string
 	GetRegistrationAccessToken() string
+	GetRegistrationClientURI() string
 }
 
 type clientMetadata struct {
@@ -72,7 +73,8 @@ type clientMetadata struct {
 	TLSClientAuthSanIP      string                 `json:"tls_client_auth_san_ip,omitempty"`
 	TLSClientAuthSanURI     string                 `json:"tls_client_auth_san_uri,omitempty"`
 	RegistrationAccessToken string                 `json:"registration_access_token,omitempty"`
-	extraProperties         map[string]interface{} `json:"-"`
+	ExtraProperties         map[string]interface{} `json:"-"`
+	RegistrationClientURI   string                 `json:"registration_client_uri,omitempty"`
 }
 
 var clientFields map[string]bool
@@ -160,7 +162,7 @@ func (c *clientMetadata) GetJwks() map[string]interface{} {
 }
 
 func (c *clientMetadata) GetExtraProperties() map[string]interface{} {
-	return c.extraProperties
+	return c.ExtraProperties
 }
 
 func (c *clientMetadata) GetTLSClientAuthSanDNS() string {
@@ -183,6 +185,10 @@ func (c *clientMetadata) GetRegistrationAccessToken() string {
 	return c.RegistrationAccessToken
 }
 
+func (c *clientMetadata) GetRegistrationClientURI() string {
+	return c.RegistrationClientURI
+}
+
 // MarshalJSON serialize the client metadata with provider metadata
 func (c *clientMetadata) MarshalJSON() ([]byte, error) {
 	type alias clientMetadata
@@ -202,7 +208,7 @@ func (c *clientMetadata) MarshalJSON() ([]byte, error) {
 	}
 
 	// Add extra properties directly - they already have the correct types
-	for k, v := range c.extraProperties {
+	for k, v := range c.ExtraProperties {
 		allFields[k] = v
 	}
 
@@ -228,10 +234,10 @@ func (c *clientMetadata) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	v.extraProperties = make(map[string]interface{})
+	v.ExtraProperties = make(map[string]interface{})
 	for key, value := range allFields {
 		if _, ok := clientFields[key]; !ok {
-			v.extraProperties[key] = value
+			v.ExtraProperties[key] = value
 		}
 	}
 

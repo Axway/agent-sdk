@@ -115,12 +115,12 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			clientReq := &clientMetadata{
 				GrantTypes:      tc.grantTypes,
 				ResponseTypes:   tc.responseTypes,
-				extraProperties: tc.extraProperties,
+				ExtraProperties: tc.extraProperties,
 			}
 
 			oktaProvider.preProcessClientRequest(clientReq)
 
-			appType, ok := clientReq.extraProperties[oktaApplicationType].(string)
+			appType, ok := clientReq.ExtraProperties[oktaApplicationType].(string)
 			assert.True(t, ok)
 			assert.Equal(t, tc.expectedAppType, appType)
 
