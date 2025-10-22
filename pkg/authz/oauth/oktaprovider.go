@@ -4,7 +4,10 @@ const (
 	oktaApplicationType  = "application_type"
 	oktaAppTypeService   = "service"
 	oktaAppTypeWeb       = "web"
+	oktaAppTypeBrowser   = "browser"
+	oktaPKCERequired     = "pkce_required"
 	oktaAuthHeaderPrefix = "SSWS"
+	oktaSpa              = "okta-spa"
 )
 
 type okta struct {
@@ -24,12 +27,23 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 		appType = oktaAppTypeService
 	}
 
-	for _, grantTypes := range clientRequest.GrantTypes {
-		if grantTypes != GrantTypeClientCredentials {
-			appType = oktaAppTypeWeb
-		} else {
+	// Check if PKCE is required - if so, this should be a browser (public client) app
+	pkceRequired, _ := clientRequest.extraProperties[oktaPKCERequired].(bool)
+
+	for _, grantType := range clientRequest.GrantTypes {
+		switch grantType {
+		case GrantTypeClientCredentials:
 			if len(clientRequest.ResponseTypes) == 0 {
 				clientRequest.ResponseTypes = []string{AuthResponseToken}
+			}
+		default:
+			if appType == oktaAppTypeService {
+				if pkceRequired {
+					appType = oktaAppTypeBrowser
+					clientRequest.TokenEndpointAuthMethod = "none"
+				} else {
+					appType = oktaAppTypeWeb
+				}
 			}
 		}
 	}
