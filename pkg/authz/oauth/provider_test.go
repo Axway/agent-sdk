@@ -63,7 +63,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
-				ExtraProperties: map[string]interface{}{
+				extraProperties: map[string]interface{}{
 					"key":               "value",
 					oktaApplicationType: oktaAppTypeWeb,
 				},
@@ -90,7 +90,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseToken},
 				Scope:                   []string{"read", "write"},
-				ExtraProperties: map[string]interface{}{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -119,7 +119,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				ExtraProperties: map[string]interface{}{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -144,7 +144,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				ExtraProperties: map[string]interface{}{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},

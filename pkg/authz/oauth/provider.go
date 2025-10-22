@@ -411,7 +411,7 @@ func (p *provider) enrichClientReq(clientReq ClientMetadata) error {
 
 	p.applyClientDefaults(clientRequest)
 
-	clientRequest.ExtraProperties = p.extraProperties
+	clientRequest.extraProperties = p.extraProperties
 
 	p.idpType.preProcessClientRequest(clientRequest)
 	p.preProcessResponseType(clientRequest)

@@ -18,17 +18,17 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 }
 
 func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
-	if clientRequest.ExtraProperties == nil {
-		clientRequest.ExtraProperties = make(map[string]interface{})
+	if clientRequest.extraProperties == nil {
+		clientRequest.extraProperties = make(map[string]interface{})
 	}
 
-	appType, ok := clientRequest.ExtraProperties[oktaApplicationType].(string)
+	appType, ok := clientRequest.extraProperties[oktaApplicationType].(string)
 	if !ok {
 		appType = oktaAppTypeService
 	}
 
 	// Check if PKCE is required - if so, this should be a browser (public client) app
-	pkceRequired, _ := clientRequest.ExtraProperties[oktaPKCERequired].(bool)
+	pkceRequired, _ := clientRequest.extraProperties[oktaPKCERequired].(bool)
 
 	for _, grantType := range clientRequest.GrantTypes {
 		switch grantType {
@@ -45,5 +45,5 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 			}
 		}
 	}
-	clientRequest.ExtraProperties[oktaApplicationType] = appType
+	clientRequest.extraProperties[oktaApplicationType] = appType
 }

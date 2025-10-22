@@ -73,7 +73,7 @@ type clientMetadata struct {
 	TLSClientAuthSanIP      string                 `json:"tls_client_auth_san_ip,omitempty"`
 	TLSClientAuthSanURI     string                 `json:"tls_client_auth_san_uri,omitempty"`
 	RegistrationAccessToken string                 `json:"registration_access_token,omitempty"`
-	ExtraProperties         map[string]interface{} `json:"-"`
+	extraProperties         map[string]interface{} `json:"-"`
 	RegistrationClientURI   string                 `json:"registration_client_uri,omitempty"`
 }
 
@@ -162,7 +162,7 @@ func (c *clientMetadata) GetJwks() map[string]interface{} {
 }
 
 func (c *clientMetadata) GetExtraProperties() map[string]interface{} {
-	return c.ExtraProperties
+	return c.extraProperties
 }
 
 func (c *clientMetadata) GetTLSClientAuthSanDNS() string {
@@ -208,7 +208,7 @@ func (c *clientMetadata) MarshalJSON() ([]byte, error) {
 	}
 
 	// Add extra properties directly - they already have the correct types
-	for k, v := range c.ExtraProperties {
+	for k, v := range c.extraProperties {
 		allFields[k] = v
 	}
 
@@ -234,10 +234,10 @@ func (c *clientMetadata) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	v.ExtraProperties = make(map[string]interface{})
+	v.extraProperties = make(map[string]interface{})
 	for key, value := range allFields {
 		if _, ok := clientFields[key]; !ok {
-			v.ExtraProperties[key] = value
+			v.extraProperties[key] = value
 		}
 	}
 
