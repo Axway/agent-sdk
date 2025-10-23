@@ -539,7 +539,7 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		for k, v := range p.queryParameters {
 			queryParams[k] = v
 		}
-		queryParams["clientId"] = clientID
+		queryParams["client_id"] = clientID
 	} else {
 		queryParams = p.queryParameters
 	}
