@@ -54,6 +54,65 @@ func TestOktaPKCERequired(t *testing.T) {
 	}
 }
 
+func TestValidateOktaExtraProperties(t *testing.T) {
+	cases := []struct {
+		name        string
+		extraProps  map[string]interface{}
+		expectError bool
+	}{
+		{
+			name: "Valid: PKCE with browser type",
+			extraProps: map[string]interface{}{
+				oktaPKCERequired:    true,
+				oktaApplicationType: oktaAppTypeBrowser,
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid: PKCE without app type",
+			extraProps: map[string]interface{}{
+				oktaPKCERequired: true,
+			},
+			expectError: false,
+		},
+		{
+			name: "Invalid: PKCE with service type",
+			extraProps: map[string]interface{}{
+				oktaPKCERequired:    true,
+				oktaApplicationType: oktaAppTypeService,
+			},
+			expectError: true,
+		},
+		{
+			name: "Invalid: PKCE with web type",
+			extraProps: map[string]interface{}{
+				oktaPKCERequired:    true,
+				oktaApplicationType: oktaAppTypeWeb,
+			},
+			expectError: true,
+		},
+		{
+			name: "Valid: No PKCE with any type",
+			extraProps: map[string]interface{}{
+				oktaApplicationType: oktaAppTypeService,
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			oktaProvider := &okta{}
+			err := oktaProvider.ValidateExtraProperties(tc.extraProps)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestOktaPreProcessClientRequest(t *testing.T) {
 	cases := []struct {
 		name                  string

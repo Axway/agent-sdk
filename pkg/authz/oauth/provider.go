@@ -52,6 +52,17 @@ type provider struct {
 type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
+	ValidateExtraProperties(extraProps map[string]interface{}) error
+}
+
+// GetProviderValidator returns a validator for the given IDP type
+func GetProviderValidator(idpType string) typedIDP {
+	switch idpType {
+	case TypeOkta:
+		return &okta{}
+	default: // keycloak, generic
+		return &genericIDP{}
+	}
 }
 
 type providerOptions struct {
