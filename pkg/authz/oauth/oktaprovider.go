@@ -2,19 +2,7 @@ package oauth
 
 import (
 	"fmt"
-
-	"github.com/Axway/agent-sdk/pkg/config"
 )
-
-func init() {
-	// Register the provider validator registration function
-	// This will be called explicitly during config parsing to avoid circular dependency
-	config.RegisterProviderValidator = func() {
-		config.GetProviderValidatorFunc = func(idpType string) config.ProviderValidator {
-			return GetProviderValidator(idpType)
-		}
-	}
-}
 
 const (
 	oktaApplicationType  = "application_type"

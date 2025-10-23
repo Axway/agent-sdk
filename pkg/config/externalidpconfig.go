@@ -9,18 +9,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 )
 
-// ProviderValidator is an interface for validating provider-specific extra properties
-type ProviderValidator interface {
-	ValidateExtraProperties(extraProps map[string]any) error
-}
-
-// GetProviderValidatorFunc is a function that returns a validator for a given IDP type
-var GetProviderValidatorFunc func(idpType string) ProviderValidator
-
-// RegisterProviderValidator is called during ParseExternalIDPConfig to register the validator
-// This function is set by the oauth package during initialization to avoid import cycle
-var RegisterProviderValidator func()
-
 const (
 	AccessToken             = "accessToken"
 	Client                  = "client"
@@ -428,25 +416,6 @@ func (i *IDPConfiguration) validate() {
 	}
 
 	i.AuthConfig.validate(i.TLSConfig)
-
-	// Validate provider-specific extra properties
-	i.validateExtraProperties()
-}
-
-func (i *IDPConfiguration) validateExtraProperties() {
-	// Call provider-specific validation if validator function is set
-	if GetProviderValidatorFunc == nil {
-		return
-	}
-
-	validator := GetProviderValidatorFunc(i.Type)
-	if validator == nil {
-		return
-	}
-
-	if err := validator.ValidateExtraProperties(i.ExtraProperties); err != nil {
-		exception.Throw(ErrBadConfig.FormatError(pathExternalIDP + "." + fldExtraProperties + ": " + err.Error()))
-	}
 }
 
 // GetType - type of authentication mechanism to use "accessToken" or "client"
@@ -635,12 +604,6 @@ func ParseExternalIDPConfig(agentFeature AgentFeaturesConfig, props properties.P
 	af, ok := agentFeature.(*AgentFeaturesConfiguration)
 	if !ok {
 		return nil
-	}
-
-	// Register the provider validator function if not already registered
-	// This avoids circular dependency while following the explicit initialization pattern
-	if GetProviderValidatorFunc == nil && RegisterProviderValidator != nil {
-		RegisterProviderValidator()
 	}
 
 	envIDPCfgList := props.ObjectSlicePropertyValue(pathExternalIDP)

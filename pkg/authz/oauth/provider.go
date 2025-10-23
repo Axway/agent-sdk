@@ -55,16 +55,6 @@ type typedIDP interface {
 	ValidateExtraProperties(extraProps map[string]interface{}) error
 }
 
-// GetProviderValidator returns a validator for the given IDP type
-func GetProviderValidator(idpType string) typedIDP {
-	switch idpType {
-	case TypeOkta:
-		return &okta{}
-	default: // keycloak, generic
-		return &genericIDP{}
-	}
-}
-
 type providerOptions struct {
 	authServerMetadata *AuthorizationServerMetadata
 }
@@ -130,6 +120,17 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		}
 		p.authClient = authClient
 	}
+
+	// Validate provider-specific extra properties
+	if err := idpType.ValidateExtraProperties(p.extraProperties); err != nil {
+		p.logger.
+			WithField("provider", p.cfg.GetIDPName()).
+			WithField("type", p.cfg.GetIDPType()).
+			WithError(err).
+			Error("invalid extra properties for provider")
+		return nil, fmt.Errorf("invalid extra properties for %s provider: %w", idp.GetIDPType(), err)
+	}
+
 	return p, nil
 }
 
