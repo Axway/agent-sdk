@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatusResourceStage  (management.v1alpha1.AssetMapping)
+// AssetMappingStatusResourceStage struct for AssetMappingStatusResourceStage
 type AssetMappingStatusResourceStage struct {
 	Ref           string                          `json:"ref,omitempty"`
 	OperationType AssetMappingStatusOperationType `json:"operationType,omitempty"`

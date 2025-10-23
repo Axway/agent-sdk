@@ -9,8 +9,8 @@
 
 package catalog
 
-// SubscriptionMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.Subscription)
-type SubscriptionMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// McpClientSpec struct for McpClientSpec
+type McpClientSpec struct {
+	// Description of the MCP client.
+	Description string `json:"description,omitempty"`
 }

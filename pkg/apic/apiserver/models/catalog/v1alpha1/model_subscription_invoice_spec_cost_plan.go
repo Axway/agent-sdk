@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceSpecCostPlan Plan information. (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceSpecCostPlan Plan information.
 type SubscriptionInvoiceSpecCostPlan struct {
 	// The Product Plan to which to migrate the Subscription.
 	Name string `json:"name,omitempty"`

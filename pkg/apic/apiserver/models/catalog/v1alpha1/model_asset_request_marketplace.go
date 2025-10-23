@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestMarketplace Details about the marketplace Access Request. (catalog.v1alpha1.AssetRequest)
+// AssetRequestMarketplace Details about the marketplace Access Request.
 type AssetRequestMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                          `json:"name"`

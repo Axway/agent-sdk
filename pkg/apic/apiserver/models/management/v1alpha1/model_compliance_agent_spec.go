@@ -9,7 +9,7 @@
 
 package management
 
-// ComplianceAgentSpec  (management.v1alpha1.ComplianceAgent)
+// ComplianceAgentSpec struct for ComplianceAgentSpec
 type ComplianceAgentSpec struct {
 	// The dataplane type that this agent connects to
 	DataplaneType string                    `json:"dataplaneType"`

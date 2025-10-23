@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceReferencesPlatformSettings  (catalog.v1.DocumentResource)
+// DocumentResourceReferencesPlatformSettings struct for DocumentResourceReferencesPlatformSettings
 type DocumentResourceReferencesPlatformSettings struct {
 	// Defines the DocumentResource used in the platform settings or not.
 	Used bool `json:"used"`

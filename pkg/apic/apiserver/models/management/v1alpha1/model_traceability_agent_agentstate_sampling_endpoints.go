@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// TraceabilityAgentAgentstateSamplingEndpoints  (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentAgentstateSamplingEndpoints struct for TraceabilityAgentAgentstateSamplingEndpoints
 type TraceabilityAgentAgentstateSamplingEndpoints struct {
 	// The time that the agent will stop sampling for this endpoint``
 	EndTime time.Time `json:"endTime,omitempty"`

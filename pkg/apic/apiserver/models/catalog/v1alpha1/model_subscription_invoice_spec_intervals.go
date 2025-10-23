@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// SubscriptionInvoiceSpecIntervals  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceSpecIntervals struct for SubscriptionInvoiceSpecIntervals
 type SubscriptionInvoiceSpecIntervals struct {
 	// The start of the interval in ISO 8601 format with numeric timezone offset.
 	From time.Time `json:"from"`

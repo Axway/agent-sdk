@@ -9,7 +9,8 @@
 
 package catalog
 
-// ConsumerProductVisibilitySpecProducts  (catalog.v1alpha1.ConsumerProductVisibility)
-type ConsumerProductVisibilitySpecProducts struct {
-	Name string `json:"name"`
+// McpClientSpec struct for McpClientSpec
+type McpClientSpec struct {
+	// Description of the MCP client.
+	Description string `json:"description,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// StageSpec  (catalog.v1alpha1.Stage)
+// StageSpec struct for StageSpec
 type StageSpec struct {
 	// description of the stage
 	Description string `json:"description,omitempty"`

@@ -9,7 +9,8 @@
 
 package catalog
 
-// ConsumerProductPlanVisibilitySpecPlans  (catalog.v1alpha1.ConsumerProductPlanVisibility)
-type ConsumerProductPlanVisibilitySpecPlans struct {
+// AssetResourceSpecDocumentResourceRef struct for AssetResourceSpecDocumentResourceRef
+type AssetResourceSpecDocumentResourceRef struct {
+	Kind string `json:"kind"`
 	Name string `json:"name"`
 }

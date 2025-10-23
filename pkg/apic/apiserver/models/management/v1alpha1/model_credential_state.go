@@ -9,7 +9,7 @@
 
 package management
 
-// CredentialState Current state of the Credential. (management.v1alpha1.Credential)
+// CredentialState Current state of the Credential.
 type CredentialState struct {
 	Name string `json:"name"`
 	// Additional info on the state.

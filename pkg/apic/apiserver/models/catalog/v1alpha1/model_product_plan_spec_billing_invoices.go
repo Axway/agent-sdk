@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecBillingInvoices Invoice actions to be performed. (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBillingInvoices Invoice actions to be performed.
 type ProductPlanSpecBillingInvoices struct {
 	// Actions on paid subscription to be performed based on invoices.
 	Actions []ProductPlanSpecBillingInvoicesActions `json:"actions"`

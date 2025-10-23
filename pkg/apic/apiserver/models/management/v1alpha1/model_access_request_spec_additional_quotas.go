@@ -9,7 +9,7 @@
 
 package management
 
-// AccessRequestSpecAdditionalQuotas Quota information for accessing the api. (management.v1alpha1.AccessRequest)
+// AccessRequestSpecAdditionalQuotas Quota information for accessing the api.
 type AccessRequestSpecAdditionalQuotas struct {
 	// The logical name of the quota
 	Name string `json:"name"`

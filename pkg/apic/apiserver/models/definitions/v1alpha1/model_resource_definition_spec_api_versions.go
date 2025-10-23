@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpecApiVersions  (definitions.v1alpha1.ResourceDefinition)
+// ResourceDefinitionSpecApiVersions struct for ResourceDefinitionSpecApiVersions
 type ResourceDefinitionSpecApiVersions struct {
 	// The name of the version to be used in the resource definition.
 	Name string `json:"name,omitempty"`

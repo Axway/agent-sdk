@@ -9,8 +9,8 @@
 
 package catalog
 
-// AssetRequestMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.AssetRequest)
-type AssetRequestMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// DocumentCollectionSpec struct for DocumentCollectionSpec
+type DocumentCollectionSpec struct {
+	// GENERATE: The following code has been modified after code generation
+	Usage interface{} `json:"usage"`
 }

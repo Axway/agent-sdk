@@ -29,6 +29,7 @@ var (
 
 const (
 	AssetResourceResourceName               = "assetresources"
+	AssetResourceOverviewSubResourceName    = "overview"
 	AssetResourceReferencesSubResourceName  = "references"
 	AssetResourceReleasehashSubResourceName = "releasehash"
 )
@@ -45,6 +46,7 @@ func init() {
 // AssetResource Resource
 type AssetResource struct {
 	apiv1.ResourceMeta
+	Overview    AssetResourceOverview   `json:"overview"`
 	Owner       *apiv1.Owner            `json:"owner"`
 	References  AssetResourceReferences `json:"references"`
 	Releasehash interface{}             `json:"releasehash"`
@@ -148,6 +150,7 @@ func (res *AssetResource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["overview"] = res.Overview
 	out["owner"] = res.Owner
 	out["references"] = res.References
 	out["releasehash"] = res.Releasehash
@@ -179,6 +182,20 @@ func (res *AssetResource) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Overview
+	if v, ok := aux.SubResources["overview"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "overview")
+		err = json.Unmarshal(sr, &res.Overview)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource References

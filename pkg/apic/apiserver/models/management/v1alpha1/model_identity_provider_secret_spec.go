@@ -9,7 +9,7 @@
 
 package management
 
-// IdentityProviderSecretSpec  (management.v1alpha1.IdentityProviderSecret)
+// IdentityProviderSecretSpec struct for IdentityProviderSecretSpec
 type IdentityProviderSecretSpec struct {
 	// The authentication type
 	Type string `json:"type"`

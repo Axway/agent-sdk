@@ -9,7 +9,7 @@
 
 package catalog
 
-// QuotaSpecUsage Defines usage restrictions for the quota resources. (catalog.v1.Quota)
+// QuotaSpecUsage Defines usage restrictions for the quota resources.
 type QuotaSpecUsage struct {
 	// The maximum allowable access to a quota resource within the specified interval.
 	Limit int32 `json:"limit"`

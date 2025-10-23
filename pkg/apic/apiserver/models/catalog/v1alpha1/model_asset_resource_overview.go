@@ -9,8 +9,8 @@
 
 package catalog
 
-// SubscriptionInvoiceMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.SubscriptionInvoice)
-type SubscriptionInvoiceMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// AssetResourceOverview The main doc that summarizes the service. To be prominently displayed in the UI.
+type AssetResourceOverview struct {
+	// GENERATE: The following code has been modified after code generation
+	Data interface{} `json:"data,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecBillingInvoicesWhen Describes when to execute which action for a state of an invoice. (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBillingInvoicesWhen Describes when to execute which action for a state of an invoice.
 type ProductPlanSpecBillingInvoicesWhen struct {
 	State   string `json:"state,omitempty"`
 	Trigger string `json:"trigger,omitempty"`

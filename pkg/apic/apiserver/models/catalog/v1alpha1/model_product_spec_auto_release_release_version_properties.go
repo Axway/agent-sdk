@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpecAutoReleaseReleaseVersionProperties Version properties for the product releases generated as part of auto release. (catalog.v1alpha1.Product)
+// ProductSpecAutoReleaseReleaseVersionProperties Version properties for the product releases generated as part of auto release.
 type ProductSpecAutoReleaseReleaseVersionProperties struct {
 	// Label for the generated release version.
 	Label string `json:"label,omitempty"`

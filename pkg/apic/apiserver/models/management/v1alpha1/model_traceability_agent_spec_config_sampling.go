@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentSpecConfigSampling How the agent will sample the transaction data found during collection
 type TraceabilityAgentSpecConfigSampling struct {
 	// Property is not used anymore. Set onlyErrors to true will allow the agent to sample only the error transactions for Business and Consumer Insights
 	AllErrors bool `json:"allErrors,omitempty"`

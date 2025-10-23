@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpec  (catalog.v1.Product)
+// ProductSpec struct for ProductSpec
 type ProductSpec struct {
 	// Description of the Product.
 	Description    string   `json:"description,omitempty"`
@@ -18,4 +18,5 @@ type ProductSpec struct {
 	// Defines all the Assets that the Product will be built from.
 	Assets      []ProductSpecAssets    `json:"assets,omitempty"`
 	AutoRelease ProductSpecAutoRelease `json:"autoRelease,omitempty"`
+	Terms       ProductSpecTerms       `json:"terms,omitempty"`
 }

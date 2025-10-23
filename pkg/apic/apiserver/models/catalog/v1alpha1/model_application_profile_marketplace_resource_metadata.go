@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationProfileMarketplaceResourceMetadata Marketplace Application Profile metadata. (catalog.v1alpha1.ApplicationProfile)
+// ApplicationProfileMarketplaceResourceMetadata Marketplace Application Profile metadata.
 type ApplicationProfileMarketplaceResourceMetadata struct {
 	// Id of the user that created the entity.
 	CreateUserId string `json:"createUserId,omitempty"`

@@ -9,7 +9,7 @@
 
 package management
 
-// AccessRequestDefinitionApplicationprofile A reference to an application profile defined as a requirement for provisioned access requests. (management.v1alpha1.AccessRequestDefinition)
+// AccessRequestDefinitionApplicationprofile A reference to an application profile defined as a requirement for provisioned access requests.
 type AccessRequestDefinitionApplicationprofile struct {
 	// The name of the application profile definition.
 	Name string `json:"name,omitempty"`

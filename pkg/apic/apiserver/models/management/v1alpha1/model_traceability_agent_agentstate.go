@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentAgentstate  (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentAgentstate struct for TraceabilityAgentAgentstate
 type TraceabilityAgentAgentstate struct {
 	// * current - Current version is the latest available * available - New version available to update to * outdated - Version in use is no longer supported * retracted - Version in use has a known issue, update immediately
 	Update string `json:"update,omitempty"`

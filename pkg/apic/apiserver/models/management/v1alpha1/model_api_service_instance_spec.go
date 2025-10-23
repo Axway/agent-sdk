@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceSpec  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceSpec struct for ApiServiceInstanceSpec
 type ApiServiceInstanceSpec struct {
 	ApiServiceRevision           string   `json:"apiServiceRevision,omitempty"`
 	AccessRequestDefinition      string   `json:"accessRequestDefinition,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionStatus  (catalog.v1alpha1.Subscription)
+// SubscriptionStatus struct for SubscriptionStatus
 type SubscriptionStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

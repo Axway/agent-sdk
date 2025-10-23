@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssistedSearchSpec  (catalog.v1alpha1.AssistedSearch)
+// AssistedSearchSpec struct for AssistedSearchSpec
 type AssistedSearchSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	Integration interface{} `json:"integration,omitempty"`

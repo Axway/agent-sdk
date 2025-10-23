@@ -9,8 +9,8 @@
 
 package catalog
 
-// ProductReviewMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.ProductReview)
-type ProductReviewMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// DocumentResourceSpecUsageApiServices struct for DocumentResourceSpecUsageApiServices
+type DocumentResourceSpecUsageApiServices struct {
+	// Defines if the DocumentResource can be used by API Services.
+	Available bool `json:"available"`
 }

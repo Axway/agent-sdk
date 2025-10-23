@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// SubscriptionInvoiceSpecCostPlanItems  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceSpecCostPlanItems struct for SubscriptionInvoiceSpecCostPlanItems
 type SubscriptionInvoiceSpecCostPlanItems struct {
 	// The title of the quota invoice item.
 	Title string `json:"title,omitempty"`

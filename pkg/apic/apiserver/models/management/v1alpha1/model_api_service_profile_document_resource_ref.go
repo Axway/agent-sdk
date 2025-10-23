@@ -9,10 +9,8 @@
 
 package management
 
-// ApiServiceInstanceSourceDataplaneType  (management.v1alpha1.APIServiceInstance)
-type ApiServiceInstanceSourceDataplaneType struct {
-	// Dataplane type
-	Managed string `json:"managed,omitempty"`
-	// Design Repository type
-	Design string `json:"design,omitempty"`
+// ApiServiceProfileDocumentResourceRef struct for ApiServiceProfileDocumentResourceRef
+type ApiServiceProfileDocumentResourceRef struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 }

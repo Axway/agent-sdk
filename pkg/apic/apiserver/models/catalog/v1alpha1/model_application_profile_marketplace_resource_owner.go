@@ -9,11 +9,11 @@
 
 package catalog
 
-// ApplicationProfileMarketplaceResourceOwner Owner of the Application Profile. (catalog.v1alpha1.ApplicationProfile)
+// ApplicationProfileMarketplaceResourceOwner Owner of the Application Profile.
 type ApplicationProfileMarketplaceResourceOwner struct {
 	// The type of the owner.
 	Type string `json:"type,omitempty"`
 	// Id of the owner of the resource.
-	Id           string                                                 `json:"id,omitempty"`
-	Organization ApplicationProfileMarketplaceResourceOwnerOrganization `json:"organization"`
+	Id           string                                          `json:"id,omitempty"`
+	Organization ApplicationMarketplaceResourceOwnerOrganization `json:"organization"`
 }

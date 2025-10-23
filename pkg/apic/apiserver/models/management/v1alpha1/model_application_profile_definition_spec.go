@@ -9,8 +9,8 @@
 
 package management
 
-// ApplicationProfileDefinitionSpec  (management.v1alpha1.ApplicationProfileDefinition)
+// ApplicationProfileDefinitionSpec struct for ApplicationProfileDefinitionSpec
 type ApplicationProfileDefinitionSpec struct {
-	// JSON Schema draft \\#7 (management.v1alpha1.ApplicationProfileDefinition)
+	// JSON Schema draft \\#7
 	Schema map[string]interface{} `json:"schema"`
 }

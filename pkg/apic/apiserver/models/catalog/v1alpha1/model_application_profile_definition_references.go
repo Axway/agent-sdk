@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationProfileDefinitionReferences  (catalog.v1alpha1.ApplicationProfileDefinition)
+// ApplicationProfileDefinitionReferences struct for ApplicationProfileDefinitionReferences
 type ApplicationProfileDefinitionReferences struct {
 	// The name of the ApplicationProfileDefinition from an Environment.
 	ManagedApplicationProfileReqDef string `json:"managedApplicationProfileReqDef,omitempty"`

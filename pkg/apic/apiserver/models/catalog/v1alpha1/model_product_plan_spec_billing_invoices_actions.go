@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanSpecBillingInvoicesActions  (catalog.v1alpha1.ProductPlan)
+// ProductPlanSpecBillingInvoicesActions struct for ProductPlanSpecBillingInvoicesActions
 type ProductPlanSpecBillingInvoicesActions struct {
 	When ProductPlanSpecBillingInvoicesWhen `json:"when,omitempty"`
 }

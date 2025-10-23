@@ -9,7 +9,7 @@
 
 package management
 
-// ApiSpecLintingJobSpec  (management.v1.APISpecLintingJob)
+// ApiSpecLintingJobSpec struct for ApiSpecLintingJobSpec
 type ApiSpecLintingJobSpec struct {
 	// Reference to Amplify Central APIServiceRevision
 	ApiServiceRevision string `json:"apiServiceRevision"`

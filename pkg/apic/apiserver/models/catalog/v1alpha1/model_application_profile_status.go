@@ -9,10 +9,10 @@
 
 package catalog
 
-// ApplicationProfileStatus  (catalog.v1alpha1.ApplicationProfile)
+// ApplicationProfileStatus struct for ApplicationProfileStatus
 type ApplicationProfileStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []ApplicationProfileStatusReasons `json:"reasons,omitempty"`
+	Reasons []SubscriptionStatusReasons `json:"reasons,omitempty"`
 }

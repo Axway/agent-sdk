@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentDataplane  (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentDataplane struct for TraceabilityAgentDataplane
 type TraceabilityAgentDataplane struct {
 	Name string `json:"name,omitempty"`
 	// Defines the interval that the dataplane will be accessed (30m = 30 minutes, 5h 5m = 5 hours and 5 mins, 2d = 2 days). 30m minimum

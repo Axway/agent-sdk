@@ -9,8 +9,8 @@
 
 package catalog
 
-// ApplicationProfileMarketplaceResourceOwnerOrganization Organization details. (catalog.v1alpha1.ApplicationProfile)
-type ApplicationProfileMarketplaceResourceOwnerOrganization struct {
-	// Id of the organization.
-	Id string `json:"id"`
+// AssetResourceOverviewMarkdownRef struct for AssetResourceOverviewMarkdownRef
+type AssetResourceOverviewMarkdownRef struct {
+	Kind    string `json:"kind"`
+	Content string `json:"content"`
 }

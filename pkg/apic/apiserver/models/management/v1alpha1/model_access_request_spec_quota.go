@@ -9,7 +9,7 @@
 
 package management
 
-// AccessRequestSpecQuota Quota information for api transactions in accessing the api. (management.v1alpha1.AccessRequest)
+// AccessRequestSpecQuota Quota information for api transactions in accessing the api.
 type AccessRequestSpecQuota struct {
 	// The limit of the allowed quota for the access request.
 	Limit    int32  `json:"limit"`

@@ -9,7 +9,7 @@
 
 package management
 
-// IdentityProviderSpec  (management.v1alpha1.IdentityProvider)
+// IdentityProviderSpec struct for IdentityProviderSpec
 type IdentityProviderSpec struct {
 	// The metadata URL for Identity provider
 	MetadataUrl string `json:"metadataUrl"`

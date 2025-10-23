@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanVisibilitySpecPlans  (catalog.v1alpha1.ProductPlanVisibility)
+// ProductPlanVisibilitySpecPlans struct for ProductPlanVisibilitySpecPlans
 type ProductPlanVisibilitySpecPlans struct {
 	Name string `json:"name"`
 }

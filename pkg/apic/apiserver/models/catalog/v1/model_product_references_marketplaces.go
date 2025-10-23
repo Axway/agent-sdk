@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReferencesMarketplaces  (catalog.v1.Product)
+// ProductReferencesMarketplaces struct for ProductReferencesMarketplaces
 type ProductReferencesMarketplaces struct {
 	// The Marketplace reference.
 	Name    string                   `json:"name,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentTemplateSpec  (catalog.v1alpha1.DocumentTemplate)
+// DocumentTemplateSpec struct for DocumentTemplateSpec
 type DocumentTemplateSpec struct {
 	// Document Template description.
 	Description string `json:"description,omitempty"`

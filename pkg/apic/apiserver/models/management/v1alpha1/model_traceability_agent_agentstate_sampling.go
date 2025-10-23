@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// TraceabilityAgentAgentstateSampling  (management.v1alpha1.TraceabilityAgent)
+// TraceabilityAgentAgentstateSampling struct for TraceabilityAgentAgentstateSampling
 type TraceabilityAgentAgentstateSampling struct {
 	// When sampling is approved by the controller, enabled will be set to true then automatically set to false after the time period
 	Enabled bool `json:"enabled,omitempty"`

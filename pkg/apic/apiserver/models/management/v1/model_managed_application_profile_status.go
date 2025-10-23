@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationProfileStatus  (management.v1.ManagedApplicationProfile)
+// ManagedApplicationProfileStatus struct for ManagedApplicationProfileStatus
 type ManagedApplicationProfileStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

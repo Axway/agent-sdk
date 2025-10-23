@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductReviewMarketplace Details about the marketplace ratings. (catalog.v1.ProductReview)
+// ProductReviewMarketplace Details about the marketplace ratings.
 type ProductReviewMarketplace struct {
 	// The name of the Marketplace.
 	Name     string                           `json:"name"`

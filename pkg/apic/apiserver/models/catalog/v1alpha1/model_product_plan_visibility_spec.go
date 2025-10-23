@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductPlanVisibilitySpec  (catalog.v1alpha1.ProductPlanVisibility)
+// ProductPlanVisibilitySpec struct for ProductPlanVisibilitySpec
 type ProductPlanVisibilitySpec struct {
 	// Defines where the visibility settings apply.
 	Plans []ProductPlanVisibilitySpecPlans `json:"plans"`

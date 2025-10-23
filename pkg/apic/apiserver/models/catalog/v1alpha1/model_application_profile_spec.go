@@ -9,10 +9,10 @@
 
 package catalog
 
-// ApplicationProfileSpec  (catalog.v1alpha1.ApplicationProfile)
+// ApplicationProfileSpec struct for ApplicationProfileSpec
 type ApplicationProfileSpec struct {
 	// The name of an application profile definition.
 	ApplicationProfileDefinition string `json:"applicationProfileDefinition"`
-	// The value that matches the ApplicationProfileDefinition schema. (catalog.v1alpha1.ApplicationProfile)
+	// The value that matches the ApplicationProfileDefinition schema.
 	Data map[string]interface{} `json:"data"`
 }

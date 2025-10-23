@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceRevisionSpecDefinition The api specification details. (management.v1alpha1.APIServiceRevision)
+// ApiServiceRevisionSpecDefinition The api specification details.
 type ApiServiceRevisionSpecDefinition struct {
 	// The type of the api specification.
 	Type string `json:"type,omitempty"`

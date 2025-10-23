@@ -9,7 +9,7 @@
 
 package management
 
-// IdentityProviderStatus  (management.v1alpha1.IdentityProvider)
+// IdentityProviderStatus struct for IdentityProviderStatus
 type IdentityProviderStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ApiServiceInstanceSamplestate  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceSamplestate struct for ApiServiceInstanceSamplestate
 type ApiServiceInstanceSamplestate struct {
 	// The time in which sampling may be requested for this api service instance again in ISO 8601 format with numeric timezone offset
 	DisabledUntil time.Time `json:"disabledUntil,omitempty"`

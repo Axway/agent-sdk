@@ -9,8 +9,8 @@
 
 package catalog
 
-// ProductReleaseStatusPendingMeta struct for ProductReleaseStatusPendingMeta
-type ProductReleaseStatusPendingMeta struct {
-	Asset        string `json:"asset,omitempty"`
-	AssetRelease string `json:"assetRelease,omitempty"`
+// DocumentResourceSpecUsageApiServices struct for DocumentResourceSpecUsageApiServices
+type DocumentResourceSpecUsageApiServices struct {
+	// Defines if the DocumentResource can be used by API Services.
+	Available bool `json:"available"`
 }

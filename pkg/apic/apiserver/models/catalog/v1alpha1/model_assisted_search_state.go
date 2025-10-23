@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssistedSearchState Current state of the integration. The integration can get to be disabled if resources quota is reached. (catalog.v1alpha1.AssistedSearch)
+// AssistedSearchState Current state of the integration. The integration can get to be disabled if resources quota is reached.
 type AssistedSearchState struct {
 	Name string `json:"name,omitempty"`
 	// Additional info on the state.

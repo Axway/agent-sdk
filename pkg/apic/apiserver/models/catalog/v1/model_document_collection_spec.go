@@ -9,8 +9,8 @@
 
 package catalog
 
-// ProductReleaseStatusPendingMeta struct for ProductReleaseStatusPendingMeta
-type ProductReleaseStatusPendingMeta struct {
-	Asset        string `json:"asset,omitempty"`
-	AssetRelease string `json:"assetRelease,omitempty"`
+// DocumentCollectionSpec struct for DocumentCollectionSpec
+type DocumentCollectionSpec struct {
+	// GENERATE: The following code has been modified after code generation
+	Usage interface{} `json:"usage"`
 }

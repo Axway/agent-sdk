@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestApprovalState  (catalog.v1alpha1.AssetRequest)
+// AssetRequestApprovalState struct for AssetRequestApprovalState
 type AssetRequestApprovalState struct {
 	Name string `json:"name,omitempty"`
 	// Additional info on the state.

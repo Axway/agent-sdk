@@ -9,11 +9,11 @@
 
 package management
 
-// ApiServiceInstanceSpecRouting  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceSpecRouting struct for ApiServiceInstanceSpecRouting
 type ApiServiceInstanceSpecRouting struct {
 	// The base path to the API. Example: '/api'.
 	BasePath string `json:"basePath,omitempty"`
-	// Specify any additional routing details needed (management.v1alpha1.APIServiceInstance)
+	// Specify any additional routing details needed
 	// GENERATE: The following code has been modified after code generation
 	Details map[string]interface{} `json:"details,omitempty"`
 }

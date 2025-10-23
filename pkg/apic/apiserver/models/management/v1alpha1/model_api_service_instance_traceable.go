@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceTraceable Subresource that will be added only by Traceable Agents for Conformance Analysis results (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceTraceable Subresource that will be added only by Traceable Agents for Conformance Analysis results
 type ApiServiceInstanceTraceable struct {
 	// The number of matched endpoints with issues
 	Issues int32 `json:"issues,omitempty"`

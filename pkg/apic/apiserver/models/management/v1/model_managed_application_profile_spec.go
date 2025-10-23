@@ -9,12 +9,12 @@
 
 package management
 
-// ManagedApplicationProfileSpec  (management.v1.ManagedApplicationProfile)
+// ManagedApplicationProfileSpec struct for ManagedApplicationProfileSpec
 type ManagedApplicationProfileSpec struct {
 	// The name of an ManagedApplication to which to attach the profile.
 	ManagedApplication string `json:"managedApplication"`
 	// The name of an ApplicationProfileDefinition to be used for the profile.
 	ApplicationProfileDefinition string `json:"applicationProfileDefinition"`
-	// The value that matches the ApplicationProfileDefinition schema. (management.v1.ManagedApplicationProfile)
+	// The value that matches the ApplicationProfileDefinition schema.
 	Data map[string]interface{} `json:"data"`
 }

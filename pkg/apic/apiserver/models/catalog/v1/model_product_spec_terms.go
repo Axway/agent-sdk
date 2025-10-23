@@ -9,7 +9,8 @@
 
 package catalog
 
-// ConsumerStageVisibilitySpecStages  (catalog.v1alpha1.ConsumerStageVisibility)
-type ConsumerStageVisibilitySpecStages struct {
-	Name string `json:"name"`
+// ProductSpecTerms struct for ProductSpecTerms
+type ProductSpecTerms struct {
+	// The document from document library that has the terms and conditions for this product.
+	Name string `json:"name,omitempty"`
 }

@@ -9,10 +9,12 @@
 
 package catalog
 
-// AssetResourceReferences  (catalog.v1alpha1.AssetResource)
+// AssetResourceReferences struct for AssetResourceReferences
 type AssetResourceReferences struct {
 	// Reference to API Service Revision resource
 	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`
 	// Reference to API Service Instance resource
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
+	// Only assigned to release version and set to the Asset's AssetResource it was copied from
+	SourceAssetResource string `json:"sourceAssetResource,omitempty"`
 }

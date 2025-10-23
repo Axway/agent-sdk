@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceSpecCostPlanQuotas  (catalog.v1alpha1.SubscriptionInvoice)
+// SubscriptionInvoiceSpecCostPlanQuotas struct for SubscriptionInvoiceSpecCostPlanQuotas
 type SubscriptionInvoiceSpecCostPlanQuotas struct {
 	Name string `json:"name,omitempty"`
 	// The cost associated with the quota.

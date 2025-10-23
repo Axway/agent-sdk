@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentReferences  (management.v1alpha1.Environment)
+// EnvironmentReferences struct for EnvironmentReferences
 type EnvironmentReferences struct {
 	// The list of referenced managed Environments
 	ManagedEnvironments []string `json:"managedEnvironments,omitempty"`

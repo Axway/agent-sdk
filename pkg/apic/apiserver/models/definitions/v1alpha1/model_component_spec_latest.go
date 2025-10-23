@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ComponentSpecLatest The latest version for the component (definitions.v1alpha1.Component)
+// ComponentSpecLatest The latest version for the component
 type ComponentSpecLatest struct {
 	// A version for the component
 	Version string `json:"version"`

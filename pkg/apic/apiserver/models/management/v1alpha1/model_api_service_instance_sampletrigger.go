@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceSampletrigger  (management.v1alpha1.APIServiceInstance)
+// ApiServiceInstanceSampletrigger struct for ApiServiceInstanceSampletrigger
 type ApiServiceInstanceSampletrigger struct {
 	// Set to true if sampling is requested
 	Requested bool `json:"requested,omitempty"`
