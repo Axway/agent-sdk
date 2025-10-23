@@ -177,6 +177,9 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 				extraProperties: tc.extraProperties,
 			}
 
+			// Simulate validation step which sets defaults (as happens in NewProvider)
+			_ = oktaProvider.validateExtraProperties(clientReq.extraProperties)
+
 			oktaProvider.preProcessClientRequest(clientReq)
 
 			appType, ok := clientReq.extraProperties[oktaApplicationType].(string)

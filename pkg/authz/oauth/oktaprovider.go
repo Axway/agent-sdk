@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"fmt"
+	"slices"
 )
 
 const (
@@ -21,23 +22,29 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 	return oktaAuthHeaderPrefix
 }
 
-// validateExtraProperties validates Okta-specific extra properties
+// validateExtraProperties validates Okta-specific extra properties and sets defaults
 func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {
-	// If PKCE is required, application_type (if set) must be 'browser'
-	pkceRequired, ok := extraProps[oktaPKCERequired].(bool)
-	if !ok || !pkceRequired {
+	pkceRequired, _ := extraProps[oktaPKCERequired].(bool)
+	appType, hasAppType := extraProps[oktaApplicationType].(string)
+
+	// If application_type is already set, validate it
+	if hasAppType && appType != "" {
+		if pkceRequired && appType != oktaAppTypeBrowser {
+			return fmt.Errorf("when %s is true, %s must be '%s' or unset, got '%s'",
+				oktaPKCERequired, oktaApplicationType, oktaAppTypeBrowser, appType)
+		}
 		return nil
 	}
 
-	appType, ok := extraProps[oktaApplicationType].(string)
-	if !ok || appType == "" {
-		return nil // Not set is valid
+	// Set default application_type based on pkce_required
+	if pkceRequired {
+		extraProps[oktaApplicationType] = oktaAppTypeBrowser
+	} else {
+		// Default to 'web' for non-PKCE flows
+		// Note: This may be overridden to 'service' in preProcessClientRequest for client credentials flows
+		extraProps[oktaApplicationType] = oktaAppTypeWeb
 	}
 
-	if appType != oktaAppTypeBrowser {
-		return fmt.Errorf("when %s is true, %s must be '%s' or unset, got '%s'",
-			oktaPKCERequired, oktaApplicationType, oktaAppTypeBrowser, appType)
-	}
 	return nil
 }
 
@@ -47,28 +54,14 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 	}
 
 	pkceRequired, _ := clientRequest.extraProperties[oktaPKCERequired].(bool)
-	_, hasAppType := clientRequest.extraProperties[oktaApplicationType].(string)
 
-	// Process grant types to set defaults
-	appType := oktaAppTypeService
-	for _, grantType := range clientRequest.GrantTypes {
-		if grantType == GrantTypeClientCredentials {
-			if len(clientRequest.ResponseTypes) == 0 {
-				clientRequest.ResponseTypes = []string{AuthResponseToken}
-			}
-		} else if !hasAppType {
-			// Non-client-credentials flow needs web or browser type
-			if pkceRequired {
-				appType = oktaAppTypeBrowser
-			} else {
-				appType = oktaAppTypeWeb
-			}
+	// Override application_type to 'service' for client credentials flows
+	// (validateExtraProperties sets default to 'web' or 'browser')
+	if slices.Contains(clientRequest.GrantTypes, GrantTypeClientCredentials) {
+		clientRequest.extraProperties[oktaApplicationType] = oktaAppTypeService
+		if len(clientRequest.ResponseTypes) == 0 {
+			clientRequest.ResponseTypes = []string{AuthResponseToken}
 		}
-	}
-
-	// Set application_type if not already set
-	if !hasAppType {
-		clientRequest.extraProperties[oktaApplicationType] = appType
 	}
 
 	if pkceRequired {
