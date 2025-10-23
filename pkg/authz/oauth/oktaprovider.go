@@ -21,8 +21,8 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 	return oktaAuthHeaderPrefix
 }
 
-// ValidateExtraProperties validates Okta-specific extra properties
-func (i *okta) ValidateExtraProperties(extraProps map[string]interface{}) error {
+// validateExtraProperties validates Okta-specific extra properties
+func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {
 	// If PKCE is required, application_type (if set) must be 'browser'
 	pkceRequired, ok := extraProps[oktaPKCERequired].(bool)
 	if !ok || !pkceRequired {

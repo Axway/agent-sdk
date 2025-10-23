@@ -15,6 +15,6 @@ func (i *genericIDP) preProcessClientRequest(clientRequest *clientMetadata) {
 	// no op
 }
 
-func (i *genericIDP) ValidateExtraProperties(extraProps map[string]any) error {
+func (i *genericIDP) validateExtraProperties(extraProps map[string]any) error {
 	return nil
 }

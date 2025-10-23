@@ -103,7 +103,7 @@ func TestValidateOktaExtraProperties(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			oktaProvider := &okta{}
-			err := oktaProvider.ValidateExtraProperties(tc.extraProps)
+			err := oktaProvider.validateExtraProperties(tc.extraProps)
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {

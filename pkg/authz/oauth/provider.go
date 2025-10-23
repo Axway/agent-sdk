@@ -52,7 +52,7 @@ type provider struct {
 type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
-	ValidateExtraProperties(extraProps map[string]interface{}) error
+	validateExtraProperties(extraProps map[string]interface{}) error
 }
 
 type providerOptions struct {
@@ -122,7 +122,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	}
 
 	// Validate provider-specific extra properties
-	if err := idpType.ValidateExtraProperties(p.extraProperties); err != nil {
+	if err := idpType.validateExtraProperties(p.extraProperties); err != nil {
 		p.logger.
 			WithField("provider", p.cfg.GetIDPName()).
 			WithField("type", p.cfg.GetIDPType()).
