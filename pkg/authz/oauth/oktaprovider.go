@@ -25,24 +25,23 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 // validateExtraProperties validates Okta-specific extra properties and sets defaults
 func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {
 	pkceRequired, _ := extraProps[oktaPKCERequired].(bool)
-	appType, hasAppType := extraProps[oktaApplicationType].(string)
+	appType, _ := extraProps[oktaApplicationType].(string)
 
-	// If application_type is already set, validate it
-	if hasAppType && appType != "" {
-		if pkceRequired && appType != oktaAppTypeBrowser {
-			return fmt.Errorf("when %s is true, %s must be '%s' or unset, got '%s'",
-				oktaPKCERequired, oktaApplicationType, oktaAppTypeBrowser, appType)
-		}
-		return nil
+	// Validate that if PKCE is required and application_type is explicitly set, it must be 'browser'
+	if pkceRequired && appType != "" && appType != oktaAppTypeBrowser {
+		return fmt.Errorf("when %s is true, %s must be '%s' or unset, got '%s'",
+			oktaPKCERequired, oktaApplicationType, oktaAppTypeBrowser, appType)
 	}
 
-	// Set default application_type based on pkce_required
-	if pkceRequired {
-		extraProps[oktaApplicationType] = oktaAppTypeBrowser
-	} else {
-		// Default to 'web' for non-PKCE flows
-		// Note: This may be overridden to 'service' in preProcessClientRequest for client credentials flows
+	// Set default application_type only if not explicitly set by user
+	// Check appType == "" to preserve valid explicit user choices (e.g., "service")
+	// Default to 'web', override to 'browser' if PKCE is required
+	// Note: May be further overridden to 'service' in preProcessClientRequest for client credentials flows
+	if appType == "" {
 		extraProps[oktaApplicationType] = oktaAppTypeWeb
+		if pkceRequired {
+			extraProps[oktaApplicationType] = oktaAppTypeBrowser
+		}
 	}
 
 	return nil
