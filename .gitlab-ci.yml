@@ -26,7 +26,7 @@ variables:
 ############################################################
 include:
   - project: "apigov/gitlabci"
-    ref: $GITLAB_CICD_BLUE
+    ref: $GITLAB_CICD_GREEN
     file: "/.gitlab-ci-sonar.yml"
   - project: "apigov/beano_cicd"
     ref: $BEANO_CICD_BLUE
@@ -44,7 +44,7 @@ include:
       - "/.gitlab-ci-blackduck.yml"
       - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_BLUE
+    ref: $BEANO_CICD_GREEN
     # this one MUST be after the scurity jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/securityjobs.yml"

@@ -41,16 +41,16 @@ func ParseOAS3(spec []byte) (*openapi3.T, error) {
 		return nil, err
 	}
 	if !strings.Contains(oas3Obj.OpenAPI, "3.") {
-		return nil, fmt.Errorf(oasParseError("3", ("'openapi' key is invalid.")))
+		return nil, fmt.Errorf("%s", oasParseError("3", ("'openapi' key is invalid.")))
 	}
 	if oas3Obj.Paths == nil {
-		return nil, fmt.Errorf(oasParseError("3", "'paths' key not found."))
+		return nil, fmt.Errorf("%s", oasParseError("3", "'paths' key not found."))
 	}
 	if oas3Obj.Info == nil {
-		return nil, fmt.Errorf(oasParseError("3", "'info' key not found."))
+		return nil, fmt.Errorf("%s", oasParseError("3", "'info' key not found."))
 	}
 	if oas3Obj.Info.Title == "" {
-		return nil, fmt.Errorf(oasParseError("3", "'info.title' key not found."))
+		return nil, fmt.Errorf("%s", oasParseError("3", "'info.title' key not found."))
 	}
 	return oas3Obj, nil
 }
