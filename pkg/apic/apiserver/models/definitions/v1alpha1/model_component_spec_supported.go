@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ComponentSpecSupported struct for ComponentSpecSupported
+// ComponentSpecSupported  (definitions.v1alpha1.Component)
 type ComponentSpecSupported struct {
 	// A version for the component
 	Version string `json:"version"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductSpecTerms struct for ProductSpecTerms
+// ProductSpecTerms  (catalog.v1alpha1.Product)
 type ProductSpecTerms struct {
 	// The document from document library that has the terms and conditions for this product.
 	Name string `json:"name,omitempty"`

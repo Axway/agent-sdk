@@ -9,7 +9,7 @@
 
 package catalog
 
-// McpClientSpec struct for McpClientSpec
+// McpClientSpec  (catalog.v1.MCPClient)
 type McpClientSpec struct {
 	// Description of the MCP client.
 	Description string `json:"description,omitempty"`

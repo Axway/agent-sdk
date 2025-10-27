@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceInvoicedAmount Amount charged in the billing system.
+// SubscriptionInvoiceInvoicedAmount Amount charged in the billing system. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceInvoicedAmount struct {
 	// Currency for the billed amount.
 	Currency string `json:"currency"`

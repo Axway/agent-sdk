@@ -9,8 +9,8 @@
 
 package catalog
 
-// ApplicationProfileDefinitionSpec struct for ApplicationProfileDefinitionSpec
+// ApplicationProfileDefinitionSpec  (catalog.v1alpha1.ApplicationProfileDefinition)
 type ApplicationProfileDefinitionSpec struct {
-	// JSON Schema draft \\#7
+	// JSON Schema draft \\#7 (catalog.v1alpha1.ApplicationProfileDefinition)
 	Schema map[string]interface{} `json:"schema"`
 }

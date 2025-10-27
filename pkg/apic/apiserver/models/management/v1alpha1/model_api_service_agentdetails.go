@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceAgentdetails struct for ApiServiceAgentdetails
+// ApiServiceAgentdetails  (management.v1alpha1.APIService)
 type ApiServiceAgentdetails struct {
 	// Remote API ID for the API Service.
 	RemoteAPIID string `json:"remoteAPIID,omitempty"`

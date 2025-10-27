@@ -9,7 +9,7 @@
 
 package management
 
-// DiscoveryAgentSpecConfigOwner Owner of the resources that the agent discovers.
+// DiscoveryAgentSpecConfigOwner Owner of the resources that the agent discovers. (management.v1alpha1.DiscoveryAgent)
 type DiscoveryAgentSpecConfigOwner struct {
 	// The type of the owner. Defaults to team if not present.
 	Type string `json:"type,omitempty"`

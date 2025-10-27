@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSpecConfigRedactionRequestHeaders The allowed and sanitization setup of request headers in transactional data
+// TraceabilityAgentSpecConfigRedactionRequestHeaders The allowed and sanitization setup of request headers in transactional data (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSpecConfigRedactionRequestHeaders struct {
 	// The regular expressions for request headers that, when matched, will be saved for Business and Consumer Insights
 	Show []string `json:"show,omitempty"`

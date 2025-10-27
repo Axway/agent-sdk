@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationProfileStatus struct for ApplicationProfileStatus
+// ApplicationProfileStatus  (catalog.v1.ApplicationProfile)
 type ApplicationProfileStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`

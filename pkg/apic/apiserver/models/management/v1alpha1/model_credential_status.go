@@ -9,10 +9,10 @@
 
 package management
 
-// CredentialStatus struct for CredentialStatus
+// CredentialStatus  (management.v1alpha1.Credential)
 type CredentialStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []AccessRequestStatusReasons `json:"reasons,omitempty"`
+	Reasons []CredentialStatusReasons `json:"reasons,omitempty"`
 }

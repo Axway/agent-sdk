@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceSpecCost The invoice generated cost
+// SubscriptionInvoiceSpecCost The invoice generated cost (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceSpecCost struct {
 	// The computed cost of the entire invoice, including plan and quota items costs.
 	Total float64                         `json:"total,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpecUsageMcpClients struct for DocumentResourceSpecUsageMcpClients
+// DocumentResourceSpecUsageMcpClients  (catalog.v1.DocumentResource)
 type DocumentResourceSpecUsageMcpClients struct {
 	// Defines if the DocumentResource is MCP Client install instructions.
 	Available bool `json:"available"`

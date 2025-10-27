@@ -9,7 +9,7 @@
 
 package management
 
-// ManagedApplicationProfileReferences struct for ManagedApplicationProfileReferences
+// ManagedApplicationProfileReferences  (management.v1.ManagedApplicationProfile)
 type ManagedApplicationProfileReferences struct {
 	// Name of the linked catalog ApplicationProfile.
 	ApplicationProfile string `json:"applicationProfile,omitempty"`

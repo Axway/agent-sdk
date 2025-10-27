@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestApproval struct for AssetRequestApproval
+// AssetRequestApproval  (catalog.v1alpha1.AssetRequest)
 type AssetRequestApproval struct {
 	State AssetRequestApprovalState `json:"state"`
 	// Read only id of the user that approved or reject the asset request.

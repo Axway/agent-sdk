@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceSourceDataplaneType struct for ApiServiceSourceDataplaneType
+// ApiServiceSourceDataplaneType  (management.v1alpha1.APIService)
 type ApiServiceSourceDataplaneType struct {
 	// Dataplane type
 	Managed string `json:"managed,omitempty"`

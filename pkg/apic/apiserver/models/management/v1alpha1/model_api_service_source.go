@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceSource struct for ApiServiceSource
+// ApiServiceSource  (management.v1alpha1.APIService)
 type ApiServiceSource struct {
 	// GENERATE: The following code has been modified after code generation
 	//

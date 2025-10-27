@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetMappingStatusSourceResourceApiServiceRevision struct for AssetMappingStatusSourceResourceApiServiceRevision
+// AssetMappingStatusSourceResourceApiServiceRevision  (catalog.v1alpha1.AssetMapping)
 type AssetMappingStatusSourceResourceApiServiceRevision struct {
 	Ref           string                          `json:"ref,omitempty"`
 	OperationType AssetMappingStatusOperationType `json:"operationType,omitempty"`

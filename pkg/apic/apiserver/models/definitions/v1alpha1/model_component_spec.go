@@ -9,7 +9,7 @@
 
 package definitions
 
-// ComponentSpec struct for ComponentSpec
+// ComponentSpec  (definitions.v1alpha1.Component)
 type ComponentSpec struct {
 	// The component type
 	Type   string              `json:"type,omitempty"`

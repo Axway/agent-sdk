@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// SubscriptionJobSpecWhen Describes when to execute the action.
+// SubscriptionJobSpecWhen Describes when to execute the action. (catalog.v1alpha1.SubscriptionJob)
 type SubscriptionJobSpecWhen struct {
 	// Time when the migration should execute in ISO 8601 format with numeric timezone offset.
 	Timestamp time.Time `json:"timestamp,omitempty"`

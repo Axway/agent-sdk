@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentTemplateSpecUsage struct for DocumentTemplateSpecUsage
+// DocumentTemplateSpecUsage  (catalog.v1alpha1.DocumentTemplate)
 type DocumentTemplateSpecUsage struct {
 	// Defines if the DocumentTemplate should be used as the default one.
 	UseAsDefault bool `json:"useAsDefault,omitempty"`

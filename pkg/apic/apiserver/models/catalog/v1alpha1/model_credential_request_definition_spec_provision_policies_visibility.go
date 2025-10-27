@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialRequestDefinitionSpecProvisionPoliciesVisibility Visibility properties for Credentials linked to this definition.
+// CredentialRequestDefinitionSpecProvisionPoliciesVisibility Visibility properties for Credentials linked to this definition. (catalog.v1alpha1.CredentialRequestDefinition)
 type CredentialRequestDefinitionSpecProvisionPoliciesVisibility struct {
 	// The number of days after which the Credentials are no longer visible in the Marketplace.
 	Period int32 `json:"period"`

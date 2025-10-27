@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetRequestDefinitionApplicationprofile A reference to the application profile defined as a requirement for provisioned asset requests.
+// AssetRequestDefinitionApplicationprofile A reference to the application profile defined as a requirement for provisioned asset requests. (catalog.v1alpha1.AssetRequestDefinition)
 type AssetRequestDefinitionApplicationprofile struct {
 	// The name of the application profile definition.
 	Name string `json:"name,omitempty"`

@@ -9,10 +9,10 @@
 
 package catalog
 
-// ConsumerProductVisibilitySpec struct for ConsumerProductVisibilitySpec
+// ConsumerProductVisibilitySpec  (catalog.v1alpha1.ConsumerProductVisibility)
 type ConsumerProductVisibilitySpec struct {
 	// Defines where the visibility settings apply.
-	Products []ProductVisibilitySpecProducts `json:"products"`
+	Products []ConsumerProductVisibilitySpecProducts `json:"products"`
 	// GENERATE: The following code has been modified after code generation
 	Subjects []interface{} `json:"subjects,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialRequestDefinitionSpecProvisionPolicies Defines the policies applied on the Credentials generated using this definition.
+// CredentialRequestDefinitionSpecProvisionPolicies Defines the policies applied on the Credentials generated using this definition. (catalog.v1alpha1.CredentialRequestDefinition)
 type CredentialRequestDefinitionSpecProvisionPolicies struct {
 	// Defines on if Credentials using this definitions can be renewed.
 	Renewable bool `json:"renewable,omitempty"`

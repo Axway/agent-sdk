@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationProfileMarketplaceResourceOwnerOrganization Organization details.
+// ApplicationProfileMarketplaceResourceOwnerOrganization Organization details. (catalog.v1.ApplicationProfile)
 type ApplicationProfileMarketplaceResourceOwnerOrganization struct {
 	// Id of the organization.
 	Id string `json:"id"`

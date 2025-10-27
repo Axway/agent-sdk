@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceCompliance struct for ApiServiceInstanceCompliance
+// ApiServiceInstanceCompliance  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceCompliance struct {
 	Runtime ApiServiceInstanceComplianceRuntimeStatus `json:"runtime,omitempty"`
 }

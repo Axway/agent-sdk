@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceOverview The main doc that summarizes the service. To be prominently displayed in the UI.
+// AssetResourceOverview The main doc that summarizes the service. To be prominently displayed in the UI. (catalog.v1alpha1.AssetResource)
 type AssetResourceOverview struct {
 	// GENERATE: The following code has been modified after code generation
 	Data interface{} `json:"data,omitempty"`

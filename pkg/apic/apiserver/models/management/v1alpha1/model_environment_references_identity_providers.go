@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentReferencesIdentityProviders struct for EnvironmentReferencesIdentityProviders
+// EnvironmentReferencesIdentityProviders  (management.v1alpha1.Environment)
 type EnvironmentReferencesIdentityProviders struct {
 	// The name of the identity provider
 	Name string `json:"name,omitempty"`

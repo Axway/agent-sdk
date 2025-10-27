@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductStatusMeta struct for ProductStatusMeta
+// ProductStatusMeta  (catalog.v1alpha1.Product)
 type ProductStatusMeta struct {
 	Asset        string `json:"asset,omitempty"`
 	AssetRelease string `json:"assetRelease,omitempty"`

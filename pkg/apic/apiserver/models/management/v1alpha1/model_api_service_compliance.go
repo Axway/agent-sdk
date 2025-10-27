@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceCompliance struct for ApiServiceCompliance
+// ApiServiceCompliance  (management.v1alpha1.APIService)
 type ApiServiceCompliance struct {
 	Design   ApiServiceComplianceLintingStatus `json:"design,omitempty"`
 	Security ApiServiceComplianceLintingStatus `json:"security,omitempty"`

@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// SubscriptionInvoiceSpecPeriod Describes the period for which the invoice was created. Initial invoice for a subscription does not contain a period.
+// SubscriptionInvoiceSpecPeriod Describes the period for which the invoice was created. Initial invoice for a subscription does not contain a period. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceSpecPeriod struct {
 	// Start time of the invoice in ISO 8601 format with numeric timezone offset.
 	From time.Time `json:"from"`

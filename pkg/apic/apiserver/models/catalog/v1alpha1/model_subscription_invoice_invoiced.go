@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceInvoiced struct for SubscriptionInvoiceInvoiced
+// SubscriptionInvoiceInvoiced  (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceInvoiced struct {
 	Amount SubscriptionInvoiceInvoicedAmount `json:"amount,omitempty"`
 }

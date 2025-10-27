@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentCollectionSpec struct for DocumentCollectionSpec
+// DocumentCollectionSpec  (catalog.v1.DocumentCollection)
 type DocumentCollectionSpec struct {
 	// GENERATE: The following code has been modified after code generation
 	Usage interface{} `json:"usage"`

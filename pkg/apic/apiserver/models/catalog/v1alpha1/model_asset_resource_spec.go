@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceSpec struct for AssetResourceSpec
+// AssetResourceSpec  (catalog.v1alpha1.AssetResource)
 type AssetResourceSpec struct {
 	// The Stage this Asset Resource is deployed on.
 	Stage                        string   `json:"stage,omitempty"`

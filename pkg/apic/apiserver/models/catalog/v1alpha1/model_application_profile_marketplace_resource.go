@@ -12,7 +12,7 @@ package catalog
 // GENERATE: The following code has been modified after code generation
 import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
-// ApplicationProfileMarketplaceResource The Marketplace Application profile resource details.
+// ApplicationProfileMarketplaceResource The Marketplace Application profile resource details. (catalog.v1alpha1.ApplicationProfile)
 type ApplicationProfileMarketplaceResource struct {
 	Metadata ApplicationProfileMarketplaceResourceMetadata `json:"metadata"`
 	// GENERATE: The following code has been modified after code generation

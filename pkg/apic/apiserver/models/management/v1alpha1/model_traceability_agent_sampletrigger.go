@@ -9,7 +9,7 @@
 
 package management
 
-// TraceabilityAgentSampletrigger struct for TraceabilityAgentSampletrigger
+// TraceabilityAgentSampletrigger  (management.v1alpha1.TraceabilityAgent)
 type TraceabilityAgentSampletrigger struct {
 	// Set to true to request that sampling for this agent is started for the duration selected
 	Requested bool `json:"requested,omitempty"`

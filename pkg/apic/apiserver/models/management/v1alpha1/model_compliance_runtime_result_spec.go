@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ComplianceRuntimeResultSpec struct for ComplianceRuntimeResultSpec
+// ComplianceRuntimeResultSpec  (management.v1alpha1.ComplianceRuntimeResult)
 type ComplianceRuntimeResultSpec struct {
 	// The name of the Compliance Agent that reported these results.
 	ComplianceAgent string `json:"complianceAgent"`

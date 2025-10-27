@@ -16,7 +16,7 @@ import (
 	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 )
 
-// ComplianceAgentStatus struct for ComplianceAgentStatus
+// ComplianceAgentStatus  (management.v1alpha1.ComplianceAgent)
 type ComplianceAgentStatus struct {
 	// Version name for the agent revision.
 	Version string `json:"version,omitempty"`

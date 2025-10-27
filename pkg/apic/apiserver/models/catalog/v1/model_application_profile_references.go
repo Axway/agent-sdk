@@ -9,7 +9,7 @@
 
 package catalog
 
-// ApplicationProfileReferences struct for ApplicationProfileReferences
+// ApplicationProfileReferences  (catalog.v1.ApplicationProfile)
 type ApplicationProfileReferences struct {
 	// Name of the related ManagedApplicationProfile.
 	ManagedApplicationProfile string `json:"managedApplicationProfile,omitempty"`

@@ -9,10 +9,10 @@
 
 package catalog
 
-// PublishedProductStatus struct for PublishedProductStatus
+// PublishedProductStatus  (catalog.v1alpha1.PublishedProduct)
 type PublishedProductStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []SubscriptionStatusReasons `json:"reasons,omitempty"`
+	Reasons []PublishedProductStatusReasons `json:"reasons,omitempty"`
 }

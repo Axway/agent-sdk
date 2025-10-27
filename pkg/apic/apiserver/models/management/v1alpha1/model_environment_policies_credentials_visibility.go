@@ -9,7 +9,7 @@
 
 package management
 
-// EnvironmentPoliciesCredentialsVisibility Visibility properties for Credentials generated in the scoped Environment.
+// EnvironmentPoliciesCredentialsVisibility Visibility properties for Credentials generated in the scoped Environment. (management.v1alpha1.Environment)
 type EnvironmentPoliciesCredentialsVisibility struct {
 	// The number of days after which the Credentials are no longer visible in the Marketplace.
 	Period int32 `json:"period,omitempty"`

@@ -9,7 +9,7 @@
 
 package catalog
 
-// AssetResourceSpecDocs struct for AssetResourceSpecDocs
+// AssetResourceSpecDocs  (catalog.v1alpha1.AssetResource)
 type AssetResourceSpecDocs struct {
 	// Additional docs about the service. Displayed in Marketplace's \"Documentation\" tab.
 	Topics string `json:"topics,omitempty"`

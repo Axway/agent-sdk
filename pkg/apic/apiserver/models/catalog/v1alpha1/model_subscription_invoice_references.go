@@ -9,7 +9,7 @@
 
 package catalog
 
-// SubscriptionInvoiceReferences struct for SubscriptionInvoiceReferences
+// SubscriptionInvoiceReferences  (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceReferences struct {
 	// Reference to product.
 	Product string `json:"product,omitempty"`

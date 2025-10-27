@@ -9,7 +9,7 @@
 
 package management
 
-// ComplianceAgentDataplane struct for ComplianceAgentDataplane
+// ComplianceAgentDataplane  (management.v1alpha1.ComplianceAgent)
 type ComplianceAgentDataplane struct {
 	Name string `json:"name,omitempty"`
 	// Queues this agent to run an execution process. Defaults to false

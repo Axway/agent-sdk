@@ -9,7 +9,7 @@
 
 package management
 
-// IdentityProviderSecurity struct for IdentityProviderSecurity
+// IdentityProviderSecurity  (management.v1alpha1.IdentityProvider)
 type IdentityProviderSecurity struct {
 	// public key to be used to encrypt the access data linked to this identity provider.
 	EncryptionKey       string `json:"encryptionKey"`

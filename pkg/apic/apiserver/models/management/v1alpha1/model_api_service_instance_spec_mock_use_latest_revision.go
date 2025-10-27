@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceSpecMockUseLatestRevision Optional property used to automatically update the mock service with the newest APIServiceRevision. When not set, you must assign the \"spec.apiServiceRevision\" to revision you want to mock.
+// ApiServiceInstanceSpecMockUseLatestRevision Optional property used to automatically update the mock service with the newest APIServiceRevision. When not set, you must assign the \"spec.apiServiceRevision\" to revision you want to mock.  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSpecMockUseLatestRevision struct {
 	ApiService string `json:"apiService"`
 }

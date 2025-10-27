@@ -9,7 +9,7 @@
 
 package catalog
 
-// CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions struct for CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions
+// CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions  (catalog.v1alpha1.CredentialRequestDefinition)
 type CredentialRequestDefinitionSpecProvisionPoliciesExpiryActions struct {
 	// The type of the action taken when the Credential using this definition expires.
 	Type string `json:"type,omitempty"`

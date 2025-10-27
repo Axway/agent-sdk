@@ -9,7 +9,7 @@
 
 package management
 
-// ComplianceAgentSpecConfig The compliance agent config
+// ComplianceAgentSpecConfig The compliance agent config (management.v1alpha1.ComplianceAgent)
 type ComplianceAgentSpecConfig struct {
 	// The list of referenced managed Environments
 	ManagedEnvironments []string `json:"managedEnvironments,omitempty"`

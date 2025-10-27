@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceProfile struct for ApiServiceProfile
+// ApiServiceProfile  (management.v1alpha1.APIService)
 type ApiServiceProfile struct {
 	// Categorizes the sensitivity of the data the service provides.
 	DataClassification string `json:"dataClassification,omitempty"`

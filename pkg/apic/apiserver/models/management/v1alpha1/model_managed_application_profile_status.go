@@ -9,10 +9,10 @@
 
 package management
 
-// ManagedApplicationProfileStatus struct for ManagedApplicationProfileStatus
+// ManagedApplicationProfileStatus  (management.v1alpha1.ManagedApplicationProfile)
 type ManagedApplicationProfileStatus struct {
 	// The current status level, indicating progress towards consistency.
 	Level string `json:"level"`
 	// Reasons for the generated status.
-	Reasons []AccessRequestStatusReasons `json:"reasons,omitempty"`
+	Reasons []ManagedApplicationProfileStatusReasons `json:"reasons,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package management
 
-// AssetMappingStatus struct for AssetMappingStatus
+// AssetMappingStatus  (management.v1alpha1.AssetMapping)
 type AssetMappingStatus struct {
 	Level  string                   `json:"level,omitempty"`
 	Source AssetMappingStatusSource `json:"source,omitempty"`

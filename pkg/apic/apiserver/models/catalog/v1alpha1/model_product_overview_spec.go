@@ -9,7 +9,7 @@
 
 package catalog
 
-// ProductOverviewSpec struct for ProductOverviewSpec
+// ProductOverviewSpec  (catalog.v1alpha1.ProductOverview)
 type ProductOverviewSpec struct {
 	// Defines all the documents and order for marketplace.
 	Documents []ProductOverviewSpecDocuments `json:"documents,omitempty"`

@@ -9,7 +9,7 @@
 
 package management
 
-// ApiServiceInstanceSourceReferences struct for ApiServiceInstanceSourceReferences
+// ApiServiceInstanceSourceReferences  (management.v1alpha1.APIServiceInstance)
 type ApiServiceInstanceSourceReferences struct {
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
 }

@@ -9,7 +9,7 @@
 
 package catalog
 
-// DocumentResourceSpecUsageApiServices struct for DocumentResourceSpecUsageApiServices
+// DocumentResourceSpecUsageApiServices  (catalog.v1.DocumentResource)
 type DocumentResourceSpecUsageApiServices struct {
 	// Defines if the DocumentResource can be used by API Services.
 	Available bool `json:"available"`
