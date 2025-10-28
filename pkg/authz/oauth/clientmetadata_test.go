@@ -19,7 +19,7 @@ func TestClientMetadataSerialization(t *testing.T) {
 		SetScopes([]string{"scope1", "scope2"}).
 		SetLogoURI("http://localhost").
 		SetJWKSURI("http://localhost").
-		SetExtraProperties(map[string]string{"key": "value"}).
+		SetExtraProperties(map[string]interface{}{"key": "value", "boolKey": true}).
 		Build()
 	assert.Nil(t, err)
 	assert.NotNil(t, c)
@@ -51,6 +51,19 @@ func TestClientMetadataSerialization(t *testing.T) {
 	assert.Equal(t, strings.Join(c.GetScopes(), ","), strings.Join(scm.GetScopes(), ","))
 	assert.Equal(t, c.GetLogoURI(), scm.GetLogoURI())
 	assert.Equal(t, c.GetJwksURI(), scm.GetJwksURI())
+
+	// Validate extra properties
+	assert.NotNil(t, c.GetExtraProperties())
+	assert.NotNil(t, scm.GetExtraProperties())
 	assert.Equal(t, len(c.GetExtraProperties()), len(scm.GetExtraProperties()))
+	assert.Equal(t, 2, len(scm.GetExtraProperties()))
+
+	// Validate string value in extra properties
+	assert.Contains(t, scm.GetExtraProperties(), "key")
+	assert.Equal(t, "value", scm.GetExtraProperties()["key"])
+
+	// Validate boolean value in extra properties
+	assert.Contains(t, scm.GetExtraProperties(), "boolKey")
+	assert.Equal(t, true, scm.GetExtraProperties()["boolKey"])
 
 }

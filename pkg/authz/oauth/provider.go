@@ -40,7 +40,7 @@ type provider struct {
 	logger             log.FieldLogger
 	cfg                corecfg.IDPConfig
 	metadataURL        string
-	extraProperties    map[string]string
+	extraProperties    map[string]interface{}
 	requestHeaders     map[string]string
 	queryParameters    map[string]string
 	apiClient          coreapi.Client
@@ -52,6 +52,7 @@ type provider struct {
 type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
+	validateExtraProperties(extraProps map[string]interface{}) error
 }
 
 type providerOptions struct {
@@ -119,6 +120,17 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		}
 		p.authClient = authClient
 	}
+
+	// Validate provider-specific extra properties
+	if err := idpType.validateExtraProperties(p.extraProperties); err != nil {
+		p.logger.
+			WithField("provider", p.cfg.GetIDPName()).
+			WithField("type", p.cfg.GetIDPType()).
+			WithError(err).
+			Error("invalid extra properties for provider")
+		return nil, fmt.Errorf("invalid extra properties for %s provider: %w", idp.GetIDPType(), err)
+	}
+
 	return p, nil
 }
 

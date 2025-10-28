@@ -63,7 +63,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]string{
+				extraProperties: map[string]interface{}{
 					"key":               "value",
 					oktaApplicationType: oktaAppTypeWeb,
 				},
@@ -90,7 +90,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseToken},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]string{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -119,7 +119,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]string{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -144,7 +144,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]string{
+				extraProperties: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -242,6 +242,74 @@ func TestProvider(t *testing.T) {
 			assertQueryParams(t, tc.queryParams, s.GetQueryParams())
 
 			assert.Nil(t, err)
+		})
+	}
+}
+
+func TestNewProviderValidatesExtraProperties(t *testing.T) {
+	// Test that validation happens during provider construction
+	s := NewMockIDPServer()
+	defer s.Close()
+
+	tests := []struct {
+		name            string
+		idpType         string
+		extraProperties map[string]interface{}
+		expectError     bool
+		errorContains   string
+	}{
+		{
+			name:    "Valid Okta provider with PKCE and browser type",
+			idpType: TypeOkta,
+			extraProperties: map[string]interface{}{
+				oktaPKCERequired:    true,
+				oktaApplicationType: oktaAppTypeBrowser,
+			},
+			expectError: false,
+		},
+		{
+			name:    "Invalid Okta provider with PKCE and service type",
+			idpType: TypeOkta,
+			extraProperties: map[string]interface{}{
+				oktaPKCERequired:    true,
+				oktaApplicationType: oktaAppTypeService,
+			},
+			expectError:   true,
+			errorContains: "pkce_required",
+		},
+		{
+			name:            "Valid generic provider",
+			idpType:         "generic",
+			extraProperties: map[string]interface{}{},
+			expectError:     false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			idpCfg := &config.IDPConfiguration{
+				Name:            "test",
+				Type:            tc.idpType,
+				MetadataURL:     s.GetMetadataURL(),
+				ExtraProperties: tc.extraProperties,
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: "test-token",
+				},
+			}
+
+			provider, err := NewProvider(idpCfg, &config.TLSConfiguration{}, "", 10*time.Second)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, provider)
+				if tc.errorContains != "" {
+					assert.Contains(t, err.Error(), tc.errorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, provider)
+			}
 		})
 	}
 }

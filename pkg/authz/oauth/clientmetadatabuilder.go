@@ -35,7 +35,7 @@ type ClientBuilder interface {
 	SetTLSClientAuthSanEmail(tlsClientAuthSanEmail string) ClientBuilder
 	SetTLSClientAuthSanIP(tlsClientAuthSanIP string) ClientBuilder
 	SetTLSClientAuthSanURI(tlsClientAuthSanURI string) ClientBuilder
-	SetExtraProperties(map[string]string) ClientBuilder
+	SetExtraProperties(map[string]interface{}) ClientBuilder
 
 	Build() (ClientMetadata, error)
 }
@@ -128,7 +128,7 @@ func (b *clientBuilder) SetTLSClientAuthSanURI(tlsClientAuthSanURI string) Clien
 	return b
 }
 
-func (b *clientBuilder) SetExtraProperties(extraProperties map[string]string) ClientBuilder {
+func (b *clientBuilder) SetExtraProperties(extraProperties map[string]interface{}) ClientBuilder {
 	b.idpClientMetadata.extraProperties = extraProperties
 	return b
 }
