@@ -50,7 +50,10 @@ func init() {
 // APIService Resource
 type APIService struct {
 	apiv1.ResourceMeta
-	Agentdetails ApiServiceAgentdetails `json:"agentdetails"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Agentdetails ApiServiceAgentdetails `json:"agentdetails"`
+	Agentdetails *ApiServiceAgentdetails `json:"agentdetails,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
 	//	Compliance              ApiServiceCompliance   `json:"compliance"`
