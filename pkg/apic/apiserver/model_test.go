@@ -160,6 +160,7 @@ func TestAPIServiceAsInstance(t *testing.T) {
 			Finalizers: nil,
 			SubResources: map[string]interface{}{
 				"details": map[string]interface{}{},
+				"profile": map[string]interface{}{},
 				"x-agent-details": map[string]interface{}{
 					"x-agent-id": "123",
 				},

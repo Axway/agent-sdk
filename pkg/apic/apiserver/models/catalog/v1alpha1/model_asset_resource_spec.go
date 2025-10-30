@@ -27,4 +27,9 @@ type AssetResourceSpec struct {
 	// information to access the definition.
 	AccessInfo         []AssetResourceSpecAccessInfo       `json:"accessInfo,omitempty"`
 	SourceReleaseState AssetResourceSpecSourceReleaseState `json:"sourceReleaseState,omitempty"`
+	// Categorizes the sensitivity of the data the service provides.
+	DataClassification string `json:"dataClassification,omitempty"`
+	// URL to the repository this service belongs to.
+	RepositoryUrl string                `json:"repositoryUrl,omitempty"`
+	Docs          AssetResourceSpecDocs `json:"docs,omitempty"`
 }
