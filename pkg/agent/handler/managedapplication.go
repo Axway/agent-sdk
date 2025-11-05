@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"errors"
+	"math"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -19,18 +21,29 @@ const (
 
 type managedApplication struct {
 	marketplaceHandler
-	prov   prov.ApplicationProvisioner
-	cache  agentcache.Manager
-	client client
+	prov       prov.ApplicationProvisioner
+	cache      agentcache.Manager
+	client     client
+	retryCount int
+}
+
+func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
+	return func(c *managedApplication) {
+		c.retryCount = rc
+	}
 }
 
 // NewManagedApplicationHandler creates a Handler for Credentials
-func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client) Handler {
-	return &managedApplication{
+func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client, opts ...func(c *managedApplication)) Handler {
+	ma := &managedApplication{
 		prov:   prov,
 		cache:  cache,
 		client: client,
 	}
+	for _, o := range opts {
+		o(ma)
+	}
+	return ma
 }
 
 // Handle processes grpc events triggered for ManagedApplications
@@ -78,8 +91,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
 	log := getLoggerFromContext(ctx)
-	status := h.prov.ApplicationRequestProvision(pma)
-
+	status := h.provision(pma)
 	app.Status = prov.NewStatusReason(status)
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
@@ -108,6 +120,29 @@ func (h *managedApplication) onPending(ctx context.Context, app *management.Mana
 	}
 
 	return err
+}
+
+func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
+	status := h.prov.ApplicationRequestProvision(pma)
+	resourceStatus := prov.NewStatusReason(status)
+	if resourceStatus.Level == prov.Success.String() {
+		return status
+	}
+
+	for i := range h.retryCount {
+		// 7(sleep) + 3(time to finish AppProvision)*4(nb of calls) = 19s, should not exceed the watch-controller timeout(30s)
+		// Exponential backoff: 1s, 2s, 4s
+		if util.IsNotTest() {
+			time.Sleep(time.Duration(math.Pow(2, float64(i))) * time.Second)
+		}
+
+		status = h.prov.ApplicationRequestProvision(pma)
+		resourceStatus = prov.NewStatusReason(status)
+		if resourceStatus.Level == prov.Success.String() {
+			return status
+		}
+	}
+	return status
 }
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {

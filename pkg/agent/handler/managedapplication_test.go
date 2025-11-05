@@ -27,6 +27,8 @@ func TestManagedApplicationHandler(t *testing.T) {
 		subError         error
 		teamName         string
 		outboundStatus   string
+		retryCount       int
+		expectedStatus   *mock.MockRequestStatus
 	}{
 		{
 			name:             "should handle a create event for a ManagedApplication when status is pending",
@@ -61,6 +63,17 @@ func TestManagedApplicationHandler(t *testing.T) {
 			action:        proto.Event_CREATED,
 			inboundStatus: prov.Error.String(),
 		},
+		{
+			action:           proto.Event_CREATED,
+			inboundStatus:    prov.Pending.String(),
+			name:             "handle ManagedApp, onPending, fails once, retry triggered, failed after",
+			outboundStatus:   prov.Error.String(),
+			retryCount:       1,
+			expectedProvType: provision,
+			expectedStatus: &mock.MockRequestStatus{
+				Status: prov.Error,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -83,6 +96,9 @@ func TestManagedApplicationHandler(t *testing.T) {
 				status:                 status,
 				t:                      t,
 			}
+			if tc.expectedStatus != nil {
+				p.status = *tc.expectedStatus
+			}
 
 			c := &mockClient{
 				subError:       tc.subError,
@@ -94,7 +110,7 @@ func TestManagedApplicationHandler(t *testing.T) {
 			if tc.teamName != "" {
 				cm.AddTeam(team)
 			}
-			handler := NewManagedApplicationHandler(p, cm, c)
+			handler := NewManagedApplicationHandler(p, cm, c, WithManagedAppRetryCount(tc.retryCount))
 
 			ri, _ := app.AsInstance()
 			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
