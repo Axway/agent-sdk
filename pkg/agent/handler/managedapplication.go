@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"math"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -130,10 +129,9 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 	}
 
 	for i := range h.retryCount {
-		// 7(sleep) + 3(time to finish AppProvision)*4(nb of calls) = 19s, should not exceed the watch-controller timeout(30s)
-		// Exponential backoff: 1s, 2s, 4s
+		// Exponential backoff: 15s, 30s, 45s
 		if util.IsNotTest() {
-			time.Sleep(time.Duration(math.Pow(2, float64(i))) * time.Second)
+			time.Sleep(time.Duration(15*(i+1)) * time.Second)
 		}
 
 		status = h.prov.ApplicationRequestProvision(pma)
