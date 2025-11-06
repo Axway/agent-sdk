@@ -129,7 +129,6 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 	}
 
 	for i := range h.retryCount {
-		// Exponential backoff: 15s, 30s, 45s
 		if util.IsNotTest() {
 			time.Sleep(time.Duration(15*(i+1)) * time.Second)
 		}
