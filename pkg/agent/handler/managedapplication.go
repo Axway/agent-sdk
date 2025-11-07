@@ -128,10 +128,12 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 		return status
 	}
 
-	for i := range h.retryCount {
+	timeout := baseRetryTimeout
+	for range h.retryCount {
 		if util.IsNotTest() {
-			time.Sleep(time.Duration(15*(i+1)) * time.Second)
+			time.Sleep(timeout)
 		}
+		timeout = timeout * 2
 
 		status = h.prov.ApplicationRequestProvision(pma)
 		resourceStatus = prov.NewStatusReason(status)

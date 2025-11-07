@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	provision   = "provision"
-	deprovision = "deprovision"
-	arFinalizer = "agent.accessrequest.provisioned"
+	provision        = "provision"
+	deprovision      = "deprovision"
+	arFinalizer      = "agent.accessrequest.provisioned"
+	baseRetryTimeout = 15 * time.Second
 )
 
 type customUnitHandler interface {
@@ -224,10 +225,12 @@ func (h *accessRequestHandler) provision(par *provAccReq) (prov.RequestStatus, p
 		return status, accessData
 	}
 
-	for i := range h.retryCount {
+	timeout := baseRetryTimeout
+	for range h.retryCount {
 		if util.IsNotTest() {
-			time.Sleep(time.Duration(15*(i+1)) * time.Second)
+			time.Sleep(timeout)
 		}
+		timeout = timeout * 2
 
 		status, accessData = h.prov.AccessRequestProvision(par)
 		if status.GetStatus() == prov.Success {

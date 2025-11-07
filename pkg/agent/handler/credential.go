@@ -321,10 +321,12 @@ func (h *credentials) provision(cr prov.CredentialRequest) (prov.RequestStatus, 
 		return status, credentialData
 	}
 
-	for i := range h.retryCount {
+	timeout := baseRetryTimeout
+	for range h.retryCount {
 		if util.IsNotTest() {
-			time.Sleep(time.Duration(15*(i+1)) * time.Second)
+			time.Sleep(timeout)
 		}
+		timeout = timeout * 2
 
 		status, credentialData = h.prov.CredentialProvision(cr)
 		if status.GetStatus() == prov.Success {
