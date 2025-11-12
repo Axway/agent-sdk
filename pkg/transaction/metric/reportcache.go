@@ -180,7 +180,18 @@ func (c *usageReportCache) addReport(event UsageEvent) error {
 	savedEvents := c.loadEvents()
 
 	for key, report := range event.Report {
-		savedEvents.Report[key] = report
+		if _, exists := savedEvents.Report[key]; !exists {
+			savedEvents.Report[key] = report
+			continue
+		}
+
+		// append usage values for existing report
+		for usageKey, usageVal := range report.Usage {
+			if _, ok := savedEvents.Report[key].Usage[usageKey]; !ok {
+				savedEvents.Report[key].Usage[usageKey] = 0
+			}
+			savedEvents.Report[key].Usage[usageKey] += usageVal
+		}
 	}
 	// Put all reports into the new event
 	event.Report = savedEvents.Report
