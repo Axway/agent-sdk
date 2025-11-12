@@ -62,8 +62,10 @@ type Set struct {
 	SubscriptionCatalogV1alpha1                    *catalog_v1alpha1.SubscriptionClient
 	SubscriptionJobCatalogV1alpha1                 *catalog_v1alpha1.UnscopedSubscriptionJobClient
 	SubscriptionInvoiceCatalogV1alpha1             *catalog_v1alpha1.UnscopedSubscriptionInvoiceClient
+	MCPClientCatalogV1alpha1                       *catalog_v1alpha1.MCPClientClient
 	DocumentResourceCatalogV1alpha1                *catalog_v1alpha1.DocumentResourceClient
 	DocumentTemplateCatalogV1alpha1                *catalog_v1alpha1.DocumentTemplateClient
+	DocumentCollectionCatalogV1alpha1              *catalog_v1alpha1.DocumentCollectionClient
 	ApplicationProfileDefinitionCatalogV1alpha1    *catalog_v1alpha1.UnscopedApplicationProfileDefinitionClient
 	ApplicationProfileCatalogV1alpha1              *catalog_v1alpha1.UnscopedApplicationProfileClient
 	MarketplaceCatalogV1alpha1                     *catalog_v1alpha1.MarketplaceClient
@@ -99,8 +101,10 @@ type Set struct {
 	SecretCatalogV1alpha1                          *catalog_v1alpha1.UnscopedSecretClient
 	AccessControlListCatalogV1alpha1               *catalog_v1alpha1.UnscopedAccessControlListClient
 	CategoryCatalogV1                              *catalog_v1.CategoryClient
+	MCPClientCatalogV1                             *catalog_v1.MCPClientClient
 	DocumentResourceCatalogV1                      *catalog_v1.DocumentResourceClient
 	DocumentTemplateCatalogV1                      *catalog_v1.DocumentTemplateClient
+	DocumentCollectionCatalogV1                    *catalog_v1.DocumentCollectionClient
 	ApplicationProfileDefinitionCatalogV1          *catalog_v1.UnscopedApplicationProfileDefinitionClient
 	ApplicationProfileCatalogV1                    *catalog_v1.UnscopedApplicationProfileClient
 	MarketplaceCatalogV1                           *catalog_v1.MarketplaceClient
@@ -313,6 +317,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.SubscriptionInvoice: %s", err))
 	}
+	s.MCPClientCatalogV1alpha1, err = catalog_v1alpha1.NewMCPClientClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.MCPClient: %s", err))
+	}
 	s.DocumentResourceCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentResourceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentResource: %s", err))
@@ -320,6 +328,10 @@ func New(b cAPIV1.Base) *Set {
 	s.DocumentTemplateCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentTemplateClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentTemplate: %s", err))
+	}
+	s.DocumentCollectionCatalogV1alpha1, err = catalog_v1alpha1.NewDocumentCollectionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1alpha1.DocumentCollection: %s", err))
 	}
 	s.ApplicationProfileDefinitionCatalogV1alpha1, err = catalog_v1alpha1.NewApplicationProfileDefinitionClient(b)
 	if err != nil {
@@ -461,6 +473,10 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Category: %s", err))
 	}
+	s.MCPClientCatalogV1, err = catalog_v1.NewMCPClientClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.MCPClient: %s", err))
+	}
 	s.DocumentResourceCatalogV1, err = catalog_v1.NewDocumentResourceClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentResource: %s", err))
@@ -468,6 +484,10 @@ func New(b cAPIV1.Base) *Set {
 	s.DocumentTemplateCatalogV1, err = catalog_v1.NewDocumentTemplateClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentTemplate: %s", err))
+	}
+	s.DocumentCollectionCatalogV1, err = catalog_v1.NewDocumentCollectionClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.DocumentCollection: %s", err))
 	}
 	s.ApplicationProfileDefinitionCatalogV1, err = catalog_v1.NewApplicationProfileDefinitionClient(b)
 	if err != nil {
