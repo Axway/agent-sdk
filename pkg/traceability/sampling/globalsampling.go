@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/jobs"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
@@ -67,7 +68,12 @@ func GetGlobalSampling() *sample {
 				endTime: time.Time{},
 				mu:      sync.RWMutex{},
 			},
+			apiAppErrorSampling: make(map[string]bool),
 		}
+
+		// start api/app error sampling reset job when global sampling is created
+		resetJob := newAPIAppErrorSamplingResetJob()
+		jobs.RegisterIntervalJobWithName(resetJob, 60*time.Minute, "API/App Error Sampling Reset")
 	}
 	return agentSamples
 }
@@ -129,7 +135,12 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 				endTime: time.Time{},
 				mu:      sync.RWMutex{},
 			},
+			apiAppErrorSampling: make(map[string]bool),
 		}
+
+		// start api/app error sampling reset job when global sampling is created
+		resetJob := newAPIAppErrorSamplingResetJob()
+		jobs.RegisterIntervalJobWithName(resetJob, 60*time.Minute, "API/App Error Sampling Reset")
 	} else {
 		agentSamples.config = cfg
 	}
