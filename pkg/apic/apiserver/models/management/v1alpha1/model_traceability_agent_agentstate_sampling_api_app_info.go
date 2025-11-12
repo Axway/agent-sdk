@@ -13,6 +13,6 @@ package management
 type TraceabilityAgentAgentstateSamplingApiAppInfo struct {
 	// The Managed Application reference
 	ManagedApp string `json:"managedApp,omitempty"`
-	// The API Service Instance reference
-	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
+	// The API Service reference
+	ApiService string `json:"apiService,omitempty"`
 }
