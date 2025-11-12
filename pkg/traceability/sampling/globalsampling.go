@@ -73,7 +73,7 @@ func GetGlobalSampling() *sample {
 
 		// start api/app error sampling reset job when global sampling is created
 		resetJob := newAPIAppErrorSamplingResetJob()
-		jobs.RegisterIntervalJobWithName(resetJob, 60*time.Minute, "API/App Error Sampling Reset")
+		jobs.RegisterScheduledJobWithName(resetJob, "@hourly", "API/App Error Sampling Reset")
 	}
 	return agentSamples
 }
@@ -140,7 +140,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 
 		// start api/app error sampling reset job when global sampling is created
 		resetJob := newAPIAppErrorSamplingResetJob()
-		jobs.RegisterIntervalJobWithName(resetJob, 60*time.Minute, "API/App Error Sampling Reset")
+		jobs.RegisterScheduledJobWithName(resetJob, "@hourly", "API/App Error Sampling Reset")
 	} else {
 		agentSamples.config = cfg
 	}
