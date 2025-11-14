@@ -41,6 +41,8 @@ func TestCredentialHandler(t *testing.T) {
 		subError             error
 		appStatus            string
 		ignoredCredTypeNames []string
+		retryCount           int
+		expectedStatus       *mock.MockRequestStatus
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -119,6 +121,17 @@ func TestCredentialHandler(t *testing.T) {
 			outboundStatus:       prov.Success.String(),
 			ignoredCredTypeNames: []string{"un-findable"},
 		},
+		{
+			action:           proto.Event_CREATED,
+			inboundStatus:    prov.Pending.String(),
+			name:             "handle Credential, onPending, fails once, retry triggered, failed after",
+			outboundStatus:   prov.Error.String(),
+			retryCount:       1,
+			expectedProvType: provision,
+			expectedStatus: &mock.MockRequestStatus{
+				Status: prov.Error,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -150,6 +163,9 @@ func TestCredentialHandler(t *testing.T) {
 				expectedCredType:     cred.Spec.CredentialRequestDefinition,
 				ignoredCredTypeNames: tc.ignoredCredTypeNames,
 			}
+			if tc.expectedStatus != nil {
+				p.expectedStatus = *tc.expectedStatus
+			}
 
 			c := &credClient{
 				t:              t,
@@ -161,7 +177,7 @@ func TestCredentialHandler(t *testing.T) {
 				subError:       tc.subError,
 			}
 
-			handler := NewCredentialHandler(p, c, nil)
+			handler := NewCredentialHandler(p, c, nil, WithCredentialRetryCount(tc.retryCount))
 			v := handler.(*credentials)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil
