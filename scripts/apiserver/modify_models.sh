@@ -98,6 +98,36 @@ $SED -i "/ApiServiceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIService.go
 
+######################
+# For APIService.go, we want to turn    "Agentdetails ApiServiceAgentdetails `json:"agentdetails"`" into
+# "Agentdetails *ApiServiceAgentdetails `json:"agentdetails"`"
+######################
+SEARCH="\s*Agentdetails\s*ApiServiceAgentdetails.*"
+REPLACE="Agentdetails *ApiServiceAgentdetails \`json:\"agentdetails,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
+# add in the new line we want
+$SED -i "/ApiServiceAgentdetails\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIService.go
+
+######################
+# For APIService.go, we want to turn    "Appinfo ApiServiceAppinfo `json:"appinfo"`" into
+# "Appinfo *ApiServiceAppinfo `json:"appinfo"`"
+######################
+SEARCH="\s*Appinfo\s*ApiServiceAppinfo.*"
+REPLACE="Appinfo *ApiServiceAppinfo \`json:\"appinfo,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
+# add in the new line we want
+$SED -i "/ApiServiceAppinfo\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
+# reformat the code
+go fmt ${MODEL_PATH}/APIService.go
+
 
 ######################
 # For model_api_service_source.go, we want to turn "DataplaneType ApiServiceSourceDataplaneType `json:"dataplaneType,omitempty"`" into
