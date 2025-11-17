@@ -79,8 +79,6 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
 # add in the new line we want
 $SED -i "/ApiServiceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
-# reformat the code
-go fmt ${MODEL_PATH}/APIService.go
 
 
 ######################
@@ -95,8 +93,6 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
 # add in the new line we want
 $SED -i "/ApiServiceSource\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
-# reformat the code
-go fmt ${MODEL_PATH}/APIService.go
 
 ######################
 # For APIService.go, we want to turn    "Agentdetails ApiServiceAgentdetails `json:"agentdetails"`" into
@@ -110,8 +106,19 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
 # add in the new line we want
 $SED -i "/ApiServiceAgentdetails\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
-# reformat the code
-go fmt ${MODEL_PATH}/APIService.go
+
+######################
+# For APIService.go, we want to turn    "Profile ApiServiceProfile `json:"profile"`" into
+# "Profile *ApiServiceProfile `json:"profile"`"
+######################
+SEARCH="\s*Profile\s*ApiServiceProfile.*"
+REPLACE="Profile *ApiServiceProfile \`json:\"profile,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
+# add in the new line we want
+$SED -i "/ApiServiceProfile\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
 
 ######################
 # For APIService.go, we want to turn    "Appinfo ApiServiceAppinfo `json:"appinfo"`" into
