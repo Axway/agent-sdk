@@ -53,11 +53,11 @@ type APIService struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Agentdetails ApiServiceAgentdetails `json:"agentdetails"`
+	//	Agentdetails            ApiServiceAgentdetails `json:"agentdetails"`
 	Agentdetails *ApiServiceAgentdetails `json:"agentdetails,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Appinfo      ApiServiceAppinfo       `json:"appinfo"`
+	//	Appinfo                 ApiServiceAppinfo      `json:"appinfo"`
 	Appinfo *ApiServiceAppinfo `json:"appinfo,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
@@ -66,11 +66,14 @@ type APIService struct {
 	Complianceruntimeresult interface{}           `json:"complianceruntimeresult"`
 	Details                 ApiServiceDetails     `json:"details"`
 	Owner                   *apiv1.Owner          `json:"owner"`
-	Profile                 ApiServiceProfile     `json:"profile"`
-	References              ApiServiceReferences  `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source                  ApiServiceSource      `json:"source"`
+	//	Profile                 ApiServiceProfile      `json:"profile"`
+	Profile    *ApiServiceProfile   `json:"profile,omitempty"`
+	References ApiServiceReferences `json:"references"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Source                  ApiServiceSource       `json:"source"`
 	Source *ApiServiceSource `json:"source,omitempty"`
 	Spec   ApiServiceSpec    `json:"spec"`
 	// Status ApiServiceStatus  `json:"status"`
