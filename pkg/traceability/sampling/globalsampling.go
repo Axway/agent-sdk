@@ -167,6 +167,14 @@ func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 	return agentSamples.FilterEvents(events), nil
 }
 
+func RemoveApiAppKey(k string) {
+	if agentSamples != nil && agentSamples.apiAppErrorSampling != nil {
+		agentSamples.samplingLock.Lock()
+		defer agentSamples.samplingLock.Unlock()
+		delete(agentSamples.apiAppErrorSampling, k)
+	}
+}
+
 func numberOfDecimals(v float64) int {
 	dec := decimal.NewFromFloat(v)
 	x := dec.Exponent()

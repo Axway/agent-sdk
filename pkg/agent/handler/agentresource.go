@@ -10,6 +10,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	traceSampling "github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
 	sdkUtil "github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -145,6 +146,12 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 	err := ta.FromInstance(resource)
 	if err != nil {
 		return err
+	}
+
+	if ta.Agentstate.Sampling != nil && ta.Agentstate.Sampling.ApiAppInfo != nil {
+		for _, info := range ta.Agentstate.Sampling.ApiAppInfo {
+			traceSampling.RemoveApiAppKey(info.ApiService + info.ManagedApp)
+		}
 	}
 
 	if ta.Agentstate.Sampling == nil || (!ta.Agentstate.Sampling.Enabled && len(ta.Agentstate.Sampling.Endpoints) == 0) {
