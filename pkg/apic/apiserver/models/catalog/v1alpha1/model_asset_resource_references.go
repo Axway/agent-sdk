@@ -15,4 +15,6 @@ type AssetResourceReferences struct {
 	ApiServiceRevision string `json:"apiServiceRevision,omitempty"`
 	// Reference to API Service Instance resource
 	ApiServiceInstance string `json:"apiServiceInstance,omitempty"`
+	// Only assigned to release version and set to the Asset's AssetResource it was copied from
+	SourceAssetResource string `json:"sourceAssetResource,omitempty"`
 }

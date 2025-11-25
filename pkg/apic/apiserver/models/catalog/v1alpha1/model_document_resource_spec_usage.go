@@ -11,6 +11,8 @@ package catalog
 
 // DocumentResourceSpecUsage Defines where the DocumentResource can be used. (catalog.v1alpha1.DocumentResource)
 type DocumentResourceSpecUsage struct {
+	ApiServices         DocumentResourceSpecUsageApiServices         `json:"apiServices,omitempty"`
 	MarketplaceSettings DocumentResourceSpecUsageMarketplaceSettings `json:"marketplaceSettings"`
+	McpClients          DocumentResourceSpecUsageMcpClients          `json:"mcpClients,omitempty"`
 	Products            DocumentResourceSpecUsageProducts            `json:"products"`
 }
