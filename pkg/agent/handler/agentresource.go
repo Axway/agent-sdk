@@ -150,7 +150,7 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 
 	if ta.Agentstate.Sampling != nil && ta.Agentstate.Sampling.ApiAppInfo != nil {
 		for _, info := range ta.Agentstate.Sampling.ApiAppInfo {
-			traceSampling.RemoveApiAppKey(info.ApiService + info.ManagedApp)
+			traceSampling.RemoveApiAppKey(info.ApiService, info.ManagedApp)
 		}
 	}
 
