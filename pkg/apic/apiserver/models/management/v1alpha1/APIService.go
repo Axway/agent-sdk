@@ -28,9 +28,12 @@ var (
 
 const (
 	APIServiceResourceName                           = "apiservices"
+	ApiServiceAgentdetailsSubResourceName            = "agentdetails"
+	ApiServiceAppinfoSubResourceName                 = "appinfo"
 	ApiServiceComplianceSubResourceName              = "compliance"
 	ApiServiceComplianceruntimeresultSubResourceName = "complianceruntimeresult"
 	ApiServiceDetailsSubResourceName                 = "details"
+	ApiServiceProfileSubResourceName                 = "profile"
 	ApiServiceReferencesSubResourceName              = "references"
 	ApiServiceSourceSubResourceName                  = "source"
 	ApiServiceStatusSubResourceName                  = "status"
@@ -50,15 +53,27 @@ type APIService struct {
 	apiv1.ResourceMeta
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance              ApiServiceCompliance `json:"compliance"`
+	//	Agentdetails            ApiServiceAgentdetails `json:"agentdetails"`
+	Agentdetails *ApiServiceAgentdetails `json:"agentdetails,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Appinfo                 ApiServiceAppinfo      `json:"appinfo"`
+	Appinfo *ApiServiceAppinfo `json:"appinfo,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Compliance              ApiServiceCompliance   `json:"compliance"`
 	Compliance              *ApiServiceCompliance `json:"compliance,omitempty"`
 	Complianceruntimeresult interface{}           `json:"complianceruntimeresult"`
 	Details                 ApiServiceDetails     `json:"details"`
 	Owner                   *apiv1.Owner          `json:"owner"`
-	References              ApiServiceReferences  `json:"references"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source                  ApiServiceSource      `json:"source"`
+	//	Profile                 ApiServiceProfile      `json:"profile"`
+	Profile    *ApiServiceProfile   `json:"profile,omitempty"`
+	References ApiServiceReferences `json:"references"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Source                  ApiServiceSource       `json:"source"`
 	Source *ApiServiceSource `json:"source,omitempty"`
 	Spec   ApiServiceSpec    `json:"spec"`
 	// Status ApiServiceStatus  `json:"status"`
@@ -151,10 +166,13 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["agentdetails"] = res.Agentdetails
+	out["appinfo"] = res.Appinfo
 	out["compliance"] = res.Compliance
 	out["complianceruntimeresult"] = res.Complianceruntimeresult
 	out["details"] = res.Details
 	out["owner"] = res.Owner
+	out["profile"] = res.Profile
 	out["references"] = res.References
 	out["source"] = res.Source
 	out["spec"] = res.Spec
@@ -186,6 +204,34 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Agentdetails
+	if v, ok := aux.SubResources["agentdetails"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "agentdetails")
+		err = json.Unmarshal(sr, &res.Agentdetails)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Appinfo
+	if v, ok := aux.SubResources["appinfo"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "appinfo")
+		err = json.Unmarshal(sr, &res.Appinfo)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Compliance
@@ -225,6 +271,20 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "details")
 		err = json.Unmarshal(sr, &res.Details)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Profile
+	if v, ok := aux.SubResources["profile"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "profile")
+		err = json.Unmarshal(sr, &res.Profile)
 		if err != nil {
 			return err
 		}

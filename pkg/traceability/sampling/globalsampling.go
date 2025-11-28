@@ -9,7 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
@@ -76,6 +79,23 @@ func GetGlobalSampling() *sample {
 		jobs.RegisterScheduledJobWithName(resetJob, "@hourly", "API/App Error Sampling Reset")
 	}
 	return agentSamples
+}
+
+func getExternalAppKeyData() definitions.ExternalAppData {
+	if agentSamples == nil {
+		sample := GetGlobalSampling()
+		return sample.externalAppKeyData
+	}
+	return agentSamples.externalAppKeyData
+}
+
+func SetExternalAppKeyData(key definitions.ExternalAppData) {
+	if agentSamples == nil {
+		sample := GetGlobalSampling()
+		sample.externalAppKeyData = key
+	} else {
+		agentSamples.externalAppKeyData = key
+	}
 }
 
 func getSamplingPercentageConfig(percentage float64, apicDeployment string) (float64, error) {
@@ -165,6 +185,75 @@ func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 		return events, ErrGlobalSamplingCfg
 	}
 	return agentSamples.FilterEvents(events), nil
+}
+
+func RemoveApiAppKey(apiServiceName, managedAppName string) {
+	if agentSamples != nil && agentSamples.apiAppErrorSampling != nil {
+		externalAPIID := getExternalAPIID(apiServiceName)
+		externalAppID := getExternalAppID(managedAppName, getExternalAppKeyData())
+		k := externalAPIID + externalAppID
+
+		agentSamples.samplingLock.Lock()
+		defer agentSamples.samplingLock.Unlock()
+		delete(agentSamples.apiAppErrorSampling, k)
+	}
+}
+
+func getExternalAppID(appName string, externalAppKey definitions.ExternalAppData) string {
+	cacheManager := getCacheManager()
+
+	if cacheManager == nil {
+		return ""
+	}
+
+	switch externalAppKey.ResourceType {
+	case management.ManagedApplicationGVK().Kind:
+		ri := cacheManager.GetManagedApplicationByName(appName)
+		managedApp := &management.ManagedApplication{}
+		managedApp.FromInstance(ri)
+		externalAppID, _ := util.GetAgentDetailsValue(managedApp, externalAppKey.Key)
+		return externalAppID
+	case management.AccessRequestGVK().Kind:
+		ris := cacheManager.GetAccessRequestsByApp(appName)
+		if len(ris) > 0 {
+			accReqRI := ris[0]
+			accReq := &management.AccessRequest{}
+			accReq.FromInstance(accReqRI)
+			externalAppID, _ := util.GetAgentDetailsValue(accReq, externalAppKey.Key)
+			return externalAppID
+		}
+	case management.CredentialGVK().Kind:
+		keys := cacheManager.GetWatchResourceCacheKeys(management.CredentialGVK().Group, management.CredentialGVK().Kind)
+		for _, key := range keys {
+			ri := cacheManager.GetWatchResourceByKey(key)
+			credential := &management.Credential{}
+			credential.FromInstance(ri)
+			if credential.Spec.ManagedApplication == appName {
+				externalAppID, _ := util.GetAgentDetailsValue(credential, externalAppKey.Key)
+				return externalAppID
+			}
+		}
+	}
+
+	return ""
+}
+
+func getExternalAPIID(apiServiceName string) string {
+	cacheManager := getCacheManager()
+
+	if cacheManager == nil {
+		return apiServiceName // Return the input as-is if no cache available
+	}
+
+	ri := cacheManager.GetAPIServiceWithName(apiServiceName)
+	if ri != nil {
+		apiService := &management.APIService{}
+		apiService.FromInstance(ri)
+		externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIID)
+		return externalAPIID
+	}
+
+	return ""
 }
 
 func numberOfDecimals(v float64) int {

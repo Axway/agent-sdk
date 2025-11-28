@@ -49,3 +49,8 @@ const (
 const (
 	MigrationCompleted = "completed"
 )
+
+type ExternalAppData struct {
+	Key          string
+	ResourceType string
+}
