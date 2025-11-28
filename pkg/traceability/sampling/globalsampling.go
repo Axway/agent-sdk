@@ -202,6 +202,10 @@ func RemoveApiAppKey(apiServiceName, managedAppName string) {
 func getExternalAppID(appName string, externalAppKey definitions.ExternalAppData) string {
 	cacheManager := getCacheManager()
 
+	if cacheManager == nil {
+		return ""
+	}
+
 	switch externalAppKey.ResourceType {
 	case management.ManagedApplicationGVK().Kind:
 		ri := cacheManager.GetManagedApplicationByName(appName)
@@ -236,6 +240,11 @@ func getExternalAppID(appName string, externalAppKey definitions.ExternalAppData
 
 func getExternalAPIID(apiServiceName string) string {
 	cacheManager := getCacheManager()
+
+	if cacheManager == nil {
+		return apiServiceName // Return the input as-is if no cache available
+	}
+
 	ri := cacheManager.GetAPIServiceWithName(apiServiceName)
 	if ri != nil {
 		apiService := &management.APIService{}
