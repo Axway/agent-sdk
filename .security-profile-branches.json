@@ -5,9 +5,12 @@
     "requirements": {
       "fortify": false,
       "irius-risk": false,
+      "pentest": false,
       "twistlock": false,
       "blackduck": true,
-      "third-party-policy-violation": false
+      "third-party-policy-violation": false,
+      "appspider": false,
+      "insightvm": false
     },
     "suppressions": [
     ]
