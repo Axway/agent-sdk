@@ -38,6 +38,8 @@ func TestAccessRequestHandler(t *testing.T) {
 		refAccessReq       string
 		ignoredARTypeNames []string
 		shouldBeSkipped    bool
+		retryCount         int
+		expectedStatus     *mock.MockRequestStatus
 	}{
 		{
 			action:           proto.Event_CREATED,
@@ -167,6 +169,23 @@ func TestAccessRequestHandler(t *testing.T) {
 			}),
 			refAccessReq: "migrating",
 		},
+		{
+			action:           proto.Event_CREATED,
+			inboundStatus:    prov.Pending.String(),
+			name:             "handle AccessRequest, onPending, fails once, retry triggered, failed after",
+			outboundStatus:   prov.Error.String(),
+			retryCount:       1,
+			expectedProvType: provision,
+			references: append(accessReq.Metadata.References, v1.Reference{
+				ID:    "migrating",
+				Group: management.AccessRequestGVK().Group,
+				Kind:  management.AccessRequestGVK().Kind,
+				Name:  "migrating",
+			}),
+			expectedStatus: &mock.MockRequestStatus{
+				Status: prov.Error,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -202,6 +221,9 @@ func TestAccessRequestHandler(t *testing.T) {
 					"status_key": "status_val",
 				},
 			}
+			if tc.expectedStatus != nil {
+				status = *tc.expectedStatus
+			}
 
 			arp := &mockARProvision{
 				expectedAccessDetails: util.GetAgentDetails(&ar),
@@ -229,7 +251,7 @@ func TestAccessRequestHandler(t *testing.T) {
 
 			af := config.NewAgentFeaturesConfiguration().GetMetricServicesConfigs()
 			customUnitHandler := customunit.NewCustomUnitHandler(af, cm, config.DiscoveryAgent)
-			handler := NewAccessRequestHandler(arp, cm, c, customUnitHandler)
+			handler := NewAccessRequestHandler(arp, cm, c, customUnitHandler, WithAccessRequestRetryCount(tc.retryCount))
 			v := handler.(*accessRequestHandler)
 			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
 				return map[string]interface{}{}, nil

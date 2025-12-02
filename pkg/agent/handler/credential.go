@@ -37,19 +37,31 @@ type credentials struct {
 	client              client
 	encryptSchema       encryptSchemaFunc
 	idpProviderRegistry oauth.IdPRegistry
+	retryCount          int
+}
+
+func WithCredentialRetryCount(rc int) func(c *credentials) {
+	return func(c *credentials) {
+		c.retryCount = rc
+	}
 }
 
 // encryptSchemaFunc func signature for encryptSchema
 type encryptSchemaFunc func(schema, credData map[string]interface{}, key, alg, hash string) (map[string]interface{}, error)
 
 // NewCredentialHandler creates a Handler for Credentials
-func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.IdPRegistry) Handler {
-	return &credentials{
+func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.IdPRegistry, opts ...func(*credentials)) Handler {
+	c := &credentials{
 		prov:                prov,
 		client:              client,
 		encryptSchema:       encryptSchema,
 		idpProviderRegistry: providerRegistry,
 	}
+
+	for _, o := range opts {
+		o(c)
+	}
+	return c
 }
 
 // Handle processes grpc events triggered for Credentials
@@ -269,7 +281,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		}
 	}
 
-	status, credentialData := h.prov.CredentialProvision(provCreds)
+	status, credentialData := h.provision(provCreds)
 
 	h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
 
@@ -301,6 +313,27 @@ func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.
 	updateDataFromEnumMap(cred.Spec.Data, crd.Spec.Schema)
 
 	return app, crd, false
+}
+
+func (h *credentials) provision(cr prov.CredentialRequest) (prov.RequestStatus, prov.Credential) {
+	status, credentialData := h.prov.CredentialProvision(cr)
+	if status.GetStatus() == prov.Success {
+		return status, credentialData
+	}
+
+	timeout := baseRetryTimeout
+	for range h.retryCount {
+		if util.IsNotTest() {
+			time.Sleep(timeout)
+		}
+		timeout = timeout * 2
+
+		status, credentialData = h.prov.CredentialProvision(cr)
+		if status.GetStatus() == prov.Success {
+			return status, credentialData
+		}
+	}
+	return status, credentialData
 }
 
 func (h *credentials) provisionPostProcess(status prov.RequestStatus, credentialData prov.Credential, app *management.ManagedApplication, crd *management.CredentialRequestDefinition, provCreds *provCreds, cred *management.Credential) {
