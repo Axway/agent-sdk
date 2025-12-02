@@ -144,6 +144,8 @@ func TestShouldSample(t *testing.T) {
 		endpointsInfo            map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
 		additionalEndpointsInfo  map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
 		expectedEndpointsSampled map[string]struct{}
+		errorSampling            bool
+		expectedErrorPairs       map[string]struct{} // keys are APIID+SubID
 	}{
 		{
 			skip:           false,
@@ -238,6 +240,28 @@ func TestShouldSample(t *testing.T) {
 			},
 			expectedEndpointsSampled: map[string]struct{}{"id1": {}, "id2": {}, "id3": {}},
 		},
+		{
+			skip:           false,
+			name:           "API/App error sampling - one error per pair",
+			globalSampling: true,
+			apiTransactions: map[string]transactionCount{
+				"api1": {successCount: 200},
+				"api2": {successCount: 200},
+			},
+			subIDs: map[string]string{
+				"api1": "appA",
+				"api2": "appA",
+			},
+			maxSampled:         2,
+			limit:              1000,
+			duration:           time.Second / 4,
+			counterResetPeriod: time.Second / 8,
+			errorSampling:      true,
+			expectedErrorPairs: map[string]struct{}{
+				"api1appA": {},
+				"api2appA": {},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -257,6 +281,10 @@ func TestShouldSample(t *testing.T) {
 			if test.globalSampling {
 				endTime = testEnd
 			}
+
+			agentSamples.samplingLock.Lock()
+			agentSamples.apiAppErrorSampling = make(map[string]bool)
+			agentSamples.samplingLock.Unlock()
 
 			period := &atomic.Int64{}
 			period.Store(int64(test.counterResetPeriod))
@@ -320,7 +348,11 @@ func TestShouldSample(t *testing.T) {
 							return
 						default:
 							for i := 0; i < calls.successCount; i++ {
-								sampleFunc(id, subID, "Success")
+								if test.errorSampling {
+									sampleFunc(id, subID, "Failure")
+								} else {
+									sampleFunc(id, subID, "Success")
+								}
 							}
 						}
 					}
@@ -333,6 +365,7 @@ func TestShouldSample(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+
 			if len(test.endpointsInfo) > 0 {
 				agentSamples.endpointsSampling.endpointsLock.Lock()
 				assert.Equal(t, 0, len(agentSamples.endpointsSampling.endpointsInfo),
@@ -347,6 +380,20 @@ func TestShouldSample(t *testing.T) {
 				for id := range test.expectedEndpointsSampled {
 					assert.Contains(t, endpointsSampled, id, "endpoint %s should have been sampled", id)
 				}
+			}
+
+			// Error sampling assertions
+			if test.errorSampling {
+				assert.Equal(t, len(test.expectedErrorPairs), sampled,
+					"should sample exactly one error per API/SubID pair")
+				agentSamples.samplingLock.Lock()
+				assert.Equal(t, len(test.expectedErrorPairs), len(agentSamples.apiAppErrorSampling),
+					"internal apiAppErrorSampling map should hold exactly the distinct pairs")
+				for key := range test.expectedErrorPairs {
+					_, exists := agentSamples.apiAppErrorSampling[key]
+					assert.True(t, exists, "expected key %s in apiAppErrorSampling", key)
+				}
+				agentSamples.samplingLock.Unlock()
 			}
 		})
 	}

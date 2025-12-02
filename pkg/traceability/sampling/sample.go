@@ -7,6 +7,7 @@ import (
 	"time"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
@@ -36,17 +37,19 @@ func (ct *concurrentTime) GetEndTime() time.Time {
 
 // sample - private struct that is used to keep track of the samples being taken
 type sample struct {
-	config             Sampling
-	currentCounts      map[string]int
-	samplingLock       sync.Mutex
-	samplingCounter    int32
-	counterResetPeriod *atomic.Int64
-	counterResetStopCh chan struct{}
-	enabled            atomic.Bool
-	samplingTime       concurrentTime
-	endpointsSampling  endpointsSampling
-	limit              int32
-	resetterRunning    atomic.Bool
+	config              Sampling
+	currentCounts       map[string]int
+	samplingLock        sync.Mutex
+	samplingCounter     int32
+	counterResetPeriod  *atomic.Int64
+	counterResetStopCh  chan struct{}
+	enabled             atomic.Bool
+	samplingTime        concurrentTime
+	endpointsSampling   endpointsSampling
+	limit               int32
+	resetterRunning     atomic.Bool
+	apiAppErrorSampling map[string]bool             // key: apiID+appID, value: doesn't matter, only key presence is used
+	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
@@ -208,6 +211,15 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && onlyErrors {
 		return false
+	}
+
+	// check if transaction is an error and sample it for api-app pair if no other error was found yet
+	if hasFailedStatus {
+		key := details.APIID + details.SubID
+		if _, exists := s.apiAppErrorSampling[key]; exists {
+			return false
+		}
+		s.apiAppErrorSampling[key] = true
 	}
 
 	s.samplingCounter++
