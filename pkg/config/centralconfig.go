@@ -222,6 +222,7 @@ type CentralConfig interface {
 	GetCredentialConfig() CredentialConfig
 	SetManagedEnvironments([]string)
 	GetManagedEnvironments() []string
+	GetProvisioningRetryCount() int
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -259,6 +260,7 @@ type CentralConfiguration struct {
 	CacheStoragePath          string                `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
 	CredentialConfig          CredentialConfig      `config:"credential"`
+	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
 	managedEnvironments       []string
 	JobExecutionTimeout       time.Duration
 	environmentID             string
@@ -671,6 +673,10 @@ func (c *CentralConfiguration) GetManagedEnvironments() []string {
 	return c.managedEnvironments
 }
 
+func (c *CentralConfiguration) GetProvisioningRetryCount() int {
+	return c.ProvisioningRetryCount
+}
+
 const (
 	pathRegion                    = "central.region"
 	pathTenantID                  = "central.organizationID"
@@ -713,6 +719,7 @@ const (
 	pathCacheStoragePath          = "central.cacheStoragePath"
 	pathCacheStorageInterval      = "central.cacheStorageInterval"
 	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
+	pathProvisioningRetryCount    = "central.provisioningRetryCount"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -890,6 +897,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	} else {
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
+		props.AddIntProperty(pathProvisioningRetryCount, 0, "The number of retries, in case it fails, for any provisioning event", properties.WithUpperLimitInt(3))
 		AddMigrationConfigProperties(props)
 	}
 }
@@ -925,6 +933,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
+		ProvisioningRetryCount:    props.IntPropertyValue(pathProvisioningRetryCount),
 		Auth: &AuthConfiguration{
 			RegionSettings: regSet,
 			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -16,9 +17,10 @@ import (
 )
 
 const (
-	provision   = "provision"
-	deprovision = "deprovision"
-	arFinalizer = "agent.accessrequest.provisioned"
+	provision        = "provision"
+	deprovision      = "deprovision"
+	arFinalizer      = "agent.accessrequest.provisioned"
+	baseRetryTimeout = 15 * time.Second
 )
 
 type customUnitHandler interface {
@@ -32,17 +34,28 @@ type accessRequestHandler struct {
 	client            client
 	encryptSchema     encryptSchemaFunc
 	customUnitHandler customUnitHandler
+	retryCount        int
+}
+
+func WithAccessRequestRetryCount(rc int) func(c *accessRequestHandler) {
+	return func(c *accessRequestHandler) {
+		c.retryCount = rc
+	}
 }
 
 // NewAccessRequestHandler creates a Handler for Access Requests
-func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler) Handler {
-	return &accessRequestHandler{
+func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manager, client client, customUnitHandler customUnitHandler, opts ...func(c *accessRequestHandler)) Handler {
+	arh := &accessRequestHandler{
 		prov:              prov,
 		cache:             cache,
 		client:            client,
 		encryptSchema:     encryptSchema,
 		customUnitHandler: customUnitHandler,
 	}
+	for _, o := range opts {
+		o(arh)
+	}
+	return arh
 }
 
 // Handle processes grpc events triggered for AccessRequests
@@ -151,7 +164,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
 
 	data := map[string]interface{}{}
-	status, accessData := h.prov.AccessRequestProvision(req)
+	status, accessData := h.provision(req)
 
 	if status.GetStatus() == prov.Success {
 		err := h.customUnitHandler.HandleQuotaEnforcement(ar, app)
@@ -204,6 +217,27 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	}
 
 	return ar
+}
+
+func (h *accessRequestHandler) provision(par *provAccReq) (prov.RequestStatus, prov.AccessData) {
+	status, accessData := h.prov.AccessRequestProvision(par)
+	if status.GetStatus() == prov.Success {
+		return status, accessData
+	}
+
+	timeout := baseRetryTimeout
+	for range h.retryCount {
+		if util.IsNotTest() {
+			time.Sleep(timeout)
+		}
+		timeout = timeout * 2
+
+		status, accessData = h.prov.AccessRequestProvision(par)
+		if status.GetStatus() == prov.Success {
+			return status, accessData
+		}
+	}
+	return status, accessData
 }
 
 // onError updates the AccessRequest with an error status

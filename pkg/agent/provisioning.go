@@ -598,7 +598,8 @@ func registerApplicationProvisioner(provisioner interface{}) {
 	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"managedappHandler",
-			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient),
+			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient,
+				handler.WithManagedAppRetryCount(agent.cfg.GetProvisioningRetryCount())),
 		)
 	}
 }
@@ -618,7 +619,8 @@ func registerAccessProvisioner(provisioner interface{}) {
 	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"accessrequestHandler",
-			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler),
+			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler,
+				handler.WithAccessRequestRetryCount(agent.cfg.GetProvisioningRetryCount())),
 		)
 	}
 }
@@ -629,7 +631,8 @@ func registerCredentialProvisioner(provisioner interface{}) {
 		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"credentialHandler",
-			handler.NewCredentialHandler(credProv, agent.apicClient, registry),
+			handler.NewCredentialHandler(credProv, agent.apicClient, registry,
+				handler.WithCredentialRetryCount(agent.cfg.GetProvisioningRetryCount())),
 		)
 	}
 }
