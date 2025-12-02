@@ -7,6 +7,7 @@ import (
 	"time"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
@@ -47,7 +48,8 @@ type sample struct {
 	endpointsSampling   endpointsSampling
 	limit               int32
 	resetterRunning     atomic.Bool
-	apiAppErrorSampling map[string]bool // key: apiID+appID, value: doesn't matter, only key presence is used
+	apiAppErrorSampling map[string]bool             // key: apiID+appID, value: doesn't matter, only key presence is used
+	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {

@@ -13,6 +13,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
+	samplingPkg "github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -130,6 +131,8 @@ func TestAgentResourceHandler(t *testing.T) {
 		fakeAgentHandler             *fakeAgent
 		expectComplianceProcessing   bool
 		expectTraceabilityProcessing bool
+		setupSampling                bool
+		details                      *samplingPkg.TransactionDetails
 	}{
 		{
 			name:     "should add platform team to cache, triggerUpdate bool",
@@ -243,6 +246,44 @@ func TestAgentResourceHandler(t *testing.T) {
 				},
 			},
 			fakeAgentHandler: &fakeAgent{},
+		},
+		{
+			name:       "should remove apiAppKey from TraceabilityAgent agent state subresource when subResourceUpdate is triggered",
+			hasError:   false,
+			action:     proto.Event_SUBRESOURCEUPDATED,
+			subresName: management.TraceabilityAgentAgentstateSubResourceName,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.TraceabilityAgentGVK().Kind,
+						},
+					},
+					SubResources: map[string]interface{}{
+						management.TraceabilityAgentAgentstateSubResourceName: management.TraceabilityAgentAgentstate{
+							Sampling: &management.TraceabilityAgentAgentstateSampling{
+								ApiAppInfo: []management.TraceabilityAgentAgentstateSamplingApiAppInfo{
+									{
+										ManagedApp: "app",
+										ApiService: "api",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			fakeAgentHandler: &fakeAgent{},
+			setupSampling:    true,
+			details: &samplingPkg.TransactionDetails{
+				SubID: "app",
+				APIID: "api",
+			},
 		},
 		{
 			name:       "should trigger TraceabilityAgent processing on agent state subresource when sampling enabled",
@@ -375,6 +416,14 @@ func TestAgentResourceHandler(t *testing.T) {
 			resourceManager := &mockResourceManager{}
 			if tc.fakeAgentHandler != nil {
 				resourceManager.fakeHandler = tc.fakeAgentHandler
+			}
+
+			if tc.setupSampling {
+				samplingPkg.SetupSampling(samplingPkg.Sampling{}, false, "")
+				if tc.details != nil {
+					_, err := samplingPkg.ShouldSampleTransaction(*tc.details)
+					assert.Nil(t, err)
+				}
 			}
 
 			sampler := &fakeSampler{}

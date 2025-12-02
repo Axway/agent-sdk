@@ -6,7 +6,6 @@ package catalog
 
 import (
 	"encoding/json"
-	"fmt"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
@@ -14,74 +13,59 @@ import (
 )
 
 var (
-	ResourceCtx log.ContextField = "resource"
+	MCPClientCtx log.ContextField = "mCPClient"
 
-	_ResourceGVK = apiv1.GroupVersionKind{
+	_MCPClientGVK = apiv1.GroupVersionKind{
 		GroupKind: apiv1.GroupKind{
 			Group: "catalog",
-			Kind:  "Resource",
+			Kind:  "MCPClient",
 		},
-		APIVersion: "v1",
+		APIVersion: "v1alpha1",
 	}
 
-	ResourceScopes = []string{"DocumentCollection", "DocumentTemplate", "Product", "ProductRelease"}
+	MCPClientScopes = []string{""}
 )
 
 const (
-	ResourceResourceName = "resources"
+	MCPClientResourceName        = "mcpclients"
+	MCPClientIconSubResourceName = "icon"
 )
 
-func ResourceGVK() apiv1.GroupVersionKind {
-	return _ResourceGVK
+func MCPClientGVK() apiv1.GroupVersionKind {
+	return _MCPClientGVK
 }
 
 func init() {
-	apiv1.RegisterGVK(_ResourceGVK, ResourceScopes[0], ResourceResourceName)
-	log.RegisterContextField(ResourceCtx)
+	apiv1.RegisterGVK(_MCPClientGVK, MCPClientScopes[0], MCPClientResourceName)
+	log.RegisterContextField(MCPClientCtx)
 }
 
-// Resource Resource
-type Resource struct {
+// MCPClient Resource
+type MCPClient struct {
 	apiv1.ResourceMeta
+	Icon  interface{}  `json:"icon"`
 	Owner *apiv1.Owner `json:"owner"`
-	Spec  ResourceSpec `json:"spec"`
+	Spec  interface{}  `json:"spec"`
 }
 
-// NewResource creates an empty *Resource
-func NewResource(name, scopeKind, scopeName string) (*Resource, error) {
-	validScope := false
-	for _, s := range ResourceScopes {
-		if scopeKind == s {
-			validScope = true
-			break
-		}
-	}
-	if !validScope {
-		return nil, fmt.Errorf("scope '%s' not valid for Resource kind", scopeKind)
-	}
-
-	return &Resource{
+// NewMCPClient creates an empty *MCPClient
+func NewMCPClient(name string) *MCPClient {
+	return &MCPClient{
 		ResourceMeta: apiv1.ResourceMeta{
 			Name:             name,
-			GroupVersionKind: _ResourceGVK,
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
-					Name: scopeName,
-					Kind: scopeKind,
-				},
-			},
+			GroupVersionKind: _MCPClientGVK,
 		},
-	}, nil
+	}
 }
 
-// ResourceFromInstanceArray converts a []*ResourceInstance to a []*Resource
-func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource, error) {
-	newArray := make([]*Resource, 0)
+// MCPClientFromInstanceArray converts a []*ResourceInstance to a []*MCPClient
+func MCPClientFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*MCPClient, error) {
+	newArray := make([]*MCPClient, 0)
 	for _, item := range fromArray {
-		res := &Resource{}
+		res := &MCPClient{}
 		err := res.FromInstance(item)
 		if err != nil {
-			return make([]*Resource, 0), err
+			return make([]*MCPClient, 0), err
 		}
 		newArray = append(newArray, res)
 	}
@@ -89,10 +73,10 @@ func ResourceFromInstanceArray(fromArray []*apiv1.ResourceInstance) ([]*Resource
 	return newArray, nil
 }
 
-// AsInstance converts a Resource to a ResourceInstance
-func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
+// AsInstance converts a MCPClient to a ResourceInstance
+func (res *MCPClient) AsInstance() (*apiv1.ResourceInstance, error) {
 	meta := res.ResourceMeta
-	meta.GroupVersionKind = ResourceGVK()
+	meta.GroupVersionKind = MCPClientGVK()
 	res.ResourceMeta = meta
 
 	m, err := json.Marshal(res)
@@ -109,8 +93,8 @@ func (res *Resource) AsInstance() (*apiv1.ResourceInstance, error) {
 	return &instance, nil
 }
 
-// FromInstance converts a ResourceInstance to a Resource
-func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
+// FromInstance converts a ResourceInstance to a MCPClient
+func (res *MCPClient) FromInstance(ri *apiv1.ResourceInstance) error {
 	if ri == nil {
 		res = nil
 		return nil
@@ -132,7 +116,7 @@ func (res *Resource) FromInstance(ri *apiv1.ResourceInstance) error {
 }
 
 // MarshalJSON custom marshaller to handle sub resources
-func (res *Resource) MarshalJSON() ([]byte, error) {
+func (res *MCPClient) MarshalJSON() ([]byte, error) {
 	m, err := json.Marshal(&res.ResourceMeta)
 	if err != nil {
 		return nil, err
@@ -144,6 +128,7 @@ func (res *Resource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["icon"] = res.Icon
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -151,7 +136,7 @@ func (res *Resource) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON custom unmarshaller to handle sub resources
-func (res *Resource) UnmarshalJSON(data []byte) error {
+func (res *MCPClient) UnmarshalJSON(data []byte) error {
 	var err error
 
 	aux := &apiv1.ResourceInstance{}
@@ -175,10 +160,24 @@ func (res *Resource) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// marshalling subresource Icon
+	if v, ok := aux.SubResources["icon"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "icon")
+		err = json.Unmarshal(sr, &res.Icon)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // PluralName returns the plural name of the resource
-func (res *Resource) PluralName() string {
-	return ResourceResourceName
+func (res *MCPClient) PluralName() string {
+	return MCPClientResourceName
 }

@@ -149,6 +149,7 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 	if agent.cacheManager == nil {
 		agent.cacheManager = agentcache.NewAgentCacheManager(centralCfg, agentFeaturesCfg.PersistCacheEnabled())
 	}
+	sampling.SetCacheManagerGetter(GetCacheManager)
 
 	setCentralConfig(centralCfg)
 
