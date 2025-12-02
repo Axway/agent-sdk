@@ -28,4 +28,6 @@ type TraceabilityAgentAgentstateSampling struct {
 	DisabledUntil time.Time `json:"disabledUntil,omitempty"`
 	// The endpoints that the agent will sample
 	Endpoints []TraceabilityAgentAgentstateSamplingEndpoints `json:"endpoints,omitempty"`
+	// The API/App combinations marked as resolved
+	ApiAppInfo []TraceabilityAgentAgentstateSamplingApiAppInfo `json:"apiAppInfo,omitempty"`
 }
