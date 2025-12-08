@@ -258,8 +258,8 @@ func TestShouldSample(t *testing.T) {
 			counterResetPeriod: time.Second / 8,
 			errorSampling:      true,
 			expectedErrorPairs: map[string]struct{}{
-				"api1appA": {},
-				"api2appA": {},
+				FormatApiAppKey("api1", "appA"): {},
+				FormatApiAppKey("api2", "appA"): {},
 			},
 		},
 	}
