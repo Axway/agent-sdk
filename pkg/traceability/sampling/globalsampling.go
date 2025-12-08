@@ -35,7 +35,7 @@ type Sampling struct {
 	PerAPI                     bool    `config:"per_api"`
 	PerSub                     bool    `config:"per_subscription"`
 	OnlyErrors                 bool    `config:"onlyErrors" yaml:"onlyErrors"`
-	ErrorSamplingEnabled       bool
+	ErrorSamplingEnabled       bool    `config:"errorSamplingEnabled"`
 	ErrorSamplingResetInterval time.Duration
 	countMax                   int
 	shouldSampleMax            int

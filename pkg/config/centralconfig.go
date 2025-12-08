@@ -210,7 +210,6 @@ type CentralConfig interface {
 	GetUsageReportingConfig() UsageReportingConfig
 	GetMetricReportingConfig() MetricReportingConfig
 	GetErrorSamplingEnabled() bool
-	GetErrorResetInterval() time.Duration
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -259,7 +258,6 @@ type CentralConfiguration struct {
 	UsageReporting            UsageReportingConfig  `config:"usageReporting"`
 	MetricReporting           MetricReportingConfig `config:"metricReporting"`
 	ErrorSamplingEnabled      bool                  `config:"errorSamplingEnabled"`
-	ErrorSamplingReset        time.Duration         `config:"errorSamplingReset"` // TODO: only for testing purposes, remove after testing
 	GRPCCfg                   GRPCConfig            `config:"grpc"`
 	CacheStoragePath          string                `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
@@ -586,11 +584,6 @@ func (c *CentralConfiguration) GetMetricReportingConfig() MetricReportingConfig 
 // GetErrorSamplingEnabled -
 func (c *CentralConfiguration) GetErrorSamplingEnabled() bool {
 	return c.ErrorSamplingEnabled
-}
-
-// GetErrorResetInterval -
-func (c *CentralConfiguration) GetErrorResetInterval() time.Duration {
-	return c.ErrorSamplingReset
 }
 
 // GetCredentialConfig -

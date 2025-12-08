@@ -186,6 +186,16 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	onlyErrors := s.config.OnlyErrors
 
 	statusText := GetStatusFromCodeString(details.Status)
+	hasFailedStatus := statusText == Failure
+
+	// check if transaction is an error and sample it for api-app pair if no other error was found yet
+	if hasFailedStatus && s.config.ErrorSamplingEnabled {
+		key := FormatApiAppKey(details.APIID, details.SubID)
+		if _, exists := s.apiAppErrorSampling[key]; !exists {
+			s.apiAppErrorSampling[key] = struct{}{}
+			return true
+		}
+	}
 
 	// if both are disabled, skip. if endpoints is enabled and sampling is disabled, check if the endpoint is found
 	if !s.enabled.Load() && !s.endpointsSampling.enabled.Load() {
@@ -207,22 +217,9 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 
-	hasFailedStatus := statusText == Failure
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && onlyErrors {
 		return false
-	}
-
-	// check if transaction is an error and sample it for api-app pair if no other error was found yet
-	if hasFailedStatus && s.config.ErrorSamplingEnabled {
-		key := FormatApiAppKey(details.APIID, details.SubID)
-		if _, exists := s.apiAppErrorSampling[key]; exists {
-			return false
-		}
-		s.apiAppErrorSampling[key] = struct{}{}
-
-		// we don't count the unique combos so we don't add those to the counter
-		return true
 	}
 
 	s.samplingCounter++

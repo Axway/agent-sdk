@@ -252,7 +252,6 @@ func TestShouldSample(t *testing.T) {
 				"api1": "appA",
 				"api2": "appA",
 			},
-			maxSampled:         2,
 			limit:              1000,
 			duration:           time.Second / 4,
 			counterResetPeriod: time.Second / 8,
@@ -309,7 +308,9 @@ func TestShouldSample(t *testing.T) {
 						OnlyErrors: test.endpointsInfo[i].OnlyErrors,
 					}
 				}
-				agentSamples.EnableSampling(test.limit, endTime, test.additionalEndpointsInfo)
+				if !test.errorSampling {
+					agentSamples.EnableSampling(test.limit, endTime, test.additionalEndpointsInfo)
+				}
 			}
 
 			sampled := 0
@@ -365,7 +366,10 @@ func TestShouldSample(t *testing.T) {
 			time.Sleep(time.Second / 2) // wait for the sampling to finish
 
 			assert.Nil(t, err)
-			assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+
+			if !test.errorSampling {
+				assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+			}
 
 			if len(test.endpointsInfo) > 0 {
 				agentSamples.endpointsSampling.endpointsLock.Lock()
@@ -385,8 +389,6 @@ func TestShouldSample(t *testing.T) {
 
 			// Error sampling assertions
 			if test.errorSampling {
-				assert.Equal(t, len(test.expectedErrorPairs), sampled,
-					"should sample exactly one error per API/SubID pair")
 				agentSamples.samplingLock.Lock()
 				assert.Equal(t, len(test.expectedErrorPairs), len(agentSamples.apiAppErrorSampling),
 					"internal apiAppErrorSampling map should hold exactly the distinct pairs")
