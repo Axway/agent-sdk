@@ -48,7 +48,7 @@ type sample struct {
 	endpointsSampling   endpointsSampling
 	limit               int32
 	resetterRunning     atomic.Bool
-	apiAppErrorSampling map[string]bool             // key: apiID+appID, value: doesn't matter, only key presence is used
+	apiAppErrorSampling map[string]struct{}         // key: apiID+appID, value: doesn't matter, only key presence is used
 	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
 }
 
@@ -214,12 +214,12 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 
 	// check if transaction is an error and sample it for api-app pair if no other error was found yet
-	if hasFailedStatus {
+	if hasFailedStatus && s.config.ErrorSamplingEnabled {
 		key := details.APIID + details.SubID
 		if _, exists := s.apiAppErrorSampling[key]; exists {
 			return false
 		}
-		s.apiAppErrorSampling[key] = true
+		s.apiAppErrorSampling[key] = struct{}{}
 	}
 
 	s.samplingCounter++

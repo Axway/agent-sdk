@@ -37,6 +37,6 @@ func (j *apiAppErrorSamplingResetJob) Status() error {
 func (j *apiAppErrorSamplingResetJob) Execute() error {
 	agentSamples.samplingLock.Lock()
 	defer agentSamples.samplingLock.Unlock()
-	agentSamples.apiAppErrorSampling = make(map[string]bool)
+	agentSamples.apiAppErrorSampling = make(map[string]struct{})
 	return nil
 }

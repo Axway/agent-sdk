@@ -209,6 +209,8 @@ type CentralConfig interface {
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
 	GetMetricReportingConfig() MetricReportingConfig
+	GetErrorSamplingEnabled() bool
+	GetErrorResetInterval() time.Duration
 	IsUsingGRPC() bool
 	GetGRPCHost() string
 	GetGRPCPort() int
@@ -256,6 +258,8 @@ type CentralConfiguration struct {
 	ProxyURL                  string                `config:"proxyUrl"`
 	UsageReporting            UsageReportingConfig  `config:"usageReporting"`
 	MetricReporting           MetricReportingConfig `config:"metricReporting"`
+	ErrorSamplingEnabled      bool                  `config:"errorSamplingEnabled"`
+	ErrorSamplingReset        time.Duration         `config:"errorSamplingReset"` // TODO: only for testing purposes, remove after testing
 	GRPCCfg                   GRPCConfig            `config:"grpc"`
 	CacheStoragePath          string                `config:"cacheStoragePath"`
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
@@ -579,6 +583,16 @@ func (c *CentralConfiguration) GetMetricReportingConfig() MetricReportingConfig 
 	return c.MetricReporting
 }
 
+// GetErrorSamplingEnabled -
+func (c *CentralConfiguration) GetErrorSamplingEnabled() bool {
+	return c.ErrorSamplingEnabled
+}
+
+// GetErrorResetInterval -
+func (c *CentralConfiguration) GetErrorResetInterval() time.Duration {
+	return c.ErrorSamplingReset
+}
+
 // GetCredentialConfig -
 func (c *CentralConfiguration) GetCredentialConfig() CredentialConfig {
 	return c.CredentialConfig
@@ -720,6 +734,7 @@ const (
 	pathCacheStorageInterval      = "central.cacheStorageInterval"
 	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
 	pathProvisioningRetryCount    = "central.provisioningRetryCount"
+	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -894,6 +909,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathDeployment, "", "Amplify Central")
 		AddMetricReportingProperties(props)
 		AddUsageReportingProperties(props)
+		props.AddBoolProperty(pathErrorSamplingEnabled, false, "Controls whether error sampling is enabled")
 	} else {
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
@@ -1013,6 +1029,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			cfg.EnvironmentID = props.StringPropertyValue(pathEnvironmentID)
 			return cfg, nil
 		}
+		cfg.ErrorSamplingEnabled = props.BoolPropertyValue(pathErrorSamplingEnabled)
 	}
 	return cfg, nil
 }

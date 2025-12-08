@@ -419,7 +419,7 @@ func TestAgentResourceHandler(t *testing.T) {
 			}
 
 			if tc.setupSampling {
-				samplingPkg.SetupSampling(samplingPkg.Sampling{}, false, "")
+				samplingPkg.SetupSampling(samplingPkg.Sampling{}, false, "", nil)
 				if tc.details != nil {
 					_, err := samplingPkg.ShouldSampleTransaction(*tc.details)
 					assert.Nil(t, err)

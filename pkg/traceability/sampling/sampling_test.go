@@ -114,7 +114,7 @@ func TestSamplingConfig(t *testing.T) {
 			}
 			os.Setenv(qaSamplingPercentageEnvVar, test.qaOverride)
 
-			err := SetupSampling(test.config, false, test.apicDeployment)
+			err := SetupSampling(test.config, false, test.apicDeployment, nil)
 			if test.errExpected {
 				assert.NotNil(t, err, "Expected the config to fail")
 			} else {
@@ -276,14 +276,15 @@ func TestShouldSample(t *testing.T) {
 			done := time.NewTicker(time.Until(testEnd))
 			defer done.Stop()
 
-			err := SetupSampling(Sampling{}, false, "")
+			err := SetupSampling(Sampling{}, false, "", nil)
 			endTime := time.Now().Add(-1 * time.Second) // reset endTime to avoid issues with the test
 			if test.globalSampling {
 				endTime = testEnd
 			}
 
 			agentSamples.samplingLock.Lock()
-			agentSamples.apiAppErrorSampling = make(map[string]bool)
+			agentSamples.apiAppErrorSampling = make(map[string]struct{})
+			agentSamples.config.ErrorSamplingEnabled = test.errorSampling
 			agentSamples.samplingLock.Unlock()
 
 			period := &atomic.Int64{}
@@ -486,7 +487,7 @@ func TestFilterEvents(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			err := SetupSampling(test.config, false, "")
+			err := SetupSampling(test.config, false, "", nil)
 			assert.Nil(t, err)
 
 			eventsInTest := createEvents(test.testEvents, test.config.Percentage)
@@ -499,7 +500,7 @@ func TestFilterEvents(t *testing.T) {
 }
 
 func TestBothSamplingsEnabled(t *testing.T) {
-	SetupSampling(Sampling{}, false, "")
+	SetupSampling(Sampling{}, false, "", nil)
 	endTime := time.Now().Add(10 * time.Second)
 
 	period := &atomic.Int64{}
