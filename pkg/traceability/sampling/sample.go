@@ -207,7 +207,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		return false
 	}
 
-	hasFailedStatus := statusText == "Failure"
+	hasFailedStatus := statusText == Failure
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && onlyErrors {
 		return false
@@ -215,11 +215,14 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 
 	// check if transaction is an error and sample it for api-app pair if no other error was found yet
 	if hasFailedStatus && s.config.ErrorSamplingEnabled {
-		key := details.APIID + details.SubID
+		key := FormatApiAppKey(details.APIID, details.SubID)
 		if _, exists := s.apiAppErrorSampling[key]; exists {
 			return false
 		}
 		s.apiAppErrorSampling[key] = struct{}{}
+
+		// we don't count the unique combos so we don't add those to the counter
+		return true
 	}
 
 	s.samplingCounter++
