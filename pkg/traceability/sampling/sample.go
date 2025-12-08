@@ -183,6 +183,9 @@ func (s *sample) resetSamplingCounter() {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+
 	onlyErrors := s.config.OnlyErrors
 
 	statusText := GetStatusFromCodeString(details.Status)
@@ -211,8 +214,6 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 
 	// sampling limit per minute exceeded
-	s.samplingLock.Lock()
-	defer s.samplingLock.Unlock()
 	if s.limit <= s.samplingCounter {
 		return false
 	}
