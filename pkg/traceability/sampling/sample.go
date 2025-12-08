@@ -48,7 +48,7 @@ type sample struct {
 	endpointsSampling   endpointsSampling
 	limit               int32
 	resetterRunning     atomic.Bool
-	apiAppErrorSampling map[string]struct{}         // key: apiID+appID, value: doesn't matter, only key presence is used
+	apiAppErrorSampling map[string]struct{}         // key: apiID - appID, value: doesn't matter, only key presence is used
 	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
 }
 

@@ -145,7 +145,7 @@ func TestShouldSample(t *testing.T) {
 		additionalEndpointsInfo  map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
 		expectedEndpointsSampled map[string]struct{}
 		errorSampling            bool
-		expectedErrorPairs       map[string]struct{} // keys are APIID+SubID
+		expectedErrorPairs       map[string]struct{}
 	}{
 		{
 			skip:           false,
