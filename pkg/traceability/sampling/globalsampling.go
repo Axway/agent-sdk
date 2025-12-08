@@ -1,6 +1,7 @@
 package sampling
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	transactionUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
@@ -191,12 +193,18 @@ func RemoveApiAppKey(apiServiceName, managedAppName string) {
 	if agentSamples != nil && agentSamples.apiAppErrorSampling != nil {
 		externalAPIID := getExternalAPIID(apiServiceName)
 		externalAppID := getExternalAppID(managedAppName, getExternalAppKeyData())
-		k := externalAPIID + externalAppID
+		k := FormatApiAppKey(externalAPIID, externalAppID)
 
 		agentSamples.samplingLock.Lock()
 		defer agentSamples.samplingLock.Unlock()
 		delete(agentSamples.apiAppErrorSampling, k)
 	}
+}
+
+func FormatApiAppKey(apiID, appID string) string {
+	formattedSvcName := strings.TrimPrefix(apiID, transactionUtil.SummaryEventProxyIDPrefix)
+	formattedAppName := strings.TrimPrefix(appID, transactionUtil.SummaryEventApplicationIDPrefix)
+	return fmt.Sprintf("%s - %s", formattedAppName, formattedSvcName)
 }
 
 func getExternalAppID(appName string, externalAppKey definitions.ExternalAppData) string {
