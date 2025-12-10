@@ -109,6 +109,7 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	redaction.SetupGlobalRedaction(outputConfig.Redaction)
 
 	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetErrorSamplingEnabled() {
+		log.Trace("automatic error sampling has been enabled")
 		outputConfig.Sampling.ErrorSamplingEnabled = agent.GetCentralConfig().GetErrorSamplingEnabled()
 	}
 
