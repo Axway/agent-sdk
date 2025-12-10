@@ -71,6 +71,14 @@ func GetGlobalSamplingPercentage() (float64, error) {
 	return agentSamples.config.Percentage, nil
 }
 
+// GetApiAppErrorSampling -
+func GetApiAppErrorSampling() map[string]struct{} {
+	if agentSamples != nil {
+		return agentSamples.apiAppErrorSampling
+	}
+	return nil
+}
+
 // GetGlobalSampling -
 func GetGlobalSampling() *sample {
 	period := &atomic.Int64{}
@@ -241,7 +249,7 @@ func RemoveApiAppKey(apiServiceName, managedAppName string) {
 func FormatApiAppKey(apiID, appID string) string {
 	formattedSvcName := strings.TrimPrefix(apiID, transactionUtil.SummaryEventProxyIDPrefix)
 	formattedAppName := strings.TrimPrefix(appID, transactionUtil.SummaryEventApplicationIDPrefix)
-	return fmt.Sprintf("%s - %s", formattedAppName, formattedSvcName)
+	return fmt.Sprintf("%s - %s", formattedSvcName, formattedAppName)
 }
 
 func (s *Sampling) getExternalAppID(appName string, externalAppKey definitions.ExternalAppData) string {
