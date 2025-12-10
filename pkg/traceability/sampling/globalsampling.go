@@ -100,6 +100,7 @@ func GetGlobalSampling() *sample {
 				mu:      sync.RWMutex{},
 			},
 			apiAppErrorSampling: make(map[string]struct{}),
+			logger:              log.NewFieldLogger().WithComponent("agentSamples").WithPackage("sampling"),
 		}
 	}
 	return agentSamples
@@ -200,6 +201,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, cacheA
 				mu:      sync.RWMutex{},
 			},
 			apiAppErrorSampling: make(map[string]struct{}),
+			logger:              log.NewFieldLogger().WithComponent("agentSamples").WithPackage("sampling"),
 		}
 	} else {
 		agentSamples.config = cfg
@@ -242,6 +244,7 @@ func RemoveApiAppKey(apiServiceName, managedAppName string) {
 
 		agentSamples.samplingLock.Lock()
 		defer agentSamples.samplingLock.Unlock()
+		agentSamples.logger.WithField(apiAppKey, k).Trace("removing api-app key pair")
 		delete(agentSamples.apiAppErrorSampling, k)
 	}
 }

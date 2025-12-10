@@ -37,6 +37,7 @@ func (j *apiAppErrorSamplingResetJob) Status() error {
 func (j *apiAppErrorSamplingResetJob) Execute() error {
 	agentSamples.samplingLock.Lock()
 	defer agentSamples.samplingLock.Unlock()
+	j.logger.Trace("removing every api-app key pair")
 	agentSamples.apiAppErrorSampling = make(map[string]struct{})
 	return nil
 }

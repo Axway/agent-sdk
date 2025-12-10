@@ -9,8 +9,11 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
+
+const apiAppKey = "apiAppKey"
 
 type endpointsSampling struct {
 	enabled       atomic.Bool
@@ -50,6 +53,7 @@ type sample struct {
 	resetterRunning     atomic.Bool
 	apiAppErrorSampling map[string]struct{}         // key: apiID - appID, value: doesn't matter, only key presence is used
 	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
+	logger              log.FieldLogger
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
@@ -59,6 +63,7 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, 
 
 	if time.Now().Before(samplingEndTime) {
 		// only enable sampling if the end time is in the future
+		s.logger.WithField("samplingEndTime", samplingEndTime).Trace("sampling has been enabled")
 		s.enabled.Store(true)
 		s.samplingTime.SetEndTime(samplingEndTime)
 		go s.disableSampling()
@@ -196,6 +201,7 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 		key := FormatApiAppKey(details.APIID, details.SubID)
 		if _, exists := s.apiAppErrorSampling[key]; !exists {
 			s.apiAppErrorSampling[key] = struct{}{}
+			s.logger.WithField(apiAppKey, key).Trace("sampled unique api-app error transaction")
 			return true
 		}
 	}
