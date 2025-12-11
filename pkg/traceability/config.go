@@ -115,9 +115,9 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 
 	// Setup the sampling config, if central config can not be found assume online mode
 	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetUsageReportingConfig() != nil {
-		err = sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(), agent.GetCentralConfig().GetAPICDeployment(), agent.GetCacheManager())
+		err = sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(), agent.GetCentralConfig().GetAPICDeployment(), sampling.WithCacheAccess(agent.GetCacheManager()))
 	} else {
-		err = sampling.SetupSampling(outputConfig.Sampling, false, agent.GetCentralConfig().GetAPICDeployment(), agent.GetCacheManager())
+		err = sampling.SetupSampling(outputConfig.Sampling, false, agent.GetCentralConfig().GetAPICDeployment(), sampling.WithCacheAccess(agent.GetCacheManager()))
 	}
 
 	if err != nil {
