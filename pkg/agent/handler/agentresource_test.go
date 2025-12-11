@@ -553,7 +553,7 @@ func TestAgentResourceHandler(t *testing.T) {
 				}
 				sampling := samplingPkg.DefaultConfig()
 				sampling.ErrorSamplingEnabled = tc.errorSamplingEnabled
-				samplingPkg.SetupSampling(sampling, false, "", cacheAccess)
+				samplingPkg.SetupSampling(sampling, false, "", samplingPkg.WithCacheAccess(cacheAccess))
 				samplingPkg.SetExternalAppKeyData(definitions.ExternalAppData{
 					Key:          tc.externalAppKey,
 					ResourceType: tc.resourceType,

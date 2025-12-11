@@ -167,8 +167,16 @@ func getErrorSamplingResetIntervalConfig() time.Duration {
 	return qaInterval
 }
 
+type SamplingOption func(*Sampling)
+
+func WithCacheAccess(ca cacheAccess) func(*Sampling) {
+	return func(s *Sampling) {
+		s.cacheAccess = ca
+	}
+}
+
 // SetupSampling - set up the global sampling for use by traceability
-func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, cacheAccess cacheAccess) error {
+func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, opts ...SamplingOption) error {
 	var err error
 
 	if offlineMode {
@@ -184,7 +192,9 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, cacheA
 		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 	}
 
-	cfg.cacheAccess = cacheAccess
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 
 	if agentSamples == nil {
 		period := &atomic.Int64{}

@@ -59,7 +59,7 @@ func createOfflineMapperTestConfig(envID string) *Config {
 		},
 	}
 	cfg.Central.SetEnvironmentID(envID)
-	sampling.SetupSampling(sampling.DefaultConfig(), true, "", nil)
+	sampling.SetupSampling(sampling.DefaultConfig(), true, "")
 	return cfg
 }
 
