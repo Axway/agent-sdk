@@ -59,7 +59,7 @@ func DefaultConfig() Sampling {
 		PerSub:                     true,
 		OnlyErrors:                 false,
 		ErrorSamplingEnabled:       false,
-		errorSamplingResetInterval: getErrorSamplingResetIntervalConfig(defaultErrorSamplingResetInterval),
+		errorSamplingResetInterval: getErrorSamplingResetIntervalConfig(),
 		countMax:                   countMax,
 		shouldSampleMax:            defaultSamplingRate,
 		externalDataLookUp:         make(map[string]string),
@@ -145,22 +145,26 @@ func getSamplingPercentageConfig(percentage float64, apicDeployment string) (flo
 	return percentage, nil
 }
 
-func getErrorSamplingResetIntervalConfig(interval time.Duration) time.Duration {
-	if val := os.Getenv(qaErrorSamplingResetInterval); val != "" {
-		if qaInterval, err := time.ParseDuration(val); err == nil {
-			log.Tracef("Using %s (%s) rather than the default (1h) for non-production", qaErrorSamplingResetInterval, val)
-			interval = qaInterval
-		} else {
-			log.Tracef("Could not use %s (%s) it is not a proper duration", qaErrorSamplingResetInterval, val)
-		}
-
-		// Validate the config to make sure it is not out of bounds
-		if interval < 10*time.Second {
-			return defaultErrorSamplingResetInterval
-		}
+func getErrorSamplingResetIntervalConfig() time.Duration {
+	// check qa env var, if not set return default
+	val := os.Getenv(qaErrorSamplingResetInterval)
+	if val == "" {
+		return defaultErrorSamplingResetInterval
 	}
 
-	return interval
+	// if qa env var set but not duration, return default
+	qaInterval, err := time.ParseDuration(val)
+	if err != nil {
+		log.Tracef("Could not use %s (%s) it is not a proper duration", qaErrorSamplingResetInterval, val)
+		return defaultErrorSamplingResetInterval
+	}
+
+	// if qa env var less than minimum return default
+	if qaInterval < 10*time.Second {
+		return defaultErrorSamplingResetInterval
+	}
+
+	return qaInterval
 }
 
 // SetupSampling - set up the global sampling for use by traceability
