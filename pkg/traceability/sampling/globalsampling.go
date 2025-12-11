@@ -214,8 +214,7 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, cacheA
 	if cfg.ErrorSamplingEnabled {
 		// start api/app error sampling reset job if error sampling is enabled
 		resetJob := newAPIAppErrorSamplingResetJob()
-		// jobs.RegisterScheduledJobWithName(resetJob, "@hourly", "API/App Error Sampling Reset")
-		jobs.RegisterIntervalJobWithName(resetJob, cfg.errorSamplingResetInterval, "API/App Error Sampling Reset") // TODO: change back to scheduled job after testing
+		jobs.RegisterIntervalJobWithName(resetJob, cfg.errorSamplingResetInterval, "API/App Error Sampling Reset")
 	}
 
 	if err != nil {
