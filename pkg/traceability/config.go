@@ -108,11 +108,16 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	// Setup the redaction regular expressions
 	redaction.SetupGlobalRedaction(outputConfig.Redaction)
 
+	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetErrorSamplingEnabled() {
+		log.Trace("automatic error sampling has been enabled")
+		outputConfig.Sampling.ErrorSamplingEnabled = agent.GetCentralConfig().GetErrorSamplingEnabled()
+	}
+
 	// Setup the sampling config, if central config can not be found assume online mode
 	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetUsageReportingConfig() != nil {
-		err = sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(), agent.GetCentralConfig().GetAPICDeployment())
+		err = sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(), agent.GetCentralConfig().GetAPICDeployment(), agent.GetCacheManager())
 	} else {
-		err = sampling.SetupSampling(outputConfig.Sampling, false, agent.GetCentralConfig().GetAPICDeployment())
+		err = sampling.SetupSampling(outputConfig.Sampling, false, agent.GetCentralConfig().GetAPICDeployment(), agent.GetCacheManager())
 	}
 
 	if err != nil {

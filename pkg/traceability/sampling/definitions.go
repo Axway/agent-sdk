@@ -1,16 +1,21 @@
 package sampling
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+	"time"
+)
 
 // SampleKey - the key used in the metadata when a transaction qualifies for sampling and should be sent to Observer
 // defaultSamplingRate - the default sampling rate in percentage
 const (
-	SampleKey            = "sample"
-	countMax             = 100
-	defaultSamplingRate  = 0
-	defaultSamplingLimit = 0
-	maximumSamplingRate  = 10
-	globalCounter        = "global"
+	SampleKey                         = "sample"
+	countMax                          = 100
+	defaultSamplingRate               = 0
+	defaultSamplingLimit              = 0
+	maximumSamplingRate               = 10
+	globalCounter                     = "global"
+	defaultErrorSamplingResetInterval = 1 * time.Hour
 )
 
 // TransactionDetails - details about the transaction that are used for sampling
@@ -29,9 +34,9 @@ const (
 )
 
 var statuses = map[string]statusText{
-	Success.String():   Success,
-	Failure.String():   Failure,
-	Exception.String(): Exception,
+	strings.ToLower(Success.String()):   Success,
+	strings.ToLower(Failure.String()):   Failure,
+	strings.ToLower(Exception.String()): Exception,
 }
 
 func (s statusText) String() string {
@@ -39,7 +44,7 @@ func (s statusText) String() string {
 }
 
 func GetStatusFromCodeString(statusCode string) statusText {
-	if v, ok := statuses[statusCode]; ok {
+	if v, ok := statuses[strings.ToLower(statusCode)]; ok {
 		return v
 	}
 

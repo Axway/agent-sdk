@@ -13,9 +13,54 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
+	samplingPkg "github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 )
+
+type mockCacheAccess struct {
+	externalAppKey string
+	externalAppID  string
+	externalAPIID  string
+}
+
+func (m *mockCacheAccess) GetManagedApplicationByName(name string) *v1.ResourceInstance {
+	managedApp := management.NewManagedApplication(name, "")
+	util.SetAgentDetailsKey(managedApp, m.externalAppKey, m.externalAppID)
+
+	mAppRI, _ := managedApp.AsInstance()
+	return mAppRI
+}
+
+func (m *mockCacheAccess) GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance {
+	accessRequest := management.NewAccessRequest("", "")
+	util.SetAgentDetailsKey(accessRequest, m.externalAppKey, m.externalAppID)
+
+	arRI, _ := accessRequest.AsInstance()
+	return []*v1.ResourceInstance{arRI}
+}
+
+func (m *mockCacheAccess) GetWatchResourceCacheKeys(group, kind string) []string {
+	return []string{"cred1"}
+}
+
+func (m *mockCacheAccess) GetWatchResourceByKey(key string) *v1.ResourceInstance {
+	cred := management.NewCredential("cred1", "")
+	cred.Spec.ManagedApplication = "app"
+	util.SetAgentDetailsKey(cred, m.externalAppKey, m.externalAppID)
+
+	credRI, _ := cred.AsInstance()
+	return credRI
+}
+
+func (m *mockCacheAccess) GetAPIServiceWithName(apiName string) *v1.ResourceInstance {
+	apiService := management.NewAPIServiceInstance(apiName, "")
+	util.SetAgentDetailsKey(apiService, definitions.AttrExternalAPIID, m.externalAPIID)
+
+	apiRI, _ := apiService.AsInstance()
+	return apiRI
+}
 
 type fakeSampler struct {
 	enabled bool
@@ -130,6 +175,12 @@ func TestAgentResourceHandler(t *testing.T) {
 		fakeAgentHandler             *fakeAgent
 		expectComplianceProcessing   bool
 		expectTraceabilityProcessing bool
+		setupSampling                bool
+		errorSamplingEnabled         bool
+		externalAppKey               string
+		externalAppID                string
+		externalAPIID                string
+		resourceType                 string
 	}{
 		{
 			name:     "should add platform team to cache, triggerUpdate bool",
@@ -243,6 +294,123 @@ func TestAgentResourceHandler(t *testing.T) {
 				},
 			},
 			fakeAgentHandler: &fakeAgent{},
+		},
+		{
+			name:       "should remove apiAppKey from TraceabilityAgent agent state subresource when subResourceUpdate is triggered - resourceType ManagedApplication",
+			hasError:   false,
+			action:     proto.Event_SUBRESOURCEUPDATED,
+			subresName: management.TraceabilityAgentAgentstateSubResourceName,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.TraceabilityAgentGVK().Kind,
+						},
+					},
+					SubResources: map[string]interface{}{
+						management.TraceabilityAgentAgentstateSubResourceName: management.TraceabilityAgentAgentstate{
+							Sampling: &management.TraceabilityAgentAgentstateSampling{
+								ApiAppInfo: []management.TraceabilityAgentAgentstateSamplingApiAppInfo{
+									{
+										ManagedApp: "app",
+										ApiService: "api",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			fakeAgentHandler:     &fakeAgent{},
+			setupSampling:        true,
+			errorSamplingEnabled: true,
+			externalAppKey:       "externalAppKey",
+			externalAppID:        "externalAppID",
+			externalAPIID:        "externalAPIID",
+			resourceType:         management.ManagedApplicationGVK().Kind,
+		},
+		{
+			name:       "should remove apiAppKey from TraceabilityAgent agent state subresource when subResourceUpdate is triggered - resourceType AccessRequest",
+			hasError:   false,
+			action:     proto.Event_SUBRESOURCEUPDATED,
+			subresName: management.TraceabilityAgentAgentstateSubResourceName,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.TraceabilityAgentGVK().Kind,
+						},
+					},
+					SubResources: map[string]interface{}{
+						management.TraceabilityAgentAgentstateSubResourceName: management.TraceabilityAgentAgentstate{
+							Sampling: &management.TraceabilityAgentAgentstateSampling{
+								ApiAppInfo: []management.TraceabilityAgentAgentstateSamplingApiAppInfo{
+									{
+										ManagedApp: "app",
+										ApiService: "api",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			fakeAgentHandler:     &fakeAgent{},
+			setupSampling:        true,
+			errorSamplingEnabled: true,
+			externalAppKey:       "externalAppKey",
+			externalAppID:        "externalAppID",
+			externalAPIID:        "externalAPIID",
+			resourceType:         management.AccessRequestGVK().Kind,
+		},
+		{
+			name:       "should remove apiAppKey from TraceabilityAgent agent state subresource when subResourceUpdate is triggered - resourceType Credential",
+			hasError:   false,
+			action:     proto.Event_SUBRESOURCEUPDATED,
+			subresName: management.TraceabilityAgentAgentstateSubResourceName,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.TraceabilityAgentGVK().Kind,
+						},
+					},
+					SubResources: map[string]interface{}{
+						management.TraceabilityAgentAgentstateSubResourceName: management.TraceabilityAgentAgentstate{
+							Sampling: &management.TraceabilityAgentAgentstateSampling{
+								ApiAppInfo: []management.TraceabilityAgentAgentstateSamplingApiAppInfo{
+									{
+										ManagedApp: "app",
+										ApiService: "api",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			fakeAgentHandler:     &fakeAgent{},
+			setupSampling:        true,
+			errorSamplingEnabled: true,
+			externalAppKey:       "externalAppKey",
+			externalAppID:        "externalAppID",
+			externalAPIID:        "externalAPIID",
+			resourceType:         management.CredentialGVK().Kind,
 		},
 		{
 			name:       "should trigger TraceabilityAgent processing on agent state subresource when sampling enabled",
@@ -377,6 +545,30 @@ func TestAgentResourceHandler(t *testing.T) {
 				resourceManager.fakeHandler = tc.fakeAgentHandler
 			}
 
+			if tc.setupSampling {
+				cacheAccess := &mockCacheAccess{
+					externalAppKey: tc.externalAppKey,
+					externalAppID:  tc.externalAppID,
+					externalAPIID:  tc.externalAPIID,
+				}
+				sampling := samplingPkg.DefaultConfig()
+				sampling.ErrorSamplingEnabled = tc.errorSamplingEnabled
+				samplingPkg.SetupSampling(sampling, false, "", cacheAccess)
+				samplingPkg.SetExternalAppKeyData(definitions.ExternalAppData{
+					Key:          tc.externalAppKey,
+					ResourceType: tc.resourceType,
+				})
+				if tc.errorSamplingEnabled {
+					details := samplingPkg.TransactionDetails{
+						Status: string(samplingPkg.Failure),
+						SubID:  tc.externalAppID,
+						APIID:  tc.externalAPIID,
+					}
+					_, err := samplingPkg.ShouldSampleTransaction(details)
+					assert.Nil(t, err)
+				}
+			}
+
 			sampler := &fakeSampler{}
 			cm := &mockAgentCache{
 				teams:  []*definitions.PlatformTeam{},
@@ -429,6 +621,13 @@ func TestAgentResourceHandler(t *testing.T) {
 				assert.False(t, tc.fakeAgentHandler.triggeredCompliance)
 				assert.False(t, tc.fakeAgentHandler.triggeredTraceability)
 				assert.False(t, sampler.enabled)
+			}
+
+			if tc.errorSamplingEnabled {
+				apiAppErrorSampling := samplingPkg.GetApiAppErrorSampling()
+				key := samplingPkg.FormatApiAppKey(tc.externalAPIID, tc.externalAppID)
+				_, ok := apiAppErrorSampling[key]
+				assert.False(t, ok, "apiAppKey should be removed from sampling after processing the subresource update")
 			}
 		})
 	}

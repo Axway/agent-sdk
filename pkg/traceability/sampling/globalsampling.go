@@ -1,6 +1,7 @@
 package sampling
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -9,6 +10,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/jobs"
+	transactionUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
@@ -18,28 +25,44 @@ import (
 var agentSamples *sample
 
 const (
-	qaSamplingPercentageEnvVar = "QA_TRACEABILITY_SAMPLING_PERCENTAGE"
+	qaSamplingPercentageEnvVar   = "QA_TRACEABILITY_SAMPLING_PERCENTAGE"
+	qaErrorSamplingResetInterval = "QA_TRACEABILITY_SAMPLING_ERRORRESETINTERVAL"
 )
+
+type cacheAccess interface {
+	GetManagedApplicationByName(name string) *v1.ResourceInstance
+	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
+	GetWatchResourceCacheKeys(group, kind string) []string
+	GetWatchResourceByKey(key string) *v1.ResourceInstance
+	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
+}
 
 // Sampling - configures the sampling of events the agent sends to Amplify
 type Sampling struct {
-	Percentage      float64 `config:"percentage"`
-	PerAPI          bool    `config:"per_api"`
-	PerSub          bool    `config:"per_subscription"`
-	OnlyErrors      bool    `config:"onlyErrors" yaml:"onlyErrors"`
-	countMax        int
-	shouldSampleMax int
+	Percentage                 float64 `config:"percentage"`
+	PerAPI                     bool    `config:"per_api"`
+	PerSub                     bool    `config:"per_subscription"`
+	OnlyErrors                 bool    `config:"onlyErrors" yaml:"onlyErrors"`
+	ErrorSamplingEnabled       bool
+	errorSamplingResetInterval time.Duration `config:"errorResetInterval"`
+	countMax                   int
+	shouldSampleMax            int
+	cacheAccess                cacheAccess
+	externalDataLookUp         map[string]string
 }
 
 // DefaultConfig - returns a default sampling config where all transactions are sent
 func DefaultConfig() Sampling {
 	return Sampling{
-		Percentage:      defaultSamplingRate,
-		PerAPI:          true,
-		PerSub:          true,
-		OnlyErrors:      false,
-		countMax:        countMax,
-		shouldSampleMax: defaultSamplingRate,
+		Percentage:                 defaultSamplingRate,
+		PerAPI:                     true,
+		PerSub:                     true,
+		OnlyErrors:                 false,
+		ErrorSamplingEnabled:       false,
+		errorSamplingResetInterval: getErrorSamplingResetIntervalConfig(),
+		countMax:                   countMax,
+		shouldSampleMax:            defaultSamplingRate,
+		externalDataLookUp:         make(map[string]string),
 	}
 }
 
@@ -48,12 +71,21 @@ func GetGlobalSamplingPercentage() (float64, error) {
 	return agentSamples.config.Percentage, nil
 }
 
+// GetApiAppErrorSampling -
+func GetApiAppErrorSampling() map[string]struct{} {
+	if agentSamples != nil {
+		return agentSamples.apiAppErrorSampling
+	}
+	return nil
+}
+
 // GetGlobalSampling -
 func GetGlobalSampling() *sample {
 	period := &atomic.Int64{}
 	period.Store(int64(time.Minute))
 	if agentSamples == nil {
 		agentSamples = &sample{
+			config:             DefaultConfig(),
 			currentCounts:      make(map[string]int),
 			samplingLock:       sync.Mutex{},
 			counterResetPeriod: period,
@@ -67,9 +99,28 @@ func GetGlobalSampling() *sample {
 				endTime: time.Time{},
 				mu:      sync.RWMutex{},
 			},
+			apiAppErrorSampling: make(map[string]struct{}),
+			logger:              log.NewFieldLogger().WithComponent("agentSamples").WithPackage("sampling"),
 		}
 	}
 	return agentSamples
+}
+
+func getExternalAppKeyData() definitions.ExternalAppData {
+	if agentSamples == nil {
+		sample := GetGlobalSampling()
+		return sample.externalAppKeyData
+	}
+	return agentSamples.externalAppKeyData
+}
+
+func SetExternalAppKeyData(key definitions.ExternalAppData) {
+	if agentSamples == nil {
+		sample := GetGlobalSampling()
+		sample.externalAppKeyData = key
+	} else {
+		agentSamples.externalAppKeyData = key
+	}
 }
 
 func getSamplingPercentageConfig(percentage float64, apicDeployment string) (float64, error) {
@@ -94,8 +145,30 @@ func getSamplingPercentageConfig(percentage float64, apicDeployment string) (flo
 	return percentage, nil
 }
 
+func getErrorSamplingResetIntervalConfig() time.Duration {
+	// check qa env var, if not set return default
+	val := os.Getenv(qaErrorSamplingResetInterval)
+	if val == "" {
+		return defaultErrorSamplingResetInterval
+	}
+
+	// if qa env var set but not duration, return default
+	qaInterval, err := time.ParseDuration(val)
+	if err != nil {
+		log.Tracef("Could not use %s (%s) it is not a proper duration", qaErrorSamplingResetInterval, val)
+		return defaultErrorSamplingResetInterval
+	}
+
+	// if qa env var less than minimum return default
+	if qaInterval < 10*time.Second {
+		return defaultErrorSamplingResetInterval
+	}
+
+	return qaInterval
+}
+
 // SetupSampling - set up the global sampling for use by traceability
-func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error {
+func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, cacheAccess cacheAccess) error {
 	var err error
 
 	if offlineMode {
@@ -110,6 +183,8 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 		cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
 		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
 	}
+
+	cfg.cacheAccess = cacheAccess
 
 	if agentSamples == nil {
 		period := &atomic.Int64{}
@@ -129,9 +204,18 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string) error 
 				endTime: time.Time{},
 				mu:      sync.RWMutex{},
 			},
+			apiAppErrorSampling: make(map[string]struct{}),
+			logger:              log.NewFieldLogger().WithComponent("agentSamples").WithPackage("sampling"),
 		}
 	} else {
 		agentSamples.config = cfg
+	}
+
+	if cfg.ErrorSamplingEnabled {
+		// start api/app error sampling reset job if error sampling is enabled
+		resetJob := newAPIAppErrorSamplingResetJob()
+		// jobs.RegisterScheduledJobWithName(resetJob, "@hourly", "API/App Error Sampling Reset")
+		jobs.RegisterIntervalJobWithName(resetJob, cfg.errorSamplingResetInterval, "API/App Error Sampling Reset") // TODO: change back to scheduled job after testing
 	}
 
 	if err != nil {
@@ -154,6 +238,89 @@ func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
 		return events, ErrGlobalSamplingCfg
 	}
 	return agentSamples.FilterEvents(events), nil
+}
+
+func RemoveApiAppKey(apiServiceName, managedAppName string) {
+	if agentSamples != nil && agentSamples.apiAppErrorSampling != nil {
+		externalAPIID := agentSamples.config.getExternalAPIID(apiServiceName)
+		externalAppID := agentSamples.config.getExternalAppID(managedAppName, getExternalAppKeyData())
+		k := FormatApiAppKey(externalAPIID, externalAppID)
+
+		agentSamples.samplingLock.Lock()
+		defer agentSamples.samplingLock.Unlock()
+		agentSamples.logger.WithField(apiAppKey, k).Trace("removing api-app key pair")
+		delete(agentSamples.apiAppErrorSampling, k)
+	}
+}
+
+func FormatApiAppKey(apiID, appID string) string {
+	formattedSvcName := strings.TrimPrefix(apiID, transactionUtil.SummaryEventProxyIDPrefix)
+	formattedAppName := strings.TrimPrefix(appID, transactionUtil.SummaryEventApplicationIDPrefix)
+	return fmt.Sprintf("%s - %s", formattedSvcName, formattedAppName)
+}
+
+func (s *Sampling) getExternalAppID(appName string, externalAppKey definitions.ExternalAppData) string {
+	if val, ok := s.externalDataLookUp[appName]; ok {
+		return val
+	}
+
+	if s.cacheAccess == nil {
+		return ""
+	}
+
+	externalAppID := ""
+	switch externalAppKey.ResourceType {
+	case management.ManagedApplicationGVK().Kind:
+		ri := s.cacheAccess.GetManagedApplicationByName(appName)
+		managedApp := &management.ManagedApplication{}
+		managedApp.FromInstance(ri)
+		externalAppID, _ = util.GetAgentDetailsValue(managedApp, externalAppKey.Key)
+	case management.AccessRequestGVK().Kind:
+		ris := s.cacheAccess.GetAccessRequestsByApp(appName)
+		if len(ris) > 0 {
+			accReqRI := ris[0]
+			accReq := &management.AccessRequest{}
+			accReq.FromInstance(accReqRI)
+			externalAppID, _ = util.GetAgentDetailsValue(accReq, externalAppKey.Key)
+		}
+	case management.CredentialGVK().Kind:
+		keys := s.cacheAccess.GetWatchResourceCacheKeys(management.CredentialGVK().Group, management.CredentialGVK().Kind)
+		for _, key := range keys {
+			ri := s.cacheAccess.GetWatchResourceByKey(key)
+			credential := &management.Credential{}
+			credential.FromInstance(ri)
+			if credential.Spec.ManagedApplication == appName {
+				externalAppID, _ = util.GetAgentDetailsValue(credential, externalAppKey.Key)
+			}
+		}
+	}
+
+	if externalAppID != "" {
+		s.externalDataLookUp[appName] = externalAppID
+	}
+
+	return externalAppID
+}
+
+func (s *Sampling) getExternalAPIID(apiServiceName string) string {
+	if val, ok := s.externalDataLookUp[apiServiceName]; ok {
+		return val
+	}
+
+	if s.cacheAccess == nil {
+		return apiServiceName // Return the input as-is if no cache available
+	}
+
+	ri := s.cacheAccess.GetAPIServiceWithName(apiServiceName)
+	if ri != nil {
+		apiService := &management.APIService{}
+		apiService.FromInstance(ri)
+		externalAPIID, _ := util.GetAgentDetailsValue(apiService, definitions.AttrExternalAPIID)
+		s.externalDataLookUp[apiServiceName] = externalAPIID
+		return externalAPIID
+	}
+
+	return ""
 }
 
 func numberOfDecimals(v float64) int {

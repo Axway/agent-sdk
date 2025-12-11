@@ -7,9 +7,13 @@ import (
 	"time"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/publisher"
 )
+
+const apiAppKey = "apiAppKey"
 
 type endpointsSampling struct {
 	enabled       atomic.Bool
@@ -36,17 +40,20 @@ func (ct *concurrentTime) GetEndTime() time.Time {
 
 // sample - private struct that is used to keep track of the samples being taken
 type sample struct {
-	config             Sampling
-	currentCounts      map[string]int
-	samplingLock       sync.Mutex
-	samplingCounter    int32
-	counterResetPeriod *atomic.Int64
-	counterResetStopCh chan struct{}
-	enabled            atomic.Bool
-	samplingTime       concurrentTime
-	endpointsSampling  endpointsSampling
-	limit              int32
-	resetterRunning    atomic.Bool
+	config              Sampling
+	currentCounts       map[string]int
+	samplingLock        sync.Mutex
+	samplingCounter     int32
+	counterResetPeriod  *atomic.Int64
+	counterResetStopCh  chan struct{}
+	enabled             atomic.Bool
+	samplingTime        concurrentTime
+	endpointsSampling   endpointsSampling
+	limit               int32
+	resetterRunning     atomic.Bool
+	apiAppErrorSampling map[string]struct{}         // key: apiID - appID, value: doesn't matter, only key presence is used
+	externalAppKeyData  definitions.ExternalAppData // field used to obtain external app value from agent details
+	logger              log.FieldLogger
 }
 
 func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, endpointsInfo map[string]management.TraceabilityAgentAgentstateSamplingEndpoints) {
@@ -56,6 +63,7 @@ func (s *sample) EnableSampling(samplingLimit int32, samplingEndTime time.Time, 
 
 	if time.Now().Before(samplingEndTime) {
 		// only enable sampling if the end time is in the future
+		s.logger.WithField("samplingEndTime", samplingEndTime).Trace("sampling has been enabled")
 		s.enabled.Store(true)
 		s.samplingTime.SetEndTime(samplingEndTime)
 		go s.disableSampling()
@@ -180,9 +188,23 @@ func (s *sample) resetSamplingCounter() {
 
 // ShouldSampleTransaction - receives the transaction details and returns true to sample it false to not
 func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
+	s.samplingLock.Lock()
+	defer s.samplingLock.Unlock()
+
 	onlyErrors := s.config.OnlyErrors
 
 	statusText := GetStatusFromCodeString(details.Status)
+	hasFailedStatus := statusText == Failure
+
+	// check if transaction is an error and sample it for api-app pair if no other error was found yet
+	if hasFailedStatus && s.config.ErrorSamplingEnabled {
+		key := FormatApiAppKey(details.APIID, details.SubID)
+		if _, exists := s.apiAppErrorSampling[key]; !exists {
+			s.apiAppErrorSampling[key] = struct{}{}
+			s.logger.WithField(apiAppKey, key).Trace("sampled unique api-app error transaction")
+			return true
+		}
+	}
 
 	// if both are disabled, skip. if endpoints is enabled and sampling is disabled, check if the endpoint is found
 	if !s.enabled.Load() && !s.endpointsSampling.enabled.Load() {
@@ -198,13 +220,10 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 	}
 
 	// sampling limit per minute exceeded
-	s.samplingLock.Lock()
-	defer s.samplingLock.Unlock()
 	if s.limit <= s.samplingCounter {
 		return false
 	}
 
-	hasFailedStatus := statusText == "Failure"
 	// sample only failed transaction if OnlyErrors is set to `true` and the transaction summary's status is an error
 	if !hasFailedStatus && onlyErrors {
 		return false

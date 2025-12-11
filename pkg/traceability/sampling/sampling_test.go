@@ -114,7 +114,7 @@ func TestSamplingConfig(t *testing.T) {
 			}
 			os.Setenv(qaSamplingPercentageEnvVar, test.qaOverride)
 
-			err := SetupSampling(test.config, false, test.apicDeployment)
+			err := SetupSampling(test.config, false, test.apicDeployment, nil)
 			if test.errExpected {
 				assert.NotNil(t, err, "Expected the config to fail")
 			} else {
@@ -144,6 +144,8 @@ func TestShouldSample(t *testing.T) {
 		endpointsInfo            map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
 		additionalEndpointsInfo  map[string]management.TraceabilityAgentAgentstateSamplingEndpoints
 		expectedEndpointsSampled map[string]struct{}
+		errorSampling            bool
+		expectedErrorPairs       map[string]struct{}
 	}{
 		{
 			skip:           false,
@@ -238,6 +240,27 @@ func TestShouldSample(t *testing.T) {
 			},
 			expectedEndpointsSampled: map[string]struct{}{"id1": {}, "id2": {}, "id3": {}},
 		},
+		{
+			skip:           false,
+			name:           "API/App error sampling - one error per pair",
+			globalSampling: true,
+			apiTransactions: map[string]transactionCount{
+				"api1": {successCount: 200},
+				"api2": {successCount: 200},
+			},
+			subIDs: map[string]string{
+				"api1": "appA",
+				"api2": "appA",
+			},
+			limit:              1000,
+			duration:           time.Second / 4,
+			counterResetPeriod: time.Second / 8,
+			errorSampling:      true,
+			expectedErrorPairs: map[string]struct{}{
+				FormatApiAppKey("api1", "appA"): {},
+				FormatApiAppKey("api2", "appA"): {},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -252,11 +275,16 @@ func TestShouldSample(t *testing.T) {
 			done := time.NewTicker(time.Until(testEnd))
 			defer done.Stop()
 
-			err := SetupSampling(Sampling{}, false, "")
+			err := SetupSampling(Sampling{}, false, "", nil)
 			endTime := time.Now().Add(-1 * time.Second) // reset endTime to avoid issues with the test
 			if test.globalSampling {
 				endTime = testEnd
 			}
+
+			agentSamples.samplingLock.Lock()
+			agentSamples.apiAppErrorSampling = make(map[string]struct{})
+			agentSamples.config.ErrorSamplingEnabled = test.errorSampling
+			agentSamples.samplingLock.Unlock()
 
 			period := &atomic.Int64{}
 			period.Store(int64(test.counterResetPeriod))
@@ -280,7 +308,9 @@ func TestShouldSample(t *testing.T) {
 						OnlyErrors: test.endpointsInfo[i].OnlyErrors,
 					}
 				}
-				agentSamples.EnableSampling(test.limit, endTime, test.additionalEndpointsInfo)
+				if !test.errorSampling {
+					agentSamples.EnableSampling(test.limit, endTime, test.additionalEndpointsInfo)
+				}
 			}
 
 			sampled := 0
@@ -320,7 +350,11 @@ func TestShouldSample(t *testing.T) {
 							return
 						default:
 							for i := 0; i < calls.successCount; i++ {
-								sampleFunc(id, subID, "Success")
+								if test.errorSampling {
+									sampleFunc(id, subID, "Failure")
+								} else {
+									sampleFunc(id, subID, "Success")
+								}
 							}
 						}
 					}
@@ -332,7 +366,11 @@ func TestShouldSample(t *testing.T) {
 			time.Sleep(time.Second / 2) // wait for the sampling to finish
 
 			assert.Nil(t, err)
-			assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+
+			if !test.errorSampling {
+				assert.LessOrEqual(t, sampled, test.maxSampled, "sampled transactions should be less than max sampled")
+			}
+
 			if len(test.endpointsInfo) > 0 {
 				agentSamples.endpointsSampling.endpointsLock.Lock()
 				assert.Equal(t, 0, len(agentSamples.endpointsSampling.endpointsInfo),
@@ -347,6 +385,18 @@ func TestShouldSample(t *testing.T) {
 				for id := range test.expectedEndpointsSampled {
 					assert.Contains(t, endpointsSampled, id, "endpoint %s should have been sampled", id)
 				}
+			}
+
+			// Error sampling assertions
+			if test.errorSampling {
+				agentSamples.samplingLock.Lock()
+				assert.Equal(t, len(test.expectedErrorPairs), len(agentSamples.apiAppErrorSampling),
+					"internal apiAppErrorSampling map should hold exactly the distinct pairs")
+				for key := range test.expectedErrorPairs {
+					_, exists := agentSamples.apiAppErrorSampling[key]
+					assert.True(t, exists, "expected key %s in apiAppErrorSampling", key)
+				}
+				agentSamples.samplingLock.Unlock()
 			}
 		})
 	}
@@ -439,7 +489,7 @@ func TestFilterEvents(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			err := SetupSampling(test.config, false, "")
+			err := SetupSampling(test.config, false, "", nil)
 			assert.Nil(t, err)
 
 			eventsInTest := createEvents(test.testEvents, test.config.Percentage)
@@ -452,7 +502,7 @@ func TestFilterEvents(t *testing.T) {
 }
 
 func TestBothSamplingsEnabled(t *testing.T) {
-	SetupSampling(Sampling{}, false, "")
+	SetupSampling(Sampling{}, false, "", nil)
 	endTime := time.Now().Add(10 * time.Second)
 
 	period := &atomic.Int64{}
