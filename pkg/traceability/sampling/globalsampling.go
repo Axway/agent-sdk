@@ -172,11 +172,11 @@ type samplingOpts struct {
 	cacheAccess cacheAccess
 }
 
-type SamplingOption func(*samplingOpts)
+type SamplingOption func(*Sampling)
 
-func WithCacheAccess(ca cacheAccess) func(*samplingOpts) {
-	return func(so *samplingOpts) {
-		so.cacheAccess = ca
+func WithCacheAccess(ca cacheAccess) func(*Sampling) {
+	return func(s *Sampling) {
+		s.cacheAccess = ca
 	}
 }
 
@@ -195,6 +195,10 @@ func SetupSampling(cfg Sampling, offlineMode bool, apicDeployment string, opts .
 		cfg.Percentage, err = getSamplingPercentageConfig(cfg.Percentage, apicDeployment)
 		cfg.countMax = int(100 * math.Pow(10, float64(numberOfDecimals(cfg.Percentage))))
 		cfg.shouldSampleMax = int(float64(cfg.countMax) * cfg.Percentage / 100)
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
 	if agentSamples == nil {
