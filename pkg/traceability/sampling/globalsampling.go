@@ -167,11 +167,6 @@ func getErrorSamplingResetIntervalConfig() time.Duration {
 	return qaInterval
 }
 
-// sampling options
-type samplingOpts struct {
-	cacheAccess cacheAccess
-}
-
 type SamplingOption func(*Sampling)
 
 func WithCacheAccess(ca cacheAccess) func(*Sampling) {
