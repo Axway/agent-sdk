@@ -133,6 +133,18 @@ func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessCon
 					{
 						Level: "scope",
 					},
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.DiscoveryAgentGVK().Kind),
+					},
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.TraceabilityAgentGVK().Kind),
+					},
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.ComplianceAgentGVK().Kind),
+					},
 				},
 			},
 		},
