@@ -27,13 +27,11 @@ var (
 )
 
 const (
-	TraceabilityAgentResourceName                     = "traceabilityagents"
-	TraceabilityAgentAgentstateSubResourceName        = "agentstate"
-	TraceabilityAgentDataplaneSubResourceName         = "dataplane"
-	TraceabilityAgentSampletriggerSubResourceName     = "sampletrigger"
-	TraceabilityAgentStatusSubResourceName            = "status"
-	TraceabilityAgentAgentstateSamplingName           = "sampling"
-	TraceabilityAgentAgentstateSamplingApiAppInfoName = "apiAppInfo"
+	TraceabilityAgentResourceName                 = "traceabilityagents"
+	TraceabilityAgentAgentstateSubResourceName    = "agentstate"
+	TraceabilityAgentDataplaneSubResourceName     = "dataplane"
+	TraceabilityAgentSampletriggerSubResourceName = "sampletrigger"
+	TraceabilityAgentStatusSubResourceName        = "status"
 )
 
 func TraceabilityAgentGVK() apiv1.GroupVersionKind {
