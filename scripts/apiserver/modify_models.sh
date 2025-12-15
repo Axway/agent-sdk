@@ -79,6 +79,7 @@ $SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIService.go
 $SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIService.go
 # add in the new line we want
 $SED -i "/ApiServiceCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
+go fmt ${MODEL_PATH}/APIService.go
 
 ######################
 # For APIService.go, we want to turn    Agentdetails ApiServiceAgentdetails `json:"agentdetails"` into
