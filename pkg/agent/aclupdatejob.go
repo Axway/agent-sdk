@@ -14,6 +14,7 @@ import (
 )
 
 const envACLFormat = "%s-agent-acl"
+const allowAllAgentsACLFormat = "%s-allowallagents-acl"
 
 // aclUpdateHandler - job that handles updates to the ACL in the environment
 type aclUpdateJob struct {
@@ -63,50 +64,54 @@ func (j *aclUpdateJob) getACLTeamIDs(ri *v1.ResourceInstance) []string {
 }
 
 func (j *aclUpdateJob) Execute() error {
-	currentACL := agent.cacheManager.GetAccessControlList()
-	if currentACL == nil {
-		currentACL = j.getACLsFromServer()
+	envACLri := agent.cacheManager.GetAccessControlList(j.getEnvACLName())
+	allowAgentsACLri := agent.cacheManager.GetAccessControlList(j.getAllowAgentsOnEnvACLName())
+	if envACLri == nil || allowAgentsACLri == nil {
+		envACLri, allowAgentsACLri = j.getACLsFromServer()
 	}
 
-	currentTeamIDs := j.getACLTeamIDs(currentACL)
+	if j.shouldUpdateAllowAgentsACL(allowAgentsACLri) {
+		if err := j.updateACL(j.getAllowAgentsOnEnvACLName(), []string{}); err != nil {
+			return fmt.Errorf("acl update job failed: %s", err)
+		}
+	}
+
+	currentTeamIDs := j.getACLTeamIDs(envACLri)
 	newTeamIDs := agent.cacheManager.GetTeamsIDsInAPIServices()
 	if len(newTeamIDs) == 0 {
 		return nil
 	}
 
 	sort.Strings(newTeamIDs)
-	if currentTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(currentTeamIDs, "") && !j.shouldUpdateACL(currentACL) {
+	if currentTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(currentTeamIDs, "") {
 		return nil
 	}
-	if err := j.updateACL(newTeamIDs); err != nil {
+	if err := j.updateACL(j.getEnvACLName(), newTeamIDs); err != nil {
 		return fmt.Errorf("acl update job failed: %s", err)
 	}
 	return nil
 }
 
-func (j *aclUpdateJob) shouldUpdateACL(currentACL *v1.ResourceInstance) bool {
-	aclRes, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, "")
-	if err := aclRes.FromInstance(currentACL); err != nil {
+func (j *aclUpdateJob) shouldUpdateAllowAgentsACL(allowAgentsACLri *v1.ResourceInstance) bool {
+	allowAgentsACL, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, "")
+	if err := allowAgentsACL.FromInstance(allowAgentsACLri); err != nil {
 		return false
 	}
 
 	// Track what we need to find
 	required := map[string]bool{
-		"scope":                                false,
 		management.DiscoveryAgentGVK().Kind:    false,
 		management.TraceabilityAgentGVK().Kind: false,
 		management.ComplianceAgentGVK().Kind:   false,
 	}
 
-	// Check all rules and access entries
-	for _, rule := range aclRes.Spec.Rules {
+	for _, rule := range allowAgentsACL.Spec.Rules {
 		for _, accessRule := range rule.Access {
-			if accessRule.Level == "scope" {
-				required["scope"] = true
-			} else if accessRule.Level == "scopedKind" && accessRule.Kind != nil {
-				if _, exists := required[*accessRule.Kind]; exists {
-					required[*accessRule.Kind] = true
-				}
+			if accessRule.Level != "scopedKind" || accessRule.Kind == nil {
+				continue
+			}
+			if _, exists := required[*accessRule.Kind]; exists {
+				required[*accessRule.Kind] = true
 			}
 		}
 	}
@@ -121,45 +126,47 @@ func (j *aclUpdateJob) shouldUpdateACL(currentACL *v1.ResourceInstance) bool {
 	return false
 }
 
-func (j aclUpdateJob) getACLsFromServer() *v1.ResourceInstance {
+func (j aclUpdateJob) getACLsFromServer() (*v1.ResourceInstance, *v1.ResourceInstance) {
 	emptyACL, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, agent.cfg.GetEnvironmentName())
 	acls, err := agent.apicClient.GetResources(emptyACL)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-
+	envACL, agentACL := &v1.ResourceInstance{}, &v1.ResourceInstance{}
 	for _, acl := range acls {
 		ri, _ := acl.AsInstance()
-		if ri.Name == j.getACLName() {
+		if ri.Name == j.getEnvACLName() {
 			agent.cacheManager.SetAccessControlList(ri)
-			return ri
+			envACL = ri
+		}
+		if ri.Name == j.getAllowAgentsOnEnvACLName() {
+			agent.cacheManager.SetAccessControlList(ri)
+			agentACL = ri
 		}
 	}
-	return nil
+	return envACL, agentACL
 }
 
-func (j *aclUpdateJob) getACLName() string {
+func (j *aclUpdateJob) getEnvACLName() string {
 	return fmt.Sprintf(envACLFormat, GetCentralConfig().GetEnvironmentName())
 }
 
+func (j *aclUpdateJob) getAllowAgentsOnEnvACLName() string {
+	return fmt.Sprintf(allowAllAgentsACLFormat, GetCentralConfig().GetEnvironmentName())
+}
+
 func (j *aclUpdateJob) initializeACLJob() {
-	if acl := agent.cacheManager.GetAccessControlList(); acl != nil {
-		return
-	}
+	envACL := agent.cacheManager.GetAccessControlList(j.getEnvACLName())
+	allowAgentsOnEnvACL := agent.cacheManager.GetAccessControlList(j.getAllowAgentsOnEnvACLName())
 
-	acl, err := agent.apicClient.GetAccessControlList(j.getACLName())
-	if err != nil {
-		return
-	}
-
-	if aclInstance, err := acl.AsInstance(); err == nil {
-		agent.cacheManager.SetAccessControlList(aclInstance)
+	if envACL == nil || allowAgentsOnEnvACL == nil {
+		j.getACLsFromServer()
 	}
 }
 
-func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessControlList {
+func (j *aclUpdateJob) createEnvACLResource(teamIDs []string) *management.AccessControlList {
 	acl, _ := management.NewAccessControlList(
-		j.getACLName(),
+		j.getEnvACLName(),
 		management.EnvironmentGVK().Kind,
 		agent.cfg.GetEnvironmentName(),
 	)
@@ -169,18 +176,6 @@ func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessCon
 				Access: []management.AccessLevelScope{
 					{
 						Level: "scope",
-					},
-					{
-						Level: "scopedKind",
-						Kind:  Ptr(management.DiscoveryAgentGVK().Kind),
-					},
-					{
-						Level: "scopedKind",
-						Kind:  Ptr(management.TraceabilityAgentGVK().Kind),
-					},
-					{
-						Level: "scopedKind",
-						Kind:  Ptr(management.ComplianceAgentGVK().Kind),
 					},
 				},
 			},
@@ -199,16 +194,59 @@ func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessCon
 	return acl
 }
 
-func (j *aclUpdateJob) updateACL(teamIDs []string) error {
-	// do not add an acl if there are no teamIDs and an ACL currently does not exist
-	currentACL := agent.cacheManager.GetAccessControlList()
-	if len(teamIDs) == 0 && currentACL == nil {
-		return nil
+func (j *aclUpdateJob) createAllowAgentsOnEnvACLResource() *management.AccessControlList {
+	acl, _ := management.NewAccessControlList(
+		j.getAllowAgentsOnEnvACLName(),
+		management.EnvironmentGVK().Kind,
+		agent.cfg.GetEnvironmentName(),
+	)
+	acl.Spec = management.AccessControlListSpec{
+		Rules: []management.AccessRules{
+			{
+				Access: []management.AccessLevelScope{
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.DiscoveryAgentGVK().Kind),
+					},
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.TraceabilityAgentGVK().Kind),
+					},
+					{
+						Level: "scopedKind",
+						Kind:  Ptr(management.ComplianceAgentGVK().Kind),
+					},
+				},
+			},
+		},
+		Subjects: []v1.Owner{
+			{
+				Type: v1.TeamOwner,
+				ID:   "*",
+			},
+		},
 	}
 
+	return acl
+}
+
+func (j *aclUpdateJob) updateACL(aclName string, teamIDs []string) error {
+	currentACL := agent.cacheManager.GetAccessControlList(aclName)
 	var err error
+	acl := &management.AccessControlList{}
 	j.logger.Trace("acl about to be updated")
-	acl := j.createACLResource(teamIDs)
+
+	switch aclName {
+	case j.getEnvACLName():
+		// do not add an acl if there are no teamIDs and an ACL currently does not exist
+		if len(teamIDs) == 0 && currentACL == nil {
+			return nil
+		}
+		acl = j.createEnvACLResource(teamIDs)
+	case j.getAllowAgentsOnEnvACLName():
+		acl = j.createAllowAgentsOnEnvACLResource()
+	}
+
 	if currentACL != nil {
 		acl, err = agent.apicClient.UpdateAccessControlList(acl)
 	} else {

@@ -143,7 +143,7 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 			for i, teamList := range test.teamSets {
 				combinedTeams = append(combinedTeams, teamList...)
 				combinedTeams = util.RemoveDuplicateValuesFromStringSlice(combinedTeams)
-				expectedACL := generateTestACL(job.getACLName(), combinedTeams)
+				expectedACL := generateTestACL(job.getEnvACLName(), combinedTeams)
 
 				// load api services with the teams
 				for _, team := range combinedTeams {
@@ -171,11 +171,11 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 				// acl from cache
 				if test.aclCached[i] {
 					var acl management.AccessControlList
-					cachedACL := agent.cacheManager.GetAccessControlList()
+					cachedACL := agent.cacheManager.GetAccessControlList(job.getEnvACLName())
 					acl.FromInstance(cachedACL)
 					assert.Equal(t, len(expectedACL.Spec.Subjects), len(acl.Spec.Subjects))
 				} else {
-					assert.Nil(t, agent.cacheManager.GetAccessControlList())
+					assert.Nil(t, agent.cacheManager.GetAccessControlList(job.getEnvACLName()))
 				}
 			}
 		})
@@ -238,7 +238,7 @@ func TestInitializeACLJob(t *testing.T) {
 			assert.Nil(t, err)
 
 			job := newACLUpdateJob()
-			expectedACL = generateTestACL(job.getACLName(), []string{"TeamA", "TeamB"})
+			expectedACL = generateTestACL(job.getEnvACLName(), []string{"TeamA", "TeamB"})
 
 			if tt.loadCache {
 				aclInstance, _ := expectedACL.AsInstance()
@@ -247,7 +247,7 @@ func TestInitializeACLJob(t *testing.T) {
 
 			job.initializeACLJob()
 
-			cachedACL := agent.cacheManager.GetAccessControlList()
+			cachedACL := agent.cacheManager.GetAccessControlList(job.getEnvACLName())
 			if tt.loadCache || tt.returnACL {
 				assert.NotNil(t, cachedACL)
 				var acl management.AccessControlList

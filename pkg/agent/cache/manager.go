@@ -69,8 +69,8 @@ type Manager interface {
 	GetTeamByID(id string) *defs.PlatformTeam
 	GetDefaultTeam() *defs.PlatformTeam
 	SetAccessControlList(acl *v1.ResourceInstance)
-	GetAccessControlList() *v1.ResourceInstance
-	DeleteAccessControlList() error
+	GetAccessControlList(name string) *v1.ResourceInstance
+	DeleteAccessControlList(name string) error
 
 	// ApplicationProfileDefinition cache related methods
 	AddApplicationProfileDefinition(resource *v1.ResourceInstance)

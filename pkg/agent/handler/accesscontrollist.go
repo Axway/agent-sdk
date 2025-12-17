@@ -32,5 +32,5 @@ func (h *aclHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *a
 		return nil
 	}
 
-	return h.agentCacheManager.DeleteAccessControlList()
+	return h.agentCacheManager.DeleteAccessControlList(resource.Name)
 }
