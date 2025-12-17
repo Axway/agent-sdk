@@ -245,6 +245,13 @@ func (j *aclUpdateJob) updateACL(aclName string, teamIDs []string) error {
 		acl = j.createEnvACLResource(teamIDs)
 	case j.getAllowAgentsOnEnvACLName():
 		acl = j.createAllowAgentsOnEnvACLResource()
+	default:
+		j.logger.
+			WithField("aclName", aclName).
+			WithField("envAclName", j.getEnvACLName()).
+			WithField("allowAgentsAclName", j.getAllowAgentsOnEnvACLName()).
+			Warn("invalid acl name, skipping acl update")
+		return nil
 	}
 
 	if currentACL != nil {
