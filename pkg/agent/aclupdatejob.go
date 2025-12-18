@@ -103,10 +103,12 @@ func (j *aclUpdateJob) shouldUpdateACL(currentACL *v1.ResourceInstance) bool {
 		for _, accessRule := range rule.Access {
 			if accessRule.Level == "scope" {
 				required["scope"] = true
-			} else if accessRule.Level == "scopedKind" && accessRule.Kind != nil {
-				if _, exists := required[*accessRule.Kind]; exists {
-					required[*accessRule.Kind] = true
-				}
+			}
+			if accessRule.Level != "scopedKind" || accessRule.Kind == nil {
+				continue
+			}
+			if _, exists := required[*accessRule.Kind]; exists {
+				required[*accessRule.Kind] = true
 			}
 		}
 	}
