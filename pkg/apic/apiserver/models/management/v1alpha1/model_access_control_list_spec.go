@@ -20,6 +20,6 @@ type AccessRules struct {
 type AccessLevelScope struct {
 	// Resource level at which access is being granted.
 	Level string  `json:"level,omitempty"`
-	Kind  *string `json:"kind,omitempty"`
-	Name  *string `json:"name,omitempty"`
+	Kind  string `json:"kind,omitempty"`
+	Name  string `json:"name,omitempty"`
 }
