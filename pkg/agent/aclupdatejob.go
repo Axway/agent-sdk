@@ -104,11 +104,11 @@ func (j *aclUpdateJob) shouldUpdateACL(currentACL *v1.ResourceInstance) bool {
 			if accessRule.Level == "scope" {
 				required["scope"] = true
 			}
-			if accessRule.Level != "scopedKind" || accessRule.Kind == nil {
+			if accessRule.Level != "scopedKind" {
 				continue
 			}
-			if _, exists := required[*accessRule.Kind]; exists {
-				required[*accessRule.Kind] = true
+			if _, exists := required[accessRule.Kind]; exists {
+				required[accessRule.Kind] = true
 			}
 		}
 	}
@@ -174,15 +174,15 @@ func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessCon
 					},
 					{
 						Level: "scopedKind",
-						Kind:  Ptr(management.DiscoveryAgentGVK().Kind),
+						Kind:  management.DiscoveryAgentGVK().Kind,
 					},
 					{
 						Level: "scopedKind",
-						Kind:  Ptr(management.TraceabilityAgentGVK().Kind),
+						Kind:  management.TraceabilityAgentGVK().Kind,
 					},
 					{
 						Level: "scopedKind",
-						Kind:  Ptr(management.ComplianceAgentGVK().Kind),
+						Kind:  management.ComplianceAgentGVK().Kind,
 					},
 				},
 			},
