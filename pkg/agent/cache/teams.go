@@ -72,20 +72,20 @@ func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
 // SetAccessControlList saves the Access Control List to the cache
 func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
-	c.teams.Set(acl.Name, acl)
+	c.teams.Set(accessControlList, acl)
 }
 
 // DeleteAccessControlList removes the Access Control List to the cache
-func (c *cacheManager) DeleteAccessControlList(name string) error {
-	return c.teams.Delete(name)
+func (c *cacheManager) DeleteAccessControlList() error {
+	return c.teams.Delete(accessControlList)
 }
 
 // GetAccessControlList gets the Access Control List from the cache
-func (c *cacheManager) GetAccessControlList(name string) *v1.ResourceInstance {
+func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
-	item, _ := c.teams.Get(name)
+	item, _ := c.teams.Get(accessControlList)
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {

@@ -40,12 +40,12 @@ func TestTeamCache(t *testing.T) {
 
 	m.SetAccessControlList(acl)
 
-	cachedACL := m.GetAccessControlList(acl.Name)
+	cachedACL := m.GetAccessControlList()
 	assert.Equal(t, acl, cachedACL)
 
-	err := m.DeleteAccessControlList(acl.Name)
+	err := m.DeleteAccessControlList()
 	assert.Nil(t, err)
 
-	cachedACL = m.GetAccessControlList(acl.Name)
+	cachedACL = m.GetAccessControlList()
 	assert.Nil(t, cachedACL)
 }
