@@ -75,13 +75,52 @@ func (j *aclUpdateJob) Execute() error {
 	}
 
 	sort.Strings(newTeamIDs)
-	if currentTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(currentTeamIDs, "") {
+	if currentTeamIDs != nil && strings.Join(newTeamIDs, "") == strings.Join(currentTeamIDs, "") && !j.shouldUpdateACL(currentACL) {
 		return nil
 	}
 	if err := j.updateACL(newTeamIDs); err != nil {
 		return fmt.Errorf("acl update job failed: %s", err)
 	}
 	return nil
+}
+
+func (j *aclUpdateJob) shouldUpdateACL(currentACL *v1.ResourceInstance) bool {
+	aclRes, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, "")
+	if err := aclRes.FromInstance(currentACL); err != nil {
+		return false
+	}
+
+	// Track what we need to find
+	required := map[string]bool{
+		"scope":                                false,
+		management.DiscoveryAgentGVK().Kind:    false,
+		management.TraceabilityAgentGVK().Kind: false,
+		management.ComplianceAgentGVK().Kind:   false,
+	}
+
+	// Check all rules and access entries
+	for _, rule := range aclRes.Spec.Rules {
+		for _, accessRule := range rule.Access {
+			if accessRule.Level == "scope" {
+				required["scope"] = true
+			}
+			if accessRule.Level != "scopedKind" {
+				continue
+			}
+			if _, exists := required[accessRule.Kind]; exists {
+				required[accessRule.Kind] = true
+			}
+		}
+	}
+
+	// Check if all required elements were found
+	for _, found := range required {
+		if !found {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (j aclUpdateJob) getACLsFromServer() *v1.ResourceInstance {
@@ -132,6 +171,18 @@ func (j *aclUpdateJob) createACLResource(teamIDs []string) *management.AccessCon
 				Access: []management.AccessLevelScope{
 					{
 						Level: "scope",
+					},
+					{
+						Level: "scopedKind",
+						Kind:  management.DiscoveryAgentGVK().Kind,
+					},
+					{
+						Level: "scopedKind",
+						Kind:  management.TraceabilityAgentGVK().Kind,
+					},
+					{
+						Level: "scopedKind",
+						Kind:  management.ComplianceAgentGVK().Kind,
 					},
 				},
 			},
