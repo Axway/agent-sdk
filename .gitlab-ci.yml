@@ -78,7 +78,7 @@ report-latest:
   needs:
     - fetch-blackduck:on-schedule
 
-report-snapshot-and-push:
+report-snapshot:
   needs:
     - fetch-fortify
     - fetch-third-party
