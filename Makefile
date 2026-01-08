@@ -29,8 +29,7 @@ dep: resolve-dependencies
 
 test: dep
 	@go vet ${GO_PKG_LIST}
-	@go test -v -short ${RACEFLAG} -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST} | tee test-output.log
-	@go-junit-report -in test-output.log -iocopy -out report.xml
+	@go test -v -short ${RACEFLAG} -coverprofile=${WORKSPACE}/gocoverage.out -count=1 ${GO_PKG_LIST}
 
 test-sonar: dep
 	@go vet ${GO_PKG_LIST}
