@@ -25,6 +25,7 @@ debug
 # Test artifacts
 gocoverage.out
 goreport.json
+test-output.log
 twistcli
 goreport.json
 results.json
