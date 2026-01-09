@@ -6,7 +6,7 @@ RACEFLAG ?= -race
 GO_TEST_LIST := $(shell go list ./... | grep -v /mock)
 
 GO_PKG_LIST := $(shell go list ./... | grep -v /mock | grep -v ./pkg/apic/apiserver/clients \
-	| grep -v ./pkg/apic/apiserver/models | grep -v ./pkg/apic/unifiedcatalog/models)
+	| grep -v ./pkg/apic/apiserver/models)
 
 export GOFLAGS := -mod=mod
 
