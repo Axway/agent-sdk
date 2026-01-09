@@ -25,3 +25,14 @@ type EntitlementEntry struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
 }
+
+type OrgEntitlementsResponse struct {
+	Success bool            `json:"success"`
+	Result  OrgEntitlements `json:"result"`
+}
+
+// OrgEntitlements contains only the entitlements map for an org.
+// Values can be numbers, booleans, or arrays.
+type OrgEntitlements struct {
+	Entitlements map[string]interface{} `json:"entitlements"`
+}

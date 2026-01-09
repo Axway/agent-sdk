@@ -461,35 +461,25 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	platformURL := fmt.Sprintf("%s/api/v1/org/%s/subscription", c.cfg.GetPlatformURL(), c.cfg.GetTenantID())
+	platformURL := fmt.Sprintf("%s/api/v1/org/%s", c.cfg.GetPlatformURL(), c.cfg.GetTenantID())
 
-	response, reqErr := c.sendServerRequest(platformURL, headers, map[string]string{})
+	// get only entitlements field from org
+	queryParams := map[string]string{
+		"fields[]": "entitlements",
+	}
+	response, reqErr := c.sendServerRequest(platformURL, headers, queryParams)
 	if reqErr != nil {
 		return nil, reqErr
 	}
 
-	var sessionEntitlements definitions.SessionEntitlements
-	err = json.Unmarshal(response, &sessionEntitlements)
+	var orgEntitlements definitions.OrgEntitlementsResponse
+	err = json.Unmarshal(response, &orgEntitlements)
 	if err != nil {
 		return nil, err
 	}
-	entitlements := map[string]interface{}{}
-
-	for _, entitlement := range sessionEntitlements.Result {
-		if entitlement.Expired {
-			continue
-		}
-		for _, entry := range entitlement.Entitlements {
-			if v, ok := entry.Value.(bool); ok && !v {
-				// Skip any entitlements that are false
-				continue
-			}
-			if v, ok := entry.Value.(float64); ok && v == 0 {
-				// Skip any entitlements that are 0
-				continue
-			}
-			entitlements[entry.Key] = entry.Value
-		}
+	entitlements := orgEntitlements.Result.Entitlements
+	if entitlements == nil {
+		entitlements = map[string]interface{}{}
 	}
 
 	return entitlements, nil
