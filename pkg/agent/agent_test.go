@@ -256,40 +256,13 @@ func TestAgentEntitlements(t *testing.T) {
 	const daName = "discovery"
 
 	teams := []definitions.PlatformTeam{}
-	entitlements := definitions.SessionEntitlements{
+	entitlements := definitions.OrgEntitlementsResponse{
 		Success: true,
-		Result: []definitions.EntitlementProduct{
-			{
-				ID:         "123a",
-				Product:    "Axway API Management",
-				Plan:       "Enterprise",
-				Tier:       "Enterprise",
-				Governance: "Governance",
-				StartDate:  "2023-01-01",
-				EndDate:    "2024-01-01",
-				Source:     "Central",
-				Entitlements: []definitions.EntitlementEntry{
-					{Key: "traceability", Value: true},
-					{Key: "discovery", Value: true},
-					{Key: "compliance", Value: true},
-				},
-				Expired:     false,
-				ProductName: "Axway API Management",
-			},
-			{
-				ID:         "123b",
-				Product:    "Axway API Management",
-				Plan:       "Enterprise",
-				Tier:       "Enterprise",
-				Governance: "Governance",
-				StartDate:  "2023-01-01",
-				EndDate:    "2024-01-01",
-				Source:     "Central",
-				Entitlements: []definitions.EntitlementEntry{
-					{Key: "expired", Value: true},
-				},
-				Expired:     true,
-				ProductName: "Axway API Management",
+		Result: definitions.OrgEntitlements{
+			Entitlements: map[string]interface{}{
+				"traceability": true,
+				"discovery":    true,
+				"compliance":   true,
 			},
 		},
 	}
@@ -328,7 +301,7 @@ func TestAgentEntitlements(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/org/123456/subscription") {
+		if strings.Contains(req.RequestURI, "/api/v1/org/123456") {
 			buf, _ := json.Marshal(entitlements)
 			resp.Write(buf)
 			return
