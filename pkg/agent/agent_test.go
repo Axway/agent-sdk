@@ -262,7 +262,9 @@ func TestAgentEntitlements(t *testing.T) {
 			Entitlements: map[string]interface{}{
 				"traceability": true,
 				"discovery":    true,
-				"compliance":   true,
+				"compliance":   1,
+				"expiredBool":  false,
+				"expiredFloat": 0,
 			},
 		},
 	}
