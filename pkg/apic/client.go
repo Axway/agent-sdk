@@ -477,9 +477,19 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	entitlements := orgEntitlements.Result.Entitlements
-	if entitlements == nil {
-		entitlements = map[string]interface{}{}
+
+	entitlements := make(map[string]interface{})
+	for key := range orgEntitlements.Result.Entitlements {
+		value := orgEntitlements.Result.Entitlements[key]
+		if v, ok := value.(bool); ok && !v {
+			// Skip any entitlements that are false
+			continue
+		}
+		if v, ok := value.(float64); ok && v == 0 {
+			// Skip any entitlements that are 0
+			continue
+		}
+		entitlements[key] = value
 	}
 
 	return entitlements, nil
