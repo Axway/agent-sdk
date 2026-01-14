@@ -282,16 +282,38 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		return
 	}
 
-	for range int(detail.Count) {
-		metric := Detail{
-			APIDetails: detail.APIDetails,
-			AppDetails: detail.AppDetails,
-			StatusCode: detail.StatusCode,
-			Duration:   int64(detail.Response.Avg),
-		}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
 
-		c.AddMetricDetail(metric)
+	c.updateStartTime()
+	c.updateUsage(detail.Count)
+
+	// Create metric with pre-aggregated response values
+	transactionCtx := transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		Status:     detail.StatusCode,
 	}
+
+	metric := c.createMetric(transactionCtx)
+
+	// Set the pre-aggregated response metrics directly
+	metric.Units.Transactions.Count = detail.Count
+	metric.Units.Transactions.Response = &ResponseMetrics{
+		Max: detail.Response.Max,
+		Min: detail.Response.Min,
+		Avg: detail.Response.Avg,
+	}
+
+	metric.Observation = &models.ObservationDetails{
+		Start: detail.Observation.Start,
+		End:   detail.Observation.End,
+	}
+
+	// Add the metric directly without going through histogram
+	c.addMetric(metric)
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
