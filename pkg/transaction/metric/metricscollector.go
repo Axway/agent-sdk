@@ -293,15 +293,6 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	// Update the detail with the resolved API ID
 	detail.APIDetails.ID = transutil.ResolveIDWithPrefix(detail.APIDetails.ID, detail.APIDetails.Name)
 
-	c.logger.WithField("apiID", detail.APIDetails.ID).
-		WithField("count", detail.Count).
-		WithField("max", detail.Response.Max).
-		WithField("min", detail.Response.Min).
-		WithField("avg", detail.Response.Avg).
-		WithField("statusCode", detail.StatusCode).
-		Debug("AddAPIMetricDetail received pre-aggregated metric")
-
-	// Create metric with pre-aggregated response values
 	transactionCtx := transactionContext{
 		APIDetails: detail.APIDetails,
 		AppDetails: detail.AppDetails,
@@ -310,7 +301,7 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 
 	metric := c.createMetric(transactionCtx)
 
-	// Set the pre-aggregated response metrics directly
+	// For aggregated metrics, directly set the pre-aggregated response data
 	metric.Units.Transactions.Count = detail.Count
 	metric.Units.Transactions.Response = &ResponseMetrics{
 		Max: detail.Response.Max,
@@ -323,20 +314,9 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		End:   detail.Observation.End,
 	}
 
-	c.logger.WithField("metricKey", metric.getKey()).
-		WithField("count", metric.Units.Transactions.Count).
-		WithField("max", metric.Units.Transactions.Response.Max).
-		WithField("min", metric.Units.Transactions.Response.Min).
-		WithField("avg", metric.Units.Transactions.Response.Avg).
-		Debug("Storing pre-aggregated metric in map")
-
-	// Update the metric in the map for proper tracking
-	c.updateMetricWithCachedMetric(metric, &preAggregatedMetric{
-		count:       detail.Count,
-		responseMax: detail.Response.Max,
-		responseMin: detail.Response.Min,
-		responseAvg: detail.Response.Avg,
-	})
+	// Generate the metric event directly without using histogram
+	// since we have pre-aggregated data
+	c.addMetric(metric)
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
