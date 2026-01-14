@@ -290,6 +290,17 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	c.updateStartTime()
 	c.updateUsage(detail.Count)
 
+	// Update the detail with the resolved API ID
+	detail.APIDetails.ID = transutil.ResolveIDWithPrefix(detail.APIDetails.ID, detail.APIDetails.Name)
+
+	c.logger.WithField("apiID", detail.APIDetails.ID).
+		WithField("count", detail.Count).
+		WithField("max", detail.Response.Max).
+		WithField("min", detail.Response.Min).
+		WithField("avg", detail.Response.Avg).
+		WithField("statusCode", detail.StatusCode).
+		Debug("AddAPIMetricDetail received pre-aggregated metric")
+
 	// Create metric with pre-aggregated response values
 	transactionCtx := transactionContext{
 		APIDetails: detail.APIDetails,
@@ -312,8 +323,20 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		End:   detail.Observation.End,
 	}
 
-	// Add the metric directly without going through histogram
-	c.addMetric(metric)
+	c.logger.WithField("metricKey", metric.getKey()).
+		WithField("count", metric.Units.Transactions.Count).
+		WithField("max", metric.Units.Transactions.Response.Max).
+		WithField("min", metric.Units.Transactions.Response.Min).
+		WithField("avg", metric.Units.Transactions.Response.Avg).
+		Debug("Storing pre-aggregated metric in map")
+
+	// Update the metric in the map for proper tracking
+	c.updateMetricWithCachedMetric(metric, &preAggregatedMetric{
+		count:       detail.Count,
+		responseMax: detail.Response.Max,
+		responseMin: detail.Response.Min,
+		responseAvg: detail.Response.Avg,
+	})
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo

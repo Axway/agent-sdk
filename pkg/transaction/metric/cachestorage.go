@@ -312,3 +312,20 @@ func (c customHistogram) Count() int64 {
 func (c customHistogram) Values() []int64 {
 	return c.h.Sample().Values()
 }
+
+type preAggregatedMetric struct {
+	count       int64
+	responseMax int64
+	responseMin int64
+	responseAvg float64
+}
+
+func (p preAggregatedMetric) Count() int64 {
+	return p.count
+}
+
+func (p preAggregatedMetric) Values() []int64 {
+	// Return synthetic values for min, avg, max to satisfy the interface
+	// The actual response metrics are set directly on the metric
+	return []int64{p.responseMin, int64(p.responseAvg), p.responseMax}
+}
