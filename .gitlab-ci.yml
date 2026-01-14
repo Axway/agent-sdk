@@ -1,84 +1,9 @@
-###
-image: docker:dind
-
-variables:
-  GIT_REPO_PATH: src/github.com/Axway # overridden from variables.yml
-  GIT_REPO_NAME: agent-sdk
-
-  # Fortify
-  FORTIFY_PROJECT: "10566"
-  FORTIFY_BUILD_ID: "apic_agents_sdk"
-  FORTIFY_INCLUDE: "**/*.go"
-  FORTIFY_EXCLUDE: "**/*_test.go"
-
-  # Blackduck
-  BLACKDUCK_PROJECT_NAME: "Amplify - APIC Agent SDK"
-
-  # SRM
-  SRM_PROJECT_NAME: "$BLACKDUCK_PROJECT_NAME"
-  SRM_PROJECT_ID: "225"
-
-  # just to be sure we don't do vendoring
-  GOFLAGS: "-mod=mod"
-
 #############################################################
 # Section for external includes
 ############################################################
 include:
-  - project: "apigov/gitlabci"
-    ref: $GITLAB_CICD_GREEN
-    file: "/.gitlab-ci-sonar.yml"
-  - project: "apigov/beano_cicd"
-    ref: $BEANO_CICD_GREEN
-    # the order of these include files is important
-    file:
-      - "/gitlabci/variables.yml"
-      - "/gitlabci/restrictions.yml"
-      - "/gitlabci/jobs.yml"
-  - project: "apigov/security/gitlabci"
-    ref: $SECURITY_CICD_GREEN
-    file:
-      - "/.gitlab-ci-fortify.yml"
-      - "/.gitlab-ci-twistlock.yml"
-      - "/.gitlab-ci-iriusrisk.yml"
-      - "/.gitlab-ci-blackduck.yml"
-      - "/.gitlab-ci-security.yml"
   - project: "apigov/beano_cicd"
     ref: $BEANO_CICD_GREEN
     # this one MUST be after the security jobs in order for overrides to work correctly!
     file:
-      - "/gitlabci/securityjobs.yml"
-      - "/gitlabci/securityjobsformirror.yml"
-
-stages:
-  - test
-  - qa-test
-  - sonar
-  - security-scans
-  - security-review
-
-twistlock-discovery:on-schedule:
-  rules:
-    - !reference [.only-never-rule, rules]
-
-twistlock-traceability:on-schedule:
-  rules:
-    - !reference [.only-never-rule, rules]
-
-merge-twistlock-scans-latest:
-  rules:
-    - !reference [.only-never-rule, rules]
-
-upload-files-to-srm:
-  rules:
-    - !reference [.only-never-rule, rules]
-
-# For these 2, override the 'needs' from base
-report-latest:
-  needs:
-    - fetch-blackduck:on-schedule
-
-report-snapshot:
-  needs:
-    - fetch-fortify
-    - fetch-third-party
+      - "/gitlabci/repos/agent-sdk.yml"
