@@ -149,7 +149,9 @@ func (res *APIServiceInstance) FromInstance(ri *apiv1.ResourceInstance) error {
 	if err != nil {
 		return err
 	}
-	res.SubResourceHashes = ri.SubResourceHashes
+	for k, v := range ri.SubResourceHashes {
+		res.SubResourceHashes[k] = v
+	}
 	return err
 }
 
