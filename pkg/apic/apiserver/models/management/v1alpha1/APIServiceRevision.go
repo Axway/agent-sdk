@@ -96,6 +96,9 @@ func (res *APIServiceRevision) AsInstance() (*apiv1.ResourceInstance, error) {
 		return nil, err
 	}
 	instance.SubResourceHashes = res.SubResourceHashes
+	for k, v := range res.SubResourceHashes {
+		instance.SubResourceHashes[k] = v
+	}
 	return &instance, nil
 }
 
