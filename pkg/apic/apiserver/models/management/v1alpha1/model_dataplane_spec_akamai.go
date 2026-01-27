@@ -12,12 +12,12 @@ package management
 // DataplaneSpecAkamai The configuration common to all Akamai agents that use this dataplane
 type DataplaneSpecAkamai struct {
 	Type string `json:"type,omitempty"`
-	// The Akamai client ID for API authentication
-	ClientId string `json:"clientId"`
-	// The base URL for Akamai API endpoints
+	// The Akamai API base URL
 	BaseUrl string `json:"baseUrl"`
 	// The segment length is a (zero-based) index of the API path to use for grouping APIs by basepath. For example, a value of 1 will use the first segment after the leading slash.
-	SegmentLength int32 `json:"segmentLength"`
-	// Used to map Akamai groups to Amplify environments for conformance analysis and API discovery
-	Groups []DataplaneSpecAkamaiGroups `json:"groups"`
+	SegmentLength int32 `json:"segmentLength,omitempty"`
+	// The Akamai HTTP timeout, in seconds, for API calls. Minimum and defaulted to 30.
+	HttpTimeout int32 `json:"httpTimeout,omitempty"`
+	// Used to run conformance analysis of specs found in central environment against endpoints found in Akamai groups
+	Environments []DataplaneSpecAkamaiEnvironments `json:"environments"`
 }
