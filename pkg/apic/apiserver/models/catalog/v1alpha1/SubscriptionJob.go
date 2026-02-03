@@ -96,7 +96,9 @@ func (res *SubscriptionJob) AsInstance() (*apiv1.ResourceInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-	instance.SubResourceHashes = res.SubResourceHashes
+	for key, val := range res.SubResourceHashes {
+		instance.SubResourceHashes[key] = val
+	}
 	return &instance, nil
 }
 
@@ -118,7 +120,9 @@ func (res *SubscriptionJob) FromInstance(ri *apiv1.ResourceInstance) error {
 	if err != nil {
 		return err
 	}
-	res.SubResourceHashes = ri.SubResourceHashes
+	for key, val := range ri.SubResourceHashes {
+		res.SubResourceHashes[key] = val
+	}
 	return err
 }
 
