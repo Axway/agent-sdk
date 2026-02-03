@@ -127,9 +127,8 @@ func (res *{{.res.kind}}) AsInstance() (*apiv1.ResourceInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-    for key, val := range res.SubResourceHashes {
-        instance.SubResourceHashes[key] = val
-    }
+    instance.SubResourceHashes = res.SubResourceHashes
+
 	return &instance, nil
 }
 
@@ -151,9 +150,8 @@ func (res *{{.res.kind}}) FromInstance(ri *apiv1.ResourceInstance) (error) {
     if err != nil {
         return err
     }
-    for key, val := range ri.SubResourceHashes {
-        res.SubResourceHashes[key] = val
-    }
+    res.SubResourceHashes = ri.SubResourceHashes
+    
     return err
 }
 
