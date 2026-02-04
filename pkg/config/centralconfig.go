@@ -224,6 +224,7 @@ type CentralConfig interface {
 	SetManagedEnvironments([]string)
 	GetManagedEnvironments() []string
 	GetProvisioningRetryCount() int
+	IsInstanceValidationEnabled() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -263,6 +264,7 @@ type CentralConfiguration struct {
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
 	CredentialConfig          CredentialConfig      `config:"credential"`
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
+	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
 	managedEnvironments       []string
 	JobExecutionTimeout       time.Duration
 	environmentID             string
@@ -684,6 +686,10 @@ func (c *CentralConfiguration) GetProvisioningRetryCount() int {
 	return c.ProvisioningRetryCount
 }
 
+func (c *CentralConfiguration) IsInstanceValidationEnabled() bool {
+	return c.InstanceValidatorEnabled
+}
+
 const (
 	pathRegion                    = "central.region"
 	pathTenantID                  = "central.organizationID"
@@ -728,6 +734,7 @@ const (
 	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
 	pathProvisioningRetryCount    = "central.provisioningRetryCount"
 	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
+	pathInstanceValidatorEnabled  = "central.instanceValidatorEnabled"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -896,6 +903,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
 	props.AddStringSliceProperty(pathCredentialsOAuthMethods, []string{}, "Allowed OAuth credential types")
+	props.AddBoolProperty(pathInstanceValidatorEnabled, false, "Controls whether an agent has instance validation enabled")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
@@ -943,6 +951,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		ProvisioningRetryCount:    props.IntPropertyValue(pathProvisioningRetryCount),
+		InstanceValidatorEnabled:  props.BoolPropertyValue(pathInstanceValidatorEnabled),
 		Auth: &AuthConfiguration{
 			RegionSettings: regSet,
 			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
