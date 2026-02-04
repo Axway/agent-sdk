@@ -10,7 +10,6 @@ import (
 
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
-	utilErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -131,30 +130,17 @@ func (j *instanceValidator) validateServices() {
 }
 
 func (j *instanceValidator) deleteServiceInstance(logger log.FieldLogger, ri *apiV1.ResourceInstance, primaryKey, apiID string) {
-	// delete if it is an api service instance
 	logger = logger.WithField("instanceTitle", ri.Title)
-	logger.Infof("API no longer exists on the dataplane, deleting the API Service Instance")
 
-	err := agent.apicClient.DeleteAPIServiceInstance(ri.Name)
-	if err != nil {
-		logger.WithError(utilErrors.Wrap(ErrDeletingServiceInstanceItem, err.Error()).FormatError(ri.Title)).Error("deleting instance")
-		return
-	}
+	logger.Info("API no longer exists on the dataplane")
 	agent.cacheManager.DeleteAPIServiceInstance(ri.Metadata.ID)
-
-	logger.Debugf("Deleted API Service Instance item from Amplify Central")
+	logger.Debug("Deleted API Service Instance from the cache")
 }
 
 func (j *instanceValidator) deleteService(logger log.FieldLogger, ri *apiV1.ResourceInstance) {
 	logger = logger.WithField("serviceTitle", ri.Title)
-	logger.Infof("API Service no longer has a service instance; deleting the API Service")
 
-	err := agent.apicClient.DeleteServiceByName(ri.Name)
-	if err != nil {
-		logger.WithError(utilErrors.Wrap(ErrDeletingService, err.Error()).FormatError(ri.Title)).Error("deleting service")
-		return
-	}
+	logger.Info("API Service no longer has a service instance")
 	agent.cacheManager.DeleteAPIService(ri.Name)
-
-	logger.Debugf("Deleted API Service from Amplify Central")
+	logger.Debug("Deleted API Service from the cache")
 }

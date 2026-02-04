@@ -903,7 +903,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
 	props.AddStringSliceProperty(pathCredentialsOAuthMethods, []string{}, "Allowed OAuth credential types")
-	props.AddBoolProperty(pathInstanceValidatorEnabled, false, "Controls whether an agent has instance validation enabled")
+	props.AddBoolProperty(pathInstanceValidatorEnabled, true, "Controls whether an agent has instance validation enabled")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
