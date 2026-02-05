@@ -103,7 +103,14 @@ func (res *AccessRequest) AsInstance() (*apiv1.ResourceInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-	instance.SubResourceHashes = res.SubResourceHashes
+
+	if instance.SubResourceHashes == nil {
+		instance.SubResourceHashes = make(map[string]interface{})
+	}
+	for key, val := range res.SubResourceHashes {
+		instance.SubResourceHashes[key] = val
+	}
+
 	return &instance, nil
 }
 
@@ -125,7 +132,14 @@ func (res *AccessRequest) FromInstance(ri *apiv1.ResourceInstance) error {
 	if err != nil {
 		return err
 	}
-	res.SubResourceHashes = ri.SubResourceHashes
+
+	if res.SubResourceHashes == nil {
+		res.SubResourceHashes = make(map[string]interface{})
+	}
+	for key, val := range ri.SubResourceHashes {
+		res.SubResourceHashes[key] = val
+	}
+
 	return err
 }
 

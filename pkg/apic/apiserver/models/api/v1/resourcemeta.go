@@ -337,10 +337,10 @@ func (rm *ResourceMeta) SetIncomingHashes() {
 		return
 	}
 	// if no agent-details or hashes inside agent details are found, we simply skip because there's nothing to set
-	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+	if v, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok || v == nil {
 		return
 	}
-	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes].(map[string]interface{}); !ok {
+	if v, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.XSubResourceHashes].(map[string]interface{}); !ok || v == nil {
 		return
 	}
 
@@ -366,7 +366,7 @@ func (rm *ResourceMeta) PrepareHashesForSending() {
 
 	delete(rm.SubResources, definitions.XSubResourceHashes)
 	rm.CreateHashes()
-	if _, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok {
+	if v, ok := rm.SubResources[definitions.XAgentDetails].(map[string]interface{}); !ok || v == nil {
 		rm.SubResources[definitions.XAgentDetails] = make(map[string]interface{})
 	}
 
