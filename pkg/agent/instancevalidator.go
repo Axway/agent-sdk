@@ -8,7 +8,6 @@ import (
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -99,8 +98,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		logger.Trace("validating API Instance on dataplane")
 		apiValidator := getAPIValidator()
 		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
-			logger.Trace("removing API Instance no longer on dataplane")
-			j.deleteServiceInstance(logger, instance, externalPrimaryKey, externalAPIID)
+			logger.WithField("serviceTitle", instance.Title).Warn("API no longer exists on the dataplane")
 		}
 	}
 
@@ -123,24 +121,7 @@ func (j *instanceValidator) validateServices() {
 		logger = logger.WithField("instanceCount", instanceCount)
 
 		if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
-			logger.Trace("service has no more instances")
-			j.deleteService(logger, service)
+			logger.WithField("serviceTitle", service.Title).Warn("API Service no longer has a service instance")
 		}
 	}
-}
-
-func (j *instanceValidator) deleteServiceInstance(logger log.FieldLogger, ri *apiV1.ResourceInstance, primaryKey, apiID string) {
-	logger = logger.WithField("instanceTitle", ri.Title)
-
-	logger.Info("API no longer exists on the dataplane")
-	agent.cacheManager.DeleteAPIServiceInstance(ri.Metadata.ID)
-	logger.Debug("Deleted API Service Instance from the cache")
-}
-
-func (j *instanceValidator) deleteService(logger log.FieldLogger, ri *apiV1.ResourceInstance) {
-	logger = logger.WithField("serviceTitle", ri.Title)
-
-	logger.Info("API Service no longer has a service instance")
-	agent.cacheManager.DeleteAPIService(ri.Name)
-	logger.Debug("Deleted API Service from the cache")
 }
