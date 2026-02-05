@@ -98,7 +98,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 		logger.Trace("validating API Instance on dataplane")
 		apiValidator := getAPIValidator()
 		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
-			logger.WithField("serviceTitle", instance.Title).Warn("API no longer exists on the dataplane")
+			logger.WithField("serviceTitle", instance.Title).Warn("API Service Instance no longer exists on the dataplane")
 		}
 	}
 
