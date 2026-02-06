@@ -17,7 +17,10 @@ import (
 	"github.com/gorhill/cronexpr"
 )
 
-const urlCutSet = " /"
+const (
+	urlCutSet                          = " /"
+	qaCentralApiValidationCronSchedule = "QA_CENTRAL_APIVALIDATIONCRONSCHEDULE"
+)
 
 type Region int
 
@@ -273,6 +276,8 @@ type CentralConfiguration struct {
 	isRegionSet               bool
 	isAxwayManaged            bool
 	WatchResourceFilters      []ResourceFilter
+
+	qaVars bool
 }
 
 // GRPCConfig - Represents the grpc config
@@ -795,6 +800,28 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
 
+	c.validateSchedule()
+
+	if c.GetClientTimeout() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
+	}
+	if c.GetJobExecutionTimeout() < 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathJobTimeout))
+	}
+}
+
+func (c *CentralConfiguration) validateSchedule() {
+	// check if the qa env var is set
+	if val := os.Getenv(qaCentralApiValidationCronSchedule); val != "" {
+		if _, err := cronexpr.Parse(val); err != nil {
+			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaCentralApiValidationCronSchedule, val)
+		} else {
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaCentralApiValidationCronSchedule, val, c.APIValidationCronSchedule)
+			c.APIValidationCronSchedule = val
+			c.qaVars = true
+		}
+		return
+	}
 	cron, err := cronexpr.Parse(c.GetAPIValidationCronSchedule())
 	if err != nil {
 		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
@@ -804,19 +831,13 @@ func (c *CentralConfiguration) validateConfig() {
 	if len(nextRuns) != checks {
 		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
 	}
+
 	for i := 1; i < checks-1; i++ {
 		delta := nextRuns[i].Sub(nextRuns[i-1])
 		if delta < time.Hour {
 			log.Tracef("%s must be at least 1 hour apart", pathAPIValidationCronSchedule)
 			exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
 		}
-	}
-
-	if c.GetClientTimeout() <= 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
-	}
-	if c.GetJobExecutionTimeout() < 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathJobTimeout))
 	}
 
 }
