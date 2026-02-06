@@ -97,7 +97,12 @@ func (es *EventSync) SyncCache() error {
 		return err
 	}
 
-	return es.registerInstanceValidator()
+	isEnabled := agent.cfg.IsInstanceValidationEnabled()
+	logger.WithField("instanceValidatorStatus", StatusString(isEnabled, "Enabled", "Disabled")).Trace("Checking instance validator status")
+	if isEnabled {
+		return es.registerInstanceValidator()
+	}
+	return nil
 }
 
 func (es *EventSync) registerInstanceValidator() error {
