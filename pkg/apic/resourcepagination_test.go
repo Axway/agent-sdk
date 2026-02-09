@@ -15,6 +15,7 @@ func TestGetAPIV1ResourceInstancesWithPageSize(t *testing.T) {
 		skip             bool
 		startPageSize    int
 		responses        []api.MockResponse
+		secondCall       bool // call a second time after error hit for retries
 		expectErr        bool
 		expectedItems    int
 		expectedPageSize int
@@ -79,7 +80,48 @@ func TestGetAPIV1ResourceInstancesWithPageSize(t *testing.T) {
 					RespData: "[]",
 				},
 			},
-			expectErr: true,
+			expectErr:        true,
+			expectedPageSize: 5,
+		},
+		"expect page size to half further after initial retry exhaustion to minimum": {
+			startPageSize: 50,
+			responses: []api.MockResponse{
+				{ //50
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //25
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //12
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //6 - max retries
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //3 - 5
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //2 - 5
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{ //1 - 5
+					RespCode:  http.StatusRequestTimeout,
+					ErrString: "context deadline exceeded",
+				},
+				{
+					RespCode: http.StatusOK,
+					RespData: "[]",
+				},
+			},
+			secondCall:       true,
+			expectErr:        true,
+			expectedPageSize: 5,
 		},
 	}
 	for name, tc := range testCases {
@@ -94,12 +136,18 @@ func TestGetAPIV1ResourceInstancesWithPageSize(t *testing.T) {
 			if tc.expectErr {
 				assert.Nil(t, data)
 				assert.NotNil(t, err)
-				return
+			} else {
+				assert.Nil(t, err)
+				assert.NotNil(t, data)
+				assert.Len(t, data, tc.expectedItems)
 			}
 
-			assert.Nil(t, err)
-			assert.NotNil(t, data)
-			assert.Len(t, data, tc.expectedItems)
+			if tc.secondCall {
+				data, err := client.GetAPIV1ResourceInstancesWithPageSize(map[string]string{"key": "value"}, url, tc.startPageSize)
+				assert.Nil(t, err)
+				assert.NotNil(t, data)
+				assert.Len(t, data, tc.expectedItems)
+			}
 
 			size, ok := client.getPageSize(client.createAPIServerURL(url))
 			if tc.expectedPageSize >= 0 {
