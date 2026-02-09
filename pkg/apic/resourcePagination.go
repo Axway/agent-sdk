@@ -72,6 +72,7 @@ func (c *ServiceClient) setPageSize(url string, size int) {
 
 // GetAPIV1ResourceInstancesWithPageSize - return apiv1 Resource instance
 func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[string]string, url string, pageSize int) ([]*apiv1.ResourceInstance, error) {
+	initPageSize := pageSize
 	morePages := true
 	page := 1
 	retries := 3
@@ -112,6 +113,9 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			retries--
 
 			// update the page size map so this endpoint uses the same size next time
+			if pageSize < 1 {
+				pageSize = 1
+			}
 			c.setPageSize(url, pageSize)
 			continue
 		} else if err != nil {
@@ -124,7 +128,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 
-		if len(resourceInstancePage) < pageSize {
+		if len(resourceInstancePage) < pageSize || len(resourceInstancePage) == 0 {
 			morePages = false
 		} else {
 			log.Trace("continue retrieving resources from next page")
