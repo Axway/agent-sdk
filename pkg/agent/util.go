@@ -50,3 +50,10 @@ func ApplyResourceToConfig(cfg interface{}) error {
 	}
 	return nil
 }
+
+func StatusString(b bool, msgTrue, msgFalse string) string {
+	if b {
+		return msgTrue
+	}
+	return msgFalse
+}

@@ -17,7 +17,10 @@ import (
 	"github.com/gorhill/cronexpr"
 )
 
-const urlCutSet = " /"
+const (
+	urlCutSet                          = " /"
+	qaCentralApiValidationCronSchedule = "QA_CENTRAL_APIVALIDATIONCRONSCHEDULE"
+)
 
 type Region int
 
@@ -224,6 +227,7 @@ type CentralConfig interface {
 	SetManagedEnvironments([]string)
 	GetManagedEnvironments() []string
 	GetProvisioningRetryCount() int
+	IsInstanceValidationEnabled() bool
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -263,6 +267,7 @@ type CentralConfiguration struct {
 	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
 	CredentialConfig          CredentialConfig      `config:"credential"`
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
+	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
 	managedEnvironments       []string
 	JobExecutionTimeout       time.Duration
 	environmentID             string
@@ -271,6 +276,8 @@ type CentralConfiguration struct {
 	isRegionSet               bool
 	isAxwayManaged            bool
 	WatchResourceFilters      []ResourceFilter
+
+	qaVars bool
 }
 
 // GRPCConfig - Represents the grpc config
@@ -684,6 +691,10 @@ func (c *CentralConfiguration) GetProvisioningRetryCount() int {
 	return c.ProvisioningRetryCount
 }
 
+func (c *CentralConfiguration) IsInstanceValidationEnabled() bool {
+	return c.InstanceValidatorEnabled
+}
+
 const (
 	pathRegion                    = "central.region"
 	pathTenantID                  = "central.organizationID"
@@ -728,6 +739,7 @@ const (
 	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
 	pathProvisioningRetryCount    = "central.provisioningRetryCount"
 	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
+	pathInstanceValidatorEnabled  = "central.instanceValidatorEnabled"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -788,6 +800,28 @@ func (c *CentralConfiguration) validateConfig() {
 		exception.Throw(ErrBadConfig.FormatError(pathReportActivityFrequency))
 	}
 
+	c.validateSchedule()
+
+	if c.GetClientTimeout() <= 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
+	}
+	if c.GetJobExecutionTimeout() < 0 {
+		exception.Throw(ErrBadConfig.FormatError(pathJobTimeout))
+	}
+}
+
+func (c *CentralConfiguration) validateSchedule() {
+	// check if the qa env var is set
+	if val := os.Getenv(qaCentralApiValidationCronSchedule); val != "" {
+		if _, err := cronexpr.Parse(val); err != nil {
+			log.Tracef("Could not use %s (%s) it is not a proper cron schedule", qaCentralApiValidationCronSchedule, val)
+		} else {
+			log.Tracef("Using %s (%s) rather than the default (%s) for non-QA", qaCentralApiValidationCronSchedule, val, c.APIValidationCronSchedule)
+			c.APIValidationCronSchedule = val
+			c.qaVars = true
+		}
+		return
+	}
 	cron, err := cronexpr.Parse(c.GetAPIValidationCronSchedule())
 	if err != nil {
 		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
@@ -797,19 +831,13 @@ func (c *CentralConfiguration) validateConfig() {
 	if len(nextRuns) != checks {
 		exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
 	}
+
 	for i := 1; i < checks-1; i++ {
 		delta := nextRuns[i].Sub(nextRuns[i-1])
 		if delta < time.Hour {
 			log.Tracef("%s must be at least 1 hour apart", pathAPIValidationCronSchedule)
 			exception.Throw(ErrBadConfig.FormatError(pathAPIValidationCronSchedule))
 		}
-	}
-
-	if c.GetClientTimeout() <= 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathClientTimeout))
-	}
-	if c.GetJobExecutionTimeout() < 0 {
-		exception.Throw(ErrBadConfig.FormatError(pathJobTimeout))
 	}
 
 }
@@ -896,6 +924,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathCacheStoragePath, "", "The directory path where agent cache will be persisted to file")
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
 	props.AddStringSliceProperty(pathCredentialsOAuthMethods, []string{}, "Allowed OAuth credential types")
+	props.AddBoolProperty(pathInstanceValidatorEnabled, true, "Controls whether an agent has instance validation enabled")
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
@@ -943,6 +972,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		ProvisioningRetryCount:    props.IntPropertyValue(pathProvisioningRetryCount),
+		InstanceValidatorEnabled:  props.BoolPropertyValue(pathInstanceValidatorEnabled),
 		Auth: &AuthConfiguration{
 			RegionSettings: regSet,
 			URL:            strings.TrimRight(props.StringPropertyValue(pathAuthURL), urlCutSet),
