@@ -11,6 +11,10 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
+const (
+	minPageSize = 5
+)
+
 // GetAPIServiceRevisions - management.APIServiceRevision
 func (c *ServiceClient) GetAPIServiceRevisions(queryParams map[string]string, URL, stage string) ([]*management.APIServiceRevision, error) {
 	resources, err := c.GetAPIV1ResourceInstances(queryParams, URL)
@@ -107,7 +111,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 			// in case of context deadline, lets reduce the page size and restart retrieving the resources
 			page = 1
 			resourceInstance = make([]*apiv1.ResourceInstance, 0)
-			pageSize = pageSize / 2
+			pageSize = max(pageSize/2, minPageSize)
 			log.WithError(err).WithField("newPageSize", pageSize).Debug("error while retrieving resources, retrying with smaller page size")
 			retries--
 
@@ -124,7 +128,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 
-		if len(resourceInstancePage) < pageSize {
+		if len(resourceInstancePage) < pageSize || len(resourceInstancePage) == 0 {
 			morePages = false
 		} else {
 			log.Trace("continue retrieving resources from next page")
