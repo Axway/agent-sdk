@@ -584,3 +584,12 @@ func EnsureStringIsNotFloat(in string) string {
 	}
 	return in
 }
+
+func IsInArray[K comparable](arr []K, val K) bool {
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
