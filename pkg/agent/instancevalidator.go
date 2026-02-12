@@ -16,9 +16,8 @@ import (
 )
 
 const (
-	agentWarningTag = "Agent Sync Warning"
-	// TODO: changeme
-	maxQueryParamLength = 40
+	agentWarningTag     = "Agent Sync Warning"
+	maxQueryParamLength = 2000
 )
 
 type resourcesInfo struct {
@@ -110,7 +109,7 @@ func (j *instanceValidator) addTags(info resourcesInfo) {
 			ivLogger.WithError(err).Error("updating resource instance")
 			continue
 		}
-		ivLogger.Trace("Added agent sync warning tag to API Resource on Amplify Central")
+		ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
 	}
 
 }
@@ -148,22 +147,20 @@ func (j *instanceValidator) getResources(queries []string, kindLink, kind string
 
 func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 	apiServiceInstancesToUpdate := resourcesInfo{}
-	j.logger.Trace("validating api service instances on dataplane")
-	// Validate the API on dataplane.
 	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
-		ivLogger := j.logger.WithField("instanceCacheID", key)
-		ivLogger.Tracef("validating")
+		ivLogger := j.logger
+		ivLogger.Trace("validating api service instance on dataplane")
 
 		instance, err := agent.cacheManager.GetAPIServiceInstanceByID(key)
 		if err != nil || instance == nil {
-			ivLogger.WithError(err).Trace("could not get instance from cache")
+			ivLogger.WithError(err).WithField("instanceCacheID", key).Trace("could not get instance from cache")
 			continue
 		}
 		ivLogger = ivLogger.WithField("name", instance.Name)
 
 		externalAPIID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if externalAPIID == "" {
-			ivLogger.Trace("could not get instance external id")
+			ivLogger.Trace("could not get instance external id. skipping api validation")
 			continue // skip service instances without external api id
 		}
 		ivLogger = ivLogger.WithField("externalAPIID", externalAPIID)
@@ -176,47 +173,44 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 			ivLogger = ivLogger.WithField("externalPrimaryKey", externalPrimaryKey)
 		}
 
-		ivLogger.Trace("validating API Instance on dataplane")
+		ivLogger.Trace("checking agent api validator")
 		apiValidator := getAPIValidator()
-		// TODO: changeme
-		if !(externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage)) {
+		if !apiValidator(externalAPIID, externalAPIStage) {
 			ivLogger.WithField("serviceTitle", instance.Title).Warn("API Service Instance no longer exists on the dataplane. Adding agent sync tag to the API Service Instance")
 			apiServiceInstancesToUpdate.names = append(apiServiceInstancesToUpdate.names, instance.Name)
-			if apiServiceInstancesToUpdate.kindLink == "" || apiServiceInstancesToUpdate.kind == "" {
+			if apiServiceInstancesToUpdate.kindLink == "" {
 				apiServiceInstancesToUpdate.kindLink = instance.GetKindLink()
-				apiServiceInstancesToUpdate.kind = management.APIServiceInstanceGVK().Kind
 			}
 		}
 	}
+	apiServiceInstancesToUpdate.kind = management.APIServiceInstanceGVK().Kind
 
 	return apiServiceInstancesToUpdate
 }
 
 func (j *instanceValidator) validateServices() resourcesInfo {
 	apiServicesToUpdate := resourcesInfo{}
-	j.logger.Trace("validating api services have at least one instance on dataplane")
 	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
-		ivLogger := j.logger.WithField("serviceCacheID", key)
-		ivLogger.Tracef("validating")
+		ivLogger := j.logger
+		ivLogger.Trace("validating api service has at least one instance on dataplane")
 
 		service := agent.cacheManager.GetAPIServiceWithPrimaryKey(key)
 		if service == nil {
-			ivLogger.Trace("service was no longer in the cache")
+			ivLogger.WithField("serviceCacheID", key).Trace("service was no longer in the cache")
 			continue
 		}
-		ivLogger = ivLogger.WithField("name", service.Name)
 		instanceCount := agent.cacheManager.GetAPIServiceInstanceCount(service.Name)
-		ivLogger = ivLogger.WithField("instanceCount", instanceCount)
-		// TODO: changeme
-		if !(agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0) {
+		ivLogger = ivLogger.WithField("instanceCount", instanceCount).WithField("name", service.Name)
+
+		if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
 			ivLogger.WithField("serviceTitle", service.Title).Warn("API Service no longer has a service instance")
 			apiServicesToUpdate.names = append(apiServicesToUpdate.names, service.Name)
 			if apiServicesToUpdate.kindLink == "" {
 				apiServicesToUpdate.kindLink = service.GetKindLink()
-				apiServicesToUpdate.kind = management.APIServiceGVK().Kind
 			}
 		}
 	}
+	apiServicesToUpdate.kind = management.APIServiceGVK().Kind
 	return apiServicesToUpdate
 }
 
@@ -243,10 +237,11 @@ func (j *instanceValidator) addNames(filterName string, resNames []string, offse
 	// format: `name=="name1" or name=="name2" or name=="name3"`
 	query := fmt.Sprintf(`%s=="%s"`, filterName, resNames[offset])
 	for i := offset + 1; i < len(resNames); i++ {
-		if len(query) >= maxQueryParamLength {
+		extendedQuery := fmt.Sprintf(`%s or %s=="%s"`, query, filterName, resNames[i])
+		if len(extendedQuery) >= j.maxQueryParamLength {
 			return i, query
 		}
-		query = fmt.Sprintf(`%s or %s=="%s"`, query, filterName, resNames[i])
+		query = extendedQuery
 	}
 	return -1, query
 }
