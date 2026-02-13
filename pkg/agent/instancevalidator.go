@@ -6,6 +6,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -13,16 +15,29 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
+const (
+	agentWarningTag     = "Agent Sync Warning"
+	maxQueryParamLength = 2000
+)
+
+type resourcesInfo struct {
+	names    []string
+	kindLink string
+	kind     string
+}
+
 type instanceValidator struct {
 	jobs.Job
-	logger    log.FieldLogger
-	cacheLock *sync.Mutex
+	logger              log.FieldLogger
+	cacheLock           *sync.Mutex
+	maxQueryParamLength int
 }
 
 func newInstanceValidator() *instanceValidator {
 	return &instanceValidator{
-		logger:    logger.WithComponent("instanceValidator"),
-		cacheLock: &sync.Mutex{},
+		logger:              logger.WithComponent("instanceValidator"),
+		cacheLock:           &sync.Mutex{},
+		maxQueryParamLength: maxQueryParamLength,
 	}
 }
 
@@ -62,66 +77,148 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	j.cacheLock.Lock()
 	defer j.cacheLock.Unlock()
 
-	logger := j.logger
+	apiServiceInstancesToUpdate := j.validateServiceInstances()
+	j.addTags(apiServiceInstancesToUpdate)
 
-	logger.Trace("validating api service instances on dataplane")
+	apiServicesToUpdate := j.validateServices()
+	j.addTags(apiServicesToUpdate)
+}
 
-	// Validate the API on dataplane.
-	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
-		logger := logger.WithField("instanceCacheID", key)
-		logger.Tracef("validating")
+func (j *instanceValidator) addTags(info resourcesInfo) {
+	ivLogger := j.logger.WithField("kind", info.kind).WithField("kindLink", info.kindLink)
+	if len(info.names) == 0 {
+		j.logger.Trace("no instance validator tags to be added")
+		return
+	}
 
-		instance, err := agent.cacheManager.GetAPIServiceInstanceByID(key)
+	queries := j.constructAPIServerQueries("name", info.names)
+	ris := []*v1.ResourceInstance{}
+	for _, query := range queries {
+		apis, err := agent.apicClient.GetAPIV1ResourceInstances(map[string]string{"query": query}, info.kindLink)
 		if err != nil {
-			logger.WithError(err).Trace("could not get instance from cache")
+			j.logger.WithField("query", query).WithError(err).Error("getting resources")
+			return
+		}
+		ris = append(ris, apis...)
+	}
+
+	for _, ri := range ris {
+		ivLogger := ivLogger.WithField("name", ri.GetName())
+		if util.IsInArray(ri.GetTags(), agentWarningTag) {
+			ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
 			continue
 		}
-		logger = logger.WithField("name", instance.Name)
+		ri.SetTags(append(ri.GetTags(), agentWarningTag))
+		_, err := agent.apicClient.UpdateResourceInstance(ri)
+		if err != nil {
+			ivLogger.WithError(err).Error("updating resource instance")
+			continue
+		}
+		ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
+	}
+}
+
+func (j *instanceValidator) validateServiceInstances() resourcesInfo {
+	apiServiceInstancesToUpdate := resourcesInfo{}
+	for _, key := range agent.cacheManager.GetAPIServiceInstanceKeys() {
+		ivLogger := j.logger
+		ivLogger.Trace("validating api service instance on dataplane")
+
+		instance, err := agent.cacheManager.GetAPIServiceInstanceByID(key)
+		if err != nil || instance == nil {
+			ivLogger.WithError(err).WithField("instanceCacheID", key).Trace("could not get instance from cache")
+			continue
+		}
+		ivLogger = ivLogger.WithField("name", instance.Name)
 
 		externalAPIID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if externalAPIID == "" {
-			logger.Trace("could not get instance external id")
+			ivLogger.Trace("could not get instance external id. skipping api validation")
 			continue // skip service instances without external api id
-		} else if err != nil {
-			logger.WithError(err).Trace("could not get instance external id")
 		}
-		logger = logger.WithField("externalAPIID", externalAPIID)
+		ivLogger = ivLogger.WithField(defs.AttrExternalAPIID, externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 		if externalAPIStage != "" {
-			logger = logger.WithField("externalAPIStage", externalAPIStage)
+			ivLogger = ivLogger.WithField("externalAPIStage", externalAPIStage)
 		}
 		externalPrimaryKey, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIPrimaryKey)
 		if externalPrimaryKey != "" {
-			logger = logger.WithField("externalPrimaryKey", externalPrimaryKey)
+			ivLogger = ivLogger.WithField("externalPrimaryKey", externalPrimaryKey)
 		}
 
-		logger.Trace("validating API Instance on dataplane")
+		ivLogger.Trace("checking agent api validator")
 		apiValidator := getAPIValidator()
-		if externalAPIID != "" && !apiValidator(externalAPIID, externalAPIStage) {
-			logger.WithField("serviceTitle", instance.Title).Warn("API Service Instance no longer exists on the dataplane")
+		if !apiValidator(externalAPIID, externalAPIStage) {
+			ivLogger.WithField("serviceTitle", instance.Title).Warn("API Service Instance no longer exists on the dataplane. Adding agent sync tag to the API Service Instance")
+			apiServiceInstancesToUpdate.names = append(apiServiceInstancesToUpdate.names, instance.Name)
+			if apiServiceInstancesToUpdate.kindLink == "" {
+				apiServiceInstancesToUpdate.kindLink = instance.GetKindLink()
+			}
 		}
 	}
+	apiServiceInstancesToUpdate.kind = management.APIServiceInstanceGVK().Kind
 
-	j.validateServices()
+	return apiServiceInstancesToUpdate
 }
 
-func (j *instanceValidator) validateServices() {
-	logger.Trace("validating api services have at least one instance on dataplane")
+func (j *instanceValidator) validateServices() resourcesInfo {
+	apiServicesToUpdate := resourcesInfo{}
 	for _, key := range agent.cacheManager.GetAPIServiceKeys() {
-		logger := logger.WithField("serviceCacheID", key)
-		logger.Tracef("validating")
+		ivLogger := j.logger
+		ivLogger.Trace("validating api service has at least one instance on dataplane")
 
 		service := agent.cacheManager.GetAPIServiceWithPrimaryKey(key)
 		if service == nil {
-			logger.Trace("service was no longer in the cache")
+			ivLogger.WithField("serviceCacheID", key).Trace("service was no longer in the cache")
 			continue
 		}
-		logger = logger.WithField("name", service.Name)
-		instanceCount := agent.cacheManager.GetAPIServiceInstanceCount(service.Name)
-		logger = logger.WithField("instanceCount", instanceCount)
-
-		if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
-			logger.WithField("serviceTitle", service.Title).Warn("API Service no longer has a service instance")
+		apiSIs := agent.cacheManager.GetAPIServiceInstancesByService(service.Name)
+		count := 0
+		for _, apiSI := range apiSIs {
+			if util.IsInArray(apiSI.GetTags(), agentWarningTag) {
+				count++
+			}
+		}
+		if count != 0 && len(apiSIs) == count {
+			ivLogger.WithField("serviceTitle", service.Title).Warn("API Service no longer has a service instance")
+			apiServicesToUpdate.names = append(apiServicesToUpdate.names, service.Name)
+			if apiServicesToUpdate.kindLink == "" {
+				apiServicesToUpdate.kindLink = service.GetKindLink()
+			}
 		}
 	}
+	apiServicesToUpdate.kind = management.APIServiceGVK().Kind
+	return apiServicesToUpdate
+}
+
+func (j *instanceValidator) constructAPIServerQueries(filterName string, resNames []string) []string {
+	queries := []string{}
+	if len(resNames) == 0 {
+		return queries
+	}
+	offset := 0
+	query := ""
+	// safeguard against infinite loop just in case, not required
+	for range len(resNames) {
+		offset, query = j.addNames(filterName, resNames, offset)
+		queries = append(queries, query)
+		// all names have been added, exit
+		if offset == -1 {
+			return queries
+		}
+	}
+	return queries
+}
+
+func (j *instanceValidator) addNames(filterName string, resNames []string, offset int) (int, string) {
+	// format: `name=="name1" or name=="name2" or name=="name3"`
+	query := fmt.Sprintf(`%s=="%s"`, filterName, resNames[offset])
+	for i := offset + 1; i < len(resNames); i++ {
+		extendedQuery := fmt.Sprintf(`%s or %s=="%s"`, query, filterName, resNames[i])
+		if len(extendedQuery) >= j.maxQueryParamLength {
+			return i, query
+		}
+		query = extendedQuery
+	}
+	return -1, query
 }
