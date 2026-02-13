@@ -6,7 +6,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/util"
 
-	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -78,23 +78,28 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	defer j.cacheLock.Unlock()
 
 	apiServiceInstancesToUpdate := j.validateServiceInstances()
-	apiServicesToUpdate := j.validateServices()
-
 	j.addTags(apiServiceInstancesToUpdate)
+
+	apiServicesToUpdate := j.validateServices()
 	j.addTags(apiServicesToUpdate)
 }
 
 func (j *instanceValidator) addTags(info resourcesInfo) {
+	ivLogger := j.logger.WithField("kind", info.kind).WithField("kindLink", info.kindLink)
 	if len(info.names) == 0 {
-		j.logger.WithField("kind", info.kind).Trace("no instance validator tags to be added")
+		j.logger.Trace("no instance validator tags to be added")
 		return
 	}
-	ivLogger := j.logger.WithField("kind", info.kind)
 
 	queries := j.constructAPIServerQueries("name", info.names)
-	ris, err := j.getResources(queries, info.kindLink, info.kind)
-	if err != nil {
-		return
+	ris := []*v1.ResourceInstance{}
+	for _, query := range queries {
+		apis, err := agent.apicClient.GetAPIV1ResourceInstances(map[string]string{"query": query}, info.kindLink)
+		if err != nil {
+			j.logger.WithField("query", query).WithError(err).Error("getting resources")
+			return
+		}
+		ris = append(ris, apis...)
 	}
 
 	for _, ri := range ris {
@@ -111,38 +116,6 @@ func (j *instanceValidator) addTags(info resourcesInfo) {
 		}
 		ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
 	}
-
-}
-
-func (j *instanceValidator) getResources(queries []string, kindLink, kind string) ([]apiV1.Interface, error) {
-	ris := []apiV1.Interface{}
-	ivLogger := j.logger.WithField("kindLink", kindLink)
-	switch kind {
-	case management.APIServiceInstanceGVK().Kind:
-		for _, query := range queries {
-			apiSIs, err := agent.apicClient.GetAPIServiceInstances(map[string]string{"query": query}, kindLink)
-			if err != nil {
-				ivLogger.WithField("query", query).WithError(err).Error("getting api service instances")
-				return nil, err
-			}
-			for _, apiSI := range apiSIs {
-				ris = append(ris, apiSI)
-			}
-		}
-
-	case management.APIServiceGVK().Kind:
-		for _, query := range queries {
-			apis, err := agent.apicClient.GetAPIServices(map[string]string{"query": query}, kindLink)
-			if err != nil {
-				ivLogger.WithField("query", query).WithField("kindLink", kindLink).WithError(err).Error("getting api services")
-				return nil, err
-			}
-			for _, api := range apis {
-				ris = append(ris, api)
-			}
-		}
-	}
-	return ris, nil
 }
 
 func (j *instanceValidator) validateServiceInstances() resourcesInfo {
@@ -163,7 +136,7 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 			ivLogger.Trace("could not get instance external id. skipping api validation")
 			continue // skip service instances without external api id
 		}
-		ivLogger = ivLogger.WithField("externalAPIID", externalAPIID)
+		ivLogger = ivLogger.WithField(defs.AttrExternalAPIID, externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 		if externalAPIStage != "" {
 			ivLogger = ivLogger.WithField("externalAPIStage", externalAPIStage)
@@ -199,10 +172,14 @@ func (j *instanceValidator) validateServices() resourcesInfo {
 			ivLogger.WithField("serviceCacheID", key).Trace("service was no longer in the cache")
 			continue
 		}
-		instanceCount := agent.cacheManager.GetAPIServiceInstanceCount(service.Name)
-		ivLogger = ivLogger.WithField("instanceCount", instanceCount).WithField("name", service.Name)
-
-		if agent.cacheManager.GetAPIServiceInstanceCount(service.Name) == 0 {
+		apiSIs := agent.cacheManager.GetAPIServiceInstancesByService(service.Name)
+		count := 0
+		for _, apiSI := range apiSIs {
+			if util.IsInArray(apiSI.GetTags(), agentWarningTag) {
+				count++
+			}
+		}
+		if count != 0 && len(apiSIs) == count {
 			ivLogger.WithField("serviceTitle", service.Title).Warn("API Service no longer has a service instance")
 			apiServicesToUpdate.names = append(apiServicesToUpdate.names, service.Name)
 			if apiServicesToUpdate.kindLink == "" {

@@ -314,16 +314,3 @@ func (c *ServiceClient) GetAPIServiceByName(name string) (*management.APIService
 	err = json.Unmarshal(response.Body, apiService)
 	return apiService, err
 }
-
-func (c *ServiceClient) GetAPIServices(query map[string]string, URL string) ([]*management.APIService, error) {
-	resources, err := c.GetAPIV1ResourceInstances(query, URL)
-	if err != nil {
-		return nil, err
-	}
-	apiServices, err := management.APIServiceFromInstanceArray(resources)
-	if err != nil {
-		return nil, err
-	}
-
-	return apiServices, nil
-}

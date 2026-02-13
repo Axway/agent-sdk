@@ -73,7 +73,6 @@ type Client interface {
 	GetUserName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
-	GetAPIServices(query map[string]string, URL string) ([]*management.APIService, error)
 	GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error)
 	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*management.APIServiceRevision, error)
 	GetAPIServiceInstances(query map[string]string, URL string) ([]*management.APIServiceInstance, error)

@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -24,6 +23,7 @@ type info struct {
 	externalAPINameInstance string
 	externalAPIIDidService  string
 	externalAPINameService  string
+	instanceTags            []string
 }
 
 func setupCache(apiInfos []info) ([]*v1.ResourceInstance, []*v1.ResourceInstance) {
@@ -66,6 +66,7 @@ func setupCache(apiInfos []info) ([]*v1.ResourceInstance, []*v1.ResourceInstance
 		if info.externalAPINameInstance != "" {
 			instance.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIName] = info.externalAPINameInstance
 		}
+		instance.SetTags(append(instance.GetTags(), info.instanceTags...))
 
 		agent.cacheManager.AddAPIService(svc)
 		agent.cacheManager.AddAPIServiceInstance(instance)
@@ -84,43 +85,29 @@ func setupAPIValidator(apiValidation bool) {
 func TestValidatorAPI(t *testing.T) {
 	getCalls := 0
 	mockClient := &mock.Client{
-		GetAPIServiceInstancesMock: func(queryParam map[string]string, url string) ([]*management.APIServiceInstance, error) {
+		GetAPIV1ResourceInstancesMock: func(queryParam map[string]string, url string) ([]*v1.ResourceInstance, error) {
 			getCalls++
-			instances := []*management.APIServiceInstance{}
-			param := queryParam["query"]
-			splits := strings.Split(param, `name=="`)
-			for i := 1; i < len(splits); i++ {
-				name := strings.Trim(strings.Trim(strings.TrimSpace(splits[i]), "or"), `"`)
-				res, _ := agent.cacheManager.GetAPIServiceInstanceByName(name)
-				if res != nil {
-					apisi := &management.APIServiceInstance{}
-					apisi.FromInstance(res)
-					instances = append(instances, apisi)
-				}
-			}
-			if len(instances) == 0 {
-				return instances, fmt.Errorf("not found. query: %s", param)
-			}
-			return instances, nil
-		},
-		GetAPIServicesMock: func(queryParam map[string]string, url string) ([]*management.APIService, error) {
-			getCalls++
-			services := []*management.APIService{}
+			ris := []*v1.ResourceInstance{}
 			param := queryParam["query"]
 			splits := strings.Split(param, `name=="`)
 			for i := 1; i < len(splits); i++ {
 				name := strings.Trim(strings.Trim(strings.TrimSpace(splits[i]), `" or `), `"`)
-				res := agent.cacheManager.GetAPIServiceWithName(name)
-				if res != nil {
-					api := &management.APIService{}
-					api.FromInstance(res)
-					services = append(services, api)
+				if strings.HasSuffix(url, "apiserviceinstances") {
+					res, _ := agent.cacheManager.GetAPIServiceInstanceByName(name)
+					if res != nil {
+						ris = append(ris, res)
+					}
+				} else if strings.HasSuffix(url, "apiservices") {
+					res := agent.cacheManager.GetAPIServiceWithName(name)
+					if res != nil {
+						ris = append(ris, res)
+					}
 				}
 			}
-			if len(services) == 0 {
-				return services, fmt.Errorf("not found. query: %s", param)
+			if len(ris) == 0 {
+				return ris, fmt.Errorf("not found. query: %s", param)
 			}
-			return services, nil
+			return ris, nil
 		},
 		UpdateResourceInstanceMock: func(ri v1.Interface) (*v1.ResourceInstance, error) {
 			switch ri.GetGroupVersionKind().Kind {
@@ -150,59 +137,73 @@ func TestValidatorAPI(t *testing.T) {
 			apiValidation: true,
 		},
 		{
-			name: "1 query, 3 tagged services, 0 tagged instances: missing externalAPIID",
+			name: "4 queries, 2 tagged services: 2 instances have agent tag, 0 tagged instances: tag already existing for 2, one missing externalAPIID",
 			cachedInfo: []info{
 				{
 					instanceName:            "exquisite-instance1",
 					serviceName:             "exquisite-service1",
-					externalAPIIDidService:  "exquisite-service-id1",
-					externalAPINameInstance: "test1",
-					externalAPINameService:  "test1",
+					externalAPIIDidService:  "exquisite-id1",
+					externalAPIIDidInstance: "exquisite-id1",
+					instanceTags:            []string{agentWarningTag},
 				},
 				{
 					instanceName:            "exquisite-instance2",
 					serviceName:             "exquisite-service2",
-					externalAPIIDidService:  "exquisite-service-id2",
-					externalAPINameInstance: "test2",
-					externalAPINameService:  "test2",
+					externalAPIIDidService:  "exquisite-id2",
+					externalAPIIDidInstance: "exquisite-id2",
+					instanceTags:            []string{agentWarningTag},
 				},
 				{
-					instanceName:            "exquisite-instance3",
-					serviceName:             "exquisite-service3",
-					externalAPIIDidService:  "exquisite-service-id3",
-					externalAPINameInstance: "test3",
-					externalAPINameService:  "test3",
+					instanceName: "exquisite-instance3",
+					serviceName:  "exquisite-service3",
 				},
 			},
-			expectedGetCalls:               1,
-			expectedServiceNamesToBeTagged: []string{"exquisite-service1", "exquisite-service2", "exquisite-service3"},
+			expectedGetCalls:               4,
+			maxQueryParamLength:            1,
+			expectedServiceNamesToBeTagged: []string{"exquisite-service1", "exquisite-service2"},
 		},
 		{
-			name: "3 queries, 3 tagged services, 3 tagged instances",
+			name: "1 query, 0 tagged services, 3 tagged instances",
 			cachedInfo: []info{
 				{
 					instanceName:            "exquisite-instance1",
 					serviceName:             "exquisite-service1",
 					externalAPIIDidInstance: "exquisite-instance-id1",
-					externalAPIIDidService:  "exquisite-service-id1",
-					externalAPINameInstance: "test1",
-					externalAPINameService:  "test1",
 				},
 				{
 					instanceName:            "exquisite-instance2",
 					serviceName:             "exquisite-service2",
 					externalAPIIDidInstance: "exquisite-instance-id2",
-					externalAPIIDidService:  "exquisite-service-id2",
-					externalAPINameInstance: "test2",
-					externalAPINameService:  "test2",
 				},
 				{
 					instanceName:            "exquisite-instance3",
 					serviceName:             "exquisite-service3",
 					externalAPIIDidInstance: "exquisite-instance-id3",
-					externalAPIIDidService:  "exquisite-service-id3",
-					externalAPINameInstance: "test3",
-					externalAPINameService:  "test3",
+				},
+			},
+			expectedGetCalls:                1,
+			expectedInstanceNamesToBeTagged: []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
+		},
+		{
+			name: "6 queries, 3 tagged services, 3 tagged instances",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidInstance: "exquisite-api-id1",
+					externalAPIIDidService:  "exquisite-api-id1",
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidInstance: "exquisite-api-id2",
+					externalAPIIDidService:  "exquisite-api-id2",
+				},
+				{
+					instanceName:            "exquisite-instance3",
+					serviceName:             "exquisite-service3",
+					externalAPIIDidInstance: "exquisite-api-id3",
+					externalAPIIDidService:  "exquisite-api-id3",
 				},
 			},
 			maxQueryParamLength:             1,
@@ -236,18 +237,4 @@ func TestValidatorAPI(t *testing.T) {
 			assert.Equal(t, tc.expectedGetCalls, getCalls)
 		})
 	}
-}
-
-func getCachedData(id, kind string) string {
-	switch kind {
-	case management.APIServiceInstanceGVK().Kind:
-		d, _ := agent.cacheManager.GetAPIServiceInstanceByID(id)
-		b, _ := json.Marshal(d)
-		return string(b)
-	case management.APIServiceGVK().Kind:
-		d := agent.cacheManager.GetAPIServiceWithPrimaryKey(id)
-		b, _ := json.Marshal(d)
-		return string(b)
-	}
-	return ""
 }

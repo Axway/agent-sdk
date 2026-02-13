@@ -221,14 +221,14 @@ func (c *cacheManager) deleteAllServiceInstanceCounts() {
 	c.instanceCountMap.Flush()
 }
 
-func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
+func (c *cacheManager) GetAPIServiceInstancesByService(svcName string) []*v1.ResourceInstance {
 	svc := c.GetAPIServiceWithName(svcName)
 
 	// get apiid and primary key
 	apiID, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIID)
 	primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
 
-	count := 0
+	ris := []*v1.ResourceInstance{}
 	for _, k := range c.instanceMap.GetKeys() {
 		item, _ := c.instanceMap.Get(k)
 		inst, ok := item.(*v1.ResourceInstance)
@@ -238,9 +238,9 @@ func (c *cacheManager) GetAPIServiceInstanceCount(svcName string) int {
 		instAPIID, _ := util.GetAgentDetailsValue(inst, defs.AttrExternalAPIID)
 		instPrimary, _ := util.GetAgentDetailsValue(inst, defs.AttrExternalAPIPrimaryKey)
 		if apiID == instAPIID || primaryKey == instPrimary {
-			count++
+			ris = append(ris, inst)
 		}
 	}
 
-	return count
+	return ris
 }
