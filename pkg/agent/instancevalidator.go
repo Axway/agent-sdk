@@ -139,11 +139,11 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 		ivLogger = ivLogger.WithField(defs.AttrExternalAPIID, externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 		if externalAPIStage != "" {
-			ivLogger = ivLogger.WithField("externalAPIStage", externalAPIStage)
+			ivLogger = ivLogger.WithField(defs.AttrExternalAPIPrimaryKey, externalAPIStage)
 		}
 		externalPrimaryKey, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIPrimaryKey)
 		if externalPrimaryKey != "" {
-			ivLogger = ivLogger.WithField("externalPrimaryKey", externalPrimaryKey)
+			ivLogger = ivLogger.WithField(defs.AttrExternalAPIPrimaryKey, externalPrimaryKey)
 		}
 
 		ivLogger.Trace("checking agent api validator")
