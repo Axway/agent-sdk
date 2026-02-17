@@ -35,6 +35,8 @@ const (
 	// AmplifyCentral amplify central
 	AmplifyCentral             = "Amplify Central"
 	CentralHealthCheckEndpoint = "central"
+
+	AgentWarningTag = "Agent Sync Warning"
 )
 
 // Remarshal - remarshal the bytes to remove any extra spaces and consistent key order

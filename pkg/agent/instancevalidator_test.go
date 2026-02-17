@@ -137,28 +137,28 @@ func TestValidatorAPI(t *testing.T) {
 			apiValidation: true,
 		},
 		{
-			name: "4 queries, 2 tagged services: 2 instances have agent tag, 0 tagged instances: tag already existing for 2, one missing externalAPIID",
+			name: "2 queries, 2 tagged services: 2 instances have agent tag, 0 tagged instances: tag already existing for 2, one missing externalAPIID",
 			cachedInfo: []info{
 				{
 					instanceName:            "exquisite-instance1",
 					serviceName:             "exquisite-service1",
 					externalAPIIDidService:  "exquisite-id1",
 					externalAPIIDidInstance: "exquisite-id1",
-					instanceTags:            []string{agentWarningTag},
+					instanceTags:            []string{util.AgentWarningTag},
 				},
 				{
 					instanceName:            "exquisite-instance2",
 					serviceName:             "exquisite-service2",
 					externalAPIIDidService:  "exquisite-id2",
 					externalAPIIDidInstance: "exquisite-id2",
-					instanceTags:            []string{agentWarningTag},
+					instanceTags:            []string{util.AgentWarningTag},
 				},
 				{
 					instanceName: "exquisite-instance3",
 					serviceName:  "exquisite-service3",
 				},
 			},
-			expectedGetCalls:               4,
+			expectedGetCalls:               2,
 			maxQueryParamLength:            1,
 			expectedServiceNamesToBeTagged: []string{"exquisite-service1", "exquisite-service2"},
 		},
@@ -228,11 +228,11 @@ func TestValidatorAPI(t *testing.T) {
 
 			for _, instName := range tc.expectedInstanceNamesToBeTagged {
 				res, _ := agent.cacheManager.GetAPIServiceInstanceByName(instName)
-				assert.True(t, util.IsInArray(res.GetTags(), agentWarningTag))
+				assert.True(t, util.IsInArray(res.GetTags(), util.AgentWarningTag))
 			}
 			for _, svcName := range tc.expectedServiceNamesToBeTagged {
 				res := agent.cacheManager.GetAPIServiceWithName(svcName)
-				assert.True(t, util.IsInArray(res.GetTags(), agentWarningTag))
+				assert.True(t, util.IsInArray(res.GetTags(), util.AgentWarningTag))
 			}
 			assert.Equal(t, tc.expectedGetCalls, getCalls)
 		})

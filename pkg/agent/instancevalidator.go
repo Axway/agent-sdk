@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	agentWarningTag     = "Agent Sync Warning"
 	maxQueryParamLength = 2000
 )
 
@@ -104,11 +103,11 @@ func (j *instanceValidator) addTags(info resourcesInfo) {
 
 	for _, ri := range ris {
 		ivLogger := ivLogger.WithField("name", ri.GetName())
-		if util.IsInArray(ri.GetTags(), agentWarningTag) {
+		if util.IsInArray(ri.GetTags(), util.AgentWarningTag) {
 			ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
 			continue
 		}
-		ri.SetTags(append(ri.GetTags(), agentWarningTag))
+		ri.SetTags(append(ri.GetTags(), util.AgentWarningTag))
 		_, err := agent.apicClient.UpdateResourceInstance(ri)
 		if err != nil {
 			ivLogger.WithError(err).Error("updating resource instance")
@@ -131,6 +130,10 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 		}
 		ivLogger = ivLogger.WithField("name", instance.Name)
 
+		if util.IsInArray(instance.GetTags(), util.AgentWarningTag) {
+			ivLogger.WithField("serviceTitle", instance.Title).Trace("skipping already tagged instance")
+			continue
+		}
 		externalAPIID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if externalAPIID == "" {
 			ivLogger.Trace("could not get instance external id. skipping api validation")
@@ -139,7 +142,7 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 		ivLogger = ivLogger.WithField(defs.AttrExternalAPIID, externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
 		if externalAPIStage != "" {
-			ivLogger = ivLogger.WithField(defs.AttrExternalAPIPrimaryKey, externalAPIStage)
+			ivLogger = ivLogger.WithField(defs.AttrExternalAPIStage, externalAPIStage)
 		}
 		externalPrimaryKey, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIPrimaryKey)
 		if externalPrimaryKey != "" {
@@ -172,10 +175,14 @@ func (j *instanceValidator) validateServices() resourcesInfo {
 			ivLogger.WithField("serviceCacheID", key).Trace("service was no longer in the cache")
 			continue
 		}
+		if util.IsInArray(service.GetTags(), util.AgentWarningTag) {
+			ivLogger.WithField("serviceTitle", service.Title).Trace("skipping already tagged service")
+			continue
+		}
 		apiSIs := agent.cacheManager.GetAPIServiceInstancesByService(service.Name)
 		count := 0
 		for _, apiSI := range apiSIs {
-			if util.IsInArray(apiSI.GetTags(), agentWarningTag) {
+			if util.IsInArray(apiSI.GetTags(), util.AgentWarningTag) {
 				count++
 			}
 		}
