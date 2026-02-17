@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -101,6 +102,8 @@ func (b *baseJob) callWithTimeout(execution func() error) error {
 		timeLimit = b.timeout
 	}
 	if timeLimit > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), timeLimit)
+		defer cancel()
 		// start a go routine to execute the job
 		executed := make(chan error)
 		go func() {
@@ -111,7 +114,7 @@ func (b *baseJob) callWithTimeout(execution func() error) error {
 		select {
 		case err := <-executed:
 			executionError = err
-		case <-time.After(timeLimit): // execute the job with a time limit
+		case <-ctx.Done(): // execute the job with a time limit
 			executionError = fmt.Errorf("job %s (%s) timed out", b.name, b.id)
 		}
 	} else {
@@ -303,8 +306,12 @@ func (b *baseJob) waitForReady() {
 }
 
 func (b *baseJob) stopReadyIfWaiting(ready int) {
-	if b.isWaitingForReady() {
-		b.stopReadyChan <- ready
+	if !b.isWaitingForReady() {
+		return
+	}
+	select {
+	case b.stopReadyChan <- ready:
+	default:
 	}
 }
 

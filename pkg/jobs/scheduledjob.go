@@ -87,7 +87,7 @@ func (b *scheduleJob) start() {
 
 // stop - write to the stop channel to stop the execution loop
 func (b *scheduleJob) stop() {
-	if b.getIsStopped() {
+	if !b.isStopped.CompareAndSwap(false, true) {
 		b.logger.Tracef("job has already been stopped")
 		return
 	}

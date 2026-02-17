@@ -10,7 +10,7 @@ func newDetachedIntervalJob(newJob Job, interval time.Duration, name string, opt
 		createBaseJob(newJob, nil, name, JobTypeDetachedInterval),
 		intervalJobProps{
 			interval: interval,
-			stopChan: make(chan bool),
+			stopChan: make(chan bool, 1),
 		},
 	}
 

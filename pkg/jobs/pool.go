@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -10,24 +11,21 @@ import (
 
 // Pool - represents a pool of jobs that are related in such a way that when one is not running none of them should be
 type Pool struct {
-	jobs                    map[string]JobExecution // All jobs that are in this pool
-	cronJobs                map[string]JobExecution // Jobs that run continuously, not just ran once
-	detachedCronJobs        map[string]JobExecution // Jobs that run continuously, not just ran once, detached from all others
-	poolStatus              PoolStatus              // Holds the current status of the pool of jobs
-	failedJob               string                  // Holds the ID of the job that is the reason for a non-running status
-	jobsMapLock             sync.Mutex
-	cronJobsMapLock         sync.Mutex
-	detachedCronJobsMapLock sync.Mutex
-	poolStatusLock          sync.Mutex
-	backoffLock             sync.Mutex
-	failedJobLock           sync.Mutex
-	failJobChan             chan string
-	stopJobsChan            chan bool
-	backoff                 *backoff
-	logger                  log.FieldLogger
-	startStopLock           sync.Mutex
-	isStartStopping         bool
-	isStartStopLock         sync.Mutex
+	jobs                  sync.Map                // All jobs that are in this pool
+	cronJobs              sync.Map                // Jobs that run continuously, not just ran once
+	detachedCronJobs      sync.Map                // Jobs that run continuously, not just ran once, detached from all others
+	jobsCount             atomic.Int64            // Count of jobs in the jobs map
+	cronJobsCount         atomic.Int64            // Count of jobs in the cronJobs map
+	detachedCronJobsCount atomic.Int64            // Count of jobs in the detachedCronJobs map
+	poolStatus            atomic.Value            // Holds the current status of the pool of jobs (stores PoolStatus)
+	failedJob             atomic.Value            // Holds the ID of the job that is the reason for a non-running status (stores string)
+	backoff               atomic.Pointer[backoff] // Holds the backoff configuration (thread-safe)
+	failJobChan           chan string
+	stopJobsChan          chan bool
+	logger                log.FieldLogger
+	startStopLock         sync.Mutex
+	isStartStopping       atomic.Bool
+	startOnce             sync.Once
 }
 
 func newPool() *Pool {
@@ -36,134 +34,115 @@ func newPool() *Pool {
 		WithPackage("sdk.jobs")
 
 	newPool := Pool{
-		jobs:             make(map[string]JobExecution),
-		cronJobs:         make(map[string]JobExecution),
-		detachedCronJobs: make(map[string]JobExecution),
-		failedJob:        "",
-		startStopLock:    sync.Mutex{},
-		isStartStopLock:  sync.Mutex{},
-		failJobChan:      make(chan string, 1),
-		stopJobsChan:     make(chan bool, 1),
-		backoff:          newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2),
-		logger:           logger,
+		startStopLock: sync.Mutex{},
+		failJobChan:   make(chan string, 1),
+		stopJobsChan:  make(chan bool, 1),
+		logger:        logger,
 	}
 	newPool.SetStatus(PoolStatusInitializing)
+	newPool.setFailedJob("")
+	newPool.backoff.Store(newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2))
 
 	return &newPool
 }
 
 // getBackoff - get the job backoff
 func (p *Pool) getBackoff() *backoff {
-	p.backoffLock.Lock()
-	defer p.backoffLock.Unlock()
-	return p.backoff
+	return p.backoff.Load()
 }
 
 // setBackoff - set the job backoff
 func (p *Pool) setBackoff(backoff *backoff) {
-	p.backoffLock.Lock()
-	defer p.backoffLock.Unlock()
-	p.backoff = backoff
+	p.backoff.Store(backoff)
 }
 
 // recordJob - Adds a job to the jobs map
 func (p *Pool) recordJob(job JobExecution) string {
-	p.jobsMapLock.Lock()
-	defer p.jobsMapLock.Unlock()
-	if len(p.jobs) == 0 && p.GetStatus() == PoolStatusInitializing.String() {
+	p.startOnce.Do(func() {
 		// start routine to check all job status funcs and catch any failures
 		go p.jobChecker()
 		// start the pool watcher
 		go p.watchJobs()
-	}
+	})
 
 	p.logger.
 		WithField("job-id", job.GetID()).
 		WithField("job-name", job.GetName()).
 		Trace("registered job")
-	p.jobs[job.GetID()] = job
+	p.jobs.Store(job.GetID(), job)
+	p.jobsCount.Add(1)
 	return job.GetID()
 }
 
 func (p *Pool) setCronJob(job JobExecution) {
-	p.cronJobsMapLock.Lock()
-	defer p.cronJobsMapLock.Unlock()
-	p.cronJobs[job.GetID()] = job
+	p.cronJobs.Store(job.GetID(), job)
+	p.cronJobsCount.Add(1)
 }
 
 func (p *Pool) getCronJob(jobID string) (JobExecution, bool) {
-	p.cronJobsMapLock.Lock()
-	defer p.cronJobsMapLock.Unlock()
-	value, exists := p.cronJobs[jobID]
-	return value, exists
+	value, exists := p.cronJobs.Load(jobID)
+	if !exists {
+		return nil, false
+	}
+	return value.(JobExecution), true
 }
 
 func (p *Pool) getCronJobs() map[string]JobExecution {
-	p.cronJobsMapLock.Lock()
-	defer p.cronJobsMapLock.Unlock()
-
 	// Create the target map
 	newMap := make(map[string]JobExecution)
 
-	// Copy from the original map to the target map to avoid race conditions
-	for key, value := range p.cronJobs {
-		newMap[key] = value
-	}
+	// Copy from the sync.Map to the target map
+	p.cronJobs.Range(func(key, value interface{}) bool {
+		newMap[key.(string)] = value.(JobExecution)
+		return true
+	})
 	return newMap
 }
 
 func (p *Pool) setDetachedCronJob(job JobExecution) {
-	p.detachedCronJobsMapLock.Lock()
-	defer p.detachedCronJobsMapLock.Unlock()
-	p.detachedCronJobs[job.GetID()] = job
+	p.detachedCronJobs.Store(job.GetID(), job)
+	p.detachedCronJobsCount.Add(1)
 }
 
 func (p *Pool) getDetachedCronJob(jobID string) (JobExecution, bool) {
-	p.detachedCronJobsMapLock.Lock()
-	defer p.detachedCronJobsMapLock.Unlock()
-	value, exists := p.detachedCronJobs[jobID]
-	return value, exists
+	value, exists := p.detachedCronJobs.Load(jobID)
+	if !exists {
+		return nil, false
+	}
+	return value.(JobExecution), true
 }
 
 // recordCronJob - Adds a job to the cron jobs map
 func (p *Pool) recordCronJob(job JobExecution) string {
 	p.setCronJob(job)
-	p.logger.Tracef("added new cron job, now running %v cron jobs", len(p.cronJobs))
+	p.logger.Tracef("added new cron job, now running %v cron jobs", p.cronJobsCount.Load())
 	return p.recordJob(job)
 }
 
 // recordDetachedCronJob - Adds a job to the detached cron jobs map
 func (p *Pool) recordDetachedCronJob(job JobExecution) string {
 	p.setDetachedCronJob(job)
-	p.logger.Tracef("added new cron job, now running %v detached cron jobs", len(p.detachedCronJobs))
+	p.logger.Tracef("added new cron job, now running %v detached cron jobs", p.detachedCronJobsCount.Load())
 	return p.recordJob(job)
 }
 
 // recordJob - Removes the specified job from jobs map
 func (p *Pool) removeJob(jobID string) {
-	p.jobsMapLock.Lock()
-	job, ok := p.jobs[jobID]
-	if ok {
+	if value, found := p.jobs.LoadAndDelete(jobID); found {
+		job := value.(JobExecution)
 		job.stop()
-		delete(p.jobs, jobID)
+		p.jobsCount.Add(-1)
 	}
-	p.jobsMapLock.Unlock()
 
 	// remove from cron jobs, if present
-	_, found := p.getCronJob(jobID)
-	p.cronJobsMapLock.Lock()
-	if found {
-		delete(p.cronJobs, jobID)
+	if _, found := p.cronJobs.LoadAndDelete(jobID); found {
+		p.cronJobsCount.Add(-1)
 	}
-	p.cronJobsMapLock.Unlock()
 
 	// remove from detached cron jobs, if present
-	_, found = p.getDetachedCronJob(jobID)
-	p.detachedCronJobsMapLock.Lock()
-	if found {
-		delete(p.detachedCronJobs, jobID)
+	if _, found := p.detachedCronJobs.LoadAndDelete(jobID); found {
+		p.detachedCronJobsCount.Add(-1)
 	}
-	p.detachedCronJobsMapLock.Unlock()
 }
 
 // RegisterSingleRunJob - Runs a single run job
@@ -271,48 +250,62 @@ func (p *Pool) UnregisterJob(jobID string) {
 
 // GetJob - Returns the Job based on the id
 func (p *Pool) GetJob(id string) JobExecution {
-	return p.jobs[id].GetJob()
+	value, ok := p.jobs.Load(id)
+	if !ok {
+		return nil
+	}
+	return value.(JobExecution).GetJob()
 }
 
 // JobLock - Locks the job, returns when the lock is granted
 func (p *Pool) JobLock(id string) {
-	p.jobs[id].Lock()
+	value, ok := p.jobs.Load(id)
+	if ok {
+		value.(JobExecution).Lock()
+	}
 }
 
 // JobUnlock - Unlocks the job
 func (p *Pool) JobUnlock(id string) {
-	p.jobs[id].Unlock()
+	value, ok := p.jobs.Load(id)
+	if ok {
+		value.(JobExecution).Unlock()
+	}
 }
 
 func (p *Pool) getFailedJob() string {
-	p.failedJobLock.Lock()
-	defer p.failedJobLock.Unlock()
-	return p.failedJob
+	value := p.failedJob.Load()
+	if value == nil {
+		return ""
+	}
+	return value.(string)
 }
 
 func (p *Pool) setFailedJob(job string) {
-	p.failedJobLock.Lock()
-	defer p.failedJobLock.Unlock()
-	p.failedJob = job
+	p.failedJob.Store(job)
 }
 
 // GetJobStatus - Returns the Status of the Job based on the id
 func (p *Pool) GetJobStatus(id string) string {
-	return p.jobs[id].GetStatus().String()
+	value, ok := p.jobs.Load(id)
+	if !ok {
+		return ""
+	}
+	return value.(JobExecution).GetStatus().String()
 }
 
 // GetStatus - returns the status of the pool of jobs
 func (p *Pool) GetStatus() string {
-	p.poolStatusLock.Lock()
-	defer p.poolStatusLock.Unlock()
-	return p.poolStatus.String()
+	status := p.poolStatus.Load()
+	if status == nil {
+		return ""
+	}
+	return status.(PoolStatus).String()
 }
 
 // SetStatus - Sets the status of the pool of jobs
 func (p *Pool) SetStatus(status PoolStatus) {
-	p.poolStatusLock.Lock()
-	defer p.poolStatusLock.Unlock()
-	p.poolStatus = status
+	p.poolStatus.Store(status)
 }
 
 // waits with timeout for the specified status in all cron jobs
@@ -323,17 +316,22 @@ func (p *Pool) waitStartStop(jobStatus JobStatus) bool {
 	done := make(chan bool)
 	go func() {
 		for {
-			running := true
-			for _, job := range p.getCronJobs() {
-				if job.GetStatus() != jobStatus {
-					running = false
+			select {
+			case <-ctx.Done():
+				return // Respect context cancellation
+			default:
+				running := true
+				for _, job := range p.getCronJobs() {
+					if job.GetStatus() != jobStatus {
+						running = false
+					}
 				}
+				if running {
+					done <- true
+					break
+				}
+				time.Sleep(10 * time.Millisecond)
 			}
-			if running {
-				done <- true
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 
@@ -346,15 +344,11 @@ func (p *Pool) waitStartStop(jobStatus JobStatus) bool {
 }
 
 func (p *Pool) setIsStartStop(isStartStop bool) {
-	p.isStartStopLock.Lock()
-	defer p.isStartStopLock.Unlock()
-	p.isStartStopping = isStartStop
+	p.isStartStopping.Store(isStartStop)
 }
 
 func (p *Pool) getIsStartStop() bool {
-	p.isStartStopLock.Lock()
-	defer p.isStartStopLock.Unlock()
-	return p.isStartStopping
+	return p.isStartStopping.Load()
 }
 
 // startAll - starts all jobs defined in the cronJobs map, used by watchJobs
@@ -411,10 +405,19 @@ func (p *Pool) stopAll() {
 func (p *Pool) jobChecker() {
 	ticker := time.NewTicker(getStatusCheckInterval())
 	defer ticker.Stop()
+
+	checking := atomic.Bool{}
+	checking.Store(false)
 	for {
 		select {
 		case <-ticker.C:
+			// if already checking, skip this tick to avoid multiple concurrent checks
+			if checking.Load() {
+				continue
+			}
 			go func() {
+				checking.Store(true)
+				defer checking.Store(false)
 				failedJob := ""
 				for _, job := range p.getCronJobs() {
 					job.updateStatus()

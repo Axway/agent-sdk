@@ -78,7 +78,8 @@ func TestChannelJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterChannelJob(job, job.stopChan)
-	globalPool.jobs[jobID].(*channelJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
+	j, _ := globalPool.jobs.Load(jobID)
+	j.(*channelJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
 	statuses := []JobStatus{JobStatusRunning}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
@@ -107,10 +108,10 @@ func TestDetachedChannelJob(t *testing.T) {
 
 	jobID, _ := RegisterDetachedChannelJob(job, job.stopChan)
 	assert.NotEmpty(t, jobID)
-	j := globalPool.detachedCronJobs[jobID]
+	j, _ := globalPool.detachedCronJobs.Load(jobID)
 	assert.NotNil(t, j)
 
-	j = globalPool.cronJobs[jobID]
+	j, _ = globalPool.cronJobs.Load(jobID)
 	assert.Nil(t, j)
 	UnregisterJob(jobID)
 }

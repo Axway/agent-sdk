@@ -67,7 +67,8 @@ func TestSingleRunJob(t *testing.T) {
 	}
 
 	jobID, _ := RegisterSingleRunJob(job)
-	globalPool.jobs[jobID].(*baseJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
+	j, _ := globalPool.jobs.Load(jobID)
+	j.(*baseJob).setBackoff(newBackoffTimeout(time.Millisecond, time.Millisecond, 1))
 
 	statuses := []JobStatus{JobStatusRunning, JobStatusFinished}
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
