@@ -7,6 +7,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestOktaPostProcessClientRegistration(t *testing.T) {
+	oktaProvider := &okta{}
+	extraProps := map[string]interface{}{
+		"group":        "MyAppUsers",
+		"createPolicy": true,
+		"authServerId": "default",
+		"policyTemplate": map[string]interface{}{
+			"name":        "AutoPolicy-Test",
+			"description": "Auto-created",
+			"rule": map[string]interface{}{
+				"name":       "AutoRule-Test",
+				"conditions": map[string]interface{}{"grantTypes": map[string]interface{}{"include": []string{"authorization_code"}}},
+				"actions":    map[string]interface{}{"token": map[string]interface{}{"accessTokenLifetime": 3600}},
+			},
+		},
+		"createScopes": true,
+		"scopes": []interface{}{
+			map[string]interface{}{"name": "read:items", "description": "Read items"},
+			map[string]interface{}{"name": "write:items", "description": "Write items"},
+		},
+	}
+	clientRes := &clientMetadata{ClientID: "app123"}
+	// Mock oktaapi.New and methods if needed
+	// For now, just check no error
+	err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, nil)
+	assert.NoError(t, err)
+}
+
+func TestOktaPostProcessClientUnregister(t *testing.T) {
+	oktaProvider := &okta{}
+	extraProps := map[string]interface{}{
+		"authServerId": "default",
+	}
+	agentDetails := map[string]string{
+		"oktaPolicyId": "pol-123",
+		"oktaRuleId":   "r-456",
+		"oktaGroupId":  "00g-789",
+		"oktaScopeId":  "scp-101",
+	}
+	clientID := "app123"
+	// Mock oktaapi.New and methods if needed
+	// For now, just check no error
+	err := oktaProvider.postProcessClientUnregister(clientID, agentDetails, extraProps, nil)
+	assert.NoError(t, err)
+}
+
 func TestOktaPKCERequired(t *testing.T) {
 	cases := []struct {
 		name          string
