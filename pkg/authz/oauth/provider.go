@@ -29,8 +29,8 @@ type Provider interface {
 	GetSupportedGrantTypes() []string
 	GetSupportedTokenAuthMethods() []string
 	GetSupportedResponseMethod() []string
-	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
-	UnregisterClient(clientID, accessToken, registrationClientURI string) error
+	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, map[string]string, error)
+	UnregisterClient(clientID, accessToken, registrationClientURI string, agentDetails map[string]string) error
 	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
@@ -53,7 +53,7 @@ type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
 	validateExtraProperties(extraProps map[string]interface{}) error
-	postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}) error
+	postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}) (map[string]string, error)
 	postProcessClientUnregister(clientID string, agentDetails map[string]string, extraProps map[string]interface{}, credentialObj interface{}) error
 }
 
@@ -355,21 +355,21 @@ func (p *provider) prepareHeaders(authPrefix, token string) map[string]string {
 }
 
 // RegisterClient - register the OAuth client with IDP
-func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, error) {
+func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, map[string]string, error) {
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	err := p.enrichClientReq(clientReq)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	clientBuffer, err := json.Marshal(clientReq)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	token, err := p.getClientToken()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	request := coreapi.Request{
@@ -382,7 +382,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 
 	response, err := p.apiClient.Send(request)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if response.Code == http.StatusCreated || response.Code == http.StatusOK {
@@ -393,11 +393,13 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		}
 
 		// Okta post-registration hook
+		var createdAgentDetails map[string]string
 		if p.cfg.GetIDPType() == TypeOkta {
-			hookErr := p.idpType.postProcessClientRegistration(clientRes, p.extraProperties, nil)
+			var hookErr error
+			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.extraProperties, nil)
 			if hookErr != nil {
 				p.logger.WithError(hookErr).Error("Okta post-registration hook failed")
-				return nil, hookErr
+				return nil, nil, hookErr
 			}
 		}
 
@@ -410,7 +412,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 			WithField("response-type", clientReq.GetResponseTypes()).
 			WithField("redirect-url", clientReq.GetRedirectURIs()).
 			Info("registered client")
-		return clientRes, err
+		return clientRes, createdAgentDetails, err
 	}
 
 	err = fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
@@ -423,7 +425,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		WithField("redirect-url", clientReq.GetRedirectURIs()).
 		Error(err.Error())
 
-	return nil, err
+	return nil, nil, err
 }
 
 func (p *provider) enrichClientReq(clientReq ClientMetadata) error {
@@ -488,7 +490,7 @@ func addResponseType(clientRequest *clientMetadata, responseType string) {
 }
 
 // UnregisterClient - removes the OAuth client from IDP
-func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string) error {
+func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string, agentDetails map[string]string) error {
 	logger := p.logger.
 		WithField("provider", p.cfg.GetIDPName()).
 		WithField("client-id", clientID)
@@ -504,43 +506,45 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
-	var err error
-
-	// Okta post-unregister hook
-	if p.cfg.GetIDPType() == TypeOkta {
-		hookErr := p.idpType.postProcessClientUnregister(clientID, nil, p.extraProperties, nil)
-		if hookErr != nil {
-			logger.WithError(hookErr).Error("Okta post-unregister hook failed")
-			return hookErr
-		}
+	// run provider-specific cleanup (Okta)
+	if hookErr := p.runPostUnregisterHook(clientID, agentDetails); hookErr != nil {
+		logger.WithError(hookErr).Error("Okta post-unregister hook failed")
+		return hookErr
 	}
 
+	// attempt unregister using known URL patterns
+	if err := p.attemptUnregisterAll(clientID, registrationClientURI, authPrefix, accessToken); err == nil {
+		logger.Info("unregistered client")
+		return nil
+	} else {
+		return err
+	}
+}
+
+// runPostUnregisterHook calls provider-specific unregister hook when applicable.
+func (p *provider) runPostUnregisterHook(clientID string, agentDetails map[string]string) error {
+	if p.cfg.GetIDPType() != TypeOkta {
+		return nil
+	}
+	return p.idpType.postProcessClientUnregister(clientID, agentDetails, p.extraProperties, nil)
+}
+
+// attemptUnregisterAll tries unregistering with the registration URI, the standard
+// registration endpoint (base + /clientID) and finally as a query-parameter.
+func (p *provider) attemptUnregisterAll(clientID, registrationClientURI, authPrefix, accessToken string) error {
 	// Try with registration client URI if not empty
 	if registrationClientURI != "" {
-		err = p.tryUnregister(registrationClientURI, "", authPrefix, accessToken)
-		if err == nil {
-			logger.Info("unregistered client")
+		if err := p.tryUnregister(registrationClientURI, "", authPrefix, accessToken); err == nil {
 			return nil
 		}
-		logger.
-			WithError(err).
-			WithField("registration-uri", registrationClientURI).
-			Debug("failed to unregister with registration client URI")
 	}
 
 	// Try with base url + clientID in path
-	// Check if registration url is different from standard URL to avoid duplicate attempts
 	standardURL := p.getClientRegistrationEndpoint() + "/" + clientID
 	if standardURL != registrationClientURI {
-		err = p.tryUnregister(standardURL, "", authPrefix, accessToken)
-		if err == nil {
-			logger.Info("unregistered client")
+		if err := p.tryUnregister(standardURL, "", authPrefix, accessToken); err == nil {
 			return nil
 		}
-		logger.
-			WithError(err).
-			WithField("unregister-url", standardURL).
-			Debug("failed to unregister with standard URL")
 	}
 
 	// Try with clientID as query parameter
@@ -549,19 +553,12 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		if strings.Contains(standardURL, "/"+clientID) {
 			baseURL = strings.Replace(standardURL, "/"+clientID, "", 1)
 		}
-
-		err = p.tryUnregister(baseURL, clientID, authPrefix, accessToken)
-		if err == nil {
-			logger.Info("unregistered client")
+		if err := p.tryUnregister(baseURL, clientID, authPrefix, accessToken); err == nil {
 			return nil
 		}
-		logger.
-			WithError(err).
-			WithField("unregister-url", baseURL).
-			Debug("failed to unregister with clientID as query parameter")
 	}
 
-	return err
+	return fmt.Errorf("unregister failed with all attempts")
 }
 
 // tryUnregister attempts to unregister using the provided parameters

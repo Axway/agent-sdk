@@ -31,8 +31,9 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 	clientRes := &clientMetadata{ClientID: "app123"}
 	// Mock oktaapi.New and methods if needed
 	// For now, just check no error
-	err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, nil)
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, nil)
 	assert.NoError(t, err)
+	_ = created
 }
 
 func TestOktaPostProcessClientUnregister(t *testing.T) {

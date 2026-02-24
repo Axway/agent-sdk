@@ -15,12 +15,12 @@ func (i *genericIDP) preProcessClientRequest(clientRequest *clientMetadata) {
 	// no op
 }
 
-func (i *genericIDP) validateExtraProperties(extraProps map[string]any) error {
+func (i *genericIDP) validateExtraProperties(extraProps map[string]interface{}) error {
 	return nil
 }
 
-func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}) error {
-	return nil
+func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}) (map[string]string, error) {
+	return nil, nil
 }
 
 func (i *genericIDP) postProcessClientUnregister(clientID string, agentDetails map[string]string, extraProps map[string]interface{}, credentialObj interface{}) error {

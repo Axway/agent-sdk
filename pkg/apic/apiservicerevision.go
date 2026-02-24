@@ -74,43 +74,18 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	log := c.logger
 	logProcess := "Creating"
 
-	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
-	if serviceBody.serviceContext.serviceAction == updateAPI {
-		logProcess = "Updating"
-
-		// get current revisions
-		revisions, totalCount, err := c.getRevisions("metadata.references.id==" + serviceBody.serviceContext.serviceID)
-		if err != nil {
-			return err
-		}
-		serviceBody.serviceContext.revisionCount = totalCount
-		apiServiceRevisions = revisions
+	apiServiceRevisions, err := c.getRevisionsIfUpdating(serviceBody)
+	if err != nil {
+		return err
 	}
 
-	// check if a revision with the same hash was already published
-	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
-		name := revName.(string)
-
-		// check to see if the tags have changed from the latest
-		for _, apiServiceRevision := range apiServiceRevisions {
-			if apiServiceRevision.Name == name {
-				updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
-				if len(updatedTags) > 0 {
-					updatedRevision := c.buildAPIServiceRevision(serviceBody)
-					updatedRevision.Name = apiServiceRevision.Name
-					updatedRevision.Metadata.Scope = v1.MetadataScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: c.cfg.GetEnvironmentName(),
-					}
-					_, err := c.UpdateResourceInstance(updatedRevision)
-					if err != nil {
-						return err
-					}
-				}
-				serviceBody.serviceContext.revisionName = name
-				return nil
-			}
-		}
+	// check if a revision with the same hash was already published and update tags if needed
+	found, err := c.checkAndUpdateExistingRevision(serviceBody, apiServiceRevisions)
+	if err != nil {
+		return err
+	}
+	if found {
+		return nil
 	}
 
 	log.
@@ -120,6 +95,15 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		WithField("environment", c.cfg.GetEnvironmentName()).
 		Info("process revision")
 
+	if err := c.createOrUpdateRevision(serviceBody); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// createOrUpdateRevision encapsulates CreateOrUpdateResource and rollback handling
+func (c *ServiceClient) createOrUpdateRevision(serviceBody *ServiceBody) error {
 	rev, err := c.CreateOrUpdateResource(c.buildAPIServiceRevision(serviceBody))
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {
@@ -132,7 +116,6 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	}
 
 	serviceBody.serviceContext.revisionName = rev.Name
-
 	return nil
 }
 
@@ -164,6 +147,50 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 	}
 
 	return apiServiceRevisions, count, nil
+}
+
+// getRevisionsIfUpdating returns revisions when the service action is an update
+func (c *ServiceClient) getRevisionsIfUpdating(serviceBody *ServiceBody) ([]*management.APIServiceRevision, error) {
+	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
+	if serviceBody.serviceContext.serviceAction == updateAPI {
+		// get current revisions
+		revisions, totalCount, err := c.getRevisions("metadata.references.id==" + serviceBody.serviceContext.serviceID)
+		if err != nil {
+			return nil, err
+		}
+		serviceBody.serviceContext.revisionCount = totalCount
+		apiServiceRevisions = revisions
+	}
+	return apiServiceRevisions, nil
+}
+
+// checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
+func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody, apiServiceRevisions []*management.APIServiceRevision) (bool, error) {
+	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
+		name := revName.(string)
+
+		// check to see if the tags have changed from the latest
+		for _, apiServiceRevision := range apiServiceRevisions {
+			if apiServiceRevision.Name == name {
+				updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
+				if len(updatedTags) > 0 {
+					updatedRevision := c.buildAPIServiceRevision(serviceBody)
+					updatedRevision.Name = apiServiceRevision.Name
+					updatedRevision.Metadata.Scope = v1.MetadataScope{
+						Kind: management.EnvironmentGVK().Kind,
+						Name: c.cfg.GetEnvironmentName(),
+					}
+					_, err := c.UpdateResourceInstance(updatedRevision)
+					if err != nil {
+						return false, err
+					}
+				}
+				serviceBody.serviceContext.revisionName = name
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not.  If they are not, return an empty[].  If they are

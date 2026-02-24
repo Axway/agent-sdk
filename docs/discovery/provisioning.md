@@ -635,6 +635,39 @@ AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1="service-account-secret"
 AGENTFEATURES_IDP_SCOPE_1="resource.READ resource.WRITE"
 ```
 
+###### Okta provider: `extraProperties` example
+To enrich Okta provisioning (group assignment, policy/rule and scopes automation), set `extraProperties` for the Okta IDP. Example (as environment entry for the corresponding `AGENTFEATURES` index):
+
+```
+AGENTFEATURES_IDP_EXTRA_PROPERTIES_1='{
+  "GroupName": "MyAppUsers",
+  "createPolicy": true,
+  "authServerId": "0oa-abc123",
+  "policyTemplate": {
+    "name": "Allow MyApp",
+    "description": "Policy for MyApp",
+    "rule": {
+      "name": "Allow rule",
+      "conditions": {"network": {"connection": "ANY"}},
+      "actions": {"token": {"accessTokenLifetime": 3600}}
+    }
+  },
+  "createScopes": true,
+  "scopes": [
+    {"name": "myapp.read", "description": "Read access"},
+    {"name": "myapp.write", "description": "Write access"}
+  ]
+}'
+```
+
+Alternatively when registering the provider programmatically via `IDPConfiguration`, include the same keys under `ExtraProperties` (map[string]interface{}).
+
+Notes:
+- The provider accepts `group`, `Group`, `GroupName` and `groupName` keys for the group assignment.
+- `createPolicy` defaults to `true` for Okta when not present; set it to `false` to skip automatic policy/rule creation.
+- `policyTemplate` must be a map describing the policy and optionally include a `rule` object.
+
+
 Alternatively, the agent implementation can choose to explicitly register the provider calling by using the `ProviderRegistry` interface.
 
 ```go
