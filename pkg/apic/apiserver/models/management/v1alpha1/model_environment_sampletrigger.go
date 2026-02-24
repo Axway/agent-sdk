@@ -9,10 +9,19 @@
 
 package management
 
+import (
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	"time"
+	time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+)
+
 // EnvironmentSampletrigger  (management.v1alpha1.Environment)
 type EnvironmentSampletrigger struct {
 	// Set to true to request that sampling for this environment is started for the duration selected
 	Requested bool `json:"requested,omitempty"`
 	// The duration, in seconds, for which the agents in the environment will sample if the request is approved
 	Duration int32 `json:"duration,omitempty"`
+	// The time after which the sampling can be triggered again in ISO 8601 format with numeric timezone offset
+	DisabledUntil time.Time `json:"disabledUntil,omitempty"`
 }
