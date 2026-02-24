@@ -13,4 +13,6 @@ package management
 type ApiServiceAgentdetails struct {
 	// Remote API ID for the API Service.
 	RemoteAPIID string `json:"remoteAPIID,omitempty"`
+	// Signals whether or not there is a Sync Warning between the gateway and the agent cache.
+	SyncWarning bool `json:"syncWarning,omitempty"`
 }

@@ -16,4 +16,5 @@ type AssetRequestMarketplaceResourceOwner struct {
 	// Id of the owner of the resource.
 	Id           string                                           `json:"id,omitempty"`
 	Organization AssetRequestMarketplaceResourceOwnerOrganization `json:"organization"`
+	User         AssetRequestMarketplaceResourceOwnerUser         `json:"user,omitempty"`
 }
