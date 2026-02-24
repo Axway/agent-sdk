@@ -20,9 +20,10 @@ const (
 )
 
 type resourcesInfo struct {
-	names    []string
-	kindLink string
-	kind     string
+	names      []string
+	kindLink   string
+	kind       string
+	updateFunc func(log.FieldLogger, *v1.ResourceInstance)
 }
 
 type instanceValidator struct {
@@ -77,13 +78,14 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 	defer j.cacheLock.Unlock()
 
 	apiServiceInstancesToUpdate := j.validateServiceInstances()
-	j.addTags(apiServiceInstancesToUpdate)
+	j.markResourceInstances(apiServiceInstancesToUpdate)
 
 	apiServicesToUpdate := j.validateServices()
-	j.addTags(apiServicesToUpdate)
+	j.markResourceInstances(apiServicesToUpdate)
 }
 
-func (j *instanceValidator) addTags(info resourcesInfo) {
+// adds the API Service Instance tags or sets the APIService.agentdetails.syncWarning to true
+func (j *instanceValidator) markResourceInstances(info resourcesInfo) {
 	ivLogger := j.logger.WithField("kind", info.kind).WithField("kindLink", info.kindLink)
 	if len(info.names) == 0 {
 		j.logger.Trace("no instance validator tags to be added")
@@ -102,18 +104,7 @@ func (j *instanceValidator) addTags(info resourcesInfo) {
 	}
 
 	for _, ri := range ris {
-		ivLogger := ivLogger.WithField("name", ri.GetName())
-		if util.IsInArray(ri.GetTags(), util.AgentWarningTag) {
-			ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
-			continue
-		}
-		ri.SetTags(append(ri.GetTags(), util.AgentWarningTag))
-		_, err := agent.apicClient.UpdateResourceInstance(ri)
-		if err != nil {
-			ivLogger.WithError(err).Error("updating resource instance")
-			continue
-		}
-		ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
+		info.updateFunc(ivLogger, ri)
 	}
 }
 
@@ -156,6 +147,7 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 			apiServiceInstancesToUpdate.names = append(apiServiceInstancesToUpdate.names, instance.Name)
 			if apiServiceInstancesToUpdate.kindLink == "" {
 				apiServiceInstancesToUpdate.kindLink = instance.GetKindLink()
+				apiServiceInstancesToUpdate.updateFunc = updateAPIServiceInstance
 			}
 		}
 	}
@@ -191,6 +183,7 @@ func (j *instanceValidator) validateServices() resourcesInfo {
 			apiServicesToUpdate.names = append(apiServicesToUpdate.names, service.Name)
 			if apiServicesToUpdate.kindLink == "" {
 				apiServicesToUpdate.kindLink = service.GetKindLink()
+				apiServicesToUpdate.updateFunc = updateAPIService
 			}
 		}
 	}
@@ -228,4 +221,36 @@ func (j *instanceValidator) addNames(filterName string, resNames []string, offse
 		query = extendedQuery
 	}
 	return -1, query
+}
+
+func updateAPIServiceInstance(ivLogger log.FieldLogger, ri *v1.ResourceInstance) {
+	ivLogger = ivLogger.WithField("name", ri.GetName())
+	if util.IsInArray(ri.GetTags(), util.AgentWarningTag) {
+		ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
+		return
+	}
+	ri.SetTags(append(ri.GetTags(), util.AgentWarningTag))
+	_, err := agent.apicClient.UpdateResourceInstance(ri)
+	if err != nil {
+		ivLogger.WithError(err).Error("updating resource instance")
+		return
+	}
+	ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
+}
+
+func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
+	ivLogger := l.WithField("name", ri.GetName())
+
+	tag, _ := util.GetAgentDetailsValue(ri, util.AgentWarningTag)
+	if apiS.Agentdetails.SyncWarning || tag != "" {
+		ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
+		return
+	}
+	ri.SetTags(append(ri.GetTags(), util.AgentWarningTag))
+	_, err := agent.apicClient.UpdateResourceInstance(ri)
+	if err != nil {
+		ivLogger.WithError(err).Error("updating resource instance")
+		return
+	}
+	ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
 }
