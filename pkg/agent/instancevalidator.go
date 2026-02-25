@@ -8,6 +8,7 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
 	"github.com/Axway/agent-sdk/pkg/jobs"
@@ -16,8 +17,7 @@ import (
 )
 
 const (
-	maxQueryParamLength    = 2000
-	externalAPISyncWarning = "externalAPISyncWarning"
+	maxQueryParamLength = 2000
 )
 
 type resourcesInfo struct {
@@ -242,7 +242,7 @@ func updateAPIServiceInstance(ivLogger log.FieldLogger, ri *v1.ResourceInstance)
 func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 	ivLogger := l.WithField("name", ri.GetName())
 
-	xAgentDetailTag, _ := util.GetAgentDetailsValue(ri, externalAPISyncWarning)
+	xAgentDetailTag, _ := util.GetAgentDetailsValue(ri, definitions.AttrExternalAPISyncWarning)
 	apiS := management.NewAPIService("", "")
 	apiS.FromInstance(ri)
 	if apiS.Agentdetails != nil {
@@ -253,7 +253,7 @@ func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 		return
 	}
 
-	util.SetAgentDetailsKey(apiS, externalAPISyncWarning, "warning")
+	util.SetAgentDetailsKey(apiS, definitions.AttrExternalAPISyncWarning, "warning")
 	if err := agent.apicClient.CreateSubResource(apiS.ResourceMeta, util.GetAgentDetails(apiS)); err != nil {
 		ivLogger.WithError(err).Error("updating resource instance")
 		return
