@@ -23,6 +23,7 @@ type info struct {
 	externalAPINameInstance string
 	externalAPIIDidService  string
 	externalAPINameService  string
+	externalAPISyncService  bool
 	instanceTags            []string
 }
 
@@ -66,6 +67,9 @@ func setupCache(apiInfos []info) ([]*v1.ResourceInstance, []*v1.ResourceInstance
 		if info.externalAPINameInstance != "" {
 			instance.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIName] = info.externalAPINameInstance
 		}
+		if info.externalAPISyncService {
+			svc.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPISyncWarning] = warningValue
+		}
 		instance.SetTags(append(instance.GetTags(), info.instanceTags...))
 
 		agent.cacheManager.AddAPIService(svc)
@@ -84,6 +88,7 @@ func setupAPIValidator(apiValidation bool) {
 
 func TestValidatorAPI(t *testing.T) {
 	getCalls := 0
+	updateCalls := 0
 	mockClient := &mock.Client{
 		GetAPIV1ResourceInstancesMock: func(queryParam map[string]string, url string) ([]*v1.ResourceInstance, error) {
 			getCalls++
@@ -110,11 +115,8 @@ func TestValidatorAPI(t *testing.T) {
 			return ris, nil
 		},
 		UpdateResourceInstanceMock: func(ri v1.Interface) (*v1.ResourceInstance, error) {
+			updateCalls++
 			switch ri.GetGroupVersionKind().Kind {
-			case management.APIServiceGVK().Kind:
-				apiRI, _ := ri.AsInstance()
-				agent.cacheManager.AddAPIService(apiRI)
-				return apiRI, nil
 			case management.APIServiceInstanceGVK().Kind:
 				instRI, _ := ri.AsInstance()
 				agent.cacheManager.AddAPIServiceInstance(instRI)
@@ -122,15 +124,29 @@ func TestValidatorAPI(t *testing.T) {
 			}
 			return nil, fmt.Errorf("not found id: %s", ri.GetMetadata().ID)
 		},
+		CreateSubResourceMock: func(rm v1.ResourceMeta, subs map[string]interface{}) error {
+			updateCalls++
+			switch rm.GetGroupVersionKind().Kind {
+			case management.APIServiceGVK().Kind:
+				apiRI := agent.cacheManager.GetAPIServiceWithName(rm.Name)
+				for name, sub := range subs {
+					apiRI.SetSubResource(name, sub)
+				}
+				agent.cacheManager.AddAPIService(apiRI)
+				return nil
+			}
+			return fmt.Errorf("unknown GVK")
+		},
 	}
 	cases := []struct {
-		name                            string
-		cachedInfo                      []info
-		maxQueryParamLength             int
-		apiValidation                   bool
-		expectedInstanceNamesToBeTagged []string
-		expectedServiceNamesToBeTagged  []string
-		expectedGetCalls                int
+		name                                string
+		cachedInfo                          []info
+		maxQueryParamLength                 int
+		apiValidation                       bool
+		expectedInstanceNamesToBeTagged     []string
+		expectedServiceNamesToHaveAgentSync []string
+		expectedGetCalls                    int
+		expectedUpdateCalls                 int
 	}{
 		{
 			name:          "no queries, no tags, validator always true",
@@ -158,12 +174,42 @@ func TestValidatorAPI(t *testing.T) {
 					serviceName:  "exquisite-service3",
 				},
 			},
-			expectedGetCalls:               2,
-			maxQueryParamLength:            1,
-			expectedServiceNamesToBeTagged: []string{"exquisite-service1", "exquisite-service2"},
+			expectedGetCalls:                    2,
+			maxQueryParamLength:                 1,
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2"},
+			expectedUpdateCalls:                 2,
 		},
 		{
-			name: "1 query, 0 tagged services, 3 tagged instances",
+			name: "3 queries, 2 tagged services: 3 instances have agent tag, but one has sync warning already " +
+				"0 tagged instances: tag already existing for 2, one missing externalAPIID",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidService:  "exquisite-id1",
+					externalAPIIDidInstance: "exquisite-id1",
+					instanceTags:            []string{util.AgentWarningTag},
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidService:  "exquisite-id2",
+					externalAPIIDidInstance: "exquisite-id2",
+					instanceTags:            []string{util.AgentWarningTag},
+					externalAPISyncService:  true,
+				},
+				{
+					instanceName: "exquisite-instance3",
+					serviceName:  "exquisite-service3",
+				},
+			},
+			expectedGetCalls:                    2,
+			expectedUpdateCalls:                 1,
+			maxQueryParamLength:                 1,
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2"},
+		},
+		{
+			name: "1 query, 0 tagged services, 3 tagged instances: services missing externalAPIID",
 			cachedInfo: []info{
 				{
 					instanceName:            "exquisite-instance1",
@@ -182,6 +228,7 @@ func TestValidatorAPI(t *testing.T) {
 				},
 			},
 			expectedGetCalls:                1,
+			expectedUpdateCalls:             3,
 			expectedInstanceNamesToBeTagged: []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
 		},
 		{
@@ -206,15 +253,17 @@ func TestValidatorAPI(t *testing.T) {
 					externalAPIIDidService:  "exquisite-api-id3",
 				},
 			},
-			maxQueryParamLength:             1,
-			expectedInstanceNamesToBeTagged: []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
-			expectedServiceNamesToBeTagged:  []string{"exquisite-service1", "exquisite-service2", "exquisite-service3"},
-			expectedGetCalls:                6,
+			maxQueryParamLength:                 1,
+			expectedInstanceNamesToBeTagged:     []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2", "exquisite-service3"},
+			expectedUpdateCalls:                 6,
+			expectedGetCalls:                    6,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			getCalls = 0
+			updateCalls = 0
 			instanceValidator := newInstanceValidator()
 			if tc.maxQueryParamLength != 0 {
 				instanceValidator.maxQueryParamLength = tc.maxQueryParamLength
@@ -230,11 +279,14 @@ func TestValidatorAPI(t *testing.T) {
 				res, _ := agent.cacheManager.GetAPIServiceInstanceByName(instName)
 				assert.True(t, util.IsInArray(res.GetTags(), util.AgentWarningTag))
 			}
-			for _, svcName := range tc.expectedServiceNamesToBeTagged {
+			for _, svcName := range tc.expectedServiceNamesToHaveAgentSync {
 				res := agent.cacheManager.GetAPIServiceWithName(svcName)
-				assert.True(t, util.IsInArray(res.GetTags(), util.AgentWarningTag))
+				syncWarning, err := util.GetAgentDetailsValue(res, definitions.AttrExternalAPISyncWarning)
+				assert.Nil(t, err)
+				assert.Equal(t, warningValue, syncWarning)
 			}
 			assert.Equal(t, tc.expectedGetCalls, getCalls)
+			assert.Equal(t, tc.expectedUpdateCalls, updateCalls)
 		})
 	}
 }

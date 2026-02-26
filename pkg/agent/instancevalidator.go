@@ -18,6 +18,7 @@ import (
 
 const (
 	maxQueryParamLength = 2000
+	warningValue        = "warning"
 )
 
 type resourcesInfo struct {
@@ -245,7 +246,7 @@ func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 	xAgentDetailTag, _ := util.GetAgentDetailsValue(ri, definitions.AttrExternalAPISyncWarning)
 	apiS := management.NewAPIService("", "")
 	apiS.FromInstance(ri)
-	if apiS.Agentdetails != nil {
+	if apiS.Agentdetails == nil {
 		apiS.Agentdetails = &management.ApiServiceAgentdetails{}
 	}
 	if apiS.Agentdetails.SyncWarning || xAgentDetailTag != "" {
@@ -253,8 +254,8 @@ func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 		return
 	}
 
-	util.SetAgentDetailsKey(apiS, definitions.AttrExternalAPISyncWarning, "warning")
-	if err := agent.apicClient.CreateSubResource(apiS.ResourceMeta, util.GetAgentDetails(apiS)); err != nil {
+	util.SetAgentDetailsKey(apiS, definitions.AttrExternalAPISyncWarning, warningValue)
+	if err := agent.apicClient.CreateSubResource(apiS.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: util.GetAgentDetails(apiS)}); err != nil {
 		ivLogger.WithError(err).Error("updating resource instance")
 		return
 	}
