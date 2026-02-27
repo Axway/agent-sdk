@@ -20,6 +20,7 @@ type Client struct {
 	GetUserNameMock                           func(ID string) (string, error)
 	ExecuteAPIMock                            func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	HealthcheckMock                           func(name string) *hc.Status
+	GetAPIServicesMock                        func(queryParams map[string]string, url string) ([]*management.APIService, error)
 	GetAPIRevisionsMock                       func(queryParams map[string]string, stage string) ([]*management.APIServiceRevision, error)
 	GetAPIServiceRevisionsMock                func(queryParams map[string]string, URL, stage string) ([]*management.APIServiceRevision, error)
 	GetAPIServiceInstancesMock                func(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error)
@@ -60,6 +61,13 @@ func (m *Client) GetEnvironment() (*management.Environment, error) {
 func (m *Client) GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error) {
 	if m.GetCentralTeamByNameMock != nil {
 		return m.GetCentralTeamByNameMock(teamName)
+	}
+	return nil, nil
+}
+
+func (m *Client) GetAPIServices(queryParams map[string]string, URL string) ([]*management.APIService, error) {
+	if m.GetAPIServicesMock != nil {
+		return m.GetAPIServicesMock(queryParams, URL)
 	}
 	return nil, nil
 }

@@ -1,61 +1,83 @@
 package agent
 
 import (
-	"net/http"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/apic/mock"
+	"github.com/Axway/agent-sdk/pkg/util"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
-	"github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupCache(externalAPIID, externalAPIName string) (*v1.ResourceInstance, *v1.ResourceInstance) {
-	svc := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name: "service",
-			Metadata: v1.Metadata{
-				ID: "svc-" + externalAPIID,
-			},
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrExternalAPIID:         externalAPIID,
-					definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
-					definitions.AttrExternalAPIName:       externalAPIName,
-				},
-			},
-		},
-	}
-	instance := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name: "instance",
-			Metadata: v1.Metadata{
-				ID: "instance-" + externalAPIID,
-			},
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrExternalAPIID:         externalAPIID,
-					definitions.AttrExternalAPIPrimaryKey: "primary-" + externalAPIID,
-					definitions.AttrExternalAPIName:       externalAPIName,
-				},
-			},
-		},
-	}
-
-	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	agent.cacheManager.AddAPIService(svc)
-	agent.cacheManager.AddAPIServiceInstance(instance)
-	return svc, instance
+type info struct {
+	instanceName            string
+	serviceName             string
+	externalAPIIDidInstance string
+	externalAPINameInstance string
+	externalAPIIDidService  string
+	externalAPINameService  string
+	externalAPISyncService  bool
+	instanceTags            []string
 }
 
-func setupAPICClient(mockResponse []api.MockResponse) {
-	client, httpClient := apic.GetTestServiceClient()
-	httpClient.SetResponses(mockResponse)
-	agent.apicClient = client
+func setupCache(apiInfos []info) ([]*v1.ResourceInstance, []*v1.ResourceInstance) {
+	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	services := []*v1.ResourceInstance{}
+	instances := []*v1.ResourceInstance{}
+	for _, info := range apiInfos {
+		svc := &v1.ResourceInstance{
+			ResourceMeta: v1.ResourceMeta{
+				GroupVersionKind: management.APIServiceGVK(),
+				Name:             info.serviceName,
+				SubResources: map[string]interface{}{
+					definitions.XAgentDetails: map[string]interface{}{},
+				},
+			},
+		}
+		instance := &v1.ResourceInstance{
+			ResourceMeta: v1.ResourceMeta{
+				GroupVersionKind: management.APIServiceInstanceGVK(),
+				Name:             info.instanceName,
+				SubResources: map[string]interface{}{
+					definitions.XAgentDetails: map[string]interface{}{},
+				},
+			},
+		}
+
+		if info.externalAPIIDidService != "" {
+			svc.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIID] = info.externalAPIIDidService
+			svc.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIPrimaryKey] = "primary-" + info.externalAPIIDidService
+			svc.Metadata.ID = fmt.Sprintf("svc-%s", info.externalAPIIDidService)
+		}
+		if info.externalAPINameService != "" {
+			svc.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIName] = info.externalAPINameService
+		}
+		if info.externalAPIIDidInstance != "" {
+			instance.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIID] = info.externalAPIIDidInstance
+			instance.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIPrimaryKey] = "primary-" + info.externalAPIIDidInstance
+			instance.Metadata.ID = fmt.Sprintf("svc-%s", info.externalAPIIDidInstance)
+		}
+		if info.externalAPINameInstance != "" {
+			instance.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPIName] = info.externalAPINameInstance
+		}
+		if info.externalAPISyncService {
+			svc.SubResources[definitions.XAgentDetails].(map[string]interface{})[definitions.AttrExternalAPISyncWarning] = warningValue
+		}
+		instance.SetTags(append(instance.GetTags(), info.instanceTags...))
+
+		agent.cacheManager.AddAPIService(svc)
+		agent.cacheManager.AddAPIServiceInstance(instance)
+		services = append(services, svc)
+		instances = append(instances, instance)
+	}
+	return services, instances
 }
 
 func setupAPIValidator(apiValidation bool) {
@@ -64,81 +86,207 @@ func setupAPIValidator(apiValidation bool) {
 	})
 }
 
-func TestValidatorAPIExistsOnDataplane(t *testing.T) {
-	// Setup
-	instanceValidator := newInstanceValidator()
-	setupCache("12345", "test")
-	setupAPIValidator(true)
-	instanceValidator.Execute()
-	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
-	assert.Nil(t, err)
-	assert.NotNil(t, i)
-
-	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
-	assert.NotNil(t, s)
-}
-
-func TestValidatorAPIDoesExistsDeleteService(t *testing.T) {
-	// Setup
-	instanceValidator := newInstanceValidator()
-	setupCache("12345", "test")
-	setupAPICClient([]api.MockResponse{
-		{
-			RespCode: http.StatusOK, // get instance finalizers
+func TestValidatorAPI(t *testing.T) {
+	getCalls := 0
+	updateCalls := 0
+	mockClient := &mock.Client{
+		GetAPIV1ResourceInstancesMock: func(queryParam map[string]string, url string) ([]*v1.ResourceInstance, error) {
+			getCalls++
+			ris := []*v1.ResourceInstance{}
+			param := queryParam["query"]
+			splits := strings.Split(param, `name=="`)
+			for i := 1; i < len(splits); i++ {
+				name := strings.Trim(strings.Trim(strings.TrimSpace(splits[i]), `" or `), `"`)
+				if strings.HasSuffix(url, "apiserviceinstances") {
+					res, _ := agent.cacheManager.GetAPIServiceInstanceByName(name)
+					if res != nil {
+						ris = append(ris, res)
+					}
+				} else if strings.HasSuffix(url, "apiservices") {
+					res := agent.cacheManager.GetAPIServiceWithName(name)
+					if res != nil {
+						ris = append(ris, res)
+					}
+				}
+			}
+			if len(ris) == 0 {
+				return ris, fmt.Errorf("not found. query: %s", param)
+			}
+			return ris, nil
 		},
-		{
-			RespCode: http.StatusNoContent, // delete instance
+		UpdateResourceInstanceMock: func(ri v1.Interface) (*v1.ResourceInstance, error) {
+			updateCalls++
+			switch ri.GetGroupVersionKind().Kind {
+			case management.APIServiceInstanceGVK().Kind:
+				instRI, _ := ri.AsInstance()
+				agent.cacheManager.AddAPIServiceInstance(instRI)
+				return instRI, nil
+			}
+			return nil, fmt.Errorf("not found id: %s", ri.GetMetadata().ID)
 		},
-		{
-			RespCode: http.StatusNoContent, // delete service
-		},
-	})
-	setupAPIValidator(false)
-	instanceValidator.Execute()
-	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
-	assert.NotNil(t, err)
-	assert.Nil(t, i)
-
-	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
-	assert.Nil(t, s)
-}
-
-func TestValidatorAPIDoesExistsDeleteInstance(t *testing.T) {
-	instanceValidator := newInstanceValidator()
-
-	setupCache("12345", "test")
-	instance := &v1.ResourceInstance{
-		ResourceMeta: v1.ResourceMeta{
-			Name: "instance123456",
-			Metadata: v1.Metadata{
-				ID: "instance-" + "123456",
-			},
-			SubResources: map[string]interface{}{
-				definitions.XAgentDetails: map[string]interface{}{
-					definitions.AttrExternalAPIID:         "123456",
-					definitions.AttrExternalAPIPrimaryKey: "primary-12345",
-					definitions.AttrExternalAPIName:       "test",
-				},
-			},
+		CreateSubResourceMock: func(rm v1.ResourceMeta, subs map[string]interface{}) error {
+			updateCalls++
+			switch rm.GetGroupVersionKind().Kind {
+			case management.APIServiceGVK().Kind:
+				apiRI := agent.cacheManager.GetAPIServiceWithName(rm.Name)
+				for name, sub := range subs {
+					apiRI.SetSubResource(name, sub)
+				}
+				agent.cacheManager.AddAPIService(apiRI)
+				return nil
+			}
+			return fmt.Errorf("unknown GVK")
 		},
 	}
-	agent.cacheManager.AddAPIServiceInstance(instance)
-	setupAPICClient([]api.MockResponse{
+	cases := []struct {
+		name                                string
+		cachedInfo                          []info
+		maxQueryParamLength                 int
+		apiValidation                       bool
+		expectedInstanceNamesToBeTagged     []string
+		expectedServiceNamesToHaveAgentSync []string
+		expectedGetCalls                    int
+		expectedUpdateCalls                 int
+	}{
 		{
-			RespCode: http.StatusOK, // get finalizers
+			name:          "no queries, no tags, validator always true",
+			apiValidation: true,
 		},
 		{
-			RespCode: http.StatusNoContent, // delete instance
+			name: "2 queries, 2 tagged services: 2 instances have agent tag, 0 tagged instances: tag already existing for 2, one missing externalAPIID",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidService:  "exquisite-id1",
+					externalAPIIDidInstance: "exquisite-id1",
+					instanceTags:            []string{util.AgentWarningTag},
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidService:  "exquisite-id2",
+					externalAPIIDidInstance: "exquisite-id2",
+					instanceTags:            []string{util.AgentWarningTag},
+				},
+				{
+					instanceName: "exquisite-instance3",
+					serviceName:  "exquisite-service3",
+				},
+			},
+			expectedGetCalls:                    2,
+			maxQueryParamLength:                 1,
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2"},
+			expectedUpdateCalls:                 2,
 		},
-	})
-	setAPIValidator(func(apiID, stageName string) bool {
-		return apiID != "12345"
-	})
-	instanceValidator.Execute()
-	i, err := agent.cacheManager.GetAPIServiceInstanceByID("instance-12345")
-	assert.NotNil(t, err)
-	assert.Nil(t, i)
+		{
+			name: "3 queries, 2 tagged services: 3 instances have agent tag, but one has sync warning already " +
+				"0 tagged instances: tag already existing for 2, one missing externalAPIID",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidService:  "exquisite-id1",
+					externalAPIIDidInstance: "exquisite-id1",
+					instanceTags:            []string{util.AgentWarningTag},
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidService:  "exquisite-id2",
+					externalAPIIDidInstance: "exquisite-id2",
+					instanceTags:            []string{util.AgentWarningTag},
+					externalAPISyncService:  true,
+				},
+				{
+					instanceName: "exquisite-instance3",
+					serviceName:  "exquisite-service3",
+				},
+			},
+			expectedGetCalls:                    2,
+			expectedUpdateCalls:                 1,
+			maxQueryParamLength:                 1,
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2"},
+		},
+		{
+			name: "1 query, 0 tagged services, 3 tagged instances: services missing externalAPIID",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidInstance: "exquisite-instance-id1",
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidInstance: "exquisite-instance-id2",
+				},
+				{
+					instanceName:            "exquisite-instance3",
+					serviceName:             "exquisite-service3",
+					externalAPIIDidInstance: "exquisite-instance-id3",
+				},
+			},
+			expectedGetCalls:                1,
+			expectedUpdateCalls:             3,
+			expectedInstanceNamesToBeTagged: []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
+		},
+		{
+			name: "6 queries, 3 tagged services, 3 tagged instances",
+			cachedInfo: []info{
+				{
+					instanceName:            "exquisite-instance1",
+					serviceName:             "exquisite-service1",
+					externalAPIIDidInstance: "exquisite-api-id1",
+					externalAPIIDidService:  "exquisite-api-id1",
+				},
+				{
+					instanceName:            "exquisite-instance2",
+					serviceName:             "exquisite-service2",
+					externalAPIIDidInstance: "exquisite-api-id2",
+					externalAPIIDidService:  "exquisite-api-id2",
+				},
+				{
+					instanceName:            "exquisite-instance3",
+					serviceName:             "exquisite-service3",
+					externalAPIIDidInstance: "exquisite-api-id3",
+					externalAPIIDidService:  "exquisite-api-id3",
+				},
+			},
+			maxQueryParamLength:                 1,
+			expectedInstanceNamesToBeTagged:     []string{"exquisite-instance1", "exquisite-instance2", "exquisite-instance3"},
+			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2", "exquisite-service3"},
+			expectedUpdateCalls:                 6,
+			expectedGetCalls:                    6,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			getCalls = 0
+			updateCalls = 0
+			instanceValidator := newInstanceValidator()
+			if tc.maxQueryParamLength != 0 {
+				instanceValidator.maxQueryParamLength = tc.maxQueryParamLength
+			}
+			setupCache(tc.cachedInfo)
+			setupAPIValidator(tc.apiValidation)
+			agent.apicClient = mockClient
 
-	s := agent.cacheManager.GetAPIServiceWithPrimaryKey("primary-12345")
-	assert.NotNil(t, s)
+			err := instanceValidator.Execute()
+			assert.Nil(t, err)
+
+			for _, instName := range tc.expectedInstanceNamesToBeTagged {
+				res, _ := agent.cacheManager.GetAPIServiceInstanceByName(instName)
+				assert.True(t, util.IsInArray(res.GetTags(), util.AgentWarningTag))
+			}
+			for _, svcName := range tc.expectedServiceNamesToHaveAgentSync {
+				res := agent.cacheManager.GetAPIServiceWithName(svcName)
+				syncWarning, err := util.GetAgentDetailsValue(res, definitions.AttrExternalAPISyncWarning)
+				assert.Nil(t, err)
+				assert.Equal(t, warningValue, syncWarning)
+			}
+			assert.Equal(t, tc.expectedGetCalls, getCalls)
+			assert.Equal(t, tc.expectedUpdateCalls, updateCalls)
+		})
+	}
 }

@@ -35,6 +35,8 @@ const (
 	// AmplifyCentral amplify central
 	AmplifyCentral             = "Amplify Central"
 	CentralHealthCheckEndpoint = "central"
+
+	AgentWarningTag = "Agent Sync Warning"
 )
 
 // Remarshal - remarshal the bytes to remove any extra spaces and consistent key order
@@ -583,4 +585,13 @@ func EnsureStringIsNotFloat(in string) string {
 		return fmt.Sprintf("%.0f", fResult)
 	}
 	return in
+}
+
+func IsInArray[K comparable](arr []K, val K) bool {
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return false
 }
