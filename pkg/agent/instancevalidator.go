@@ -71,7 +71,7 @@ func (j *instanceValidator) Execute() error {
 		j.logger.Trace("no registered validator")
 	}
 
-	j.logger.Trace("finished executing")
+	j.logger.Info("finished executing instance validation")
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (j *instanceValidator) validateAPIOnDataplane() {
 func (j *instanceValidator) markResourceInstances(info resourcesInfo) {
 	ivLogger := j.logger.WithField("kind", info.kind).WithField("kindLink", info.kindLink)
 	if len(info.names) == 0 {
-		j.logger.Trace("no instance validator tags to be added")
+		ivLogger.Trace("no instance validator tags to be added")
 		return
 	}
 
@@ -99,7 +99,7 @@ func (j *instanceValidator) markResourceInstances(info resourcesInfo) {
 	for _, query := range queries {
 		apis, err := agent.apicClient.GetAPIV1ResourceInstances(map[string]string{"query": query}, info.kindLink)
 		if err != nil {
-			j.logger.WithField("query", query).WithError(err).Error("getting resources")
+			ivLogger.WithField("query", query).WithError(err).Error("getting resources")
 			return
 		}
 		ris = append(ris, apis...)
@@ -130,7 +130,7 @@ func (j *instanceValidator) validateServiceInstances() resourcesInfo {
 		externalAPIID, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
 		if externalAPIID == "" {
 			ivLogger.Trace("could not get instance external id. skipping api validation")
-			continue // skip service instances without external api id
+			continue
 		}
 		ivLogger = ivLogger.WithField(defs.AttrExternalAPIID, externalAPIID)
 		externalAPIStage, _ := util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
@@ -169,7 +169,8 @@ func (j *instanceValidator) validateServices() resourcesInfo {
 			ivLogger.WithField("serviceCacheID", key).Trace("service was no longer in the cache")
 			continue
 		}
-		if util.IsInArray(service.GetTags(), util.AgentWarningTag) {
+		syncDetails, _ := util.GetAgentDetailsValue(service, definitions.AttrExternalAPISyncWarning)
+		if syncDetails != "" {
 			ivLogger.WithField("serviceTitle", service.Title).Trace("skipping already tagged service")
 			continue
 		}
@@ -225,18 +226,21 @@ func (j *instanceValidator) addNames(filterName string, resNames []string, offse
 	return -1, query
 }
 
-func updateAPIServiceInstance(ivLogger log.FieldLogger, ri *v1.ResourceInstance) {
-	ivLogger = ivLogger.WithField("name", ri.GetName())
+func updateAPIServiceInstance(l log.FieldLogger, ri *v1.ResourceInstance) {
+	ivLogger := l.WithField("name", ri.GetName())
 	if util.IsInArray(ri.GetTags(), util.AgentWarningTag) {
 		ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
 		return
 	}
+
 	ri.SetTags(append(ri.GetTags(), util.AgentWarningTag))
 	_, err := agent.apicClient.UpdateResourceInstance(ri)
 	if err != nil {
 		ivLogger.WithError(err).Error("updating resource instance")
 		return
 	}
+	// we add the changes to the instances to the cache directly and not wait for the resource update events because the tagging impacts the upcoming APIservice checks
+	agent.cacheManager.AddAPIServiceInstance(ri)
 	ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
 }
 
@@ -259,5 +263,6 @@ func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 		ivLogger.WithError(err).Error("updating resource instance")
 		return
 	}
+	// we do not need to add to the cache because by the time the next instance validator runs, the resource update events would have already been handled
 	ivLogger.Warn("Added agent sync warning tag to API Resource on Amplify Central")
 }
