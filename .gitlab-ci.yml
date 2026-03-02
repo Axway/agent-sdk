@@ -2,7 +2,7 @@
 # Section for external includes
 ############################################################
 include:
-  - project: "apigov/beano_cicd"
+  - project: "apigov/agents/beano_cicd"
     ref: $BEANO_CICD_GREEN
     # this one MUST be after the security jobs in order for overrides to work correctly!
     file:
