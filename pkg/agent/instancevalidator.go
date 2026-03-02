@@ -248,19 +248,14 @@ func updateAPIService(l log.FieldLogger, ri *v1.ResourceInstance) {
 	ivLogger := l.WithField("name", ri.GetName())
 
 	xAgentDetailTag, _ := util.GetAgentDetailsValue(ri, definitions.AttrExternalAPISyncWarning)
-	apiS := management.NewAPIService("", "")
-	apiS.FromInstance(ri)
-	if apiS.Agentdetails == nil {
-		apiS.Agentdetails = &management.ApiServiceAgentdetails{}
-	}
-	if apiS.Agentdetails.SyncWarning || xAgentDetailTag != "" {
+	if xAgentDetailTag != "" {
 		ivLogger.Trace("Agent sync warning tag already existing. Skipping update")
 		return
 	}
 
-	util.SetAgentDetailsKey(apiS, definitions.AttrExternalAPISyncWarning, warningValue)
-	if err := agent.apicClient.CreateSubResource(apiS.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: util.GetAgentDetails(apiS)}); err != nil {
-		ivLogger.WithError(err).Error("updating resource instance")
+	util.SetAgentDetailsKey(ri, definitions.AttrExternalAPISyncWarning, warningValue)
+	if err := agent.apicClient.CreateSubResource(ri.ResourceMeta, map[string]interface{}{definitions.XAgentDetails: util.GetAgentDetails(ri)}); err != nil {
+		ivLogger.WithError(err).Error("updating sub resource")
 		return
 	}
 	// we do not need to add to the cache because by the time the next instance validator runs, the resource update events would have already been handled
