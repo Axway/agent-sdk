@@ -47,6 +47,9 @@ func TestAPIServiceMarshal(t *testing.T) {
 			Type: v1.TeamOwner,
 			ID:   "233",
 		},
+		Samplestate: m.ApiServiceSamplestate{
+			DisabledUntil: getTimestamp(),
+		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
 			Icon: m.ApiServiceSpecIcon{
@@ -103,6 +106,9 @@ func TestAPIServiceMarshalNoOwner(t *testing.T) {
 					"x-agent-id": "123",
 				},
 			},
+		},
+		Samplestate: m.ApiServiceSamplestate{
+			DisabledUntil: getTimestamp(),
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
@@ -174,11 +180,18 @@ func TestAPIServiceAsInstance(t *testing.T) {
 					},
 				},
 				"references": map[string]interface{}{},
+				"samplestate": map[string]interface{}{
+					"disabledUntil": time.Time(newTime).Format(v1.APIServerTimeFormat),
+				},
+				"sampletrigger": map[string]interface{}{},
 			},
 		},
 		Owner: &v1.Owner{
 			Type: v1.TeamOwner,
 			ID:   "233",
+		},
+		Samplestate: m.ApiServiceSamplestate{
+			DisabledUntil: newTime,
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",
@@ -258,6 +271,9 @@ func TestAPIServiceFromInstance(t *testing.T) {
 		Owner: &v1.Owner{
 			Type: v1.TeamOwner,
 			ID:   "233",
+		},
+		Samplestate: m.ApiServiceSamplestate{
+			DisabledUntil: getTimestamp(),
 		},
 		Spec: m.ApiServiceSpec{
 			Description: "desc",

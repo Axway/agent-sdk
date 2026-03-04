@@ -35,6 +35,8 @@ const (
 	ApiServiceDetailsSubResourceName                 = "details"
 	ApiServiceProfileSubResourceName                 = "profile"
 	ApiServiceReferencesSubResourceName              = "references"
+	ApiServiceSamplestateSubResourceName             = "samplestate"
+	ApiServiceSampletriggerSubResourceName           = "sampletrigger"
 	ApiServiceSourceSubResourceName                  = "source"
 	ApiServiceStatusSubResourceName                  = "status"
 )
@@ -61,19 +63,21 @@ type APIService struct {
 	Appinfo *ApiServiceAppinfo `json:"appinfo,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Compliance              ApiServiceCompliance   `json:"compliance"`
+	//	Compliance              ApiServiceCompliance    `json:"compliance"`
 	Compliance              *ApiServiceCompliance `json:"compliance,omitempty"`
 	Complianceruntimeresult interface{}           `json:"complianceruntimeresult"`
 	Details                 ApiServiceDetails     `json:"details"`
 	Owner                   *apiv1.Owner          `json:"owner"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Profile                 ApiServiceProfile     `json:"profile"`
-	Profile    *ApiServiceProfile   `json:"profile,omitempty"`
-	References ApiServiceReferences `json:"references"`
+	//	Profile                 ApiServiceProfile       `json:"profile"`
+	Profile       *ApiServiceProfile      `json:"profile,omitempty"`
+	References    ApiServiceReferences    `json:"references"`
+	Samplestate   ApiServiceSamplestate   `json:"samplestate"`
+	Sampletrigger ApiServiceSampletrigger `json:"sampletrigger"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Source                  ApiServiceSource      `json:"source"`
+	//	Source                  ApiServiceSource        `json:"source"`
 	Source *ApiServiceSource `json:"source,omitempty"`
 	Spec   ApiServiceSpec    `json:"spec"`
 	// Status ApiServiceStatus  `json:"status"`
@@ -188,6 +192,8 @@ func (res *APIService) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["profile"] = res.Profile
 	out["references"] = res.References
+	out["samplestate"] = res.Samplestate
+	out["sampletrigger"] = res.Sampletrigger
 	out["source"] = res.Source
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -313,6 +319,34 @@ func (res *APIService) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Samplestate
+	if v, ok := aux.SubResources["samplestate"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "samplestate")
+		err = json.Unmarshal(sr, &res.Samplestate)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Sampletrigger
+	if v, ok := aux.SubResources["sampletrigger"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "sampletrigger")
+		err = json.Unmarshal(sr, &res.Sampletrigger)
 		if err != nil {
 			return err
 		}
