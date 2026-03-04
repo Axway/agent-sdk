@@ -180,7 +180,7 @@ func TestValidatorAPI(t *testing.T) {
 			expectedUpdateCalls:                 2,
 		},
 		{
-			name: "3 queries, 2 tagged services: 3 instances have agent tag, but one has sync warning already " +
+			name: "3 queries, 1 tagged service: 3 instances have agent tag, one has sync warning already, one is missing externalAPIID" +
 				"0 tagged instances: tag already existing for 2, one missing externalAPIID",
 			cachedInfo: []info{
 				{
@@ -203,7 +203,7 @@ func TestValidatorAPI(t *testing.T) {
 					serviceName:  "exquisite-service3",
 				},
 			},
-			expectedGetCalls:                    2,
+			expectedGetCalls:                    1,
 			expectedUpdateCalls:                 1,
 			maxQueryParamLength:                 1,
 			expectedServiceNamesToHaveAgentSync: []string{"exquisite-service1", "exquisite-service2"},
