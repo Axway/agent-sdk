@@ -14,5 +14,7 @@ type ApiServiceAgentdetails struct {
 	// Remote API ID for the API Service.
 	RemoteAPIID string `json:"remoteAPIID,omitempty"`
 	// Signals whether or not there is a Sync Warning between the gateway and the agent cache.
-	SyncWarning bool `json:"syncWarning,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	// 	SyncWarning bool `json:"syncWarning,omitempty"`
+	SyncWarning *bool `json:"syncWarning,omitempty"`
 }
