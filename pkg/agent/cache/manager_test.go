@@ -167,12 +167,12 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	cachedInstance, err := m.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)
 	assert.Equal(t, instance1, cachedInstance)
-	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
+	assert.Equal(t, 1, len(m.GetAPIServiceInstancesByService(api1.Name)))
 
 	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
 	assert.Nil(t, err)
 	assert.Equal(t, instance1, cachedInstance)
-	assert.Equal(t, 1, m.GetAPIServiceInstanceCount(api1.Name))
+	assert.Equal(t, 1, len(m.GetAPIServiceInstancesByService(api1.Name)))
 
 	err = m.DeleteAPIServiceInstance("id1")
 	assert.Nil(t, err)
@@ -181,12 +181,12 @@ func TestAPIServiceInstanceCache(t *testing.T) {
 	cachedInstance, err = m.GetAPIServiceInstanceByID("id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedInstance)
-	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
+	assert.Equal(t, 0, len(m.GetAPIServiceInstancesByService(instance2.Name)))
 
 	cachedInstance, err = m.GetAPIServiceInstanceByName("name-id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedInstance)
-	assert.Equal(t, 0, m.GetAPIServiceInstanceCount(instance2.Name))
+	assert.Equal(t, 0, len(m.GetAPIServiceInstancesByService(instance2.Name)))
 
 	m.DeleteAllAPIServiceInstance()
 	assert.ElementsMatch(t, []string{}, m.GetAPIServiceInstanceKeys())
@@ -240,7 +240,7 @@ func TestCachePersistenc(t *testing.T) {
 	assert.ElementsMatch(t, m.GetAPIServiceKeys(), m2.GetAPIServiceKeys())
 	assertResourceInstance(t, api1, persistedAPI)
 	// instance count not updated properly check
-	assert.Equal(t, 0, m2.GetAPIServiceInstanceCount(api1.Name))
+	assert.Equal(t, 0, len(m2.GetAPIServiceInstancesByService(api1.Name)))
 
 	persistedInstance, err := m2.GetAPIServiceInstanceByID("id1")
 	assert.Nil(t, err)
