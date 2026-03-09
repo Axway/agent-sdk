@@ -14,6 +14,7 @@ const (
 // Filter - Interface for filter
 type Filter interface {
 	Evaluate(tags interface{}) bool
+	GetConditions() []Condition
 }
 
 // AgentFilter - Represents the filter
@@ -76,4 +77,8 @@ func (af *AgentFilter) Evaluate(tags interface{}) (result bool) {
 		result = true
 	}
 	return
+}
+
+func (af *AgentFilter) GetConditions() []Condition {
+	return af.filterConditions
 }
