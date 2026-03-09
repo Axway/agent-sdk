@@ -2,13 +2,16 @@ package oauth
 
 import (
 	"encoding/json"
+	"net/http/httptest"
 	"testing"
 
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOktaPostProcessClientRegistration(t *testing.T) {
 	oktaProvider := &okta{}
+	credentialObj := &corecfg.IDPConfiguration{MetadataURL: "https://integrator-1663282.okta.com/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"}
 	extraProps := map[string]interface{}{
 		"group":        "MyAppUsers",
 		"createPolicy": true,
@@ -31,13 +34,14 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 	clientRes := &clientMetadata{ClientID: "app123"}
 	// Mock oktaapi.New and methods if needed
 	// For now, just check no error
-	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, nil)
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj)
 	assert.NoError(t, err)
 	_ = created
 }
 
 func TestOktaPostProcessClientUnregister(t *testing.T) {
 	oktaProvider := &okta{}
+	credentialObj := &corecfg.IDPConfiguration{MetadataURL: "https://integrator-1663282.okta.com/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"}
 	extraProps := map[string]interface{}{
 		"authServerId": "default",
 	}
@@ -50,8 +54,78 @@ func TestOktaPostProcessClientUnregister(t *testing.T) {
 	clientID := "app123"
 	// Mock oktaapi.New and methods if needed
 	// For now, just check no error
-	err := oktaProvider.postProcessClientUnregister(clientID, agentDetails, extraProps, nil)
+	err := oktaProvider.postProcessClientUnregister(clientID, agentDetails, extraProps, credentialObj)
 	assert.NoError(t, err)
+}
+
+func TestOktaPostProcessClientRegistration_UsesIDPAccessToken(t *testing.T) {
+	// We only need to prove that auth.accessToken from the IDP config is used to
+	// enable Okta post-processing (i.e. the hook does not early-return).
+	// Avoid making any Okta API calls by disabling all optional actions.
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
+
+	credentialObj := &corecfg.IDPConfiguration{
+		MetadataURL: ts.URL + "/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server",
+		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: "access-token"},
+	}
+	extraProps := map[string]interface{}{
+		"createPolicy": false,
+		"createScopes": false,
+	}
+
+	oktaProvider := &okta{}
+	clientRes := &clientMetadata{ClientID: "app123"}
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj)
+	assert.NoError(t, err)
+	assert.NotNil(t, created)
+}
+
+func TestOktaBaseURLFromMetadataURL(t *testing.T) {
+	cases := []struct {
+		name        string
+		metadataURL string
+		want        string
+		wantErr     bool
+	}{
+		{
+			name:        "empty metadata url returns empty",
+			metadataURL: "",
+			want:        "",
+			wantErr:     false,
+		},
+		{
+			name:        "okta issuer url returns scheme+host",
+			metadataURL: "https://integrator-1663282.okta.com/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server",
+			want:        "https://integrator-1663282.okta.com",
+			wantErr:     false,
+		},
+		{
+			name:        "invalid url returns error",
+			metadataURL: "://bad-url",
+			want:        "",
+			wantErr:     true,
+		},
+		{
+			name:        "missing scheme/host returns error",
+			metadataURL: "/relative/path",
+			want:        "",
+			wantErr:     true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := oktaBaseURLFromMetadataURL(tc.metadataURL)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestOktaPKCERequired(t *testing.T) {

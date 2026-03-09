@@ -3,10 +3,11 @@ package oauth
 import (
 	"context"
 	"fmt"
-	"os"
+	"net/url"
 	"slices"
 
 	"github.com/Axway/agent-sdk/pkg/authz/oauth/oktaapi"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
 const (
@@ -21,16 +22,34 @@ const (
 
 type okta struct{}
 
+func oktaBaseURLFromMetadataURL(metadataURL string) (string, error) {
+	if metadataURL == "" {
+		return "", nil
+	}
+	u, err := url.Parse(metadataURL)
+	if err != nil {
+		return "", err
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("invalid metadata URL: %q", metadataURL)
+	}
+	return u.Scheme + "://" + u.Host, nil
+}
+
 // postProcessClientRegistration handles Okta provisioning after client registration
 func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}) (map[string]string, error) {
 	ctx := context.Background()
-	baseURL := os.Getenv("OKTA_BASE_URL")
-	apiToken := os.Getenv("OKTA_API_TOKEN")
-	if v, ok := extraProps["oktaBaseURL"].(string); ok && v != "" {
-		baseURL = v
+	var metadataURL string
+	var apiToken string
+	if cfg, ok := credentialObj.(corecfg.IDPConfig); ok {
+		metadataURL = cfg.GetMetadataURL()
+		if authCfg := cfg.GetAuthConfig(); authCfg != nil {
+			apiToken = authCfg.GetAccessToken()
+		}
 	}
-	if v, ok := extraProps["oktaApiToken"].(string); ok && v != "" {
-		apiToken = v
+	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
+	if err != nil {
+		return nil, err
 	}
 	if baseURL == "" || apiToken == "" {
 		return nil, nil // skip if not configured
@@ -56,13 +75,17 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, extraProp
 // postProcessClientUnregister handles Okta cleanup after client deprovision
 func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[string]string, extraProps map[string]interface{}, credentialObj interface{}) error {
 	ctx := context.Background()
-	baseURL := os.Getenv("OKTA_BASE_URL")
-	apiToken := os.Getenv("OKTA_API_TOKEN")
-	if v, ok := extraProps["oktaBaseURL"].(string); ok && v != "" {
-		baseURL = v
+	var metadataURL string
+	var apiToken string
+	if cfg, ok := credentialObj.(corecfg.IDPConfig); ok {
+		metadataURL = cfg.GetMetadataURL()
+		if authCfg := cfg.GetAuthConfig(); authCfg != nil {
+			apiToken = authCfg.GetAccessToken()
+		}
 	}
-	if v, ok := extraProps["oktaApiToken"].(string); ok && v != "" {
-		apiToken = v
+	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
+	if err != nil {
+		return err
 	}
 	if baseURL == "" || apiToken == "" {
 		return nil // skip if not configured
@@ -89,14 +112,14 @@ func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[str
 
 // handlePolicyRuleDeletion deletes rule then policy if present in agentDetails
 func (i *okta) handlePolicyRuleDeletion(ctx context.Context, oktaClient *oktaapi.OktaAPI, extraProps map[string]interface{}, agentDetails map[string]string) error {
-	authServerId, _ := extraProps["authServerId"].(string)
-	if policyId, ok := agentDetails["oktaPolicyId"]; ok && policyId != "" {
-		if ruleId, ok := agentDetails["oktaRuleId"]; ok && ruleId != "" {
-			if err := oktaClient.DeleteRule(ctx, authServerId, policyId, ruleId); err != nil {
+	authServerID, _ := extraProps["authServerId"].(string)
+	if policyID, ok := agentDetails["oktaPolicyId"]; ok && policyID != "" {
+		if ruleID, ok := agentDetails["oktaRuleId"]; ok && ruleID != "" {
+			if err := oktaClient.DeleteRule(ctx, authServerID, policyID, ruleID); err != nil {
 				return err
 			}
 		}
-		if err := oktaClient.DeletePolicy(ctx, authServerId, policyId); err != nil {
+		if err := oktaClient.DeletePolicy(ctx, authServerID, policyID); err != nil {
 			return err
 		}
 	}
@@ -115,9 +138,9 @@ func (i *okta) handleGroupUnassignment(ctx context.Context, oktaClient *oktaapi.
 
 // handleScopeDeletion deletes the scope if scope id present in agentDetails
 func (i *okta) handleScopeDeletion(ctx context.Context, oktaClient *oktaapi.OktaAPI, extraProps map[string]interface{}, agentDetails map[string]string) error {
-	authServerId, _ := extraProps["authServerId"].(string)
-	if scopeId, ok := agentDetails["oktaScopeId"]; ok && scopeId != "" {
-		if err := oktaClient.DeleteScope(ctx, authServerId, scopeId); err != nil {
+	authServerID, _ := extraProps["authServerId"].(string)
+	if scopeID, ok := agentDetails["oktaScopeId"]; ok && scopeID != "" {
+		if err := oktaClient.DeleteScope(ctx, authServerID, scopeID); err != nil {
 			return err
 		}
 	}
@@ -170,19 +193,19 @@ func (i *okta) handlePolicyRuleCreation(ctx context.Context, oktaClient *oktaapi
 		createPolicy = true
 	}
 	if createPolicy {
-		authServerId, _ := extraProps["authServerId"].(string)
+		authServerID, _ := extraProps["authServerId"].(string)
 		policyTemplate, _ := extraProps["policyTemplate"].(map[string]interface{})
-		policyId, err := oktaClient.CreatePolicy(ctx, authServerId, policyTemplate)
+		policyID, err := oktaClient.CreatePolicy(ctx, authServerID, policyTemplate)
 		if err != nil {
 			return err
 		}
-		created["oktaPolicyId"] = policyId
+		created["oktaPolicyId"] = policyID
 		if rule, ok := policyTemplate["rule"].(map[string]interface{}); ok {
-			ruleId, err := oktaClient.CreateRule(ctx, authServerId, policyId, rule)
+			ruleID, err := oktaClient.CreateRule(ctx, authServerID, policyID, rule)
 			if err != nil {
 				return err
 			}
-			created["oktaRuleId"] = ruleId
+			created["oktaRuleId"] = ruleID
 		}
 	}
 	return nil
@@ -191,19 +214,19 @@ func (i *okta) handlePolicyRuleCreation(ctx context.Context, oktaClient *oktaapi
 // handleScopeCreation creates scopes and records the first created id
 func (i *okta) handleScopeCreation(ctx context.Context, oktaClient *oktaapi.OktaAPI, extraProps map[string]interface{}, created map[string]string) error {
 	if createScopes, ok := extraProps["createScopes"].(bool); ok && createScopes {
-		authServerId, _ := extraProps["authServerId"].(string)
+		authServerID, _ := extraProps["authServerId"].(string)
 		scopes, _ := extraProps["scopes"].([]interface{})
 		for _, s := range scopes {
 			scopeMap, ok := s.(map[string]interface{})
 			if !ok {
 				continue
 			}
-			scopeId, err := oktaClient.CreateScope(ctx, authServerId, scopeMap)
+			scopeID, err := oktaClient.CreateScope(ctx, authServerID, scopeMap)
 			if err != nil {
 				return err
 			}
 			if _, exists := created["oktaScopeId"]; !exists {
-				created["oktaScopeId"] = scopeId
+				created["oktaScopeId"] = scopeID
 			}
 		}
 	}

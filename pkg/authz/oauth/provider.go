@@ -396,7 +396,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, map
 		var createdAgentDetails map[string]string
 		if p.cfg.GetIDPType() == TypeOkta {
 			var hookErr error
-			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.extraProperties, nil)
+			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.extraProperties, p.cfg)
 			if hookErr != nil {
 				p.logger.WithError(hookErr).Error("Okta post-registration hook failed")
 				return nil, nil, hookErr
@@ -526,7 +526,7 @@ func (p *provider) runPostUnregisterHook(clientID string, agentDetails map[strin
 	if p.cfg.GetIDPType() != TypeOkta {
 		return nil
 	}
-	return p.idpType.postProcessClientUnregister(clientID, agentDetails, p.extraProperties, nil)
+	return p.idpType.postProcessClientUnregister(clientID, agentDetails, p.extraProperties, p.cfg)
 }
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard
