@@ -151,6 +151,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			agentName:  "agent-007",
 		},
 		{
+			agentName: "agent-007",
 			name:      "should create a watch topic for a compliance agent if it does not exist",
 			agentType: config.ComplianceAgent,
 			hasErr:    false,
@@ -166,6 +167,7 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 			managedEnvs: []string{"managedEnv1", "managedEnv2"},
 		},
 		{
+			agentName: "agent-007",
 			name:      "should create a watch topic for a discovery agent if it does not exist",
 			agentType: config.DiscoveryAgent,
 			hasErr:    false,
@@ -234,14 +236,14 @@ func TestGetOrCreateWatchTopic(t *testing.T) {
 				}
 				assert.True(t, found)
 			}
-			if tc.agentType == config.TraceabilityAgent {
+			if tc.client.getErr != nil {
 				foundName := false
 				for _, wtFilter := range wt.Spec.Filters {
 					if wtFilter.Name == tc.agentName {
 						foundName = true
 					}
 				}
-				assert.Truef(t, foundName, "could not find %s for %s", tc.agentName)
+				assert.Truef(t, foundName, "could not find %s for %s", tc.agentName, tc.name)
 			}
 			// validate watch topic filter for compliance agent managed env filters
 			if len(tc.managedEnvs) > 0 && tc.agentType == config.ComplianceAgent {
