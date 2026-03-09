@@ -5,12 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOktaPostProcessClientRegistration(t *testing.T) {
 	oktaProvider := &okta{}
+	apiClient := coreapi.NewClient(nil, "")
 	credentialObj := &corecfg.IDPConfiguration{MetadataURL: "https://integrator-1663282.okta.com/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"}
 	extraProps := map[string]interface{}{
 		"group":        "MyAppUsers",
@@ -32,15 +34,16 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 		},
 	}
 	clientRes := &clientMetadata{ClientID: "app123"}
-	// Mock oktaapi.New and methods if needed
+	// Mock clients.New and methods if needed
 	// For now, just check no error
-	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj)
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj, apiClient)
 	assert.NoError(t, err)
 	_ = created
 }
 
 func TestOktaPostProcessClientUnregister(t *testing.T) {
 	oktaProvider := &okta{}
+	apiClient := coreapi.NewClient(nil, "")
 	credentialObj := &corecfg.IDPConfiguration{MetadataURL: "https://integrator-1663282.okta.com/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"}
 	extraProps := map[string]interface{}{
 		"authServerId": "default",
@@ -52,9 +55,9 @@ func TestOktaPostProcessClientUnregister(t *testing.T) {
 		"oktaScopeId":  "scp-101",
 	}
 	clientID := "app123"
-	// Mock oktaapi.New and methods if needed
+	// Mock clients.New and methods if needed
 	// For now, just check no error
-	err := oktaProvider.postProcessClientUnregister(clientID, agentDetails, extraProps, credentialObj)
+	err := oktaProvider.postProcessClientUnregister(clientID, agentDetails, extraProps, credentialObj, apiClient)
 	assert.NoError(t, err)
 }
 
@@ -74,9 +77,10 @@ func TestOktaPostProcessClientRegistration_UsesIDPAccessToken(t *testing.T) {
 		"createScopes": false,
 	}
 
+	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 	clientRes := &clientMetadata{ClientID: "app123"}
-	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj)
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj, apiClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, created)
 }

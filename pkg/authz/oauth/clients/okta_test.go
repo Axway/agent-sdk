@@ -1,10 +1,12 @@
-package oktaapi
+package clients
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
 )
 
 func TestOktaAPI_StatusHandling(t *testing.T) {
@@ -81,7 +83,7 @@ func TestOktaAPI_StatusHandling(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			client := New(ts.URL, "token")
+			client := New(coreapi.NewClient(nil, ""), ts.URL, "token")
 			err := tc.call(client)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
