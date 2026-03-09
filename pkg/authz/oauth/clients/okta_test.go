@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,9 +8,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 )
 
-func TestOktaAPI_StatusHandling(t *testing.T) {
-	ctx := context.Background()
-
+func TestOktaAPIStatusHandling(t *testing.T) {
 	type testCase struct {
 		name           string
 		handler        http.HandlerFunc
@@ -29,7 +26,7 @@ func TestOktaAPI_StatusHandling(t *testing.T) {
 				_, _ = w.Write([]byte("forbidden"))
 			},
 			call: func(client *OktaAPI) error {
-				return client.AssignGroupToApp(ctx, "app123", "group456")
+				return client.AssignGroupToApp("app123", "group456")
 			},
 			wantErr: true,
 		},
@@ -41,7 +38,7 @@ func TestOktaAPI_StatusHandling(t *testing.T) {
 				_, _ = w.Write([]byte("already assigned"))
 			},
 			call: func(client *OktaAPI) error {
-				return client.AssignGroupToApp(ctx, "app123", "group456")
+				return client.AssignGroupToApp("app123", "group456")
 			},
 			wantErr: false,
 		},
@@ -53,7 +50,7 @@ func TestOktaAPI_StatusHandling(t *testing.T) {
 				_, _ = w.Write([]byte("not found"))
 			},
 			call: func(client *OktaAPI) error {
-				return client.DeletePolicy(ctx, "as1", "pol1")
+				return client.DeletePolicy("as1", "pol1")
 			},
 			wantErr: false,
 		},
@@ -65,7 +62,7 @@ func TestOktaAPI_StatusHandling(t *testing.T) {
 				_, _ = w.Write([]byte("forbidden"))
 			},
 			call: func(client *OktaAPI) error {
-				return client.DeleteRule(ctx, "as1", "pol1", "rule1")
+				return client.DeleteRule("as1", "pol1", "rule1")
 			},
 			wantErr: true,
 		},

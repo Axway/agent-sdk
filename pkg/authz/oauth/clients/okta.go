@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,7 +31,7 @@ func New(apiClient coreapi.Client, baseURL, apiToken string) *OktaAPI {
 	}
 }
 
-func (o *OktaAPI) doRequest(ctx context.Context, method, endpoint string, body interface{}) (*coreapi.Response, error) {
+func (o *OktaAPI) doRequest(method, endpoint string, body interface{}) (*coreapi.Response, error) {
 	var reqBody []byte
 	var err error
 	if body != nil {
@@ -52,7 +51,6 @@ func (o *OktaAPI) doRequest(ctx context.Context, method, endpoint string, body i
 		Body: reqBody,
 	}
 
-	_ = ctx // coreapi.Client doesn't accept ctx today
 	return o.Client.Send(request)
 }
 
@@ -69,9 +67,9 @@ func isStatus(code int, allowed ...int) bool {
 	return false
 }
 
-func (o *OktaAPI) FindGroupByName(ctx context.Context, groupName string) (string, error) {
+func (o *OktaAPI) FindGroupByName(groupName string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/groups?q=%s", o.BaseURL, url.QueryEscape(groupName))
-	resp, err := o.doRequest(ctx, coreapi.GET, endpoint, nil)
+	resp, err := o.doRequest(coreapi.GET, endpoint, nil)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +94,7 @@ func (o *OktaAPI) FindGroupByName(ctx context.Context, groupName string) (string
 	return "", nil
 }
 
-func (o *OktaAPI) CreateGroup(ctx context.Context, name, description string) (string, error) {
+func (o *OktaAPI) CreateGroup(name, description string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/groups", o.BaseURL)
 	body := map[string]interface{}{
 		"profile": map[string]interface{}{
@@ -104,12 +102,12 @@ func (o *OktaAPI) CreateGroup(ctx context.Context, name, description string) (st
 			"description": description,
 		},
 	}
-	resp, err := o.doRequest(ctx, coreapi.POST, endpoint, body)
+	resp, err := o.doRequest(coreapi.POST, endpoint, body)
 	if err != nil {
 		return "", err
 	}
 	if resp.Code == http.StatusConflict {
-		return o.FindGroupByName(ctx, name)
+		return o.FindGroupByName(name)
 	}
 	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
 		return "", o.unexpectedStatusError(coreapi.POST, endpoint, resp)
@@ -123,10 +121,10 @@ func (o *OktaAPI) CreateGroup(ctx context.Context, name, description string) (st
 	return group.ID, nil
 }
 
-func (o *OktaAPI) AssignGroupToApp(ctx context.Context, appID, groupID string) error {
+func (o *OktaAPI) AssignGroupToApp(appID, groupID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups", o.BaseURL, appID)
 	body := map[string]interface{}{"id": groupID}
-	resp, err := o.doRequest(ctx, coreapi.POST, endpoint, body)
+	resp, err := o.doRequest(coreapi.POST, endpoint, body)
 	if err != nil {
 		return err
 	}
@@ -139,9 +137,9 @@ func (o *OktaAPI) AssignGroupToApp(ctx context.Context, appID, groupID string) e
 	return nil
 }
 
-func (o *OktaAPI) UnassignGroupFromApp(ctx context.Context, appID, groupID string) error {
+func (o *OktaAPI) UnassignGroupFromApp(appID, groupID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
-	resp, err := o.doRequest(ctx, coreapi.DELETE, endpoint, nil)
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -154,9 +152,9 @@ func (o *OktaAPI) UnassignGroupFromApp(ctx context.Context, appID, groupID strin
 	return nil
 }
 
-func (o *OktaAPI) CreatePolicy(ctx context.Context, authServerID string, policy map[string]interface{}) (string, error) {
+func (o *OktaAPI) CreatePolicy(authServerID string, policy map[string]interface{}) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
-	resp, err := o.doRequest(ctx, coreapi.POST, endpoint, policy)
+	resp, err := o.doRequest(coreapi.POST, endpoint, policy)
 	if err != nil {
 		return "", err
 	}
@@ -175,9 +173,9 @@ func (o *OktaAPI) CreatePolicy(ctx context.Context, authServerID string, policy 
 	return pol.ID, nil
 }
 
-func (o *OktaAPI) CreateRule(ctx context.Context, authServerID, policyID string, rule map[string]interface{}) (string, error) {
+func (o *OktaAPI) CreateRule(authServerID, policyID string, rule map[string]interface{}) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
-	resp, err := o.doRequest(ctx, coreapi.POST, endpoint, rule)
+	resp, err := o.doRequest(coreapi.POST, endpoint, rule)
 	if err != nil {
 		return "", err
 	}
@@ -196,9 +194,9 @@ func (o *OktaAPI) CreateRule(ctx context.Context, authServerID, policyID string,
 	return r.ID, nil
 }
 
-func (o *OktaAPI) DeleteRule(ctx context.Context, authServerID, policyID, ruleID string) error {
+func (o *OktaAPI) DeleteRule(authServerID, policyID, ruleID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules/%s", o.BaseURL, authServerID, policyID, ruleID)
-	resp, err := o.doRequest(ctx, coreapi.DELETE, endpoint, nil)
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -211,9 +209,9 @@ func (o *OktaAPI) DeleteRule(ctx context.Context, authServerID, policyID, ruleID
 	return nil
 }
 
-func (o *OktaAPI) DeletePolicy(ctx context.Context, authServerID, policyID string) error {
+func (o *OktaAPI) DeletePolicy(authServerID, policyID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
-	resp, err := o.doRequest(ctx, coreapi.DELETE, endpoint, nil)
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -226,9 +224,9 @@ func (o *OktaAPI) DeletePolicy(ctx context.Context, authServerID, policyID strin
 	return nil
 }
 
-func (o *OktaAPI) CreateScope(ctx context.Context, authServerID string, scope map[string]interface{}) (string, error) {
+func (o *OktaAPI) CreateScope(authServerID string, scope map[string]interface{}) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/scopes", o.BaseURL, authServerID)
-	resp, err := o.doRequest(ctx, coreapi.POST, endpoint, scope)
+	resp, err := o.doRequest(coreapi.POST, endpoint, scope)
 	if err != nil {
 		return "", err
 	}
@@ -247,9 +245,9 @@ func (o *OktaAPI) CreateScope(ctx context.Context, authServerID string, scope ma
 	return s.ID, nil
 }
 
-func (o *OktaAPI) DeleteScope(ctx context.Context, authServerID, scopeID string) error {
+func (o *OktaAPI) DeleteScope(authServerID, scopeID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/scopes/%s", o.BaseURL, authServerID, scopeID)
-	resp, err := o.doRequest(ctx, coreapi.DELETE, endpoint, nil)
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err
 	}

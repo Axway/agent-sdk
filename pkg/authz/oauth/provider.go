@@ -495,7 +495,7 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		WithField("provider", p.cfg.GetIDPName()).
 		WithField("client-id", clientID)
 
-	logger.Trace("starting client unregistration")
+	logger.Debug("starting client unregistration")
 
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	if accessToken == "" {
@@ -513,7 +513,7 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 	}
 
 	// attempt unregister using known URL patterns
-	if err := p.attemptUnregisterAll(clientID, registrationClientURI, authPrefix, accessToken); err == nil {
+	if err := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken); err == nil {
 		logger.Info("unregistered client")
 		return nil
 	} else {
@@ -531,20 +531,33 @@ func (p *provider) runPostUnregisterHook(clientID string, agentDetails map[strin
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard
 // registration endpoint (base + /clientID) and finally as a query-parameter.
-func (p *provider) attemptUnregisterAll(clientID, registrationClientURI, authPrefix, accessToken string) error {
+
+func (p *provider) attemptUnregisterAll(logger log.FieldLogger, clientID, registrationClientURI, authPrefix, accessToken string) error {
+	var err error
+
 	// Try with registration client URI if not empty
 	if registrationClientURI != "" {
-		if err := p.tryUnregister(registrationClientURI, "", authPrefix, accessToken); err == nil {
+		err = p.tryUnregister(registrationClientURI, "", authPrefix, accessToken)
+		if err == nil {
 			return nil
 		}
+		logger.
+			WithError(err).
+			WithField("registration-uri", registrationClientURI).
+			Trace("failed to unregister with registration client URI")
 	}
 
 	// Try with base url + clientID in path
 	standardURL := p.getClientRegistrationEndpoint() + "/" + clientID
 	if standardURL != registrationClientURI {
-		if err := p.tryUnregister(standardURL, "", authPrefix, accessToken); err == nil {
+		err = p.tryUnregister(standardURL, "", authPrefix, accessToken)
+		if err == nil {
 			return nil
 		}
+		logger.
+			WithError(err).
+			WithField("unregister-url", standardURL).
+			Trace("failed to unregister with standard URL")
 	}
 
 	// Try with clientID as query parameter
@@ -553,12 +566,17 @@ func (p *provider) attemptUnregisterAll(clientID, registrationClientURI, authPre
 		if strings.Contains(standardURL, "/"+clientID) {
 			baseURL = strings.Replace(standardURL, "/"+clientID, "", 1)
 		}
-		if err := p.tryUnregister(baseURL, clientID, authPrefix, accessToken); err == nil {
+		err = p.tryUnregister(baseURL, clientID, authPrefix, accessToken)
+		if err == nil {
 			return nil
 		}
+		logger.
+			WithError(err).
+			WithField("unregister-url", baseURL).
+			Trace("failed to unregister with clientID as query parameter")
 	}
 
-	return fmt.Errorf("unregister failed with all attempts")
+	return err
 }
 
 // tryUnregister attempts to unregister using the provided parameters
