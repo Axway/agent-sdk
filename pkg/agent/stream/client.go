@@ -42,6 +42,7 @@ type StreamerClient struct {
 	requestQueue       events.RequestQueue
 	newRequestQueue    events.NewRequestQueueFunc
 	onStreamConnection func()
+	onReconnect        func()
 	sequence           events.SequenceProvider
 	topicSelfLink      string
 	watchCfg           *wm.Config
@@ -54,6 +55,7 @@ type StreamerClient struct {
 	onEventSyncError   func()
 	isInitialized      atomic.Bool
 	isRunning          atomic.Bool
+	firstStart         bool
 	cancel             context.CancelFunc
 }
 
@@ -88,6 +90,7 @@ func NewStreamerClient(
 		newRequestQueue: events.NewRequestQueue,
 		logger:          logger,
 		environmentURL:  cfg.GetEnvironmentURL(),
+		firstStart:      true,
 	}
 
 	for _, opt := range options {
@@ -172,6 +175,10 @@ func (s *StreamerClient) Start() error {
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
+	if s.onReconnect != nil && !s.firstStart {
+		go s.onReconnect()
+	}
+	s.firstStart = false
 	s.isInitialized.Store(true)
 
 	if err != nil {
