@@ -232,8 +232,6 @@ func TestCachePersistenc(t *testing.T) {
 
 	m.AddSequence("watch1", 1)
 
-	m.SaveCache()
-
 	m2 := NewAgentCacheManager(&config.CentralConfiguration{AgentName: "test", GRPCCfg: config.GRPCConfig{Enabled: true}}, true)
 
 	persistedAPI := m2.GetAPIServiceWithAPIID("id1")

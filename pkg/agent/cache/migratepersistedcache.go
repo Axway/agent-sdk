@@ -1,30 +1,12 @@
 package cache
 
-import (
-	"sync"
-)
-
+// cacheMigrate is deprecated - no longer needed with bbolt persistence
+// Left for future compatibility if needed
 type cacheMigrate func(key string) error
 
-// migratePersistentCache is the top level migrator for all cache migrations
+// migratePersistentCache is deprecated - bbolt handles persistence automatically
+// This is a no-op function left for compatibility
 func (c *cacheManager) migratePersistentCache(key string) error {
-	c.logger.Trace("checking if the persisted cache needs migrations")
-
-	wg := sync.WaitGroup{}
-	errs := make([]error, len(c.migrators))
-	for i, m := range c.migrators {
-		wg.Add(1)
-		go func(index int, migFunc cacheMigrate) {
-			defer wg.Done()
-			errs[index] = migFunc(key)
-		}(i, m)
-	}
-	wg.Wait()
-
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
-	}
+	// No migration needed with bbolt - data is persisted automatically
 	return nil
 }

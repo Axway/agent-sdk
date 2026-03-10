@@ -6,7 +6,6 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
 // AddAccessRequestDefinition -  add/update AccessRequestDefinition resource in cache
 func (c *cacheManager) AddAccessRequestDefinition(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 
 	c.ardMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
@@ -51,7 +50,6 @@ func (c *cacheManager) GetAccessRequestDefinitionByID(id string) (*v1.ResourceIn
 
 // DeleteAccessRequestDefinition - deletes the AccessRequestDefinition cache based on resource id
 func (c *cacheManager) DeleteAccessRequestDefinition(id string) error {
-	defer c.setCacheUpdated(true)
 
 	return c.ardMap.Delete(id)
 }

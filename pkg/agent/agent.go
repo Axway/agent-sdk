@@ -728,7 +728,9 @@ func setupSignalProcessor() {
 		}
 
 		cleanUp()
-		agent.cacheManager.SaveCache()
+		if err := agent.cacheManager.Close(); err != nil {
+			logger.WithError(err).Warn("error closing cache manager")
+		}
 		os.Exit(0)
 	}()
 }

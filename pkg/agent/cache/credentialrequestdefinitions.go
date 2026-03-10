@@ -6,7 +6,6 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
 // AddCredentialRequestDefinition -  add/update CredentialRequestDefinition resource in cache
 func (c *cacheManager) AddCredentialRequestDefinition(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 
 	c.crdMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
@@ -72,7 +71,6 @@ func (c *cacheManager) GetCredentialRequestDefinitionByID(id string) (*v1.Resour
 
 // DeleteCredentialRequestDefinition - deletes the CredentialRequestDefinition cache based on resource id
 func (c *cacheManager) DeleteCredentialRequestDefinition(id string) error {
-	defer c.setCacheUpdated(true)
 
 	return c.crdMap.Delete(id)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -122,27 +121,13 @@ func (es *EventSync) initCache() error {
 	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
 	// when the poll/stream client is ready
 	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
-	agent.cacheManager.Flush()
 	if seqID > 0 {
 		es.sequence.SetSequence(seqID - 1)
 	}
 	err = es.discoveryCache.execute()
 	if err != nil {
-		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
-		agent.cacheManager.Flush()
 		return err
 	}
-	agent.cacheManager.SaveCache()
-
-	agentInstance := agent.agentResourceManager.GetAgentResource()
-
-	// add 7 days to the current date for the next rebuild cache
-	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
-
-	// persist cacheUpdateTime
-	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
-	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
-	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 	return nil
 }
 

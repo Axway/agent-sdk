@@ -5,7 +5,6 @@ import (
 )
 
 func (c *cacheManager) AddComplianceRuntimeResult(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 
 	c.crrMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
@@ -48,7 +47,6 @@ func (c *cacheManager) GetComplianceRuntimeResultByName(name string) (*v1.Resour
 
 // DeleteAPIServiceInstance - remove APIServiceInstance resource from cache based on instance ID
 func (c *cacheManager) DeleteComplianceRuntimeResult(id string) error {
-	defer c.setCacheUpdated(true)
 
 	return c.crrMap.Delete(id)
 }

@@ -6,7 +6,6 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
 // AddApplicationProfileDefinition -  add/update ApplicationProfileDefinition resource in cache
 func (c *cacheManager) AddApplicationProfileDefinition(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 
 	c.apdMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
@@ -51,7 +50,6 @@ func (c *cacheManager) GetApplicationProfileDefinitionByID(id string) (*v1.Resou
 
 // DeleteApplicationProfileDefinition - deletes the ApplicationProfileDefinition cache based on resource id
 func (c *cacheManager) DeleteApplicationProfileDefinition(id string) error {
-	defer c.setCacheUpdated(true)
 
 	return c.apdMap.Delete(id)
 }

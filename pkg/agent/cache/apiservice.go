@@ -25,7 +25,6 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 		return fmt.Errorf("failed to get external API ID from APIService resource: %s", err)
 	}
 	if apiID != "" {
-		defer c.setCacheUpdated(true)
 		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
 		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
 		cachedRI, _ := c.GetAPIServiceInstanceByName(apiName)
@@ -58,6 +57,7 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 
 // GetAPIServiceCache - returns the APIService cache
 func (c *cacheManager) GetAPIServiceCache() cache.Cache {
+	// boltStore implements cache.Cache interface
 	return c.apiMap
 }
 
@@ -146,7 +146,6 @@ func (c *cacheManager) GetTeamsIDsInAPIServices() []string {
 
 // DeleteAPIService - remove APIService resource from cache based on externalAPIID or externalAPIPrimaryKey
 func (c *cacheManager) DeleteAPIService(key string) error {
-	defer c.setCacheUpdated(true)
 
 	err := c.apiMap.Delete(key)
 	if err != nil {

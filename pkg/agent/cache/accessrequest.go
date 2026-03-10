@@ -63,8 +63,14 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 		WithField("secKey", secKey).
 		Trace("add access request and set secondary key")
 
-	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
-	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey)
+	if err := c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri); err != nil {
+		c.logger.WithError(err).Error("failed to set access request with secondary key")
+		return
+	}
+	if err := c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey); err != nil {
+		c.logger.WithError(err).Error("failed to set access request foreign key")
+		return
+	}
 
 }
 

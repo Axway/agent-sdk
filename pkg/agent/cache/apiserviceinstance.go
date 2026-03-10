@@ -10,7 +10,6 @@ import (
 
 // AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 	c.logger.
 		WithField("resource", resource.Name).
 		WithField("apiID", resource.Metadata.ID).
@@ -68,7 +67,6 @@ func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceIns
 
 // DeleteAPIServiceInstance - remove APIServiceInstance resource from cache based on instance ID
 func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
-	defer c.setCacheUpdated(true)
 
 	ri, _ := c.GetAPIServiceInstanceByID(id)
 	if ri != nil {
@@ -82,7 +80,6 @@ func (c *cacheManager) DeleteAPIServiceInstance(id string) error {
 
 // DeleteAllAPIServiceInstance - remove all APIServiceInstance resource from cache
 func (c *cacheManager) DeleteAllAPIServiceInstance() {
-	defer c.setCacheUpdated(true)
 
 	c.deleteAllServiceInstanceCounts()
 	c.instanceMap.Flush()

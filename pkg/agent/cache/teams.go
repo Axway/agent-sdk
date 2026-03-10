@@ -11,12 +11,12 @@ const accessControlList = "AccessControlListKey"
 
 // GetTeamCache - returns the team cache
 func (c *cacheManager) GetTeamCache() cache.Cache {
+	// boltStore implements cache.Cache interface
 	return c.teams
 }
 
 // AddTeam saves a team to the cache
 func (c *cacheManager) AddTeam(team *defs.PlatformTeam) {
-	defer c.setCacheUpdated(true)
 	c.teams.SetWithSecondaryKey(team.Name, team.ID, *team)
 }
 
@@ -71,7 +71,6 @@ func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
 
 // SetAccessControlList saves the Access Control List to the cache
 func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
-	defer c.setCacheUpdated(true)
 	c.teams.Set(accessControlList, acl)
 }
 

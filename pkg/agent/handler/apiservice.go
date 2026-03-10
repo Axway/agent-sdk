@@ -57,6 +57,15 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 		return err
 	}
 
-	// remove the service from the cache by name
-	return h.agentCacheManager.DeleteAPIService(resource.Name)
+	if id != "" {
+		if err := h.agentCacheManager.DeleteAPIService(id); err == nil {
+			return nil
+		}
+	}
+
+	if resource.Name != "" {
+		return h.agentCacheManager.DeleteAPIService(resource.Name)
+	}
+
+	return nil
 }
