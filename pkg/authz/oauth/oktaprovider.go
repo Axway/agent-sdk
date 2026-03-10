@@ -1,11 +1,9 @@
 package oauth
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"slices"
-	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth/clients"
@@ -65,10 +63,6 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, extraProp
 		return nil, err
 	}
 
-	if err := i.handleScopeCreation(oktaClient, extraProps, created); err != nil {
-		return nil, err
-	}
-
 	return created, nil
 }
 
@@ -101,16 +95,11 @@ func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[str
 		return err
 	}
 
-	// Remove scopes
-	if err := i.handleScopeDeletion(oktaClient, extraProps, agentDetails); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // handlePolicyRuleDeletion deletes rule then policy if present in agentDetails
-func (i *okta) handlePolicyRuleDeletion(oktaClient *clients.OktaAPI, extraProps map[string]interface{}, agentDetails map[string]string) error {
+func (i *okta) handlePolicyRuleDeletion(oktaClient *clients.Okta, extraProps map[string]interface{}, agentDetails map[string]string) error {
 	authServerID, _ := extraProps["authServerId"].(string)
 	if policyID, ok := agentDetails["oktaPolicyId"]; ok && policyID != "" {
 		if ruleID, ok := agentDetails["oktaRuleId"]; ok && ruleID != "" {
@@ -126,7 +115,7 @@ func (i *okta) handlePolicyRuleDeletion(oktaClient *clients.OktaAPI, extraProps 
 }
 
 // handleGroupUnassignment unassigns a group from the app if group id present
-func (i *okta) handleGroupUnassignment(oktaClient *clients.OktaAPI, clientID string, agentDetails map[string]string) error {
+func (i *okta) handleGroupUnassignment(oktaClient *clients.Okta, clientID string, agentDetails map[string]string) error {
 	if groupId, ok := agentDetails["oktaGroupId"]; ok && groupId != "" {
 		if err := oktaClient.UnassignGroupFromApp(clientID, groupId); err != nil {
 			return err
@@ -134,52 +123,12 @@ func (i *okta) handleGroupUnassignment(oktaClient *clients.OktaAPI, clientID str
 	}
 	return nil
 }
-
-// handleScopeDeletion deletes the scope if scope id present in agentDetails
-func (i *okta) handleScopeDeletion(oktaClient *clients.OktaAPI, extraProps map[string]interface{}, agentDetails map[string]string) error {
-	authServerID, _ := extraProps["authServerId"].(string)
-	raw := strings.TrimSpace(agentDetails["oktaScopeId"])
-	if raw == "" {
-		return nil
-	}
-
-	for _, scopeID := range parseOktaScopeIDs(raw) {
-		scopeID = strings.TrimSpace(scopeID)
-		if scopeID == "" {
-			continue
-		}
-		if err := oktaClient.DeleteScope(authServerID, scopeID); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func parseOktaScopeIDs(raw string) []string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil
-	}
-	if !strings.HasPrefix(trimmed, "[") {
-		return []string{trimmed}
-	}
-
-	var parsed []string
-	if err := json.Unmarshal([]byte(trimmed), &parsed); err != nil {
-		return []string{trimmed}
-	}
-	return parsed
-}
-
 func (i *okta) getAuthorizationHeaderPrefix() string {
-	// Okta DCR endpoints are still OAuth; use standard Bearer tokens.
-	// Okta Management API calls use SSWS and are handled in pkg/authz/oauth/clients.
-	return genericAuthHeaderPrefix
+	return clients.OktaAuthHeaderPrefix
 }
 
 // handleGroupAssignment provisions/assigns a group and records created id into created map
-func (i *okta) handleGroupAssignment(oktaClient *clients.OktaAPI, clientRes ClientMetadata, extraProps map[string]interface{}, created map[string]string) error {
+func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, extraProps map[string]interface{}, created map[string]string) error {
 	// Accept several possible keys for group name to be forgiving in config
 	groupName, _ := extraProps["group"].(string)
 	if groupName == "" {
@@ -213,7 +162,7 @@ func (i *okta) handleGroupAssignment(oktaClient *clients.OktaAPI, clientRes Clie
 }
 
 // handlePolicyRuleCreation creates policy and rule if requested and records ids
-func (i *okta) handlePolicyRuleCreation(oktaClient *clients.OktaAPI, extraProps map[string]interface{}, created map[string]string) error {
+func (i *okta) handlePolicyRuleCreation(oktaClient *clients.Okta, extraProps map[string]interface{}, created map[string]string) error {
 	createPolicy, _ := extraProps["createPolicy"].(bool)
 	if createPolicy {
 		authServerID, _ := extraProps["authServerId"].(string)
@@ -239,69 +188,6 @@ func (i *okta) handlePolicyRuleCreation(oktaClient *clients.OktaAPI, extraProps 
 		}
 	}
 	return nil
-}
-
-// handleScopeCreation creates scopes and records the first created id
-func (i *okta) handleScopeCreation(oktaClient *clients.OktaAPI, extraProps map[string]interface{}, created map[string]string) error {
-	createScopes, _ := extraProps["createScopes"].(bool)
-	if !createScopes {
-		return nil
-	}
-
-	authServerID, _ := extraProps["authServerId"].(string)
-	if authServerID == "" {
-		return fmt.Errorf("authServerId is required when createScopes is true")
-	}
-
-	rawScopes, _ := extraProps["scopes"].([]interface{})
-	if len(rawScopes) == 0 {
-		return fmt.Errorf("scopes is required when createScopes is true")
-	}
-
-	createdScopeIDs, err := createOktaScopes(oktaClient, authServerID, rawScopes)
-	if err != nil {
-		return err
-	}
-
-	if v, err := formatOktaScopeIDs(createdScopeIDs); err != nil {
-		return err
-	} else if v != "" {
-		created["oktaScopeId"] = v
-	}
-
-	return nil
-}
-
-func createOktaScopes(oktaClient *clients.OktaAPI, authServerID string, rawScopes []interface{}) ([]string, error) {
-	createdScopeIDs := make([]string, 0, len(rawScopes))
-	for _, s := range rawScopes {
-		scopeMap, ok := s.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		scopeID, err := oktaClient.CreateScope(authServerID, scopeMap)
-		if err != nil {
-			return nil, err
-		}
-		if scopeID != "" {
-			createdScopeIDs = append(createdScopeIDs, scopeID)
-		}
-	}
-	return createdScopeIDs, nil
-}
-
-func formatOktaScopeIDs(scopeIDs []string) (string, error) {
-	if len(scopeIDs) == 1 {
-		return scopeIDs[0], nil
-	}
-	if len(scopeIDs) > 1 {
-		b, err := json.Marshal(scopeIDs)
-		if err != nil {
-			return "", err
-		}
-		return string(b), nil
-	}
-	return "", nil
 }
 
 // validateExtraProperties validates Okta-specific extra properties and sets defaults
@@ -335,18 +221,6 @@ func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error 
 		}
 		if len(policyTemplate) == 0 {
 			return fmt.Errorf("policyTemplate is required when createPolicy is true")
-		}
-	}
-
-	createScopes, _ := extraProps["createScopes"].(bool)
-	if createScopes {
-		authServerID, _ := extraProps["authServerId"].(string)
-		scopes, _ := extraProps["scopes"].([]interface{})
-		if authServerID == "" {
-			return fmt.Errorf("authServerId is required when createScopes is true")
-		}
-		if len(scopes) == 0 {
-			return fmt.Errorf("scopes is required when createScopes is true")
 		}
 	}
 

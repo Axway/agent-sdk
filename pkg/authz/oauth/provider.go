@@ -79,6 +79,12 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	}
 
 	apiClient := coreapi.NewClient(tlsCfg, proxyURL, coreapi.WithTimeout(clientTimeout))
+
+	extraProps := idp.GetExtraProperties()
+	if extraProps == nil {
+		extraProps = make(map[string]interface{})
+	}
+
 	var idpType typedIDP
 	switch idp.GetIDPType() {
 	case TypeOkta:
@@ -91,7 +97,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		logger:             logger,
 		metadataURL:        idp.GetMetadataURL(),
 		cfg:                idp,
-		extraProperties:    idp.GetExtraProperties(),
+		extraProperties:    extraProps,
 		requestHeaders:     idp.GetRequestHeaders(),
 		queryParameters:    idp.GetQueryParams(),
 		apiClient:          apiClient,

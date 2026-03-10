@@ -651,12 +651,7 @@ AGENTFEATURES_IDP_EXTRA_PROPERTIES_1='{
       "conditions": {"network": {"connection": "ANY"}},
       "actions": {"token": {"accessTokenLifetime": 3600}}
     }
-  },
-  "createScopes": true,
-  "scopes": [
-    {"name": "myapp.read", "description": "Read access"},
-    {"name": "myapp.write", "description": "Write access"}
-  ]
+  }
 }'
 ```
 
@@ -666,7 +661,6 @@ Notes:
 - The provider accepts `group`, `Group`, `GroupName` and `groupName` keys for the group assignment.
  Set `createPolicy` to `true` to enable automatic policy/rule creation.
 - `policyTemplate` must be a map describing the policy and optionally include a `rule` object.
- If `createScopes` is `true` and multiple scopes are created, the agent details stored for cleanup may contain multiple scope IDs.
 
 
 Alternatively, the agent implementation can choose to explicitly register the provider calling by using the `ProviderRegistry` interface.

@@ -9,29 +9,27 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 )
 
-// OktaAuthHeaderPrefix is the Authorization header scheme for Okta API tokens.
-// Okta expects this to be formatted as: "SSWS <token>".
 const OktaAuthHeaderPrefix = "SSWS"
 
-// OktaAPI wraps Okta Management API calls.
-type OktaAPI struct {
+// Okta wraps Okta Management API calls.
+type Okta struct {
 	BaseURL  string
 	APIToken string
 	Client   coreapi.Client
 }
 
-func New(apiClient coreapi.Client, baseURL, apiToken string) *OktaAPI {
+func New(apiClient coreapi.Client, baseURL, apiToken string) *Okta {
 	if apiClient == nil {
 		apiClient = coreapi.NewClient(nil, "")
 	}
-	return &OktaAPI{
+	return &Okta{
 		BaseURL:  baseURL,
 		APIToken: apiToken,
 		Client:   apiClient,
 	}
 }
 
-func (o *OktaAPI) doRequest(method, endpoint string, body interface{}) (*coreapi.Response, error) {
+func (o *Okta) doRequest(method, endpoint string, body interface{}) (*coreapi.Response, error) {
 	var reqBody []byte
 	var err error
 	if body != nil {
@@ -54,7 +52,7 @@ func (o *OktaAPI) doRequest(method, endpoint string, body interface{}) (*coreapi
 	return o.Client.Send(request)
 }
 
-func (o *OktaAPI) unexpectedStatusError(method, endpoint string, resp *coreapi.Response) error {
+func (o *Okta) unexpectedStatusError(method, endpoint string, resp *coreapi.Response) error {
 	return fmt.Errorf("okta api %s %s returned %d: %s", method, endpoint, resp.Code, string(resp.Body))
 }
 
@@ -67,7 +65,7 @@ func isStatus(code int, allowed ...int) bool {
 	return false
 }
 
-func (o *OktaAPI) FindGroupByName(groupName string) (string, error) {
+func (o *Okta) FindGroupByName(groupName string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/groups?q=%s", o.BaseURL, url.QueryEscape(groupName))
 	resp, err := o.doRequest(coreapi.GET, endpoint, nil)
 	if err != nil {
@@ -94,7 +92,7 @@ func (o *OktaAPI) FindGroupByName(groupName string) (string, error) {
 	return "", nil
 }
 
-func (o *OktaAPI) CreateGroup(name, description string) (string, error) {
+func (o *Okta) CreateGroup(name, description string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/groups", o.BaseURL)
 	body := map[string]interface{}{
 		"profile": map[string]interface{}{
@@ -121,7 +119,7 @@ func (o *OktaAPI) CreateGroup(name, description string) (string, error) {
 	return group.ID, nil
 }
 
-func (o *OktaAPI) AssignGroupToApp(appID, groupID string) error {
+func (o *Okta) AssignGroupToApp(appID, groupID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups", o.BaseURL, appID)
 	body := map[string]interface{}{"id": groupID}
 	resp, err := o.doRequest(coreapi.POST, endpoint, body)
@@ -137,7 +135,7 @@ func (o *OktaAPI) AssignGroupToApp(appID, groupID string) error {
 	return nil
 }
 
-func (o *OktaAPI) UnassignGroupFromApp(appID, groupID string) error {
+func (o *Okta) UnassignGroupFromApp(appID, groupID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
 	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
@@ -152,7 +150,7 @@ func (o *OktaAPI) UnassignGroupFromApp(appID, groupID string) error {
 	return nil
 }
 
-func (o *OktaAPI) CreatePolicy(authServerID string, policy map[string]interface{}) (string, error) {
+func (o *Okta) CreatePolicy(authServerID string, policy map[string]interface{}) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
 	resp, err := o.doRequest(coreapi.POST, endpoint, policy)
 	if err != nil {
@@ -173,7 +171,7 @@ func (o *OktaAPI) CreatePolicy(authServerID string, policy map[string]interface{
 	return pol.ID, nil
 }
 
-func (o *OktaAPI) CreateRule(authServerID, policyID string, rule map[string]interface{}) (string, error) {
+func (o *Okta) CreateRule(authServerID, policyID string, rule map[string]interface{}) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
 	resp, err := o.doRequest(coreapi.POST, endpoint, rule)
 	if err != nil {
@@ -194,7 +192,7 @@ func (o *OktaAPI) CreateRule(authServerID, policyID string, rule map[string]inte
 	return r.ID, nil
 }
 
-func (o *OktaAPI) DeleteRule(authServerID, policyID, ruleID string) error {
+func (o *Okta) DeleteRule(authServerID, policyID, ruleID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules/%s", o.BaseURL, authServerID, policyID, ruleID)
 	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
@@ -209,44 +207,8 @@ func (o *OktaAPI) DeleteRule(authServerID, policyID, ruleID string) error {
 	return nil
 }
 
-func (o *OktaAPI) DeletePolicy(authServerID, policyID string) error {
+func (o *Okta) DeletePolicy(authServerID, policyID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
-	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	if resp.Code == http.StatusNotFound {
-		return nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
-	}
-	return nil
-}
-
-func (o *OktaAPI) CreateScope(authServerID string, scope map[string]interface{}) (string, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/scopes", o.BaseURL, authServerID)
-	resp, err := o.doRequest(coreapi.POST, endpoint, scope)
-	if err != nil {
-		return "", err
-	}
-	if resp.Code == http.StatusConflict {
-		return "", nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
-		return "", o.unexpectedStatusError(coreapi.POST, endpoint, resp)
-	}
-	var s struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(resp.Body, &s); err != nil {
-		return "", err
-	}
-	return s.ID, nil
-}
-
-func (o *OktaAPI) DeleteScope(authServerID, scopeID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/scopes/%s", o.BaseURL, authServerID, scopeID)
 	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -16,8 +15,7 @@ import (
 const (
 	groupsEndpoint        = " /api/v1/groups"
 	appGroupsEndpoint     = " /api/v1/apps/app123/groups"
-	oauthMetadataEndpoint = " /oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"
-	scopesEndpoint        = " /api/v1/authorizationServers/default/scopes/scp-read"
+	oauthMetadataEndpoint = "/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"
 	accessToken           = "access-token"
 )
 
@@ -87,7 +85,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 
 	cases := []testCase{
 		{
-			name: "provisions group + policy/rule + scopes",
+			name: "provisions group + policy/rule",
 			extraProps: map[string]interface{}{
 				"group":        "MyAppUsers",
 				"createPolicy": true,
@@ -100,11 +98,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 						"conditions": map[string]interface{}{"grantTypes": map[string]interface{}{"include": []string{"authorization_code"}}},
 						"actions":    map[string]interface{}{"token": map[string]interface{}{"accessTokenLifetime": 3600}},
 					},
-				},
-				"createScopes": true,
-				"scopes": []interface{}{
-					map[string]interface{}{"name": "read:items", "description": "Read items"},
-					map[string]interface{}{"name": "write:items", "description": "Write items"},
 				},
 			},
 			routes: map[string]http.HandlerFunc{
@@ -129,42 +122,22 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 					w.WriteHeader(http.StatusCreated)
 					_, _ = w.Write([]byte(`{"id":"rule-456"}`))
 				},
-				http.MethodPost + " /api/v1/authorizationServers/default/scopes": func(w http.ResponseWriter, r *http.Request) {
-					body, _ := io.ReadAll(r.Body)
-					var payload map[string]interface{}
-					_ = json.Unmarshal(body, &payload)
-					name, _ := payload["name"].(string)
-					scopeID := "scp-unknown"
-					switch name {
-					case "read:items":
-						scopeID = "scp-read"
-					case "write:items":
-						scopeID = "scp-write"
-					}
-					w.WriteHeader(http.StatusCreated)
-					_, _ = w.Write([]byte(`{"id":"` + scopeID + `"}`))
-				},
 			},
 			wantCreated: map[string]string{
 				"oktaGroupId":  "00g-123",
 				"oktaPolicyId": "pol-123",
 				"oktaRuleId":   "rule-456",
-				"oktaScopeId":  `["scp-read","scp-write"]`,
 			},
 			wantMinCalls: map[string]int{
 				http.MethodGet + groupsEndpoint:                                                  1,
 				http.MethodPost + appGroupsEndpoint:                                              1,
 				http.MethodPost + " /api/v1/authorizationServers/default/policies":               1,
 				http.MethodPost + " /api/v1/authorizationServers/default/policies/pol-123/rules": 1,
-				http.MethodPost + " /api/v1/authorizationServers/default/scopes":                 2,
 			},
 		},
 		{
-			name: "no actions when group/policy/scopes disabled",
-			extraProps: map[string]interface{}{
-				"createPolicy": false,
-				"createScopes": false,
-			},
+			name:         "no actions when group/policy disabled",
+			extraProps:   map[string]interface{}{"createPolicy": false},
 			routes:       map[string]http.HandlerFunc{},
 			wantCreated:  map[string]string{},
 			wantMinCalls: map[string]int{},
@@ -174,7 +147,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			extraProps: map[string]interface{}{
 				"group":        "NewGroup",
 				"createPolicy": false,
-				"createScopes": false,
 			},
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +217,7 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 
 	cases := []testCase{
 		{
-			name: "cleans up policy/rule, group assignment, and scope",
+			name: "cleans up policy/rule and group assignment",
 			extraProps: map[string]interface{}{
 				"authServerId": "default",
 			},
@@ -253,7 +225,6 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 				"oktaPolicyId": "pol-123",
 				"oktaRuleId":   "rule-456",
 				"oktaGroupId":  "00g-123",
-				"oktaScopeId":  "scp-read",
 			},
 			routes: map[string]http.HandlerFunc{
 				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123/rules/rule-456": func(w http.ResponseWriter, r *http.Request) {
@@ -265,36 +236,11 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 				http.MethodDelete + " /api/v1/apps/app123/groups/00g-123": func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
-				http.MethodDelete + scopesEndpoint: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				},
 			},
 			wantMinCalls: map[string]int{
 				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123/rules/rule-456": 1,
 				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123":                1,
 				http.MethodDelete + " /api/v1/apps/app123/groups/00g-123":                                   1,
-				http.MethodDelete + scopesEndpoint:                                                          1,
-			},
-		},
-		{
-			name: "cleans up multiple scopes when stored as json list",
-			extraProps: map[string]interface{}{
-				"authServerId": "default",
-			},
-			agentDetails: map[string]string{
-				"oktaScopeId": `["scp-read","scp-write"]`,
-			},
-			routes: map[string]http.HandlerFunc{
-				http.MethodDelete + scopesEndpoint: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				},
-				http.MethodDelete + " /api/v1/authorizationServers/default/scopes/scp-write": func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				},
-			},
-			wantMinCalls: map[string]int{
-				http.MethodDelete + scopesEndpoint:                                           1,
-				http.MethodDelete + " /api/v1/authorizationServers/default/scopes/scp-write": 1,
 			},
 		},
 		{
@@ -342,7 +288,6 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 	}
 	extraProps := map[string]interface{}{
 		"createPolicy": false,
-		"createScopes": false,
 	}
 
 	apiClient := coreapi.NewClient(nil, "")

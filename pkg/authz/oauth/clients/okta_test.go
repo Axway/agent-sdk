@@ -12,7 +12,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 	type testCase struct {
 		name           string
 		handler        http.HandlerFunc
-		call           func(client *OktaAPI) error
+		call           func(client *Okta) error
 		wantErr        bool
 		expectedMethod string
 	}
@@ -25,7 +25,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 				w.WriteHeader(http.StatusForbidden)
 				_, _ = w.Write([]byte("forbidden"))
 			},
-			call: func(client *OktaAPI) error {
+			call: func(client *Okta) error {
 				return client.AssignGroupToApp("app123", "group456")
 			},
 			wantErr: true,
@@ -37,7 +37,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 				w.WriteHeader(http.StatusConflict)
 				_, _ = w.Write([]byte("already assigned"))
 			},
-			call: func(client *OktaAPI) error {
+			call: func(client *Okta) error {
 				return client.AssignGroupToApp("app123", "group456")
 			},
 			wantErr: false,
@@ -49,7 +49,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = w.Write([]byte("not found"))
 			},
-			call: func(client *OktaAPI) error {
+			call: func(client *Okta) error {
 				return client.DeletePolicy("as1", "pol1")
 			},
 			wantErr: false,
@@ -61,7 +61,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 				w.WriteHeader(http.StatusForbidden)
 				_, _ = w.Write([]byte("forbidden"))
 			},
-			call: func(client *OktaAPI) error {
+			call: func(client *Okta) error {
 				return client.DeleteRule("as1", "pol1", "rule1")
 			},
 			wantErr: true,
