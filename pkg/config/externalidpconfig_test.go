@@ -10,12 +10,85 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func setEnvVars(t *testing.T, env map[string]string) {
+	t.Helper()
+	for key, val := range env {
+		assert.NoError(t, os.Setenv(key, val))
+	}
+	t.Cleanup(func() {
+		for key := range env {
+			_ = os.Unsetenv(key)
+		}
+	})
+}
+
+func parseExternalIDP(t *testing.T) ExternalIDPConfig {
+	t.Helper()
+	prop := properties.NewProperties(&cobra.Command{})
+	AddAgentFeaturesConfigProperties(prop)
+	agentFeatures := &AgentFeaturesConfiguration{}
+	assert.NoError(t, ParseExternalIDPConfig(agentFeatures, prop))
+	assert.NotNil(t, agentFeatures.ExternalIDPConfig)
+	return agentFeatures.ExternalIDPConfig
+}
+
+func assertIDPRoundTrip(t *testing.T, idp IDPConfig, expectedOktaGroup string, expectedOktaPolicy string) {
+	t.Helper()
+	buf, err := json.Marshal(idp)
+	assert.NoError(t, err)
+	assert.NotNil(t, buf)
+
+	parsedIDP := &IDPConfiguration{}
+	assert.NoError(t, json.Unmarshal(buf, parsedIDP))
+
+	assert.Equal(t, idp.GetIDPName(), parsedIDP.GetIDPName())
+	assert.Equal(t, idp.GetIDPType(), parsedIDP.GetIDPType())
+	assert.Equal(t, idp.GetMetadataURL(), parsedIDP.GetMetadataURL())
+	assert.Equal(t, len(idp.GetRequestHeaders()), len(parsedIDP.GetRequestHeaders()))
+	assert.Equal(t, len(idp.GetQueryParams()), len(parsedIDP.GetQueryParams()))
+	assert.Equal(t, idp.GetAuthConfig().GetType(), parsedIDP.GetAuthConfig().GetType())
+	assert.Equal(t, idp.GetAuthConfig().GetAccessToken(), parsedIDP.GetAuthConfig().GetAccessToken())
+	assert.Equal(t, idp.GetAuthConfig().GetClientID(), parsedIDP.GetAuthConfig().GetClientID())
+	assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIDP.GetAuthConfig().GetClientSecret())
+	assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIDP.GetAuthConfig().GetRequestHeaders()))
+	assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIDP.GetAuthConfig().GetQueryParams()))
+
+	if expectedOktaGroup != "" {
+		assert.Equal(t, expectedOktaGroup, idp.GetOktaGroup())
+		assert.Equal(t, expectedOktaGroup, parsedIDP.GetOktaGroup())
+	}
+	if expectedOktaPolicy != "" {
+		assert.Equal(t, expectedOktaPolicy, idp.GetOktaPolicy())
+		assert.Equal(t, expectedOktaPolicy, parsedIDP.GetOktaPolicy())
+	}
+}
+
+type externalIDPTestCase struct {
+	name       string
+	envNames   map[string]string
+	oktaGroup  string
+	oktaPolicy string
+	hasError   bool
+}
+
+func runExternalIDPTestCase(t *testing.T, tc externalIDPTestCase) {
+	t.Helper()
+	setEnvVars(t, tc.envNames)
+
+	idpCfgs := parseExternalIDP(t)
+	err := idpCfgs.ValidateCfg()
+	if tc.hasError {
+		assert.Error(t, err)
+		return
+	}
+	assert.NoError(t, err)
+	for _, idp := range idpCfgs.GetIDPList() {
+		assertIDPRoundTrip(t, idp, tc.oktaGroup, tc.oktaPolicy)
+	}
+}
+
 func TestExternalIDPConfig(t *testing.T) {
-	testCases := []struct {
-		name     string
-		envNames map[string]string
-		hasError bool
-	}{
+	testCases := []externalIDPTestCase{
 		{
 			name:     "no external IDP config",
 			envNames: map[string]string{},
@@ -72,6 +145,32 @@ func TestExternalIDPConfig(t *testing.T) {
 			hasError: false,
 		},
 		{
+			name: "okta group config via env var",
+			envNames: map[string]string{
+				"AGENTFEATURES_IDP_NAME_1":             "test",
+				"AGENTFEATURES_IDP_TYPE_1":             "okta",
+				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
+				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
+				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
+				"AGENTFEATURES_IDP_OKTA_GROUP_1":       "MyAppUsers",
+			},
+			oktaGroup: "MyAppUsers",
+			hasError:  false,
+		},
+		{
+			name: "okta policy config via env var",
+			envNames: map[string]string{
+				"AGENTFEATURES_IDP_NAME_1":             "test",
+				"AGENTFEATURES_IDP_TYPE_1":             "okta",
+				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
+				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
+				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
+				"AGENTFEATURES_IDP_OKTA_POLICY_1":      `{"policyTemplate":{"name":"AutoPolicy"}}`,
+			},
+			oktaPolicy: `{"policyTemplate":{"name":"AutoPolicy"}}`,
+			hasError:   false,
+		},
+		{
 			name: "client auth config with no clientid/secret in IDP config",
 			envNames: map[string]string{
 				"AGENTFEATURES_IDP_NAME_1":        "test",
@@ -106,48 +205,10 @@ func TestExternalIDPConfig(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, test := range testCases {
-		t.Run(test.name, func(t *testing.T) {
-			for key, val := range test.envNames {
-				os.Setenv(key, val)
-			}
-			defer func() {
-				for key := range test.envNames {
-					os.Setenv(key, "")
-				}
-			}()
-			prop := properties.NewProperties(&cobra.Command{})
-			AddAgentFeaturesConfigProperties(prop)
-			agentFeatures := &AgentFeaturesConfiguration{}
-			err := ParseExternalIDPConfig(agentFeatures, prop)
-			assert.Nil(t, err)
-			assert.NotNil(t, agentFeatures.ExternalIDPConfig)
-			idpCfgs := agentFeatures.ExternalIDPConfig
-			err = idpCfgs.ValidateCfg()
-			if test.hasError {
-				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
-				for _, idp := range idpCfgs.GetIDPList() {
-					buf, err := json.Marshal(idp)
-					assert.Nil(t, err)
-					assert.NotNil(t, buf)
-					parsedIdP := &IDPConfiguration{}
-					err = json.Unmarshal(buf, &parsedIdP)
-					assert.Nil(t, err)
-					assert.Equal(t, idp.GetIDPName(), parsedIdP.GetIDPName())
-					assert.Equal(t, idp.GetIDPType(), parsedIdP.GetIDPType())
-					assert.Equal(t, idp.GetMetadataURL(), parsedIdP.GetMetadataURL())
-					assert.Equal(t, len(idp.GetRequestHeaders()), len(parsedIdP.GetRequestHeaders()))
-					assert.Equal(t, len(idp.GetQueryParams()), len(parsedIdP.GetQueryParams()))
-					assert.Equal(t, idp.GetAuthConfig().GetType(), parsedIdP.GetAuthConfig().GetType())
-					assert.Equal(t, idp.GetAuthConfig().GetAccessToken(), parsedIdP.GetAuthConfig().GetAccessToken())
-					assert.Equal(t, idp.GetAuthConfig().GetClientID(), parsedIdP.GetAuthConfig().GetClientID())
-					assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIdP.GetAuthConfig().GetClientSecret())
-					assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIdP.GetAuthConfig().GetRequestHeaders()))
-					assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIdP.GetAuthConfig().GetQueryParams()))
-				}
-			}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			runExternalIDPTestCase(t, tc)
 		})
 	}
 }

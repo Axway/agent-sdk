@@ -120,9 +120,10 @@ func (o *Okta) CreateGroup(name, description string) (string, error) {
 }
 
 func (o *Okta) AssignGroupToApp(appID, groupID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups", o.BaseURL, appID)
-	body := map[string]interface{}{"id": groupID}
-	resp, err := o.doRequest(coreapi.POST, endpoint, body)
+	// Okta assigns groups to apps via PUT /api/v1/apps/{appId}/groups/{groupId}
+	// (POST to /api/v1/apps/{appId}/groups returns 405 Method Not Allowed).
+	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
+	resp, err := o.doRequest(coreapi.PUT, endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (o *Okta) AssignGroupToApp(appID, groupID string) error {
 		return nil
 	}
 	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+		return o.unexpectedStatusError(coreapi.PUT, endpoint, resp)
 	}
 	return nil
 }

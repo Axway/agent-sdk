@@ -53,8 +53,8 @@ type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
 	validateExtraProperties(extraProps map[string]interface{}) error
-	postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error)
-	postProcessClientUnregister(clientID string, agentDetails map[string]string, extraProps map[string]interface{}, credentialObj interface{}, apiClient coreapi.Client) error
+	postProcessClientRegistration(clientRes ClientMetadata, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error)
+	postProcessClientUnregister(clientID string, agentDetails map[string]string, credentialObj interface{}, apiClient coreapi.Client) error
 }
 
 type providerOptions struct {
@@ -402,7 +402,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, map
 		var createdAgentDetails map[string]string
 		if p.cfg.GetIDPType() == TypeOkta {
 			var hookErr error
-			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.extraProperties, p.cfg, p.apiClient)
+			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.cfg, p.apiClient)
 			if hookErr != nil {
 				p.logger.WithError(hookErr).Error("Okta post-registration hook failed")
 				return nil, nil, hookErr
@@ -532,7 +532,7 @@ func (p *provider) runPostUnregisterHook(clientID string, agentDetails map[strin
 	if p.cfg.GetIDPType() != TypeOkta {
 		return nil
 	}
-	return p.idpType.postProcessClientUnregister(clientID, agentDetails, p.extraProperties, p.cfg, p.apiClient)
+	return p.idpType.postProcessClientUnregister(clientID, agentDetails, p.cfg, p.apiClient)
 }
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard

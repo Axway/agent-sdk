@@ -27,6 +27,8 @@ const (
 	fldTitle                    = "title"
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
+	fldOktaGroup                = "okta.group"
+	fldOktaPolicy               = "okta.policy"
 	fldExtraProperties          = "extraProperties"
 	fldRequestHeaders           = "requestHeaders"
 	fldQueryParams              = "queryParams"
@@ -58,6 +60,8 @@ var configProperties = []string{
 	fldTitle,
 	fldType,
 	fldMetadataURL,
+	fldOktaGroup,
+	fldOktaPolicy,
 	fldExtraProperties,
 	fldRequestHeaders,
 	fldQueryParams,
@@ -232,6 +236,10 @@ type IDPConfig interface {
 	GetIDPTitle() string
 	// GetAuthConfig - to be used for authentication with IDP
 	GetAuthConfig() IDPAuthConfig
+	// GetOktaGroup - okta-specific group assignment configuration.
+	GetOktaGroup() string
+	// GetOktaPolicy - okta-specific policy/rule automation configuration as JSON.
+	GetOktaPolicy() string
 	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 	GetClientScopes() string
 	// GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
@@ -269,21 +277,28 @@ type IDPAuthConfiguration struct {
 	UseRegistrationToken bool              `json:"-"`
 }
 
+// OktaIDPConfiguration - okta-specific configuration.
+type OktaIDPConfiguration struct {
+	Group  string `json:"group,omitempty"`
+	Policy string `json:"policy,omitempty"`
+}
+
 // IDPConfiguration - Structure to hold the IdP provider config
 type IDPConfiguration struct {
-	Name             string            `json:"name,omitempty"`
-	Title            string            `json:"title,omitempty"`
-	Type             string            `json:"type,omitempty"`
-	MetadataURL      string            `json:"metadataUrl,omitempty"`
-	AuthConfig       IDPAuthConfig     `json:"auth,omitempty"`
-	ClientScopes     string            `json:"scope,omitempty"`
-	GrantType        string            `json:"grantType,omitempty"`
-	AuthMethod       string            `json:"authMethod,omitempty"`
-	AuthResponseType string            `json:"authResponseType,omitempty"`
-	ExtraProperties  ExtraProperties   `json:"extraProperties,omitempty"`
-	RequestHeaders   IDPRequestHeaders `json:"requestHeaders,omitempty"`
-	QueryParams      IDPQueryParams    `json:"queryParams,omitempty"`
-	TLSConfig        TLSConfig         `json:"-"`
+	Name             string                `json:"name,omitempty"`
+	Title            string                `json:"title,omitempty"`
+	Type             string                `json:"type,omitempty"`
+	MetadataURL      string                `json:"metadataUrl,omitempty"`
+	Okta             *OktaIDPConfiguration `json:"okta,omitempty"`
+	AuthConfig       IDPAuthConfig         `json:"auth,omitempty"`
+	ClientScopes     string                `json:"scope,omitempty"`
+	GrantType        string                `json:"grantType,omitempty"`
+	AuthMethod       string                `json:"authMethod,omitempty"`
+	AuthResponseType string                `json:"authResponseType,omitempty"`
+	ExtraProperties  ExtraProperties       `json:"extraProperties,omitempty"`
+	RequestHeaders   IDPRequestHeaders     `json:"requestHeaders,omitempty"`
+	QueryParams      IDPQueryParams        `json:"queryParams,omitempty"`
+	TLSConfig        TLSConfig             `json:"-"`
 }
 
 // GetIDPName - for the identity provider
@@ -309,6 +324,22 @@ func (i *IDPConfiguration) GetAuthConfig() IDPAuthConfig {
 // GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
 func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
+}
+
+// GetOktaGroup - returns Okta group name configured for this IDP (if any).
+func (i *IDPConfiguration) GetOktaGroup() string {
+	if i.Okta == nil {
+		return ""
+	}
+	return i.Okta.Group
+}
+
+// GetOktaPolicy - returns Okta policy configuration JSON for this IDP (if any).
+func (i *IDPConfiguration) GetOktaPolicy() string {
+	if i.Okta == nil {
+		return ""
+	}
+	return i.Okta.Policy
 }
 
 // GetExtraProperties - set of additional properties to be applied when registering the client

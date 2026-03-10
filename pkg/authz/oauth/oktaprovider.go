@@ -1,9 +1,11 @@
 package oauth
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"slices"
+	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth/clients"
@@ -21,6 +23,37 @@ const (
 
 type okta struct{}
 
+type oktaPolicyConfig struct {
+	CreatePolicy   *bool                  `json:"createPolicy,omitempty"`
+	Enabled        *bool                  `json:"enabled,omitempty"`
+	AuthServerID   string                 `json:"authServerId,omitempty"`
+	PolicyTemplate map[string]interface{} `json:"policyTemplate,omitempty"`
+}
+
+func parseOktaPolicyConfig(policyJSON string) (*oktaPolicyConfig, error) {
+	if strings.TrimSpace(policyJSON) == "" {
+		return nil, nil
+	}
+	cfg := &oktaPolicyConfig{}
+	if err := json.Unmarshal([]byte(policyJSON), cfg); err != nil {
+		return nil, fmt.Errorf("invalid okta policy config: %w", err)
+	}
+	return cfg, nil
+}
+
+func (c *oktaPolicyConfig) isEnabled() bool {
+	if c == nil {
+		return false
+	}
+	if c.CreatePolicy != nil {
+		return *c.CreatePolicy
+	}
+	if c.Enabled != nil {
+		return *c.Enabled
+	}
+	return true
+}
+
 func oktaBaseURLFromMetadataURL(metadataURL string) (string, error) {
 	if metadataURL == "" {
 		return "", nil
@@ -35,16 +68,43 @@ func oktaBaseURLFromMetadataURL(metadataURL string) (string, error) {
 	return u.Scheme + "://" + u.Host, nil
 }
 
+func oktaAuthServerIDFromMetadataURL(metadataURL string) string {
+	if metadataURL == "" {
+		return ""
+	}
+	u, err := url.Parse(metadataURL)
+	if err != nil {
+		return ""
+	}
+	path := strings.Trim(u.Path, "/")
+	if path == "" {
+		return ""
+	}
+	segments := strings.Split(path, "/")
+	for i := 0; i < len(segments)-1; i++ {
+		if segments[i] == "oauth2" {
+			return segments[i+1]
+		}
+	}
+	return ""
+}
+
 // postProcessClientRegistration handles Okta provisioning after client registration
-func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, extraProps map[string]interface{}, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error) {
+func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error) {
 	var metadataURL string
 	var apiToken string
+	var groupName string
+	var policyJSON string
+
 	if cfg, ok := credentialObj.(corecfg.IDPConfig); ok {
 		metadataURL = cfg.GetMetadataURL()
 		if authCfg := cfg.GetAuthConfig(); authCfg != nil {
 			apiToken = authCfg.GetAccessToken()
 		}
+		groupName = cfg.GetOktaGroup()
+		policyJSON = cfg.GetOktaPolicy()
 	}
+
 	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
 	if err != nil {
 		return nil, err
@@ -55,26 +115,36 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, extraProp
 	oktaClient := clients.New(apiClient, baseURL, apiToken)
 	created := make(map[string]string)
 
-	if err := i.handleGroupAssignment(oktaClient, clientRes, extraProps, created); err != nil {
+	policyCfg, err := parseOktaPolicyConfig(policyJSON)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := i.handlePolicyRuleCreation(oktaClient, extraProps, created); err != nil {
-		return nil, err
+	if groupName != "" {
+		if err := i.handleGroupAssignment(oktaClient, clientRes, groupName, created); err != nil {
+			return nil, err
+		}
+	}
+	if policyCfg != nil && policyCfg.isEnabled() {
+		if err := i.handlePolicyRuleCreation(oktaClient, metadataURL, policyCfg, created); err != nil {
+			return nil, err
+		}
 	}
 
 	return created, nil
 }
 
 // postProcessClientUnregister handles Okta cleanup after client deprovision
-func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[string]string, extraProps map[string]interface{}, credentialObj interface{}, apiClient coreapi.Client) error {
+func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[string]string, credentialObj interface{}, apiClient coreapi.Client) error {
 	var metadataURL string
 	var apiToken string
+	var policyJSON string
 	if cfg, ok := credentialObj.(corecfg.IDPConfig); ok {
 		metadataURL = cfg.GetMetadataURL()
 		if authCfg := cfg.GetAuthConfig(); authCfg != nil {
 			apiToken = authCfg.GetAccessToken()
 		}
+		policyJSON = cfg.GetOktaPolicy()
 	}
 	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
 	if err != nil {
@@ -85,8 +155,13 @@ func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[str
 	}
 	oktaClient := clients.New(apiClient, baseURL, apiToken)
 
+	policyCfg, err := parseOktaPolicyConfig(policyJSON)
+	if err != nil {
+		return err
+	}
+
 	// Remove policy/rule
-	if err := i.handlePolicyRuleDeletion(oktaClient, extraProps, agentDetails); err != nil {
+	if err := i.handlePolicyRuleDeletion(oktaClient, metadataURL, policyCfg, agentDetails); err != nil {
 		return err
 	}
 
@@ -99,9 +174,18 @@ func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[str
 }
 
 // handlePolicyRuleDeletion deletes rule then policy if present in agentDetails
-func (i *okta) handlePolicyRuleDeletion(oktaClient *clients.Okta, extraProps map[string]interface{}, agentDetails map[string]string) error {
-	authServerID, _ := extraProps["authServerId"].(string)
+func (i *okta) handlePolicyRuleDeletion(oktaClient *clients.Okta, metadataURL string, policyCfg *oktaPolicyConfig, agentDetails map[string]string) error {
+	authServerID := ""
+	if policyCfg != nil {
+		authServerID = policyCfg.AuthServerID
+	}
+	if authServerID == "" {
+		authServerID = oktaAuthServerIDFromMetadataURL(metadataURL)
+	}
 	if policyID, ok := agentDetails["oktaPolicyId"]; ok && policyID != "" {
+		if authServerID == "" {
+			return fmt.Errorf("authServerId is required to delete okta policy/rule (could not infer from metadataURL)")
+		}
 		if ruleID, ok := agentDetails["oktaRuleId"]; ok && ruleID != "" {
 			if err := oktaClient.DeleteRule(authServerID, policyID, ruleID); err != nil {
 				return err
@@ -128,22 +212,7 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 }
 
 // handleGroupAssignment provisions/assigns a group and records created id into created map
-func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, extraProps map[string]interface{}, created map[string]string) error {
-	// Accept several possible keys for group name to be forgiving in config
-	groupName, _ := extraProps["group"].(string)
-	if groupName == "" {
-		groupName, _ = extraProps["Group"].(string)
-	}
-	if groupName == "" {
-		groupName, _ = extraProps["GroupName"].(string)
-	}
-	if groupName == "" {
-		groupName, _ = extraProps["groupName"].(string)
-	}
-	if groupName == "" {
-		return nil
-	}
-
+func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, groupName string, created map[string]string) error {
 	groupId, err := oktaClient.FindGroupByName(groupName)
 	if err != nil {
 		return err
@@ -162,30 +231,32 @@ func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientM
 }
 
 // handlePolicyRuleCreation creates policy and rule if requested and records ids
-func (i *okta) handlePolicyRuleCreation(oktaClient *clients.Okta, extraProps map[string]interface{}, created map[string]string) error {
-	createPolicy, _ := extraProps["createPolicy"].(bool)
-	if createPolicy {
-		authServerID, _ := extraProps["authServerId"].(string)
-		policyTemplate, _ := extraProps["policyTemplate"].(map[string]interface{})
-		if authServerID == "" {
-			return fmt.Errorf("authServerId is required when createPolicy is true")
-		}
-		if len(policyTemplate) == 0 {
-			return fmt.Errorf("policyTemplate is required when createPolicy is true")
-		}
+func (i *okta) handlePolicyRuleCreation(oktaClient *clients.Okta, metadataURL string, policyCfg *oktaPolicyConfig, created map[string]string) error {
+	if policyCfg == nil || !policyCfg.isEnabled() {
+		return nil
+	}
+	authServerID := policyCfg.AuthServerID
+	if authServerID == "" {
+		authServerID = oktaAuthServerIDFromMetadataURL(metadataURL)
+	}
+	if authServerID == "" {
+		return fmt.Errorf("authServerId is required for okta policy creation (could not infer from metadataURL)")
+	}
+	if len(policyCfg.PolicyTemplate) == 0 {
+		return fmt.Errorf("policyTemplate is required for okta policy creation")
+	}
 
-		policyID, err := oktaClient.CreatePolicy(authServerID, policyTemplate)
+	policyID, err := oktaClient.CreatePolicy(authServerID, policyCfg.PolicyTemplate)
+	if err != nil {
+		return err
+	}
+	created["oktaPolicyId"] = policyID
+	if rule, ok := policyCfg.PolicyTemplate["rule"].(map[string]interface{}); ok {
+		ruleID, err := oktaClient.CreateRule(authServerID, policyID, rule)
 		if err != nil {
 			return err
 		}
-		created["oktaPolicyId"] = policyID
-		if rule, ok := policyTemplate["rule"].(map[string]interface{}); ok {
-			ruleID, err := oktaClient.CreateRule(authServerID, policyID, rule)
-			if err != nil {
-				return err
-			}
-			created["oktaRuleId"] = ruleID
-		}
+		created["oktaRuleId"] = ruleID
 	}
 	return nil
 }
@@ -209,18 +280,6 @@ func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error 
 		extraProps[oktaApplicationType] = oktaAppTypeWeb
 		if pkceRequired {
 			extraProps[oktaApplicationType] = oktaAppTypeBrowser
-		}
-	}
-
-	createPolicy, _ := extraProps["createPolicy"].(bool)
-	if createPolicy {
-		authServerID, _ := extraProps["authServerId"].(string)
-		policyTemplate, _ := extraProps["policyTemplate"].(map[string]interface{})
-		if authServerID == "" {
-			return fmt.Errorf("authServerId is required when createPolicy is true")
-		}
-		if len(policyTemplate) == 0 {
-			return fmt.Errorf("policyTemplate is required when createPolicy is true")
 		}
 	}
 

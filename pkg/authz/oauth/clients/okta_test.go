@@ -20,7 +20,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 	cases := []testCase{
 		{
 			name:           "AssignGroupToApp returns error on forbidden",
-			expectedMethod: http.MethodPost,
+			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
 				_, _ = w.Write([]byte("forbidden"))
@@ -32,7 +32,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 		},
 		{
 			name:           "AssignGroupToApp treats conflict as success",
-			expectedMethod: http.MethodPost,
+			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusConflict)
 				_, _ = w.Write([]byte("already assigned"))

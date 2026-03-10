@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -13,10 +14,18 @@ import (
 )
 
 const (
-	groupsEndpoint        = " /api/v1/groups"
-	appGroupsEndpoint     = " /api/v1/apps/app123/groups"
-	oauthMetadataEndpoint = "/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"
-	accessToken           = "access-token"
+	groupsEndpoint           = " /api/v1/groups"
+	appGroupsEndpointBase    = " /api/v1/apps/app123/groups/"
+	oktaGroupIDExisting      = "00g-123"
+	oktaGroupIDNew           = "00g-new"
+	oauthMetadataEndpoint    = "/oauth2/ausxna8tgvHrw8UrN697/.well-known/oauth-authorization-server"
+	oktaPoliciesEndpoint     = " /api/v1/authorizationServers/default/policies/"
+	oktaPoliciesEndpointByID = " /api/v1/authorizationServers/ausxna8tgvHrw8UrN697/policies/"
+	accessToken              = "access-token"
+	oktaPolicyID             = "pol-123"
+	oktaRuleID               = "rule-456"
+	oktaGroupID              = "00g-123"
+	rules                    = "/rules/"
 )
 
 type oktaScriptedServer struct {
@@ -77,7 +86,8 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 
 	type testCase struct {
 		name         string
-		extraProps   map[string]interface{}
+		oktaGroup    string
+		oktaPolicy   string
 		routes       map[string]http.HandlerFunc
 		wantCreated  map[string]string
 		wantMinCalls map[string]int
@@ -85,21 +95,9 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 
 	cases := []testCase{
 		{
-			name: "provisions group + policy/rule",
-			extraProps: map[string]interface{}{
-				"group":        "MyAppUsers",
-				"createPolicy": true,
-				"authServerId": "default",
-				"policyTemplate": map[string]interface{}{
-					"name":        "AutoPolicy-Test",
-					"description": "Auto-created",
-					"rule": map[string]interface{}{
-						"name":       "AutoRule-Test",
-						"conditions": map[string]interface{}{"grantTypes": map[string]interface{}{"include": []string{"authorization_code"}}},
-						"actions":    map[string]interface{}{"token": map[string]interface{}{"accessTokenLifetime": 3600}},
-					},
-				},
-			},
+			name:       "provisions group + policy/rule",
+			oktaGroup:  "MyAppUsers",
+			oktaPolicy: `{"authServerId":"default","policyTemplate":{"name":"AutoPolicy-Test","description":"Auto-created","rule":{"name":"AutoRule-Test","conditions":{"grantTypes":{"include":["authorization_code"]}},"actions":{"token":{"accessTokenLifetime":3600}}}}}`,
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
 					if q := r.URL.Query().Get("q"); q != "MyAppUsers" {
@@ -108,9 +106,9 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 						return
 					}
 					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`[{"id":"00g-other","profile":{"name":"Other"}},{"id":"00g-123","profile":{"name":"MyAppUsers"}}]`))
+					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"00g-other","profile":{"name":"Other"}},{"id":"%s","profile":{"name":"MyAppUsers"}}]`, oktaGroupIDExisting)))
 				},
-				http.MethodPost + appGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					_, _ = w.Write([]byte(`{}`))
 				},
@@ -124,30 +122,60 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				},
 			},
 			wantCreated: map[string]string{
-				"oktaGroupId":  "00g-123",
-				"oktaPolicyId": "pol-123",
-				"oktaRuleId":   "rule-456",
+				"oktaGroupId":  oktaGroupIDExisting,
+				"oktaPolicyId": oktaPolicyID,
+				"oktaRuleId":   oktaRuleID,
 			},
 			wantMinCalls: map[string]int{
 				http.MethodGet + groupsEndpoint:                                                  1,
-				http.MethodPost + appGroupsEndpoint:                                              1,
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting:                     1,
 				http.MethodPost + " /api/v1/authorizationServers/default/policies":               1,
 				http.MethodPost + " /api/v1/authorizationServers/default/policies/pol-123/rules": 1,
 			},
 		},
 		{
+			name:       "infers auth server id for policy/rule",
+			oktaGroup:  "MyAppUsers",
+			oktaPolicy: `{"policyTemplate":{"name":"AutoPolicy-Test","description":"Auto-created","rule":{"name":"AutoRule-Test","conditions":{"grantTypes":{"include":["authorization_code"]}},"actions":{"token":{"accessTokenLifetime":3600}}}}}`,
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"%s","profile":{"name":"MyAppUsers"}}]`, oktaGroupIDExisting)))
+				},
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{}`))
+				},
+				http.MethodPost + " /api/v1/authorizationServers/ausxna8tgvHrw8UrN697/policies": func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(fmt.Sprintf(`{"id":"%s"}`, oktaPolicyID)))
+				},
+				http.MethodPost + " /api/v1/authorizationServers/ausxna8tgvHrw8UrN697/policies/pol-123/rules": func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(fmt.Sprintf(`{"id":"%s"}`, oktaRuleID)))
+				},
+			},
+			wantCreated: map[string]string{
+				"oktaGroupId":  oktaGroupIDExisting,
+				"oktaPolicyId": oktaPolicyID,
+				"oktaRuleId":   oktaRuleID,
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + groupsEndpoint:                                                               1,
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting:                                  1,
+				http.MethodPost + " /api/v1/authorizationServers/ausxna8tgvHrw8UrN697/policies":               1,
+				http.MethodPost + " /api/v1/authorizationServers/ausxna8tgvHrw8UrN697/policies/pol-123/rules": 1,
+			},
+		},
+		{
 			name:         "no actions when group/policy disabled",
-			extraProps:   map[string]interface{}{"createPolicy": false},
 			routes:       map[string]http.HandlerFunc{},
 			wantCreated:  map[string]string{},
 			wantMinCalls: map[string]int{},
 		},
 		{
-			name: "creates group when not found",
-			extraProps: map[string]interface{}{
-				"group":        "NewGroup",
-				"createPolicy": false,
-			},
+			name:      "creates group when not found",
+			oktaGroup: "NewGroup",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
 					if q := r.URL.Query().Get("q"); q != "NewGroup" {
@@ -160,20 +188,20 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				},
 				http.MethodPost + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
-					_, _ = w.Write([]byte(`{"id":"00g-new"}`))
+					_, _ = w.Write([]byte(fmt.Sprintf(`{"id":"%s"}`, oktaGroupIDNew)))
 				},
-				http.MethodPost + appGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDNew: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					_, _ = w.Write([]byte(`{}`))
 				},
 			},
 			wantCreated: map[string]string{
-				"oktaGroupId": "00g-new",
+				"oktaGroupId": oktaGroupIDNew,
 			},
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint:     1,
-				http.MethodPost + groupsEndpoint:    1,
-				http.MethodPost + appGroupsEndpoint: 1,
+				http.MethodGet + groupsEndpoint:                         1,
+				http.MethodPost + groupsEndpoint:                        1,
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDNew: 1,
 			},
 		},
 	}
@@ -189,9 +217,12 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				MetadataURL: ts.URL + oauthMetadataEndpoint,
 				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
 			}
+			if tc.oktaGroup != "" || tc.oktaPolicy != "" {
+				credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup, Policy: tc.oktaPolicy}
+			}
 			clientRes := &clientMetadata{ClientID: "app123"}
 
-			created, err := oktaProvider.postProcessClientRegistration(clientRes, tc.extraProps, credentialObj, apiClient)
+			created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantCreated, created)
 
@@ -209,7 +240,7 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 
 	type testCase struct {
 		name         string
-		extraProps   map[string]interface{}
+		oktaPolicy   string
 		agentDetails map[string]string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
@@ -217,35 +248,57 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 
 	cases := []testCase{
 		{
-			name: "cleans up policy/rule and group assignment",
-			extraProps: map[string]interface{}{
-				"authServerId": "default",
-			},
+			name:       "cleans up policy/rule and group assignment",
+			oktaPolicy: `{"authServerId":"default","policyTemplate":{"name":"AutoPolicy-Test"}}`,
 			agentDetails: map[string]string{
-				"oktaPolicyId": "pol-123",
-				"oktaRuleId":   "rule-456",
-				"oktaGroupId":  "00g-123",
+				"oktaPolicyId": oktaPolicyID,
+				"oktaRuleId":   oktaRuleID,
+				"oktaGroupId":  oktaGroupID,
 			},
 			routes: map[string]http.HandlerFunc{
-				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123/rules/rule-456": func(w http.ResponseWriter, r *http.Request) {
+				http.MethodDelete + oktaPoliciesEndpoint + oktaPolicyID + rules + oktaRuleID: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
-				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123": func(w http.ResponseWriter, r *http.Request) {
+				http.MethodDelete + oktaPoliciesEndpoint + oktaPolicyID: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
-				http.MethodDelete + " /api/v1/apps/app123/groups/00g-123": func(w http.ResponseWriter, r *http.Request) {
+				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
 			},
 			wantMinCalls: map[string]int{
-				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123/rules/rule-456": 1,
-				http.MethodDelete + " /api/v1/authorizationServers/default/policies/pol-123":                1,
-				http.MethodDelete + " /api/v1/apps/app123/groups/00g-123":                                   1,
+				http.MethodDelete + oktaPoliciesEndpoint + oktaPolicyID + rules + oktaRuleID: 1,
+				http.MethodDelete + oktaPoliciesEndpoint + oktaPolicyID:                      1,
+				http.MethodDelete + appGroupsEndpointBase + oktaGroupID:                      1,
+			},
+		},
+		{
+			name:       "infers auth server id for cleanup",
+			oktaPolicy: `{"policyTemplate":{"name":"AutoPolicy-Test"}}`,
+			agentDetails: map[string]string{
+				"oktaPolicyId": oktaPolicyID,
+				"oktaRuleId":   oktaRuleID,
+				"oktaGroupId":  oktaGroupID,
+			},
+			routes: map[string]http.HandlerFunc{
+				http.MethodDelete + oktaPoliciesEndpointByID + oktaPolicyID + rules + oktaRuleID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				},
+				http.MethodDelete + oktaPoliciesEndpointByID + oktaPolicyID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				},
+				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				},
+			},
+			wantMinCalls: map[string]int{
+				http.MethodDelete + oktaPoliciesEndpointByID + oktaPolicyID + rules + oktaRuleID: 1,
+				http.MethodDelete + oktaPoliciesEndpointByID + oktaPolicyID:                      1,
+				http.MethodDelete + appGroupsEndpointBase + oktaGroupID:                          1,
 			},
 		},
 		{
 			name:         "no cleanup when agent details are empty",
-			extraProps:   map[string]interface{}{"authServerId": "default"},
 			agentDetails: map[string]string{},
 			routes:       map[string]http.HandlerFunc{},
 			wantMinCalls: map[string]int{},
@@ -263,8 +316,11 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 				MetadataURL: ts.URL + oauthMetadataEndpoint,
 				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
 			}
+			if tc.oktaPolicy != "" {
+				credentialObj.Okta = &corecfg.OktaIDPConfiguration{Policy: tc.oktaPolicy}
+			}
 
-			err := oktaProvider.postProcessClientUnregister("app123", tc.agentDetails, tc.extraProps, credentialObj, apiClient)
+			err := oktaProvider.postProcessClientUnregister("app123", tc.agentDetails, credentialObj, apiClient)
 			assert.NoError(t, err)
 
 			calls := scripted.getCalls()
@@ -286,14 +342,11 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 		MetadataURL: ts.URL + oauthMetadataEndpoint,
 		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
 	}
-	extraProps := map[string]interface{}{
-		"createPolicy": false,
-	}
 
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 	clientRes := &clientMetadata{ClientID: "app123"}
-	created, err := oktaProvider.postProcessClientRegistration(clientRes, extraProps, credentialObj, apiClient)
+	created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, created)
 }
