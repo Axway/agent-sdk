@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -14,6 +15,34 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"go.etcd.io/bbolt"
 )
+
+// Error definitions for cache operations
+var (
+	// ErrReadOnlyMode is returned when a write operation is attempted on a read-only database
+	ErrReadOnlyMode = errors.New("cannot perform write operation: database is in read-only mode")
+	// ErrDatabaseNotAvailable is returned when the database is not initialized
+	ErrDatabaseNotAvailable = errors.New("database not available")
+	// ErrBucketNotFound is returned when a required bucket does not exist
+	ErrBucketNotFound = errors.New("bucket not found")
+)
+
+// boltStore error handling guide:
+//
+// Write operations (Set, SetWithSecondaryKey, SetWithForeignKey, SetSecondaryKey, SetForeignKey,
+// Delete, DeleteBySecondaryKey, DeleteSecondaryKey, DeleteItemsByForeignKey, Flush) may return:
+//   - ErrReadOnlyMode: The database is in read-only mode. This occurs when the database file
+//     is on a read-only filesystem or the cache was opened with ReadOnly flag. In this state,
+//     only read operations (Get, GetBySecondaryKey, etc.) are allowed.
+//   - ErrDatabaseNotAvailable: The database handle is nil. The cache was initialized without
+//     a database connection.
+//   - Other errors from bbolt or serialization failures (JSON/gob encoding errors).
+//
+// Read operations (Get, GetBySecondaryKey, GetItemsByForeignKey, etc.) may return:
+//   - Key not found errors: The requested key/secondary key/foreign key does not exist.
+//   - Serialization errors: Data in the database is corrupted or cannot be deserialized.
+//   - ErrDatabaseNotAvailable: The database handle is nil.
+//
+// Flush() operates gracefully in read-only mode by becoming a no-op and logging to stderr.
 
 // recordEnvelope wraps stored data with metadata
 type recordEnvelope struct {
@@ -35,6 +64,18 @@ type recordEnvelope struct {
 type boltStore struct {
 	db         *bbolt.DB
 	bucketName string
+}
+
+// ensureWritable checks if the database is available and not in read-only mode
+// Returns an error if writes cannot be performed
+func (bc *boltStore) ensureWritable() error {
+	if bc.db == nil {
+		return ErrDatabaseNotAvailable
+	}
+	if bc.db.IsReadOnly() {
+		return ErrReadOnlyMode
+	}
+	return nil
 }
 
 // newBoltStore creates a new bbolt-backed storage instance for the given bucket
@@ -225,8 +266,8 @@ func (bc *boltStore) Set(key string, data interface{}) error {
 
 // SetWithSecondaryKey stores data with primary and secondary key
 func (bc *boltStore) SetWithSecondaryKey(key string, secondaryKey string, data interface{}) error {
-	if bc.db == nil {
-		return fmt.Errorf("database not available")
+	if err := bc.ensureWritable(); err != nil {
+		return err
 	}
 	if key == "" {
 		if secondaryKey == "" {
@@ -301,6 +342,9 @@ func (bc *boltStore) SetWithSecondaryKey(key string, secondaryKey string, data i
 
 // SetSecondaryKey adds a secondary key to an existing item
 func (bc *boltStore) SetSecondaryKey(key string, secondaryKey string) error {
+	if err := bc.ensureWritable(); err != nil {
+		return err
+	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bc.bucketName))
 		if bucket == nil {
@@ -344,8 +388,8 @@ func (bc *boltStore) SetSecondaryKey(key string, secondaryKey string) error {
 
 // SetWithForeignKey stores data with primary key and foreign key
 func (bc *boltStore) SetWithForeignKey(key string, foreignKey string, data interface{}) error {
-	if bc.db == nil {
-		return fmt.Errorf("database not available")
+	if err := bc.ensureWritable(); err != nil {
+		return err
 	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bc.bucketName))
@@ -426,6 +470,9 @@ func (bc *boltStore) SetWithForeignKey(key string, foreignKey string, data inter
 
 // SetForeignKey sets the foreign key for an existing item
 func (bc *boltStore) SetForeignKey(key string, foreignKey string) error {
+	if err := bc.ensureWritable(); err != nil {
+		return err
+	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bc.bucketName))
 		if bucket == nil {
@@ -683,8 +730,8 @@ func (bc *boltStore) HasItemBySecondaryKeyChanged(secondaryKey string, data inte
 
 // Delete removes an item by primary key
 func (bc *boltStore) Delete(key string) error {
-	if bc.db == nil {
-		return fmt.Errorf("database not available")
+	if err := bc.ensureWritable(); err != nil {
+		return err
 	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bc.bucketName))
@@ -775,6 +822,9 @@ func (bc *boltStore) DeleteBySecondaryKey(secondaryKey string) error {
 
 // DeleteSecondaryKey removes a secondary key mapping
 func (bc *boltStore) DeleteSecondaryKey(secondaryKey string) error {
+	if err := bc.ensureWritable(); err != nil {
+		return err
+	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		secondaryBucket := tx.Bucket([]byte(bc.bucketName + "_secondary"))
 		if secondaryBucket == nil {
@@ -819,6 +869,9 @@ func (bc *boltStore) DeleteForeignKey(foreignKey string) error {
 
 // DeleteItemsByForeignKey removes all items with the given foreign key
 func (bc *boltStore) DeleteItemsByForeignKey(foreignKey string) error {
+	if err := bc.ensureWritable(); err != nil {
+		return err
+	}
 	return bc.db.Update(func(tx *bbolt.Tx) error {
 		foreignBucket := tx.Bucket([]byte(bc.bucketName + "_foreign"))
 		if foreignBucket == nil {
@@ -868,9 +921,16 @@ func (bc *boltStore) DeleteItemsByForeignKey(foreignKey string) error {
 	})
 }
 
-// Flush removes all data from the cache
+// Flush removes all data from the cache.
+// In read-only mode, this operation is silently skipped (no-op).
+// Any errors during the flush operation are logged but not returned.
 func (bc *boltStore) Flush() {
-	bc.db.Update(func(tx *bbolt.Tx) error {
+	// Skip flush in read-only mode
+	if bc.db == nil || bc.db.IsReadOnly() {
+		return
+	}
+
+	err := bc.db.Update(func(tx *bbolt.Tx) error {
 		// Delete and recreate all buckets
 		buckets := []string{
 			bc.bucketName,
@@ -889,14 +949,33 @@ func (bc *boltStore) Flush() {
 
 		return nil
 	})
+
+	// Log error if flush fails (but don't panic or propagate it)
+	if err != nil {
+		// Note: We can't use a logger here as we don't have access to log.FieldLogger
+		// in this type. Errors would need to be logged at the manager level.
+		// The cache.Cache interface doesn't support returning errors from Flush()
+		fmt.Fprintf(os.Stderr, "WARNING: failed to flush cache %s: %v\n", bc.bucketName, err)
+	}
 }
 
-// Save is a no-op for bbolt (persistence is automatic)
+// Save is a no-op for bbolt persistence.
+//
+// Unlike in-memory caches that require explicit serialization, bbolt automatically persists
+// all data to disk as part of the transaction. Calling this method has no effect.
+// This method exists to satisfy the cache.Cache interface contract for compatibility
+// with other cache implementations.
 func (bc *boltStore) Save(path string) error {
 	return nil
 }
 
-// Load is a no-op for bbolt (data is loaded on open)
+// Load is a no-op for bbolt persistence.
+//
+// Unlike in-memory caches that require explicit deserialization from disk, bbolt
+// automatically loads all data from the database file on open. Data is available
+// immediately and does not require a separate load operation.
+// This method exists to satisfy the cache.Cache interface contract for compatibility
+// with other cache implementations.
 func (bc *boltStore) Load(path string) error {
 	return nil
 }

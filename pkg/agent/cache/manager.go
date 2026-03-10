@@ -3,6 +3,7 @@ package cache
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -17,7 +18,72 @@ import (
 
 const defaultCacheStoragePath = "./data/cache"
 
-var sharedBoltDBs sync.Map
+// dbHandle tracks a shared database file with reference counting
+type dbHandle struct {
+	db       *bbolt.DB
+	refCount atomic.Int32
+}
+
+// sharedBoltDBs manages shared database handles across multiple cache managers
+// This prevents file locking issues when multiple agents share the same database
+var (
+	sharedBoltDBsLock sync.RWMutex
+	sharedBoltDBs     = make(map[string]*dbHandle)
+)
+
+// getSharedDB retrieves or creates a shared database handle, incrementing reference count
+func getSharedDB(dbPath string) (*bbolt.DB, error) {
+	sharedBoltDBsLock.Lock()
+	defer sharedBoltDBsLock.Unlock()
+
+	// Check if handle already exists
+	if handle, exists := sharedBoltDBs[dbPath]; exists && handle.db != nil {
+		handle.refCount.Add(1)
+		return handle.db, nil
+	}
+
+	// Try to open in read-write mode first
+	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{
+		Timeout: 10 * time.Second,
+	})
+	if err != nil {
+		// Try read-only mode
+		db, err = bbolt.Open(dbPath, 0600, &bbolt.Options{
+			Timeout:  1 * time.Second,
+			ReadOnly: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Store handle with ref count of 1
+	sharedBoltDBs[dbPath] = &dbHandle{
+		db: db,
+	}
+	sharedBoltDBs[dbPath].refCount.Store(1)
+	return db, nil
+}
+
+// releaseSharedDB decrements the reference count and closes the database if count reaches zero
+func releaseSharedDB(dbPath string) error {
+	sharedBoltDBsLock.Lock()
+	defer sharedBoltDBsLock.Unlock()
+
+	handle, exists := sharedBoltDBs[dbPath]
+	if !exists || handle.db == nil {
+		return nil
+	}
+
+	newCount := handle.refCount.Add(-1)
+	if newCount <= 0 {
+		err := handle.db.Close()
+		delete(sharedBoltDBs, dbPath)
+		return err
+	}
+
+	return nil
+}
 
 // cache keys
 const (
@@ -204,48 +270,28 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 	}
 	c.dbPath = dbPath
 
-	// Always create a database
-	c.db, err = bbolt.Open(dbPath, 0600, &bbolt.Options{
-		Timeout: 10 * time.Second,
-	})
-	if err != nil {
-		if sharedDB, ok := sharedBoltDBs.Load(dbPath); ok {
-			if db, ok := sharedDB.(*bbolt.DB); ok && db != nil {
-				c.db = db
-				err = nil
-				c.isPersistedCacheLoaded = true
-				c.logger.WithField("dbFile", dbPath).Info("reusing shared database handle")
-			}
-		}
-	}
+	// Use shared database handle management to prevent file locking issues
+	c.db, err = getSharedDB(dbPath)
 
 	if err != nil {
 		if c.isPersistedCacheEnabled {
-			c.logger.WithError(err).Warn("failed to open database in read-write mode, attempting read-only mode")
-			c.db, err = bbolt.Open(dbPath, 0600, &bbolt.Options{
-				Timeout:  1 * time.Second,
-				ReadOnly: true,
-			})
-			if err == nil {
-				sharedBoltDBs.Store(dbPath, c.db)
-			}
-		}
-
-		if err != nil {
 			c.logger.WithError(err).Error("failed to open database, cache will not persist")
 			c.isPersistedCacheLoaded = false
 			c.isPersistedCacheEnabled = false
 		} else {
-			c.isPersistedCacheLoaded = true
-			c.logger.WithField("dbFile", dbPath).Info("database opened in read-only mode")
+			c.logger.WithError(err).Debug("failed to open temporary cache database")
 		}
 	} else {
-		sharedBoltDBs.Store(dbPath, c.db)
-		if c.isPersistedCacheEnabled {
-			c.isPersistedCacheLoaded = true
+		if c.db.IsReadOnly() {
+			c.logger.WithField("dbFile", dbPath).Info("database opened in read-only mode")
+		} else if c.isPersistedCacheEnabled {
 			c.logger.WithField("dbFile", c.cacheFilename).Info("database opened successfully")
 		} else {
 			c.logger.Debug("temporary database created for cache (test mode)")
+		}
+
+		if c.isPersistedCacheEnabled {
+			c.isPersistedCacheLoaded = true
 		}
 	}
 
@@ -448,58 +494,43 @@ func (c *cacheManager) ReleaseResourceReadLock() {
 	c.resourceCacheReadLock.Unlock()
 }
 
-// Flush empties the persistent cache and all internal caches
+// Flush empties the persistent cache and all internal caches.
+// In read-only mode, flush operations are silently skipped.
 func (c *cacheManager) Flush() {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 	c.logger.Debug("resetting the persistent cache")
 
-	if c.accessRequestMap != nil {
-		c.accessRequestMap.Flush()
+	caches := []*boltStore{
+		c.accessRequestMap,
+		c.apiMap,
+		c.ardMap,
+		c.apdMap,
+		c.crrMap,
+		c.crdMap,
+		c.instanceMap,
+		c.managedApplicationMap,
+		c.sequenceCache,
+		c.subscriptionMap,
+		c.watchResourceMap,
+		c.teams,
+		c.instanceCountMap,
 	}
-	if c.apiMap != nil {
-		c.apiMap.Flush()
-	}
-	if c.ardMap != nil {
-		c.ardMap.Flush()
-	}
-	if c.apdMap != nil {
-		c.apdMap.Flush()
-	}
-	if c.crrMap != nil {
-		c.crrMap.Flush()
-	}
-	if c.crdMap != nil {
-		c.crdMap.Flush()
-	}
-	if c.instanceMap != nil {
-		c.instanceMap.Flush()
-	}
-	if c.managedApplicationMap != nil {
-		c.managedApplicationMap.Flush()
-	}
-	if c.sequenceCache != nil {
-		c.sequenceCache.Flush()
-	}
-	if c.subscriptionMap != nil {
-		c.subscriptionMap.Flush()
-	}
-	if c.watchResourceMap != nil {
-		c.watchResourceMap.Flush()
-	}
-	if c.teams != nil {
-		c.teams.Flush()
-	}
-	if c.instanceCountMap != nil {
-		c.instanceCountMap.Flush()
+
+	for _, cache := range caches {
+		if cache != nil {
+			cache.Flush()
+		}
 	}
 }
 
-// Close closes the bbolt database
+// Close closes the bbolt database and releases the shared database handle.
+// If this is the last reference to the database, it will be closed and cleaned up.
 func (c *cacheManager) Close() error {
-	if c.db != nil {
-		c.logger.Info("closing bbolt database")
-		return c.db.Close()
+	if c.dbPath == "" {
+		return nil
 	}
-	return nil
+
+	c.logger.WithField("dbPath", c.dbPath).Debug("releasing database handle")
+	return releaseSharedDB(c.dbPath)
 }
