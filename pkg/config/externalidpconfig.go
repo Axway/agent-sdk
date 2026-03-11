@@ -238,7 +238,7 @@ type IDPConfig interface {
 	GetAuthConfig() IDPAuthConfig
 	// GetOktaGroup - okta-specific group assignment configuration.
 	GetOktaGroup() string
-	// GetOktaPolicy - okta-specific policy/rule automation configuration as JSON.
+	// GetOktaPolicy - okta-specific authorization server policy name to look up.
 	GetOktaPolicy() string
 	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 	GetClientScopes() string
@@ -334,7 +334,7 @@ func (i *IDPConfiguration) GetOktaGroup() string {
 	return i.Okta.Group
 }
 
-// GetOktaPolicy - returns Okta policy configuration JSON for this IDP (if any).
+// GetOktaPolicy - returns Okta authorization server policy name for this IDP (if any).
 func (i *IDPConfiguration) GetOktaPolicy() string {
 	if i.Okta == nil {
 		return ""

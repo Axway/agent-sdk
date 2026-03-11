@@ -165,9 +165,9 @@ func TestExternalIDPConfig(t *testing.T) {
 				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
 				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
 				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
-				"AGENTFEATURES_IDP_OKTA_POLICY_1":      `{"policyTemplate":{"name":"AutoPolicy"}}`,
+				"AGENTFEATURES_IDP_OKTA_POLICY_1":      "marketplacePolicy",
 			},
-			oktaPolicy: `{"policyTemplate":{"name":"AutoPolicy"}}`,
+			oktaPolicy: "marketplacePolicy",
 			hasError:   false,
 		},
 		{

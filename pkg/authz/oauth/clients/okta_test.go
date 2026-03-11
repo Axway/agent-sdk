@@ -43,26 +43,26 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:           "DeletePolicy treats not found as success",
+			name:           "UnassignGroupFromApp treats not found as success",
 			expectedMethod: http.MethodDelete,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = w.Write([]byte("not found"))
 			},
 			call: func(client *Okta) error {
-				return client.DeletePolicy("as1", "pol1")
+				return client.UnassignGroupFromApp("app123", "group456")
 			},
 			wantErr: false,
 		},
 		{
-			name:           "DeleteRule returns error on forbidden",
-			expectedMethod: http.MethodDelete,
+			name:           "UpdatePolicy returns error on forbidden",
+			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
 				_, _ = w.Write([]byte("forbidden"))
 			},
 			call: func(client *Okta) error {
-				return client.DeleteRule("as1", "pol1", "rule1")
+				return client.UpdatePolicy("as1", "pol1", map[string]interface{}{"id": "pol1"})
 			},
 			wantErr: true,
 		},

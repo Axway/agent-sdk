@@ -610,6 +610,10 @@ type IDPConfig interface {
   GetIDPName() string
   // GetAuthConfig - to be used for authentication with IDP
   GetAuthConfig() IDPAuthConfig
+  // GetOktaGroup - okta-specific group assignment configuration.
+  GetOktaGroup() string
+  // GetOktaPolicy - okta-specific authorization server policy name to look up.
+  GetOktaPolicy() string
   // GetClientScopes - default list of scopes that are included in the client metadata request to IDP
   GetClientScopes() string
   // GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
@@ -636,7 +640,7 @@ AGENTFEATURES_IDP_SCOPE_1="resource.READ resource.WRITE"
 ```
 
 ###### Okta provider configuration
-To enrich Okta provisioning (group assignment and policy/rule automation), configure the Okta IDP with a group name and optional `extraProperties`.
+To enrich Okta provisioning (group assignment and policy lookup), configure the Okta IDP with a group name and/or policy name.
 
 Group assignment is configured via:
 
@@ -644,29 +648,16 @@ Group assignment is configured via:
 AGENTFEATURES_IDP_OKTA_GROUP_1="MyAppUsers"
 ```
 
-Policy/rule creation is configured via `extraProperties` (as an environment entry for the corresponding `AGENTFEATURES` index):
+Policy lookup is configured via:
 
 ```
-AGENTFEATURES_IDP_EXTRAPROPERTIES_1='{
-  "createPolicy": true,
-  "authServerId": "0oa-abc123",
-  "policyTemplate": {
-    "name": "Allow MyApp",
-    "description": "Policy for MyApp",
-    "rule": {
-      "name": "Allow rule",
-      "conditions": {"network": {"connection": "ANY"}},
-      "actions": {"token": {"accessTokenLifetime": 3600}}
-    }
-  }
-}'
+AGENTFEATURES_IDP_OKTA_POLICY_1="MarketplacePolicy"
 ```
-
-Alternatively when registering the provider programmatically via `IDPConfiguration`, set the Okta group under `Okta.Group` and include policy/rule keys under `ExtraProperties`.
 
 Notes:
-- Set `createPolicy` to `true` to enable automatic policy/rule creation.
-- `policyTemplate` must be a map describing the policy and optionally include a `rule` object.
+- The SDK does not create groups or policies. If the configured group/policy does not exist, it no-ops.
+
+Alternatively when registering the provider programmatically via `IDPConfiguration`, set the Okta group under `Okta.Group` and the policy name under `Okta.Policy`.
 
 
 Alternatively, the agent implementation can choose to explicitly register the provider calling by using the `ProviderRegistry` interface.

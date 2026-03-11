@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 )
@@ -52,6 +53,20 @@ func (o *Okta) doRequest(method, endpoint string, body interface{}) (*coreapi.Re
 	return o.Client.Send(request)
 }
 
+func (o *Okta) doGetJSON(endpoint string, out interface{}) error {
+	resp, err := o.doRequest(coreapi.GET, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if !isStatus(resp.Code, http.StatusOK) {
+		return o.unexpectedStatusError(coreapi.GET, endpoint, resp)
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(resp.Body, out)
+}
+
 func (o *Okta) unexpectedStatusError(method, endpoint string, resp *coreapi.Response) error {
 	return fmt.Errorf("okta api %s %s returned %d: %s", method, endpoint, resp.Code, string(resp.Body))
 }
@@ -63,6 +78,10 @@ func isStatus(code int, allowed ...int) bool {
 		}
 	}
 	return false
+}
+
+func (o *Okta) authServerPolicyEndpoint(authServerID, policyID string) string {
+	return fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
 }
 
 func (o *Okta) FindGroupByName(groupName string) (string, error) {
@@ -92,36 +111,7 @@ func (o *Okta) FindGroupByName(groupName string) (string, error) {
 	return "", nil
 }
 
-func (o *Okta) CreateGroup(name, description string) (string, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/groups", o.BaseURL)
-	body := map[string]interface{}{
-		"profile": map[string]interface{}{
-			"name":        name,
-			"description": description,
-		},
-	}
-	resp, err := o.doRequest(coreapi.POST, endpoint, body)
-	if err != nil {
-		return "", err
-	}
-	if resp.Code == http.StatusConflict {
-		return o.FindGroupByName(name)
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
-		return "", o.unexpectedStatusError(coreapi.POST, endpoint, resp)
-	}
-	var group struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(resp.Body, &group); err != nil {
-		return "", err
-	}
-	return group.ID, nil
-}
-
 func (o *Okta) AssignGroupToApp(appID, groupID string) error {
-	// Okta assigns groups to apps via PUT /api/v1/apps/{appId}/groups/{groupId}
-	// (POST to /api/v1/apps/{appId}/groups returns 405 Method Not Allowed).
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
 	resp, err := o.doRequest(coreapi.PUT, endpoint, nil)
 	if err != nil {
@@ -151,74 +141,116 @@ func (o *Okta) UnassignGroupFromApp(appID, groupID string) error {
 	return nil
 }
 
-func (o *Okta) CreatePolicy(authServerID string, policy map[string]interface{}) (string, error) {
+// FindPolicyByName returns the policy object for the given policy name on the authorization server.
+// Returns nil if not found.
+//
+// Note: This does a list call to locate the policy ID and then retrieves the policy by ID
+// so callers can update it without needing an additional fetch.
+func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]interface{}, error) {
+	policyName = strings.TrimSpace(policyName)
+	if authServerID == "" || policyName == "" {
+		return nil, nil
+	}
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
-	resp, err := o.doRequest(coreapi.POST, endpoint, policy)
-	if err != nil {
-		return "", err
+	var policies []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
 	}
-	if resp.Code == http.StatusConflict {
-		return "", nil
+	if err := o.doGetJSON(endpoint, &policies); err != nil {
+		return nil, err
 	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
-		return "", o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+
+	policyID := ""
+	for _, p := range policies {
+		if p.Name == policyName {
+			policyID = p.ID
+			break
+		}
 	}
-	var pol struct {
-		ID string `json:"id"`
+	if policyID == "" {
+		return nil, nil
 	}
-	if err := json.Unmarshal(resp.Body, &pol); err != nil {
-		return "", err
+
+	policyEndpoint := o.authServerPolicyEndpoint(authServerID, policyID)
+	var policy map[string]interface{}
+	if err := o.doGetJSON(policyEndpoint, &policy); err != nil {
+		return nil, err
 	}
-	return pol.ID, nil
+	return policy, nil
 }
 
-func (o *Okta) CreateRule(authServerID, policyID string, rule map[string]interface{}) (string, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
-	resp, err := o.doRequest(coreapi.POST, endpoint, rule)
-	if err != nil {
-		return "", err
+// UpdatePolicy updates an existing authorization server policy.
+func (o *Okta) UpdatePolicy(authServerID, policyID string, policy map[string]interface{}) error {
+	if authServerID == "" || policyID == "" {
+		return nil
 	}
-	if resp.Code == http.StatusConflict {
-		return "", nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
-		return "", o.unexpectedStatusError(coreapi.POST, endpoint, resp)
-	}
-	var r struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(resp.Body, &r); err != nil {
-		return "", err
-	}
-	return r.ID, nil
-}
-
-func (o *Okta) DeleteRule(authServerID, policyID, ruleID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules/%s", o.BaseURL, authServerID, policyID, ruleID)
-	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
+	endpoint := o.authServerPolicyEndpoint(authServerID, policyID)
+	resp, err := o.doRequest(coreapi.PUT, endpoint, policy)
 	if err != nil {
 		return err
 	}
-	if resp.Code == http.StatusNotFound {
-		return nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
+	if !isStatus(resp.Code, http.StatusOK) {
+		return o.unexpectedStatusError(coreapi.PUT, endpoint, resp)
 	}
 	return nil
 }
 
-func (o *Okta) DeletePolicy(authServerID, policyID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
-	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	if resp.Code == http.StatusNotFound {
+// AssignClientToPolicy updates the policy-level "Assigned to clients" list to include the given client.
+// If the policy is already assigned to ALL_CLIENTS or already includes the client, it no-ops.
+//
+// The policy map is modified in-place and then persisted via UpdatePolicy.
+func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]interface{}, clientID string) error {
+	clientID = strings.TrimSpace(clientID)
+	if authServerID == "" || policy == nil || clientID == "" {
 		return nil
 	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
+	policyID, _ := policy["id"].(string)
+	policyID = strings.TrimSpace(policyID)
+	if policyID == "" {
+		return nil
 	}
-	return nil
+
+	conditions := ensureMap(policy, "conditions")
+	clients := ensureMap(conditions, "clients")
+
+	includeRaw, hasInclude := clients["include"]
+	if !hasInclude || includeRaw == nil {
+		clients["include"] = []interface{}{clientID}
+		return o.UpdatePolicy(authServerID, policyID, policy)
+	}
+
+	include, ok := includeRaw.([]interface{})
+	if !ok {
+		// Unexpected type; avoid breaking existing policy structure.
+		return nil
+	}
+	if includeHasAllOrClient(include, clientID) {
+		return nil
+	}
+	clients["include"] = append(include, clientID)
+	return o.UpdatePolicy(authServerID, policyID, policy)
+}
+
+func ensureMap(parent map[string]interface{}, key string) map[string]interface{} {
+	child, ok := parent[key].(map[string]interface{})
+	if ok && child != nil {
+		return child
+	}
+	child = make(map[string]interface{})
+	parent[key] = child
+	return child
+}
+
+func includeHasAllOrClient(include []interface{}, clientID string) bool {
+	for _, v := range include {
+		s, ok := v.(string)
+		if !ok {
+			continue
+		}
+		s = strings.TrimSpace(s)
+		if s == "ALL_CLIENTS" || s == clientID {
+			return true
+		}
+	}
+	return false
 }
