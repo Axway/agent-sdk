@@ -655,7 +655,7 @@ AGENTFEATURES_IDP_OKTA_POLICY_1="MarketplacePolicy"
 ```
 
 Notes:
-- The SDK does not create groups or policies. If the configured group/policy does not exist, it no-ops.
+- The SDK does not create groups or policies; they must already exist in Okta before the agent starts. If a configured group or policy cannot be found during provider initialization, `NewProvider` returns an error and the agent will fail to start.
 
 Alternatively when registering the provider programmatically via `IDPConfiguration`, set the Okta group under `Okta.Group` and the policy name under `Okta.Policy`.
 

@@ -191,6 +191,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 		routes       map[string]http.HandlerFunc
 		wantCreated  map[string]string
 		wantMinCalls map[string]int
+		wantErr      bool
 	}
 
 	cases := []testCase{
@@ -247,23 +248,23 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			wantMinCalls: map[string]int{},
 		},
 		{
-			name:      "no action when group not found",
+			name:      "error when group not found",
 			oktaGroup: "NewGroup",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
 			},
-			wantCreated: map[string]string{},
+			wantErr: true,
 			wantMinCalls: map[string]int{
 				http.MethodGet + groupsEndpoint: 1,
 			},
 		},
 		{
-			name:       "no action when policy not found",
+			name:       "error when policy not found",
 			oktaPolicy: "MissingPolicy",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
 			},
-			wantCreated: map[string]string{},
+			wantErr: true,
 			wantMinCalls: map[string]int{
 				http.MethodGet + oktaPoliciesEndpointByID: 1,
 			},
@@ -280,8 +281,12 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			clientRes := &clientMetadata{ClientID: "app123"}
 
 			created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.wantCreated, created)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.wantCreated, created)
+			}
 
 			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
 		})

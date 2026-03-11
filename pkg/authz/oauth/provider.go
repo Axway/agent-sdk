@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/api"
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -53,8 +52,8 @@ type typedIDP interface {
 	getAuthorizationHeaderPrefix() string
 	preProcessClientRequest(clientRequest *clientMetadata)
 	validateExtraProperties(extraProps map[string]interface{}) error
-	postProcessClientRegistration(clientRes ClientMetadata, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error)
-	postProcessClientUnregister(clientID string, agentDetails map[string]string, credentialObj interface{}, apiClient coreapi.Client) error
+	postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) (map[string]string, error)
+	postProcessClientUnregister(clientID string, agentDetails map[string]string, idp corecfg.IDPConfig, apiClient coreapi.Client) error
 }
 
 type providerOptions struct {
@@ -155,7 +154,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	return p, nil
 }
 
-func FetchMetadata(apiClient api.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
+func FetchMetadata(apiClient coreapi.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
 	if apiClient == nil || metadataURL == "" {
 		return nil, errors.New("unexpected arguments")
 	}
@@ -532,12 +531,11 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 	}
 
 	// attempt unregister using known URL patterns
-	if err := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken); err == nil {
-		logger.Info("unregistered client")
-		return nil
-	} else {
+	if err := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken); err != nil {
 		return err
 	}
+	logger.Info("unregistered client")
+	return nil
 }
 
 // runPostUnregisterHook calls provider-specific unregister hook when applicable.
