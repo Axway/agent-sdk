@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -78,6 +79,107 @@ func (s *oktaScriptedServer) getCalls() map[string]int {
 	return out
 }
 
+type oktaGroupItem struct {
+	ID   string
+	Name string
+}
+
+type oktaPolicyItem struct {
+	ID   string
+	Name string
+}
+
+func oktaGroupsSearchHandler(wantQ string, items []oktaGroupItem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if wantQ != "" {
+			if q := r.URL.Query().Get("q"); q != wantQ {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("unexpected q"))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		buf := make([]byte, 0, 256)
+		buf = append(buf, '[')
+		for i, item := range items {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			buf = append(buf, []byte(fmt.Sprintf(`{"id":%q,"profile":{"name":%q}}`, item.ID, item.Name))...)
+		}
+		buf = append(buf, ']')
+		_, _ = w.Write(buf)
+	}
+}
+
+func oktaAssignGroupHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}
+}
+
+func oktaPoliciesListHandler(items []oktaPolicyItem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		buf := make([]byte, 0, 256)
+		buf = append(buf, '[')
+		for i, item := range items {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			buf = append(buf, []byte(fmt.Sprintf(`{"id":%q,"name":%q}`, item.ID, item.Name))...)
+		}
+		buf = append(buf, ']')
+		_, _ = w.Write(buf)
+	}
+}
+
+func oktaPolicyGetHandler(policyID, policyName string, include []string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		includeJSON, _ := json.Marshal(include)
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"id":%q,"name":%q,"conditions":{"clients":{"include":%s}}}`, policyID, policyName, string(includeJSON))))
+	}
+}
+
+func oktaPolicyPutMustIncludeClientHandler(clientID string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		conds, _ := body["conditions"].(map[string]interface{})
+		clients, _ := conds["clients"].(map[string]interface{})
+		include, _ := clients["include"].([]interface{})
+		for _, v := range include {
+			if s, ok := v.(string); ok && s == clientID {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("client id not included"))
+	}
+}
+
+func newIDPCredential(tsURL, group, policy string) *corecfg.IDPConfiguration {
+	credentialObj := &corecfg.IDPConfiguration{
+		MetadataURL: tsURL + oauthMetadataEndpoint,
+		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+	}
+	if strings.TrimSpace(group) != "" || strings.TrimSpace(policy) != "" {
+		credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: group, Policy: policy}
+	}
+	return credentialObj
+}
+
+func assertMinCalls(t *testing.T, calls map[string]int, wantMinCalls map[string]int) {
+	t.Helper()
+	for key, minCount := range wantMinCalls {
+		assert.GreaterOrEqual(t, calls[key], minCount, "expected at least %d calls to %s", minCount, key)
+	}
+}
+
 func TestOktaPostProcessClientRegistration(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
@@ -97,48 +199,11 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
-					if q := r.URL.Query().Get("q"); q != "MyAppUsers" {
-						w.WriteHeader(http.StatusBadRequest)
-						_, _ = w.Write([]byte("unexpected q"))
-						return
-					}
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"00g-other","profile":{"name":"Other"}},{"id":"%s","profile":{"name":"MyAppUsers"}}]`, oktaGroupIDExisting)))
-				},
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{}`))
-				},
-				http.MethodGet + oktaPoliciesEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"%s","name":"MarketplacePolicy"}]`, oktaPolicyID)))
-				},
-				http.MethodGet + oktaPolicyEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{"id":"pol-123","name":"MarketplacePolicy","conditions":{"clients":{"include":[]}}}`))
-				},
-				http.MethodPut + oktaPolicyEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					var body map[string]interface{}
-					_ = json.NewDecoder(r.Body).Decode(&body)
-					conds, _ := body["conditions"].(map[string]interface{})
-					clients, _ := conds["clients"].(map[string]interface{})
-					include, _ := clients["include"].([]interface{})
-					found := false
-					for _, v := range include {
-						if s, ok := v.(string); ok && s == "app123" {
-							found = true
-							break
-						}
-					}
-					if !found {
-						w.WriteHeader(http.StatusBadRequest)
-						_, _ = w.Write([]byte("client id not included"))
-						return
-					}
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{}`))
-				},
+				http.MethodGet + groupsEndpoint:                              oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: "00g-other", Name: "Other"}, {ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
 			},
 			wantCreated: map[string]string{
 				"oktaGroupId":  oktaGroupIDExisting,
@@ -157,43 +222,11 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"%s","profile":{"name":"MyAppUsers"}}]`, oktaGroupIDExisting)))
-				},
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{}`))
-				},
-				http.MethodGet + oktaPoliciesEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(fmt.Sprintf(`[{"id":"%s","name":"MarketplacePolicy"}]`, oktaPolicyID)))
-				},
-				http.MethodGet + oktaPolicyEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{"id":"pol-123","name":"MarketplacePolicy","conditions":{"clients":{"include":[]}}}`))
-				},
-				http.MethodPut + oktaPolicyEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					var body map[string]interface{}
-					_ = json.NewDecoder(r.Body).Decode(&body)
-					conds, _ := body["conditions"].(map[string]interface{})
-					clients, _ := conds["clients"].(map[string]interface{})
-					include, _ := clients["include"].([]interface{})
-					found := false
-					for _, v := range include {
-						if s, ok := v.(string); ok && s == "app123" {
-							found = true
-							break
-						}
-					}
-					if !found {
-						w.WriteHeader(http.StatusBadRequest)
-						_, _ = w.Write([]byte("client id not included"))
-						return
-					}
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`{}`))
-				},
+				http.MethodGet + groupsEndpoint:                              oktaGroupsSearchHandler("", []oktaGroupItem{{ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
 			},
 			wantCreated: map[string]string{
 				"oktaGroupId":  oktaGroupIDExisting,
@@ -217,15 +250,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			name:      "no action when group not found",
 			oktaGroup: "NewGroup",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
-					if q := r.URL.Query().Get("q"); q != "NewGroup" {
-						w.WriteHeader(http.StatusBadRequest)
-						_, _ = w.Write([]byte("unexpected q"))
-						return
-					}
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`[]`))
-				},
+				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
 			},
 			wantCreated: map[string]string{},
 			wantMinCalls: map[string]int{
@@ -236,10 +261,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			name:       "no action when policy not found",
 			oktaPolicy: "MissingPolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + oktaPoliciesEndpointByID: func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, _ = w.Write([]byte(`[{"id":"pol-other","name":"OtherPolicy"}]`))
-				},
+				http.MethodGet + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
 			},
 			wantCreated: map[string]string{},
 			wantMinCalls: map[string]int{
@@ -254,24 +276,14 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			expectedAuth := "SSWS access-token"
 			ts, scripted := newOktaScriptedServer(t, expectedAuth, tc.routes)
 			defer ts.Close()
-
-			credentialObj := &corecfg.IDPConfiguration{
-				MetadataURL: ts.URL + oauthMetadataEndpoint,
-				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
-			}
-			if tc.oktaGroup != "" || tc.oktaPolicy != "" {
-				credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup, Policy: tc.oktaPolicy}
-			}
+			credentialObj := newIDPCredential(ts.URL, tc.oktaGroup, tc.oktaPolicy)
 			clientRes := &clientMetadata{ClientID: "app123"}
 
 			created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantCreated, created)
 
-			calls := scripted.getCalls()
-			for key, minCount := range tc.wantMinCalls {
-				assert.GreaterOrEqual(t, calls[key], minCount, "expected at least %d calls to %s", minCount, key)
-			}
+			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
 		})
 	}
 }

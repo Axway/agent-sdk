@@ -120,6 +120,19 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		p.authServerMetadata = metadata
 	}
 
+	// Fail-fast Okta validation: if Okta group/policy is configured, verify the resources exist.
+	if idp.GetIDPType() == TypeOkta {
+		if err := validateOktaConfiguredResources(idp, apiClient); err != nil {
+			p.logger.
+				WithField("provider", p.cfg.GetIDPName()).
+				WithField("type", p.cfg.GetIDPType()).
+				WithField("metadata-url", p.metadataURL).
+				WithError(err).
+				Error("okta configuration validation failed")
+			return nil, err
+		}
+	}
+
 	// No OAuth client is needed to request token for access token based authentication to IdP
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
 		authClient, err := p.createAuthClient()

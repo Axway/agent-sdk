@@ -57,6 +57,87 @@ func oktaAuthServerIDFromMetadataURL(metadataURL string) string {
 	return ""
 }
 
+func validateOktaConfiguredResources(idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	groupName, policyName := oktaValidationNames(idp)
+	if groupName == "" && policyName == "" {
+		return nil
+	}
+
+	apiToken := oktaManagementAPIToken(idp)
+	if apiToken == "" {
+		return fmt.Errorf("okta group/policy validation requires IDP auth type %q with a valid management API access token", corecfg.AccessToken)
+	}
+
+	metadataURL := idp.GetMetadataURL()
+	oktaClient, err := oktaClientFromMetadataURL(apiClient, metadataURL, apiToken)
+	if err != nil {
+		return err
+	}
+
+	if err := validateOktaGroupExists(oktaClient, groupName); err != nil {
+		return err
+	}
+	if err := validateOktaPolicyExists(oktaClient, metadataURL, policyName); err != nil {
+		return err
+	}
+	return nil
+}
+
+func oktaValidationNames(idp corecfg.IDPConfig) (groupName, policyName string) {
+	return strings.TrimSpace(idp.GetOktaGroup()), strings.TrimSpace(idp.GetOktaPolicy())
+}
+
+func oktaManagementAPIToken(idp corecfg.IDPConfig) string {
+	authCfg := idp.GetAuthConfig()
+	if authCfg == nil {
+		return ""
+	}
+	return strings.TrimSpace(authCfg.GetAccessToken())
+}
+
+func oktaClientFromMetadataURL(apiClient coreapi.Client, metadataURL, apiToken string) (*clients.Okta, error) {
+	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
+	if err != nil {
+		return nil, err
+	}
+	if baseURL == "" {
+		return nil, fmt.Errorf("invalid okta metadata URL: %q", metadataURL)
+	}
+	return clients.New(apiClient, baseURL, apiToken), nil
+}
+
+func validateOktaGroupExists(oktaClient *clients.Okta, groupName string) error {
+	if strings.TrimSpace(groupName) == "" {
+		return nil
+	}
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return err
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured okta group %q was not found", groupName)
+	}
+	return nil
+}
+
+func validateOktaPolicyExists(oktaClient *clients.Okta, metadataURL, policyName string) error {
+	if strings.TrimSpace(policyName) == "" {
+		return nil
+	}
+	authServerID := oktaAuthServerIDFromMetadataURL(metadataURL)
+	if authServerID == "" {
+		return fmt.Errorf("authServerId is required to locate okta policy (could not infer from metadataURL)")
+	}
+	policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
+	if err != nil {
+		return err
+	}
+	if policy == nil {
+		return fmt.Errorf("configured okta policy %q was not found on authorization server %q", policyName, authServerID)
+	}
+	return nil
+}
+
 // postProcessClientRegistration handles Okta provisioning after client registration
 func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, credentialObj interface{}, apiClient coreapi.Client) (map[string]string, error) {
 	var metadataURL string
@@ -83,15 +164,12 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, credentia
 	oktaClient := clients.New(apiClient, baseURL, apiToken)
 	updated := make(map[string]string)
 
-	if strings.TrimSpace(groupName) != "" {
-		if err := i.handleGroupAssignmentIfExists(oktaClient, clientRes, groupName, updated); err != nil {
-			return nil, err
-		}
+	if err := i.handleGroupAssignmentIfExists(oktaClient, clientRes, groupName, updated); err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(policyName) != "" {
-		if err := i.handlePolicyIfExists(oktaClient, clientRes.GetClientID(), metadataURL, policyName, updated); err != nil {
-			return nil, err
-		}
+
+	if err := i.handlePolicyIfExists(oktaClient, clientRes.GetClientID(), metadataURL, policyName, updated); err != nil {
+		return nil, err
 	}
 
 	return updated, nil
@@ -157,10 +235,6 @@ func (i *okta) handleGroupAssignmentIfExists(oktaClient *clients.Okta, clientRes
 // handlePolicyIfExists looks up an existing policy by name and records its id.
 // If the policy does not exist, it no-ops (does not create the policy).
 func (i *okta) handlePolicyIfExists(oktaClient *clients.Okta, clientID, metadataURL string, policyName string, updated map[string]string) error {
-	clientID = strings.TrimSpace(clientID)
-	if clientID == "" {
-		return nil
-	}
 	policyName = strings.TrimSpace(policyName)
 	if policyName == "" {
 		return nil

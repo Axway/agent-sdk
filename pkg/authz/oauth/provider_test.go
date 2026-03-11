@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,8 +12,10 @@ import (
 )
 
 const (
-	testLocalHost = "http://localhost"
-	testJwksURL   = "http://jwks"
+	testLocalHost             = "http://localhost"
+	testJwksURL               = "http://jwks"
+	testToken                 = "test-token"
+	testAuthServerMetadataURL = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
 )
 
 type providerTestCase struct {
@@ -307,7 +310,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 				ExtraProperties: tc.extraProperties,
 				AuthConfig: &config.IDPAuthConfiguration{
 					Type:        config.AccessToken,
-					AccessToken: "test-token",
+					AccessToken: testToken,
 				},
 			}
 
@@ -325,4 +328,88 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewProviderOktaValidatesConfiguredGroupAndPolicyExist(t *testing.T) {
+	token := testToken
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+			return
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups":
+			if r.URL.Query().Get("q") == "Marketplace" {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`[{"id":"00g-123","profile":{"name":"Marketplace"}}]`))
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+			return
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"id":"pol-123","name":"shane"}]`))
+			return
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies/pol-123":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id":"pol-123","name":"shane","conditions":{"clients":{"include":[]}}}`))
+			return
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}))
+	defer srv.Close()
+
+	idpCfg := &config.IDPConfiguration{
+		Name:        "test",
+		Type:        TypeOkta,
+		MetadataURL: srv.URL + testAuthServerMetadataURL,
+		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace", Policy: "shane"},
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:        config.AccessToken,
+			AccessToken: token,
+		},
+	}
+
+	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+	assert.NoError(t, err)
+	assert.NotNil(t, p)
+}
+
+func TestNewProviderOktaFailsFastWhenConfiguredGroupMissing(t *testing.T) {
+	token := testToken
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+			return
+		}
+		if r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	idpCfg := &config.IDPConfiguration{
+		Name:        "test",
+		Type:        TypeOkta,
+		MetadataURL: srv.URL + testAuthServerMetadataURL,
+		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace"},
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:        config.AccessToken,
+			AccessToken: token,
+		},
+	}
+
+	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+	assert.Error(t, err)
+	assert.Nil(t, p)
+	assert.Contains(t, err.Error(), "configured okta group")
 }
