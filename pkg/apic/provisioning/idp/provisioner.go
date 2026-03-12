@@ -138,7 +138,7 @@ func (p *provisioner) RegisterClient() error {
 	}
 
 	// provision external client
-	resClientMetadata, createdAgentDetails, err := p.idpProvider.RegisterClient(clientMetadata)
+	resClientMetadata, err := p.idpProvider.RegisterClient(clientMetadata)
 	if err != nil {
 		return err
 	}
@@ -151,14 +151,6 @@ func (p *provisioner) RegisterClient() error {
 		util.SetAgentDetailsKey(p.credential, "registrationClientURI", resClientMetadata.GetRegistrationClientURI())
 	}
 
-	// Persist any agent details returned by provider (e.g., Okta resource IDs)
-	if len(createdAgentDetails) > 0 {
-		// merge with existing agent details
-		existing := util.GetAgentDetailStrings(p.credential)
-		merged := util.MergeMapStringString(existing, createdAgentDetails)
-		util.SetAgentDetails(p.credential, util.MapStringStringToMapStringInterface(merged))
-	}
-
 	return nil
 }
 
@@ -169,9 +161,7 @@ func (p *provisioner) UnregisterClient() error {
 
 	registrationClientURI, _ := util.GetAgentDetailsValue(p.credential, "registrationClientURI")
 
-	// retrieve any stored agent details for cleanup
-	agentDetails := util.GetAgentDetailStrings(p.credential)
-	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken, registrationClientURI, agentDetails)
+	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken, registrationClientURI)
 	if err != nil {
 		return err
 	}

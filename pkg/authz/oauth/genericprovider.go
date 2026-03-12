@@ -24,10 +24,10 @@ func (i *genericIDP) validateExtraProperties(extraProps map[string]interface{}) 
 	return nil
 }
 
-func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) (map[string]string, error) {
-	return nil, nil
+func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	return nil
 }
 
-func (i *genericIDP) postProcessClientUnregister(clientID string, agentDetails map[string]string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+func (i *genericIDP) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
 	return nil
 }

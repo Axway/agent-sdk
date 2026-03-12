@@ -140,7 +140,7 @@ func validateOktaPolicyExists(oktaClient *clients.Okta, authServerID, policyName
 }
 
 // postProcessClientRegistration handles Okta provisioning after client registration
-func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) (map[string]string, error) {
+func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
 	metadataURL := idp.GetMetadataURL()
 	var apiToken string
 	if authCfg := idp.GetAuthConfig(); authCfg != nil {
@@ -151,28 +151,27 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corec
 
 	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if baseURL == "" || apiToken == "" {
-		return nil, nil // skip if not configured
+		return nil // skip if not configured
 	}
 	oktaClient := clients.New(apiClient, baseURL, apiToken)
-	updated := make(map[string]string)
 
-	if err := i.handleGroupAssignment(oktaClient, clientRes, groupName, updated); err != nil {
-		return nil, err
+	if err := i.handleGroupAssignment(oktaClient, clientRes, groupName); err != nil {
+		return err
 	}
 
 	authServerID := oktaAuthServerIDFromMetadataURL(metadataURL)
-	if err := i.handlePolicyAssignment(oktaClient, clientRes.GetClientID(), authServerID, policyName, updated); err != nil {
-		return nil, err
+	if err := i.handlePolicyAssignment(oktaClient, clientRes.GetClientID(), authServerID, policyName); err != nil {
+		return err
 	}
 
-	return updated, nil
+	return nil
 }
 
 // postProcessClientUnregister removes only the app→group assignment (no deletes).
-func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[string]string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+func (i *okta) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
 	metadataURL := idp.GetMetadataURL()
 	var apiToken string
 	if authCfg := idp.GetAuthConfig(); authCfg != nil {
@@ -188,15 +187,26 @@ func (i *okta) postProcessClientUnregister(clientID string, agentDetails map[str
 	}
 
 	oktaClient := clients.New(apiClient, baseURL, apiToken)
-	return i.handleGroupUnassignment(oktaClient, clientID, agentDetails)
+	return i.handleGroupUnassignment(oktaClient, clientID, idp.GetOktaGroup())
 }
 
-// handleGroupUnassignment unassigns a group from the app if group id present
-func (i *okta) handleGroupUnassignment(oktaClient *clients.Okta, clientID string, agentDetails map[string]string) error {
-	if groupId, ok := agentDetails["oktaGroupId"]; ok && groupId != "" {
-		if err := oktaClient.UnassignGroupFromApp(clientID, groupId); err != nil {
-			return err
-		}
+// handleGroupUnassignment unassigns the configured group from the app.
+func (i *okta) handleGroupUnassignment(oktaClient *clients.Okta, clientID, groupName string) error {
+	groupName = strings.TrimSpace(groupName)
+	if groupName == "" {
+		return nil
+	}
+
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return err
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured okta group %q was not found during client cleanup", groupName)
+	}
+
+	if err := oktaClient.UnassignGroupFromApp(clientID, groupID); err != nil {
+		return err
 	}
 	return nil
 }
@@ -206,7 +216,7 @@ func (i *okta) getAuthorizationHeaderPrefix() string {
 
 // handleGroupAssignment looks up the named group and assigns it to the app.
 // Returns an error if the group is not found.  Even though we fail fast at the start, we check again to guard against the possibility that the group was deleted between validation and assignment.
-func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, groupName string, updated map[string]string) error {
+func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, groupName string) error {
 	groupName = strings.TrimSpace(groupName)
 	if groupName == "" {
 		return nil
@@ -221,13 +231,12 @@ func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientM
 	if err := oktaClient.AssignGroupToApp(clientRes.GetClientID(), groupId); err != nil {
 		return err
 	}
-	updated["oktaGroupId"] = groupId
 	return nil
 }
 
 // handlePolicyAssignment looks up the named policy on the authorization server and assigns the client to it.
 // Returns an error if the policy is not found. Even though we fail fast at the start, we check again to guard against the possibility that the policy was deleted between validation and assignment.
-func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authServerID string, policyName string, updated map[string]string) error {
+func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authServerID string, policyName string) error {
 	policyName = strings.TrimSpace(policyName)
 	if policyName == "" {
 		return nil
@@ -251,7 +260,6 @@ func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authSe
 	if err := oktaClient.AssignClientToPolicy(authServerID, policy, clientID); err != nil {
 		return err
 	}
-	updated["oktaPolicyId"] = policyID
 	return nil
 }
 

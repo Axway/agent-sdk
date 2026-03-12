@@ -189,7 +189,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 		oktaGroup    string
 		oktaPolicy   string
 		routes       map[string]http.HandlerFunc
-		wantCreated  map[string]string
 		wantMinCalls map[string]int
 		wantErr      bool
 	}
@@ -205,10 +204,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				http.MethodGet + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
 				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
 				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
-			},
-			wantCreated: map[string]string{
-				"oktaGroupId":  oktaGroupIDExisting,
-				"oktaPolicyId": oktaPolicyID,
 			},
 			wantMinCalls: map[string]int{
 				http.MethodGet + groupsEndpoint:                              1,
@@ -229,10 +224,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
 				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
 			},
-			wantCreated: map[string]string{
-				"oktaGroupId":  oktaGroupIDExisting,
-				"oktaPolicyId": oktaPolicyID,
-			},
 			wantMinCalls: map[string]int{
 				http.MethodGet + groupsEndpoint:                              1,
 				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: 1,
@@ -244,7 +235,6 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 		{
 			name:         "no actions when group/policy disabled",
 			routes:       map[string]http.HandlerFunc{},
-			wantCreated:  map[string]string{},
 			wantMinCalls: map[string]int{},
 		},
 		{
@@ -280,12 +270,11 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			credentialObj := newIDPCredential(ts.URL, tc.oktaGroup, tc.oktaPolicy)
 			clientRes := &clientMetadata{ClientID: "app123"}
 
-			created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
+			err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.wantCreated, created)
 			}
 
 			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
@@ -299,31 +288,47 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 
 	type testCase struct {
 		name         string
-		agentDetails map[string]string
+		oktaGroup    string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
+		wantErr      bool
+		errContains  string
 	}
 
 	cases := []testCase{
 		{
-			name: "unassigns group when agent details include group id",
-			agentDetails: map[string]string{
-				"oktaGroupId": oktaGroupID,
-			},
+			name:      "unassigns group when configured group exists",
+			oktaGroup: "MyAppUsers",
 			routes: map[string]http.HandlerFunc{
+				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: oktaGroupID, Name: "MyAppUsers"}}),
 				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
 			},
 			wantMinCalls: map[string]int{
+				http.MethodGet + groupsEndpoint:                         1,
 				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: 1,
 			},
+			wantErr: false,
 		},
 		{
-			name:         "no cleanup when agent details are empty",
-			agentDetails: map[string]string{},
+			name:         "no cleanup when okta group is not configured",
+			oktaGroup:    "",
 			routes:       map[string]http.HandlerFunc{},
 			wantMinCalls: map[string]int{},
+			wantErr:      false,
+		},
+		{
+			name:      "returns error when configured group is not found",
+			oktaGroup: "MissingGroup",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("MissingGroup", nil),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + groupsEndpoint: 1,
+			},
+			wantErr:     true,
+			errContains: "configured okta group",
 		},
 	}
 
@@ -336,10 +341,18 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 
 			credentialObj := &corecfg.IDPConfiguration{
 				MetadataURL: ts.URL + oauthMetadataEndpoint,
+				Okta:        &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup},
 				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
 			}
-			err := oktaProvider.postProcessClientUnregister("app123", tc.agentDetails, credentialObj, apiClient)
-			assert.NoError(t, err)
+			err := oktaProvider.postProcessClientUnregister("app123", credentialObj, apiClient)
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.errContains != "" {
+					assert.Contains(t, err.Error(), tc.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
 
 			calls := scripted.getCalls()
 			for key, minCount := range tc.wantMinCalls {
@@ -364,9 +377,8 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 	clientRes := &clientMetadata{ClientID: "app123"}
-	created, err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
+	err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
 	assert.NoError(t, err)
-	assert.NotNil(t, created)
 }
 
 func TestOktaBaseURLFromMetadataURL(t *testing.T) {

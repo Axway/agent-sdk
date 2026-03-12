@@ -19,6 +19,8 @@ const (
 	testJwksURL               = "http://jwks"
 	testToken                 = "test-token"
 	testAuthServerMetadataURL = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
+	testMetadataURL           = "/metadata"
+	testRegisterURL           = "/register/cid-1"
 )
 
 type providerTestCase struct {
@@ -228,7 +230,7 @@ func runProviderTestCase(t *testing.T, tc providerTestCase) {
 		s.SetClientID(tc.clientID)
 	}
 
-	cr, _, err := p.RegisterClient(tc.clientRequest)
+	cr, err := p.RegisterClient(tc.clientRequest)
 	if tc.expectRegistrationErr {
 		assert.NotNil(t, err)
 		assert.Nil(t, cr)
@@ -252,7 +254,7 @@ func runProviderTestCase(t *testing.T, tc providerTestCase) {
 		assert.Equal(t, s.GetUnregisterEndpoint(), cr.GetRegistrationClientURI())
 	}
 	s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint(), nil)
+	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint())
 	if tc.expectUnRegistrationErr {
 		assert.NotNil(t, err)
 		return
@@ -430,81 +432,109 @@ func (f *failingHookIDP) getAuthorizationHeaderPrefix() string {
 	return "Bearer"
 }
 
-func (f *failingHookIDP) preProcessClientRequest(clientRequest *clientMetadata) {}
+func (f *failingHookIDP) preProcessClientRequest(clientRequest *clientMetadata) {
+	// No preprocessing needed for this mock IDP implementation
+}
 
 func (f *failingHookIDP) validateExtraProperties(extraProps map[string]interface{}) error {
 	return nil
 }
 
-func (f *failingHookIDP) postProcessClientRegistration(clientRes ClientMetadata, idp config.IDPConfig, apiClient coreapi.Client) (map[string]string, error) {
-	return nil, f.regErr
+func (f *failingHookIDP) postProcessClientRegistration(clientRes ClientMetadata, idp config.IDPConfig, apiClient coreapi.Client) error {
+	return f.regErr
 }
 
-func (f *failingHookIDP) postProcessClientUnregister(clientID string, agentDetails map[string]string, idp config.IDPConfig, apiClient coreapi.Client) error {
+func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config.IDPConfig, apiClient coreapi.Client) error {
 	return f.unregErr
 }
 
-func TestRegisterClient_RollsBackWhenPostRegistrationHookFails(t *testing.T) {
-	var deleteCalls atomic.Int32
-	var registerCalls atomic.Int32
-
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-		case r.Method == http.MethodPost && r.URL.Path == "/register":
-			registerCalls.Add(1)
-			w.WriteHeader(http.StatusCreated)
-			_, _ = w.Write([]byte(`{"client_id":"cid-1","client_secret":"sec-1","registration_client_uri":"` + srv.URL + `/register/cid-1"}`))
-		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
-			deleteCalls.Add(1)
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer srv.Close()
-
-	idpCfg := &config.IDPConfiguration{
-		Name:        "test",
-		Type:        "generic",
-		MetadataURL: srv.URL + "/metadata",
-		AuthConfig: &config.IDPAuthConfiguration{
-			Type:        config.AccessToken,
-			AccessToken: testToken,
+func TestRegisterClientRollBack(t *testing.T) {
+	tests := []struct {
+		name               string
+		deleteResponseCode int
+		deleteResponseBody string
+		errorContains      string
+	}{
+		{
+			name:               "rollback succeeds when hook fails",
+			deleteResponseCode: http.StatusNoContent,
+			errorContains:      "failed to complete Okta client setup",
+		},
+		{
+			name:               "rollback failure is surfaced with manual cleanup guidance",
+			deleteResponseCode: http.StatusInternalServerError,
+			deleteResponseBody: "delete failed",
+			errorContains:      "Manual cleanup in Okta may be required",
 		},
 	}
 
-	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
-	assert.NoError(t, err)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			var deleteCalls atomic.Int32
+			var registerCalls atomic.Int32
 
-	p := pIntf.(*provider)
-	idpCfg.Type = TypeOkta
-	p.idpType = &failingHookIDP{regErr: errors.New("post-registration hook failed")}
+			var srv *httptest.Server
+			srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == testMetadataURL:
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+				case r.Method == http.MethodPost && r.URL.Path == "/register":
+					registerCalls.Add(1)
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(`{"client_id":"cid-1","client_secret":"sec-1","registration_client_uri":"` + srv.URL + testRegisterURL + `"}`))
+				case r.Method == http.MethodDelete && r.URL.Path == testRegisterURL:
+					deleteCalls.Add(1)
+					w.WriteHeader(tc.deleteResponseCode)
+					if tc.deleteResponseBody != "" {
+						_, _ = w.Write([]byte(tc.deleteResponseBody))
+					}
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer srv.Close()
 
-	clientReq := &clientMetadata{ClientName: "test"}
-	cr, details, err := p.RegisterClient(clientReq)
+			idpCfg := &config.IDPConfiguration{
+				Name:        "test",
+				Type:        "generic",
+				MetadataURL: srv.URL + testMetadataURL,
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: testToken,
+				},
+			}
 
-	assert.Error(t, err)
-	assert.Nil(t, cr)
-	assert.Nil(t, details)
-	assert.Contains(t, err.Error(), "failed to complete Okta client setup")
-	assert.Equal(t, int32(1), registerCalls.Load())
-	assert.Equal(t, int32(1), deleteCalls.Load())
+			pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+			assert.NoError(t, err)
+
+			p := pIntf.(*provider)
+			idpCfg.Type = TypeOkta
+			p.idpType = &failingHookIDP{regErr: errors.New("post-registration hook failed")}
+
+			clientReq := &clientMetadata{ClientName: "test"}
+			cr, err := p.RegisterClient(clientReq)
+
+			assert.Error(t, err)
+			assert.Nil(t, cr)
+			assert.Contains(t, err.Error(), tc.errorContains)
+			assert.Equal(t, int32(1), registerCalls.Load())
+			assert.Equal(t, int32(1), deleteCalls.Load())
+		})
+	}
 }
 
-func TestUnregisterClient_AttemptsDeleteWhenPostUnregisterHookFails(t *testing.T) {
+func TestUnregisterClientDeleteHookFails(t *testing.T) {
 	var deleteCalls atomic.Int32
 
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
+		case r.Method == http.MethodGet && r.URL.Path == testMetadataURL:
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
+		case r.Method == http.MethodDelete && r.URL.Path == testRegisterURL:
 			deleteCalls.Add(1)
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -516,7 +546,7 @@ func TestUnregisterClient_AttemptsDeleteWhenPostUnregisterHookFails(t *testing.T
 	idpCfg := &config.IDPConfiguration{
 		Name:        "test",
 		Type:        "generic",
-		MetadataURL: srv.URL + "/metadata",
+		MetadataURL: srv.URL + testMetadataURL,
 		AuthConfig: &config.IDPAuthConfiguration{
 			Type:        config.AccessToken,
 			AccessToken: testToken,
@@ -530,23 +560,23 @@ func TestUnregisterClient_AttemptsDeleteWhenPostUnregisterHookFails(t *testing.T
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+"/register/cid-1", map[string]string{"oktaGroupId": "g1"})
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration")
 	assert.Equal(t, int32(1), deleteCalls.Load())
 }
 
-func TestUnregisterClient_ReturnsCombinedErrorWhenCleanupAndDeleteFail(t *testing.T) {
+func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	var deleteCalls atomic.Int32
 
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
+		case r.Method == http.MethodGet && r.URL.Path == testMetadataURL:
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
+		case r.Method == http.MethodDelete && r.URL.Path == testRegisterURL:
 			deleteCalls.Add(1)
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`delete failed`))
@@ -559,7 +589,7 @@ func TestUnregisterClient_ReturnsCombinedErrorWhenCleanupAndDeleteFail(t *testin
 	idpCfg := &config.IDPConfiguration{
 		Name:        "test",
 		Type:        "generic",
-		MetadataURL: srv.URL + "/metadata",
+		MetadataURL: srv.URL + testMetadataURL,
 		AuthConfig: &config.IDPAuthConfiguration{
 			Type:        config.AccessToken,
 			AccessToken: testToken,
@@ -573,7 +603,7 @@ func TestUnregisterClient_ReturnsCombinedErrorWhenCleanupAndDeleteFail(t *testin
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+"/register/cid-1", map[string]string{"oktaGroupId": "g1"})
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fully remove the Okta client")
