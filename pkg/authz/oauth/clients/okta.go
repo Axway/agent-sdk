@@ -8,9 +8,12 @@ import (
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const OktaAuthHeaderPrefix = "SSWS"
+
+var logger = log.NewFieldLogger().WithComponent("oktaClient").WithPackage("sdk.agent.authz.oauth.clients")
 
 // Okta wraps Okta Management API calls.
 type Okta struct {
@@ -224,7 +227,24 @@ func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]inter
 		// Unexpected type; avoid breaking existing policy structure.
 		return nil
 	}
-	if includeHasAllOrClient(include, clientID) {
+
+	// check if policy has all clients configured
+	if includeHasAllClients(include) {
+		logger.
+			WithField("authServerID", authServerID).
+			WithField("policyID", policyID).
+			WithField("clientID", clientID).
+			Trace("policy assignment already includes ALL_CLIENTS. Skipping client-specific policy update")
+		return nil
+	}
+
+	// check if client is already included in policy assignment
+	if includeHasClient(include, clientID) {
+		logger.
+			WithField("authServerID", authServerID).
+			WithField("policyID", policyID).
+			WithField("clientID", clientID).
+			Trace("policy assignment already includes client. Skipping client-specific policy update")
 		return nil
 	}
 	clients["include"] = append(include, clientID)
@@ -241,14 +261,28 @@ func ensureMap(parent map[string]interface{}, key string) map[string]interface{}
 	return child
 }
 
-func includeHasAllOrClient(include []interface{}, clientID string) bool {
+func includeHasAllClients(include []interface{}) bool {
 	for _, v := range include {
 		s, ok := v.(string)
 		if !ok {
 			continue
 		}
 		s = strings.TrimSpace(s)
-		if s == "ALL_CLIENTS" || s == clientID {
+		if s == "ALL_CLIENTS" {
+			return true
+		}
+	}
+	return false
+}
+
+func includeHasClient(include []interface{}, clientID string) bool {
+	for _, v := range include {
+		s, ok := v.(string)
+		if !ok {
+			continue
+		}
+		s = strings.TrimSpace(s)
+		if s == clientID {
 			return true
 		}
 	}
