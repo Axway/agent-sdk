@@ -22,6 +22,20 @@ type Okta struct {
 	Client   coreapi.Client
 }
 
+type oktaGroupSearchResult struct {
+	ID      string           `json:"id"`
+	Profile oktaGroupProfile `json:"profile"`
+}
+
+type oktaGroupProfile struct {
+	Name string `json:"name"`
+}
+
+type oktaPolicyListResult struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func New(apiClient coreapi.Client, baseURL, apiToken string) *Okta {
 	if apiClient == nil {
 		apiClient = coreapi.NewClient(nil, "")
@@ -97,12 +111,7 @@ func (o *Okta) FindGroupByName(groupName string) (string, error) {
 		return "", o.unexpectedStatusError(coreapi.GET, endpoint, resp)
 	}
 
-	var groups []struct {
-		ID      string `json:"id"`
-		Profile struct {
-			Name string `json:"name"`
-		} `json:"profile"`
-	}
+	var groups []oktaGroupSearchResult
 	if err := json.Unmarshal(resp.Body, &groups); err != nil {
 		return "", err
 	}
@@ -155,10 +164,8 @@ func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]int
 		return nil, nil
 	}
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
-	var policies []struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
+	
+	var policies []oktaPolicyListResult
 	if err := o.doGetJSON(endpoint, &policies); err != nil {
 		return nil, err
 	}

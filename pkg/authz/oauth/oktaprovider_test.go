@@ -18,7 +18,6 @@ const (
 	groupsEndpoint           = " /api/v1/groups"
 	appGroupsEndpointBase    = " /api/v1/apps/app123/groups/"
 	oktaGroupIDExisting      = "00g-123"
-	oktaGroupIDNew           = "00g-new"
 	oauthMetadataEndpoint    = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
 	oktaPoliciesEndpointByID = " /api/v1/authorizationServers/authorizationID/policies"
 	accessToken              = "access-token"
@@ -184,16 +183,14 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 
-	type testCase struct {
+	cases := []struct {
 		name         string
 		oktaGroup    string
 		oktaPolicy   string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
 		wantErr      bool
-	}
-
-	cases := []testCase{
+	}{
 		{
 			name:       "assigns existing group + records existing policy",
 			oktaGroup:  "MyAppUsers",
@@ -286,16 +283,14 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 
-	type testCase struct {
+	cases := []struct {
 		name         string
 		oktaGroup    string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
 		wantErr      bool
 		errContains  string
-	}
-
-	cases := []testCase{
+	}{
 		{
 			name:      "unassigns group when configured group exists",
 			oktaGroup: "MyAppUsers",

@@ -98,11 +98,7 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		WithField("environment", c.cfg.GetEnvironmentName()).
 		Info("process revision")
 
-	if err := c.createOrUpdateRevision(serviceBody); err != nil {
-		return err
-	}
-
-	return nil
+	return c.createOrUpdateRevision(serviceBody)
 }
 
 // createOrUpdateRevision encapsulates CreateOrUpdateResource and rollback handling
@@ -169,28 +165,31 @@ func (c *ServiceClient) getRevisionsIfUpdating(serviceBody *ServiceBody) ([]*man
 
 // checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
 func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody, apiServiceRevisions []*management.APIServiceRevision) (bool, error) {
-	if revName, found := serviceBody.specHashes[serviceBody.specHash]; found {
-		name := revName.(string)
+	revName, found := serviceBody.specHashes[serviceBody.specHash]
+	if !found {
+		return false, nil
+	}
 
-		// check to see if the tags have changed from the latest
-		for _, apiServiceRevision := range apiServiceRevisions {
-			if apiServiceRevision.Name == name {
-				updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
-				if len(updatedTags) > 0 {
-					updatedRevision := c.buildAPIServiceRevision(serviceBody)
-					updatedRevision.Name = apiServiceRevision.Name
-					updatedRevision.Metadata.Scope = v1.MetadataScope{
-						Kind: management.EnvironmentGVK().Kind,
-						Name: c.cfg.GetEnvironmentName(),
-					}
-					_, err := c.UpdateResourceInstance(updatedRevision)
-					if err != nil {
-						return false, err
-					}
+	name := revName.(string)
+
+	// check to see if the tags have changed from the latest
+	for _, apiServiceRevision := range apiServiceRevisions {
+		if apiServiceRevision.Name == name {
+			updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
+			if len(updatedTags) > 0 {
+				updatedRevision := c.buildAPIServiceRevision(serviceBody)
+				updatedRevision.Name = apiServiceRevision.Name
+				updatedRevision.Metadata.Scope = v1.MetadataScope{
+					Kind: management.EnvironmentGVK().Kind,
+					Name: c.cfg.GetEnvironmentName(),
 				}
-				serviceBody.serviceContext.revisionName = name
-				return true, nil
+				_, err := c.UpdateResourceInstance(updatedRevision)
+				if err != nil {
+					return false, err
+				}
 			}
+			serviceBody.serviceContext.revisionName = name
+			return true, nil
 		}
 	}
 	return false, nil

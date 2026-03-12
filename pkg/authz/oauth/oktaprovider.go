@@ -210,6 +210,7 @@ func (i *okta) handleGroupUnassignment(oktaClient *clients.Okta, clientID, group
 	}
 	return nil
 }
+
 func (i *okta) getAuthorizationHeaderPrefix() string {
 	return clients.OktaAuthHeaderPrefix
 }
@@ -257,10 +258,7 @@ func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authSe
 		return fmt.Errorf("okta policy %q has no id field", policyName)
 	}
 	// Update policy-level client assignment (no rules).
-	if err := oktaClient.AssignClientToPolicy(authServerID, policy, clientID); err != nil {
-		return err
-	}
-	return nil
+	return oktaClient.AssignClientToPolicy(authServerID, policy, clientID)
 }
 
 // validateExtraProperties validates Okta-specific extra properties and sets defaults

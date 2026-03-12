@@ -411,7 +411,7 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 			WithField("grantType", clientReq.GetGrantTypes()).
 			WithField("tokenAuthMethod", clientReq.GetTokenEndpointAuthMethod()).
 			WithField("responseType", clientReq.GetResponseTypes()).
-			WithField("redirectUrl", clientReq.GetRedirectURIs()).
+			WithField("redirectURIs", clientReq.GetRedirectURIs()).
 			Info("registered client")
 		return clientRes, err
 	}

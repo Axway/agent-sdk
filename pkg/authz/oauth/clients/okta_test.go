@@ -9,21 +9,19 @@ import (
 )
 
 func TestOktaAPIStatusHandling(t *testing.T) {
-	type testCase struct {
+	cases := []struct {
 		name           string
 		handler        http.HandlerFunc
 		call           func(client *Okta) error
 		wantErr        bool
 		expectedMethod string
-	}
-
-	cases := []testCase{
+	}{
 		{
 			name:           "AssignGroupToApp returns error on forbidden",
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
-				_, _ = w.Write([]byte("forbidden"))
+				w.Write([]byte("forbidden"))
 			},
 			call: func(client *Okta) error {
 				return client.AssignGroupToApp("app123", "group456")
@@ -35,7 +33,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusConflict)
-				_, _ = w.Write([]byte("already assigned"))
+				w.Write([]byte("already assigned"))
 			},
 			call: func(client *Okta) error {
 				return client.AssignGroupToApp("app123", "group456")
@@ -47,7 +45,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			expectedMethod: http.MethodDelete,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
-				_, _ = w.Write([]byte("not found"))
+				w.Write([]byte("not found"))
 			},
 			call: func(client *Okta) error {
 				return client.UnassignGroupFromApp("app123", "group456")
@@ -59,7 +57,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
-				_, _ = w.Write([]byte("forbidden"))
+				w.Write([]byte("forbidden"))
 			},
 			call: func(client *Okta) error {
 				return client.UpdatePolicy("as1", "pol1", map[string]interface{}{"id": "pol1"})
