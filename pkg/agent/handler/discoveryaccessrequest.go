@@ -9,22 +9,20 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-type traceAccessRequestHandler struct {
+type discoveryAccessRequest struct {
 	marketplaceHandler
-	cache  agentcache.Manager
-	client client
+	cache agentcache.Manager
 }
 
-// NewTraceAccessRequestHandler creates a Handler for Access Requests for trace agent
-func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handler {
-	return &traceAccessRequestHandler{
-		cache:  cache,
-		client: client,
+// NewDiscoveryAccessRequestHandler creates a Handler for AccessRequests for discovery agent cache building
+func NewDiscoveryAccessRequestHandler(cache agentcache.Manager) Handler {
+	return &discoveryAccessRequest{
+		cache: cache,
 	}
 }
 
-// Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+// Handle processes events triggered for AccessRequests during discovery cache building
+func (h *discoveryAccessRequest) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if resource.Kind != management.AccessRequestGVK().Kind {
 		return nil

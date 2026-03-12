@@ -810,6 +810,8 @@ func newHandlers() []handler.Handler {
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+			handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager),
+			handler.NewDiscoveryAccessRequestHandler(agent.cacheManager),
 		)
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent

@@ -48,7 +48,12 @@ func (c *cacheManager) getCacheForKind(kind string) cache.Cache {
 	}
 }
 
-// extractResourceSummary iterates the cache keys and returns name -> modifyTimestamp.
+// ResourceCacheKey builds a unique cache key from kind, scope name, and resource name.
+func ResourceCacheKey(kind, scopeName, name string) string {
+	return kind + "/" + scopeName + "/" + name
+}
+
+// extractResourceSummary iterates the cache keys and returns a composite key -> modifyTimestamp.
 func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache) map[string]time.Time {
 	result := make(map[string]time.Time)
 	keys := resourceCache.GetKeys()
@@ -63,7 +68,7 @@ func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache) map[str
 			continue
 		}
 		modTime := time.Time(ri.Metadata.Audit.ModifyTimestamp)
-		result[ri.Name] = modTime
+		result[ResourceCacheKey(ri.Kind, ri.Metadata.Scope.Name, ri.Name)] = modTime
 	}
 
 	return result
@@ -86,7 +91,7 @@ func (c *cacheManager) getWatchResourcesByKind(group, kind string) map[string]ti
 		}
 		if ri.Group == group && ri.Kind == kind {
 			modTime := time.Time(ri.Metadata.Audit.ModifyTimestamp)
-			result[ri.Name] = modTime
+			result[ResourceCacheKey(ri.Kind, ri.Metadata.Scope.Name, ri.Name)] = modTime
 		}
 	}
 

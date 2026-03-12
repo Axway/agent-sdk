@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -17,26 +19,29 @@ type cacheGetter interface {
 
 // cacheValidator validates the persisted cache against the API server
 type cacheValidator struct {
-	logger     log.FieldLogger
-	client     resourceClient
-	watchTopic *management.WatchTopic
-	cacheMan   cacheGetter
+	logger         log.FieldLogger
+	client         resourceClient
+	watchTopic     *management.WatchTopic
+	cacheMan       cacheGetter
+	validatedKinds map[string]struct{}
 }
 
 func newCacheValidator(
 	client resourceClient,
 	watchTopic *management.WatchTopic,
 	cacheMan cacheGetter,
+	agentType config.AgentType,
 ) *cacheValidator {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
 		WithComponent("cacheValidator")
 
 	return &cacheValidator{
-		logger:     logger,
-		client:     client,
-		watchTopic: watchTopic,
-		cacheMan:   cacheMan,
+		logger:         logger,
+		client:         client,
+		watchTopic:     watchTopic,
+		cacheMan:       cacheMan,
+		validatedKinds: validatedKindsByAgentType(agentType),
 	}
 }
 
@@ -53,8 +58,38 @@ func (cv *cacheValidator) Execute() error {
 	return nil
 }
 
+// validatedKindsByAgentType returns the set of resource kinds to validate for each agent type.
+func validatedKindsByAgentType(agentType config.AgentType) map[string]struct{} {
+	// Common kinds validated by all agent types
+	kinds := map[string]struct{}{
+		management.APIServiceGVK().Kind:         {},
+		management.APIServiceInstanceGVK().Kind: {},
+	}
+
+	switch agentType {
+	case config.DiscoveryAgent:
+		kinds[management.ManagedApplicationGVK().Kind] = struct{}{}
+		kinds[management.AccessRequestGVK().Kind] = struct{}{}
+		kinds[management.AccessRequestDefinitionGVK().Kind] = struct{}{}
+		kinds[management.CredentialRequestDefinitionGVK().Kind] = struct{}{}
+		kinds[management.ApplicationProfileDefinitionGVK().Kind] = struct{}{}
+	case config.TraceabilityAgent:
+		kinds[management.ManagedApplicationGVK().Kind] = struct{}{}
+		kinds[management.AccessRequestGVK().Kind] = struct{}{}
+	case config.ComplianceAgent:
+		kinds[management.ComplianceRuntimeResultGVK().Kind] = struct{}{}
+	}
+
+	return kinds
+}
+
 func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) bool {
 	logger := cv.logger.WithField("kind", filter.Kind).WithField("group", filter.Group)
+
+	if _, ok := cv.validatedKinds[filter.Kind]; !ok {
+		logger.Trace("skipping validation for kind")
+		return true
+	}
 
 	ri := apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -78,9 +113,9 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 		return true
 	}
 
-	// Fetch only name and audit metadata
+	// Fetch only name, audit metadata, and scope
 	query := map[string]string{
-		"fields": "name,metadata.audit",
+		"fields": "name,kind,metadata.audit,metadata.scope",
 	}
 
 	logger.Trace("fetching resource metadata from API server for validation")
@@ -92,11 +127,11 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 
 	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind)
 
-	// Build a map from server resources: name -> modifyTimestamp
+	// Build a map from server resources: composite key -> modifyTimestamp
 	serverMap := make(map[string]time.Time, len(serverResources))
 	for _, res := range serverResources {
 		modTime := time.Time(res.Metadata.Audit.ModifyTimestamp)
-		serverMap[res.Name] = modTime
+		serverMap[agentcache.ResourceCacheKey(res.Kind, res.Metadata.Scope.Name, res.Name)] = modTime
 	}
 
 	// Count mismatch
