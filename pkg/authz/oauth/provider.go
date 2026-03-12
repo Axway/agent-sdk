@@ -16,7 +16,7 @@ import (
 // to satisfy sonarqube linter for consistent log fields
 const (
 	logClientID = "clientID" // named to avoid actual values of clientID
-	logProvider = "provider" 
+	logProvider = "provider"
 	logUnregisterURL = "unregisterUrl"
 )
 

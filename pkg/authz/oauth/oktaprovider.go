@@ -170,7 +170,10 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corec
 	return nil
 }
 
-// postProcessClientUnregister removes only the app→group assignment (no deletes).
+// postProcessClientUnregister removes the app→group assignment for the client.
+// Explicit policy cleanup is not required: when the group assignment is removed, Okta
+// automatically removes the client from any policy include lists that were scoped to that
+// group, so no separate policy deprovision step is needed.
 func (i *okta) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
 	metadataURL := idp.GetMetadataURL()
 	var apiToken string

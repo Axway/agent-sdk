@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	groupsEndpoint           = " /api/v1/groups"
-	appGroupsEndpointBase    = " /api/v1/apps/app123/groups/"
+	groupsEndpoint           = "/api/v1/groups"
+	appGroupsEndpointBase    = "/api/v1/apps/app123/groups/"
 	oktaGroupIDExisting      = "00g-123"
 	oauthMetadataEndpoint    = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
-	oktaPoliciesEndpointByID = " /api/v1/authorizationServers/authorizationID/policies"
+	oktaPoliciesEndpointByID = "/api/v1/authorizationServers/authorizationID/policies"
 	accessToken              = "access-token"
 	oktaPolicyID             = "pol-123"
 	oktaGroupID              = "00g-123"
-	oktaPolicyEndpointByID   = " /api/v1/authorizationServers/authorizationID/policies/pol-123"
+	oktaPolicyEndpointByID   = "/api/v1/authorizationServers/authorizationID/policies/pol-123"
 )
 
 type oktaScriptedServer struct {
@@ -196,18 +196,18 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint:                              oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: "00g-other", Name: "Other"}, {ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
-				http.MethodGet + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
-				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
-				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
+				http.MethodGet + " " + groupsEndpoint:                              oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: "00g-other", Name: "Other"}, {ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
 			},
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint:                              1,
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: 1,
-				http.MethodGet + oktaPoliciesEndpointByID:                    1,
-				http.MethodGet + oktaPolicyEndpointByID:                      1,
-				http.MethodPut + oktaPolicyEndpointByID:                      1,
+				http.MethodGet + " " + groupsEndpoint:                              1,
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: 1,
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    1,
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      1,
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
 			},
 		},
 		{
@@ -215,18 +215,18 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint:                              oktaGroupsSearchHandler("", []oktaGroupItem{{ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
-				http.MethodGet + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
-				http.MethodGet + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
-				http.MethodPut + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
+				http.MethodGet + " " + groupsEndpoint:                              oktaGroupsSearchHandler("", []oktaGroupItem{{ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
 			},
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint:                              1,
-				http.MethodPut + appGroupsEndpointBase + oktaGroupIDExisting: 1,
-				http.MethodGet + oktaPoliciesEndpointByID:                    1,
-				http.MethodGet + oktaPolicyEndpointByID:                      1,
-				http.MethodPut + oktaPolicyEndpointByID:                      1,
+				http.MethodGet + " " + groupsEndpoint:                              1,
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: 1,
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    1,
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      1,
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
 			},
 		},
 		{
@@ -238,22 +238,22 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 			name:      "error when group not found",
 			oktaGroup: "NewGroup",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
 			},
 			wantErr: true,
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint: 1,
+				http.MethodGet + " " + groupsEndpoint: 1,
 			},
 		},
 		{
 			name:       "error when policy not found",
 			oktaPolicy: "MissingPolicy",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
+				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
 			},
 			wantErr: true,
 			wantMinCalls: map[string]int{
-				http.MethodGet + oktaPoliciesEndpointByID: 1,
+				http.MethodGet + " " + oktaPoliciesEndpointByID: 1,
 			},
 		},
 	}
@@ -295,14 +295,14 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 			name:      "unassigns group when configured group exists",
 			oktaGroup: "MyAppUsers",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: oktaGroupID, Name: "MyAppUsers"}}),
-				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: oktaGroupID, Name: "MyAppUsers"}}),
+				http.MethodDelete + " " + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				},
 			},
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint:                         1,
-				http.MethodDelete + appGroupsEndpointBase + oktaGroupID: 1,
+				http.MethodGet + " " + groupsEndpoint:                         1,
+				http.MethodDelete + " " + appGroupsEndpointBase + oktaGroupID: 1,
 			},
 			wantErr: false,
 		},
@@ -317,10 +317,10 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 			name:      "returns error when configured group is not found",
 			oktaGroup: "MissingGroup",
 			routes: map[string]http.HandlerFunc{
-				http.MethodGet + groupsEndpoint: oktaGroupsSearchHandler("MissingGroup", nil),
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MissingGroup", nil),
 			},
 			wantMinCalls: map[string]int{
-				http.MethodGet + groupsEndpoint: 1,
+				http.MethodGet + " " + groupsEndpoint: 1,
 			},
 			wantErr:     true,
 			errContains: "configured okta group",
