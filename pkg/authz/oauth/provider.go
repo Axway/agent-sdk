@@ -107,13 +107,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	if p.authServerMetadata == nil {
 		metadata, err := p.fetchMetadata()
 		if err != nil {
-			p.logger.
-				WithField("provider", p.cfg.GetIDPName()).
-				WithField("type", p.cfg.GetIDPType()).
-				WithField("metadata-url", p.metadataURL).
-				WithError(err).
-				Error("unable to fetch OAuth authorization server metadata")
-			return nil, err
+			return nil, fmt.Errorf("unable to fetch OAuth authorization server metadata for provider %q: %w", p.cfg.GetIDPName(), err)
 		}
 
 		p.authServerMetadata = metadata
@@ -122,13 +116,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	// Fail-fast Okta validation: if Okta group/policy is configured, verify the resources exist.
 	if idp.GetIDPType() == TypeOkta {
 		if err := validateOktaConfiguredResources(idp, apiClient); err != nil {
-			p.logger.
-				WithField("provider", p.cfg.GetIDPName()).
-				WithField("type", p.cfg.GetIDPType()).
-				WithField("metadata-url", p.metadataURL).
-				WithError(err).
-				Error("okta configuration validation failed")
-			return nil, err
+			return nil, fmt.Errorf("failed to validate Okta configuration for provider %q: %w", p.cfg.GetIDPName(), err)
 		}
 	}
 
@@ -143,11 +131,6 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 
 	// Validate provider-specific extra properties
 	if err := idpType.validateExtraProperties(p.extraProperties); err != nil {
-		p.logger.
-			WithField("provider", p.cfg.GetIDPName()).
-			WithField("type", p.cfg.GetIDPType()).
-			WithError(err).
-			Error("invalid extra properties for provider")
 		return nil, fmt.Errorf("invalid extra properties for %s provider: %w", idp.GetIDPType(), err)
 	}
 
@@ -416,8 +399,18 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, map
 			var hookErr error
 			createdAgentDetails, hookErr = p.idpType.postProcessClientRegistration(clientRes, p.cfg, p.apiClient)
 			if hookErr != nil {
-				p.logger.WithError(hookErr).Error("Okta post-registration hook failed")
-				return nil, nil, hookErr
+				// If post-registration processing fails, attempt to delete
+				// the newly created OAuth client to avoid leaving orphaned registrations behind.
+				rollbackErr := p.rollbackRegisteredClient(clientRes, authPrefix, token)
+				if rollbackErr != nil {
+					return nil, nil, fmt.Errorf(
+						"failed to complete Okta client setup for client %q. Manual cleanup in Okta may be required. setup error: %v; rollback error: %w",
+						clientRes.GetClientID(),
+						hookErr,
+						rollbackErr,
+					)
+				}
+				return nil, nil, fmt.Errorf("failed to complete Okta client setup: %w", hookErr)
 			}
 		}
 
@@ -433,17 +426,34 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, map
 		return clientRes, createdAgentDetails, err
 	}
 
-	err = fmt.Errorf("error status code: %d, body: %s", response.Code, string(response.Body))
-	p.logger.
-		WithField("provider", p.cfg.GetIDPName()).
-		WithField("client-name", clientReq.GetClientName()).
-		WithField("grant-type", clientReq.GetGrantTypes()).
-		WithField("token-auth-method", clientReq.GetTokenEndpointAuthMethod()).
-		WithField("response-type", clientReq.GetResponseTypes()).
-		WithField("redirect-url", clientReq.GetRedirectURIs()).
-		Error(err.Error())
+	return nil, nil, fmt.Errorf("failed to register OAuth client for provider %q: status code %d, body: %s", p.cfg.GetIDPName(), response.Code, string(response.Body))
+}
 
-	return nil, nil, err
+func (p *provider) rollbackRegisteredClient(clientRes ClientMetadata, authPrefix, fallbackToken string) error {
+	if clientRes == nil {
+		return nil
+	}
+	clientID := clientRes.GetClientID()
+	if clientID == "" {
+		return fmt.Errorf("registered client response missing client id")
+	}
+
+	rollbackToken := clientRes.GetRegistrationAccessToken()
+	if rollbackToken == "" {
+		rollbackToken = fallbackToken
+	}
+
+	logger := p.logger.
+		WithField("provider", p.cfg.GetIDPName()).
+		WithField("client-id", clientID)
+
+	return p.attemptUnregisterAll(
+		logger,
+		clientID,
+		clientRes.GetRegistrationClientURI(),
+		authPrefix,
+		rollbackToken,
+	)
 }
 
 func (p *provider) enrichClientReq(clientReq ClientMetadata) error {
@@ -524,18 +534,25 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
-	// run provider-specific cleanup (Okta)
-	if hookErr := p.runPostUnregisterHook(clientID, agentDetails); hookErr != nil {
-		logger.WithError(hookErr).Error("Okta post-unregister hook failed")
-		return hookErr
+	// Run provider-specific cleanup first (for example, Okta group/policy unassignment), but always continue to OAuth client deletion so transient cleanup failures do not
+	// leave active clients behind. Return whichever error(s) occurred after both steps.
+	cleanupErr := p.runPostUnregisterHook(clientID, agentDetails)
+	unregisterErr := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken)
+
+	if unregisterErr == nil {
+		logger.Info("unregistered client")
 	}
 
-	// attempt unregister using known URL patterns
-	if err := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken); err != nil {
-		return err
+	switch {
+	case cleanupErr != nil && unregisterErr != nil:
+		return fmt.Errorf("failed to fully remove the Okta client. Provider cleanup failed and OAuth client deletion failed. cleanup error: %v; delete error: %w", cleanupErr, unregisterErr)
+	case unregisterErr != nil:
+		return fmt.Errorf("failed to delete the OAuth client from the identity provider: %w", unregisterErr)
+	case cleanupErr != nil:
+		return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
+	default:
+		return nil
 	}
-	logger.Info("unregistered client")
-	return nil
 }
 
 // runPostUnregisterHook calls provider-specific unregister hook when applicable.

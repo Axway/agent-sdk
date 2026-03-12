@@ -1,12 +1,15 @@
 package oauth
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -412,4 +415,168 @@ func TestNewProviderOktaFailsFastWhenConfiguredGroupMissing(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, p)
 	assert.Contains(t, err.Error(), "configured okta group")
+}
+
+type failingHookIDP struct {
+	authPrefix string
+	regErr     error
+	unregErr   error
+}
+
+func (f *failingHookIDP) getAuthorizationHeaderPrefix() string {
+	if f.authPrefix != "" {
+		return f.authPrefix
+	}
+	return "Bearer"
+}
+
+func (f *failingHookIDP) preProcessClientRequest(clientRequest *clientMetadata) {}
+
+func (f *failingHookIDP) validateExtraProperties(extraProps map[string]interface{}) error {
+	return nil
+}
+
+func (f *failingHookIDP) postProcessClientRegistration(clientRes ClientMetadata, idp config.IDPConfig, apiClient coreapi.Client) (map[string]string, error) {
+	return nil, f.regErr
+}
+
+func (f *failingHookIDP) postProcessClientUnregister(clientID string, agentDetails map[string]string, idp config.IDPConfig, apiClient coreapi.Client) error {
+	return f.unregErr
+}
+
+func TestRegisterClient_RollsBackWhenPostRegistrationHookFails(t *testing.T) {
+	var deleteCalls atomic.Int32
+	var registerCalls atomic.Int32
+
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/register":
+			registerCalls.Add(1)
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"client_id":"cid-1","client_secret":"sec-1","registration_client_uri":"` + srv.URL + `/register/cid-1"}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
+			deleteCalls.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	idpCfg := &config.IDPConfiguration{
+		Name:        "test",
+		Type:        "generic",
+		MetadataURL: srv.URL + "/metadata",
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:        config.AccessToken,
+			AccessToken: testToken,
+		},
+	}
+
+	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+	assert.NoError(t, err)
+
+	p := pIntf.(*provider)
+	idpCfg.Type = TypeOkta
+	p.idpType = &failingHookIDP{regErr: errors.New("post-registration hook failed")}
+
+	clientReq := &clientMetadata{ClientName: "test"}
+	cr, details, err := p.RegisterClient(clientReq)
+
+	assert.Error(t, err)
+	assert.Nil(t, cr)
+	assert.Nil(t, details)
+	assert.Contains(t, err.Error(), "failed to complete Okta client setup")
+	assert.Equal(t, int32(1), registerCalls.Load())
+	assert.Equal(t, int32(1), deleteCalls.Load())
+}
+
+func TestUnregisterClient_AttemptsDeleteWhenPostUnregisterHookFails(t *testing.T) {
+	var deleteCalls atomic.Int32
+
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
+			deleteCalls.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	idpCfg := &config.IDPConfiguration{
+		Name:        "test",
+		Type:        "generic",
+		MetadataURL: srv.URL + "/metadata",
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:        config.AccessToken,
+			AccessToken: testToken,
+		},
+	}
+
+	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+	assert.NoError(t, err)
+
+	p := pIntf.(*provider)
+	idpCfg.Type = TypeOkta
+	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
+
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+"/register/cid-1", map[string]string{"oktaGroupId": "g1"})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration")
+	assert.Equal(t, int32(1), deleteCalls.Load())
+}
+
+func TestUnregisterClient_ReturnsCombinedErrorWhenCleanupAndDeleteFail(t *testing.T) {
+	var deleteCalls atomic.Int32
+
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/metadata":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/register/cid-1":
+			deleteCalls.Add(1)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`delete failed`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	idpCfg := &config.IDPConfiguration{
+		Name:        "test",
+		Type:        "generic",
+		MetadataURL: srv.URL + "/metadata",
+		AuthConfig: &config.IDPAuthConfiguration{
+			Type:        config.AccessToken,
+			AccessToken: testToken,
+		},
+	}
+
+	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+	assert.NoError(t, err)
+
+	p := pIntf.(*provider)
+	idpCfg.Type = TypeOkta
+	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
+
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+"/register/cid-1", map[string]string{"oktaGroupId": "g1"})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fully remove the Okta client")
+	assert.Contains(t, err.Error(), "OAuth client deletion failed")
+	assert.Equal(t, int32(1), deleteCalls.Load())
 }
