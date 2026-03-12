@@ -71,16 +71,19 @@ func (o *Okta) doRequest(method, endpoint string, body interface{}) (*coreapi.Re
 }
 
 func (o *Okta) doGetJSON(endpoint string, out interface{}) error {
+	if out == nil {
+		return nil
+	}
+
 	resp, err := o.doRequest(coreapi.GET, endpoint, nil)
 	if err != nil {
 		return err
 	}
+
 	if !isStatus(resp.Code, http.StatusOK) {
 		return o.unexpectedStatusError(coreapi.GET, endpoint, resp)
 	}
-	if out == nil {
-		return nil
-	}
+	
 	return json.Unmarshal(resp.Body, out)
 }
 
@@ -164,7 +167,7 @@ func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]int
 		return nil, nil
 	}
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
-	
+
 	var policies []oktaPolicyListResult
 	if err := o.doGetJSON(endpoint, &policies); err != nil {
 		return nil, err
