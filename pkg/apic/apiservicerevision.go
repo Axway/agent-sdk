@@ -73,6 +73,9 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 	log := c.logger
 	logProcess := "Creating"
+	if serviceBody.serviceContext.serviceAction == updateAPI {
+		logProcess = "Updating"
+	}
 
 	apiServiceRevisions, err := c.getRevisionsIfUpdating(serviceBody)
 	if err != nil {
