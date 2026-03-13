@@ -246,7 +246,8 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		resources, err := dc.client.GetAPIV1ResourceInstances(nil, ri.GetKindLink())
+		url := ri.GetKindLink()
+		resources, err := dc.client.GetAPIV1ResourceInstances(nil, url)
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}

@@ -57,3 +57,11 @@ func WithOnStreamConnection() StreamerOpt {
 		}
 	}
 }
+
+// WithOnReconnect sets a callback to execute when a connection to central is restored.
+// This is used to validate the persisted cache after reconnection.
+func WithOnReconnect(cb func()) StreamerOpt {
+	return func(client *StreamerClient) {
+		client.onReconnect = cb
+	}
+}

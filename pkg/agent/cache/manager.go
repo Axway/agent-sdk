@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -129,6 +130,8 @@ type Manager interface {
 	GetWatchResourceByID(group, kind, id string) *v1.ResourceInstance
 	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
 	DeleteWatchResource(group, kind, id string) error
+
+	GetCachedResourcesByKind(group, kind string) map[string]time.Time
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()

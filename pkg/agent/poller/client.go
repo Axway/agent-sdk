@@ -24,11 +24,13 @@ type PollClient struct {
 	newListener        events.NewListenerFunc
 	onClientStop       onClientStopCb
 	onStreamConnection func()
+	onReconnect        func()
 	poller             *pollExecutor
 	newPollManager     newPollExecutorFunc
 	harvesterConfig    harvesterConfig
 	mutex              sync.RWMutex
 	initialized        bool
+	firstStart         bool
 }
 
 type harvesterConfig struct {
@@ -54,6 +56,7 @@ func NewPollClient(
 		newListener:    events.NewEventListener,
 		newPollManager: newPollExecutor,
 		poller:         nil,
+		firstStart:     true,
 	}
 
 	for _, opt := range options {
@@ -81,6 +84,11 @@ func (p *PollClient) Start() error {
 	if p.onStreamConnection != nil {
 		p.onStreamConnection()
 	}
+
+	if p.onReconnect != nil && !p.firstStart {
+		go p.onReconnect()
+	}
+	p.firstStart = false
 
 	p.mutex.Lock()
 	p.initialized = true

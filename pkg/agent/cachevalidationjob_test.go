@@ -1,0 +1,395 @@
+package agent
+
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/stretchr/testify/assert"
+)
+
+// mockCacheGetter implements cacheGetter for tests
+type mockCacheGetter struct {
+	resources map[string]map[string]time.Time // keyed by "group/kind"
+}
+
+func newMockCacheGetter() *mockCacheGetter {
+	return &mockCacheGetter{
+		resources: make(map[string]map[string]time.Time),
+	}
+}
+
+func (m *mockCacheGetter) GetCachedResourcesByKind(group, kind string) map[string]time.Time {
+	key := group + "/" + kind
+	if res, ok := m.resources[key]; ok {
+		return res
+	}
+	return make(map[string]time.Time)
+}
+
+func (m *mockCacheGetter) setResources(group, kind string, resources map[string]time.Time) {
+	m.resources[group+"/"+kind] = resources
+}
+
+// mockResourceClient implements resourceClient for tests
+type mockResourceClient struct {
+	resources map[string][]*apiv1.ResourceInstance // keyed by URL substring
+	err       error
+}
+
+func newMockResourceClient() *mockResourceClient {
+	return &mockResourceClient{
+		resources: make(map[string][]*apiv1.ResourceInstance),
+	}
+}
+
+func (m *mockResourceClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	if res, ok := m.resources[URL]; ok {
+		return res, nil
+	}
+	return []*apiv1.ResourceInstance{}, nil
+}
+
+func makeServerResource(kind, scopeKind, scopeName, name string, modTime time.Time) *apiv1.ResourceInstance {
+	return &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: apiv1.GroupVersionKind{
+				GroupKind: apiv1.GroupKind{
+					Group: "management",
+					Kind:  kind,
+				},
+				APIVersion: "v1alpha1",
+			},
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Kind: scopeKind,
+					Name: scopeName,
+				},
+				Audit: apiv1.AuditMetadata{
+					ModifyTimestamp: apiv1.Time(modTime),
+				},
+			},
+			Name: name,
+		},
+	}
+}
+
+func TestValidatedKindsByAgentType(t *testing.T) {
+	type testCase struct {
+		agentType   config.AgentType
+		expectedIn  []string
+		expectedOut []string
+	}
+
+	tests := map[string]testCase{
+		"DiscoveryAgent validates discovery-relevant kinds": {
+			agentType: config.DiscoveryAgent,
+			expectedIn: []string{
+				management.APIServiceGVK().Kind,
+				management.APIServiceInstanceGVK().Kind,
+				management.ManagedApplicationGVK().Kind,
+				management.AccessRequestGVK().Kind,
+				management.AccessRequestDefinitionGVK().Kind,
+				management.CredentialRequestDefinitionGVK().Kind,
+				management.ApplicationProfileDefinitionGVK().Kind,
+			},
+			expectedOut: []string{
+				management.ComplianceRuntimeResultGVK().Kind,
+			},
+		},
+		"TraceabilityAgent validates traceability-relevant kinds": {
+			agentType: config.TraceabilityAgent,
+			expectedIn: []string{
+				management.APIServiceGVK().Kind,
+				management.APIServiceInstanceGVK().Kind,
+				management.ManagedApplicationGVK().Kind,
+				management.AccessRequestGVK().Kind,
+			},
+			expectedOut: []string{
+				management.AccessRequestDefinitionGVK().Kind,
+				management.CredentialRequestDefinitionGVK().Kind,
+				management.ApplicationProfileDefinitionGVK().Kind,
+				management.ComplianceRuntimeResultGVK().Kind,
+			},
+		},
+		"ComplianceAgent validates compliance-relevant kinds": {
+			agentType: config.ComplianceAgent,
+			expectedIn: []string{
+				management.APIServiceGVK().Kind,
+				management.APIServiceInstanceGVK().Kind,
+				management.ComplianceRuntimeResultGVK().Kind,
+			},
+			expectedOut: []string{
+				management.ManagedApplicationGVK().Kind,
+				management.AccessRequestGVK().Kind,
+				management.AccessRequestDefinitionGVK().Kind,
+				management.CredentialRequestDefinitionGVK().Kind,
+				management.ApplicationProfileDefinitionGVK().Kind,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			kinds := validatedKindsByAgentType(tc.agentType)
+			for _, k := range tc.expectedIn {
+				_, ok := kinds[k]
+				assert.True(t, ok, "expected kind %s to be validated", k)
+			}
+			for _, k := range tc.expectedOut {
+				_, ok := kinds[k]
+				assert.False(t, ok, "expected kind %s to NOT be validated", k)
+			}
+		})
+	}
+}
+
+func TestCacheValidator_Execute(t *testing.T) {
+	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
+	serverTime := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
+
+	svcGVK := management.APIServiceGVK()
+	instGVK := management.APIServiceInstanceGVK()
+	crrGVK := management.ComplianceRuntimeResultGVK()
+	scopeName := "testEnv"
+
+	svc1 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", modTime)
+	svc2 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc2", modTime)
+	inst1 := makeServerResource(instGVK.Kind, "Environment", scopeName, "inst1", modTime)
+	crr1 := makeServerResource(crrGVK.Kind, "Environment", scopeName, "crr1", modTime)
+
+	singleScopeWatchTopic := func(gvk apiv1.GroupVersionKind, scopeName string) *management.WatchTopic {
+		return &management.WatchTopic{
+			Spec: management.WatchTopicSpec{
+				Filters: []management.WatchTopicSpecFilters{
+					{
+						Group: gvk.Group,
+						Kind:  gvk.Kind,
+						Name:  "*",
+						Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName},
+					},
+				},
+			},
+		}
+	}
+
+	type testCase struct {
+		setup      func(*mockResourceClient, *mockCacheGetter)
+		watchTopic *management.WatchTopic
+		agentType  config.AgentType
+		expectErr  error
+	}
+
+	tests := map[string]testCase{
+		"skips unvalidated kinds": {
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{Group: "management", Kind: management.WatchTopicGVK().Kind, Name: "*"},
+					},
+				},
+			},
+			agentType: config.DiscoveryAgent,
+			expectErr: nil,
+		},
+		"in sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  nil,
+		},
+		"count mismatch": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+		"resource missing from cache": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc-other"): modTime,
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+		"modify time mismatch": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				svcNewer := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", serverTime)
+				client.resources[svcNewer.GetKindLink()] = []*apiv1.ResourceInstance{svcNewer}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+		"zero timestamps are ignored": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				svcZero := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", time.Time{})
+				client.resources[svcZero.GetKindLink()] = []*apiv1.ResourceInstance{svcZero}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  nil,
+		},
+		"extra resource in cache": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc3"): modTime,
+				})
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+		"fetch error": {
+			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
+				client.err = fmt.Errorf("network error")
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+		"multi-scope composite key": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				svcEnv2 := makeServerResource(svcGVK.Kind, "Environment", "env2", "svc1", modTime)
+				svcEnv1 := makeServerResource(svcGVK.Kind, "Environment", "env1", "svc1", modTime)
+				client.resources[svcEnv1.GetKindLink()] = []*apiv1.ResourceInstance{svcEnv1, svcEnv2}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, "env1", "svc1"): modTime,
+					agentcache.ResourceCacheKey(svcGVK.Kind, "env2", "svc1"): modTime,
+				})
+			},
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{
+							Group: svcGVK.Group,
+							Kind:  svcGVK.Kind,
+							Name:  "*",
+							Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: "env1"},
+						},
+					},
+				},
+			},
+			agentType: config.DiscoveryAgent,
+			expectErr: nil,
+		},
+		"multiple kinds in sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+				cacheMan.setResources(instGVK.Group, instGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(instGVK.Kind, scopeName, "inst1"): modTime,
+				})
+			},
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{Group: svcGVK.Group, Kind: svcGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+						{Group: instGVK.Group, Kind: instGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+					},
+				},
+			},
+			agentType: config.DiscoveryAgent,
+			expectErr: nil,
+		},
+		"second kind out of sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+				cacheMan.setResources(instGVK.Group, instGVK.Kind, map[string]time.Time{})
+			},
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{Group: svcGVK.Group, Kind: svcGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+						{Group: instGVK.Group, Kind: instGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+					},
+				},
+			},
+			agentType: config.DiscoveryAgent,
+			expectErr: errCacheOutOfSync,
+		},
+		"empty server and cache": {
+			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
+				ri := apiv1.ResourceInstance{
+					ResourceMeta: apiv1.ResourceMeta{
+						GroupVersionKind: apiv1.GroupVersionKind{
+							GroupKind:  apiv1.GroupKind{Group: svcGVK.Group, Kind: svcGVK.Kind},
+							APIVersion: "v1alpha1",
+						},
+						Metadata: apiv1.Metadata{
+							Scope: apiv1.MetadataScope{Kind: "Environment", Name: scopeName},
+						},
+					},
+				}
+				client.resources[ri.GetKindLink()] = []*apiv1.ResourceInstance{}
+			},
+			watchTopic: singleScopeWatchTopic(svcGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  nil,
+		},
+		"DiscoveryAgent skips ComplianceRuntimeResult": {
+			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
+				client.resources[crr1.GetKindLink()] = []*apiv1.ResourceInstance{crr1}
+			},
+			watchTopic: singleScopeWatchTopic(crrGVK, scopeName),
+			agentType:  config.DiscoveryAgent,
+			expectErr:  nil,
+		},
+		"ComplianceAgent detects out-of-sync ComplianceRuntimeResult": {
+			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
+				client.resources[crr1.GetKindLink()] = []*apiv1.ResourceInstance{crr1}
+			},
+			watchTopic: singleScopeWatchTopic(crrGVK, scopeName),
+			agentType:  config.ComplianceAgent,
+			expectErr:  errCacheOutOfSync,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			client := newMockResourceClient()
+			cacheMan := newMockCacheGetter()
+			if tc.setup != nil {
+				tc.setup(client, cacheMan)
+			}
+			cv := newCacheValidator(client, tc.watchTopic, cacheMan, tc.agentType)
+			err := cv.Execute()
+			assert.Equal(t, tc.expectErr, err)
+		})
+	}
+}
