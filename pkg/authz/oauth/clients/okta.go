@@ -61,7 +61,7 @@ func (o *Okta) doRequest(method, endpoint string, body interface{}) (*coreapi.Re
 		Method: method,
 		URL:    endpoint,
 		Headers: map[string]string{
-			"Authorization": OktaAuthHeaderPrefix + " " + o.APIToken,
+			"Authorization": fmt.Sprintf("%s %s", OktaAuthHeaderPrefix, o.APIToken),
 			"Content-Type":  "application/json",
 		},
 		Body: reqBody,
@@ -83,7 +83,7 @@ func (o *Okta) doGetJSON(endpoint string, out interface{}) error {
 	if !isStatus(resp.Code, http.StatusOK) {
 		return o.unexpectedStatusError(coreapi.GET, endpoint, resp)
 	}
-	
+
 	return json.Unmarshal(resp.Body, out)
 }
 
@@ -272,27 +272,17 @@ func ensureMap(parent map[string]interface{}, key string) map[string]interface{}
 }
 
 func includeHasAllClients(include []interface{}) bool {
-	for _, v := range include {
-		s, ok := v.(string)
-		if !ok {
-			continue
-		}
-		s = strings.TrimSpace(s)
-		if s == "ALL_CLIENTS" {
-			return true
-		}
-	}
-	return false
+	return includeHasClient(include, "ALL_CLIENTS")
 }
 
 func includeHasClient(include []interface{}, clientID string) bool {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return false
+	}
 	for _, v := range include {
 		s, ok := v.(string)
-		if !ok {
-			continue
-		}
-		s = strings.TrimSpace(s)
-		if s == clientID {
+		if ok && strings.TrimSpace(s) == clientID {
 			return true
 		}
 	}

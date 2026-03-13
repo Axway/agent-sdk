@@ -174,23 +174,29 @@ func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody,
 
 	// check to see if the tags have changed from the latest
 	for _, apiServiceRevision := range apiServiceRevisions {
-		if apiServiceRevision.Name == name {
-			updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
-			if len(updatedTags) > 0 {
-				updatedRevision := c.buildAPIServiceRevision(serviceBody)
-				updatedRevision.Name = apiServiceRevision.Name
-				updatedRevision.Metadata.Scope = v1.MetadataScope{
-					Kind: management.EnvironmentGVK().Kind,
-					Name: c.cfg.GetEnvironmentName(),
-				}
-				_, err := c.UpdateResourceInstance(updatedRevision)
-				if err != nil {
-					return false, err
-				}
-			}
-			serviceBody.serviceContext.revisionName = name
+		if apiServiceRevision.Name != name {
+			continue
+		}
+
+		serviceBody.serviceContext.revisionName = name
+
+		updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
+		if len(updatedTags) == 0 {
 			return true, nil
 		}
+
+		updatedRevision := c.buildAPIServiceRevision(serviceBody)
+		updatedRevision.Name = apiServiceRevision.Name
+		updatedRevision.Metadata.Scope = v1.MetadataScope{
+			Kind: management.EnvironmentGVK().Kind,
+			Name: c.cfg.GetEnvironmentName(),
+		}
+		_, err := c.UpdateResourceInstance(updatedRevision)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 	return false, nil
 }
