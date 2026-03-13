@@ -32,6 +32,7 @@ const (
 	EnvironmentCompliancetasksSubResourceName         = "compliancetasks"
 	EnvironmentPoliciesSubResourceName                = "policies"
 	EnvironmentReferencesSubResourceName              = "references"
+	EnvironmentSampletriggerSubResourceName           = "sampletrigger"
 	EnvironmentStagesSubResourceName                  = "stages"
 	EnvironmentTraceableSubResourceName               = "traceable"
 )
@@ -53,6 +54,7 @@ type Environment struct {
 	Owner                   *apiv1.Owner               `json:"owner"`
 	Policies                EnvironmentPolicies        `json:"policies"`
 	References              EnvironmentReferences      `json:"references"`
+	Sampletrigger           EnvironmentSampletrigger   `json:"sampletrigger"`
 	Spec                    EnvironmentSpec            `json:"spec"`
 	Stages                  EnvironmentStages          `json:"stages"`
 	// GENERATE: The following code has been modified after code generation
@@ -160,6 +162,7 @@ func (res *Environment) MarshalJSON() ([]byte, error) {
 	out["owner"] = res.Owner
 	out["policies"] = res.Policies
 	out["references"] = res.References
+	out["sampletrigger"] = res.Sampletrigger
 	out["spec"] = res.Spec
 	out["stages"] = res.Stages
 	out["traceable"] = res.Traceable
@@ -243,6 +246,20 @@ func (res *Environment) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "references")
 		err = json.Unmarshal(sr, &res.References)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Sampletrigger
+	if v, ok := aux.SubResources["sampletrigger"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "sampletrigger")
+		err = json.Unmarshal(sr, &res.Sampletrigger)
 		if err != nil {
 			return err
 		}
