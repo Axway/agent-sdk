@@ -2,31 +2,429 @@ package oauth
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	groupsEndpoint           = "/api/v1/groups"
+	appGroupsEndpointBase    = "/api/v1/apps/app123/groups/"
+	oktaGroupIDExisting      = "00g-123"
+	oauthMetadataEndpoint    = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
+	oktaPoliciesEndpointByID = "/api/v1/authorizationServers/authorizationID/policies"
+	accessToken              = "access-token"
+	oktaPolicyID             = "pol-123"
+	oktaGroupID              = "00g-123"
+	oktaPolicyEndpointByID   = "/api/v1/authorizationServers/authorizationID/policies/pol-123"
+)
+
+type oktaScriptedServer struct {
+	mu            sync.Mutex
+	expectedAuth  string
+	calls         map[string]int
+	routes        map[string]http.HandlerFunc
+	strictRouting bool
+}
+
+func newOktaScriptedServer(t *testing.T, expectedAuth string, routes map[string]http.HandlerFunc) (*httptest.Server, *oktaScriptedServer) {
+	t.Helper()
+
+	s := &oktaScriptedServer{
+		expectedAuth: expectedAuth,
+		calls:        make(map[string]int),
+		routes:       routes,
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		s.calls[r.Method+" "+r.URL.Path]++
+		s.mu.Unlock()
+
+		if expectedAuth != "" {
+			if got := r.Header.Get("Authorization"); got != expectedAuth {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("bad auth"))
+				return
+			}
+		}
+
+		key := r.Method + " " + r.URL.Path
+		if h, ok := routes[key]; ok {
+			h(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("not found"))
+	}))
+
+	return ts, s
+}
+
+func (s *oktaScriptedServer) getCalls() map[string]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]int, len(s.calls))
+	for k, v := range s.calls {
+		out[k] = v
+	}
+	return out
+}
+
+type oktaGroupItem struct {
+	ID   string
+	Name string
+}
+
+type oktaPolicyItem struct {
+	ID   string
+	Name string
+}
+
+func oktaGroupsSearchHandler(wantQ string, items []oktaGroupItem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if wantQ != "" {
+			if q := r.URL.Query().Get("q"); q != wantQ {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("unexpected q"))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		buf := make([]byte, 0, 256)
+		buf = append(buf, '[')
+		for i, item := range items {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			buf = append(buf, []byte(fmt.Sprintf(`{"id":%q,"profile":{"name":%q}}`, item.ID, item.Name))...)
+		}
+		buf = append(buf, ']')
+		_, _ = w.Write(buf)
+	}
+}
+
+func oktaAssignGroupHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}
+}
+
+func oktaPoliciesListHandler(items []oktaPolicyItem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		buf := make([]byte, 0, 256)
+		buf = append(buf, '[')
+		for i, item := range items {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			buf = append(buf, []byte(fmt.Sprintf(`{"id":%q,"name":%q}`, item.ID, item.Name))...)
+		}
+		buf = append(buf, ']')
+		_, _ = w.Write(buf)
+	}
+}
+
+func oktaPolicyGetHandler(policyID, policyName string, include []string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		includeJSON, _ := json.Marshal(include)
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"id":%q,"name":%q,"conditions":{"clients":{"include":%s}}}`, policyID, policyName, string(includeJSON))))
+	}
+}
+
+func oktaPolicyPutMustIncludeClientHandler(clientID string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		conds, _ := body["conditions"].(map[string]interface{})
+		clients, _ := conds["clients"].(map[string]interface{})
+		include, _ := clients["include"].([]interface{})
+		for _, v := range include {
+			if s, ok := v.(string); ok && s == clientID {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("client id not included"))
+	}
+}
+
+func newIDPCredential(tsURL, group, policy string) *corecfg.IDPConfiguration {
+	credentialObj := &corecfg.IDPConfiguration{
+		MetadataURL: tsURL + oauthMetadataEndpoint,
+		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+	}
+	if strings.TrimSpace(group) != "" || strings.TrimSpace(policy) != "" {
+		credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: group, Policy: policy}
+	}
+	return credentialObj
+}
+
+func assertMinCalls(t *testing.T, calls map[string]int, wantMinCalls map[string]int) {
+	t.Helper()
+	for key, minCount := range wantMinCalls {
+		assert.GreaterOrEqual(t, calls[key], minCount, "expected at least %d calls to %s", minCount, key)
+	}
+}
+
+func TestOktaPostProcessClientRegistration(t *testing.T) {
+	apiClient := coreapi.NewClient(nil, "")
+	oktaProvider := &okta{}
+
+	cases := map[string]struct {
+		oktaGroup    string
+		oktaPolicy   string
+		routes       map[string]http.HandlerFunc
+		wantMinCalls map[string]int
+		wantErr      bool
+	}{
+		"assigns existing group + records existing policy": {
+			oktaGroup:  "MyAppUsers",
+			oktaPolicy: "MarketplacePolicy",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + groupsEndpoint:                              oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: "00g-other", Name: "Other"}, {ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + groupsEndpoint:                              1,
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: 1,
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    1,
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      1,
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
+			},
+		},
+		"infers auth server id for policy": {
+			oktaGroup:  "MyAppUsers",
+			oktaPolicy: "MarketplacePolicy",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + groupsEndpoint:                              oktaGroupsSearchHandler("", []oktaGroupItem{{ID: oktaGroupIDExisting, Name: "MyAppUsers"}}),
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: oktaAssignGroupHandler(),
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: "MarketplacePolicy"}}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      oktaPolicyGetHandler(oktaPolicyID, "MarketplacePolicy", []string{}),
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      oktaPolicyPutMustIncludeClientHandler("app123"),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + groupsEndpoint:                              1,
+				http.MethodPut + " " + appGroupsEndpointBase + oktaGroupIDExisting: 1,
+				http.MethodGet + " " + oktaPoliciesEndpointByID:                    1,
+				http.MethodGet + " " + oktaPolicyEndpointByID:                      1,
+				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
+			},
+		},
+		"no actions when group/policy disabled": {
+			routes:       map[string]http.HandlerFunc{},
+			wantMinCalls: map[string]int{},
+		},
+		"error when group not found": {
+			oktaGroup: "NewGroup",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
+			},
+			wantErr: true,
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + groupsEndpoint: 1,
+			},
+		},
+		"error when policy not found": {
+			oktaPolicy: "MissingPolicy",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
+			},
+			wantErr: true,
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + oktaPoliciesEndpointByID: 1,
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			expectedAuth := "SSWS access-token"
+			ts, scripted := newOktaScriptedServer(t, expectedAuth, tc.routes)
+			defer ts.Close()
+			credentialObj := newIDPCredential(ts.URL, tc.oktaGroup, tc.oktaPolicy)
+			clientRes := &clientMetadata{ClientID: "app123"}
+
+			err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
+		})
+	}
+}
+
+func TestOktaPostProcessClientUnreg(t *testing.T) {
+	apiClient := coreapi.NewClient(nil, "")
+	oktaProvider := &okta{}
+
+	cases := map[string]struct {
+		oktaGroup    string
+		routes       map[string]http.HandlerFunc
+		wantMinCalls map[string]int
+		wantErr      bool
+		errContains  string
+	}{
+		"unassigns group when configured group exists": {
+			oktaGroup: "MyAppUsers",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: oktaGroupID, Name: "MyAppUsers"}}),
+				http.MethodDelete + " " + appGroupsEndpointBase + oktaGroupID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				},
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + groupsEndpoint:                         1,
+				http.MethodDelete + " " + appGroupsEndpointBase + oktaGroupID: 1,
+			},
+			wantErr: false,
+		},
+		"no cleanup when okta group is not configured": {
+			oktaGroup:    "",
+			routes:       map[string]http.HandlerFunc{},
+			wantMinCalls: map[string]int{},
+			wantErr:      false,
+		},
+		"returns error when configured group is not found": {
+			oktaGroup: "MissingGroup",
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MissingGroup", nil),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + groupsEndpoint: 1,
+			},
+			wantErr:     true,
+			errContains: "configured okta group",
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			expectedAuth := "SSWS access-token"
+			ts, scripted := newOktaScriptedServer(t, expectedAuth, tc.routes)
+			defer ts.Close()
+
+			credentialObj := &corecfg.IDPConfiguration{
+				MetadataURL: ts.URL + oauthMetadataEndpoint,
+				Okta:        &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup},
+				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+			}
+			err := oktaProvider.postProcessClientUnregister("app123", credentialObj, apiClient)
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.errContains != "" {
+					assert.Contains(t, err.Error(), tc.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			calls := scripted.getCalls()
+			for key, minCount := range tc.wantMinCalls {
+				assert.GreaterOrEqual(t, calls[key], minCount, "expected at least %d calls to %s", minCount, key)
+			}
+		})
+	}
+}
+
+func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
+	// We only need to prove that auth.accessToken from the IDP config is used to
+	// enable Okta post-processing (i.e. the hook does not early-return).
+	// Avoid making any Okta API calls by disabling all optional actions.
+	ts := httptest.NewServer(nil)
+	defer ts.Close()
+
+	credentialObj := &corecfg.IDPConfiguration{
+		MetadataURL: ts.URL + oauthMetadataEndpoint,
+		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+	}
+
+	apiClient := coreapi.NewClient(nil, "")
+	oktaProvider := &okta{}
+	clientRes := &clientMetadata{ClientID: "app123"}
+	err := oktaProvider.postProcessClientRegistration(clientRes, credentialObj, apiClient)
+	assert.NoError(t, err)
+}
+
+func TestOktaBaseURLFromMetadataURL(t *testing.T) {
+	cases := map[string]struct {
+		metadataURL string
+		want        string
+		wantErr     bool
+	}{
+		"empty metadata url returns error": {
+			metadataURL: "",
+			want:        "",
+			wantErr:     true,
+		},
+		"okta issuer url returns scheme+host": {
+			metadataURL: "https://integrator-1663282.okta.com/oauth2/authorizationid/.well-known/oauth-authorization-server",
+			want:        "https://integrator-1663282.okta.com",
+			wantErr:     false,
+		},
+		"invalid url returns error": {
+			metadataURL: "://bad-url",
+			want:        "",
+			wantErr:     true,
+		},
+		"missing scheme/host returns error": {
+			metadataURL: "/relative/path",
+			want:        "",
+			wantErr:     true,
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			got, err := oktaBaseURLFromMetadataURL(tc.metadataURL)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestOktaPKCERequired(t *testing.T) {
-	cases := []struct {
-		name          string
+	cases := map[string]struct {
 		pkceRequired  bool
 		expectedValue bool
 	}{
-		{
-			name:          "PKCE required true",
+		"PKCE required true": {
 			pkceRequired:  true,
 			expectedValue: true,
 		},
-		{
-			name:          "PKCE required false",
+		"PKCE required false": {
 			pkceRequired:  false,
 			expectedValue: false,
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			props := map[string]interface{}{
 				oktaPKCERequired: tc.pkceRequired,
 			}
@@ -55,44 +453,38 @@ func TestOktaPKCERequired(t *testing.T) {
 }
 
 func TestValidateOktaExtraProperties(t *testing.T) {
-	cases := []struct {
-		name        string
+	cases := map[string]struct {
 		extraProps  map[string]interface{}
 		expectError bool
 	}{
-		{
-			name: "Valid: PKCE with browser type",
+		"Valid: PKCE with browser type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeBrowser,
 			},
 			expectError: false,
 		},
-		{
-			name: "Valid: PKCE without app type",
+		"Valid: PKCE without app type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired: true,
 			},
 			expectError: false,
 		},
-		{
-			name: "Invalid: PKCE with service type",
+		"Invalid: PKCE with service type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeService,
 			},
 			expectError: true,
 		},
-		{
-			name: "Invalid: PKCE with web type",
+		"Invalid: PKCE with web type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeWeb,
 			},
 			expectError: true,
 		},
-		{
-			name: "Valid: No PKCE with any type",
+		"Valid: No PKCE with any type": {
 			extraProps: map[string]interface{}{
 				oktaApplicationType: oktaAppTypeService,
 			},
@@ -100,8 +492,8 @@ func TestValidateOktaExtraProperties(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			oktaProvider := &okta{}
 			err := oktaProvider.validateExtraProperties(tc.extraProps)
 			if tc.expectError {
@@ -114,8 +506,7 @@ func TestValidateOktaExtraProperties(t *testing.T) {
 }
 
 func TestOktaPreProcessClientRequest(t *testing.T) {
-	cases := []struct {
-		name                  string
+	cases := map[string]struct {
 		grantTypes            []string
 		responseTypes         []string
 		extraProperties       map[string]interface{}
@@ -123,8 +514,7 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 		expectedResponseTypes []string
 		expectedAuthMethod    string
 	}{
-		{
-			name:       "Authorization code with PKCE should use browser type",
+		"Authorization code with PKCE should use browser type": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: true,
@@ -132,24 +522,21 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			expectedAppType:    oktaAppTypeBrowser,
 			expectedAuthMethod: "none",
 		},
-		{
-			name:       "Authorization code without PKCE should use web type",
+		"Authorization code without PKCE should use web type": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: false,
 			},
 			expectedAppType: oktaAppTypeWeb,
 		},
-		{
-			name:                  "Client credentials should remain service type",
+		"Client credentials should remain service type": {
 			grantTypes:            []string{GrantTypeClientCredentials},
 			responseTypes:         []string{},
 			extraProperties:       map[string]interface{}{},
 			expectedAppType:       oktaAppTypeService,
 			expectedResponseTypes: []string{AuthResponseToken},
 		},
-		{
-			name:       "Explicit browser type should be preserved with PKCE",
+		"Explicit browser type should be preserved with PKCE": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaApplicationType: oktaAppTypeBrowser,
@@ -158,8 +545,7 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			expectedAppType:    oktaAppTypeBrowser,
 			expectedAuthMethod: "none",
 		},
-		{
-			name:       "Implicit flow without PKCE should use web type",
+		"Implicit flow without PKCE should use web type": {
 			grantTypes: []string{GrantTypeImplicit},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: false,
@@ -168,8 +554,8 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			oktaProvider := &okta{}
 			clientReq := &clientMetadata{
 				GrantTypes:      tc.grantTypes,
