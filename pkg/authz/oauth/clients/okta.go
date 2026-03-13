@@ -47,6 +47,14 @@ func New(apiClient coreapi.Client, baseURL, apiToken string) *Okta {
 	}
 }
 
+func (o *Okta) authServerPolicyEndpoint(authServerID, policyID string) string {
+	return fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
+}
+
+func (o *Okta) authServerPoliciesEndpoint(authServerID string) string {
+	return fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
+}
+
 func (o *Okta) doRequest(method, endpoint string, body interface{}) (*coreapi.Response, error) {
 	var reqBody []byte
 	var err error
@@ -100,9 +108,7 @@ func isStatus(code int, allowed ...int) bool {
 	return false
 }
 
-func (o *Okta) authServerPolicyEndpoint(authServerID, policyID string) string {
-	return fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s", o.BaseURL, authServerID, policyID)
-}
+
 
 func (o *Okta) FindGroupByName(groupName string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/groups?q=%s", o.BaseURL, url.QueryEscape(groupName))
@@ -133,6 +139,10 @@ func (o *Okta) AssignGroupToApp(appID, groupID string) error {
 		return err
 	}
 	if resp.Code == http.StatusConflict {
+		logger.
+			WithField("appID", appID).
+			WithField("groupID", groupID).
+			Warn("group assignment already exists")
 		return nil
 	}
 	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated, http.StatusNoContent) {
@@ -148,6 +158,10 @@ func (o *Okta) UnassignGroupFromApp(appID, groupID string) error {
 		return err
 	}
 	if resp.Code == http.StatusNotFound {
+		logger.
+			WithField("appID", appID).
+			WithField("groupID", groupID).
+			Warn("group assignment not found during unassign. Assuming already unassigned")
 		return nil
 	}
 	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
@@ -166,7 +180,7 @@ func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]int
 	if authServerID == "" || policyName == "" {
 		return nil, nil
 	}
-	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies", o.BaseURL, authServerID)
+	endpoint := o.authServerPoliciesEndpoint(authServerID)
 
 	var policies []oktaPolicyListResult
 	if err := o.doGetJSON(endpoint, &policies); err != nil {
@@ -215,13 +229,19 @@ func (o *Okta) UpdatePolicy(authServerID, policyID string, policy map[string]int
 func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]interface{}, clientID string) error {
 	clientID = strings.TrimSpace(clientID)
 	if authServerID == "" || policy == nil || clientID == "" {
-		return nil
+		return fmt.Errorf("invalid input for policy assignment")
 	}
+	
 	policyID, _ := policy["id"].(string)
 	policyID = strings.TrimSpace(policyID)
 	if policyID == "" {
-		return nil
+		return fmt.Errorf("invalid input for policy assignment")
 	}
+
+	policyLogger := logger.
+		WithField("authServerID", authServerID).
+		WithField("policyID", policyID).
+		WithField("clientID", clientID)
 
 	conditions := ensureMap(policy, "conditions")
 	clients := ensureMap(conditions, "clients")
@@ -240,21 +260,13 @@ func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]inter
 
 	// check if policy has all clients configured
 	if includeHasAllClients(include) {
-		logger.
-			WithField("authServerID", authServerID).
-			WithField("policyID", policyID).
-			WithField("clientID", clientID).
-			Trace("policy assignment already includes ALL_CLIENTS. Skipping client-specific policy update")
+		policyLogger.Trace("policy assignment already includes ALL_CLIENTS. Skipping client-specific policy update")
 		return nil
 	}
 
 	// check if client is already included in policy assignment
 	if includeHasClient(include, clientID) {
-		logger.
-			WithField("authServerID", authServerID).
-			WithField("policyID", policyID).
-			WithField("clientID", clientID).
-			Trace("policy assignment already includes client. Skipping client-specific policy update")
+		policyLogger.Trace("policy assignment already includes client. Skipping client-specific policy update")
 		return nil
 	}
 	clients["include"] = append(include, clientID)

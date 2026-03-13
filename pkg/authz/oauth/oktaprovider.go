@@ -24,37 +24,37 @@ type okta struct{}
 
 func oktaBaseURLFromMetadataURL(metadataURL string) (string, error) {
 	if metadataURL == "" {
-		return "", nil
+		return "", fmt.Errorf("metadata URL is empty")
 	}
 	u, err := url.Parse(metadataURL)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid metadata URL %q: %w", metadataURL, err)
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return "", fmt.Errorf("invalid metadata URL: %q", metadataURL)
+		return "", fmt.Errorf("invalid metadata URL %q: missing scheme or host", metadataURL)
 	}
 	return u.Scheme + "://" + u.Host, nil
 }
 
-func oktaAuthServerIDFromMetadataURL(metadataURL string) string {
+func oktaAuthServerIDFromMetadataURL(metadataURL string) (string, error) {
 	if metadataURL == "" {
-		return ""
+		return "", fmt.Errorf("metadata URL is empty")
 	}
 	u, err := url.Parse(metadataURL)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("invalid metadata URL %q: %w", metadataURL, err)
 	}
 	path := strings.Trim(u.Path, "/")
 	if path == "" {
-		return ""
+		return "", fmt.Errorf("unable to determine Okta authorization server from metadata URL")
 	}
 	segments := strings.Split(path, "/")
 	for i := 0; i < len(segments)-1; i++ {
 		if segments[i] == "oauth2" {
-			return segments[i+1]
+			return segments[i+1], nil
 		}
 	}
-	return ""
+	return "", fmt.Errorf("unable to determine Okta authorization server from metadata URL")
 }
 
 func validateOktaConfiguredResources(idp corecfg.IDPConfig, apiClient coreapi.Client) error {
@@ -74,7 +74,13 @@ func validateOktaConfiguredResources(idp corecfg.IDPConfig, apiClient coreapi.Cl
 		return err
 	}
 
-	authServerID := oktaAuthServerIDFromMetadataURL(metadataURL)
+	authServerID := ""
+	if policyName != "" {
+		authServerID, err = oktaAuthServerIDFromMetadataURL(metadataURL)
+		if err != nil {
+			return err
+		}
+	}
 
 	if err := validateOktaGroupExists(oktaClient, groupName); err != nil {
 		return err
@@ -127,7 +133,7 @@ func validateOktaPolicyExists(oktaClient *clients.Okta, authServerID, policyName
 		return nil
 	}
 	if authServerID == "" {
-		return fmt.Errorf("authServerId could not be inferred from the metadata URL. Ensure the metadata URL follows the Okta custom authorization server pattern (/oauth2/{authServerId}/...)")
+		return fmt.Errorf("unable to determine Okta authorization server from metadata URL")
 	}
 	policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
 	if err != nil {
@@ -162,7 +168,13 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corec
 		return err
 	}
 
-	authServerID := oktaAuthServerIDFromMetadataURL(metadataURL)
+	authServerID := ""
+	if strings.TrimSpace(policyName) != "" {
+		authServerID, err = oktaAuthServerIDFromMetadataURL(metadataURL)
+		if err != nil {
+			return err
+		}
+	}
 	if err := i.handlePolicyAssignment(oktaClient, clientRes.GetClientID(), authServerID, policyName); err != nil {
 		return err
 	}
@@ -246,7 +258,7 @@ func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authSe
 		return nil
 	}
 	if authServerID == "" {
-		return fmt.Errorf("authServerId could not be inferred from the metadata URL; ensure the metadata URL follows the Okta custom authorization server pattern (/oauth2/{authServerId}/)")
+		return fmt.Errorf("unable to determine Okta authorization server from metadata URL")
 	}
 	policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
 	if err != nil {

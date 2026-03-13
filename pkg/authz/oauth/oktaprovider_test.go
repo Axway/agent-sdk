@@ -372,10 +372,10 @@ func TestOktaBaseURLFromMetadataURL(t *testing.T) {
 		want        string
 		wantErr     bool
 	}{
-		"empty metadata url returns empty": {
+		"empty metadata url returns error": {
 			metadataURL: "",
 			want:        "",
-			wantErr:     false,
+			wantErr:     true,
 		},
 		"okta issuer url returns scheme+host": {
 			metadataURL: "https://integrator-1663282.okta.com/oauth2/authorizationid/.well-known/oauth-authorization-server",
