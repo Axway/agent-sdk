@@ -9,15 +9,13 @@ import (
 )
 
 func TestOktaAPIStatusHandling(t *testing.T) {
-	cases := []struct {
-		name           string
+	cases := map[string]struct {
 		handler        http.HandlerFunc
 		call           func(client *Okta) error
 		wantErr        bool
 		expectedMethod string
 	}{
-		{
-			name:           "AssignGroupToApp returns error on forbidden",
+		"AssignGroupToApp returns error on forbidden": {
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
@@ -28,8 +26,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name:           "AssignGroupToApp treats conflict as success",
+		"AssignGroupToApp treats conflict as success": {
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusConflict)
@@ -40,8 +37,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name:           "UnassignGroupFromApp treats not found as success",
+		"UnassignGroupFromApp treats not found as success": {
 			expectedMethod: http.MethodDelete,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
@@ -52,8 +48,7 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name:           "UpdatePolicy returns error on forbidden",
+		"UpdatePolicy returns error on forbidden": {
 			expectedMethod: http.MethodPut,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
@@ -66,9 +61,9 @@ func TestOktaAPIStatusHandling(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
+	for name, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tc.expectedMethod != "" && r.Method != tc.expectedMethod {
 					w.WriteHeader(http.StatusMethodNotAllowed)

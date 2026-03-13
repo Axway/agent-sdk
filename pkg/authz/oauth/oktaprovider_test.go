@@ -183,16 +183,14 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 
-	cases := []struct {
-		name         string
+	cases := map[string]struct {
 		oktaGroup    string
 		oktaPolicy   string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
 		wantErr      bool
 	}{
-		{
-			name:       "assigns existing group + records existing policy",
+		"assigns existing group + records existing policy": {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
@@ -210,8 +208,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
 			},
 		},
-		{
-			name:       "infers auth server id for policy",
+		"infers auth server id for policy": {
 			oktaGroup:  "MyAppUsers",
 			oktaPolicy: "MarketplacePolicy",
 			routes: map[string]http.HandlerFunc{
@@ -229,13 +226,11 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				http.MethodPut + " " + oktaPolicyEndpointByID:                      1,
 			},
 		},
-		{
-			name:         "no actions when group/policy disabled",
+		"no actions when group/policy disabled": {
 			routes:       map[string]http.HandlerFunc{},
 			wantMinCalls: map[string]int{},
 		},
-		{
-			name:      "error when group not found",
+		"error when group not found": {
 			oktaGroup: "NewGroup",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("NewGroup", nil),
@@ -245,8 +240,7 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 				http.MethodGet + " " + groupsEndpoint: 1,
 			},
 		},
-		{
-			name:       "error when policy not found",
+		"error when policy not found": {
 			oktaPolicy: "MissingPolicy",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: "pol-other", Name: "OtherPolicy"}}),
@@ -258,9 +252,9 @@ func TestOktaPostProcessClientRegistration(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
+	for name, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			expectedAuth := "SSWS access-token"
 			ts, scripted := newOktaScriptedServer(t, expectedAuth, tc.routes)
 			defer ts.Close()
@@ -283,16 +277,14 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{}
 
-	cases := []struct {
-		name         string
+	cases := map[string]struct {
 		oktaGroup    string
 		routes       map[string]http.HandlerFunc
 		wantMinCalls map[string]int
 		wantErr      bool
 		errContains  string
 	}{
-		{
-			name:      "unassigns group when configured group exists",
+		"unassigns group when configured group exists": {
 			oktaGroup: "MyAppUsers",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MyAppUsers", []oktaGroupItem{{ID: oktaGroupID, Name: "MyAppUsers"}}),
@@ -306,15 +298,13 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name:         "no cleanup when okta group is not configured",
+		"no cleanup when okta group is not configured": {
 			oktaGroup:    "",
 			routes:       map[string]http.HandlerFunc{},
 			wantMinCalls: map[string]int{},
 			wantErr:      false,
 		},
-		{
-			name:      "returns error when configured group is not found",
+		"returns error when configured group is not found": {
 			oktaGroup: "MissingGroup",
 			routes: map[string]http.HandlerFunc{
 				http.MethodGet + " " + groupsEndpoint: oktaGroupsSearchHandler("MissingGroup", nil),
@@ -327,9 +317,9 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
+	for name, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			expectedAuth := "SSWS access-token"
 			ts, scripted := newOktaScriptedServer(t, expectedAuth, tc.routes)
 			defer ts.Close()
@@ -377,41 +367,36 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 }
 
 func TestOktaBaseURLFromMetadataURL(t *testing.T) {
-	cases := []struct {
-		name        string
+	cases := map[string]struct {
 		metadataURL string
 		want        string
 		wantErr     bool
 	}{
-		{
-			name:        "empty metadata url returns empty",
+		"empty metadata url returns empty": {
 			metadataURL: "",
 			want:        "",
 			wantErr:     false,
 		},
-		{
-			name:        "okta issuer url returns scheme+host",
+		"okta issuer url returns scheme+host": {
 			metadataURL: "https://integrator-1663282.okta.com/oauth2/authorizationid/.well-known/oauth-authorization-server",
 			want:        "https://integrator-1663282.okta.com",
 			wantErr:     false,
 		},
-		{
-			name:        "invalid url returns error",
+		"invalid url returns error": {
 			metadataURL: "://bad-url",
 			want:        "",
 			wantErr:     true,
 		},
-		{
-			name:        "missing scheme/host returns error",
+		"missing scheme/host returns error": {
 			metadataURL: "/relative/path",
 			want:        "",
 			wantErr:     true,
 		},
 	}
 
-	for _, tc := range cases {
+	for name, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			got, err := oktaBaseURLFromMetadataURL(tc.metadataURL)
 			if tc.wantErr {
 				assert.Error(t, err)
@@ -424,25 +409,22 @@ func TestOktaBaseURLFromMetadataURL(t *testing.T) {
 }
 
 func TestOktaPKCERequired(t *testing.T) {
-	cases := []struct {
-		name          string
+	cases := map[string]struct {
 		pkceRequired  bool
 		expectedValue bool
 	}{
-		{
-			name:          "PKCE required true",
+		"PKCE required true": {
 			pkceRequired:  true,
 			expectedValue: true,
 		},
-		{
-			name:          "PKCE required false",
+		"PKCE required false": {
 			pkceRequired:  false,
 			expectedValue: false,
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			props := map[string]interface{}{
 				oktaPKCERequired: tc.pkceRequired,
 			}
@@ -471,44 +453,38 @@ func TestOktaPKCERequired(t *testing.T) {
 }
 
 func TestValidateOktaExtraProperties(t *testing.T) {
-	cases := []struct {
-		name        string
+	cases := map[string]struct {
 		extraProps  map[string]interface{}
 		expectError bool
 	}{
-		{
-			name: "Valid: PKCE with browser type",
+		"Valid: PKCE with browser type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeBrowser,
 			},
 			expectError: false,
 		},
-		{
-			name: "Valid: PKCE without app type",
+		"Valid: PKCE without app type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired: true,
 			},
 			expectError: false,
 		},
-		{
-			name: "Invalid: PKCE with service type",
+		"Invalid: PKCE with service type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeService,
 			},
 			expectError: true,
 		},
-		{
-			name: "Invalid: PKCE with web type",
+		"Invalid: PKCE with web type": {
 			extraProps: map[string]interface{}{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeWeb,
 			},
 			expectError: true,
 		},
-		{
-			name: "Valid: No PKCE with any type",
+		"Valid: No PKCE with any type": {
 			extraProps: map[string]interface{}{
 				oktaApplicationType: oktaAppTypeService,
 			},
@@ -516,8 +492,8 @@ func TestValidateOktaExtraProperties(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			oktaProvider := &okta{}
 			err := oktaProvider.validateExtraProperties(tc.extraProps)
 			if tc.expectError {
@@ -530,8 +506,7 @@ func TestValidateOktaExtraProperties(t *testing.T) {
 }
 
 func TestOktaPreProcessClientRequest(t *testing.T) {
-	cases := []struct {
-		name                  string
+	cases := map[string]struct {
 		grantTypes            []string
 		responseTypes         []string
 		extraProperties       map[string]interface{}
@@ -539,8 +514,7 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 		expectedResponseTypes []string
 		expectedAuthMethod    string
 	}{
-		{
-			name:       "Authorization code with PKCE should use browser type",
+		"Authorization code with PKCE should use browser type": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: true,
@@ -548,24 +522,21 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			expectedAppType:    oktaAppTypeBrowser,
 			expectedAuthMethod: "none",
 		},
-		{
-			name:       "Authorization code without PKCE should use web type",
+		"Authorization code without PKCE should use web type": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: false,
 			},
 			expectedAppType: oktaAppTypeWeb,
 		},
-		{
-			name:                  "Client credentials should remain service type",
+		"Client credentials should remain service type": {
 			grantTypes:            []string{GrantTypeClientCredentials},
 			responseTypes:         []string{},
 			extraProperties:       map[string]interface{}{},
 			expectedAppType:       oktaAppTypeService,
 			expectedResponseTypes: []string{AuthResponseToken},
 		},
-		{
-			name:       "Explicit browser type should be preserved with PKCE",
+		"Explicit browser type should be preserved with PKCE": {
 			grantTypes: []string{GrantTypeAuthorizationCode},
 			extraProperties: map[string]interface{}{
 				oktaApplicationType: oktaAppTypeBrowser,
@@ -574,8 +545,7 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 			expectedAppType:    oktaAppTypeBrowser,
 			expectedAuthMethod: "none",
 		},
-		{
-			name:       "Implicit flow without PKCE should use web type",
+		"Implicit flow without PKCE should use web type": {
 			grantTypes: []string{GrantTypeImplicit},
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired: false,
@@ -584,8 +554,8 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			oktaProvider := &okta{}
 			clientReq := &clientMetadata{
 				GrantTypes:      tc.grantTypes,

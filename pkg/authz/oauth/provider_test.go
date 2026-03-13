@@ -24,7 +24,6 @@ const (
 )
 
 type providerTestCase struct {
-	name                       string
 	idpType                    string
 	authHeader                 map[string]string
 	authQueryParams            map[string]string
@@ -44,15 +43,13 @@ type providerTestCase struct {
 
 func TestProvider(t *testing.T) {
 
-	cases := []providerTestCase{
-		{
-			name:                 "IDP metadata bad request",
+	cases := map[string]providerTestCase{
+		"IDP metadata bad request": {
 			idpType:              "generic",
 			metadataResponseCode: http.StatusBadRequest,
 			expectMetadataErr:    true,
 		},
-		{
-			name:    "registration bad request",
+		"registration bad request": {
 			idpType: "generic",
 			clientRequest: &clientMetadata{
 				ClientName: "test",
@@ -61,8 +58,7 @@ func TestProvider(t *testing.T) {
 			registrationResponseCode: http.StatusBadRequest,
 			expectRegistrationErr:    true,
 		},
-		{
-			name:    "unregistration bad request",
+		"unregistration bad request": {
 			idpType: "okta",
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
@@ -88,8 +84,7 @@ func TestProvider(t *testing.T) {
 			unRegistrationResponseCode: http.StatusBadRequest,
 			expectUnRegistrationErr:    true,
 		},
-		{
-			name:    "successful create and delete client",
+		"successful create and delete client": {
 			idpType: "generic",
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
@@ -113,8 +108,7 @@ func TestProvider(t *testing.T) {
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
-		{
-			name:            "successful client_credential",
+		"successful client_credential": {
 			idpType:         "generic",
 			authHeader:      map[string]string{"authHdr": "authHrdVal"},
 			authQueryParams: map[string]string{"authParam": "authParamVal"},
@@ -142,8 +136,7 @@ func TestProvider(t *testing.T) {
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
-		{
-			name:    "provider with existing auth server metadata",
+		"provider with existing auth server metadata": {
 			idpType: "generic",
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
@@ -169,9 +162,9 @@ func TestProvider(t *testing.T) {
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
 	}
-	for _, tc := range cases {
+	for name, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			runProviderTestCase(t, tc)
 		})
 	}
@@ -272,15 +265,13 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 	s := NewMockIDPServer()
 	defer s.Close()
 
-	tests := []struct {
-		name            string
+	tests := map[string]struct {
 		idpType         string
 		extraProperties map[string]interface{}
 		expectError     bool
 		errorContains   string
 	}{
-		{
-			name:    "Valid Okta provider with PKCE and browser type",
+		"Valid Okta provider with PKCE and browser type": {
 			idpType: TypeOkta,
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired:    true,
@@ -288,8 +279,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 			},
 			expectError: false,
 		},
-		{
-			name:    "Invalid Okta provider with PKCE and service type",
+		"Invalid Okta provider with PKCE and service type": {
 			idpType: TypeOkta,
 			extraProperties: map[string]interface{}{
 				oktaPKCERequired:    true,
@@ -298,16 +288,15 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 			expectError:   true,
 			errorContains: "pkce_required",
 		},
-		{
-			name:            "Valid generic provider",
+		"Valid generic provider": {
 			idpType:         "generic",
 			extraProperties: map[string]interface{}{},
 			expectError:     false,
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 			idpCfg := &config.IDPConfiguration{
 				Name:            "test",
 				Type:            tc.idpType,
@@ -449,28 +438,25 @@ func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config
 }
 
 func TestRegisterClientRollBack(t *testing.T) {
-	tests := []struct {
-		name               string
+	tests := map[string]struct {
 		deleteResponseCode int
 		deleteResponseBody string
 		errorContains      string
 	}{
-		{
-			name:               "rollback succeeds when hook fails",
+		"rollback succeeds when hook fails": {
 			deleteResponseCode: http.StatusNoContent,
 			errorContains:      "failed to complete Okta client setup",
 		},
-		{
-			name:               "rollback failure is surfaced with manual cleanup guidance",
+		"rollback failure is surfaced with manual cleanup guidance": {
 			deleteResponseCode: http.StatusInternalServerError,
 			deleteResponseBody: "delete failed",
 			errorContains:      "Manual cleanup in Okta may be required",
 		},
 	}
 
-	for _, tc := range tests {
+	for name, tc := range tests {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			var deleteCalls atomic.Int32
 			var registerCalls atomic.Int32
 
