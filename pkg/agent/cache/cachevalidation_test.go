@@ -48,137 +48,151 @@ func makeAPIServiceRI(scopeName, name, apiID string, modTime time.Time) *v1.Reso
 }
 
 func TestResourceCacheKey(t *testing.T) {
-	key := ResourceCacheKey("APIService", "env1", "svc1")
-	assert.Equal(t, "APIService/env1/svc1", key)
-
-	key = ResourceCacheKey("APIService", "", "svc1")
-	assert.Equal(t, "APIService//svc1", key)
+	tests := map[string]struct {
+		kind     string
+		scope    string
+		name     string
+		expected string
+	}{
+		"with scope":  {kind: "APIService", scope: "env1", name: "svc1", expected: "APIService/env1/svc1"},
+		"empty scope": {kind: "APIService", scope: "", name: "svc1", expected: "APIService//svc1"},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ResourceCacheKey(tc.kind, tc.scope, tc.name))
+		})
+	}
 }
 
-func TestGetCachedResourcesByKind_APIService(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+func TestGetCachedResourcesByKind(t *testing.T) {
 	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri := makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime)
-	err := cm.AddAPIService(ri)
-	assert.Nil(t, err)
-
-	result := cm.GetCachedResourcesByKind("management", management.APIServiceGVK().Kind)
-	expectedKey := ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, expectedKey)
-	assert.Equal(t, modTime, result[expectedKey])
-}
-
-func TestGetCachedResourcesByKind_APIServiceInstance(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri := makeRI("management", management.APIServiceInstanceGVK().Kind, "Environment", "env1", "inst1", "id1", modTime)
-	cm.AddAPIServiceInstance(ri)
-
-	result := cm.GetCachedResourcesByKind("management", management.APIServiceInstanceGVK().Kind)
-	expectedKey := ResourceCacheKey(management.APIServiceInstanceGVK().Kind, "env1", "inst1")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, expectedKey)
-}
-
-func TestGetCachedResourcesByKind_ManagedApplication(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri := makeRI("management", management.ManagedApplicationGVK().Kind, "Environment", "env1", "app1", "id1", modTime)
-	cm.AddManagedApplication(ri)
-
-	result := cm.GetCachedResourcesByKind("management", management.ManagedApplicationGVK().Kind)
-	expectedKey := ResourceCacheKey(management.ManagedApplicationGVK().Kind, "env1", "app1")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, expectedKey)
-}
-
-func TestGetCachedResourcesByKind_AccessRequest(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri := makeRI("management", management.AccessRequestGVK().Kind, "Environment", "env1", "ar1", "id1", modTime)
-	cm.AddAccessRequest(ri)
-
-	result := cm.GetCachedResourcesByKind("management", management.AccessRequestGVK().Kind)
-	expectedKey := ResourceCacheKey(management.AccessRequestGVK().Kind, "env1", "ar1")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, expectedKey)
-}
-
-func TestGetCachedResourcesByKind_MultipleResourcesSameKind(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime1 := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
 	modTime2 := time.Date(2026, 3, 12, 11, 0, 0, 0, time.UTC)
 
-	svcKind := management.APIServiceGVK().Kind
-	ri1 := makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime1)
-	ri2 := makeAPIServiceRI("env1", "svc2", "ext-id-2", modTime2)
-	cm.AddAPIService(ri1)
-	cm.AddAPIService(ri2)
+	type testCase struct {
+		setup      func(Manager)
+		group      string
+		kind       string
+		expectLen  int
+		expectKeys []string
+		verify     func(t *testing.T, result map[string]time.Time)
+	}
 
-	result := cm.GetCachedResourcesByKind("management", svcKind)
-	assert.Len(t, result, 2)
-	assert.Contains(t, result, ResourceCacheKey(svcKind, "env1", "svc1"))
-	assert.Contains(t, result, ResourceCacheKey(svcKind, "env1", "svc2"))
-}
+	tests := map[string]testCase{
+		"APIService": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+			},
+			group:      "management",
+			kind:       management.APIServiceGVK().Kind,
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1")},
+			verify: func(t *testing.T, result map[string]time.Time) {
+				assert.Equal(t, modTime, result[ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1")])
+			},
+		},
+		"APIServiceInstance": {
+			setup: func(cm Manager) {
+				cm.AddAPIServiceInstance(makeRI("management", management.APIServiceInstanceGVK().Kind, "Environment", "env1", "inst1", "id1", modTime))
+			},
+			group:      "management",
+			kind:       management.APIServiceInstanceGVK().Kind,
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey(management.APIServiceInstanceGVK().Kind, "env1", "inst1")},
+		},
+		"ManagedApplication": {
+			setup: func(cm Manager) {
+				cm.AddManagedApplication(makeRI("management", management.ManagedApplicationGVK().Kind, "Environment", "env1", "app1", "id1", modTime))
+			},
+			group:      "management",
+			kind:       management.ManagedApplicationGVK().Kind,
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey(management.ManagedApplicationGVK().Kind, "env1", "app1")},
+		},
+		"AccessRequest": {
+			setup: func(cm Manager) {
+				cm.AddAccessRequest(makeRI("management", management.AccessRequestGVK().Kind, "Environment", "env1", "ar1", "id1", modTime))
+			},
+			group:      "management",
+			kind:       management.AccessRequestGVK().Kind,
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey(management.AccessRequestGVK().Kind, "env1", "ar1")},
+		},
+		"multiple resources same kind": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc2", "ext-id-2", modTime2))
+			},
+			group:     "management",
+			kind:      management.APIServiceGVK().Kind,
+			expectLen: 2,
+			expectKeys: []string{
+				ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1"),
+				ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc2"),
+			},
+		},
+		"different scopes": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+				cm.AddAPIService(makeAPIServiceRI("env2", "svc1", "ext-id-2", modTime))
+			},
+			group:     "management",
+			kind:      management.APIServiceGVK().Kind,
+			expectLen: 2,
+			expectKeys: []string{
+				ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1"),
+				ResourceCacheKey(management.APIServiceGVK().Kind, "env2", "svc1"),
+			},
+		},
+		"empty cache": {
+			group:     "management",
+			kind:      management.APIServiceGVK().Kind,
+			expectLen: 0,
+		},
+		"unknown kind falls back to watch resource": {
+			setup: func(cm Manager) {
+				cm.AddWatchResource(makeRI("catalog", "SomeCustomKind", "Environment", "env1", "custom1", "id1", modTime))
+			},
+			group:      "catalog",
+			kind:       "SomeCustomKind",
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey("SomeCustomKind", "env1", "custom1")},
+		},
+		"watch resource filters by group and kind - group A": {
+			setup: func(cm Manager) {
+				cm.AddWatchResource(makeRI("groupA", "KindA", "", "", "res1", "id1", modTime))
+				cm.AddWatchResource(makeRI("groupB", "KindB", "", "", "res2", "id2", modTime))
+			},
+			group:      "groupA",
+			kind:       "KindA",
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey("KindA", "", "res1")},
+		},
+		"watch resource filters by group and kind - group B": {
+			setup: func(cm Manager) {
+				cm.AddWatchResource(makeRI("groupA", "KindA", "", "", "res1", "id1", modTime))
+				cm.AddWatchResource(makeRI("groupB", "KindB", "", "", "res2", "id2", modTime))
+			},
+			group:      "groupB",
+			kind:       "KindB",
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey("KindB", "", "res2")},
+		},
+	}
 
-func TestGetCachedResourcesByKind_DifferentScopes(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	svcKind := management.APIServiceGVK().Kind
-	ri1 := makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime)
-	ri2 := makeAPIServiceRI("env2", "svc1", "ext-id-2", modTime)
-	cm.AddAPIService(ri1)
-	cm.AddAPIService(ri2)
-
-	result := cm.GetCachedResourcesByKind("management", svcKind)
-	key1 := ResourceCacheKey(svcKind, "env1", "svc1")
-	key2 := ResourceCacheKey(svcKind, "env2", "svc1")
-
-	assert.Len(t, result, 2)
-	assert.Contains(t, result, key1)
-	assert.Contains(t, result, key2)
-}
-
-func TestGetCachedResourcesByKind_EmptyCache(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-
-	result := cm.GetCachedResourcesByKind("management", management.APIServiceGVK().Kind)
-	assert.Empty(t, result)
-}
-
-func TestGetCachedResourcesByKind_UnknownKindFallsBackToWatchResource(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri := makeRI("catalog", "SomeCustomKind", "Environment", "env1", "custom1", "id1", modTime)
-	cm.AddWatchResource(ri)
-
-	result := cm.GetCachedResourcesByKind("catalog", "SomeCustomKind")
-	expectedKey := ResourceCacheKey("SomeCustomKind", "env1", "custom1")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, expectedKey)
-}
-
-func TestGetCachedResourcesByKind_WatchResourceFiltersGroupAndKind(t *testing.T) {
-	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-
-	ri1 := makeRI("groupA", "KindA", "", "", "res1", "id1", modTime)
-	ri2 := makeRI("groupB", "KindB", "", "", "res2", "id2", modTime)
-	cm.AddWatchResource(ri1)
-	cm.AddWatchResource(ri2)
-
-	result := cm.GetCachedResourcesByKind("groupA", "KindA")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, ResourceCacheKey("KindA", "", "res1"))
-
-	result = cm.GetCachedResourcesByKind("groupB", "KindB")
-	assert.Len(t, result, 1)
-	assert.Contains(t, result, ResourceCacheKey("KindB", "", "res2"))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			if tc.setup != nil {
+				tc.setup(cm)
+			}
+			result := cm.GetCachedResourcesByKind(tc.group, tc.kind)
+			assert.Len(t, result, tc.expectLen)
+			for _, k := range tc.expectKeys {
+				assert.Contains(t, result, k)
+			}
+			if tc.verify != nil {
+				tc.verify(t, result)
+			}
+		})
+	}
 }
