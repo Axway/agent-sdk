@@ -12,6 +12,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -95,6 +96,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 
 	svcDetails := buildAgentDetailsSubResource(serviceBody, true, serviceBody.ServiceAgentDetails)
 	newSVCDetails := util.MergeMapStringInterface(util.GetAgentDetails(svc), svcDetails)
+	delete(newSVCDetails, definitions.AttrExternalAPISyncWarning)
 	util.SetAgentDetails(svc, newSVCDetails)
 
 	// get the specHashes from the existing service

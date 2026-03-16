@@ -96,6 +96,21 @@ $SED -i "/ApiServiceAgentdetails\s/a ${REPLACE}" ${MODEL_PATH}/APIService.go
 # reformat the code
 go fmt ${MODEL_PATH}/APIService.go
 
+######################
+# For model_api_service_agentdetails.go, we want to turn    "SyncWarning bool `json:"syncWarning,omitempty"`" into
+# "SyncWarning *bool `json:"syncWarning,omitempty"`"
+######################
+SEARCH="\s*SyncWarning\s*bool.*"
+REPLACE="SyncWarning *bool \`json:\"syncWarning,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_api_service_agentdetails.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_api_service_agentdetails.go
+# add in the new line we want
+$SED -i "/SyncWarning\s/a ${REPLACE}" ${MODEL_PATH}/model_api_service_agentdetails.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_api_service_agentdetails.go
+
 
 ######################
 # For APIService.go, we want to turn    "Source ApiServiceSource `json:"source"`" into

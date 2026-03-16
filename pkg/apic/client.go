@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -866,10 +867,11 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
-		// check if either hash or title has changed and mark for update
+		// check if either hash, tags or title have changed and mark for update
+		equalTags := slices.Equal(existingRI.GetTags(), data.GetTags())
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
-		if oldHash == newHash && existingRI.Title == data.Title {
+		if oldHash == newHash && existingRI.Title == data.Title && equalTags {
 			log.Debug("no updates to the hash or to the title")
 			updateRI = false
 		}
@@ -899,6 +901,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		existingRI.Spec = data.Spec
 		existingRI.SubResources = data.SubResources
 		existingRI.Title = data.Title
+		existingRI.Tags = data.GetTags()
 		existingRI.Metadata.ResourceVersion = ""
 
 		// set the data and subresources to be pushed

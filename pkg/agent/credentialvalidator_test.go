@@ -6,6 +6,7 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -23,6 +24,12 @@ func setupCredCache(expireTime time.Time) {
 
 	agent.cacheManager = agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	agent.cacheManager.AddWatchResource(ri)
+}
+
+func setupAPICClient(mockResponse []api.MockResponse) {
+	client, httpClient := apic.GetTestServiceClient()
+	httpClient.SetResponses(mockResponse)
+	agent.apicClient = client
 }
 
 func TestRegisterCredentialChecker(t *testing.T) {

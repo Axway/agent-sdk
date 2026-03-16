@@ -49,7 +49,7 @@ type Manager interface {
 	GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance
 	GetAPIServiceWithName(apiName string) *v1.ResourceInstance
-	GetAPIServiceInstanceCount(apiName string) int
+	GetAPIServiceInstancesByService(apiName string) []*v1.ResourceInstance
 	GetTeamsIDsInAPIServices() []string
 	DeleteAPIService(apiID string) error
 
