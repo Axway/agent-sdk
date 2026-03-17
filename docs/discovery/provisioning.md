@@ -610,6 +610,10 @@ type IDPConfig interface {
   GetIDPName() string
   // GetAuthConfig - to be used for authentication with IDP
   GetAuthConfig() IDPAuthConfig
+  // GetOktaGroup - okta-specific group assignment configuration.
+  GetOktaGroup() string
+  // GetOktaPolicy - okta-specific authorization server policy name to look up.
+  GetOktaPolicy() string
   // GetClientScopes - default list of scopes that are included in the client metadata request to IDP
   GetClientScopes() string
   // GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
@@ -634,6 +638,27 @@ AGENTFEATURES_IDP_AUTH_CLIENTID_1="service-account"
 AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1="service-account-secret"
 AGENTFEATURES_IDP_SCOPE_1="resource.READ resource.WRITE"
 ```
+
+###### Okta provider configuration
+To enrich Okta provisioning (group assignment and policy lookup), configure the Okta IDP with a group name and/or policy name.
+
+Group assignment is configured via:
+
+```
+AGENTFEATURES_IDP_OKTA_GROUP_1="MyAppUsers"
+```
+
+Policy lookup is configured via:
+
+```
+AGENTFEATURES_IDP_OKTA_POLICY_1="MarketplacePolicy"
+```
+
+Notes:
+- The SDK does not create groups or policies; they must already exist in Okta before the agent starts. If a configured group or policy cannot be found during provider initialization, `NewProvider` returns an error and the agent will fail to start.
+
+Alternatively when registering the provider programmatically via `IDPConfiguration`, set the Okta group under `Okta.Group` and the policy name under `Okta.Policy`.
+
 
 Alternatively, the agent implementation can choose to explicitly register the provider calling by using the `ProviderRegistry` interface.
 
