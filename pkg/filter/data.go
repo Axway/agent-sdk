@@ -8,6 +8,7 @@ import (
 const (
 	filterTypeAttr = "attr"
 	filterTypeTag  = "tag"
+	filterTypeName = "name"
 )
 
 // Data - Interface representing the data for filter evaluation
