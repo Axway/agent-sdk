@@ -168,6 +168,7 @@ func TestAgentResourceHandler(t *testing.T) {
 		name                         string
 		hasError                     bool
 		resource                     v1.Interface
+		agentResource                v1.Interface
 		expectResourceUpdate         bool
 		expectTeamUpdate             bool
 		subresName                   string
@@ -518,7 +519,7 @@ func TestAgentResourceHandler(t *testing.T) {
 			expectComplianceProcessing: true,
 		},
 		{
-			name:     "should ignore processing agent resource",
+			name:     "should ignore processing agent resource because of different GVK",
 			hasError: true,
 			action:   proto.Event_UPDATED,
 			resource: &v1.ResourceInstance{
@@ -536,11 +537,40 @@ func TestAgentResourceHandler(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "should ignore processing agent resource because of different agent name",
+			action: proto.Event_UPDATED,
+			resource: &v1.ResourceInstance{
+				ResourceMeta: v1.ResourceMeta{
+					Name:  "name",
+					Title: "title",
+					Metadata: v1.Metadata{
+						ID: "123",
+					},
+					GroupVersionKind: v1.GroupVersionKind{
+						GroupKind: v1.GroupKind{
+							Kind: management.TraceabilityAgentGVK().Kind,
+						},
+					},
+				},
+			},
+			agentResource: &management.TraceabilityAgent{
+				ResourceMeta: v1.ResourceMeta{
+					Name: "different-name",
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			resourceManager := &mockResourceManager{}
+			if tc.agentResource == nil {
+				tc.agentResource = tc.resource
+			}
+			agentRes, _ := tc.agentResource.AsInstance()
+			resourceManager := &mockResourceManager{
+				resource: agentRes,
+			}
 			if tc.fakeAgentHandler != nil {
 				resourceManager.fakeHandler = tc.fakeAgentHandler
 			}
@@ -591,7 +621,6 @@ func TestAgentResourceHandler(t *testing.T) {
 			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.GetGroupVersionKind().Kind, tc.resource.GetName()), &proto.EventMeta{Subresource: tc.subresName}, ri)
 			if tc.hasError {
 				assert.Nil(t, err)
-				assert.Nil(t, resourceManager.resource)
 			}
 			if tc.expectTeamUpdate {
 				assert.True(t, len(cm.teams) > 0)
