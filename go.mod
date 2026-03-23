@@ -25,10 +25,10 @@ require (
 	github.com/subosito/gotenv v1.4.0
 	github.com/swaggest/go-asyncapi v0.8.0
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
-	golang.org/x/net v0.51.0
+	golang.org/x/net v0.52.0
 	golang.org/x/text v0.35.0
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/grpc v1.79.3
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/h2non/gock.v1 v1.1.2
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.22.7
@@ -97,7 +97,7 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
 	golang.org/x/tools v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
