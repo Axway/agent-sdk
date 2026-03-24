@@ -24,6 +24,7 @@ const qaTriggerSevenDayRefreshCache = "QA_CENTRAL_TRIGGER_REFRESH_CACHE"
 
 type EventSyncCache interface {
 	RebuildCache()
+	ValidateCache() error
 }
 
 // Manager - interface to manage agent resource
@@ -181,8 +182,9 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	return err
 }
 
-// 1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
-// 2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
+//  1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
+//  2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.
+//     If past 7 days, validate the cache first and only rebuild if out of sync.
 func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 	// Only perform periodic/self-healing cache rebuild for non-gRPC agents
 	if a.cfg != nil && a.cfg.IsUsingGRPC() {
@@ -212,8 +214,15 @@ func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
 
 			// check to see if 7 days have passed since last refresh cache. currentCacheUpdateTime is the date at the time we rebuilt cache plus 7 days(in event sync - RebuildCache)
 			if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
-				logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
-				rebuildCache = true
+				logger.Trace("the current date is greater than the current scheduled refresh date - validating cache before deciding to rebuild")
+				if a.rebuildCache != nil {
+					if err := a.rebuildCache.ValidateCache(); err != nil {
+						logger.WithError(err).Trace("cache validation failed - time to rebuild cache")
+						rebuildCache = true
+					}
+				} else {
+					rebuildCache = true
+				}
 			}
 		} else {
 			if !exists {

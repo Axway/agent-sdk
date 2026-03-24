@@ -1,11 +1,16 @@
 package resource
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -289,4 +294,95 @@ func assertAgentStatusResource(t *testing.T, agentRes *v1.ResourceInstance, agen
 	assert.Equal(t, state, statusSubRes.State)
 	assert.Equal(t, previousState, statusSubRes.PreviousState)
 	assert.Equal(t, message, statusSubRes.Message)
+}
+
+type mockEventSyncCache struct {
+	rebuildCalled  int
+	validateCalled int
+	validateErr    error
+}
+
+func (m *mockEventSyncCache) RebuildCache() {
+	m.rebuildCalled++
+}
+
+func (m *mockEventSyncCache) ValidateCache() error {
+	m.validateCalled++
+	return m.validateErr
+}
+
+func TestShouldRebuildCache(t *testing.T) {
+	pastDeadline := strconv.FormatInt(time.Now().Add(-7*24*time.Hour-time.Second).UnixNano(), 10)
+	futureDeadline := strconv.FormatInt(time.Now().Add(7*24*time.Hour).UnixNano(), 10)
+
+	tests := []struct {
+		name             string
+		agentDetails     interface{}
+		validateErr      error
+		expectedRebuild  bool
+		expectedValidate bool
+	}{
+		{
+			name:            "no x-agent-details - rebuild unconditionally",
+			agentDetails:    nil,
+			expectedRebuild: true,
+		},
+		{
+			name:            "x-agent-details without cacheUpdateTime - rebuild unconditionally",
+			agentDetails:    map[string]interface{}{},
+			expectedRebuild: true,
+		},
+		{
+			name:            "deadline not yet reached - no rebuild",
+			agentDetails:    map[string]interface{}{"cacheUpdateTime": futureDeadline},
+			expectedRebuild: false,
+		},
+		{
+			name:             "7 days passed, cache valid - no rebuild, timer reset",
+			agentDetails:     map[string]interface{}{"cacheUpdateTime": pastDeadline},
+			validateErr:      nil,
+			expectedRebuild:  false,
+			expectedValidate: true,
+		},
+		{
+			name:             "7 days passed, cache invalid - rebuild",
+			agentDetails:     map[string]interface{}{"cacheUpdateTime": pastDeadline},
+			validateErr:      fmt.Errorf("cache out of sync"),
+			expectedRebuild:  true,
+			expectedValidate: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCache := &mockEventSyncCache{validateErr: tc.validateErr}
+
+			resource := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
+			if tc.agentDetails != nil {
+				resource.SubResources = map[string]interface{}{
+					definitions.XAgentDetails: tc.agentDetails,
+				}
+			}
+
+			cfg := &config.CentralConfiguration{}
+			cfg.AgentName = "Test-DA"
+			cfg.AgentType = config.DiscoveryAgent
+
+			m := &agentResourceManager{
+				cfg:           cfg,
+				agentResource: resource,
+				rebuildCache:  mockCache,
+				logger:        log.NewFieldLogger(),
+			}
+
+			shouldRebuild, err := m.shouldRebuildCache()
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectedRebuild, shouldRebuild)
+			if tc.expectedValidate {
+				assert.Equal(t, 1, mockCache.validateCalled)
+			} else {
+				assert.Equal(t, 0, mockCache.validateCalled)
+			}
+		})
+	}
 }

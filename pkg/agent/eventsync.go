@@ -151,16 +151,17 @@ func (es *EventSync) initCache() error {
 	}
 	agent.cacheManager.SaveCache()
 
+	es.resetCacheTimer()
+	return nil
+}
+
+// resetCacheTimer persists a new cacheUpdateTime 7 days from now in the agent's x-agent-details.
+func (es *EventSync) resetCacheTimer() {
 	agentInstance := agent.agentResourceManager.GetAgentResource()
-
-	// add 7 days to the current date for the next rebuild cache
 	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
-
-	// persist cacheUpdateTime
 	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
 	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
 	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
-	return nil
 }
 
 func (es *EventSync) RebuildCache() {
@@ -200,6 +201,16 @@ func (es *EventSync) validateCache() error {
 		return nil
 	}
 	return es.cacheValidator.Execute()
+}
+
+// ValidateCache validates the cache against the API server.
+// If the cache is valid, the cache timer is reset to 7 days from now.
+func (es *EventSync) ValidateCache() error {
+	if err := es.validateCache(); err != nil {
+		return err
+	}
+	es.resetCacheTimer()
+	return nil
 }
 
 // validateAndRebuildCache validates the cache and rebuilds it if out of sync.
