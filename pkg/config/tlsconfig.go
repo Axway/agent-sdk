@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Axway/agent-sdk/pkg/util/log"
-
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // TLSCipherSuite - defined type
@@ -18,10 +17,7 @@ type TLSCipherSuite uint16
 // Taken from https://www.iana.org/assignments/tls-parameters/tls-parameters.xml
 var tlsCipherSuites = map[string]TLSCipherSuite{
 	// ECDHE-ECDSA
-	"ECDHE-ECDSA-AES-128-CBC-SHA":    TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA),
-	"ECDHE-ECDSA-AES-128-CBC-SHA256": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
 	"ECDHE-ECDSA-AES-128-GCM-SHA256": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
-	"ECDHE-ECDSA-AES-256-CBC-SHA":    TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA),
 	"ECDHE-ECDSA-AES-256-GCM-SHA384": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384),
 	"ECDHE-ECDSA-CHACHA20-POLY1305":  TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305),
 	"ECDHE-ECDSA-RC4-128-SHA":        TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA),
@@ -73,8 +69,6 @@ var TLSDefaultCipherSuites = []TLSCipherSuite{
 	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305),
 	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
 	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256),
-	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
-	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256),
 }
 
 var tlsCipherSuitesInverse = make(map[TLSCipherSuite]string, len(tlsCipherSuites))

@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Axway/agent-sdk/pkg/apic/auth"
 	"github.com/Axway/agent-sdk/pkg/cache"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/google/uuid"
-
-	"github.com/sirupsen/logrus"
-
 	wm "github.com/Axway/agent-sdk/pkg/watchmanager"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -69,8 +68,6 @@ func defaultTLSConfig() *tls.Config {
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 		},
 	}
 }
