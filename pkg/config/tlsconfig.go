@@ -233,9 +233,9 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 		cipherNames = append(cipherNames, tls.CipherSuiteName(cs))
 	}
 	c.logger.
-		WithField("cipher-suites", cipherNames).
-		WithField("min-version", tlsVersionsInverse[c.MinVersion]).
-		WithField("max-version", tlsVersionsInverse[c.MaxVersion]).
+		WithField("cipherSuites", cipherNames).
+		WithField("minVersion", tlsVersionsInverse[c.MinVersion]).
+		WithField("maxVersion", tlsVersionsInverse[c.MaxVersion]).
 		Trace("TLS configuration built")
 
 	cfg := &tls.Config{
