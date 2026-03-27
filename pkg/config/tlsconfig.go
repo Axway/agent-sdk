@@ -209,7 +209,6 @@ type TLSConfiguration struct {
 // NewTLSConfig - build default config
 func NewTLSConfig() TLSConfig {
 	return &TLSConfiguration{
-		logger:             log.NewFieldLogger().WithPackage("config").WithComponent("tls"),
 		InsecureSkipVerify: false,
 		NextProtos:         []string{},
 		CipherSuites:       TLSDefaultCipherSuites,
@@ -232,7 +231,7 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	for _, cs := range ciphers {
 		cipherNames = append(cipherNames, tls.CipherSuiteName(cs))
 	}
-	c.logger.
+	c.log().
 		WithField("cipherSuites", cipherNames).
 		WithField("minVersion", tlsVersionsInverse[c.MinVersion]).
 		WithField("maxVersion", tlsVersionsInverse[c.MaxVersion]).
@@ -400,4 +399,11 @@ func (c *TLSConfiguration) isValidCiphers() bool {
 	}
 
 	return true
+}
+
+func (c *TLSConfiguration) log() log.FieldLogger {
+	if c.logger == nil {
+		c.logger = log.NewFieldLogger().WithPackage("config").WithComponent("tls")
+	}
+	return c.logger
 }
