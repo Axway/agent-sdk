@@ -3,6 +3,7 @@ package metric
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -282,16 +283,42 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		return
 	}
 
-	for range int(detail.Count) {
-		metric := Detail{
+	for _, duration := range buildDurations(detail.Count, detail.Response) {
+		c.AddMetricDetail(Detail{
 			APIDetails: detail.APIDetails,
 			AppDetails: detail.AppDetails,
 			StatusCode: detail.StatusCode,
-			Duration:   int64(detail.Response.Avg),
-		}
-
-		c.AddMetricDetail(metric)
+			Duration:   duration,
+		})
 	}
+}
+
+// buildDurations creates synthetic histogram samples that preserve the original Min, Max, and Avg.
+// Since we insert one Min sample and one Max sample, the remaining (Count-2) middle
+// samples must compensate so that the overall histogram mean equals the original Avg.
+// Solving: (Min + Max + (Count-2)*avg) / Count = Avg  →  avg = (Count*Avg - Min - Max) / (Count-2)
+func buildDurations(count int64, response ResponseMetrics) []int64 {
+	if count <= 0 {
+		return nil
+	}
+	if count == 1 {
+		return []int64{int64(response.Avg)}
+	}
+
+	durations := make([]int64, count)
+	durations[0] = response.Min
+	durations[count-1] = response.Max
+
+	if count > 2 {
+		avg := int64(math.Round(
+			(float64(count)*response.Avg - float64(response.Min) - float64(response.Max)) / float64(count-2),
+		))
+		for i := int64(1); i < count-1; i++ {
+			durations[i] = avg
+		}
+	}
+
+	return durations
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
