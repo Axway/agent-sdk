@@ -1027,97 +1027,84 @@ func TestCollector_CreateOrUpdateHistogram_IDResolution(t *testing.T) {
 }
 
 func TestBuildDurations(t *testing.T) {
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		count    int64
 		response ResponseMetrics
 		expected []int64
 	}{
 		// --- Guard/boundary cases ---
-		{
-			name:     "zero count returns nil",
+		"zero count returns nil": {
 			count:    0,
 			response: ResponseMetrics{Min: 83, Max: 312, Avg: 197},
 			expected: nil,
 		},
-		{
-			name:     "negative count returns nil",
+		"negative count returns nil": {
 			count:    -1,
 			response: ResponseMetrics{Min: 83, Max: 312, Avg: 197},
 			expected: nil,
 		},
 		// --- Count = 1: single sample, returns avg ---
-		{
-			name:     "count 1 returns avg",
+		"count 1 returns avg": {
 			count:    1,
 			response: ResponseMetrics{Min: 83, Max: 312, Avg: 217},
 			expected: []int64{217},
 		},
-		{
-			name:     "count 1 with zero avg",
+		"count 1 with zero avg": {
 			count:    1,
 			response: ResponseMetrics{Min: 0, Max: 0, Avg: 0},
 			expected: []int64{0},
 		},
 		// --- Count = 2: only min and max, no middle computation ---
-		{
-			name:     "count 2 returns min and max",
+		"count 2 returns min and max": {
 			count:    2,
 			response: ResponseMetrics{Min: 37, Max: 891, Avg: 463},
 			expected: []int64{37, 891},
 		},
-		{
-			name:     "count 2 with equal min and max",
+		"count 2 with equal min and max": {
 			count:    2,
 			response: ResponseMetrics{Min: 73, Max: 73, Avg: 73},
 			expected: []int64{73, 73},
 		},
 		// --- Count > 2, consistent aggregates (avg within valid range for samples in [min, max]) ---
-		{
-			// middleAvg = (3*112 - 43 - 187) / 1 = 106
-			name:     "count 3 consistent avg skewed low",
+		// middleAvg = (3*112 - 43 - 187) / 1 = 106
+		"count 3 consistent avg skewed low": {
 			count:    3,
 			response: ResponseMetrics{Min: 43, Max: 187, Avg: 112},
 			expected: []int64{43, 106, 187},
 		},
-		{
-			// middleAvg = (3*537 - 201 - 834) / 1 = 576
-			name:     "count 3 consistent avg skewed high",
+		// middleAvg = (3*537 - 201 - 834) / 1 = 576
+		"count 3 consistent avg skewed high": {
 			count:    3,
 			response: ResponseMetrics{Min: 201, Max: 834, Avg: 537},
 			expected: []int64{201, 576, 834},
 		},
-		{
-			name:     "real log values count=4 min=106 max=147 avg=128",
+		"real log values count=4 min=106 max=147 avg=128": {
 			count:    4,
 			response: ResponseMetrics{Min: 106, Max: 147, Avg: 128},
 			expected: []int64{106, 130, 130, 147},
 		},
-		{
-			// middleAvg = round((4*164 - 31 - 290) / 2) = round(335/2) = round(167.5) = 168
-			name:     "count 4 fractional middle rounds up",
+		// middleAvg = round((4*164 - 31 - 290) / 2) = round(335/2) = round(167.5) = 168
+		"count 4 fractional middle rounds up": {
 			count:    4,
 			response: ResponseMetrics{Min: 31, Max: 290, Avg: 164},
 			expected: []int64{31, 168, 168, 290},
 		},
-		{
-			// middleAvg = (5*218 - 57 - 394) / 3 = 639/3 = 213
-			name:     "count 5 skewed avg",
+		// middleAvg = (5*218 - 57 - 394) / 3 = 639/3 = 213
+		"count 5 skewed avg": {
 			count:    5,
 			response: ResponseMetrics{Min: 57, Max: 394, Avg: 218},
 			expected: []int64{57, 213, 213, 213, 394},
 		},
-		{
-			// middleAvg = round((10*247 - 89 - 431) / 8) = round(1950/8) = round(243.75) = 244
-			name:     "count 10 wide range",
+		// middleAvg = round((10*247 - 89 - 431) / 8) = round(1950/8) = round(243.75) = 244
+		"count 10 wide range": {
 			count:    10,
 			response: ResponseMetrics{Min: 89, Max: 431, Avg: 247},
 			expected: []int64{89, 244, 244, 244, 244, 244, 244, 244, 244, 431},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			result := buildDurations(tt.count, tt.response)
 			assert.Equal(t, tt.expected, result)
 		})
