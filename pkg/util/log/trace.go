@@ -140,6 +140,8 @@ func (t *httpTrace) logTLSHandshakeDone(state tls.ConnectionState, err error) {
 		WithField("id", t.reqID).
 		WithField("protocol", state.NegotiatedProtocol).
 		WithField("server-name", state.ServerName).
+		WithField("cipher-suite", tls.CipherSuiteName(state.CipherSuite)).
+		WithField("tls-version", tls.VersionName(state.Version)).
 		Trace("TLS handshake completed")
 }
 

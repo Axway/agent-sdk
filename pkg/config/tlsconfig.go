@@ -173,6 +173,7 @@ type TLSConfig interface {
 // the tls package will also not modify it.
 type TLSConfiguration struct {
 	IConfigValidator
+	logger log.FieldLogger
 	// NextProtos is a list of supported application level protocols, in order of preference.
 	NextProtos []string `config:"nextProtos,replace" json:"nextProtos,omitempty"`
 
@@ -208,6 +209,7 @@ type TLSConfiguration struct {
 // NewTLSConfig - build default config
 func NewTLSConfig() TLSConfig {
 	return &TLSConfiguration{
+		logger:             log.NewFieldLogger().WithPackage("config").WithComponent("tls"),
 		InsecureSkipVerify: false,
 		NextProtos:         []string{},
 		CipherSuites:       TLSDefaultCipherSuites,
@@ -224,6 +226,18 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 
 	ciphers := c.buildUintArrayFromSuites()
+
+	// log the configured cipher suites and TLS versions
+	cipherNames := make([]string, 0, len(ciphers))
+	for _, cs := range ciphers {
+		cipherNames = append(cipherNames, tls.CipherSuiteName(cs))
+	}
+	c.logger.
+		WithField("cipher-suites", cipherNames).
+		WithField("min-version", tlsVersionsInverse[c.MinVersion]).
+		WithField("max-version", tlsVersionsInverse[c.MaxVersion]).
+		Trace("TLS configuration built")
+
 	cfg := &tls.Config{
 		MinVersion:         uint16(c.MinVersion),
 		MaxVersion:         uint16(c.MaxVersion),
