@@ -351,6 +351,11 @@ func TestShouldRebuildCache(t *testing.T) {
 			expectedRebuild:  true,
 			expectedValidate: true,
 		},
+		{
+			name:            "unparseable cacheUpdateTime - rebuild unconditionally",
+			agentDetails:    map[string]interface{}{"cacheUpdateTime": "not-a-timestamp"},
+			expectedRebuild: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -375,8 +380,7 @@ func TestShouldRebuildCache(t *testing.T) {
 				logger:        log.NewFieldLogger(),
 			}
 
-			shouldRebuild, err := m.shouldRebuildCache()
-			assert.Nil(t, err)
+			shouldRebuild := m.shouldRebuildCache()
 			assert.Equal(t, tc.expectedRebuild, shouldRebuild)
 			if tc.expectedValidate {
 				assert.Equal(t, 1, mockCache.validateCalled)
