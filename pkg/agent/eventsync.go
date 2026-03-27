@@ -24,6 +24,7 @@ type EventSync struct {
 	sequence       events.SequenceProvider
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
+	cacheValidator *cacheValidator
 }
 
 // newEventSync creates an EventSync
@@ -70,11 +71,19 @@ func newEventSync() (*EventSync, error) {
 		opts...,
 	)
 
+	cacheValidator := newCacheValidator(
+		GetCentralClient(),
+		wt,
+		agent.cacheManager,
+		agent.cfg.GetAgentType(),
+	)
+
 	return &EventSync{
 		watchTopic:     wt,
 		sequence:       sequence,
 		harvester:      hClient,
 		discoveryCache: discoveryCache,
+		cacheValidator: cacheValidator,
 	}, nil
 }
 
@@ -85,10 +94,18 @@ func (es *EventSync) SyncCache() error {
 			return err
 		}
 	} else {
-		err := finalizeInitialization()
-		if err != nil {
-			logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
-			return err
+		// Validate the persisted cache against the API server
+		if err := es.validateCache(); err != nil {
+			logger.WithError(err).Info("persisted cache validation failed, rebuilding cache")
+			if err := es.initCache(); err != nil {
+				return err
+			}
+		} else {
+			err := finalizeInitialization()
+			if err != nil {
+				logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
+				return err
+			}
 		}
 	}
 
@@ -134,16 +151,17 @@ func (es *EventSync) initCache() error {
 	}
 	agent.cacheManager.SaveCache()
 
+	es.resetCacheTimer()
+	return nil
+}
+
+// resetCacheTimer persists a new cacheUpdateTime 7 days from now in the agent's x-agent-details.
+func (es *EventSync) resetCacheTimer() {
 	agentInstance := agent.agentResourceManager.GetAgentResource()
-
-	// add 7 days to the current date for the next rebuild cache
 	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
-
-	// persist cacheUpdateTime
 	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
 	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
 	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
-	return nil
 }
 
 func (es *EventSync) RebuildCache() {
@@ -177,6 +195,37 @@ func (es *EventSync) waitForCacheRebuild() {
 	}
 }
 
+// validateCache runs the cache validator to check if the persisted cache is in sync.
+func (es *EventSync) validateCache() error {
+	if es.cacheValidator == nil {
+		return nil
+	}
+	return es.cacheValidator.Execute()
+}
+
+// ValidateCache validates the cache against the API server.
+// If the cache is valid, the cache timer is reset to 7 days from now.
+func (es *EventSync) ValidateCache() error {
+	if err := es.validateCache(); err != nil {
+		return err
+	}
+	es.resetCacheTimer()
+	return nil
+}
+
+// validateAndRebuildCache validates the cache and rebuilds it if out of sync.
+// Called when connection to Engage is restored.
+func (es *EventSync) validateAndRebuildCache() {
+	if es.cacheValidator == nil {
+		return
+	}
+
+	if err := es.validateCache(); err != nil {
+		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding cache")
+		es.RebuildCache()
+	}
+}
+
 func (es *EventSync) startCentralEventProcessor() error {
 	if agent.cfg.IsUsingGRPC() {
 		return es.startStreamMode()
@@ -194,6 +243,7 @@ func (es *EventSync) startPollMode() error {
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
 		poller.WithOnClientStop(es.RebuildCache),
 		poller.WithOnConnect(),
+		poller.WithOnReconnect(es.validateAndRebuildCache),
 	)
 
 	if err != nil {
@@ -217,6 +267,7 @@ func (es *EventSync) startStreamMode() error {
 		handlers,
 		stream.WithOnStreamConnection(),
 		stream.WithEventSyncError(es.RebuildCache),
+		stream.WithOnReconnect(es.validateAndRebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
 		stream.WithCacheManager(agent.cacheManager),
