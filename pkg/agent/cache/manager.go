@@ -131,7 +131,7 @@ type Manager interface {
 	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
 	DeleteWatchResource(group, kind, id string) error
 
-	GetCachedResourcesByKind(group, kind string) map[string]time.Time
+	GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()

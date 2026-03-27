@@ -9,18 +9,19 @@ import (
 )
 
 // GetCachedResourcesByKind returns a map of resource name to modification timestamp
-// for all cached resources of the given group and kind.
-func (c *cacheManager) GetCachedResourcesByKind(group, kind string) map[string]time.Time {
+// for all cached resources of the given group and kind. When scopeName is non-empty,
+// only resources whose scope matches scopeName are included.
+func (c *cacheManager) GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
 	resourceCache := c.getCacheForKind(kind)
 	if resourceCache == nil {
 		// Fall back to the watch resource map for kinds not in a dedicated cache
-		return c.getWatchResourcesByKind(group, kind)
+		return c.getWatchResourcesByKind(group, kind, scopeName)
 	}
 
-	return c.extractResourceSummary(resourceCache)
+	return c.extractResourceSummary(resourceCache, scopeName)
 }
 
 // getCacheForKind returns the dedicated cache for the given resource kind, or nil
@@ -54,7 +55,8 @@ func ResourceCacheKey(kind, scopeName, name string) string {
 }
 
 // extractResourceSummary iterates the cache keys and returns a composite key -> modifyTimestamp.
-func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache) map[string]time.Time {
+// When scopeName is non-empty, only resources whose scope matches scopeName are included.
+func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache, scopeName string) map[string]time.Time {
 	result := make(map[string]time.Time)
 	keys := resourceCache.GetKeys()
 
@@ -67,6 +69,9 @@ func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache) map[str
 		if !ok || ri == nil {
 			continue
 		}
+		if scopeName != "" && ri.Metadata.Scope.Name != scopeName {
+			continue
+		}
 		modTime := time.Time(ri.Metadata.Audit.ModifyTimestamp)
 		result[ResourceCacheKey(ri.Kind, ri.Metadata.Scope.Name, ri.Name)] = modTime
 	}
@@ -75,8 +80,9 @@ func (c *cacheManager) extractResourceSummary(resourceCache cache.Cache) map[str
 }
 
 // getWatchResourcesByKind iterates the watch resource map and returns resources
-// matching the given group and kind.
-func (c *cacheManager) getWatchResourcesByKind(group, kind string) map[string]time.Time {
+// matching the given group and kind. When scopeName is non-empty, only resources
+// whose scope matches scopeName are included.
+func (c *cacheManager) getWatchResourcesByKind(group, kind, scopeName string) map[string]time.Time {
 	result := make(map[string]time.Time)
 
 	keys := c.watchResourceMap.GetKeys()
@@ -87,6 +93,9 @@ func (c *cacheManager) getWatchResourcesByKind(group, kind string) map[string]ti
 		}
 		ri, ok := item.(*v1.ResourceInstance)
 		if !ok || ri == nil {
+			continue
+		}
+		if scopeName != "" && ri.Metadata.Scope.Name != scopeName {
 			continue
 		}
 		if ri.Group == group && ri.Kind == kind {

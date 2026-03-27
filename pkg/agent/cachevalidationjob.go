@@ -14,7 +14,7 @@ import (
 var errCacheOutOfSync = fmt.Errorf("persisted cache is out of sync with API server")
 
 type cacheGetter interface {
-	GetCachedResourcesByKind(group, kind string) map[string]time.Time
+	GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time
 }
 
 // cacheValidator validates the persisted cache against the API server
@@ -125,7 +125,11 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 		return false
 	}
 
-	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind)
+	scopeName := ""
+	if filter.Scope != nil {
+		scopeName = filter.Scope.Name
+	}
+	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind, scopeName)
 
 	// Build a map from server resources: composite key -> modifyTimestamp
 	serverMap := make(map[string]time.Time, len(serverResources))
@@ -159,16 +163,6 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 				WithField("serverModTime", serverModTime).
 				WithField("cacheModTime", cacheModTime).
 				Info("cache validation failed: modification time mismatch")
-			return false
-		}
-	}
-
-	// Each cache resource exists on the server (extra resources in cache)
-	for name := range cachedResources {
-		if _, exists := serverMap[name]; !exists {
-			logger.
-				WithField("resource", name).
-				Info("cache validation failed: resource in cache but not on server")
 			return false
 		}
 	}

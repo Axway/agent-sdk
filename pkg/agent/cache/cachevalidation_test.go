@@ -72,6 +72,7 @@ func TestGetCachedResourcesByKind(t *testing.T) {
 		setup      func(Manager)
 		group      string
 		kind       string
+		scopeName  string
 		expectLen  int
 		expectKeys []string
 		verify     func(t *testing.T, result map[string]time.Time)
@@ -130,7 +131,7 @@ func TestGetCachedResourcesByKind(t *testing.T) {
 				ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc2"),
 			},
 		},
-		"different scopes": {
+		"different scopes - no scope filter returns all": {
 			setup: func(cm Manager) {
 				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
 				cm.AddAPIService(makeAPIServiceRI("env2", "svc1", "ext-id-2", modTime))
@@ -142,6 +143,28 @@ func TestGetCachedResourcesByKind(t *testing.T) {
 				ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1"),
 				ResourceCacheKey(management.APIServiceGVK().Kind, "env2", "svc1"),
 			},
+		},
+		"different scopes - scoped to env1 returns only env1": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+				cm.AddAPIService(makeAPIServiceRI("env2", "svc1", "ext-id-2", modTime))
+			},
+			group:      "management",
+			kind:       management.APIServiceGVK().Kind,
+			scopeName:  "env1",
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey(management.APIServiceGVK().Kind, "env1", "svc1")},
+		},
+		"watch resource scope filter": {
+			setup: func(cm Manager) {
+				cm.AddWatchResource(makeRI("catalog", "SomeKind", "Environment", "env1", "res1", "id1", modTime))
+				cm.AddWatchResource(makeRI("catalog", "SomeKind", "Environment", "env2", "res2", "id2", modTime))
+			},
+			group:      "catalog",
+			kind:       "SomeKind",
+			scopeName:  "env1",
+			expectLen:  1,
+			expectKeys: []string{ResourceCacheKey("SomeKind", "env1", "res1")},
 		},
 		"empty cache": {
 			group:     "management",
@@ -185,7 +208,7 @@ func TestGetCachedResourcesByKind(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(cm)
 			}
-			result := cm.GetCachedResourcesByKind(tc.group, tc.kind)
+			result := cm.GetCachedResourcesByKind(tc.group, tc.kind, tc.scopeName)
 			assert.Len(t, result, tc.expectLen)
 			for _, k := range tc.expectKeys {
 				assert.Contains(t, result, k)

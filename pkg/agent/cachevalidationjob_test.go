@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,12 +24,24 @@ func newMockCacheGetter() *mockCacheGetter {
 	}
 }
 
-func (m *mockCacheGetter) GetCachedResourcesByKind(group, kind string) map[string]time.Time {
+func (m *mockCacheGetter) GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time {
 	key := group + "/" + kind
-	if res, ok := m.resources[key]; ok {
+	res, ok := m.resources[key]
+	if !ok {
+		return make(map[string]time.Time)
+	}
+	if scopeName == "" {
 		return res
 	}
-	return make(map[string]time.Time)
+	filtered := make(map[string]time.Time)
+	for k, v := range res {
+		// key format: kind/scopeName/name
+		parts := strings.SplitN(k, "/", 3)
+		if len(parts) == 3 && parts[1] == scopeName {
+			filtered[k] = v
+		}
+	}
+	return filtered
 }
 
 func (m *mockCacheGetter) setResources(group, kind string, resources map[string]time.Time) {
@@ -276,29 +289,26 @@ func TestCacheValidator_Execute(t *testing.T) {
 			agentType:  config.DiscoveryAgent,
 			expectErr:  errCacheOutOfSync,
 		},
-		"multi-scope composite key": {
+		"compliance agent: APIServiceInstances from multiple managed environments are each validated independently": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
-				svcEnv2 := makeServerResource(svcGVK.Kind, "Environment", "env2", "svc1", modTime)
-				svcEnv1 := makeServerResource(svcGVK.Kind, "Environment", "env1", "svc1", modTime)
-				client.resources[svcEnv1.GetKindLink()] = []*apiv1.ResourceInstance{svcEnv1, svcEnv2}
-				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
-					agentcache.ResourceCacheKey(svcGVK.Kind, "env1", "svc1"): modTime,
-					agentcache.ResourceCacheKey(svcGVK.Kind, "env2", "svc1"): modTime,
+				instEnv1 := makeServerResource(instGVK.Kind, "Environment", "env1", "inst1", modTime)
+				instEnv2 := makeServerResource(instGVK.Kind, "Environment", "env2", "inst2", modTime)
+				client.resources[instEnv1.GetKindLink()] = []*apiv1.ResourceInstance{instEnv1}
+				client.resources[instEnv2.GetKindLink()] = []*apiv1.ResourceInstance{instEnv2}
+				cacheMan.setResources(instGVK.Group, instGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(instGVK.Kind, "env1", "inst1"): modTime,
+					agentcache.ResourceCacheKey(instGVK.Kind, "env2", "inst2"): modTime,
 				})
 			},
 			watchTopic: &management.WatchTopic{
 				Spec: management.WatchTopicSpec{
 					Filters: []management.WatchTopicSpecFilters{
-						{
-							Group: svcGVK.Group,
-							Kind:  svcGVK.Kind,
-							Name:  "*",
-							Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: "env1"},
-						},
+						{Group: instGVK.Group, Kind: instGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: "env1"}},
+						{Group: instGVK.Group, Kind: instGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: "env2"}},
 					},
 				},
 			},
-			agentType: config.DiscoveryAgent,
+			agentType: config.ComplianceAgent,
 			expectErr: nil,
 		},
 		"multiple kinds in sync": {
