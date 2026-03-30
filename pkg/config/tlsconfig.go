@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Axway/agent-sdk/pkg/util/log"
-
 	"github.com/Axway/agent-sdk/pkg/util/exception"
+	log "github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // TLSCipherSuite - defined type
@@ -18,10 +17,7 @@ type TLSCipherSuite uint16
 // Taken from https://www.iana.org/assignments/tls-parameters/tls-parameters.xml
 var tlsCipherSuites = map[string]TLSCipherSuite{
 	// ECDHE-ECDSA
-	"ECDHE-ECDSA-AES-128-CBC-SHA":    TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA),
-	"ECDHE-ECDSA-AES-128-CBC-SHA256": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
 	"ECDHE-ECDSA-AES-128-GCM-SHA256": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
-	"ECDHE-ECDSA-AES-256-CBC-SHA":    TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA),
 	"ECDHE-ECDSA-AES-256-GCM-SHA384": TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384),
 	"ECDHE-ECDSA-CHACHA20-POLY1305":  TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305),
 	"ECDHE-ECDSA-RC4-128-SHA":        TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA),
@@ -73,8 +69,6 @@ var TLSDefaultCipherSuites = []TLSCipherSuite{
 	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305),
 	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
 	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256),
-	TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256),
-	TLSCipherSuite(tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256),
 }
 
 var tlsCipherSuitesInverse = make(map[TLSCipherSuite]string, len(tlsCipherSuites))
@@ -179,6 +173,7 @@ type TLSConfig interface {
 // the tls package will also not modify it.
 type TLSConfiguration struct {
 	IConfigValidator
+	logger log.FieldLogger
 	// NextProtos is a list of supported application level protocols, in order of preference.
 	NextProtos []string `config:"nextProtos,replace" json:"nextProtos,omitempty"`
 
@@ -230,6 +225,18 @@ func (c *TLSConfiguration) BuildTLSConfig() *tls.Config {
 	}
 
 	ciphers := c.buildUintArrayFromSuites()
+
+	// log the configured cipher suites and TLS versions
+	cipherNames := make([]string, 0, len(ciphers))
+	for _, cs := range ciphers {
+		cipherNames = append(cipherNames, tls.CipherSuiteName(cs))
+	}
+	c.log().
+		WithField("cipherSuites", cipherNames).
+		WithField("minVersion", tlsVersionsInverse[c.MinVersion]).
+		WithField("maxVersion", tlsVersionsInverse[c.MaxVersion]).
+		Trace("TLS configuration built")
+
 	cfg := &tls.Config{
 		MinVersion:         uint16(c.MinVersion),
 		MaxVersion:         uint16(c.MaxVersion),
@@ -392,4 +399,11 @@ func (c *TLSConfiguration) isValidCiphers() bool {
 	}
 
 	return true
+}
+
+func (c *TLSConfiguration) log() log.FieldLogger {
+	if c.logger == nil {
+		c.logger = log.NewFieldLogger().WithPackage("config").WithComponent("tls")
+	}
+	return c.logger
 }
