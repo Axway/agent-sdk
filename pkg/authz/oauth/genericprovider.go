@@ -1,5 +1,10 @@
 package oauth
 
+import (
+	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	corecfg "github.com/Axway/agent-sdk/pkg/config"
+)
+
 const (
 	genericAuthHeaderPrefix = "Bearer"
 )
@@ -15,6 +20,14 @@ func (i *genericIDP) preProcessClientRequest(clientRequest *clientMetadata) {
 	// no op
 }
 
-func (i *genericIDP) validateExtraProperties(extraProps map[string]any) error {
+func (i *genericIDP) validateExtraProperties(extraProps map[string]interface{}) error {
+	return nil
+}
+
+func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	return nil
+}
+
+func (i *genericIDP) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
 	return nil
 }

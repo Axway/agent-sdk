@@ -87,6 +87,11 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	if !ok {
 		return nil
 	}
+	agentRes := h.agentResourceManager.GetAgentResource()
+	if agentRes == nil || agentRes.GetSelfLink() != resource.GetSelfLink() {
+		h.logger.WithField("selfLink", resource.GetSelfLink()).Trace("skipping handling agent resource")
+		return nil
+	}
 	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
 		h.handleUpdateTrigger(resource)
 	}

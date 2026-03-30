@@ -170,7 +170,7 @@ func (f *ConditionParser) parseCallArguments(args []ast.Expr) ([]interface{}, er
 func (f *ConditionParser) parseSelector(selector string) (selectorType, selectorPath string, err error) {
 	selectorType = selector[0:strings.Index(selector, ".")]
 	selectorPath = selector[strings.Index(selector, ".")+1:]
-	if selectorType != filterTypeTag && selectorType != filterTypeAttr {
+	if selectorType != filterTypeTag && selectorType != filterTypeAttr && selectorType != filterTypeName {
 		err = ErrFilterSelectorType
 	}
 	return

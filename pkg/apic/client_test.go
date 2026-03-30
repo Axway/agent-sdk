@@ -233,13 +233,13 @@ func TestCreateSubResource(t *testing.T) {
 
 func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 	tests := []struct {
-		name           string
-		gvk            apiv1.GroupVersionKind
-		oldHash        string
-		newHash        string
-		apiResponses   []api.MockResponse
-		expectedTagVal string
-		expectErr      bool
+		name            string
+		gvk             apiv1.GroupVersionKind
+		oldHash         string
+		newHash         string
+		apiResponses    []api.MockResponse
+		expectedAttrVal string
+		expectErr       bool
 	}{
 		{
 			name:    "should error with bad response from api call",
@@ -251,26 +251,26 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 					RespCode: http.StatusUnauthorized,
 				},
 			},
-			expectedTagVal: "existing",
-			expectErr:      true,
+			expectedAttrVal: "existing",
+			expectErr:       true,
 		},
 		{
-			name:           "should not update ARD as hash is unchanged",
-			gvk:            management.AccessRequestDefinitionGVK(),
-			oldHash:        "1234",
-			newHash:        "1234",
-			apiResponses:   []api.MockResponse{},
-			expectedTagVal: "existing",
-			expectErr:      false,
+			name:            "should not update ARD as hash is unchanged",
+			gvk:             management.AccessRequestDefinitionGVK(),
+			oldHash:         "1234",
+			newHash:         "1234",
+			apiResponses:    []api.MockResponse{},
+			expectedAttrVal: "existing",
+			expectErr:       false,
 		},
 		{
-			name:           "should not update CRD as hash is unchanged",
-			gvk:            management.CredentialRequestDefinitionGVK(),
-			oldHash:        "1234",
-			newHash:        "1234",
-			apiResponses:   []api.MockResponse{},
-			expectedTagVal: "existing",
-			expectErr:      false,
+			name:            "should not update CRD as hash is unchanged",
+			gvk:             management.CredentialRequestDefinitionGVK(),
+			oldHash:         "1234",
+			newHash:         "1234",
+			apiResponses:    []api.MockResponse{},
+			expectedAttrVal: "existing",
+			expectErr:       false,
 		},
 		{
 			name:    "should update ARD as hash has changed",
@@ -287,8 +287,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 			},
-			expectedTagVal: "prod",
-			expectErr:      false,
+			expectErr: false,
 		},
 		{
 			name:    "should update CRD as hash has changed",
@@ -305,8 +304,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 			},
-			expectedTagVal: "prod",
-			expectErr:      false,
+			expectErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -328,7 +326,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 							defs.AttrSpecHash: tt.oldHash,
 						},
 					},
-					Tags: []string{"existing"},
+					Attributes: map[string]string{"existing": "existing"},
 				},
 				Spec: map[string]interface{}{},
 			}
@@ -342,7 +340,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 			}
 
 			newRes := res
-			newRes.Tags = []string{}
+			newRes.Attributes = map[string]string{}
 			newRes.SubResources = map[string]interface{}{defs.XAgentDetails: map[string]interface{}{defs.AttrSpecHash: tt.newHash}}
 
 			ri, err := svcClient.updateSpecORCreateResourceInstance(&newRes)
@@ -350,7 +348,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, tt.expectedTagVal, ri.Tags[0])
+				assert.Equal(t, tt.expectedAttrVal, ri.Attributes["existing"])
 			}
 
 		})

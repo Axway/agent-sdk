@@ -37,6 +37,8 @@ var filterDataWithStringArrary = map[string][]string{
 func TestSimpleFilter(t *testing.T) {
 	SetSupportedCallExprTypes(defaultSupportedExpr)
 
+	assertFilter(t, "name.name4==\"value 4\"", filterData, true)
+	assertFilter(t, "name.name4==\"value 3\"", filterData, false)
 	assertFilter(t, "tag.name == \"value 1\"", filterData, false)
 	assertFilter(t, "tag.name1 == \"value 1\"", filterData, true)
 	assertFilter(t, "tag.name1 == \"value 1,v 1,v-1\"", filterDataWithStringArrary, true)
