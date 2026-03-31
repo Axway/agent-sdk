@@ -628,7 +628,7 @@ func Test_getWatchTopic(t *testing.T) {
 		EnvironmentID: "123",
 		AgentName:     "discoveryagents",
 		URL:           "http://abc.com",
-		TLS:           &config.TLSConfiguration{},
+		TLS:           config.NewTLSConfig(),
 	}
 
 	wt, err := GetWatchTopic(cfg, httpClient)

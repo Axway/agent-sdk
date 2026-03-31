@@ -308,7 +308,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 				},
 			}
 
-			provider, err := NewProvider(idpCfg, &config.TLSConfiguration{}, "", 10*time.Second)
+			provider, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
 
 			if tc.expectError {
 				assert.Error(t, err)

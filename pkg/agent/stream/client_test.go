@@ -29,7 +29,7 @@ func NewConfig() *config.CentralConfiguration {
 		EnvironmentID: "123",
 		AgentName:     "discoveryagents",
 		URL:           "http://abc.com",
-		TLS:           &config.TLSConfiguration{},
+		TLS:           config.NewTLSConfig(),
 		SingleURL:     "https://abc.com",
 	}
 }
