@@ -42,6 +42,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 	Flush()
+	FlushKind(kind string)
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error

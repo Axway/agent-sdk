@@ -95,9 +95,10 @@ func (es *EventSync) SyncCache() error {
 		}
 	} else {
 		// Validate the persisted cache against the API server
-		if err := es.validateCache(); err != nil {
-			logger.WithError(err).Info("persisted cache validation failed, rebuilding cache")
-			if err := es.initCache(); err != nil {
+		failedFilters, err := es.validateCache()
+		if err != nil {
+			logger.WithError(err).Info("persisted cache validation failed, rebuilding out-of-sync kinds")
+			if err := es.initCache(failedFilters...); err != nil {
 				return err
 			}
 		} else {
@@ -131,11 +132,30 @@ func (es *EventSync) registerInstanceValidator() error {
 	return nil
 }
 
-func (es *EventSync) initCache() error {
+func (es *EventSync) initCache(failedFilters ...management.WatchTopicSpecFilters) error {
 	seqID, err := es.harvester.ReceiveSyncEvents(context.Background(), es.watchTopic.GetSelfLink(), 0, nil)
 	if err != nil {
 		return err
 	}
+
+	// Attempt a targeted rebuild when only specific kinds are out of sync
+	if len(failedFilters) > 0 {
+		for _, f := range failedFilters {
+			agent.cacheManager.FlushKind(f.Kind)
+		}
+		if rebuildErr := es.discoveryCache.execute(failedFilters...); rebuildErr == nil {
+			if seqID > 0 {
+				es.sequence.SetSequence(seqID - 1)
+			}
+			agent.cacheManager.SaveCache()
+			es.resetCacheTimer()
+			return nil
+		} else {
+			logger.WithError(rebuildErr).Info("targeted cache rebuild failed, falling back to full rebuild")
+		}
+	}
+
+	// Full rebuild: flush everything and re-populate
 	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
 	// when the poll/stream client is ready
 	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
@@ -195,34 +215,53 @@ func (es *EventSync) waitForCacheRebuild() {
 	}
 }
 
+// rebuildFilters rebuilds the cache for the given subset of filters, then persists the cache.
+func (es *EventSync) rebuildFilters(filters []management.WatchTopicSpecFilters) error {
+	if err := es.discoveryCache.execute(filters...); err != nil {
+		return err
+	}
+	agent.cacheManager.SaveCache()
+	return nil
+}
+
 // validateCache runs the cache validator to check if the persisted cache is in sync.
-func (es *EventSync) validateCache() error {
+// Returns the filters that are out of sync, plus a non-nil error if any failed.
+func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error) {
 	if es.cacheValidator == nil {
-		return nil
+		return nil, nil
 	}
 	return es.cacheValidator.Execute()
 }
 
 // ValidateCache validates the cache against the API server.
-// If the cache is valid, the cache timer is reset to 7 days from now.
+// If the cache is fully valid, the timer is reset to 7 days from now.
+// If only some filters are out of sync, only those kinds are rebuilt.
 func (es *EventSync) ValidateCache() error {
-	if err := es.validateCache(); err != nil {
-		return err
+	failedFilters, err := es.validateCache()
+	if err != nil {
+		logger.WithError(err).Info("periodic cache validation failed, rebuilding out-of-sync kinds")
+		if rebuildErr := es.rebuildFilters(failedFilters); rebuildErr != nil {
+			return rebuildErr
+		}
 	}
 	es.resetCacheTimer()
 	return nil
 }
 
-// validateAndRebuildCache validates the cache and rebuilds it if out of sync.
+// validateAndRebuildCache validates the cache and rebuilds only the out-of-sync kinds.
 // Called when connection to Engage is restored.
 func (es *EventSync) validateAndRebuildCache() {
 	if es.cacheValidator == nil {
 		return
 	}
 
-	if err := es.validateCache(); err != nil {
-		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding cache")
-		es.RebuildCache()
+	failedFilters, err := es.validateCache()
+	if err != nil {
+		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding out-of-sync kinds")
+		if rebuildErr := es.rebuildFilters(failedFilters); rebuildErr != nil {
+			logger.WithError(rebuildErr).Error("targeted cache rebuild failed on reconnect, falling back to full rebuild")
+			es.RebuildCache()
+		}
 	}
 }
 
