@@ -3,7 +3,10 @@ package events
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -193,4 +196,137 @@ type mockHandler struct {
 
 func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
 	return m.err
+}
+
+// slowHandler blocks for the given duration each time Handle is called,
+// and atomically increments callCount.
+type slowHandler struct {
+	delay     time.Duration
+	callCount atomic.Int32
+}
+
+func (h *slowHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
+	time.Sleep(h.delay)
+	h.callCount.Add(1)
+	return nil
+}
+
+func newTestEvent(seqID int64) *proto.Event {
+	return &proto.Event{
+		Type: proto.Event_CREATED,
+		Payload: &proto.ResourceInstance{
+			Metadata: &proto.Metadata{
+				SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+			},
+		},
+		Metadata: &proto.EventMeta{
+			SequenceID: seqID,
+		},
+	}
+}
+
+func TestEventListener_PauseResume(t *testing.T) {
+	tests := map[string]struct {
+		handlerDelay time.Duration
+		chanSize     int
+		run          func(t *testing.T, listener *EventListener, events chan *proto.Event, h *slowHandler, seq SequenceProvider)
+	}{
+		"pause blocks processing until resume": {
+			handlerDelay: 50 * time.Millisecond,
+			chanSize:     5,
+			run: func(t *testing.T, listener *EventListener, events chan *proto.Event, h *slowHandler, seq SequenceProvider) {
+				events <- newTestEvent(1)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(1), h.callCount.Load())
+
+				listener.Pause()
+				events <- newTestEvent(2)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(1), h.callCount.Load())
+
+				listener.Resume()
+				time.Sleep(150 * time.Millisecond)
+				assert.Equal(t, int32(2), h.callCount.Load())
+			},
+		},
+		"pause waits for in-flight event to finish": {
+			handlerDelay: 200 * time.Millisecond,
+			chanSize:     5,
+			run: func(t *testing.T, listener *EventListener, events chan *proto.Event, h *slowHandler, seq SequenceProvider) {
+				events <- newTestEvent(1)
+				time.Sleep(50 * time.Millisecond)
+
+				start := time.Now()
+				listener.Pause()
+				elapsed := time.Since(start)
+
+				assert.True(t, elapsed >= 100*time.Millisecond, "Pause returned too fast: %v", elapsed)
+				assert.Equal(t, int32(1), h.callCount.Load())
+				listener.Resume()
+			},
+		},
+		"no events lost during pause": {
+			handlerDelay: 10 * time.Millisecond,
+			chanSize:     10,
+			run: func(t *testing.T, listener *EventListener, events chan *proto.Event, h *slowHandler, seq SequenceProvider) {
+				listener.Pause()
+				for i := 1; i <= 5; i++ {
+					events <- newTestEvent(int64(i))
+				}
+				listener.Resume()
+
+				time.Sleep(300 * time.Millisecond)
+				assert.Equal(t, int32(5), h.callCount.Load())
+				assert.Equal(t, int64(5), seq.GetSequence())
+			},
+		},
+		"concurrent pause resume safety": {
+			handlerDelay: 5 * time.Millisecond,
+			chanSize:     20,
+			run: func(t *testing.T, listener *EventListener, events chan *proto.Event, h *slowHandler, seq SequenceProvider) {
+				var wg sync.WaitGroup
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for i := int64(1); i <= 20; i++ {
+						events <- newTestEvent(i)
+						time.Sleep(2 * time.Millisecond)
+					}
+				}()
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					for i := 0; i < 5; i++ {
+						time.Sleep(10 * time.Millisecond)
+						listener.Pause()
+						time.Sleep(5 * time.Millisecond)
+						listener.Resume()
+					}
+				}()
+
+				wg.Wait()
+				time.Sleep(300 * time.Millisecond)
+				assert.Equal(t, int32(20), h.callCount.Load())
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			seq := NewSequenceProvider(cacheManager, "testWatch")
+			events := make(chan *proto.Event, tc.chanSize)
+
+			h := &slowHandler{delay: tc.handlerDelay}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, seq, h)
+			listener.Listen()
+
+			tc.run(t, listener, events, h, seq)
+		})
+	}
 }
