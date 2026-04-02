@@ -208,6 +208,65 @@ func TestStatusUpdates(t *testing.T) {
 	}
 }
 
+func TestStreamerClient_PauseResumeListener(t *testing.T) {
+	tests := map[string]struct {
+		setupListener bool // whether to start the client so listener is live
+		callPause     bool
+		callResume    bool
+	}{
+		"no-op when listener is nil (before Start)": {
+			setupListener: false,
+			callPause:     true,
+			callResume:    true,
+		},
+		"delegates pause to live listener": {
+			setupListener: true,
+			callPause:     true,
+		},
+		"delegates resume to live listener": {
+			setupListener: true,
+			callPause:     true,
+			callResume:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			streamer, err := NewStreamerClient(
+				&mockAPIClient{},
+				NewConfig(),
+				&mockTokenGetter{},
+				nil,
+				WithCacheManager(agentcache.NewAgentCacheManager(NewConfig(), false)),
+				WithWatchTopic(&management.WatchTopic{}),
+			)
+			assert.Nil(t, err)
+
+			if tc.setupListener {
+				manager := &mockManager{status: true, readyCh: make(chan struct{})}
+				streamer.newManager = func(_ *wm.Config, _ ...wm.Option) (wm.Manager, error) {
+					return manager, nil
+				}
+				errCh := make(chan error, 1)
+				go func() { errCh <- streamer.Start() }()
+				<-manager.readyCh
+				defer func() {
+					streamer.listener.Stop()
+					<-errCh
+				}()
+			}
+
+			// Neither call should panic regardless of listener state.
+			if tc.callPause {
+				assert.NotPanics(t, func() { streamer.PauseListener() })
+			}
+			if tc.callResume {
+				assert.NotPanics(t, func() { streamer.ResumeListener() })
+			}
+		})
+	}
+}
+
 func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 	t.Helper()
 	// should stop the listener and write nil to the listener's error channel

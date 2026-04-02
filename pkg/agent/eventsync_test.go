@@ -19,106 +19,85 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEventSync_pollMode(t *testing.T) {
-	cfg := createCentralCfg("https://abc.com", "mockenv")
-	err := Initialize(cfg)
-	cfg.AgentName = "Test-DA"
-	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
-
-	mc := &mock.Client{
-		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-			if method == api.PUT {
-				return buffer, nil
-			}
-			return json.Marshal(agentRes)
-		},
-		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
-			if strings.Contains(url, "/discoveryagents") {
-				return agentRes, nil
-			}
-			wt := management.NewWatchTopic("mock-wt")
-			ri, err := wt.AsInstance()
-			return ri, err
+func TestEventSync(t *testing.T) {
+	tests := map[string]struct {
+		cfgFn         func(cfg *config.CentralConfiguration)
+		agentFeatsCfg *config.AgentFeaturesConfiguration
+	}{
+		"poll mode": {},
+		"stream mode": {
+			cfgFn: func(cfg *config.CentralConfiguration) {
+				cfg.GRPCCfg = config.GRPCConfig{Enabled: true, Insecure: true}
+			},
+			agentFeatsCfg: &config.AgentFeaturesConfiguration{
+				ConnectToCentral:     true,
+				ProcessSystemSignals: true,
+				VersionChecker:       false,
+				PersistCache:         true,
+			},
 		},
 	}
 
-	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
-	agent.agentResourceManager = m
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := createCentralCfg("https://abc.com", "mockenv")
+			if tc.cfgFn != nil {
+				tc.cfgFn(cfg)
+			}
+			err := Initialize(cfg)
+			if tc.agentFeatsCfg != nil {
+				agent.agentFeaturesCfg = tc.agentFeatsCfg
+			}
 
-	InitializeForTest(mc)
-	assert.Nil(t, err)
+			cfg.AgentName = "Test-DA"
+			agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
 
-	es, err := newEventSync()
-	assert.Nil(t, err)
-	assert.NotNil(t, es.watchTopic)
-	assert.NotNil(t, es.discoveryCache)
-	assert.NotNil(t, es.sequence)
-	assert.NotNil(t, es.harvester)
+			mc := &mock.Client{
+				ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+					if method == api.PUT {
+						return buffer, nil
+					}
+					return json.Marshal(agentRes)
+				},
+				GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
+					if strings.Contains(url, "/discoveryagents") {
+						return agentRes, nil
+					}
+					wt := management.NewWatchTopic("mock-wt")
+					ri, err := wt.AsInstance()
+					return ri, err
+				},
+			}
 
-	es.harvester = &mockHarvester{}
-	err = es.SyncCache()
-	assert.Nil(t, err)
+			m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
+			agent.agentResourceManager = m
+			InitializeForTest(mc)
+			assert.Nil(t, err)
+
+			es, err := newEventSync()
+			assert.Nil(t, err)
+			assert.NotNil(t, es.watchTopic)
+			assert.NotNil(t, es.discoveryCache)
+			assert.NotNil(t, es.sequence)
+			assert.NotNil(t, es.harvester)
+
+			es.harvester = &mockHarvester{}
+			err = es.SyncCache()
+			assert.Nil(t, err)
+		})
+	}
 }
 
-func TestEventSync_streamMode(t *testing.T) {
-	cfg := createCentralCfg("https://abc.com", "mockenv")
-	cfg.GRPCCfg = config.GRPCConfig{
-		Enabled:  true,
-		Insecure: true,
-	}
-	err := Initialize(cfg)
-	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
-		ConnectToCentral:     true,
-		ProcessSystemSignals: true,
-		VersionChecker:       false,
-		PersistCache:         true,
-	}
-
-	cfg.AgentName = "Test-DA"
-	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
-	mc := &mock.Client{
-		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-			if method == api.PUT {
-				return buffer, nil
-			}
-			return json.Marshal(agentRes)
-		},
-		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
-			if strings.Contains(url, "/discoveryagents") {
-				return agentRes, nil
-			}
-			wt := management.NewWatchTopic("mock-wt")
-			ri, err := wt.AsInstance()
-			return ri, err
-		},
-	}
-
-	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
-	agent.agentResourceManager = m
-
-	InitializeForTest(mc)
-	assert.Nil(t, err)
-
-	es, err := newEventSync()
-	assert.Nil(t, err)
-	assert.NotNil(t, es.watchTopic)
-	assert.NotNil(t, es.discoveryCache)
-	assert.NotNil(t, es.sequence)
-	assert.NotNil(t, es.harvester)
-
-	es.harvester = &mockHarvester{}
-	err = es.SyncCache()
-	assert.Nil(t, err)
+type mockHarvester struct {
+	err error
 }
-
-type mockHarvester struct{}
 
 func (m mockHarvester) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
-	return nil
+	return m.err
 }
 
 func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
-	return 1, nil
+	return 1, m.err
 }
 
 func TestInitCache_targetedRebuild(t *testing.T) {
@@ -269,4 +248,99 @@ func (m *mockSequence) SetSequence(id int64) {
 
 func (m *mockSequence) GetSequence() int64 {
 	return m.id
+}
+
+// mockListenerPauser records how many times Pause and Resume are called.
+type mockListenerPauser struct {
+	pauseCount  int
+	resumeCount int
+}
+
+func (m *mockListenerPauser) PauseListener()  { m.pauseCount++ }
+func (m *mockListenerPauser) ResumeListener() { m.resumeCount++ }
+
+func TestEventSync_listenerPauser(t *testing.T) {
+	cfg := createCentralCfg("https://abc.com", "mockenv")
+	err := Initialize(cfg)
+	assert.Nil(t, err)
+
+	scopeName := cfg.Environment
+
+	apiSvcFilter := management.WatchTopicSpecFilters{
+		Group: management.APIServiceGVK().Group,
+		Kind:  management.APIServiceGVK().Kind,
+		Name:  "*",
+		Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName},
+	}
+	wt := &management.WatchTopic{
+		Spec: management.WatchTopicSpec{
+			Filters: []management.WatchTopicSpecFilters{apiSvcFilter},
+		},
+	}
+
+	tests := map[string]struct {
+		run             func(t *testing.T, es *EventSync, pauser *mockListenerPauser)
+		expectedPauses  int
+		expectedResumes int
+	}{
+		"rebuildFilters pauses and resumes the listener": {
+			run: func(t *testing.T, es *EventSync, _ *mockListenerPauser) {
+				err := es.rebuildFilters([]management.WatchTopicSpecFilters{apiSvcFilter})
+				assert.Nil(t, err)
+			},
+			expectedPauses:  1,
+			expectedResumes: 1,
+		},
+		"pausedInitCache pauses and resumes the listener": {
+			run: func(t *testing.T, es *EventSync, _ *mockListenerPauser) {
+				// Use a harvester that returns an error so initCache exits early,
+				// but the pause/resume wrapping in pausedInitCache still executes.
+				es.harvester = &mockHarvester{err: fmt.Errorf("harvester error")}
+				_ = es.pausedInitCache()
+			},
+			expectedPauses:  1,
+			expectedResumes: 1,
+		},
+		"rebuildFilters resumes even when discoveryCache fails": {
+			run: func(t *testing.T, es *EventSync, _ *mockListenerPauser) {
+				// Replace client with one that always fails so execute() returns an error.
+				dc := newDiscoveryCache(cfg, &mockRIClient{err: fmt.Errorf("simulated error")}, nil, wt)
+				es.discoveryCache = dc
+				_ = es.rebuildFilters([]management.WatchTopicSpecFilters{apiSvcFilter})
+			},
+			expectedPauses:  1,
+			expectedResumes: 1,
+		},
+		"no listenerPauser set - rebuildFilters succeeds without panic": {
+			run: func(t *testing.T, es *EventSync, _ *mockListenerPauser) {
+				es.listenerPauser = nil
+				assert.NotPanics(t, func() {
+					_ = es.rebuildFilters([]management.WatchTopicSpecFilters{apiSvcFilter})
+				})
+			},
+			expectedPauses:  0,
+			expectedResumes: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			agent.cacheManager = agentcache.NewAgentCacheManager(cfg, false)
+			pauser := &mockListenerPauser{}
+			mockClient := &mockRIClient{svcs: newAPIServices(scopeName)}
+			dc := newDiscoveryCache(cfg, mockClient, nil, wt)
+			es := &EventSync{
+				watchTopic:     wt,
+				harvester:      &mockHarvester{},
+				discoveryCache: dc,
+				sequence:       &mockSequence{},
+				listenerPauser: pauser,
+			}
+
+			tc.run(t, es, pauser)
+
+			assert.Equal(t, tc.expectedPauses, pauser.pauseCount, "pause count mismatch")
+			assert.Equal(t, tc.expectedResumes, pauser.resumeCount, "resume count mismatch")
+		})
+	}
 }
