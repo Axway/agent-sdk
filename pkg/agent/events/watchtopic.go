@@ -22,6 +22,7 @@ var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    management.DiscoveryAgentResourceName,
 	config.TraceabilityAgent: management.TraceabilityAgentResourceName,
 	config.ComplianceAgent:   management.ComplianceAgentResourceName,
+	config.SampleAgent:       "sampleagents",
 }
 
 type watchTopicFeatures interface {
@@ -73,6 +74,9 @@ func getOrCreateWatchTopic(name, scope string, client APIClient, features watchT
 	case config.ComplianceAgent:
 		agentResourceGroupKind = management.ComplianceAgentGVK().GroupKind
 		tmplValuesFunc = NewComplianceWatchTopic
+	case config.SampleAgent:
+		agentResourceGroupKind = management.DiscoveryAgentGVK().GroupKind
+		tmplValuesFunc = NewSampleWatchTopic
 	default:
 		return nil, resource.ErrUnsupportedAgentType
 	}
@@ -301,6 +305,23 @@ func NewComplianceWatchTopic(name, scope string, agentResourceGroupKind v1.Group
 		Name:        name,
 		Title:       name,
 		Description: fmt.Sprintf(desc, "compliance", scope),
+		Kinds:       kinds,
+	}
+}
+
+// NewSampleWatchTopic creates a WatchTopic template string.
+// Using a template instead of unmarshalling into a struct to avoid sending a request with empty fields
+func NewSampleWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind, features watchTopicFeatures) WatchTopicValues {
+	kinds := []kindValues{
+		{GroupKind: agentResourceGroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: updated},
+		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
+		// {GroupKind: management.WatchTopicGVK().GroupKind, Name: name, EventTypes: updated},
+	}
+
+	return WatchTopicValues{
+		Name:        name,
+		Title:       name,
+		Description: fmt.Sprintf(desc, "sample", scope),
 		Kinds:       kinds,
 	}
 }
