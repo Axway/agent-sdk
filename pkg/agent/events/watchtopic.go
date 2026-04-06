@@ -22,7 +22,7 @@ var agentTypesMap = map[config.AgentType]string{
 	config.DiscoveryAgent:    management.DiscoveryAgentResourceName,
 	config.TraceabilityAgent: management.TraceabilityAgentResourceName,
 	config.ComplianceAgent:   management.ComplianceAgentResourceName,
-	config.SampleAgent:       "sampleagents",
+	config.SampleAgent:       management.DiscoveryAgentResourceName,
 }
 
 type watchTopicFeatures interface {
