@@ -8,7 +8,6 @@
  */
 
 package management
-
 // DataplaneSpecAws The configuration common to all AWS agents that use this dataplane
 type DataplaneSpecAws struct {
 	Type string `json:"type"`
@@ -18,4 +17,6 @@ type DataplaneSpecAws struct {
 	FullTransactionLogging bool `json:"fullTransactionLogging,omitempty"`
 	// The name of tag on AWS API Gateway Stage that holds mapped stage on Amplify Engage.
 	StageTagName string `json:"stageTagName,omitempty"`
+	// The gateway mode the AWS agent operates in.
+	GatewayMode string `json:"gatewayMode,omitempty"`
 }
