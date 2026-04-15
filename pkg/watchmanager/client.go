@@ -84,8 +84,15 @@ func (c *watchClient) recv() error {
 	if err != nil {
 		return err
 	}
-	c.cfg.events <- event
-	return nil
+
+	select {
+	case c.cfg.events <- event:
+		return nil
+	case <-c.cfg.ctx.Done():
+		return c.cfg.ctx.Err()
+	case <-c.stream.Context().Done():
+		return c.stream.Context().Err()
+	}
 }
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
@@ -158,27 +165,54 @@ func (c *watchClient) createTokenRefreshRequest() error {
 	}
 
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
-	// write the token request to the channel
-	c.cfg.requests <- req
+	if err = c.enqueueRequest(req); err != nil {
+		return err
+	}
 
 	c.timer.Reset(exp)
 	return nil
 }
 
-// handleError stop the running timer, send to the error channel, and close the open stream.
-func (c *watchClient) handleError(err error) {
+func (c *watchClient) enqueueRequest(req *proto.Request) error {
+	select {
+	case c.cfg.requests <- req:
+		return nil
+	case <-c.cfg.ctx.Done():
+		return c.cfg.ctx.Err()
+	case <-c.stream.Context().Done():
+		return c.stream.Context().Err()
+	}
+}
+
+// shouldNotifyError checks if the error should be sent to the error channel, and stops the timer if it should.
+// If context already has error(context already closed), it will not send to the error channel.
+func (c *watchClient) shouldNotifyError() bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-
 	if c.isRunning {
 		c.isRunning = false
 		c.timer.Stop()
-		if c.cfg.ctx.Err() != nil {
-			return
+		if c.cfg.ctx.Err() == nil {
+			return true
 		}
-		c.cfg.errors <- err
-		c.cfg.cancel()
 	}
+	return false
+}
+
+// handleError stop the running timer, send to the error channel, and close the open stream.
+func (c *watchClient) handleError(err error) {
+	if !c.shouldNotifyError() {
+		return
+	}
+
+	go func() {
+		select {
+		case c.cfg.errors <- err:
+		case <-c.cfg.ctx.Done():
+		}
+	}()
+
+	c.cfg.cancel()
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {

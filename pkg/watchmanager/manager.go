@@ -136,6 +136,14 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 
 // RegisterWatch - Registers a subscription with watch service using topic
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
+	subscriptionID, _ := uuid.NewUUID()
+	subID := subscriptionID.String()
+
+	m.logger.
+		WithField("watchId", subID).
+		WithField("watchTopic", link).
+		Info("registering watch client")
+
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
@@ -150,36 +158,59 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		m.newWatchClientFunc,
 	)
 	if err != nil {
-		return "", err
+		m.logger.WithError(err).
+			WithField("watchId", subID).
+			WithField("watchTopic", link).
+			Error("failed to create watch stream client")
+		return subID, err
 	}
-
-	subscriptionID, _ := uuid.NewUUID()
-	subID := subscriptionID.String()
 
 	if m.options.sequence != nil && m.options.sequence.GetSequence() < 0 {
 		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
-		m.logger.Error(err.Error())
+		m.logger.WithError(err).
+			WithField("watchId", subID).
+			WithField("watchTopic", link).
+			Error("cannot register watch due to invalid sequence")
 		m.CloseWatch(subID)
 		m.onHarvesterErr()
 		return subID, err
 	}
+	m.logger.
+		WithField("watchId", subID).
+		WithField("watchTopic", link).
+		Debug("starting watch catch-up sync")
 	if err := m.eventCatchUp(link, events); err != nil {
-		m.logger.WithError(err).Error("failed to sync events from harvester")
+		m.logger.WithError(err).
+			WithField("watchId", subID).
+			WithField("watchTopic", link).
+			Error("failed to sync events from harvester")
 		m.CloseWatch(subID)
 		m.onHarvesterErr()
 		return subID, err
 	}
+	m.logger.
+		WithField("watchId", subID).
+		WithField("watchTopic", link).
+		Debug("watch catch-up sync complete, proceeding to register watch client")
 
 	if err := client.processRequest(); err != nil {
+		m.logger.WithError(err).
+			WithField("watchId", subID).
+			WithField("watchTopic", link).
+			Error("failed to send initial watch subscribe request")
 		m.CloseWatch(subID)
 		return subID, err
 	}
+	m.logger.
+		WithField("watchId", subID).
+		WithField("watchTopic", link).
+		Debug("watch subscription request sent, starting watch event receiver")
 	go client.processEvents()
 
 	m.addClient(subID, client)
 	m.logger.
-		WithField("id", subID).
-		WithField("watchtopic", link).
+		WithField("watchId", subID).
+		WithField("watchTopic", link).
 		Info("registered watch client")
 
 	return subID, nil
@@ -192,9 +223,8 @@ func (m *watchManager) CloseWatch(id string) error {
 		return err
 	}
 
-	m.logger.WithField("watchID", id).Info("closing connection for subscription")
+	m.logger.WithField("watchId", id).Info("closing connection for subscription")
 	client.cfg.cancel()
-	m.deleteClients([]string{id})
 	return nil
 }
 
@@ -242,7 +272,7 @@ func (m *watchManager) addClient(id string, client *watchClient) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.clientMap[id] = client
-	m.logger.WithField("watchID", id).Trace("added client to watch manager")
+	m.logger.WithField("watchId", id).Trace("added client to watch manager")
 }
 
 func (m *watchManager) getClient(id string) (*watchClient, error) {
@@ -273,5 +303,6 @@ func (m *watchManager) deleteClients(ids []string) {
 
 	for _, id := range ids {
 		delete(m.clientMap, id)
+		m.logger.WithField("watchId", id).Trace("removed client from watch manager")
 	}
 }
