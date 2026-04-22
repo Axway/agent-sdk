@@ -66,8 +66,12 @@ func (q *requestQueue) Write(request *proto.Request) error {
 	}
 
 	q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
-	q.receiveCh <- request
-	return nil
+	select {
+	case q.receiveCh <- request:
+		return nil
+	case <-q.ctx.Done():
+		return q.ctx.Err()
+	}
 }
 
 func (q *requestQueue) Start() {
