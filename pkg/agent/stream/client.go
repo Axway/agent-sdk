@@ -167,16 +167,16 @@ func (s *StreamerClient) Start() error {
 	s.manager = manager
 	s.isInitialized.Store(false)
 	s.listener.Listen()
-	s.requestQueue.Start()
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
-	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
 	}
+	s.requestQueue.Start()
+	s.isInitialized.Store(true)
 
 	select {
 	case err := <-eventErrorCh:
