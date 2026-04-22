@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"testing"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -63,7 +64,7 @@ func TestNewStreamer(t *testing.T) {
 		return manager, nil
 	}
 
-	assert.Nil(t, streamer.Status())
+	assert.NotNil(t, streamer.Status())
 
 	errCh := make(chan error)
 	go func() {
@@ -90,7 +91,8 @@ func TestNewStreamer(t *testing.T) {
 
 	<-manager.readyCh
 
-	assert.Nil(t, streamer.Status())
+	// wait for isInitialized to be set after requestQueue.Start()
+	assert.Eventually(t, func() bool { return streamer.Status() == nil }, time.Second, 10*time.Millisecond)
 	stop(t, streamer, errCh)
 	manager.status = false
 
@@ -176,7 +178,7 @@ func TestStatusUpdates(t *testing.T) {
 				return manager, nil
 			}
 
-			assert.Nil(t, streamer.Status())
+			assert.NotNil(t, streamer.Status())
 			errCh := make(chan error)
 			go func() {
 				err := streamer.Start()

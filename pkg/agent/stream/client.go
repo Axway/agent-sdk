@@ -189,7 +189,7 @@ func (s *StreamerClient) Start() error {
 // Status returns the health status
 func (s *StreamerClient) Status() error {
 	if !s.isInitialized.Load() {
-		return nil
+		return fmt.Errorf("stream client is not yet initialized")
 	}
 
 	if s.manager == nil || s.listener == nil || s.requestQueue == nil {
