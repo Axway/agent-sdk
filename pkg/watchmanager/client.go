@@ -112,7 +112,7 @@ func (c *watchClient) processRequest() error {
 		return err
 	}
 
-	return lock.wait(c.cfg.ctx)
+	return lock.wait(c.cfg.ctx, initDuration)
 }
 
 func (c *watchClient) initialRequest() error {
@@ -271,12 +271,16 @@ func (l *initialRequestLock) done(err error) {
 	})
 }
 
-func (l *initialRequestLock) wait(ctx context.Context) error {
+func (l *initialRequestLock) wait(ctx context.Context, timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case <-l.ready:
 		return l.getError()
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-timer.C:
+		return fmt.Errorf("timed out waiting for initial watch request after %s", timeout)
 	}
 }
 
