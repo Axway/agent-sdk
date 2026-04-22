@@ -120,13 +120,40 @@ func TestTLSDefaultCipherSuitesStringSlice(t *testing.T) {
 }
 
 func TestUnpackTLSCipherSuiteString(t *testing.T) {
-	suite := TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA)
-	err := suite.Unpack("ECDHE-ECDSA-AES-128-CBC-SHA")
-	assert.Nil(t, err)
+	tests := map[string]struct {
+		input     string
+		expected  TLSCipherSuite
+		expectErr bool
+		errMsg    string
+	}{
+		"valid cipher suite": {
+			input:    "ECDHE-ECDSA-AES-128-GCM-SHA256",
+			expected: TLSCipherSuite(tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256),
+		},
+		"empty string": {
+			input:    "",
+			expected: TLSCipherSuite(0),
+		},
+		"invalid cipher suite": {
+			input:     "WRONG-SHA",
+			expectErr: true,
+			errMsg:    "invalid tls cipher suite 'WRONG-SHA'",
+		},
+	}
 
-	err = suite.Unpack("WRONG-SHA")
-	assert.NotNil(t, err)
-	assert.Equal(t, "invalid tls cipher suite 'WRONG-SHA'", err.Error())
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			suite := TLSCipherSuite(0)
+			err := suite.Unpack(tc.input)
+			if tc.expectErr {
+				assert.NotNil(t, err)
+				assert.Equal(t, tc.errMsg, err.Error())
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expected, suite)
+			}
+		})
+	}
 }
 
 // func (cs *TLSCipherSuite) String() string {
