@@ -112,7 +112,7 @@ func (c *watchClient) processRequest() error {
 		return err
 	}
 
-	return lock.wait()
+	return lock.wait(c.cfg.ctx)
 }
 
 func (c *watchClient) initialRequest() error {
@@ -253,32 +253,32 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 }
 
 type initialRequestLock struct {
-	waitDone bool
-	lock     sync.Mutex
-	wg       sync.WaitGroup
-	err      error
+	once  sync.Once
+	ready chan struct{}
+	lock  sync.Mutex
+	err   error
 }
 
 func createInitialRequestLock() *initialRequestLock {
-	l := &initialRequestLock{
-		wg: sync.WaitGroup{},
+	return &initialRequestLock{
+		ready: make(chan struct{}),
 	}
-	l.wg.Add(1)
-	return l
 }
 
 func (l *initialRequestLock) done(err error) {
-	l.setError(err)
-
-	if !l.waitDone {
-		l.wg.Done()
-		l.waitDone = true
-	}
+	l.once.Do(func() {
+		l.setError(err)
+		close(l.ready)
+	})
 }
 
-func (l *initialRequestLock) wait() error {
-	l.wg.Wait()
-	return l.getError()
+func (l *initialRequestLock) wait(ctx context.Context) error {
+	select {
+	case <-l.ready:
+		return l.getError()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (l *initialRequestLock) setError(err error) {
