@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -31,10 +32,9 @@ type clientConfig struct {
 type watchClient struct {
 	cfg                    clientConfig
 	getTokenExpirationTime getTokenExpFunc
-	isRunning              bool
+	isRunning              atomic.Bool
 	stream                 proto.Watch_SubscribeClient
 	timer                  *time.Timer
-	mutex                  sync.Mutex
 }
 
 // newWatchClientFunc func signature to create a watch client
@@ -59,11 +59,10 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 	client := &watchClient{
 		cfg:                    clientCfg,
 		getTokenExpirationTime: getTokenExpirationTime,
-		isRunning:              true,
 		stream:                 stream,
 		timer:                  time.NewTimer(initDuration),
 	}
-
+	client.isRunning.Store(true)
 	return client, nil
 }
 
@@ -187,10 +186,8 @@ func (c *watchClient) enqueueRequest(req *proto.Request) error {
 // shouldNotifyError checks if the error should be sent to the error channel, and stops the timer if it should.
 // If context already has error(context already closed), it will not send to the error channel.
 func (c *watchClient) shouldNotifyError() bool {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	if c.isRunning {
-		c.isRunning = false
+	if c.isRunning.Load() {
+		c.isRunning.Store(false)
 		c.timer.Stop()
 		if c.cfg.ctx.Err() == nil {
 			return true
