@@ -89,6 +89,7 @@ func NewStreamerClient(
 		logger:          logger,
 		environmentURL:  cfg.GetEnvironmentURL(),
 	}
+	s.isInitialized.Store(false)
 
 	for _, opt := range options {
 		opt(s)
@@ -165,7 +166,6 @@ func (s *StreamerClient) Start() error {
 	defer manager.CloseConn()
 
 	s.manager = manager
-	s.isInitialized.Store(false)
 	s.listener.Listen()
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
 	if s.onStreamConnection != nil {
@@ -177,6 +177,7 @@ func (s *StreamerClient) Start() error {
 	}
 	s.requestQueue.Start()
 	s.isInitialized.Store(true)
+	defer s.isInitialized.Store(false)
 
 	select {
 	case err := <-eventErrorCh:
