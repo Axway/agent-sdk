@@ -73,14 +73,14 @@ func TestNewStreamer(t *testing.T) {
 	}()
 
 	<-manager.readyCh
-
+	assert.Equal(t, hc.OK, hc.RunChecks())
 	// should stop the listener and write nil to the listener's error channel
 	streamer.listener.Stop()
 
 	err = <-errCh
 	assert.NotNil(t, err)
 
-	assert.Equal(t, hc.OK, hc.RunChecks())
+	assert.Equal(t, hc.FAIL, hc.RunChecks())
 	streamer.manager = nil
 	streamer.listener = nil
 
