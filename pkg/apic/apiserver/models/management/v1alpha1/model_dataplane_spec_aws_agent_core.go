@@ -9,8 +9,8 @@
 
 package management
 
-// DataplaneSpecAwsAgentcore Configuration specific to the agentcore-gateway mode.
-type DataplaneSpecAwsAgentcore struct {
+// DataplaneSpecAwsAgentCore Configuration specific to the agentcore-gateway mode.
+type DataplaneSpecAwsAgentCore struct {
 	// Number of items per page when listing agentcore resources.
 	PageSize int32 `json:"pageSize,omitempty"`
 	// Log group prefix for agentcore-gateway vendored logs.
