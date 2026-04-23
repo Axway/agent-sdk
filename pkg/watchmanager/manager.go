@@ -243,22 +243,18 @@ func (m *watchManager) CloseConn() {
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
 	clients := m.getClients()
-	ok := true
 	if len(clients) == 0 {
-		ok = false
+		return false
 	}
 
-	clientsToRemove := make([]string, 0)
-	for k, c := range clients {
-		if c != nil && !c.isRunning {
+	for _, c := range clients {
+		if c != nil && !c.isRunning.Load() {
 			m.logger.Debug("watch client is not running")
-			ok = false
-			clientsToRemove = append(clientsToRemove, k)
+			return false
 		}
 	}
-	m.deleteClients(clientsToRemove)
 
-	return ok && m.connection.GetState() == connectivity.Ready
+	return m.connection.GetState() == connectivity.Ready
 }
 
 func (m *watchManager) onHarvesterErr() {
