@@ -374,6 +374,8 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 				cached, cacheErr := svcClient.caches.GetCredentialRequestDefinitionByName(ri.Name)
 				assert.Nil(t, cacheErr)
 				assert.NotNil(t, cached)
+				// Verify the cached entry is the fetched resource, not the original local one.
+				assert.Equal(t, ri.Metadata.ID, cached.Metadata.ID)
 			}
 		})
 	}
