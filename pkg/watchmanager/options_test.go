@@ -26,6 +26,9 @@ func TestWatchOptions(t *testing.T) {
 	entry := logrus.NewEntry(logrus.New())
 	seq := &testSequenceProvider{}
 	seq.SetSequence(1)
+	ch := make(chan *proto.Request, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	opts := []Option{
 		WithTLSConfig(nil),
 		WithKeepAlive(1*time.Second, 1*time.Second),
@@ -33,6 +36,8 @@ func TestWatchOptions(t *testing.T) {
 		WithHarvester(&mockHarvester{}, seq),
 		WithProxy("http://proxy"),
 		WithSingleEntryAddr("single-entry"),
+		WithRequestChannel(ch),
+		WithContext(ctx, cancel),
 	}
 
 	options := newWatchOptions()
@@ -48,6 +53,8 @@ func TestWatchOptions(t *testing.T) {
 	assert.NotNil(t, options.sequence)
 	assert.Equal(t, "http://proxy", options.proxyURL)
 	assert.Equal(t, "single-entry", options.singleEntryAddr)
+	assert.Equal(t, ch, options.requestCh)
+	assert.Equal(t, ctx, options.ctx)
 }
 
 type mockHarvester struct{}

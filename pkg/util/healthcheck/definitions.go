@@ -14,6 +14,7 @@ type healthChecker struct {
 	Status       StatusLevel             `json:"status"`
 	StatusDetail string                  `json:"-"`
 	Checks       map[string]*statusCheck `json:"statusChecks"`
+	checksMu     sync.RWMutex            `json:"-"`
 	registered   bool
 	statusServer *Server `json:"-"`
 }
