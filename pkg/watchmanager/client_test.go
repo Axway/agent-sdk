@@ -43,14 +43,13 @@ func Test_watchClient_recv(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
 
 			cfg := clientConfig{
 				ctx:    ctx,
 				cancel: cancel,
 				events: make(chan *proto.Event),
-				errors: make(chan error, 1),
 			}
 
 			streamCtx := context.Background()
@@ -83,7 +82,7 @@ func Test_watchClient_recv(t *testing.T) {
 			}()
 
 			if tc.cancelCtx {
-				cancel()
+				cancel(nil)
 			}
 
 			if !tc.hasErr {
@@ -144,7 +143,6 @@ func Test_watchClient_send(t *testing.T) {
 
 			cfg := clientConfig{
 				events:      make(chan *proto.Event),
-				errors:      make(chan error),
 				tokenGetter: getter.GetToken,
 				requests:    make(chan *proto.Request, 1),
 			}
@@ -192,14 +190,13 @@ func Test_watchClient_send(t *testing.T) {
 	}
 }
 
-// Should write an error to the error channel when calling processEvents
+// Should cancel context when processEvents encounters an error
 func Test_watchClient_processEvents(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	cfg := clientConfig{
 		ctx:    ctx,
 		cancel: cancel,
 		events: make(chan *proto.Event),
-		errors: make(chan error),
 	}
 	stream := &mockStream{
 		event: &proto.Event{},
@@ -215,8 +212,15 @@ func Test_watchClient_processEvents(t *testing.T) {
 
 	go c.processEvents()
 
-	err = <-cfg.errors
-	assert.NotNil(t, err)
+	select {
+	case <-ctx.Done():
+		assert.NotNil(t, ctx.Err())
+		cause := context.Cause(ctx)
+		assert.NotNil(t, cause)
+		assert.Equal(t, "err", cause.Error())
+	case <-time.After(time.Second):
+		t.Fatal("expected context to be cancelled on processEvents error")
+	}
 }
 
 // Stream should be cancelled and an error received over the context
@@ -224,12 +228,11 @@ func Test_watchClient_processRequest(t *testing.T) {
 	getter := &mockTokenGetter{
 		err: nil,
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	cfg := clientConfig{
 		ctx:         ctx,
 		cancel:      cancel,
 		events:      make(chan *proto.Event),
-		errors:      make(chan error),
 		tokenGetter: getter.GetToken,
 	}
 	stream := &mockStream{
@@ -247,10 +250,38 @@ func Test_watchClient_processRequest(t *testing.T) {
 
 	go c.processRequest()
 
-	cancel()
+	cancel(nil)
 
 	err = ctx.Err()
 	assert.NotNil(t, err)
+}
+
+func Test_watchClient_handleError_withCancelContext(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+
+	cfg := clientConfig{
+		ctx:    ctx,
+		cancel: cancel,
+		events: make(chan *proto.Event),
+	}
+	stream := &mockStream{
+		event:   &proto.Event{},
+		context: context.Background(),
+	}
+
+	c, err := newWatchClient(&mockConn{stream: stream}, cfg, newMockWatchClient(stream, nil))
+	assert.Nil(t, err)
+	assert.NotNil(t, c)
+
+	c.handleError(fmt.Errorf("watch stream failed"))
+
+	select {
+	case <-ctx.Done():
+		assert.NotNil(t, ctx.Err())
+	case <-time.After(time.Second):
+		t.Fatal("expected watch client to cancel context on error")
+	}
 }
 
 // Should return an error when calling newWatchClient
@@ -258,7 +289,6 @@ func Test_newWatchClient(t *testing.T) {
 	getter := &mockTokenGetter{}
 	cfg := clientConfig{
 		events:      make(chan *proto.Event),
-		errors:      make(chan error),
 		tokenGetter: getter.GetToken,
 	}
 	stream := &mockStream{
@@ -352,14 +382,13 @@ func Test_watchClient_enqueueRequest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
 
 			cfg := clientConfig{
 				ctx:      ctx,
 				cancel:   cancel,
 				events:   make(chan *proto.Event),
-				errors:   make(chan error, 1),
 				requests: make(chan *proto.Request), // unbuffered, no reader
 			}
 			stream := &mockStream{context: context.Background()}
@@ -367,7 +396,7 @@ func Test_watchClient_enqueueRequest(t *testing.T) {
 			assert.Nil(t, err)
 
 			if tc.cancelCtx {
-				cancel()
+				cancel(nil)
 				c.cfg.ctx = ctx
 			}
 
@@ -385,14 +414,13 @@ func Test_watchClient_enqueueRequest(t *testing.T) {
 
 // createTokenRefreshRequest should return error when enqueue fails (ctx cancelled)
 func Test_watchClient_createTokenRefreshRequest_enqueueError(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(nil)
 	getter := &mockTokenGetter{}
 	cfg := clientConfig{
 		ctx:         ctx,
 		cancel:      cancel,
 		events:      make(chan *proto.Event),
-		errors:      make(chan error, 1),
 		tokenGetter: getter.GetToken,
 		requests:    make(chan *proto.Request), // unbuffered, no reader
 	}
@@ -417,7 +445,6 @@ func Test_watchClient_requestLoop(t *testing.T) {
 		checkRequest    bool // assert a request was enqueued (used with fireTimer)
 		expectLockReady bool // wait for lock.ready (loop exit)
 		expectLockErr   bool // assert lock carries an error after exit
-		drainErrors     bool // drain cfg.errors after lock exits
 	}{
 		{
 			name:         "should handle token refresh when timer fires",
@@ -445,7 +472,6 @@ func Test_watchClient_requestLoop(t *testing.T) {
 			sendRequest:     true,
 			expectLockReady: true,
 			expectLockErr:   true,
-			drainErrors:     true,
 		},
 		{
 			name:            "should stop when stream context is done",
@@ -456,8 +482,8 @@ func Test_watchClient_requestLoop(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
 
 			tokenGetter := func() (string, error) { return "testToken", nil }
 			if tc.makeTokenGetter != nil {
@@ -468,7 +494,6 @@ func Test_watchClient_requestLoop(t *testing.T) {
 				ctx:         ctx,
 				cancel:      cancel,
 				events:      make(chan *proto.Event),
-				errors:      make(chan error, 1),
 				tokenGetter: tokenGetter,
 				requests:    make(chan *proto.Request, 1),
 			}
@@ -521,13 +546,6 @@ func Test_watchClient_requestLoop(t *testing.T) {
 				}
 				if tc.expectLockErr {
 					assert.NotNil(t, lock.getError())
-				}
-			}
-
-			if tc.drainErrors {
-				select {
-				case <-cfg.errors:
-				case <-time.After(time.Second):
 				}
 			}
 		})

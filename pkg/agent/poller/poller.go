@@ -14,7 +14,7 @@ import (
 
 type pollExecutor struct {
 	ctx           context.Context
-	cancel        context.CancelFunc
+	cancel        context.CancelCauseFunc
 	harvester     harvester.Harvest
 	sequence      events.SequenceProvider
 	topicSelfLink string
@@ -33,7 +33,7 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 		WithComponent("pollExecutor").
 		WithPackage("sdk.agent.poller")
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	pm := &pollExecutor{
 		logger:   logger,
 		timer:    time.NewTimer(interval),
@@ -50,32 +50,28 @@ func newPollExecutor(interval time.Duration, options ...executorOpt) *pollExecut
 }
 
 // RegisterWatch registers a watch topic for polling events and publishing events on a channel
-func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan error) {
+func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event) {
 	m.logger.Trace("register watch topic for polling and publishing events")
 	if m.harvester == nil {
-		go func() {
-			m.Stop()
-			errChan <- fmt.Errorf("harvester is not configured for the polling client")
-		}()
+		err := fmt.Errorf("harvester is not configured for the polling client")
+		m.cancel(err)
+		m.Stop()
 		return
 	}
 
 	if m.sequence.GetSequence() < 0 {
 		m.onHarvesterErr()
-		go func() {
-			m.Stop()
-			errChan <- fmt.Errorf("do not have a sequence id, stopping poller")
-		}()
+		err := fmt.Errorf("do not have a sequence id, stopping poller")
+		m.cancel(err)
+		m.Stop()
 		return
 	}
 
 	if err := m.harvester.EventCatchUp(m.ctx, m.topicSelfLink, eventChan); err != nil {
 		m.logger.WithError(err).Error("harvester returned an error when syncing events")
 		m.onHarvesterErr()
-		go func() {
-			m.Stop()
-			errChan <- err
-		}()
+		m.cancel(err)
+		m.Stop()
 		return
 	}
 
@@ -84,9 +80,10 @@ func (m *pollExecutor) RegisterWatch(eventChan chan *proto.Event, errChan chan e
 	m.lock.Unlock()
 
 	go func() {
-		err := m.sync(m.topicSelfLink, eventChan)
+		if err := m.sync(m.topicSelfLink, eventChan); err != nil {
+			m.cancel(err)
+		}
 		m.Stop()
-		errChan <- err
 	}()
 }
 
@@ -142,7 +139,7 @@ func (m *pollExecutor) onHarvesterErr() {
 // Stop stops the poller
 func (m *pollExecutor) Stop() {
 	m.timer.Stop()
-	m.cancel()
+	m.cancel(nil)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()

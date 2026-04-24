@@ -112,18 +112,18 @@ func New(cfg *Config, opts ...Option) (Manager, error)
 The method create a new watch manager client and returns the following interface to allow implementation to manage the gRPC stream
 ```golang
 type Manager interface {
-	RegisterWatch(topicSelfLink string, eventChan chan *proto.Event, errChan chan error) (string, error)
+    RegisterWatch(topicSelfLink string, eventChan chan *proto.Event) (string, error)
 	CloseWatch(id string) error
 	CloseConn()
 	Status() bool
 }
 ```
 
-The client can call the *RegisterWatch* method with the topic self link and a set of channels to receive events and errors.
+The client can call the *RegisterWatch* method with the topic self link and an event channel.
 
 When the client initiates the subscription request, it calls the sequence getter if configured to get the last known sequence identifier of the resource event that the implementation received. On successful subscription request, the client places an API call to Amplify Central watch service to fetch the events that were missed while the gRPC watch stream connection was not active.
 
-When the client receives an event from the gRPC stream (or fetched by API call) it hands over the events to the implementation by writing them to the event channel configured while registering the watch subscription. In case the client receives any error on gRPC stream connection, the error is written to an error channel configured while registering the watch subscription.
+When the client receives an event from the gRPC stream (or fetched by API call) it hands over the events to the implementation by writing them to the event channel configured while registering the watch subscription. In case the client receives any error on gRPC stream connection, the watch context is canceled.
 
 Below is the structure of the event that is received by the Amplify Central watch service(refer [./proto/watch.pb.go](./proto/watch.pb.go) for more detail)
 ```golang
@@ -222,14 +222,16 @@ func startWatch(tenantID string, host string, port uint32, topicSelfLink string,
     }
 
     /**
-    * 4. Create channels to receive event and error
+    * 4. Create context and channel to receive events
     */
-    eventChannel, errCh := make(chan *proto.Event), make(chan error)
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
+    eventChannel := make(chan *proto.Event)
 
     /**
     * 5. Register the watch subscription
     */
-    subscriptionID, err := wm.RegisterWatch(topicSelfLink, eventChannel, errCh)
+    subscriptionID, err := wm.RegisterWatch(topicSelfLink, eventChannel)
     if err != nil {
         log.Error(err)
         return
@@ -238,13 +240,12 @@ func startWatch(tenantID string, host string, port uint32, topicSelfLink string,
     log.Infof("watch subscription (%s) registered successfully", subscriptionID)
 
     /**
-    * 6. Start to process event and error received on channel
+    * 6. Start to process events until context is canceled
     */
     for {
         select {
-        case err = <-errCh:
-            log.Error(err)
-            wm.CloseWatch(subscriptionID)
+        case <-ctx.Done():
+            log.Error("watch stream closed")
             return
         case event := <-eventChannel:
             bts, _ := json.MarshalIndent(event, "", "  ")

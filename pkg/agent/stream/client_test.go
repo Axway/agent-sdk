@@ -171,7 +171,7 @@ func TestStatusUpdates(t *testing.T) {
 			}
 			requestQueue := &mockRequestQueue{active: tc.queueActive}
 
-			streamer.newRequestQueue = func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) events.RequestQueue {
+			streamer.newRequestQueue = func(ctx context.Context, cancel context.CancelCauseFunc, requestCh chan *proto.Request) events.RequestQueue {
 				return requestQueue
 			}
 			streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
@@ -224,7 +224,7 @@ type mockManager struct {
 	readyCh chan struct{}
 }
 
-func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
+func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event) (string, error) {
 	if m.readyCh != nil {
 		m.readyCh <- struct{}{}
 	}

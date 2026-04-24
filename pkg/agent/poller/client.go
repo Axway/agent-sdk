@@ -65,9 +65,9 @@ func NewPollClient(
 
 // Start the polling client
 func (p *PollClient) Start() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	eventCh, eventErrorCh := make(chan *proto.Event), make(chan error)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+	eventCh := make(chan *proto.Event)
 
 	p.mutex.Lock()
 
@@ -76,7 +76,7 @@ func (p *PollClient) Start() error {
 	p.poller = p.newPollManager(p.interval, withOnStop(p.onClientStop), withHarvester(p.harvesterConfig), WithContext(ctx, cancel))
 	p.mutex.Unlock()
 	p.listener.Listen()
-	p.poller.RegisterWatch(eventCh, eventErrorCh)
+	p.poller.RegisterWatch(eventCh)
 
 	if p.onStreamConnection != nil {
 		p.onStreamConnection()
@@ -86,12 +86,11 @@ func (p *PollClient) Start() error {
 	p.initialized = true
 	p.mutex.Unlock()
 
-	select {
-	case err := <-eventErrorCh:
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("poll client context has been closed")
+	<-ctx.Done()
+	if cause := context.Cause(ctx); cause != nil {
+		return cause
 	}
+	return fmt.Errorf("poll client context has been closed")
 }
 
 // Status returns an error if the poller is not running

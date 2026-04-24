@@ -44,7 +44,7 @@ type keepAliveOption struct {
 // watchOptions options to use when creating a stream
 type watchOptions struct {
 	ctx              context.Context
-	cancel           context.CancelFunc
+	cancel           context.CancelCauseFunc
 	tlsCfg           *tls.Config
 	proxyURL         string
 	singleEntryAddr  string
@@ -59,7 +59,7 @@ type watchOptions struct {
 // newWatchOptions returns the default watchOptions
 func newWatchOptions() *watchOptions {
 	// Default context and cancel function
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 
 	return &watchOptions{
 		ctx:         ctx,
@@ -131,7 +131,7 @@ func WithRequestChannel(requestCh chan *proto.Request) Option {
 	})
 }
 
-func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
+func WithContext(ctx context.Context, cancel context.CancelCauseFunc) Option {
 	return funcOption(func(o *watchOptions) {
 		o.ctx = ctx
 		o.cancel = cancel
