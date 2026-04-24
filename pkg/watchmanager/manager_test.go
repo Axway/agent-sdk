@@ -81,8 +81,8 @@ func TestWatchManager_RegisterWatch(t *testing.T) {
 			stream := &mockStream{context: context.Background()}
 			manager.newWatchClientFunc = newMockWatchClient(stream, tc.subscribeErr)
 
-			events, errors := make(chan *proto.Event), make(chan error)
-			_, err = manager.RegisterWatch("/watch/topic", events, errors)
+			events := make(chan *proto.Event)
+			_, err = manager.RegisterWatch("/watch/topic", events)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 				assert.Equal(t, 0, len(manager.clientMap))
@@ -126,8 +126,8 @@ func TestWatchManager_OnError(t *testing.T) {
 	}
 	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
-	events, errors := make(chan *proto.Event), make(chan error)
-	_, err = manager.RegisterWatch("/watch/topic", events, errors)
+	events := make(chan *proto.Event)
+	_, err = manager.RegisterWatch("/watch/topic", events)
 	assert.NotNil(t, err)
 
 	// expect that the callback func for a harvester error was called
@@ -164,8 +164,8 @@ func TestWatchManager_zeroSequenceID(t *testing.T) {
 	}
 	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
-	events, errors := make(chan *proto.Event), make(chan error)
-	_, err = manager.RegisterWatch("/watch/topic", events, errors)
+	events := make(chan *proto.Event)
+	_, err = manager.RegisterWatch("/watch/topic", events)
 	assert.NotNil(t, err)
 
 	// expect that the callback func for a harvester error was called
@@ -242,8 +242,8 @@ func TestWatchManager_Status(t *testing.T) {
 				stream := &mockStream{context: context.Background()}
 				manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
-				events, errors := make(chan *proto.Event), make(chan error)
-				id, regErr := manager.RegisterWatch("/watch/topic", events, errors)
+				events := make(chan *proto.Event)
+				id, regErr := manager.RegisterWatch("/watch/topic", events)
 				assert.Nil(t, regErr)
 
 				if tc.stopClient {
@@ -296,8 +296,8 @@ func TestWatchManager_CloseWatch(t *testing.T) {
 				stream := &mockStream{context: context.Background()}
 				manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
-				events, errors := make(chan *proto.Event), make(chan error)
-				id, err = manager.RegisterWatch("/watch/topic", events, errors)
+				events := make(chan *proto.Event)
+				id, err = manager.RegisterWatch("/watch/topic", events)
 				assert.Nil(t, err)
 			}
 
@@ -378,8 +378,8 @@ func TestWatchManager_negativeSequenceID(t *testing.T) {
 	stream := &mockStream{context: context.Background()}
 	manager.newWatchClientFunc = newMockWatchClient(stream, nil)
 
-	events, errors := make(chan *proto.Event), make(chan error)
-	_, err = manager.RegisterWatch("/watch/topic", events, errors)
+	events := make(chan *proto.Event)
+	_, err = manager.RegisterWatch("/watch/topic", events)
 	assert.NotNil(t, err)
 
 	select {

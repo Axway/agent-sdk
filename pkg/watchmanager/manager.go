@@ -19,7 +19,7 @@ type NewManagerFunc func(cfg *Config, opts ...Option) (Manager, error)
 
 // Manager - Interface to manage watch connections
 type Manager interface {
-	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
+	RegisterWatch(topic string, eventChan chan *proto.Event) (string, error)
 	CloseWatch(id string) error
 	CloseConn()
 	Status() bool
@@ -135,7 +135,7 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic
-func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
+func (m *watchManager) RegisterWatch(link string, events chan *proto.Event) (string, error) {
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
 
@@ -149,7 +149,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		clientConfig{
 			ctx:           m.options.ctx,
 			cancel:        m.options.cancel,
-			errors:        errors,
 			events:        events,
 			tokenGetter:   m.cfg.TokenGetter,
 			topicSelfLink: link,
@@ -171,7 +170,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 			WithField("watchId", subID).
 			WithField("watchTopic", link).
 			Error("cannot register watch due to invalid sequence")
-		m.CloseWatch(subID)
 		m.onHarvesterErr()
 		return subID, err
 	}
@@ -184,7 +182,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 			WithField("watchId", subID).
 			WithField("watchTopic", link).
 			Error("failed to sync events from harvester")
-		m.CloseWatch(subID)
 		m.onHarvesterErr()
 		return subID, err
 	}
@@ -198,7 +195,6 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 			WithField("watchId", subID).
 			WithField("watchTopic", link).
 			Error("failed to send initial watch subscribe request")
-		m.CloseWatch(subID)
 		return subID, err
 	}
 	m.logger.
@@ -224,7 +220,7 @@ func (m *watchManager) CloseWatch(id string) error {
 	}
 
 	m.logger.WithField("watchId", id).Info("closing connection for subscription")
-	client.cfg.cancel()
+	client.cfg.cancel(nil)
 	return nil
 }
 

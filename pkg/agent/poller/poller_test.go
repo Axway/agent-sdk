@@ -1,6 +1,7 @@
 package poller
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -26,13 +27,13 @@ func TestPollerRegisterWatch(t *testing.T) {
 		hClient:       mockH,
 	}))
 
-	eventCh, errCh := make(chan *proto.Event), make(chan error)
+	eventCh := make(chan *proto.Event)
 	h := &mockHarvester{
 		eventCh: eventCh,
 	}
 
 	poller.harvester = h
-	poller.RegisterWatch(eventCh, errCh)
+	poller.RegisterWatch(eventCh)
 
 	evt := <-h.eventCh
 	assert.NotNil(t, evt)
@@ -50,15 +51,16 @@ func TestPollerRegisterWatchError(t *testing.T) {
 		hClient:       mockH,
 	}))
 
-	eventCh, errCh := make(chan *proto.Event), make(chan error)
+	eventCh := make(chan *proto.Event)
 	poller.harvester = &mockHarvester{
 		err: fmt.Errorf("harvester error"),
 	}
 
-	poller.RegisterWatch(eventCh, errCh)
+	poller.RegisterWatch(eventCh)
 
-	err := <-errCh
-	assert.NotNil(t, err)
+	<-poller.ctx.Done()
+	assert.NotNil(t, poller.ctx.Err())
+	assert.Equal(t, "harvester error", context.Cause(poller.ctx).Error())
 }
 
 func TestPollClientOptions(t *testing.T) {

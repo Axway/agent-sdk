@@ -27,8 +27,8 @@ func TestWatchOptions(t *testing.T) {
 	seq := &testSequenceProvider{}
 	seq.SetSequence(1)
 	ch := make(chan *proto.Request, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
 	opts := []Option{
 		WithTLSConfig(nil),
 		WithKeepAlive(1*time.Second, 1*time.Second),

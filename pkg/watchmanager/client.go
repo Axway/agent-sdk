@@ -21,8 +21,7 @@ const (
 
 type clientConfig struct {
 	ctx           context.Context
-	cancel        context.CancelFunc
-	errors        chan error
+	cancel        context.CancelCauseFunc
 	events        chan *proto.Event
 	tokenGetter   TokenGetter
 	topicSelfLink string
@@ -47,12 +46,12 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 
 	// If no context is provided, create a new one
 	if clientCfg.ctx == nil {
-		clientCfg.ctx, clientCfg.cancel = context.WithCancel(context.Background())
+		clientCfg.ctx, clientCfg.cancel = context.WithCancelCause(context.Background())
 	}
 
 	stream, err := svcClient.Subscribe(clientCfg.ctx)
 	if err != nil {
-		clientCfg.cancel()
+		clientCfg.cancel(err)
 		return nil, err
 	}
 
@@ -126,9 +125,6 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 
 	for {
 		select {
-		case <-c.cfg.ctx.Done():
-			c.handleError(c.cfg.ctx.Err())
-			return
 		case <-c.stream.Context().Done():
 			c.handleError(c.stream.Context().Err())
 			return
@@ -183,11 +179,9 @@ func (c *watchClient) enqueueRequest(req *proto.Request) error {
 	}
 }
 
-// shouldNotifyError checks if the error should be sent to the error channel, and stops the timer if it should.
-// If context already has error(context already closed), it will not send to the error channel.
-func (c *watchClient) shouldNotifyError() bool {
-	if c.isRunning.Load() {
-		c.isRunning.Store(false)
+// shouldCancelContext checks if the context should be canceled. Returns true only once per client lifecycle.
+func (c *watchClient) shouldCancelContext() bool {
+	if c.isRunning.CompareAndSwap(true, false) {
 		c.timer.Stop()
 		if c.cfg.ctx.Err() == nil {
 			return true
@@ -196,19 +190,12 @@ func (c *watchClient) shouldNotifyError() bool {
 	return false
 }
 
-// handleError stop the running timer, send to the error channel, and close the open stream.
+// handleError stops the running timer and cancels the stream context
 func (c *watchClient) handleError(err error) {
-	if !c.shouldNotifyError() {
+	if !c.shouldCancelContext() {
 		return
 	}
-
-	go func() {
-		select {
-		case c.cfg.errors <- err:
-		case <-c.cfg.ctx.Done():
-		}
-		c.cfg.cancel()
-	}()
+	c.cfg.cancel(err)
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
