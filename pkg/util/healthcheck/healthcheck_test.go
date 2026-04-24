@@ -220,7 +220,7 @@ func TestHTTPRequests(t *testing.T) {
 	//########################## GetHealthcheckOutput ################################
 
 	// Marshall the previous response to the same marshall indented expected from GetHealthcheckOutput
-	indentResult, _ := json.MarshalIndent(result, "", "  ")
+	indentResult, _ := json.MarshalIndent(&result, "", "  ")
 
 	output, err := GetHealthcheckOutput(server.URL)
 	assert.Nil(t, err)

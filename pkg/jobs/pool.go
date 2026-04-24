@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -10,24 +11,20 @@ import (
 
 // Pool - represents a pool of jobs that are related in such a way that when one is not running none of them should be
 type Pool struct {
+	logger                  log.FieldLogger
 	jobs                    map[string]JobExecution // All jobs that are in this pool
 	cronJobs                map[string]JobExecution // Jobs that run continuously, not just ran once
 	detachedCronJobs        map[string]JobExecution // Jobs that run continuously, not just ran once, detached from all others
-	poolStatus              PoolStatus              // Holds the current status of the pool of jobs
-	failedJob               string                  // Holds the ID of the job that is the reason for a non-running status
+	poolStatus              atomic.Value            // Holds the current status of the pool of jobs
+	failedJob               atomic.Value            // Holds the ID of the job that is the reason for a non-running status
 	jobsMapLock             sync.Mutex
 	cronJobsMapLock         sync.Mutex
 	detachedCronJobsMapLock sync.Mutex
-	poolStatusLock          sync.Mutex
-	backoffLock             sync.Mutex
-	failedJobLock           sync.Mutex
 	failJobChan             chan string
 	stopJobsChan            chan bool
-	backoff                 *backoff
-	logger                  log.FieldLogger
+	backoff                 atomic.Pointer[backoff]
 	startStopLock           sync.Mutex
-	isStartStopping         bool
-	isStartStopLock         sync.Mutex
+	isStartStopping         atomic.Bool
 }
 
 func newPool() *Pool {
@@ -39,31 +36,21 @@ func newPool() *Pool {
 		jobs:             make(map[string]JobExecution),
 		cronJobs:         make(map[string]JobExecution),
 		detachedCronJobs: make(map[string]JobExecution),
-		failedJob:        "",
+		poolStatus:       atomic.Value{},
+		failedJob:        atomic.Value{},
 		startStopLock:    sync.Mutex{},
-		isStartStopLock:  sync.Mutex{},
+		isStartStopping:  atomic.Bool{},
 		failJobChan:      make(chan string, 1),
 		stopJobsChan:     make(chan bool, 1),
-		backoff:          newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2),
+		backoff:          atomic.Pointer[backoff]{},
 		logger:           logger,
 	}
-	newPool.SetStatus(PoolStatusInitializing)
+	newPool.backoff.Store(newBackoffTimeout(defaultRetryInterval, 10*time.Minute, 2))
+	newPool.failedJob.Store("")
+	newPool.isStartStopping.Store(false)
+	newPool.poolStatus.Store(PoolStatusInitializing)
 
 	return &newPool
-}
-
-// getBackoff - get the job backoff
-func (p *Pool) getBackoff() *backoff {
-	p.backoffLock.Lock()
-	defer p.backoffLock.Unlock()
-	return p.backoff
-}
-
-// setBackoff - set the job backoff
-func (p *Pool) setBackoff(backoff *backoff) {
-	p.backoffLock.Lock()
-	defer p.backoffLock.Unlock()
-	p.backoff = backoff
 }
 
 // recordJob - Adds a job to the jobs map
@@ -284,18 +271,6 @@ func (p *Pool) JobUnlock(id string) {
 	p.jobs[id].Unlock()
 }
 
-func (p *Pool) getFailedJob() string {
-	p.failedJobLock.Lock()
-	defer p.failedJobLock.Unlock()
-	return p.failedJob
-}
-
-func (p *Pool) setFailedJob(job string) {
-	p.failedJobLock.Lock()
-	defer p.failedJobLock.Unlock()
-	p.failedJob = job
-}
-
 // GetJobStatus - Returns the Status of the Job based on the id
 func (p *Pool) GetJobStatus(id string) string {
 	return p.jobs[id].GetStatus().String()
@@ -303,16 +278,12 @@ func (p *Pool) GetJobStatus(id string) string {
 
 // GetStatus - returns the status of the pool of jobs
 func (p *Pool) GetStatus() string {
-	p.poolStatusLock.Lock()
-	defer p.poolStatusLock.Unlock()
-	return p.poolStatus.String()
+	return p.poolStatus.Load().(PoolStatus).String()
 }
 
 // SetStatus - Sets the status of the pool of jobs
 func (p *Pool) SetStatus(status PoolStatus) {
-	p.poolStatusLock.Lock()
-	defer p.poolStatusLock.Unlock()
-	p.poolStatus = status
+	p.poolStatus.Store(status)
 }
 
 // waits with timeout for the specified status in all cron jobs
@@ -343,18 +314,6 @@ func (p *Pool) waitStartStop(jobStatus JobStatus) bool {
 	case <-ctx.Done():
 		return false
 	}
-}
-
-func (p *Pool) setIsStartStop(isStartStop bool) {
-	p.isStartStopLock.Lock()
-	defer p.isStartStopLock.Unlock()
-	p.isStartStopping = isStartStop
-}
-
-func (p *Pool) getIsStartStop() bool {
-	p.isStartStopLock.Lock()
-	defer p.isStartStopLock.Unlock()
-	return p.isStartStopping
 }
 
 // startAll - starts all jobs defined in the cronJobs map, used by watchJobs
@@ -424,7 +383,7 @@ func (p *Pool) jobChecker() {
 					}
 				}
 
-				if !p.getIsStartStop() {
+				if !p.isStartStopping.Load() {
 					if failedJob != "" {
 						p.failJobChan <- failedJob
 					} else {
@@ -433,7 +392,7 @@ func (p *Pool) jobChecker() {
 				}
 			}()
 		case failedJob := <-p.failJobChan:
-			p.setFailedJob(failedJob) // this is the job for the current fail loop
+			p.failedJob.Store(failedJob) // this is the job for the current fail loop
 			p.stopJobsChan <- true
 			p.SetStatus(PoolStatusStopped)
 		}
@@ -444,8 +403,8 @@ func (p *Pool) stopPool() {
 	p.startStopLock.Lock()
 	defer p.startStopLock.Unlock()
 
-	p.setIsStartStop(true)
-	defer p.setIsStartStop(false)
+	p.isStartStopping.Store(true)
+	defer p.isStartStopping.Store(false)
 	p.stopAll()
 }
 
@@ -454,38 +413,38 @@ func (p *Pool) startPool() {
 	defer p.startStopLock.Unlock()
 
 	if p.GetStatus() == PoolStatusStopped.String() {
-		p.setIsStartStop(true)
-		defer p.setIsStartStop(false)
+		p.isStartStopping.Store(true)
+		defer p.isStartStopping.Store(false)
 		// attempt to restart all jobs
 		if p.startAll() {
-			p.getBackoff().reset()
+			p.backoff.Load().reset()
 		} else {
-			p.getBackoff().increaseTimeout()
+			p.backoff.Load().increaseTimeout()
 		}
-		p.setFailedJob("")
+		p.failedJob.Store("")
 	}
 }
 
 // watchJobs - the main loop of a pool of jobs, constantly checks for status of jobs and acts accordingly
 func (p *Pool) watchJobs() {
 	p.SetStatus(PoolStatusRunning)
-	ticker := time.NewTicker(p.getBackoff().getCurrentTimeout())
+	ticker := time.NewTicker(p.backoff.Load().getCurrentTimeout())
 	defer ticker.Stop()
 	for {
 		select {
 		case <-p.stopJobsChan:
-			if job, found := p.getCronJob(p.getFailedJob()); found {
+			if job, found := p.getCronJob(p.failedJob.Load().(string)); found {
 				p.logger.
-					WithField("job-name", job.GetName()).
-					WithField("failed-job", p.getFailedJob()).
+					WithField("jobName", job.GetName()).
+					WithField("failedJob", p.failedJob.Load().(string)).
 					Debug("Job failed, stop all jobs")
 			}
 			p.stopPool()
 		case <-ticker.C:
 			p.startPool()
-			ticker = time.NewTicker(p.getBackoff().getCurrentTimeout())
+			ticker = time.NewTicker(p.backoff.Load().getCurrentTimeout())
 			p.logger.
-				WithField("interval", p.getBackoff().getCurrentTimeout()).
+				WithField("interval", p.backoff.Load().getCurrentTimeout()).
 				Trace("setting next job restart backoff interval")
 		}
 	}
