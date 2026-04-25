@@ -211,7 +211,6 @@ func WithCRDType(credType string) func(c *crdBuilderOptions) {
 	}
 }
 
-// WithCRDIdentityProvider - set the identity provider resource name for the CRD
 func WithCRDIdentityProvider(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.identityProvider = name

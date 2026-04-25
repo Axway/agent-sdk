@@ -363,8 +363,11 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	}
 
 	idpResourceName := ""
-	if agent.agentFeaturesCfg.ManageIdPResources() {
+	if agent.agentFeaturesCfg.ManageIDPResources() {
 		idpResourceName = manageIDPResource(idpLogger, idp)
+		if idpResourceName == "" {
+			idpLogger.Warn("IdentityProvider resource could not be created or found; CRD will be registered without an IdentityProvider reference")
+		}
 	}
 
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
@@ -396,8 +399,6 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	return err
 }
 
-// manageIDPResource creates or reuses an IdentityProvider resource in Engage and returns its name.
-// Returns empty string on any failure so the caller can proceed without a resource reference.
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
 	metadataURL := idp.GetMetadataURL()
 	envName := agent.cfg.GetEnvironmentName()

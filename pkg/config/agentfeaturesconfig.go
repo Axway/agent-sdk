@@ -14,7 +14,7 @@ type AgentFeaturesConfig interface {
 	AgentStatusUpdatesEnabled() bool
 	SetPersistentCache(enable bool)
 	GetMetricServicesConfigs() []MetricServiceConfiguration
-	ManageIdPResources() bool
+	ManageIDPResources() bool
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -28,7 +28,7 @@ type AgentFeaturesConfiguration struct {
 	ExternalIDPConfig     ExternalIDPConfig            `config:"idp"`
 	AgentStatusUpdates    bool                         `config:"agentStatusUpdates"`
 	MetricServicesConfigs []MetricServiceConfiguration `config:"metricServices"`
-	ManageIDPResources    bool                         `config:"manageIdPResources"`
+	IDPResourceMgmt       bool                         `config:"manageIdPResources"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -81,9 +81,9 @@ func (c *AgentFeaturesConfiguration) AgentStatusUpdatesEnabled() bool {
 	return c.AgentStatusUpdates
 }
 
-// ManageIdPResources - True if the agent SDK should create IdP resources in Engage.
-func (c *AgentFeaturesConfiguration) ManageIdPResources() bool {
-	return c.ManageIDPResources
+// ManageIDPResources - True if the agent SDK should create IdP resources in Engage.
+func (c *AgentFeaturesConfiguration) ManageIDPResources() bool {
+	return c.IDPResourceMgmt
 }
 
 const (
@@ -123,7 +123,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		VersionChecker:       props.BoolPropertyValueOrTrue(pathVersionChecker),
 		PersistCache:         props.BoolPropertyValueOrTrue(pathPersistCache),
 		AgentStatusUpdates:   props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
-		ManageIDPResources:   props.BoolPropertyValue(pathManageIdPResources),
+		IDPResourceMgmt:      props.BoolPropertyValue(pathManageIdPResources),
 	}
 	metricSvsCfgs, err := parseMetricServicesConfig(props)
 	if err != nil {

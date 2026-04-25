@@ -93,3 +93,53 @@ func TestProviderRegistry(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, p)
 }
+
+func TestIDPResourceName(t *testing.T) {
+	const (
+		metadataURL  = "https://idp.example.com/.well-known/openid-configuration"
+		resourceName = "my-idp-resource"
+	)
+
+	tests := []struct {
+		name          string
+		lookupURL     string
+		preSet        bool
+		expectedName  string
+		expectedFound bool
+	}{
+		{
+			name:          "not found before set",
+			lookupURL:     metadataURL,
+			preSet:        false,
+			expectedName:  "",
+			expectedFound: false,
+		},
+		{
+			name:          "found after set",
+			lookupURL:     metadataURL,
+			preSet:        true,
+			expectedName:  resourceName,
+			expectedFound: true,
+		},
+		{
+			name:          "different URL not found",
+			lookupURL:     "https://other.example.com/",
+			preSet:        true,
+			expectedName:  "",
+			expectedFound: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			providerReg := NewProviderRegistry()
+			if tc.preSet {
+				providerReg.SetIDPResourceName(metadataURL, resourceName)
+			}
+
+			name, ok := providerReg.GetIDPResourceName(tc.lookupURL)
+			assert.Equal(t, tc.expectedFound, ok)
+			assert.Equal(t, tc.expectedName, name)
+		})
+	}
+}

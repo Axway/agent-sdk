@@ -22,3 +22,21 @@ func TestDefaultAgentFeaturesConfig(t *testing.T) {
 	err := cfgValidator.ValidateCfg()
 	assert.NoError(t, err)
 }
+
+func TestManageIDPResources(t *testing.T) {
+	tests := []struct {
+		name     string
+		enabled  bool
+		expected bool
+	}{
+		{name: "disabled returns false", enabled: false, expected: false},
+		{name: "enabled returns true", enabled: true, expected: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &AgentFeaturesConfiguration{IDPResourceMgmt: tc.enabled}
+			assert.Equal(t, tc.expected, cfg.ManageIDPResources())
+		})
+	}
+}

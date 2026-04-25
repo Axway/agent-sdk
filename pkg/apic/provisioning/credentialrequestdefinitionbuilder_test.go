@@ -72,3 +72,36 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 		})
 	}
 }
+
+func TestSetIdentityProvider(t *testing.T) {
+	tests := []struct {
+		name     string
+		idpName  string
+		expected string
+	}{
+		{name: "set identity provider name", idpName: "my-idp-resource", expected: "my-idp-resource"},
+		{name: "empty identity provider name", idpName: "", expected: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var capturedSpec management.CredentialRequestDefinitionSpec
+			registerFunc := func(crd *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
+				capturedSpec = crd.Spec
+				return crd, nil
+			}
+
+			_, err := NewCRDBuilder(registerFunc).
+				SetName("test-crd").
+				SetProvisionSchema(
+					NewSchemaBuilder().SetName("s").AddProperty(NewSchemaPropertyBuilder().SetName("p").IsString())).
+				SetRequestSchema(
+					NewSchemaBuilder().SetName("s").AddProperty(NewSchemaPropertyBuilder().SetName("p").IsString())).
+				SetIdentityProvider(tc.idpName).
+				Register()
+
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expected, capturedSpec.IdentityProvider)
+		})
+	}
+}

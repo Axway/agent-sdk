@@ -1033,3 +1033,46 @@ func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
 	}
 }
+
+func TestIsExternalCredential(t *testing.T) {
+	tests := []struct {
+		name     string
+		cred     *management.Credential
+		expected bool
+	}{
+		{
+			name:     "nil credential returns false",
+			cred:     nil,
+			expected: false,
+		},
+		{
+			name:     "empty mode returns false",
+			cred:     &management.Credential{},
+			expected: false,
+		},
+		{
+			name: "mode external returns true",
+			cred: &management.Credential{
+				Spec: management.CredentialSpec{
+					Provision: management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "other mode returns false",
+			cred: &management.Credential{
+				Spec: management.CredentialSpec{
+					Provision: management.CredentialSpecProvision{Mode: "internal"},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, isExternalCredential(tc.cred))
+		})
+	}
+}
