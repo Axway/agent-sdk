@@ -28,6 +28,7 @@ var (
 
 const (
 	IdentityProviderResourceName            = "identityproviders"
+	IdentityProviderPoliciesSubResourceName = "policies"
 	IdentityProviderSecuritySubResourceName = "security"
 	IdentityProviderStatusSubResourceName   = "status"
 )
@@ -45,6 +46,7 @@ func init() {
 type IdentityProvider struct {
 	apiv1.ResourceMeta
 	Owner    *apiv1.Owner             `json:"owner"`
+	Policies IdentityProviderPolicies `json:"policies"`
 	Security IdentityProviderSecurity `json:"security"`
 	Spec     IdentityProviderSpec     `json:"spec"`
 	// Status   IdentityProviderStatus   `json:"status"`
@@ -146,6 +148,7 @@ func (res *IdentityProvider) MarshalJSON() ([]byte, error) {
 	}
 
 	out["owner"] = res.Owner
+	out["policies"] = res.Policies
 	out["security"] = res.Security
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -176,6 +179,20 @@ func (res *IdentityProvider) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Policies
+	if v, ok := aux.SubResources["policies"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "policies")
+		err = json.Unmarshal(sr, &res.Policies)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Security

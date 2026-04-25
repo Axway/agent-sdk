@@ -272,7 +272,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	if provCreds.IsIDPCredential() {
+	if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
 		err := provCreds.idpProvisioner.RegisterClient()
 		if err != nil {
 			logger.WithError(err).Error("error provisioning credential request with IDP")
@@ -433,7 +433,7 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 		}
 
 		// if IDP and rotate the agent will register a new client
-		if action == prov.Rotate && provCreds.IsIDPCredential() {
+		if action == prov.Rotate && provCreds.IsIDPCredential() && !isExternalCredential(cred) {
 			err := provCreds.idpProvisioner.RegisterClient()
 			if err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
@@ -447,6 +447,20 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 	}
 
 	return cred
+}
+
+// isExternalCredential returns true when the credential carries an external flag,
+// indicating the client was registered outside the SDK and RegisterClient should be skipped.
+func isExternalCredential(cred *management.Credential) bool {
+	if cred == nil {
+		return false
+	}
+	v, ok := cred.Spec.Data["external"]
+	if !ok {
+		return false
+	}
+	external, ok := v.(bool)
+	return ok && external
 }
 
 // onError updates the AccessRequest with an error status

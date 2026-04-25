@@ -12,7 +12,7 @@ package management
 // IdentityProviderSpec  (management.v1alpha1.IdentityProvider)
 type IdentityProviderSpec struct {
 	// The metadata URL for Identity provider
-	MetadataUrl string `json:"metadataUrl"`
+	MetadataUrl string `json:"metadataUrl,omitempty"`
 	// The type of Identity provider
 	ProviderType string `json:"providerType,omitempty"`
 	// The flag to configure agent to use registration access token for removing/updating the client created by agent in Identity provider

@@ -76,6 +76,7 @@ type agentData struct {
 
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
+	idpResourceSupplier  IDPResourceSupplier
 
 	finalizeAgentInit func() error
 	publishingLock    *sync.Mutex
@@ -353,17 +354,25 @@ func CacheInitSync() error {
 }
 
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
-	logger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadata-url", idp.GetMetadataURL())
+	idpLogger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadata-url", idp.GetMetadataURL())
+
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
-		logger.WithError(err).Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed.")
+		idpLogger.WithError(err).Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed.")
 		return err
 	}
+
+	idpResourceName := ""
+	if agent.agentFeaturesCfg.ManageIdPResources() {
+		idpResourceName = manageIDPResource(idpLogger, idp)
+	}
+
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
 	if err != nil {
 		return err
 	}
+
 	crd, err := NewOAuthCredentialRequestBuilder(
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
@@ -372,18 +381,163 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
 		WithCRDIsSuspendable(),
+		WithCRDIdentityProvider(idpResourceName),
 	).Register()
 	if err != nil {
-		logger.
+		idpLogger.
 			WithField("title", idp.GetIDPTitle()).
 			Errorf("unable to create and register credential request definition. %s", err.Error())
 	} else {
-		logger.
+		idpLogger.
 			WithField("name", crd.Name).
 			WithField("title", idp.GetIDPTitle()).
 			Info("successfully created and registered credential request definition.")
 	}
 	return err
+}
+
+// manageIDPResource creates or reuses an IdentityProvider resource in Engage and returns its name.
+// Returns empty string on any failure so the caller can proceed without a resource reference.
+func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
+	metadataURL := idp.GetMetadataURL()
+	envName := agent.cfg.GetEnvironmentName()
+	idpLogger = idpLogger.WithField("environmentName", envName)
+
+	idpURL := agent.cfg.GetEnvironmentURL() + "/" + management.IdentityProviderResourceName
+	existing, err := agent.apicClient.GetAPIV1ResourceInstances(
+		map[string]string{"query": fmt.Sprintf("spec.metadataUrl=='%s'", metadataURL)},
+		idpURL,
+	)
+	if err != nil {
+		idpLogger.WithError(err).Warn("unable to query for existing IdentityProvider resources; will attempt creation")
+	}
+
+	if len(existing) > 0 {
+		name := existing[0].Name
+		GetAuthProviderRegistry().SetIDPResourceName(metadataURL, name)
+		idpLogger.WithField("name", name).Debug("reusing existing IdentityProvider resource")
+		return name
+	}
+
+	createdName, err := createIDPResource(idpLogger, idp, metadataURL)
+	if err != nil {
+		return ""
+	}
+	return createdName
+}
+
+func createIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig, metadataURL string) (string, error) {
+	idpResource, err := buildIdentityProvider(idpLogger, idp, metadataURL)
+	if err != nil {
+		return "", err
+	}
+
+	envPolicies := getEnvCredentialPolicies(idpLogger)
+
+	ri, err := agent.apicClient.CreateOrUpdateResource(idpResource)
+	if err != nil {
+		idpLogger.WithError(err).Error("unable to create IdentityProvider resource in Engage")
+		return "", err
+	}
+	if err = idpResource.FromInstance(ri); err != nil {
+		idpLogger.WithError(err).Error("failed to parse created IdentityProvider resource")
+		return "", err
+	}
+	createdName := idpResource.Name
+
+	applyIDPPolicies(idpLogger, idpResource, envPolicies)
+	createIDPMetadataResource(idpLogger, idp, createdName)
+
+	GetAuthProviderRegistry().SetIDPResourceName(metadataURL, createdName)
+	idpLogger.WithField("name", createdName).Info("successfully created IdentityProvider resource")
+	return createdName, nil
+}
+
+func buildIdentityProvider(idpLogger log.FieldLogger, idp config.IDPConfig, metadataURL string) (*management.IdentityProvider, error) {
+	if s := agent.idpResourceSupplier; s != nil {
+		res, err := s.GetIdentityProvider(idp)
+		if err != nil {
+			idpLogger.WithError(err).Error("supplier failed to build IdentityProvider resource")
+			return nil, err
+		}
+		return res, nil
+	}
+	name := util.NormalizeNameForCentral(idp.GetIDPName())
+	res := management.NewIdentityProvider(name)
+	res.Spec = management.IdentityProviderSpec{
+		MetadataUrl:  metadataURL,
+		ProviderType: idp.GetIDPType(),
+	}
+	return res, nil
+}
+
+func getEnvCredentialPolicies(idpLogger log.FieldLogger) management.EnvironmentPoliciesCredentials {
+	env, err := agent.apicClient.GetEnvironment()
+	if err != nil {
+		idpLogger.WithError(err).Warn("unable to retrieve environment credential policies; IdP will be created without policies")
+		return management.EnvironmentPoliciesCredentials{}
+	}
+	return env.Policies.Credentials
+}
+
+func applyIDPPolicies(idpLogger log.FieldLogger, idpResource *management.IdentityProvider, envPolicies management.EnvironmentPoliciesCredentials) {
+	if envPolicies.Expiry.Period == 0 && envPolicies.Visibility.Period == 0 {
+		return
+	}
+	policies := management.IdentityProviderPolicies{
+		Credentials: management.IdentityProviderPoliciesCredentials{
+			Expiry: management.IdentityProviderPoliciesCredentialsExpiry{
+				Period: envPolicies.Expiry.Period,
+				Action: envPolicies.Expiry.Action,
+				Notifications: management.IdentityProviderPoliciesCredentialsExpiryNotifications{
+					DaysBefore: envPolicies.Expiry.Notifications.DaysBefore,
+				},
+			},
+			Visibility: management.IdentityProviderPoliciesCredentialsVisibility{
+				Period: envPolicies.Visibility.Period,
+			},
+		},
+	}
+	if err := agent.apicClient.CreateSubResource(idpResource.ResourceMeta, map[string]interface{}{
+		management.IdentityProviderPoliciesSubResourceName: policies,
+	}); err != nil {
+		idpLogger.WithField("name", idpResource.Name).WithError(err).Warn("unable to set credential policies on IdentityProvider resource")
+	}
+}
+
+func createIDPMetadataResource(idpLogger log.FieldLogger, idp config.IDPConfig, idpName string) {
+	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
+	if err != nil {
+		idpLogger.WithError(err).Error("unable to get registered provider for IdP metadata; IdentityProviderMetadata resource will not be created")
+		return
+	}
+	serverMetadata := provider.GetMetadata()
+	if serverMetadata == nil {
+		idpLogger.Error("provider returned nil metadata; IdentityProviderMetadata resource will not be created")
+		return
+	}
+
+	var idpMetadata *management.IdentityProviderMetadata
+	if s := agent.idpResourceSupplier; s != nil {
+		idpMetadata, err = s.GetIdentityProviderMetadata(idp, serverMetadata)
+		if err != nil {
+			idpLogger.WithError(err).Error("supplier failed to build IdentityProviderMetadata resource")
+			return
+		}
+	} else {
+		idpMetadata = management.NewIdentityProviderMetadata(idpName, idpName)
+		idpMetadata.Spec = management.IdentityProviderMetadataSpec{
+			Issuer:                serverMetadata.Issuer,
+			AuthorizationEndpoint: serverMetadata.AuthorizationEndpoint,
+			TokenEndpoint:         serverMetadata.TokenEndpoint,
+			IntrospectionEndpoint: serverMetadata.IntrospectionEndpoint,
+			JwksUri:               serverMetadata.JwksURI,
+		}
+	}
+
+	if _, err = agent.apicClient.CreateOrUpdateResource(idpMetadata); err != nil {
+		idpLogger.WithField("name", idpName).WithError(err).Error("unable to create IdentityProviderMetadata resource in Engage")
+	}
 }
 
 func getCorsSchemaPropertyBuilder() provisioning.PropertyBuilder {

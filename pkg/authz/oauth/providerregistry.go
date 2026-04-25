@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	issuerKeyPrefix      = "issuer:"
-	tokenEpKeyPrefix     = "tokenEp:"
-	mtlsTokenEpKeyPrefix = "mtlsTokenEp:"
-	authEpKeyPrefix      = "authEp:"
-	metadataURLKeyPrefix = "metadataUrl:"
+	issuerKeyPrefix       = "issuer:"
+	tokenEpKeyPrefix      = "tokenEp:"
+	mtlsTokenEpKeyPrefix  = "mtlsTokenEp:"
+	authEpKeyPrefix       = "authEp:"
+	metadataURLKeyPrefix  = "metadataUrl:"
+	idpResourceNamePrefix = "idpResource:"
 )
 
 // ProviderRegistry - interface for provider registry
@@ -31,6 +32,10 @@ type ProviderRegistry interface {
 	GetProviderByAuthorizationEndpoint(authEndpoint string) (Provider, error)
 	// GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
 	GetProviderByMetadataURL(metadataURL string) (Provider, error)
+	// SetIDPResourceName - stores the Engage IdentityProvider resource name for a given metadata URL
+	SetIDPResourceName(metadataURL, resourceName string)
+	// GetIDPResourceName - returns the Engage IdentityProvider resource name for a given metadata URL
+	GetIDPResourceName(metadataURL string) (string, bool)
 }
 
 type providerRegistry struct {
@@ -117,6 +122,21 @@ func (r *providerRegistry) GetProviderByAuthorizationEndpoint(authEndpoint strin
 // GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
 func (r *providerRegistry) GetProviderByMetadataURL(metadataURL string) (Provider, error) {
 	return r.getProviderBySecondaryKey(metadataURLKeyPrefix + metadataURL)
+}
+
+// SetIDPResourceName - stores the Engage IdentityProvider resource name for a given metadata URL
+func (r *providerRegistry) SetIDPResourceName(metadataURL, resourceName string) {
+	r.providerMap.Set(idpResourceNamePrefix+metadataURL, resourceName)
+}
+
+// GetIDPResourceName - returns the Engage IdentityProvider resource name for a given metadata URL
+func (r *providerRegistry) GetIDPResourceName(metadataURL string) (string, bool) {
+	val, err := r.providerMap.Get(idpResourceNamePrefix + metadataURL)
+	if err != nil {
+		return "", false
+	}
+	name, ok := val.(string)
+	return name, ok
 }
 
 func (r *providerRegistry) getProviderBySecondaryKey(key string) (Provider, error) {

@@ -12,7 +12,8 @@ package management
 // CredentialSpec  (management.v1alpha1.Credential)
 type CredentialSpec struct {
 	// Reference to Credential Request Definition resource
-	CredentialRequestDefinition string `json:"credentialRequestDefinition"`
+	CredentialRequestDefinition string                  `json:"credentialRequestDefinition"`
+	Provision                   CredentialSpecProvision `json:"provision,omitempty"`
 	// Reference to the ManagedApplication for which the Credential belongs to
 	ManagedApplication string `json:"managedApplication"`
 	// data matching the credential request definition schema. (management.v1alpha1.Credential)

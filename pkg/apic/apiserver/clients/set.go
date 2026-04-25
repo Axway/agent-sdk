@@ -38,6 +38,7 @@ type Set struct {
 	CredentialManagementV1alpha1                   *management_v1alpha1.UnscopedCredentialClient
 	IdentityProviderManagementV1alpha1             *management_v1alpha1.IdentityProviderClient
 	IdentityProviderSecretManagementV1alpha1       *management_v1alpha1.UnscopedIdentityProviderSecretClient
+	IdentityProviderMetadataManagementV1alpha1     *management_v1alpha1.UnscopedIdentityProviderMetadataClient
 	ApplicationProfileDefinitionManagementV1alpha1 *management_v1alpha1.UnscopedApplicationProfileDefinitionClient
 	ManagedApplicationProfileManagementV1alpha1    *management_v1alpha1.UnscopedManagedApplicationProfileClient
 	ComplianceRuntimeResultManagementV1alpha1      *management_v1alpha1.UnscopedComplianceRuntimeResultClient
@@ -220,6 +221,10 @@ func New(b cAPIV1.Base) *Set {
 	s.IdentityProviderSecretManagementV1alpha1, err = management_v1alpha1.NewIdentityProviderSecretClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.IdentityProviderSecret: %s", err))
+	}
+	s.IdentityProviderMetadataManagementV1alpha1, err = management_v1alpha1.NewIdentityProviderMetadataClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.IdentityProviderMetadata: %s", err))
 	}
 	s.ApplicationProfileDefinitionManagementV1alpha1, err = management_v1alpha1.NewApplicationProfileDefinitionClient(b)
 	if err != nil {

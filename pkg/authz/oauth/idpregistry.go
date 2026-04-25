@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
-type ConfigOption func(config.IDPConfig) error
+type ConfigOption func(corecfg.IDPConfig) error
 
 type IdPRegistry interface {
 	// RegisterProvider - registers the provider using the config
@@ -26,6 +25,10 @@ type IdPRegistry interface {
 	GetProviderByAuthorizationEndpoint(ctx context.Context, authEndpoint string, opts ...ConfigOption) (Provider, error)
 	// GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
 	GetProviderByMetadataURL(ctx context.Context, metadataURL string, opts ...ConfigOption) (Provider, error)
+	// SetIDPResourceName - stores the Engage IdentityProvider resource name for a given metadata URL
+	SetIDPResourceName(metadataURL, resourceName string)
+	// GetIDPResourceName - returns the Engage IdentityProvider resource name for a given metadata URL
+	GetIDPResourceName(metadataURL string) (string, bool)
 }
 
 type idpRegistry struct {
@@ -55,6 +58,7 @@ func (p *idpRegistry) RegisterProvider(_ context.Context, idp corecfg.IDPConfig,
 }
 
 func (p *idpRegistry) UnregisterProvider(_ context.Context, provider Provider) error {
+	// TODO: implement — check with original developer on expected cache cleanup behavior (secondary keys, idpResource entry)
 	return fmt.Errorf("not implemented")
 }
 
@@ -76,4 +80,12 @@ func (p *idpRegistry) GetProviderByAuthorizationEndpoint(_ context.Context, auth
 
 func (p *idpRegistry) GetProviderByMetadataURL(_ context.Context, metadataURL string, _ ...ConfigOption) (Provider, error) {
 	return p.registry.GetProviderByMetadataURL(metadataURL)
+}
+
+func (p *idpRegistry) SetIDPResourceName(metadataURL, resourceName string) {
+	p.registry.SetIDPResourceName(metadataURL, resourceName)
+}
+
+func (p *idpRegistry) GetIDPResourceName(metadataURL string) (string, bool) {
+	return p.registry.GetIDPResourceName(metadataURL)
 }
