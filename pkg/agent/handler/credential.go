@@ -449,18 +449,13 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 	return cred
 }
 
-// isExternalCredential returns true when the credential carries an external flag,
+// isExternalCredential returns true when the credential was provisioned externally,
 // indicating the client was registered outside the SDK and RegisterClient should be skipped.
 func isExternalCredential(cred *management.Credential) bool {
 	if cred == nil {
 		return false
 	}
-	v, ok := cred.Spec.Data["external"]
-	if !ok {
-		return false
-	}
-	external, ok := v.(bool)
-	return ok && external
+	return cred.Spec.Provision.Mode == "external"
 }
 
 // onError updates the AccessRequest with an error status
