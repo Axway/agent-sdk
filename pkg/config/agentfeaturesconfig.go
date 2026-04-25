@@ -28,7 +28,7 @@ type AgentFeaturesConfiguration struct {
 	ExternalIDPConfig     ExternalIDPConfig            `config:"idp"`
 	AgentStatusUpdates    bool                         `config:"agentStatusUpdates"`
 	MetricServicesConfigs []MetricServiceConfiguration `config:"metricServices"`
-	ManageIdP             bool                         `config:"manageIdPResources"`
+	ManageIDPResources    bool                         `config:"manageIdPResources"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -83,7 +83,7 @@ func (c *AgentFeaturesConfiguration) AgentStatusUpdatesEnabled() bool {
 
 // ManageIdPResources - True if the agent SDK should create IdP resources in Engage.
 func (c *AgentFeaturesConfiguration) ManageIdPResources() bool {
-	return c.ManageIdP
+	return c.ManageIDPResources
 }
 
 const (
@@ -123,7 +123,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		VersionChecker:       props.BoolPropertyValueOrTrue(pathVersionChecker),
 		PersistCache:         props.BoolPropertyValueOrTrue(pathPersistCache),
 		AgentStatusUpdates:   props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
-		ManageIdP:            props.BoolPropertyValue(pathManageIdPResources),
+		ManageIDPResources:   props.BoolPropertyValue(pathManageIdPResources),
 	}
 	metricSvsCfgs, err := parseMetricServicesConfig(props)
 	if err != nil {
