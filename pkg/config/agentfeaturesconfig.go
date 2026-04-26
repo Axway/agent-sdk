@@ -28,7 +28,7 @@ type AgentFeaturesConfiguration struct {
 	ExternalIDPConfig     ExternalIDPConfig            `config:"idp"`
 	AgentStatusUpdates    bool                         `config:"agentStatusUpdates"`
 	MetricServicesConfigs []MetricServiceConfiguration `config:"metricServices"`
-	IDPResourceMgmt       bool                         `config:"manageIdPResources"`
+	IDPResourceMgmt       bool                         `config:"manageIDPResources"`
 }
 
 // NewAgentFeaturesConfiguration - Creates the default agent features config
@@ -92,7 +92,7 @@ const (
 	pathVersionChecker       = "agentFeatures.versionChecker"
 	pathPersistCache         = "agentFeatures.persistCache"
 	pathAgentStatusUpdates   = "agentFeatures.agentStatusUpdates"
-	pathManageIDPResources   = "agentFeatures.manageIdPResources"
+	pathManageIDPResources   = "agentFeatures.manageIDPResources"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface

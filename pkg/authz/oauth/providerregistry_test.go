@@ -134,9 +134,9 @@ func TestIDPResourceName(t *testing.T) {
 				providerReg.SetIDPResourceName(metadataURL, resourceName)
 			}
 
-			name, ok := providerReg.GetIDPResourceName(tc.lookupURL)
+			gotName, ok := providerReg.GetIDPResourceName(tc.lookupURL)
 			assert.Equal(t, tc.expectedFound, ok)
-			assert.Equal(t, tc.expectedName, name)
+			assert.Equal(t, tc.expectedName, gotName)
 		})
 	}
 }
