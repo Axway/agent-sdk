@@ -58,7 +58,7 @@ func (p *idpRegistry) RegisterProvider(_ context.Context, idp corecfg.IDPConfig,
 }
 
 func (p *idpRegistry) UnregisterProvider(_ context.Context, provider Provider) error {
-	// TODO: implement — check with original developer on expected cache cleanup behavior (secondary keys, idpResource entry)
+	// TODO: APIGOV-32516 — implement cleanup of provider map secondary keys and idpResource:<metadataURL> entries
 	return fmt.Errorf("not implemented")
 }
 

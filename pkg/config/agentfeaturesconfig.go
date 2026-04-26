@@ -92,7 +92,7 @@ const (
 	pathVersionChecker       = "agentFeatures.versionChecker"
 	pathPersistCache         = "agentFeatures.persistCache"
 	pathAgentStatusUpdates   = "agentFeatures.agentStatusUpdates"
-	pathManageIdPResources   = "agentFeatures.manageIdPResources"
+	pathManageIDPResources   = "agentFeatures.manageIdPResources"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -110,7 +110,7 @@ func AddAgentFeaturesConfigProperties(props properties.Properties) {
 	props.AddBoolProperty(pathVersionChecker, true, "Controls whether the agent SDK version checker will be enabled or not")
 	props.AddBoolProperty(pathPersistCache, true, "Controls whether the agent SDK will persist agent cache or not")
 	props.AddBoolProperty(pathAgentStatusUpdates, true, "Controls whether the agent should manage the status update or not")
-	props.AddBoolProperty(pathManageIdPResources, false, "Controls whether the agent SDK creates IdP resources in Engage")
+	props.AddBoolProperty(pathManageIDPResources, false, "Controls whether the agent SDK creates IdP resources in Engage")
 	addMetricServicesProperties(props)
 	addExternalIDPProperties(props)
 }
@@ -123,7 +123,7 @@ func ParseAgentFeaturesConfig(props properties.Properties) (AgentFeaturesConfig,
 		VersionChecker:       props.BoolPropertyValueOrTrue(pathVersionChecker),
 		PersistCache:         props.BoolPropertyValueOrTrue(pathPersistCache),
 		AgentStatusUpdates:   props.BoolPropertyValueOrTrue(pathAgentStatusUpdates),
-		IDPResourceMgmt:      props.BoolPropertyValue(pathManageIdPResources),
+		IDPResourceMgmt:      props.BoolPropertyValue(pathManageIDPResources),
 	}
 	metricSvsCfgs, err := parseMetricServicesConfig(props)
 	if err != nil {
