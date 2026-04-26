@@ -3,10 +3,11 @@ package agent
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockIDPResourceSupplier struct {

@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -467,9 +468,21 @@ func TestApplyIDPPoliciesSkippedWhenEmpty(t *testing.T) {
 		policies            management.EnvironmentPoliciesCredentials
 		wantSubResourceCall bool
 	}{
-		"no sub-resource call when policies are zero": {
+		"no sub-resource call when both periods are zero": {
 			policies:            management.EnvironmentPoliciesCredentials{},
 			wantSubResourceCall: false,
+		},
+		"sub-resource called when only expiry period is set": {
+			policies: management.EnvironmentPoliciesCredentials{
+				Expiry: management.EnvironmentPoliciesCredentialsExpiry{Period: 90},
+			},
+			wantSubResourceCall: true,
+		},
+		"sub-resource called when only visibility period is set": {
+			policies: management.EnvironmentPoliciesCredentials{
+				Visibility: management.EnvironmentPoliciesCredentialsVisibility{Period: 30},
+			},
+			wantSubResourceCall: true,
 		},
 	}
 
