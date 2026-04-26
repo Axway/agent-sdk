@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 

@@ -100,29 +100,25 @@ func TestIDPResourceName(t *testing.T) {
 		resourceName = "my-idp-resource"
 	)
 
-	tests := []struct {
-		name          string
+	tests := map[string]struct {
 		lookupURL     string
 		preSet        bool
 		expectedName  string
 		expectedFound bool
 	}{
-		{
-			name:          "not found before set",
+		"not found before set": {
 			lookupURL:     metadataURL,
 			preSet:        false,
 			expectedName:  "",
 			expectedFound: false,
 		},
-		{
-			name:          "found after set",
+		"found after set": {
 			lookupURL:     metadataURL,
 			preSet:        true,
 			expectedName:  resourceName,
 			expectedFound: true,
 		},
-		{
-			name:          "different URL not found",
+		"different URL not found": {
 			lookupURL:     "https://other.example.com/",
 			preSet:        true,
 			expectedName:  "",
@@ -130,8 +126,9 @@ func TestIDPResourceName(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
 			providerReg := NewProviderRegistry()
 			if tc.preSet {
 				providerReg.SetIDPResourceName(metadataURL, resourceName)

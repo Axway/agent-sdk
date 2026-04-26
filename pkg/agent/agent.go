@@ -354,7 +354,7 @@ func CacheInitSync() error {
 }
 
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
-	idpLogger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadata-url", idp.GetMetadataURL())
+	idpLogger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadataUrl", idp.GetMetadataURL())
 
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
@@ -507,14 +507,10 @@ func applyIDPPolicies(idpLogger log.FieldLogger, idpResource *management.Identit
 }
 
 func createIDPMetadataResource(idpLogger log.FieldLogger, idp config.IDPConfig, idpName string) {
-	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
+	httpClient := api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL())
+	serverMetadata, err := oauth.FetchMetadata(httpClient, idp.GetMetadataURL())
 	if err != nil {
-		idpLogger.WithError(err).Error("unable to get registered provider for IdP metadata; IdentityProviderMetadata resource will not be created")
-		return
-	}
-	serverMetadata := provider.GetMetadata()
-	if serverMetadata == nil {
-		idpLogger.Error("provider returned nil metadata; IdentityProviderMetadata resource will not be created")
+		idpLogger.WithError(err).Error("unable to fetch IdP metadata; IdentityProviderMetadata resource will not be created")
 		return
 	}
 
@@ -526,14 +522,7 @@ func createIDPMetadataResource(idpLogger log.FieldLogger, idp config.IDPConfig, 
 			return
 		}
 	} else {
-		idpMetadata = management.NewIdentityProviderMetadata(idpName, idpName)
-		idpMetadata.Spec = management.IdentityProviderMetadataSpec{
-			Issuer:                serverMetadata.Issuer,
-			AuthorizationEndpoint: serverMetadata.AuthorizationEndpoint,
-			TokenEndpoint:         serverMetadata.TokenEndpoint,
-			IntrospectionEndpoint: serverMetadata.IntrospectionEndpoint,
-			JwksUri:               serverMetadata.JwksURI,
-		}
+		idpMetadata = NewIdentityProviderMetadataFromServerMetadata(idpName, idpName, serverMetadata)
 	}
 
 	if _, err = agent.apicClient.CreateOrUpdateResource(idpMetadata); err != nil {

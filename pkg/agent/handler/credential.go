@@ -533,21 +533,23 @@ type provCreds struct {
 	credSchema        map[string]interface{}
 	credProvSchema    map[string]interface{}
 	credSchemaDetails map[string]interface{}
+	provisionMode     string
 }
 
 func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
 	provCred := &provCreds{
-		appDetails:  util.GetAgentDetails(app),
-		credDetails: credDetails,
-		credType:    cr.Spec.CredentialRequestDefinition,
-		credData:    cr.Spec.Data,
-		managedApp:  cr.Spec.ManagedApplication,
-		id:          cr.Metadata.ID,
-		name:        cr.Name,
-		credAction:  action,
-		days:        0,
+		appDetails:    util.GetAgentDetails(app),
+		credDetails:   credDetails,
+		credType:      cr.Spec.CredentialRequestDefinition,
+		credData:      cr.Spec.Data,
+		managedApp:    cr.Spec.ManagedApplication,
+		id:            cr.Metadata.ID,
+		name:          cr.Name,
+		credAction:    action,
+		days:          0,
+		provisionMode: cr.Spec.Provision.Mode,
 	}
 
 	if crd != nil {
@@ -599,6 +601,11 @@ func (c provCreds) GetCredentialData() map[string]interface{} {
 // GetCredentialAction gets the data of the credential
 func (c provCreds) GetCredentialAction() prov.CredentialAction {
 	return c.credAction
+}
+
+// GetProvisionMode returns the provisioning mode for the credential (e.g. "external")
+func (c provCreds) GetProvisionMode() string {
+	return c.provisionMode
 }
 
 // GetID gets the id of the credential resource

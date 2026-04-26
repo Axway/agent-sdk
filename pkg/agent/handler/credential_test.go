@@ -1035,23 +1035,19 @@ func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
 }
 
 func TestIsExternalCredential(t *testing.T) {
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		cred     *management.Credential
 		expected bool
 	}{
-		{
-			name:     "nil credential returns false",
+		"nil credential returns false": {
 			cred:     nil,
 			expected: false,
 		},
-		{
-			name:     "empty mode returns false",
+		"empty mode returns false": {
 			cred:     &management.Credential{},
 			expected: false,
 		},
-		{
-			name: "mode external returns true",
+		"mode external returns true": {
 			cred: &management.Credential{
 				Spec: management.CredentialSpec{
 					Provision: management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal},
@@ -1059,8 +1055,7 @@ func TestIsExternalCredential(t *testing.T) {
 			},
 			expected: true,
 		},
-		{
-			name: "other mode returns false",
+		"other mode returns false": {
 			cred: &management.Credential{
 				Spec: management.CredentialSpec{
 					Provision: management.CredentialSpecProvision{Mode: "internal"},
@@ -1070,9 +1065,29 @@ func TestIsExternalCredential(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, isExternalCredential(tc.cred))
+		})
+	}
+}
+
+func TestGetProvisionMode(t *testing.T) {
+	tests := map[string]struct {
+		mode     string
+		expected string
+	}{
+		"empty mode":    {mode: "", expected: ""},
+		"external mode": {mode: prov.CredProvisionModeExternal, expected: prov.CredProvisionModeExternal},
+		"other mode":    {mode: "internal", expected: "internal"},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			c := provCreds{provisionMode: tc.mode}
+			assert.Equal(t, tc.expected, c.GetProvisionMode())
 		})
 	}
 }

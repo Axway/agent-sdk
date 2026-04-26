@@ -74,17 +74,17 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 }
 
 func TestSetIdentityProvider(t *testing.T) {
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		idpName  string
 		expected string
 	}{
-		{name: "set identity provider name", idpName: "my-idp-resource", expected: "my-idp-resource"},
-		{name: "empty identity provider name", idpName: "", expected: ""},
+		"set identity provider name":   {idpName: "my-idp-resource", expected: "my-idp-resource"},
+		"empty identity provider name": {idpName: "", expected: ""},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
 			var capturedSpec management.CredentialRequestDefinitionSpec
 			registerFunc := func(crd *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error) {
 				capturedSpec = crd.Spec
