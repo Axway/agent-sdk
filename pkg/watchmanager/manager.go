@@ -138,11 +138,8 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 func (m *watchManager) RegisterWatch(link string, events chan *proto.Event) (string, error) {
 	subscriptionID, _ := uuid.NewUUID()
 	subID := subscriptionID.String()
-
-	m.logger.
-		WithField("watchId", subID).
-		WithField("watchTopic", link).
-		Info("registering watch client")
+	logger := m.logger.WithField("watchId", subID).WithField("watchTopic", link)
+	logger.Info("registering watch client")
 
 	client, err := newWatchClient(
 		m.connection,
@@ -157,57 +154,35 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event) (str
 		m.newWatchClientFunc,
 	)
 	if err != nil {
-		m.logger.WithError(err).
-			WithField("watchId", subID).
-			WithField("watchTopic", link).
-			Error("failed to create watch stream client")
+		logger.WithError(err).Error("failed to create watch stream client")
 		return subID, err
 	}
 
 	if m.options.sequence != nil && m.options.sequence.GetSequence() < 0 {
 		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
-		m.logger.WithError(err).
-			WithField("watchId", subID).
-			WithField("watchTopic", link).
+		logger.WithError(err).
 			Error("cannot register watch due to invalid sequence")
 		m.onHarvesterErr()
 		return subID, err
 	}
-	m.logger.
-		WithField("watchId", subID).
-		WithField("watchTopic", link).
-		Debug("starting watch catch-up sync")
+	logger.Debug("starting watch catch-up sync")
 	if err := m.eventCatchUp(link, events); err != nil {
-		m.logger.WithError(err).
-			WithField("watchId", subID).
-			WithField("watchTopic", link).
-			Error("failed to sync events from harvester")
+		logger.WithError(err).Error("failed to sync events from harvester")
 		m.onHarvesterErr()
 		return subID, err
 	}
-	m.logger.
-		WithField("watchId", subID).
-		WithField("watchTopic", link).
-		Debug("watch catch-up sync complete, proceeding to register watch client")
+	logger.Debug("watch catch-up sync complete, proceeding to register watch client")
 
 	if err := client.processRequest(); err != nil {
-		m.logger.WithError(err).
-			WithField("watchId", subID).
-			WithField("watchTopic", link).
+		logger.WithError(err).
 			Error("failed to send initial watch subscribe request")
 		return subID, err
 	}
-	m.logger.
-		WithField("watchId", subID).
-		WithField("watchTopic", link).
-		Debug("watch subscription request sent, starting watch event receiver")
+	logger.Debug("watch subscription request sent, starting watch event receiver")
 	go client.processEvents()
 
 	m.addClient(subID, client)
-	m.logger.
-		WithField("watchId", subID).
-		WithField("watchTopic", link).
-		Info("registered watch client")
+	logger.Info("registered watch client")
 
 	return subID, nil
 }
