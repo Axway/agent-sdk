@@ -273,8 +273,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	}
 
 	if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
-		err := provCreds.idpProvisioner.RegisterClient()
-		if err != nil {
+		if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
 			logger.WithError(err).Error("error provisioning credential request with IDP")
 			h.onError(ctx, cred, err)
 			return cred
@@ -434,8 +433,7 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 
 		// if IDP and rotate the agent will register a new client
 		if action == prov.Rotate && provCreds.IsIDPCredential() && !isExternalCredential(cred) {
-			err := provCreds.idpProvisioner.RegisterClient()
-			if err != nil {
+			if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
 				h.onError(ctx, cred, err)
 				return cred

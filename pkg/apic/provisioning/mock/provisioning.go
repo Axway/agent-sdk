@@ -87,6 +87,7 @@ type MockCredentialRequest struct {
 	CRDSchema     map[string]interface{}
 	CRDProvSchema map[string]interface{}
 	CRDDetails    map[string]interface{}
+	ProvisionMode string
 }
 
 func (m MockCredentialRequest) GetApplicationName() string {
@@ -146,6 +147,10 @@ func (m MockCredentialRequest) IsIDPCredential() bool {
 
 func (m MockCredentialRequest) GetIDPCredentialData() provisioning.IDPCredentialData {
 	return m.IDPCredData
+}
+
+func (m MockCredentialRequest) GetProvisionMode() string {
+	return m.ProvisionMode
 }
 
 type MockAccessRequest struct {

@@ -88,6 +88,7 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 		expectedQueryCount int
 	}{
 		"no IdP query when flag disabled": {flagEnabled: false, expectedQueryCount: 0},
+		"IdP query made when flag enabled": {flagEnabled: true, expectedQueryCount: 1},
 	}
 
 	for name, tc := range tests {
@@ -107,6 +108,9 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 					inst, _ := ri.AsInstance()
 					return inst, nil
 				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					return management.NewEnvironment(testEnvName), nil
+				},
 			}
 
 			idpServer, cleanup := setupIDPLifecycleAgent(t, apicClient, tc.flagEnabled)
@@ -115,7 +119,7 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 			idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
 			err := registerCredentialProvider(idpCfg, config.NewTLSConfig(), "", 30*time.Second)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedQueryCount, queryCallCount, "no IdentityProvider query expected when ManageIDPResources is false")
+			assert.Equal(t, tc.expectedQueryCount, queryCallCount)
 		})
 	}
 }
@@ -170,6 +174,47 @@ func TestManageIDPResourceExistingFound(t *testing.T) {
 			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
 			assert.True(t, ok)
 			assert.Equal(t, tc.existingName, storedName)
+		})
+	}
+}
+
+func TestManageIDPResourceQueryError(t *testing.T) {
+	tests := map[string]struct {
+		wantNameStored bool
+	}{
+		"query error falls through to creation and name is stored": {
+			wantNameStored: true,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			apicClient := &mock.Client{
+				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+					return nil, errors.New("query error")
+				},
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+					inst, _ := ri.AsInstance()
+					return inst, nil
+				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					return management.NewEnvironment(testEnvName), nil
+				},
+			}
+
+			idpServer, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
+			resultName := manageIDPResource(logger, idpCfg)
+
+			assert.NotEmpty(t, resultName, "should attempt creation and return a name even when query errors")
+			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
+			assert.Equal(t, tc.wantNameStored, ok)
+			if tc.wantNameStored {
+				assert.Equal(t, resultName, storedName)
+			}
 		})
 	}
 }
