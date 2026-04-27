@@ -20,7 +20,7 @@ func UpdateDurations(retryInterval time.Duration, executionTimeout time.Duration
 	durationsMutex.Lock()
 	defer durationsMutex.Unlock()
 	executionTimeLimit = executionTimeout
-	globalPool.setBackoff(newBackoffTimeout(retryInterval, 10*time.Minute, 2))
+	globalPool.backoff.Store(newBackoffTimeout(retryInterval, 10*time.Minute, 2))
 	statusCheckInterval = retryInterval
 }
 

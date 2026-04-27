@@ -20,7 +20,7 @@ type RequestQueue interface {
 // requestQueue
 type requestQueue struct {
 	ctx       context.Context
-	cancel    context.CancelFunc
+	cancel    context.CancelCauseFunc
 	logger    log.FieldLogger
 	requestCh chan *proto.Request
 	receiveCh chan *proto.Request
@@ -28,10 +28,10 @@ type requestQueue struct {
 }
 
 // NewRequestQueueFunc type for creating a new request queue
-type NewRequestQueueFunc func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue
+type NewRequestQueueFunc func(ctx context.Context, cancel context.CancelCauseFunc, requestCh chan *proto.Request) RequestQueue
 
 // NewRequestQueue creates a new queue for the requests to be sent for watch subscription
-func NewRequestQueue(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) RequestQueue {
+func NewRequestQueue(ctx context.Context, cancel context.CancelCauseFunc, requestCh chan *proto.Request) RequestQueue {
 	logger := log.NewFieldLogger().
 		WithComponent("requestQueue").
 		WithPackage("sdk.agent.events")
@@ -52,7 +52,7 @@ func (q *requestQueue) Stop() {
 	}
 
 	defer q.isActive.Store(false)
-	q.cancel()
+	q.cancel(nil)
 	close(q.receiveCh)
 }
 
@@ -66,8 +66,12 @@ func (q *requestQueue) Write(request *proto.Request) error {
 	}
 
 	q.logger.WithField("requestType", request.RequestType).Trace("received stream request")
-	q.receiveCh <- request
-	return nil
+	select {
+	case q.receiveCh <- request:
+		return nil
+	case <-q.ctx.Done():
+		return q.ctx.Err()
+	}
 }
 
 func (q *requestQueue) Start() {

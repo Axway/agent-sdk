@@ -54,10 +54,30 @@ func SetNameAndVersion(name, version string) {
 
 // RegisterHealthcheck - register a new dependency with this service
 func RegisterHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
+	globalHealthChecker.checksMu.Lock()
+	defer globalHealthChecker.checksMu.Unlock()
+
 	if _, ok := globalHealthChecker.Checks[endpoint]; ok {
 		return "", fmt.Errorf("a check with the endpoint of %s already exists", endpoint)
 	}
 
+	return registerHealthcheck(name, endpoint, check)
+}
+
+// RegisterOrUpdateHealthcheck - updates or registers the checker
+func RegisterOrUpdateHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
+	globalHealthChecker.checksMu.Lock()
+	defer globalHealthChecker.checksMu.Unlock()
+
+	if existing, ok := globalHealthChecker.Checks[endpoint]; ok {
+		existing.checker = check
+		return existing.ID, nil
+	}
+
+	return registerHealthcheck(name, endpoint, check)
+}
+
+func registerHealthcheck(name, endpoint string, check CheckStatus) (string, error) {
 	newID, _ := uuid.NewUUID()
 	newChecker := &statusCheck{
 		Name:        name,
@@ -97,7 +117,9 @@ func GetStatusConfig() corecfg.StatusConfig {
 
 // GetStatus - returns the current status for specified service
 func GetStatus(endpoint string) StatusLevel {
+	globalHealthChecker.checksMu.RLock()
 	statusCheck, ok := globalHealthChecker.Checks[endpoint]
+	globalHealthChecker.checksMu.RUnlock()
 	if !ok {
 		logger.Debugf("health check endpoint for %s not found in global health checker. Returning %s status", endpoint, FAIL)
 		return FAIL
@@ -114,8 +136,15 @@ func GetStatus(endpoint string) StatusLevel {
 
 // RunChecks - loop through all
 func RunChecks() StatusLevel {
-	status := Status{Result: OK}
+	globalHealthChecker.checksMu.RLock()
+	checks := make([]*statusCheck, 0, len(globalHealthChecker.Checks))
 	for _, check := range globalHealthChecker.Checks {
+		checks = append(checks, check)
+	}
+	globalHealthChecker.checksMu.RUnlock()
+
+	status := Status{Result: OK}
+	for _, check := range checks {
 		check.executeCheck()
 		if check.Status.Result == FAIL && status.Result == OK {
 			status = *check.Status
@@ -171,9 +200,11 @@ func (s *Server) registerHandler(path string, handler func(http.ResponseWriter, 
 func (s *Server) HandleRequests() {
 	if !globalHealthChecker.registered {
 		s.registerHandler("/status", statusHandler)
+		globalHealthChecker.checksMu.RLock()
 		for _, statusChecks := range globalHealthChecker.Checks {
 			s.registerHandler(fmt.Sprintf("/status/%s", statusChecks.Endpoint), checkHandler)
 		}
+		globalHealthChecker.checksMu.RUnlock()
 		globalHealthChecker.registered = true
 	}
 
@@ -243,7 +274,7 @@ func GetHealthcheckOutput(url string) (string, error) {
 	// Close the response body and the server
 	resp.Body.Close()
 
-	output, err := json.MarshalIndent(statusResp, "", "  ")
+	output, err := json.MarshalIndent(&statusResp, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("error formatting the Status Check into Indented JSON")
 	}
@@ -285,7 +316,9 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get the check object
 	endpoint := path[1]
+	globalHealthChecker.checksMu.RLock()
 	thisCheck, ok := globalHealthChecker.Checks[endpoint]
+	globalHealthChecker.checksMu.RUnlock()
 	if !ok {
 		logger.Errorf("Check with endpoint of %s is not known", endpoint)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -299,7 +332,7 @@ func checkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return data
-	data, _ := json.Marshal(globalHealthChecker.Checks[endpoint].Status)
+	data, _ := json.Marshal(thisCheck.Status)
 	io.WriteString(w, string(data))
 }
 
