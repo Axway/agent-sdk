@@ -23,6 +23,8 @@ type WatchClient struct {
 	config *Config
 	logger logrus.FieldLogger
 	wm     wm.Manager
+	ctx    context.Context
+	cancel context.CancelCauseFunc
 }
 
 type sequenceManager struct {
@@ -135,6 +137,9 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		watchOptions = append(watchOptions, wm.WithHarvester(hClient, sm))
 	}
 
+	ctx, cancel := context.WithCancelCause(context.Background())
+	watchOptions = append(watchOptions, wm.WithContext(ctx, cancel))
+
 	cfg := &wm.Config{
 		Host:        ccfg.GRPCCfg.Host,
 		Port:        uint32(ccfg.GRPCCfg.Port),
@@ -152,6 +157,8 @@ func NewWatchClient(config *Config, logger logrus.FieldLogger) (*WatchClient, er
 		config: config,
 		logger: entry,
 		wm:     w,
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
@@ -160,21 +167,25 @@ func (w WatchClient) Watch() {
 	log := w.logger
 	log.Info("starting to watch events")
 
-	eventChannel, errCh := make(chan *proto.Event), make(chan error)
-	subscriptionID, err := w.wm.RegisterWatch(w.config.TopicSelfLink, eventChannel, errCh)
+	eventChannel := make(chan *proto.Event)
+	subscriptionID, err := w.wm.RegisterWatch(w.config.TopicSelfLink, eventChannel)
 	if err != nil {
 		log.Error(err)
 		return
 	}
+	defer w.cancel(nil)
 
 	log = log.WithField("subscriptionID", subscriptionID)
 	log.Infof("watch registered successfully")
 
 	for {
 		select {
-		case err = <-errCh:
-			log.Error(err)
-			w.wm.CloseWatch(subscriptionID)
+		case <-w.ctx.Done():
+			if cause := context.Cause(w.ctx); cause != nil {
+				log.WithError(cause).Error("watch stream closed with error")
+			} else {
+				log.Error("watch stream closed")
+			}
 			return
 		case event := <-eventChannel:
 			log.

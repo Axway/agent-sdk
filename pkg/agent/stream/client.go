@@ -54,7 +54,7 @@ type StreamerClient struct {
 	onEventSyncError   func()
 	isInitialized      atomic.Bool
 	isRunning          atomic.Bool
-	cancel             context.CancelFunc
+	cancel             context.CancelCauseFunc
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -89,6 +89,7 @@ func NewStreamerClient(
 		logger:          logger,
 		environmentURL:  cfg.GetEnvironmentURL(),
 	}
+	s.isInitialized.Store(false)
 
 	for _, opt := range options {
 		opt(s)
@@ -146,11 +147,11 @@ func (s *StreamerClient) Start() error {
 	s.isRunning.Store(true)
 	defer s.isRunning.Store(false)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	s.cancel = cancel
-	defer cancel()
-	eventCh, requestCh, eventErrorCh := make(chan *proto.Event), make(chan *proto.Request, 1), make(chan error)
+	defer cancel(nil)
 
+	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
 	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
 	defer s.listener.Stop()
 
@@ -165,31 +166,30 @@ func (s *StreamerClient) Start() error {
 	defer manager.CloseConn()
 
 	s.manager = manager
-	s.isInitialized.Store(false)
 	s.listener.Listen()
-	s.requestQueue.Start()
-	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh, eventErrorCh)
+	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh)
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
-	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
 	}
+	s.requestQueue.Start()
+	s.isInitialized.Store(true)
+	defer s.isInitialized.Store(false)
 
-	select {
-	case err := <-eventErrorCh:
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("stream client context has been closed")
+	<-ctx.Done()
+	if cause := context.Cause(ctx); cause != nil {
+		return cause
 	}
+	return fmt.Errorf("stream client context has been closed")
 }
 
 // Status returns the health status
 func (s *StreamerClient) Status() error {
 	if !s.isInitialized.Load() {
-		return nil
+		return fmt.Errorf("stream client is not yet initialized")
 	}
 
 	if s.manager == nil || s.listener == nil || s.requestQueue == nil {
@@ -205,7 +205,7 @@ func (s *StreamerClient) Status() error {
 // Stop stops the StreamerClient
 func (s *StreamerClient) Stop() {
 	if s.cancel != nil {
-		s.cancel()
+		s.cancel(nil)
 	}
 }
 
