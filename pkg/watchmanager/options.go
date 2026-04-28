@@ -6,22 +6,19 @@ import (
 	"net"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent/events"
-	"github.com/Axway/agent-sdk/pkg/harvester"
-	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
+	"github.com/Axway/agent-sdk/pkg/harvester"
+	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
 // Option configures how we set up the watch connection.
@@ -47,7 +44,7 @@ type keepAliveOption struct {
 // watchOptions options to use when creating a stream
 type watchOptions struct {
 	ctx              context.Context
-	cancel           context.CancelFunc
+	cancel           context.CancelCauseFunc
 	tlsCfg           *tls.Config
 	proxyURL         string
 	singleEntryAddr  string
@@ -62,7 +59,7 @@ type watchOptions struct {
 // newWatchOptions returns the default watchOptions
 func newWatchOptions() *watchOptions {
 	// Default context and cancel function
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 
 	return &watchOptions{
 		ctx:         ctx,
@@ -134,7 +131,7 @@ func WithRequestChannel(requestCh chan *proto.Request) Option {
 	})
 }
 
-func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
+func WithContext(ctx context.Context, cancel context.CancelCauseFunc) Option {
 	return funcOption(func(o *watchOptions) {
 		o.ctx = ctx
 		o.cancel = cancel
@@ -203,8 +200,6 @@ func defaultTLSConfig() *tls.Config {
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
 		},
 	}
 }

@@ -62,7 +62,7 @@ func TestEventListener_start(t *testing.T) {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancelCause(context.Background())
 			listener := NewEventListener(ctx, cancel, tc.events, tc.client, sequenceManager, tc.handler)
 
 			errCh := make(chan error)
@@ -103,14 +103,14 @@ func TestEventListener_Listen(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
 	listener.Listen()
 	listener.Stop()
 	err := ctx.Err()
 	assert.NotNil(t, err)
 
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel = context.WithCancelCause(context.Background())
 	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
 	listener.Listen()
 	close(events)
@@ -176,7 +176,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				},
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancelCause(context.Background())
 			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, sequenceManager, tc.handler)
 
 			err := listener.handleEvent(event)
@@ -320,8 +320,8 @@ func TestEventListener_PauseResume(t *testing.T) {
 			events := make(chan *proto.Event, tc.chanSize)
 
 			h := &slowHandler{delay: tc.handlerDelay}
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
 
 			listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, seq, h)
 			listener.Listen()

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -20,8 +21,7 @@ const (
 
 type clientConfig struct {
 	ctx           context.Context
-	cancel        context.CancelFunc
-	errors        chan error
+	cancel        context.CancelCauseFunc
 	events        chan *proto.Event
 	tokenGetter   TokenGetter
 	topicSelfLink string
@@ -31,10 +31,9 @@ type clientConfig struct {
 type watchClient struct {
 	cfg                    clientConfig
 	getTokenExpirationTime getTokenExpFunc
-	isRunning              bool
+	isRunning              atomic.Bool
 	stream                 proto.Watch_SubscribeClient
 	timer                  *time.Timer
-	mutex                  sync.Mutex
 }
 
 // newWatchClientFunc func signature to create a watch client
@@ -47,23 +46,22 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 
 	// If no context is provided, create a new one
 	if clientCfg.ctx == nil {
-		clientCfg.ctx, clientCfg.cancel = context.WithCancel(context.Background())
+		clientCfg.ctx, clientCfg.cancel = context.WithCancelCause(context.Background())
 	}
 
 	stream, err := svcClient.Subscribe(clientCfg.ctx)
 	if err != nil {
-		clientCfg.cancel()
+		clientCfg.cancel(err)
 		return nil, err
 	}
 
 	client := &watchClient{
 		cfg:                    clientCfg,
 		getTokenExpirationTime: getTokenExpirationTime,
-		isRunning:              true,
 		stream:                 stream,
 		timer:                  time.NewTimer(initDuration),
 	}
-
+	client.isRunning.Store(true)
 	return client, nil
 }
 
@@ -84,8 +82,15 @@ func (c *watchClient) recv() error {
 	if err != nil {
 		return err
 	}
-	c.cfg.events <- event
-	return nil
+
+	select {
+	case c.cfg.events <- event:
+		return nil
+	case <-c.cfg.ctx.Done():
+		return c.cfg.ctx.Err()
+	case <-c.stream.Context().Done():
+		return c.stream.Context().Err()
+	}
 }
 
 // processRequest sends a message to the client when the timer expires, and handles when the stream is closed.
@@ -105,7 +110,7 @@ func (c *watchClient) processRequest() error {
 		return err
 	}
 
-	return lock.wait()
+	return lock.wait(c.cfg.ctx, initDuration)
 }
 
 func (c *watchClient) initialRequest() error {
@@ -120,9 +125,6 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 
 	for {
 		select {
-		case <-c.cfg.ctx.Done():
-			c.handleError(c.cfg.ctx.Err())
-			return
 		case <-c.stream.Context().Done():
 			c.handleError(c.stream.Context().Err())
 			return
@@ -158,27 +160,42 @@ func (c *watchClient) createTokenRefreshRequest() error {
 	}
 
 	req := createWatchRequest(c.cfg.topicSelfLink, token)
-	// write the token request to the channel
-	c.cfg.requests <- req
+	if err = c.enqueueRequest(req); err != nil {
+		return err
+	}
 
 	c.timer.Reset(exp)
 	return nil
 }
 
-// handleError stop the running timer, send to the error channel, and close the open stream.
-func (c *watchClient) handleError(err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.isRunning {
-		c.isRunning = false
-		c.timer.Stop()
-		if c.cfg.ctx.Err() != nil {
-			return
-		}
-		c.cfg.errors <- err
-		c.cfg.cancel()
+func (c *watchClient) enqueueRequest(req *proto.Request) error {
+	select {
+	case c.cfg.requests <- req:
+		return nil
+	case <-c.cfg.ctx.Done():
+		return c.cfg.ctx.Err()
+	case <-c.stream.Context().Done():
+		return c.stream.Context().Err()
 	}
+}
+
+// shouldCancelContext checks if the context should be canceled. Returns true only once per client lifecycle.
+func (c *watchClient) shouldCancelContext() bool {
+	if c.isRunning.CompareAndSwap(true, false) {
+		c.timer.Stop()
+		if c.cfg.ctx.Err() == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// handleError stops the running timer and cancels the stream context
+func (c *watchClient) handleError(err error) {
+	if !c.shouldCancelContext() {
+		return
+	}
+	c.cfg.cancel(err)
 }
 
 func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
@@ -219,32 +236,36 @@ func getTokenExpirationTime(token string) (time.Duration, error) {
 }
 
 type initialRequestLock struct {
-	waitDone bool
-	lock     sync.Mutex
-	wg       sync.WaitGroup
-	err      error
+	once  sync.Once
+	ready chan struct{}
+	lock  sync.Mutex
+	err   error
 }
 
 func createInitialRequestLock() *initialRequestLock {
-	l := &initialRequestLock{
-		wg: sync.WaitGroup{},
+	return &initialRequestLock{
+		ready: make(chan struct{}),
 	}
-	l.wg.Add(1)
-	return l
 }
 
 func (l *initialRequestLock) done(err error) {
-	l.setError(err)
-
-	if !l.waitDone {
-		l.wg.Done()
-		l.waitDone = true
-	}
+	l.once.Do(func() {
+		l.setError(err)
+		close(l.ready)
+	})
 }
 
-func (l *initialRequestLock) wait() error {
-	l.wg.Wait()
-	return l.getError()
+func (l *initialRequestLock) wait(ctx context.Context, timeout time.Duration) error {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-l.ready:
+		return l.getError()
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return fmt.Errorf("timed out waiting for initial watch request after %s", timeout)
+	}
 }
 
 func (l *initialRequestLock) setError(err error) {

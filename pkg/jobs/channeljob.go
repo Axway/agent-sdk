@@ -43,7 +43,7 @@ func (b *channelJob) handleExecution() {
 	b.setError(b.job.Execute())
 	if b.getError() != nil {
 		b.setExecutionError()
-		b.baseJob.logger.Error(b.err.Load())
+		b.baseJob.logger.Error(b.getError())
 		b.stop() // stop the job on error
 		b.incrementConsecutiveFails()
 		return

@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"testing"
+	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -29,7 +30,7 @@ func NewConfig() *config.CentralConfiguration {
 		EnvironmentID: "123",
 		AgentName:     "discoveryagents",
 		URL:           "http://abc.com",
-		TLS:           &config.TLSConfiguration{},
+		TLS:           config.NewTLSConfig(),
 		SingleURL:     "https://abc.com",
 	}
 }
@@ -63,7 +64,7 @@ func TestNewStreamer(t *testing.T) {
 		return manager, nil
 	}
 
-	assert.Nil(t, streamer.Status())
+	assert.NotNil(t, streamer.Status())
 
 	errCh := make(chan error)
 	go func() {
@@ -72,14 +73,14 @@ func TestNewStreamer(t *testing.T) {
 	}()
 
 	<-manager.readyCh
-
+	assert.Equal(t, hc.OK, hc.RunChecks())
 	// should stop the listener and write nil to the listener's error channel
 	streamer.listener.Stop()
 
 	err = <-errCh
 	assert.NotNil(t, err)
 
-	assert.Equal(t, hc.OK, hc.RunChecks())
+	assert.Equal(t, hc.FAIL, hc.RunChecks())
 	streamer.manager = nil
 	streamer.listener = nil
 
@@ -90,7 +91,8 @@ func TestNewStreamer(t *testing.T) {
 
 	<-manager.readyCh
 
-	assert.Nil(t, streamer.Status())
+	// wait for isInitialized to be set after requestQueue.Start()
+	assert.Eventually(t, func() bool { return streamer.Status() == nil }, time.Second, 10*time.Millisecond)
 	stop(t, streamer, errCh)
 	manager.status = false
 
@@ -169,14 +171,14 @@ func TestStatusUpdates(t *testing.T) {
 			}
 			requestQueue := &mockRequestQueue{active: tc.queueActive}
 
-			streamer.newRequestQueue = func(ctx context.Context, cancel context.CancelFunc, requestCh chan *proto.Request) events.RequestQueue {
+			streamer.newRequestQueue = func(ctx context.Context, cancel context.CancelCauseFunc, requestCh chan *proto.Request) events.RequestQueue {
 				return requestQueue
 			}
 			streamer.newManager = func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
 				return manager, nil
 			}
 
-			assert.Nil(t, streamer.Status())
+			assert.NotNil(t, streamer.Status())
 			errCh := make(chan error)
 			go func() {
 				err := streamer.Start()
@@ -281,7 +283,7 @@ type mockManager struct {
 	readyCh chan struct{}
 }
 
-func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event, _ chan error) (string, error) {
+func (m *mockManager) RegisterWatch(_ string, _ chan *proto.Event) (string, error) {
 	if m.readyCh != nil {
 		m.readyCh <- struct{}{}
 	}
