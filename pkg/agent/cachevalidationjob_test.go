@@ -9,7 +9,6 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -95,76 +94,6 @@ func makeServerResource(kind, scopeKind, scopeName, name string, modTime time.Ti
 	}
 }
 
-func TestValidatedKindsByAgentType(t *testing.T) {
-	type testCase struct {
-		agentType   config.AgentType
-		expectedIn  []string
-		expectedOut []string
-	}
-
-	tests := map[string]testCase{
-		"DiscoveryAgent validates discovery-relevant kinds": {
-			agentType: config.DiscoveryAgent,
-			expectedIn: []string{
-				management.APIServiceGVK().Kind,
-				management.APIServiceInstanceGVK().Kind,
-				management.ManagedApplicationGVK().Kind,
-				management.AccessRequestGVK().Kind,
-				management.AccessRequestDefinitionGVK().Kind,
-				management.CredentialRequestDefinitionGVK().Kind,
-				management.ApplicationProfileDefinitionGVK().Kind,
-			},
-			expectedOut: []string{
-				management.ComplianceRuntimeResultGVK().Kind,
-			},
-		},
-		"TraceabilityAgent validates traceability-relevant kinds": {
-			agentType: config.TraceabilityAgent,
-			expectedIn: []string{
-				management.APIServiceGVK().Kind,
-				management.APIServiceInstanceGVK().Kind,
-				management.ManagedApplicationGVK().Kind,
-				management.AccessRequestGVK().Kind,
-			},
-			expectedOut: []string{
-				management.AccessRequestDefinitionGVK().Kind,
-				management.CredentialRequestDefinitionGVK().Kind,
-				management.ApplicationProfileDefinitionGVK().Kind,
-				management.ComplianceRuntimeResultGVK().Kind,
-			},
-		},
-		"ComplianceAgent validates compliance-relevant kinds": {
-			agentType: config.ComplianceAgent,
-			expectedIn: []string{
-				management.APIServiceGVK().Kind,
-				management.APIServiceInstanceGVK().Kind,
-				management.ComplianceRuntimeResultGVK().Kind,
-			},
-			expectedOut: []string{
-				management.ManagedApplicationGVK().Kind,
-				management.AccessRequestGVK().Kind,
-				management.AccessRequestDefinitionGVK().Kind,
-				management.CredentialRequestDefinitionGVK().Kind,
-				management.ApplicationProfileDefinitionGVK().Kind,
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			kinds := validatedKindsByAgentType(tc.agentType)
-			for _, k := range tc.expectedIn {
-				_, ok := kinds[k]
-				assert.True(t, ok, "expected kind %s to be validated", k)
-			}
-			for _, k := range tc.expectedOut {
-				_, ok := kinds[k]
-				assert.False(t, ok, "expected kind %s to NOT be validated", k)
-			}
-		})
-	}
-}
-
 func TestCacheValidator_Execute(t *testing.T) {
 	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
 	serverTime := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
@@ -197,13 +126,12 @@ func TestCacheValidator_Execute(t *testing.T) {
 	type testCase struct {
 		setup               func(*mockResourceClient, *mockCacheGetter)
 		watchTopic          *management.WatchTopic
-		agentType           config.AgentType
 		expectErr           error
-		expectedFailedKinds []string // kinds expected in the returned failed-filters slice
+		expectedFailedKinds []string
 	}
 
 	tests := map[string]testCase{
-		"skips unvalidated kinds": {
+		"skips non-cached kinds": {
 			watchTopic: &management.WatchTopic{
 				Spec: management.WatchTopicSpec{
 					Filters: []management.WatchTopicSpecFilters{
@@ -211,7 +139,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			agentType:           config.DiscoveryAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
@@ -223,7 +150,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
@@ -235,7 +161,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{svcGVK.Kind},
 		},
@@ -247,7 +172,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{svcGVK.Kind},
 		},
@@ -260,7 +184,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{svcGVK.Kind},
 		},
@@ -273,7 +196,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
@@ -286,7 +208,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 				})
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{svcGVK.Kind},
 		},
@@ -295,11 +216,10 @@ func TestCacheValidator_Execute(t *testing.T) {
 				client.err = fmt.Errorf("network error")
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{svcGVK.Kind},
 		},
-		"compliance agent: APIServiceInstances from multiple managed environments are each validated independently": {
+		"APIServiceInstances from multiple scopes are each validated independently": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				instEnv1 := makeServerResource(instGVK.Kind, "Environment", "env1", "inst1", modTime)
 				instEnv2 := makeServerResource(instGVK.Kind, "Environment", "env2", "inst2", modTime)
@@ -318,7 +238,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			agentType:           config.ComplianceAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
@@ -341,7 +260,6 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			agentType:           config.DiscoveryAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
@@ -362,9 +280,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{instGVK.Kind}, // only the instance kind failed
+			expectedFailedKinds: []string{instGVK.Kind},
 		},
 		"both kinds out of sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -380,9 +297,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			agentType:           config.DiscoveryAgent,
 			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind, instGVK.Kind}, // both failed
+			expectedFailedKinds: []string{svcGVK.Kind, instGVK.Kind},
 		},
 		"empty server and cache": {
 			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
@@ -400,25 +316,14 @@ func TestCacheValidator_Execute(t *testing.T) {
 				client.resources[ri.GetKindLink()] = []*apiv1.ResourceInstance{}
 			},
 			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
 			expectErr:           nil,
 			expectedFailedKinds: nil,
 		},
-		"DiscoveryAgent skips ComplianceRuntimeResult": {
+		"ComplianceRuntimeResult out of sync is detected": {
 			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
 				client.resources[crr1.GetKindLink()] = []*apiv1.ResourceInstance{crr1}
 			},
 			watchTopic:          singleScopeWatchTopic(crrGVK, scopeName),
-			agentType:           config.DiscoveryAgent,
-			expectErr:           nil,
-			expectedFailedKinds: nil,
-		},
-		"ComplianceAgent detects out-of-sync ComplianceRuntimeResult": {
-			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
-				client.resources[crr1.GetKindLink()] = []*apiv1.ResourceInstance{crr1}
-			},
-			watchTopic:          singleScopeWatchTopic(crrGVK, scopeName),
-			agentType:           config.ComplianceAgent,
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{crrGVK.Kind},
 		},
@@ -431,11 +336,10 @@ func TestCacheValidator_Execute(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(client, cacheMan)
 			}
-			cv := newCacheValidator(client, tc.watchTopic, cacheMan, tc.agentType)
+			cv := newCacheValidator(client, tc.watchTopic, cacheMan)
 			failedFilters, err := cv.Execute()
 			assert.Equal(t, tc.expectErr, err)
 
-			// assert returned failed-filter kinds
 			if len(tc.expectedFailedKinds) == 0 {
 				assert.Empty(t, failedFilters)
 			} else {

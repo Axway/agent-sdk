@@ -202,18 +202,23 @@ func (a *agentResourceManager) shouldRebuildCache() bool {
 		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
 		if value != nil {
 			logger := a.logger.WithField("cacheUpdateTime", value)
+			strVal, ok := value.(string)
+			if !ok {
+				logger.Warn("cacheUpdateTime is not a string, triggering rebuild")
+				return true
+			}
 			// get current cacheUpdateTime from x-agent-details
-			convToTimestamp, err := strconv.ParseInt(value.(string), 10, 64)
+			convToTimestamp, err := strconv.ParseInt(strVal, 10, 64)
 			if err != nil {
 				logger.WithError(err).Error("unable to parse cache update time")
 				return true
 			}
 			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
-			logger.Trace("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+			logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 
 			// check to see if 7 days have passed since last refresh cache. currentCacheUpdateTime is the date at the time we rebuilt cache plus 7 days(in event sync - RebuildCache)
 			if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
-				logger.Trace("the current date is greater than the current scheduled refresh date - validating cache before deciding to rebuild")
+				logger.Tracef("the current date is greater than the current scheduled refresh date - validating cache before deciding to rebuild")
 				if a.rebuildCache != nil {
 					if err := a.rebuildCache.ValidateCache(); err != nil {
 						logger.WithError(err).Trace("cache validation failed - time to rebuild cache")
