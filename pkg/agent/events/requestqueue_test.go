@@ -29,7 +29,7 @@ func TestRequestQueue(t *testing.T) {
 	for _, tc := range cases {
 		requestCh := make(chan *proto.Request, 1)
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancelCause(context.Background())
 			q := NewRequestQueue(ctx, cancel, requestCh)
 			var receivedReq *proto.Request
 			wg := sync.WaitGroup{}

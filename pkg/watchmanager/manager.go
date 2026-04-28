@@ -19,7 +19,7 @@ type NewManagerFunc func(cfg *Config, opts ...Option) (Manager, error)
 
 // Manager - Interface to manage watch connections
 type Manager interface {
-	RegisterWatch(topic string, eventChan chan *proto.Event, errChan chan error) (string, error)
+	RegisterWatch(topic string, eventChan chan *proto.Event) (string, error)
 	CloseWatch(id string) error
 	CloseConn()
 	Status() bool
@@ -135,13 +135,17 @@ func (m *watchManager) eventCatchUp(link string, events chan *proto.Event) error
 }
 
 // RegisterWatch - Registers a subscription with watch service using topic
-func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, errors chan error) (string, error) {
+func (m *watchManager) RegisterWatch(link string, events chan *proto.Event) (string, error) {
+	subscriptionID, _ := uuid.NewUUID()
+	subID := subscriptionID.String()
+	logger := m.logger.WithField("watchId", subID).WithField("watchTopic", link)
+	logger.Info("registering watch client")
+
 	client, err := newWatchClient(
 		m.connection,
 		clientConfig{
 			ctx:           m.options.ctx,
 			cancel:        m.options.cancel,
-			errors:        errors,
 			events:        events,
 			tokenGetter:   m.cfg.TokenGetter,
 			topicSelfLink: link,
@@ -150,37 +154,35 @@ func (m *watchManager) RegisterWatch(link string, events chan *proto.Event, erro
 		m.newWatchClientFunc,
 	)
 	if err != nil {
-		return "", err
+		logger.WithError(err).Error("failed to create watch stream client")
+		return subID, err
 	}
-
-	subscriptionID, _ := uuid.NewUUID()
-	subID := subscriptionID.String()
 
 	if m.options.sequence != nil && m.options.sequence.GetSequence() < 0 {
 		err := fmt.Errorf("do not have a sequence id, stopping watch manager")
-		m.logger.Error(err.Error())
-		m.CloseWatch(subID)
+		logger.WithError(err).
+			Error("cannot register watch due to invalid sequence")
 		m.onHarvesterErr()
 		return subID, err
 	}
+	logger.Debug("starting watch catch-up sync")
 	if err := m.eventCatchUp(link, events); err != nil {
-		m.logger.WithError(err).Error("failed to sync events from harvester")
-		m.CloseWatch(subID)
+		logger.WithError(err).Error("failed to sync events from harvester")
 		m.onHarvesterErr()
 		return subID, err
 	}
+	logger.Debug("watch catch-up sync complete, proceeding to register watch client")
 
 	if err := client.processRequest(); err != nil {
-		m.CloseWatch(subID)
+		logger.WithError(err).
+			Error("failed to send initial watch subscribe request")
 		return subID, err
 	}
+	logger.Debug("watch subscription request sent, starting watch event receiver")
 	go client.processEvents()
 
 	m.addClient(subID, client)
-	m.logger.
-		WithField("id", subID).
-		WithField("watchtopic", link).
-		Info("registered watch client")
+	logger.Info("registered watch client")
 
 	return subID, nil
 }
@@ -192,9 +194,8 @@ func (m *watchManager) CloseWatch(id string) error {
 		return err
 	}
 
-	m.logger.WithField("watchID", id).Info("closing connection for subscription")
-	client.cfg.cancel()
-	m.deleteClients([]string{id})
+	m.logger.WithField("watchId", id).Info("closing connection for subscription")
+	client.cfg.cancel(nil)
 	return nil
 }
 
@@ -213,22 +214,18 @@ func (m *watchManager) CloseConn() {
 // Status returns a boolean to indicate if the clients connected to central are active.
 func (m *watchManager) Status() bool {
 	clients := m.getClients()
-	ok := true
 	if len(clients) == 0 {
-		ok = false
+		return false
 	}
 
-	clientsToRemove := make([]string, 0)
-	for k, c := range clients {
-		if c != nil && !c.isRunning {
+	for _, c := range clients {
+		if c != nil && !c.isRunning.Load() {
 			m.logger.Debug("watch client is not running")
-			ok = false
-			clientsToRemove = append(clientsToRemove, k)
+			return false
 		}
 	}
-	m.deleteClients(clientsToRemove)
 
-	return ok && m.connection.GetState() == connectivity.Ready
+	return m.connection.GetState() == connectivity.Ready
 }
 
 func (m *watchManager) onHarvesterErr() {
@@ -242,7 +239,7 @@ func (m *watchManager) addClient(id string, client *watchClient) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.clientMap[id] = client
-	m.logger.WithField("watchID", id).Trace("added client to watch manager")
+	m.logger.WithField("watchId", id).Trace("added client to watch manager")
 }
 
 func (m *watchManager) getClient(id string) (*watchClient, error) {
@@ -273,5 +270,6 @@ func (m *watchManager) deleteClients(ids []string) {
 
 	for _, id := range ids {
 		delete(m.clientMap, id)
+		m.logger.WithField("watchId", id).Trace("removed client from watch manager")
 	}
 }

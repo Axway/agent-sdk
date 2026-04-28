@@ -86,13 +86,17 @@ func (b *intervalJob) stop() {
 		return
 	}
 	b.stopLog()
+	b.setIsStopped(true)
 	if b.IsReady() {
 		b.logger.Tracef("writing to %s stop channel", b.GetName())
-		b.stopChan <- true
-		b.logger.Tracef("wrote to %s stop channel", b.GetName())
+		select {
+		case b.stopChan <- true:
+			b.logger.Tracef("wrote to %s stop channel", b.GetName())
+		default:
+			b.logger.Tracef("stop channel for %s already has a pending signal", b.GetName())
+		}
 		b.UnsetIsReady()
 	} else {
 		b.stopReadyIfWaiting(0)
 	}
-	b.setIsStopped(true)
 }
