@@ -918,7 +918,8 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		}
 
 		respBytes, err := c.ExecuteAPIWithHeader(method, url, nil, reqBytes, nil)
-		if err == ErrConflict && method == coreapi.POST {
+		switch {
+		case err == ErrConflict && method == coreapi.POST:
 			// Resource exists on server but not in cache; fetch and cache it.
 			log.Warnf("resource %s %s already exists on the server but was not in the local cache, fetching existing resource", data.Kind, data.Name)
 			fetchedRI, fetchErr := c.GetResource(data.GetSelfLink())
@@ -926,15 +927,15 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 				return nil, fetchErr
 			}
 			c.addResourceToCache(fetchedRI)
-			return fetchedRI, nil
-		}
-		if err != nil {
+			newRI = fetchedRI
+		case err != nil:
 			return nil, err
 		}
 
-		err = json.Unmarshal(respBytes, newRI)
-		if err != nil {
-			return nil, err
+		if newRI.Name == "" {
+			if err = json.Unmarshal(respBytes, newRI); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		newRI = existingRI

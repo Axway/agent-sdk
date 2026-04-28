@@ -293,6 +293,7 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 			apiResponses: []api.MockResponse{
 				{RespCode: http.StatusConflict},
 				{FileName: "./testdata/credentialrequestdefinition.json", RespCode: http.StatusOK},
+				{FileName: "./testdata/credentialrequestdefinition.json", RespCode: http.StatusOK},
 			},
 			expectCached: true,
 		},
