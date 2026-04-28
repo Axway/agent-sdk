@@ -202,8 +202,13 @@ func (a *agentResourceManager) shouldRebuildCache() bool {
 		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
 		if value != nil {
 			logger := a.logger.WithField("cacheUpdateTime", value)
+			strVal, ok := value.(string)
+			if !ok {
+				logger.Warn("cacheUpdateTime is not a string, triggering rebuild")
+				return true
+			}
 			// get current cacheUpdateTime from x-agent-details
-			convToTimestamp, err := strconv.ParseInt(value.(string), 10, 64)
+			convToTimestamp, err := strconv.ParseInt(strVal, 10, 64)
 			if err != nil {
 				logger.WithError(err).Error("unable to parse cache update time")
 				return true

@@ -75,7 +75,6 @@ func newEventSync() (*EventSync, error) {
 		GetCentralClient(),
 		wt,
 		agent.cacheManager,
-		agent.cfg.GetAgentType(),
 	)
 
 	return &EventSync{

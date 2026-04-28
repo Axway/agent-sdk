@@ -8,6 +8,23 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cache"
 )
 
+// IsCachedKind reports whether the given kind has a dedicated cache entry.
+// Only kinds with dedicated caches are meaningful to validate against the API server.
+func IsCachedKind(kind string) bool {
+	switch kind {
+	case management.APIServiceGVK().Kind,
+		management.APIServiceInstanceGVK().Kind,
+		management.ManagedApplicationGVK().Kind,
+		management.AccessRequestGVK().Kind,
+		management.AccessRequestDefinitionGVK().Kind,
+		management.CredentialRequestDefinitionGVK().Kind,
+		management.ApplicationProfileDefinitionGVK().Kind,
+		management.ComplianceRuntimeResultGVK().Kind:
+		return true
+	}
+	return false
+}
+
 // GetCachedResourcesByKind returns a map of resource name to modification timestamp
 // for all cached resources of the given group and kind. When scopeName is non-empty,
 // only resources whose scope matches scopeName are included.
