@@ -150,16 +150,15 @@ func (es *EventSync) initCache(failedFilters ...management.WatchTopicSpecFilters
 		for _, f := range failedFilters {
 			agent.cacheManager.FlushKind(f.Kind)
 		}
-		if rebuildErr := es.discoveryCache.execute(failedFilters...); rebuildErr == nil {
+		if err = es.discoveryCache.execute(failedFilters...); err == nil {
 			if seqID > 0 {
 				es.sequence.SetSequence(seqID - 1)
 			}
 			agent.cacheManager.SaveCache()
 			es.resetCacheTimer()
 			return nil
-		} else {
-			logger.WithError(rebuildErr).Info("targeted cache rebuild failed, falling back to full rebuild")
 		}
+		logger.WithError(err).Info("targeted cache rebuild failed, falling back to full rebuild")
 	}
 
 	// Full rebuild: flush everything and re-populate
