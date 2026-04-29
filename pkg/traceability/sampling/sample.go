@@ -254,7 +254,6 @@ func (s *sample) GetSamplePercentage() float64 {
 	return s.config.Percentage
 }
 
-// Useful in cases where we could skip querying a Gateway to get Transactions Info
 func (s *sample) IsSamplingEnabled() bool {
 	return s.enabled.Load() || s.endpointsSampling.enabled.Load()
 }
