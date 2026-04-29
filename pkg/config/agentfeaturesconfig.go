@@ -14,7 +14,7 @@ type AgentFeaturesConfig interface {
 	AgentStatusUpdatesEnabled() bool
 	SetPersistentCache(enable bool)
 	GetMetricServicesConfigs() []MetricServiceConfiguration
-	ManageIDPResources() bool
+	ManageIDPResourcesEnabled() bool
 }
 
 // AgentFeaturesConfiguration - Structure to hold the agent features config
@@ -81,8 +81,8 @@ func (c *AgentFeaturesConfiguration) AgentStatusUpdatesEnabled() bool {
 	return c.AgentStatusUpdates
 }
 
-// ManageIDPResources - True if the agent SDK should create IdP resources in Engage.
-func (c *AgentFeaturesConfiguration) ManageIDPResources() bool {
+// ManageIDPResourcesEnabled - True if the agent SDK should create IdP resources in Engage.
+func (c *AgentFeaturesConfiguration) ManageIDPResourcesEnabled() bool {
 	return c.IDPResourceMgmt
 }
 

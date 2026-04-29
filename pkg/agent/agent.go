@@ -363,7 +363,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	}
 
 	idpResourceName := ""
-	if agent.agentFeaturesCfg.ManageIDPResources() {
+	if agent.agentFeaturesCfg.ManageIDPResourcesEnabled() {
 		idpResourceName = manageIDPResource(idpLogger, idp)
 		if idpResourceName == "" {
 			idpLogger.Warn("IdentityProvider resource could not be created or found; CRD will be registered without an IdentityProvider reference")

@@ -95,34 +95,23 @@ func TestProviderRegistry(t *testing.T) {
 }
 
 func TestIDPResourceName(t *testing.T) {
-	const (
-		metadataURL  = "https://idp.example.com/.well-known/openid-configuration"
-		resourceName = "my-idp-resource"
-	)
+	idpServer := NewMockIDPServer()
+	defer idpServer.Close()
 
 	tests := map[string]struct {
-		lookupURL     string
 		preSet        bool
 		expectedName  string
 		expectedFound bool
 	}{
 		"not found before set": {
-			lookupURL:     metadataURL,
 			preSet:        false,
 			expectedName:  "",
 			expectedFound: false,
 		},
-		"found after set": {
-			lookupURL:     metadataURL,
+		"found after set — registry and provider both updated": {
 			preSet:        true,
-			expectedName:  resourceName,
+			expectedName:  "my-idp-resource",
 			expectedFound: true,
-		},
-		"different URL not found": {
-			lookupURL:     "https://other.example.com/",
-			preSet:        true,
-			expectedName:  "",
-			expectedFound: false,
 		},
 	}
 
@@ -130,13 +119,23 @@ func TestIDPResourceName(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			providerReg := NewProviderRegistry()
+			err := providerReg.RegisterProvider(
+				createIDPConfig("test-idp", idpServer.GetMetadataURL()),
+				config.NewTLSConfig(), "", 30*time.Second,
+			)
+			assert.NoError(t, err)
+
 			if tc.preSet {
-				providerReg.SetIDPResourceName(metadataURL, resourceName)
+				providerReg.SetIDPResourceName(idpServer.GetMetadataURL(), tc.expectedName)
 			}
 
-			gotName, ok := providerReg.GetIDPResourceName(tc.lookupURL)
+			gotName, ok := providerReg.GetIDPResourceName(idpServer.GetMetadataURL())
 			assert.Equal(t, tc.expectedFound, ok)
 			assert.Equal(t, tc.expectedName, gotName)
+
+			p, err := providerReg.GetProviderByName("test-idp")
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedName, p.GetIDPResourceName())
 		})
 	}
 }

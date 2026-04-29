@@ -4,6 +4,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 // NewIdentityProviderMetadataFromServerMetadata creates an *IdentityProviderMetadata populated from fetched IdP server metadata.
@@ -37,4 +38,18 @@ func SetIDPResourceSupplier(s IDPResourceSupplier) {
 // GetIDPResourceSupplier - returns the registered custom supplier for IdP and IdP Metadata resources
 func GetIDPResourceSupplier() IDPResourceSupplier {
 	return agent.idpResourceSupplier
+}
+
+// ManageIDPResourceWithMetadata creates or reuses an IdentityProvider resource in Engage using
+// agent-supplied metadata, bypassing any outbound HTTP fetch to a discovery URL.
+// Agents that resolve OAuth metadata independently (e.g. from an internal registry) call this
+// instead of relying on the config-driven startup path.
+// Returns the Engage IdentityProvider resource name, or empty string on failure.
+func ManageIDPResourceWithMetadata(idp config.IDPConfig, metadata *oauth.AuthorizationServerMetadata) string {
+	idpLogger := log.NewFieldLogger().
+		WithComponent("idplifecycle").
+		WithPackage("sdk.agent").
+		WithField("name", idp.GetIDPName()).
+		WithField("type", idp.GetIDPType())
+	return manageIDPResourceWithMetadata(idpLogger, idp, metadata)
 }

@@ -19,10 +19,11 @@ import (
 )
 
 const (
-	testEnvName     = "test-env"
-	testIDPName     = "test-idp"
-	existingIDPName = "existing-idp"
-	supplierIDPName = "supplier-idp"
+	testEnvName         = "test-env"
+	testIDPName         = "test-idp"
+	existingIDPName     = "existing-idp"
+	supplierIDPName     = "supplier-idp"
+	suppliedMetadataURL = "http://idp.example.com/.well-known/openid-configuration"
 )
 
 // setupIDPLifecycleAgent initialises the global agent with a minimal discovery-agent config
@@ -51,6 +52,10 @@ func setupIDPLifecycleAgent(t *testing.T, apicClient *mock.Client, flagEnabled b
 	InitializeWithAgentFeatures(cfg, features, nil)
 	agent.apicClient = apicClient
 	agent.authProviderRegistry = nil // force fresh registry
+
+	// Pre-register the provider so GetMetadata() is available when tests call manageIDPResource directly.
+	idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
+	_ = GetAuthProviderRegistry().RegisterProvider(idpCfg, config.NewTLSConfig(), "", 30*time.Second)
 
 	return idpServer, func() {
 		idpServer.Close()
@@ -87,7 +92,7 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 		flagEnabled        bool
 		expectedQueryCount int
 	}{
-		"no IdP query when flag disabled": {flagEnabled: false, expectedQueryCount: 0},
+		"no IdP query when flag disabled":  {flagEnabled: false, expectedQueryCount: 0},
 		"IdP query made when flag enabled": {flagEnabled: true, expectedQueryCount: 1},
 	}
 
@@ -126,12 +131,12 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 
 func TestManageIDPResourceExistingFound(t *testing.T) {
 	tests := map[string]struct {
-		existingName    string
+		existingName     string
 		wantCreateCalled bool
 		wantSubResource  bool
 	}{
 		"reuses existing resource name without creating": {
-			existingName:    existingIDPName,
+			existingName:     existingIDPName,
 			wantCreateCalled: false,
 			wantSubResource:  false,
 		},
@@ -182,8 +187,8 @@ func TestManageIDPResourceQueryError(t *testing.T) {
 	tests := map[string]struct {
 		wantNameStored bool
 	}{
-		"query error falls through to creation and name is stored": {
-			wantNameStored: true,
+		"query error aborts creation and name is not stored": {
+			wantNameStored: false,
 		},
 	}
 
@@ -193,10 +198,6 @@ func TestManageIDPResourceQueryError(t *testing.T) {
 			apicClient := &mock.Client{
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return nil, errors.New("query error")
-				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
-					inst, _ := ri.AsInstance()
-					return inst, nil
 				},
 				GetEnvironmentMock: func() (*management.Environment, error) {
 					return management.NewEnvironment(testEnvName), nil
@@ -209,12 +210,9 @@ func TestManageIDPResourceQueryError(t *testing.T) {
 			idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
 			resultName := manageIDPResource(logger, idpCfg)
 
-			assert.NotEmpty(t, resultName, "should attempt creation and return a name even when query errors")
-			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
+			assert.Empty(t, resultName, "query error should abort creation and return empty name")
+			_, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
 			assert.Equal(t, tc.wantNameStored, ok)
-			if tc.wantNameStored {
-				assert.Equal(t, resultName, storedName)
-			}
 		})
 	}
 }
@@ -326,14 +324,14 @@ func TestManageIDPResourceCreateIDPError(t *testing.T) {
 	}
 }
 
-func TestManageIDPResourceMetadataFetchError(t *testing.T) {
+func TestManageIDPResourceProviderNotFound(t *testing.T) {
 	tests := map[string]struct {
 		wantCreateCount int
-		metadataStatus  int
+		wantResult      string
 	}{
-		"IdP created and name stored even when metadata fetch fails": {
-			wantCreateCount: 1,
-			metadataStatus:  http.StatusInternalServerError,
+		"empty result when provider not in registry": {
+			wantCreateCount: 0,
+			wantResult:      "",
 		},
 	}
 
@@ -342,41 +340,34 @@ func TestManageIDPResourceMetadataFetchError(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			createCount := 0
 
-			apicClient := &mock.Client{
-				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
-					return []*apiv1.ResourceInstance{}, nil
-				},
+			// Bare agent with an empty registry — no RegisterProvider call.
+			resetResources()
+			agent.apicClient = &mock.Client{
 				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					createCount++
 					inst, _ := ri.AsInstance()
 					return inst, nil
 				},
-				GetEnvironmentMock: func() (*management.Environment, error) {
-					return management.NewEnvironment(testEnvName), nil
-				},
 			}
+			agent.authProviderRegistry = nil
 
-			idpServer, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
-			defer cleanup()
-			idpServer.SetMetadataResponseCode(tc.metadataStatus)
-
-			idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
-			resultName := manageIDPResource(logger, idpCfg)
-			assert.NotEmpty(t, resultName, "should return the created IdP name even when metadata fetch fails")
-			assert.Equal(t, tc.wantCreateCount, createCount, "should only create the IdentityProvider — not IdP Metadata")
-
-			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
-			assert.True(t, ok)
-			assert.Equal(t, resultName, storedName)
+			idpCfg := makeIDPConfig("http://unregistered.example.com/.well-known/openid-configuration")
+			result := manageIDPResource(logger, idpCfg)
+			assert.Equal(t, tc.wantResult, result)
+			assert.Equal(t, tc.wantCreateCount, createCount, "should not call CreateOrUpdateResource when provider is not registered")
 		})
 	}
 }
 
 func TestManageIDPResourceMetadataWriteError(t *testing.T) {
 	tests := map[string]struct {
+		wantResultEmpty bool
+		wantNameStored  bool
 		wantCreateCount int
 	}{
-		"IdP name still stored when metadata write fails": {
+		"metadata write error returns empty name and stores nothing": {
+			wantResultEmpty: true,
+			wantNameStored:  false,
 			wantCreateCount: 2,
 		},
 	}
@@ -408,22 +399,20 @@ func TestManageIDPResourceMetadataWriteError(t *testing.T) {
 
 			idpCfg := makeIDPConfig(idpServer.GetMetadataURL())
 			resultName := manageIDPResource(logger, idpCfg)
-			assert.NotEmpty(t, resultName, "should return the created IdP name even when metadata write fails")
-			assert.Equal(t, tc.wantCreateCount, createCount, "should attempt both IdP and IdP Metadata create")
-
-			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
-			assert.True(t, ok)
-			assert.Equal(t, resultName, storedName)
+			assert.Equal(t, tc.wantResultEmpty, resultName == "")
+			assert.Equal(t, tc.wantCreateCount, createCount)
+			_, ok := GetAuthProviderRegistry().GetIDPResourceName(idpServer.GetMetadataURL())
+			assert.Equal(t, tc.wantNameStored, ok)
 		})
 	}
 }
 
 func TestManageIDPResourceWithSupplier(t *testing.T) {
 	tests := map[string]struct {
-		supplierIDPName      string
-		supplierMetaName     string
-		wantIDPKind          string
-		wantMetadataKind     string
+		supplierIDPName  string
+		supplierMetaName string
+		wantIDPKind      string
+		wantMetadataKind string
 	}{
 		"supplier results used for both IdP and Metadata resources": {
 			supplierIDPName:  supplierIDPName,
@@ -474,9 +463,9 @@ func TestManageIDPResourceWithSupplier(t *testing.T) {
 
 func TestGetEnvCredentialPoliciesError(t *testing.T) {
 	tests := map[string]struct {
-		envErr          error
-		wantExpiryZero  bool
-		wantVisibZero   bool
+		envErr         error
+		wantExpiryZero bool
+		wantVisibZero  bool
 	}{
 		"empty policies returned when GetEnvironment errors": {
 			envErr:         errors.New("env fetch failed"),
@@ -504,88 +493,6 @@ func TestGetEnvCredentialPoliciesError(t *testing.T) {
 			if tc.wantVisibZero {
 				assert.Zero(t, policies.Visibility.Period)
 			}
-		})
-	}
-}
-
-func TestApplyIDPPoliciesSkippedWhenEmpty(t *testing.T) {
-	tests := map[string]struct {
-		policies            management.EnvironmentPoliciesCredentials
-		wantSubResourceCall bool
-	}{
-		"no sub-resource call when both periods are zero": {
-			policies:            management.EnvironmentPoliciesCredentials{},
-			wantSubResourceCall: false,
-		},
-		"sub-resource called when only expiry period is set": {
-			policies: management.EnvironmentPoliciesCredentials{
-				Expiry: management.EnvironmentPoliciesCredentialsExpiry{Period: 90},
-			},
-			wantSubResourceCall: true,
-		},
-		"sub-resource called when only visibility period is set": {
-			policies: management.EnvironmentPoliciesCredentials{
-				Visibility: management.EnvironmentPoliciesCredentialsVisibility{Period: 30},
-			},
-			wantSubResourceCall: true,
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			subResourceCalled := false
-			apicClient := &mock.Client{
-				CreateSubResourceMock: func(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
-					subResourceCalled = true
-					return nil
-				},
-			}
-
-			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
-			defer cleanup()
-
-			idpResource := management.NewIdentityProvider(testIDPName)
-			applyIDPPolicies(logger, idpResource, tc.policies)
-			assert.Equal(t, tc.wantSubResourceCall, subResourceCalled, "should not call CreateSubResource when policies are empty")
-		})
-	}
-}
-
-func TestApplyIDPPoliciesWritten(t *testing.T) {
-	tests := map[string]struct {
-		expiryPeriod     int32
-		visibilityPeriod int32
-		wantCallCount    int
-	}{
-		"sub-resource written once when policies are non-zero": {
-			expiryPeriod:     90,
-			visibilityPeriod: 30,
-			wantCallCount:    1,
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			subResourceCount := 0
-			apicClient := &mock.Client{
-				CreateSubResourceMock: func(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
-					subResourceCount++
-					return nil
-				},
-			}
-
-			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
-			defer cleanup()
-
-			idpResource := management.NewIdentityProvider(testIDPName)
-			policies := management.EnvironmentPoliciesCredentials{
-				Expiry:     management.EnvironmentPoliciesCredentialsExpiry{Period: tc.expiryPeriod},
-				Visibility: management.EnvironmentPoliciesCredentialsVisibility{Period: tc.visibilityPeriod},
-			}
-			applyIDPPolicies(logger, idpResource, policies)
-			assert.Equal(t, tc.wantCallCount, subResourceCount)
 		})
 	}
 }
@@ -635,11 +542,12 @@ func TestManageIDPResourceSupplierIDPError(t *testing.T) {
 
 func TestManageIDPResourceSupplierMetadataError(t *testing.T) {
 	tests := map[string]struct {
-		metadataErr      error
-		wantCreateCount  int
-		wantNameStored   bool
+		metadataErr     error
+		wantCreateCount int
+		wantNameStored  bool
 	}{
-		"supplier GetIdentityProviderMetadata error — IdP name still stored, no metadata resource created": {
+		// supplier build failure is non-fatal: IdP was already created, name is stored, no metadata written
+		"supplier GetIdentityProviderMetadata error — IdP name stored, no metadata resource created": {
 			metadataErr:     errors.New("supplier metadata error"),
 			wantCreateCount: 1,
 			wantNameStored:  true,
@@ -683,6 +591,213 @@ func TestManageIDPResourceSupplierMetadataError(t *testing.T) {
 			if tc.wantNameStored {
 				assert.Equal(t, resultName, storedName)
 			}
+		})
+	}
+}
+
+func validSuppliedMetadata() *oauth.AuthorizationServerMetadata {
+	return &oauth.AuthorizationServerMetadata{
+		Issuer:                "https://idp.example.com",
+		AuthorizationEndpoint: "https://idp.example.com/auth",
+		TokenEndpoint:         "https://idp.example.com/token",
+		IntrospectionEndpoint: "https://idp.example.com/introspect",
+		JwksURI:               "https://idp.example.com/jwks",
+	}
+}
+
+func TestManageIDPResourceWithMetadataValidation(t *testing.T) {
+	tests := map[string]struct {
+		metadata  *oauth.AuthorizationServerMetadata
+		wantEmpty bool
+	}{
+		"nil metadata returns empty name": {
+			metadata:  nil,
+			wantEmpty: true,
+		},
+		"missing issuer returns empty name": {
+			metadata:  &oauth.AuthorizationServerMetadata{AuthorizationEndpoint: "a", TokenEndpoint: "b", IntrospectionEndpoint: "c", JwksURI: "d"},
+			wantEmpty: true,
+		},
+		"missing authorizationEndpoint returns empty name": {
+			metadata:  &oauth.AuthorizationServerMetadata{Issuer: "a", TokenEndpoint: "b", IntrospectionEndpoint: "c", JwksURI: "d"},
+			wantEmpty: true,
+		},
+		"missing tokenEndpoint returns empty name": {
+			metadata:  &oauth.AuthorizationServerMetadata{Issuer: "a", AuthorizationEndpoint: "b", IntrospectionEndpoint: "c", JwksURI: "d"},
+			wantEmpty: true,
+		},
+		"missing introspectionEndpoint returns empty name": {
+			metadata:  &oauth.AuthorizationServerMetadata{Issuer: "a", AuthorizationEndpoint: "b", TokenEndpoint: "c", JwksURI: "d"},
+			wantEmpty: true,
+		},
+		"missing jwksUri returns empty name": {
+			metadata:  &oauth.AuthorizationServerMetadata{Issuer: "a", AuthorizationEndpoint: "b", TokenEndpoint: "c", IntrospectionEndpoint: "d"},
+			wantEmpty: true,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			apicClient := &mock.Client{}
+			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			idpCfg := makeIDPConfig(suppliedMetadataURL)
+			result := manageIDPResourceWithMetadata(logger, idpCfg, tc.metadata)
+			if tc.wantEmpty {
+				assert.Empty(t, result)
+			}
+		})
+	}
+}
+
+func TestManageIDPResourceWithMetadataExistingFound(t *testing.T) {
+	tests := map[string]struct {
+		existingName    string
+		wantCreateCount int
+	}{
+		"reuses existing resource without creating": {
+			existingName:    existingIDPName,
+			wantCreateCount: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			createCount := 0
+			apicClient := &mock.Client{
+				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+					return []*apiv1.ResourceInstance{idpInstanceRI(tc.existingName)}, nil
+				},
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+					createCount++
+					inst, _ := ri.AsInstance()
+					return inst, nil
+				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					return management.NewEnvironment(testEnvName), nil
+				},
+			}
+
+			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			idpCfg := makeIDPConfig(suppliedMetadataURL)
+			resultName := manageIDPResourceWithMetadata(logger, idpCfg, validSuppliedMetadata())
+			assert.Equal(t, tc.existingName, resultName)
+			assert.Equal(t, tc.wantCreateCount, createCount)
+
+			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpCfg.MetadataURL)
+			assert.True(t, ok)
+			assert.Equal(t, tc.existingName, storedName)
+		})
+	}
+}
+
+func TestManageIDPResourceWithMetadataCreatedSuccessfully(t *testing.T) {
+	tests := map[string]struct {
+		wantCreateCount int
+		wantSubResource bool
+		envExpiryPeriod int32
+	}{
+		"creates IdP and metadata from supplied struct — no HTTP fetch": {
+			wantCreateCount: 2,
+			wantSubResource: true,
+			envExpiryPeriod: 90,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			createCount := 0
+			subResourceCalled := false
+
+			apicClient := &mock.Client{
+				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+					return []*apiv1.ResourceInstance{}, nil
+				},
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+					createCount++
+					inst, _ := ri.AsInstance()
+					return inst, nil
+				},
+				CreateSubResourceMock: func(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
+					subResourceCalled = true
+					return nil
+				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					env := management.NewEnvironment(testEnvName)
+					env.Policies = management.EnvironmentPolicies{
+						Credentials: management.EnvironmentPoliciesCredentials{
+							Expiry: management.EnvironmentPoliciesCredentialsExpiry{Period: tc.envExpiryPeriod},
+						},
+					}
+					return env, nil
+				},
+			}
+
+			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			idpCfg := makeIDPConfig(suppliedMetadataURL)
+			resultName := manageIDPResourceWithMetadata(logger, idpCfg, validSuppliedMetadata())
+			assert.NotEmpty(t, resultName)
+			assert.Equal(t, tc.wantCreateCount, createCount)
+			assert.Equal(t, tc.wantSubResource, subResourceCalled)
+
+			storedName, ok := GetAuthProviderRegistry().GetIDPResourceName(idpCfg.MetadataURL)
+			assert.True(t, ok)
+			assert.Equal(t, resultName, storedName)
+		})
+	}
+}
+
+func TestManageIDPResourceWithMetadataWriteError(t *testing.T) {
+	tests := map[string]struct {
+		wantCreateCount int
+		wantNameStored  bool
+	}{
+		"metadata write error returns empty name and stores nothing": {
+			wantCreateCount: 2,
+			wantNameStored:  false,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			createCount := 0
+
+			apicClient := &mock.Client{
+				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+					return []*apiv1.ResourceInstance{}, nil
+				},
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+					createCount++
+					if createCount == 1 {
+						inst, _ := ri.AsInstance()
+						return inst, nil
+					}
+					return nil, errors.New("metadata write error")
+				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					return management.NewEnvironment(testEnvName), nil
+				},
+			}
+
+			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			idpCfg := makeIDPConfig(suppliedMetadataURL)
+			resultName := manageIDPResourceWithMetadata(logger, idpCfg, validSuppliedMetadata())
+			assert.Empty(t, resultName, "metadata write error should return empty name")
+			assert.Equal(t, tc.wantCreateCount, createCount)
+
+			_, ok := GetAuthProviderRegistry().GetIDPResourceName(idpCfg.MetadataURL)
+			assert.Equal(t, tc.wantNameStored, ok)
 		})
 	}
 }

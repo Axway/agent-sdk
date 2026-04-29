@@ -36,7 +36,7 @@ func TestManageIDPResources(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			cfg := &AgentFeaturesConfiguration{IDPResourceMgmt: tc.enabled}
-			assert.Equal(t, tc.expected, cfg.ManageIDPResources())
+			assert.Equal(t, tc.expected, cfg.ManageIDPResourcesEnabled())
 		})
 	}
 }

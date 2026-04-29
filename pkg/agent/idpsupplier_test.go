@@ -29,8 +29,8 @@ func TestSetGetIDPResourceSupplier(t *testing.T) {
 	tests := map[string]struct {
 		supplier IDPResourceSupplier
 	}{
-		"nil supplier":      {supplier: nil},
-		"non-nil supplier":  {supplier: &mockIDPResourceSupplier{}},
+		"nil supplier":     {supplier: nil},
+		"non-nil supplier": {supplier: &mockIDPResourceSupplier{}},
 	}
 
 	for name, tc := range tests {
