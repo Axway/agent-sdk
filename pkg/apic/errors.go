@@ -11,6 +11,7 @@ var (
 	ErrRequestQuery       = errors.New(1120, "error making a request to Amplify")
 	ErrAuthenticationCall = errors.New(1130, "error getting authentication token. Check Amplify Central auth configuration (CENTRAL_AUTH_*) and network configuration for agent on docs.axway.com")
 	ErrAuthentication     = errors.New(1131, "authentication token was not valid. Check Amplify Central auth configuration (CENTRAL_AUTH_*)")
+	ErrConflict           = errors.New(1132, "conflict: resource already exists on Amplify Central")
 )
 
 // Errors hit when calling different Amplify APIs
