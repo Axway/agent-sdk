@@ -338,7 +338,7 @@ func (a *agentResourceManager) onResourceChange() {
 func (a *agentResourceManager) getAgentResourceType() *v1.ResourceInstance {
 	var agentRes v1.Interface
 	switch a.cfg.GetAgentType() {
-	case config.DiscoveryAgent:
+	case config.DiscoveryAgent, config.SampleAgent:
 		res := management.NewDiscoveryAgent(a.cfg.GetAgentName(), a.cfg.GetEnvironmentName())
 		res.Spec.DataplaneType = config.AgentDataPlaneType
 		agentRes = res

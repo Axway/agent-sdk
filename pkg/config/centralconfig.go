@@ -110,18 +110,22 @@ const (
 	ComplianceAgent
 	// GenericService - Type for a generic service
 	GenericService
+	// SampleAgent - Type definition for sample agent
+	SampleAgent
 )
 
 var agentTypeNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "discoveryagent",
 	TraceabilityAgent: "traceabilityagent",
 	ComplianceAgent:   "complianceagent",
+	SampleAgent:       "discoveryagent",
 }
 
 var agentTypeShortNamesMap = map[AgentType]string{
 	DiscoveryAgent:    "da",
 	TraceabilityAgent: "ta",
 	ComplianceAgent:   "ca",
+	SampleAgent:       "da",
 }
 
 func (agentType AgentType) ToString() string {

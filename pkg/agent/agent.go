@@ -835,6 +835,12 @@ func newHandlers() []handler.Handler {
 			),
 			handler.NewCRRHandler(agent.cacheManager),
 		)
+	case config.SampleAgent:
+		handlers = append(
+			handlers,
+			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
+			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+		)
 	}
 
 	return handlers
