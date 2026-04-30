@@ -43,6 +43,8 @@ func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBo
 		for _, crd := range crds {
 			if def, err := c.caches.GetCredentialRequestDefinitionByName(crd); err == nil && def != nil {
 				knownCRDs = append(knownCRDs, crd)
+			} else {
+				log.Warnf("credential request definition %s for API %s not found in cache, skipping", crd, serviceBody.APIName)
 			}
 		}
 	} else {
