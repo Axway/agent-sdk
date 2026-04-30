@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -15,6 +16,11 @@ import (
 type Listener interface {
 	Listen()
 	Stop()
+	// Pause blocks until any in-flight event is done, then prevents new events from
+	// being processed until Resume is called. Safe to call from a different goroutine.
+	Pause()
+	// Resume allows event processing to continue after a Pause call.
+	Resume()
 }
 
 // APIClient -
@@ -34,6 +40,7 @@ type EventListener struct {
 	logger          log.FieldLogger
 	sequenceManager SequenceProvider
 	source          chan *proto.Event
+	processMu       sync.RWMutex
 }
 
 // NewListenerFunc type for creating a new listener
@@ -61,6 +68,17 @@ func (em *EventListener) Stop() {
 	if em != nil {
 		em.cancel(nil)
 	}
+}
+
+// Pause blocks until any in-flight event finishes processing, then holds the
+// lock so no new events are processed until Resume is called.
+func (em *EventListener) Pause() {
+	em.processMu.Lock()
+}
+
+// Resume releases the lock acquired by Pause, allowing event processing to continue.
+func (em *EventListener) Resume() {
+	em.processMu.Unlock()
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
@@ -91,8 +109,10 @@ func (em *EventListener) start() (done bool, err error) {
 			break
 		}
 
-		if err := em.handleEvent(event); err != nil {
-			em.logger.WithError(err).Error("stream event listener error handling event")
+		em.processMu.RLock()
+		defer em.processMu.RUnlock()
+		if handleErr := em.handleEvent(event); handleErr != nil {
+			em.logger.WithError(handleErr).Error("stream event listener error handling event")
 		}
 	case <-em.ctx.Done():
 		em.logger.Trace("stream event listener context is done")

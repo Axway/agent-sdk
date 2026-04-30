@@ -228,6 +228,23 @@ func (s *StreamerClient) Stop() {
 	}
 }
 
+// PauseListener suspends event processing on the underlying listener.
+// Blocks until any in-flight event is done, then holds the pause until ResumeListener is called.
+// No-op when called before the listener has been created.
+func (s *StreamerClient) PauseListener() {
+	if s.listener != nil {
+		s.listener.Pause()
+	}
+}
+
+// ResumeListener resumes event processing after a PauseListener call.
+// No-op when called before the listener has been created.
+func (s *StreamerClient) ResumeListener() {
+	if s.listener != nil {
+		s.listener.Resume()
+	}
+}
+
 // WaitForReady blocks until Start() has established a connection to Central,
 // or until ctx is cancelled, or until Start() exits with an error before connecting.
 func (s *StreamerClient) WaitForReady(ctx context.Context) error {

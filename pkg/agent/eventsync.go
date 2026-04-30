@@ -25,6 +25,14 @@ type EventSync struct {
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
 	cacheValidator *cacheValidator
+	listenerPauser listenerPauser
+}
+
+// listenerPauser is satisfied by StreamerClient; allows EventSync to pause the
+// live event listener while mutating the cache.
+type listenerPauser interface {
+	PauseListener()
+	ResumeListener()
 }
 
 // newEventSync creates an EventSync
@@ -164,7 +172,6 @@ func (es *EventSync) resetCacheTimer() {
 }
 
 func (es *EventSync) RebuildCache() {
-	// SDB - NOTE : Do we need to pause jobs.
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
@@ -174,13 +181,23 @@ func (es *EventSync) RebuildCache() {
 	es.waitForCacheRebuild()
 }
 
+// pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
+// A separate function ensures ResumeListener is always called even on panic.
+func (es *EventSync) pausedInitCache() error {
+	if es.listenerPauser != nil {
+		es.listenerPauser.PauseListener()
+		defer es.listenerPauser.ResumeListener()
+	}
+	return es.initCache()
+}
+
 // waitForCacheRebuild continuously attempts to rebuild the cache until successful
 func (es *EventSync) waitForCacheRebuild() {
 	adjustment := 2
 	maxBackoff := 5 * time.Minute
 	currentBackoff := 30 * time.Second
 	for {
-		err := es.initCache()
+		err := es.pausedInitCache()
 		if err == nil {
 			return
 		}
@@ -282,6 +299,7 @@ func (es *EventSync) startStreamMode() error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
+	es.listenerPauser = sc
 	agent.streamer = sc
 
 	if util.IsNotTest() {
