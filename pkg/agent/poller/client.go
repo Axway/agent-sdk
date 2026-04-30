@@ -31,6 +31,9 @@ type PollClient struct {
 	mutex              sync.RWMutex
 	initialized        bool
 	firstStart         bool
+	connectedCh        chan struct{} // closed when the first connection is live in Start()
+	connectedOnce      sync.Once    // ensures connectedCh is closed at most once across reconnects
+	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
 }
 
 type harvesterConfig struct {
@@ -57,6 +60,8 @@ func NewPollClient(
 		newPollManager: newPollExecutor,
 		poller:         nil,
 		firstStart:     true,
+		connectedCh:    make(chan struct{}),
+		startErrCh:     make(chan error, 1),
 	}
 
 	for _, opt := range options {
@@ -81,9 +86,25 @@ func (p *PollClient) Start() error {
 	p.listener.Listen()
 	p.poller.RegisterWatch(eventCh)
 
+	// pollExecutor may cancel ctx internally (e.g. harvester not configured).
+	select {
+	case <-ctx.Done():
+		err := context.Cause(ctx)
+		if err == nil {
+			err = fmt.Errorf("poll client context cancelled during setup")
+		}
+		select {
+		case p.startErrCh <- err:
+		default:
+		}
+		return err
+	default:
+	}
+
 	if p.onStreamConnection != nil {
 		p.onStreamConnection()
 	}
+	p.connectedOnce.Do(func() { close(p.connectedCh) })
 
 	if p.onReconnect != nil && !p.firstStart {
 		go p.onReconnect()
@@ -99,6 +120,19 @@ func (p *PollClient) Start() error {
 		return cause
 	}
 	return fmt.Errorf("poll client context has been closed")
+}
+
+// WaitForReady blocks until Start() has established a connection to Central,
+// or until ctx is cancelled, or until Start() exits with an error before connecting.
+func (p *PollClient) WaitForReady(ctx context.Context) error {
+	select {
+	case <-p.connectedCh:
+		return nil
+	case err := <-p.startErrCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Status returns an error if the poller is not running

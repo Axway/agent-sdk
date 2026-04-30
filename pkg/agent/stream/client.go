@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -57,6 +58,9 @@ type StreamerClient struct {
 	isRunning          atomic.Bool
 	firstStart         bool
 	cancel             context.CancelCauseFunc
+	connectedCh        chan struct{} // closed when the first connection is live in Start()
+	connectedOnce      sync.Once    // ensures connectedCh is closed at most once across reconnects
+	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -91,6 +95,8 @@ func NewStreamerClient(
 		logger:          logger,
 		environmentURL:  cfg.GetEnvironmentURL(),
 		firstStart:      true,
+		connectedCh:     make(chan struct{}),
+		startErrCh:      make(chan error, 1),
 	}
 	s.isInitialized.Store(false)
 
@@ -164,6 +170,10 @@ func (s *StreamerClient) Start() error {
 	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh), wm.WithContext(ctx, cancel))
 	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
+		select {
+		case s.startErrCh <- err:
+		default:
+		}
 		return err
 	}
 	defer manager.CloseConn()
@@ -174,6 +184,7 @@ func (s *StreamerClient) Start() error {
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
+	s.connectedOnce.Do(func() { close(s.connectedCh) })
 	if s.onReconnect != nil && !s.firstStart {
 		go s.onReconnect()
 	}
@@ -214,6 +225,20 @@ func (s *StreamerClient) Status() error {
 func (s *StreamerClient) Stop() {
 	if s.cancel != nil {
 		s.cancel(nil)
+	}
+}
+
+// WaitForReady blocks until Start() has established a connection to Central,
+// or until ctx is cancelled, or until Start() exits with an error before connecting.
+func (s *StreamerClient) WaitForReady(ctx context.Context) error {
+	select {
+	case <-s.connectedCh:
+		return nil
+	case err := <-s.startErrCh:
+		s.logger.WithError(err).Error("stream client failed to connect")
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 

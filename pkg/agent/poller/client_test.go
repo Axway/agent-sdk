@@ -2,6 +2,7 @@ package poller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -134,6 +136,85 @@ func (m mockHarvester) ReceiveSyncEvents(_ context.Context, _ string, _ int64, _
 		}
 	}
 	return 0, m.err
+}
+
+func TestPollClientWaitForReady(t *testing.T) {
+	catchUpErr := fmt.Errorf("harvester catch-up failed")
+	blockCh := make(chan struct{})
+
+	cases := map[string]struct {
+		harvester   harvester.Harvest
+		ctxTimeout  time.Duration
+		expectedErr error
+		cleanup     func()
+	}{
+		"connects successfully": {
+			harvester:   &mockHarvester{},
+			ctxTimeout:  2 * time.Second,
+			expectedErr: nil,
+		},
+		"context deadline exceeded before connection": {
+			harvester:   &blockingHarvester{block: blockCh},
+			ctxTimeout:  50 * time.Millisecond,
+			expectedErr: context.DeadlineExceeded,
+			cleanup:     func() { close(blockCh) },
+		},
+		"start fails before connecting": {
+			harvester:   &blockingHarvester{err: catchUpErr}, // nil block: EventCatchUp returns err immediately
+			ctxTimeout:  2 * time.Second,
+			expectedErr: catchUpErr,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			wt := management.NewWatchTopic("mocktopic")
+			ri, _ := wt.AsInstance()
+			httpClient := &mockAPIClient{ri: ri}
+
+			cacheManager := agentcache.NewAgentCacheManager(cfg, false)
+			seq := events.NewSequenceProvider(cacheManager, wt.Name)
+			seq.SetSequence(1)
+
+			pc, err := NewPollClient(httpClient, cfg, nil, WithHarvester(tc.harvester, seq, wt.GetSelfLink()))
+			assert.Nil(t, err)
+
+			pc.newPollManager = func(interval time.Duration, options ...executorOpt) *pollExecutor {
+				p := newPollExecutor(cfg.PollInterval, options...)
+				p.harvester = tc.harvester
+				return p
+			}
+
+			go func() { _ = pc.Start() }()
+			if tc.cleanup != nil {
+				defer tc.cleanup()
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), tc.ctxTimeout)
+			defer cancel()
+
+			err = pc.WaitForReady(ctx)
+			assert.ErrorIs(t, err, tc.expectedErr)
+		})
+	}
+}
+
+// blockingHarvester blocks EventCatchUp until block is closed (or returns err if block is nil).
+type blockingHarvester struct {
+	block chan struct{}
+	err   error
+}
+
+func (m *blockingHarvester) EventCatchUp(_ context.Context, _ string, _ chan *proto.Event) error {
+	if m.block == nil {
+		return m.err
+	}
+	<-m.block
+	return m.err
+}
+
+func (m *blockingHarvester) ReceiveSyncEvents(_ context.Context, _ string, _ int64, _ chan *proto.Event) (int64, error) {
+	return 0, nil
 }
 
 var watchTopic = &management.WatchTopic{
