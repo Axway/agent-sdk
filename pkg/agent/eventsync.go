@@ -191,7 +191,6 @@ func (es *EventSync) resetCacheTimer() {
 }
 
 func (es *EventSync) RebuildCache() {
-	// SDB - NOTE : Do we need to pause jobs.
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
@@ -311,9 +310,14 @@ func (es *EventSync) startPollMode() error {
 
 	if util.IsNotTest() {
 		newEventProcessorJob(pc, "Poll Client")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if err := pc.WaitForReady(ctx); err != nil {
+			return fmt.Errorf("poll client did not connect to Central within timeout: %w", err)
+		}
 	}
 
-	return err
+	return nil
 }
 
 func (es *EventSync) startStreamMode() error {
@@ -342,7 +346,12 @@ func (es *EventSync) startStreamMode() error {
 
 	if util.IsNotTest() {
 		newEventProcessorJob(sc, "Stream Client")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if err := sc.WaitForReady(ctx); err != nil {
+			return fmt.Errorf("stream client did not connect to Central within timeout: %w", err)
+		}
 	}
 
-	return err
+	return nil
 }
