@@ -150,8 +150,14 @@ func (p *PollClient) Status() error {
 
 // Stop stops the streamer
 func (p *PollClient) Stop() {
-	p.poller.Stop()
-	p.listener.Stop()
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	if p.poller != nil {
+		p.poller.Stop()
+	}
+	if p.listener != nil {
+		p.listener.Stop()
+	}
 }
 
 // Healthcheck returns a healthcheck

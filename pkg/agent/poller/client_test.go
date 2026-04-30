@@ -186,6 +186,7 @@ func TestPollClientWaitForReady(t *testing.T) {
 			}
 
 			go func() { _ = pc.Start() }()
+			defer pc.Stop()
 			if tc.cleanup != nil {
 				defer tc.cleanup()
 			}

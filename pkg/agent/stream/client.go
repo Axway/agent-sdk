@@ -57,6 +57,7 @@ type StreamerClient struct {
 	isInitialized      atomic.Bool
 	isRunning          atomic.Bool
 	firstStart         bool
+	cancelMu           sync.Mutex
 	cancel             context.CancelCauseFunc
 	connectedCh        chan struct{} // closed when the first connection is live in Start()
 	connectedOnce      sync.Once    // ensures connectedCh is closed at most once across reconnects
@@ -157,8 +158,10 @@ func (s *StreamerClient) Start() error {
 	defer s.isRunning.Store(false)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
+	s.cancelMu.Lock()
 	s.cancel = cancel
-	defer cancel(nil)
+	s.cancelMu.Unlock()
+	defer cancel(nil) // local variable: safe to call without lock in the same goroutine
 
 	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
 	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
@@ -223,6 +226,8 @@ func (s *StreamerClient) Status() error {
 
 // Stop stops the StreamerClient
 func (s *StreamerClient) Stop() {
+	s.cancelMu.Lock()
+	defer s.cancelMu.Unlock()
 	if s.cancel != nil {
 		s.cancel(nil)
 	}
