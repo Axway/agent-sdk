@@ -138,14 +138,10 @@ func (s *sample) sampleEndpointAndOnlyErrors(apiID string) (bool, bool) {
 	return true, s.endpointsSampling.endpointsInfo[apiID] // endpoint found, return onlyErrors
 }
 
-func (s *sample) hasRemainingEndpoints() bool {
+func (s *sample) resetEndpointSampling() {
 	s.endpointsSampling.endpointsLock.Lock()
 	defer s.endpointsSampling.endpointsLock.Unlock()
-	return len(s.endpointsSampling.endpointsInfo) > 0
-}
-
-func (s *sample) resetEndpointSampling() {
-	if s.hasRemainingEndpoints() {
+	if len(s.endpointsSampling.endpointsInfo) > 0 {
 		return
 	}
 	s.endpointsSampling.enabled.Store(false)
