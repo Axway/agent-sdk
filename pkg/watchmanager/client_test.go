@@ -178,7 +178,7 @@ func Test_watchClient_send(t *testing.T) {
 				time.Sleep(time.Second)
 			}
 
-			err = c.createTokenRefreshRequest()
+			err = c.createTokenRefreshRequest(false)
 			if tc.hasErr {
 				assert.NotNil(t, err)
 			} else if !tc.hasSendErr {
@@ -430,7 +430,7 @@ func Test_watchClient_createTokenRefreshRequest_enqueueError(t *testing.T) {
 	c.cfg.ctx = ctx
 	c.getTokenExpirationTime = mockGetTokenExp
 
-	err = c.createTokenRefreshRequest()
+	err = c.createTokenRefreshRequest(false)
 	assert.NotNil(t, err)
 }
 
@@ -547,6 +547,152 @@ func Test_watchClient_requestLoop(t *testing.T) {
 				if tc.expectLockErr {
 					assert.NotNil(t, lock.getError())
 				}
+			}
+		})
+	}
+}
+
+func Test_watchClient_recv_ping(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+
+	cfg := clientConfig{
+		ctx:      ctx,
+		cancel:   cancel,
+		events:   make(chan *proto.Event),
+		requests: make(chan *proto.Request, 1),
+	}
+	pingEvent := &proto.Event{Id: "ping-123", Type: proto.Event_PING}
+	stream := &mockStream{
+		event:   pingEvent,
+		context: context.Background(),
+	}
+	c, err := newWatchClient(&mockConn{stream: stream}, cfg, newMockWatchClient(stream, nil))
+	assert.Nil(t, err)
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- c.recv()
+	}()
+
+	select {
+	case err := <-errCh:
+		assert.Nil(t, err)
+	case <-cfg.events:
+		t.Fatal("ping event should not be forwarded to events channel")
+	case <-time.After(time.Second):
+		t.Fatal("recv did not return in time")
+	}
+
+	// ping response should be enqueued with the id copied from the event
+	select {
+	case req := <-cfg.requests:
+		assert.NotNil(t, req.PingResponse)
+		assert.Equal(t, "ping-123", req.PingResponse.Id)
+		assert.Equal(t, proto.RequestType_PING_RESPONSE, req.GetRequestType())
+	case <-time.After(time.Second):
+		t.Fatal("ping response was not enqueued in time")
+	}
+}
+
+func Test_watchClient_sendPingResponse(t *testing.T) {
+	tests := []struct {
+		name          string
+		cancelCtx     bool
+		streamCtxDone bool
+		expectEnqueue bool
+	}{
+		{
+			name:          "should enqueue ping response with correct id",
+			expectEnqueue: true,
+		},
+		{
+			name:      "should not block when context is cancelled",
+			cancelCtx: true,
+		},
+		{
+			name:          "should not block when stream context is done",
+			streamCtxDone: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(nil)
+
+			cfg := clientConfig{
+				ctx:      ctx,
+				cancel:   cancel,
+				events:   make(chan *proto.Event),
+				requests: make(chan *proto.Request, 1),
+			}
+			stream := &mockStream{context: context.Background()}
+			c, err := newWatchClient(&mockConn{stream: stream}, cfg, newMockWatchClient(stream, nil))
+			assert.Nil(t, err)
+
+			if tc.cancelCtx {
+				cancel(nil)
+			}
+			if tc.streamCtxDone {
+				doneCtx, doneCancel := context.WithCancel(context.Background())
+				doneCancel()
+				stream.context = doneCtx
+			}
+
+			done := make(chan struct{})
+			go func() {
+				c.sendPingResponse("test-id")
+				close(done)
+			}()
+
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("sendPingResponse did not return in time")
+			}
+
+			if tc.expectEnqueue {
+				select {
+				case req := <-cfg.requests:
+					assert.NotNil(t, req.PingResponse)
+					assert.Equal(t, "test-id", req.PingResponse.Id)
+					assert.Equal(t, proto.RequestType_PING_RESPONSE, req.GetRequestType())
+				default:
+					t.Fatal("expected ping response in requests channel")
+				}
+			}
+		})
+	}
+}
+
+func Test_createWatchRequestWithCapabilities(t *testing.T) {
+	tests := []struct {
+		name           string
+		initialRequest bool
+		expectCapsPing bool
+	}{
+		{
+			name:           "initial request should include ping capability",
+			initialRequest: true,
+			expectCapsPing: true,
+		},
+		{
+			name:           "token refresh should not include capabilities",
+			initialRequest: false,
+			expectCapsPing: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := createWatchRequest("self/link", "mytoken", tc.initialRequest)
+			assert.Equal(t, "self/link", req.SelfLink)
+			assert.Equal(t, "Bearer mytoken", req.Token)
+			if tc.expectCapsPing {
+				assert.True(t, HasCapability(req, CapabilityPing))
+			} else {
+				assert.False(t, HasCapability(req, CapabilityPing))
 			}
 		})
 	}
