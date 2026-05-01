@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Axway/agent-sdk/pkg/config"
 )
 
 func createIDPConfig(name, metadataURL string) *config.IDPConfiguration {

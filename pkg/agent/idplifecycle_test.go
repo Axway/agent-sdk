@@ -87,6 +87,14 @@ func idpInstanceRI(name string) *apiv1.ResourceInstance {
 	return ri
 }
 
+// idpMetadataInstanceRI builds a *ResourceInstance that looks like a fetched IdentityProviderMetadata
+// with idpScopeName as the scope name — used to test the ManageIDPResource Engage query path.
+func idpMetadataInstanceRI(idpScopeName string) *apiv1.ResourceInstance {
+	meta := management.NewIdentityProviderMetadata("test-meta", idpScopeName)
+	ri, _ := meta.AsInstance()
+	return ri
+}
+
 func TestManageIDPResourceFlagDisabled(t *testing.T) {
 	tests := map[string]struct {
 		flagEnabled        bool
@@ -817,6 +825,139 @@ func TestWithCRDIdentityProvider(t *testing.T) {
 			opts := &crdBuilderOptions{}
 			WithCRDIdentityProvider(tc.idpName)(opts)
 			assert.Equal(t, tc.expected, opts.identityProvider)
+		})
+	}
+}
+
+func TestManageIDPResource(t *testing.T) {
+	testMeta := &oauth.AuthorizationServerMetadata{
+		Issuer:                "https://idp.example.com",
+		AuthorizationEndpoint: "https://idp.example.com/auth",
+		TokenEndpoint:         "https://idp.example.com/token",
+		IntrospectionEndpoint: "https://idp.example.com/introspect",
+		JwksURI:               "https://idp.example.com/jwks",
+	}
+
+	tests := map[string]struct {
+		metadata               *oauth.AuthorizationServerMetadata
+		preloadCacheName       string
+		tokenEndpointInstances []*apiv1.ResourceInstance
+		tokenEndpointErr       error
+		metadataURLInstances   []*apiv1.ResourceInstance
+		createErr              error
+		assertResult           func(t *testing.T, result string)
+		wantQueryCount         int
+		wantCreateCalled       bool
+		wantCachedAfter        bool
+	}{
+		"nil metadata returns empty without any API call": {
+			metadata:     nil,
+			assertResult: func(t *testing.T, result string) { assert.Empty(t, result) },
+			wantQueryCount: 0,
+		},
+		"local cache hit skips Engage query and returns cached name": {
+			metadata:         testMeta,
+			preloadCacheName: "cached-idp",
+			assertResult:     func(t *testing.T, result string) { assert.Equal(t, "cached-idp", result) },
+			wantQueryCount:   0,
+			wantCachedAfter:  true,
+		},
+		"Engage query finds IdentityProviderMetadata with non-empty scope name": {
+			metadata:               testMeta,
+			tokenEndpointInstances: []*apiv1.ResourceInstance{idpMetadataInstanceRI("found-idp")},
+			assertResult:           func(t *testing.T, result string) { assert.Equal(t, "found-idp", result) },
+			wantQueryCount:         1,
+			wantCachedAfter:        true,
+		},
+		"Engage query finds result with empty scope name falls through to create": {
+			metadata:               testMeta,
+			tokenEndpointInstances: []*apiv1.ResourceInstance{idpMetadataInstanceRI("")},
+			metadataURLInstances:   []*apiv1.ResourceInstance{},
+			assertResult:           func(t *testing.T, result string) { assert.NotEmpty(t, result) },
+			wantQueryCount:         2,
+			wantCreateCalled:       true,
+			wantCachedAfter:        true,
+		},
+		"Engage query error falls through to create": {
+			metadata:             testMeta,
+			tokenEndpointErr:     errors.New("query error"),
+			metadataURLInstances: []*apiv1.ResourceInstance{},
+			assertResult:         func(t *testing.T, result string) { assert.NotEmpty(t, result) },
+			wantQueryCount:       2,
+			wantCreateCalled:     true,
+			wantCachedAfter:      true,
+		},
+		"not in cache or Engage creates resource and caches by token endpoint": {
+			metadata:               testMeta,
+			tokenEndpointInstances: []*apiv1.ResourceInstance{},
+			metadataURLInstances:   []*apiv1.ResourceInstance{},
+			assertResult:           func(t *testing.T, result string) { assert.NotEmpty(t, result) },
+			wantQueryCount:         2,
+			wantCreateCalled:       true,
+			wantCachedAfter:        true,
+		},
+		"create failure returns empty name and nothing cached": {
+			metadata:               testMeta,
+			tokenEndpointInstances: []*apiv1.ResourceInstance{},
+			metadataURLInstances:   []*apiv1.ResourceInstance{},
+			createErr:              errors.New("create failed"),
+			assertResult:           func(t *testing.T, result string) { assert.Empty(t, result) },
+			wantQueryCount:         2,
+			wantCreateCalled:       true,
+			wantCachedAfter:        false,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			idpMetadataResourceCacheLock.Lock()
+			idpMetadataResourceCache = map[string]string{}
+			idpMetadataResourceCacheLock.Unlock()
+
+			queryCount := 0
+			createCalled := false
+
+			apicClient := &mock.Client{
+				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+					queryCount++
+					if queryCount == 1 {
+						return tc.tokenEndpointInstances, tc.tokenEndpointErr
+					}
+					return tc.metadataURLInstances, nil
+				},
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+					createCalled = true
+					if tc.createErr != nil {
+						return nil, tc.createErr
+					}
+					inst, _ := ri.AsInstance()
+					return inst, nil
+				},
+				CreateSubResourceMock: func(_ apiv1.ResourceMeta, _ map[string]interface{}) error {
+					return nil
+				},
+				GetEnvironmentMock: func() (*management.Environment, error) {
+					return management.NewEnvironment(testEnvName), nil
+				},
+			}
+
+			_, cleanup := setupIDPLifecycleAgent(t, apicClient, true)
+			defer cleanup()
+
+			if tc.preloadCacheName != "" {
+				setIDPMetadataResourceName(testMeta.TokenEndpoint, tc.preloadCacheName)
+			}
+
+			result := ManageIDPResource(logger, tc.metadata)
+
+			tc.assertResult(t, result)
+			assert.Equal(t, tc.wantQueryCount, queryCount)
+			assert.Equal(t, tc.wantCreateCalled, createCalled)
+			if tc.metadata != nil {
+				_, cached := getIDPMetadataResourceName(tc.metadata.TokenEndpoint)
+				assert.Equal(t, tc.wantCachedAfter, cached)
+			}
 		})
 	}
 }
