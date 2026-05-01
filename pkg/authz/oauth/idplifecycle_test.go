@@ -55,6 +55,12 @@ func makeTestProvider(t *testing.T) Provider {
 	return p
 }
 
+func makeTestMetadata(t *testing.T) (*AuthorizationServerMetadata, config.IDPConfig) {
+	t.Helper()
+	p := makeTestProvider(t)
+	return p.GetMetadata(), p.GetConfig()
+}
+
 func idpRI(name string) *apiv1.ResourceInstance {
 	ri, _ := management.NewIdentityProvider(name).AsInstance()
 	return ri
@@ -89,8 +95,8 @@ func TestCreateEngageResourcesQueryError(t *testing.T) {
 				createSubRes: noOpCreateSubRes,
 			}
 
-			p := makeTestProvider(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", management.EnvironmentPoliciesCredentials{})
+			metadata, idpCfg := makeTestMetadata(t)
+			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
 		})
@@ -124,12 +130,11 @@ func TestCreateEngageResourcesExistingFound(t *testing.T) {
 				createSubRes: noOpCreateSubRes,
 			}
 
-			p := makeTestProvider(t)
-			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", management.EnvironmentPoliciesCredentials{})
+			metadata, idpCfg := makeTestMetadata(t)
+			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.existingName, resultName)
 			assert.Equal(t, tc.wantCreated, created)
-			assert.Equal(t, tc.existingName, p.GetIDPResourceName())
 		})
 	}
 }
@@ -160,11 +165,10 @@ func TestCreateEngageResourcesIDPCreateError(t *testing.T) {
 				createSubRes: noOpCreateSubRes,
 			}
 
-			p := makeTestProvider(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", management.EnvironmentPoliciesCredentials{})
+			metadata, idpCfg := makeTestMetadata(t)
+			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
-			assert.Empty(t, p.GetIDPResourceName())
 		})
 	}
 }
@@ -201,11 +205,10 @@ func TestCreateEngageResourcesPolicyError(t *testing.T) {
 			policies := management.EnvironmentPoliciesCredentials{
 				Expiry: management.EnvironmentPoliciesCredentialsExpiry{Period: 90},
 			}
-			p := makeTestProvider(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", policies)
+			metadata, idpCfg := makeTestMetadata(t)
+			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", policies)
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
-			assert.Empty(t, p.GetIDPResourceName())
 		})
 	}
 }
@@ -240,11 +243,10 @@ func TestCreateEngageResourcesMetadataWriteError(t *testing.T) {
 				createSubRes: noOpCreateSubRes,
 			}
 
-			p := makeTestProvider(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", management.EnvironmentPoliciesCredentials{})
+			metadata, idpCfg := makeTestMetadata(t)
+			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
-			assert.Empty(t, p.GetIDPResourceName())
 		})
 	}
 }
@@ -294,13 +296,12 @@ func TestCreateEngageResourcesSuccess(t *testing.T) {
 				}
 			}
 
-			p := makeTestProvider(t)
-			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResources(newTestLogger(), p, "/env", policies)
+			metadata, idpCfg := makeTestMetadata(t)
+			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", policies)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultName)
 			assert.Equal(t, tc.wantCreateCount, created)
 			assert.Equal(t, tc.wantSubRes, subResCalled)
-			assert.Equal(t, resultName, p.GetIDPResourceName())
 		})
 	}
 }
@@ -354,8 +355,8 @@ func TestCreateEngageResourcesWithBuilder(t *testing.T) {
 				metadataErr:    tc.metadataErr,
 			}
 
-			p := makeTestProvider(t)
-			resultName, err := NewIDPEngageLifecycle(client, WithResourceBuilder(builder)).CreateEngageResources(newTestLogger(), p, "/env", management.EnvironmentPoliciesCredentials{})
+			metadata, idpCfg := makeTestMetadata(t)
+			resultName, err := NewIDPEngageLifecycle(client, WithResourceBuilder(builder)).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 
 			assert.Equal(t, tc.wantCreateCount, created)
 			assert.Equal(t, tc.wantNameStored, resultName != "")

@@ -362,13 +362,7 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		return err
 	}
 
-	idpResourceName := ""
-	if agent.agentFeaturesCfg.ManageIDPResourcesEnabled() {
-		idpResourceName = manageIDPResource(idpLogger, idp)
-		if idpResourceName == "" {
-			idpLogger.Warn("IdentityProvider resource could not be created or found; CRD will be registered without an IdentityProvider reference")
-		}
-	}
+	idpResourceName := manageIDPResource(idpLogger, idp)
 
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())

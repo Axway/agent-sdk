@@ -28,10 +28,11 @@ type IDPResourceBuilder interface {
 
 // IDPEngageLifecycle manages IdentityProvider and IdentityProviderMetadata resources in Engage.
 type IDPEngageLifecycle interface {
-	// CreateEngageResources creates or reuses IdentityProvider and IdentityProviderMetadata
-	// resources in Engage for the given provider and environment credential policies.
+	// CreateEngageResourcesFromMetadata creates or reuses IdentityProvider and IdentityProviderMetadata
+	// resources in Engage using pre-resolved metadata — no Provider or outbound HTTP fetch required.
+	// idpCfg is optional (may be nil for the v7 path); when set it is passed to the IDPResourceBuilder.
 	// Returns the Engage IdentityProvider resource name.
-	CreateEngageResources(idpLogger log.FieldLogger, p Provider, envURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error)
+	CreateEngageResourcesFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName string, metadata *AuthorizationServerMetadata, envURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error)
 }
 
 // LifecycleOption configures an idpEngageLifecycle.
@@ -56,8 +57,11 @@ func NewIDPEngageLifecycle(client IDPClient, opts ...LifecycleOption) IDPEngageL
 	return l
 }
 
-func (l *idpEngageLifecycle) CreateEngageResources(idpLogger log.FieldLogger, p Provider, envURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error) {
-	metadataURL := p.GetConfig().GetMetadataURL()
+func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName string, metadata *AuthorizationServerMetadata, envURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error) {
+	metadataURL := metadata.Issuer
+	if idpCfg != nil {
+		metadataURL = idpCfg.GetMetadataURL()
+	}
 
 	idpLogger.Debug("querying Engage for existing IdentityProvider resource")
 	existing, err := l.client.GetAPIV1ResourceInstances(
@@ -70,14 +74,11 @@ func (l *idpEngageLifecycle) CreateEngageResources(idpLogger log.FieldLogger, p 
 
 	if len(existing) > 0 {
 		name := existing[0].Name
-		if prov, ok := p.(*provider); ok && prov.idpResourceName != nil {
-			*prov.idpResourceName = name
-		}
 		idpLogger.WithField("name", name).Info("reusing existing IdentityProvider resource")
 		return name, nil
 	}
 
-	idpResource, err := l.buildIdentityProvider(idpLogger, p, metadataURL)
+	idpResource, err := l.buildIdentityProviderFromMetadata(idpLogger, idpCfg, idpName, metadataURL)
 	if err != nil {
 		return "", err
 	}
@@ -97,21 +98,18 @@ func (l *idpEngageLifecycle) CreateEngageResources(idpLogger log.FieldLogger, p 
 		return "", err
 	}
 
-	if err = l.createMetadata(idpLogger, p, createdName); err != nil {
+	if err = l.createMetadataFromServerMetadata(idpLogger, idpCfg, createdName, metadata); err != nil {
 		return "", err
 	}
 
-	if prov, ok := p.(*provider); ok && prov.idpResourceName != nil {
-		*prov.idpResourceName = createdName
-	}
 	idpLogger.WithField("name", createdName).Info("IdentityProvider resource created successfully")
 	return createdName, nil
 }
 
-func (l *idpEngageLifecycle) buildIdentityProvider(idpLogger log.FieldLogger, p Provider, metadataURL string) (*management.IdentityProvider, error) {
-	if l.builder != nil {
+func (l *idpEngageLifecycle) buildIdentityProviderFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName, metadataURL string) (*management.IdentityProvider, error) {
+	if l.builder != nil && idpCfg != nil {
 		idpLogger.Debug("building IdentityProvider resource via supplier")
-		res, err := l.builder.GetIdentityProvider(p.GetConfig())
+		res, err := l.builder.GetIdentityProvider(idpCfg)
 		if err != nil {
 			idpLogger.WithError(err).Error("supplier failed to build IdentityProvider resource")
 			return nil, err
@@ -119,31 +117,35 @@ func (l *idpEngageLifecycle) buildIdentityProvider(idpLogger log.FieldLogger, p 
 		return res, nil
 	}
 
-	cfg := p.GetConfig()
-	name := util.NormalizeNameForCentral(cfg.GetIDPName())
+	name := util.NormalizeNameForCentral(idpName)
 	res := management.NewIdentityProvider(name)
 	res.Spec = management.IdentityProviderSpec{
-		MetadataUrl:     metadataURL,
-		ProviderType:    cfg.GetIDPType(),
-		RequestHeaders:  toKeyValuePairs(cfg.GetRequestHeaders()),
-		QueryParameters: toKeyValuePairs(cfg.GetQueryParams()),
+		MetadataUrl: metadataURL,
 	}
-	if authCfg := cfg.GetAuthConfig(); authCfg != nil {
-		res.Spec.UseRegistrationAccessToken = authCfg.UseRegistrationAccessToken()
-	}
-	idpLogger.WithField("name", name).Trace("built IdentityProvider resource from config")
 	return res, nil
 }
 
-func toKeyValuePairs(m map[string]string) []management.IdentityProviderSpecKeyValuePair {
-	if len(m) == 0 {
-		return nil
+func (l *idpEngageLifecycle) createMetadataFromServerMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName string, metadata *AuthorizationServerMetadata) error {
+	idpLogger.WithField("name", idpName).Debug("creating IdentityProviderMetadata resource")
+
+	idpMetadata := newIdentityProviderMetadata(idpName, idpName, metadata)
+
+	if l.builder != nil && idpCfg != nil {
+		idpLogger.Debug("building IdentityProviderMetadata resource via supplier")
+		supplied, err := l.builder.GetIdentityProviderMetadata(idpCfg, metadata)
+		if err != nil {
+			idpLogger.WithError(err).Warn("supplier failed to build IdentityProviderMetadata resource; skipping metadata creation")
+			return nil
+		}
+		idpMetadata = supplied
 	}
-	pairs := make([]management.IdentityProviderSpecKeyValuePair, 0, len(m))
-	for k, v := range m {
-		pairs = append(pairs, management.IdentityProviderSpecKeyValuePair{Name: k, Value: v})
+
+	if _, err := l.client.CreateOrUpdateResource(idpMetadata); err != nil {
+		idpLogger.WithField("name", idpName).WithError(err).Warn("unable to create IdentityProviderMetadata resource in Engage")
+		return err
 	}
-	return pairs
+	idpLogger.WithField("name", idpName).Info("IdentityProviderMetadata resource created successfully")
+	return nil
 }
 
 func (l *idpEngageLifecycle) applyPolicies(idpLogger log.FieldLogger, idpResource *management.IdentityProvider, envPolicies management.EnvironmentPoliciesCredentials) error {
@@ -173,40 +175,6 @@ func (l *idpEngageLifecycle) applyPolicies(idpLogger log.FieldLogger, idpResourc
 		return err
 	}
 	idpLogger.WithField("name", idpResource.Name).Info("credential policies applied to IdentityProvider")
-	return nil
-}
-
-// createMetadata builds and writes the IdentityProviderMetadata resource.
-// When a builder is set and it errors, the error is logged and skipped (supplier
-// build failure is non-fatal — the IdP was already created). API write errors
-// are returned so the caller can abort per REQ-052.
-func (l *idpEngageLifecycle) createMetadata(idpLogger log.FieldLogger, p Provider, idpName string) error {
-	idpLogger.WithField("name", idpName).Debug("creating IdentityProviderMetadata resource")
-
-	serverMetadata := p.GetMetadata()
-	if serverMetadata == nil {
-		idpLogger.Warn("provider has no server metadata; IdentityProviderMetadata resource will not be created")
-		return nil
-	}
-
-	idpMetadata := newIdentityProviderMetadata(idpName, idpName, serverMetadata)
-
-	if l.builder != nil {
-		idpLogger.Debug("building IdentityProviderMetadata resource via supplier")
-		supplied, err := l.builder.GetIdentityProviderMetadata(p.GetConfig(), serverMetadata)
-		if err != nil {
-			// supplier build failure is non-fatal: log and skip metadata write
-			idpLogger.WithError(err).Warn("supplier failed to build IdentityProviderMetadata resource; skipping metadata creation")
-			return nil
-		}
-		idpMetadata = supplied
-	}
-
-	if _, err := l.client.CreateOrUpdateResource(idpMetadata); err != nil {
-		idpLogger.WithField("name", idpName).WithError(err).Warn("unable to create IdentityProviderMetadata resource in Engage")
-		return err
-	}
-	idpLogger.WithField("name", idpName).Info("IdentityProviderMetadata resource created successfully")
 	return nil
 }
 
