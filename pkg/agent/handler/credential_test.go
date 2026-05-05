@@ -1061,7 +1061,7 @@ func TestExternalCredentialOnPending(t *testing.T) {
 			cred := credential
 			cred.Status.Level = prov.Pending.String()
 			cred.Spec.State.Name = apiv1.Active
-			cred.Spec.Provision = management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal}
+			cred.Spec.Provision = &management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal}
 
 			expectedStatus := mock.MockRequestStatus{Status: prov.Success, Msg: "msg"}
 			if tc.provisionErr != nil {
@@ -1134,7 +1134,7 @@ func TestIsExternalCredential(t *testing.T) {
 		"mode external returns true": {
 			cred: &management.Credential{
 				Spec: management.CredentialSpec{
-					Provision: management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal},
+					Provision: &management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal},
 				},
 			},
 			expected: true,
@@ -1142,7 +1142,7 @@ func TestIsExternalCredential(t *testing.T) {
 		"other mode returns false": {
 			cred: &management.Credential{
 				Spec: management.CredentialSpec{
-					Provision: management.CredentialSpecProvision{Mode: "internal"},
+					Provision: &management.CredentialSpecProvision{Mode: "internal"},
 				},
 			},
 			expected: false,
