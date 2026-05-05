@@ -369,6 +369,37 @@ $SED -i "/EnvironmentTraceable\s/a ${REPLACE}" ${MODEL_PATH}/Environment.go
 go fmt ${MODEL_PATH}/Environment.go
 
 ######################
+# For management/v1alpha1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
+# "Provision *CredentialSpecProvision"
+######################
+SEARCH="\s*Provision\s*CredentialSpecProvision.*"
+REPLACE="Provision *CredentialSpecProvision \`json:\"provision,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/model_credential_spec.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/model_credential_spec.go
+# add in the new line we want
+$SED -i "/CredentialSpecProvision/a ${REPLACE}" ${MODEL_PATH}/model_credential_spec.go
+# reformat the code
+go fmt ${MODEL_PATH}/model_credential_spec.go
+
+######################
+# For catalog/v1alpha1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
+# "Provision *CredentialSpecProvision"
+######################
+CATALOG_MODEL_PATH="${OUTDIR}/models/catalog/v1alpha1"
+SEARCH="\s*Provision\s*CredentialSpecProvision.*"
+REPLACE="Provision *CredentialSpecProvision \`json:\"provision,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${CATALOG_MODEL_PATH}/model_credential_spec.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${CATALOG_MODEL_PATH}/model_credential_spec.go
+# add in the new line we want
+$SED -i "/CredentialSpecProvision/a ${REPLACE}" ${CATALOG_MODEL_PATH}/model_credential_spec.go
+# reformat the code
+go fmt ${CATALOG_MODEL_PATH}/model_credential_spec.go
+
+######################
 # Update the Status subresource in generated model to use v1.ResourceStatus
 ######################
 MODELS=`find ${OUTDIR}/models -type f -name "*.go" \

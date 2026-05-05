@@ -452,7 +452,7 @@ func isExternalCredential(cred *management.Credential) bool {
 	if cred == nil {
 		return false
 	}
-	return cred.Spec.Provision.Mode == prov.CredProvisionModeExternal
+	return cred.Spec.Provision != nil && cred.Spec.Provision.Mode == prov.CredProvisionModeExternal
 }
 
 // onError updates the AccessRequest with an error status
@@ -537,6 +537,11 @@ type provCreds struct {
 func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
+	provisionMode := ""
+	if cr.Spec.Provision != nil {
+		provisionMode = cr.Spec.Provision.Mode
+	}
+
 	provCred := &provCreds{
 		appDetails:    util.GetAgentDetails(app),
 		credDetails:   credDetails,
@@ -547,7 +552,7 @@ func (h *credentials) newProvCreds(cr *management.Credential, app *management.Ma
 		name:          cr.Name,
 		credAction:    action,
 		days:          0,
-		provisionMode: cr.Spec.Provision.Mode,
+		provisionMode: provisionMode,
 	}
 
 	if crd != nil {
