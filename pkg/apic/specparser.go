@@ -57,6 +57,7 @@ type OasSpecProcessor interface {
 	GetSpecBytes() []byte
 	GetResourceType() string
 	GetVersion() string
+	stripEndpoints()
 }
 
 // SpecResourceParser -

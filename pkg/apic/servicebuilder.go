@@ -56,6 +56,7 @@ type ServiceBuilder interface {
 	SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder
 	SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
 	SetStripOASExtensions(strip bool) ServiceBuilder
+	SetStripOASServersBeforePublish() ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -379,6 +380,15 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		val.StripExtensions()
 	}
 
+	if b.serviceBody.stripOASServersBeforePublish {
+		b.serviceBody.originalSpecDefinition = b.serviceBody.SpecDefinition
+		b.serviceBody.originalSpecHash = b.serviceBody.specHash
+		val.stripEndpoints()
+		b.serviceBody.SpecDefinition = val.GetSpecBytes()
+		newHash, _ := util.ComputeHash(val.GetSpecBytes())
+		b.serviceBody.specHash = fmt.Sprintf("%v", newHash)
+	}
+
 	// only set ard name based on spec if not already set, use first auth we find
 	if b.serviceBody.ardName != "" {
 		return b.serviceBody, nil
@@ -423,6 +433,11 @@ func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName
 
 func (b *serviceBodyBuilder) SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder {
 	b.serviceBody.ignoreSpecBasesCreds = ignore
+	return b
+}
+
+func (b *serviceBodyBuilder) SetStripOASServersBeforePublish() ServiceBuilder {
+	b.serviceBody.stripOASServersBeforePublish = true
 	return b
 }
 

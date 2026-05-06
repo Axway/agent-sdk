@@ -78,6 +78,13 @@ func (p *oas2SpecProcessor) GetEndpoints() ([]EndpointDefinition, error) {
 	return endPoints, nil
 }
 
+func (p *oas2SpecProcessor) stripEndpoints() {
+	// strip the endpoints from the spec, these will be added based on the API Service EndpointDefinitions
+	p.spec.BasePath = ""
+	p.spec.Host = ""
+	p.spec.Schemes = []string{}
+}
+
 func (p *oas2SpecProcessor) ParseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}
