@@ -595,3 +595,21 @@ func IsInArray[K comparable](arr []K, val K) bool {
 	}
 	return false
 }
+
+func StringSlicesEqualUnordered(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	counts := make(map[string]int)
+	for _, item := range a {
+		counts[item]++
+	}
+	for _, item := range b {
+		counts[item]--
+		if counts[item] < 0 {
+			return false
+		}
+	}
+	return true
+}
