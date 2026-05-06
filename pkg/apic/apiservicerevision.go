@@ -211,20 +211,13 @@ func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody,
 // different, return the updated tags
 func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
 	// Extract values from map and convert to []string
-	mapValues := []string{}
-	for _, v := range serviceBodyTags {
-		if strVal, ok := v.(string); ok {
-			mapValues = append(mapValues, strVal)
-		}
-	}
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 
 	// Compare
-	if util.StringSlicesEqualUnordered(mapValues, revisionTags) {
+	if util.StringSlicesEqualUnordered(tags, revisionTags) {
 		return []string{} // return empty string slice if equal
 	}
 
-	// If not equal, return the keys from serviceBodyTags
-	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 	return tags
 }
 
