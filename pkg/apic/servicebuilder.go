@@ -381,7 +381,6 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 
 	if b.serviceBody.stripOASServersBeforePublish {
-		b.serviceBody.originalSpecDefinition = b.serviceBody.SpecDefinition
 		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		val.stripEndpoints()
 		b.serviceBody.SpecDefinition = val.GetSpecBytes()

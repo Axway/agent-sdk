@@ -68,7 +68,6 @@ type ServiceBody struct {
 	referencedInstanceName       string
 	logger                       log.FieldLogger
 	instanceLifecycle            *management.ApiServiceInstanceLifecycle
-	originalSpecDefinition       []byte
 	originalSpecHash             string
 }
 
