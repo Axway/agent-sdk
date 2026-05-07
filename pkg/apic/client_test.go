@@ -232,95 +232,109 @@ func TestCreateSubResource(t *testing.T) {
 }
 
 func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
-	tests := []struct {
-		name            string
+	tests := map[string]struct {
 		gvk             apiv1.GroupVersionKind
+		resourceName    string
 		oldHash         string
 		newHash         string
+		skipCache       bool
 		apiResponses    []api.MockResponse
 		expectedAttrVal string
 		expectErr       bool
+		expectCached    bool
 	}{
-		{
-			name:    "should error with bad response from api call",
+		"should error with bad response from api call": {
 			gvk:     management.AccessRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "1235",
 			apiResponses: []api.MockResponse{
-				{
-					RespCode: http.StatusUnauthorized,
-				},
+				{RespCode: http.StatusUnauthorized},
 			},
-			expectedAttrVal: "existing",
-			expectErr:       true,
+			expectErr: true,
 		},
-		{
-			name:            "should not update ARD as hash is unchanged",
+		"should not update ARD as hash is unchanged": {
 			gvk:             management.AccessRequestDefinitionGVK(),
 			oldHash:         "1234",
 			newHash:         "1234",
 			apiResponses:    []api.MockResponse{},
 			expectedAttrVal: "existing",
-			expectErr:       false,
 		},
-		{
-			name:            "should not update CRD as hash is unchanged",
+		"should not update CRD as hash is unchanged": {
 			gvk:             management.CredentialRequestDefinitionGVK(),
 			oldHash:         "1234",
 			newHash:         "1234",
 			apiResponses:    []api.MockResponse{},
 			expectedAttrVal: "existing",
-			expectErr:       false,
 		},
-		{
-			name:    "should update ARD as hash has changed",
+		"should update ARD as hash has changed": {
 			gvk:     management.AccessRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "5234",
 			apiResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/apiservice.json",
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/apiservice.json",
-					RespCode: http.StatusOK,
-				},
+				{FileName: "./testdata/apiservice.json", RespCode: http.StatusOK},
+				{FileName: "./testdata/apiservice.json", RespCode: http.StatusOK},
 			},
-			expectErr: false,
 		},
-		{
-			name:    "should update CRD as hash has changed",
+		"should update CRD as hash has changed": {
 			gvk:     management.CredentialRequestDefinitionGVK(),
 			oldHash: "1234",
 			newHash: "5234",
 			apiResponses: []api.MockResponse{
-				{
-					FileName: "./testdata/apiservice.json",
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: "./testdata/apiservice.json",
-					RespCode: http.StatusOK,
-				},
+				{FileName: "./testdata/apiservice.json", RespCode: http.StatusOK},
+				{FileName: "./testdata/apiservice.json", RespCode: http.StatusOK},
 			},
-			expectErr: false,
+		},
+		"should recover from 409 conflict by fetching existing resource": {
+			gvk:          management.CredentialRequestDefinitionGVK(),
+			resourceName: "oauth-secret",
+			oldHash:      "1234",
+			newHash:      "1234",
+			skipCache:    true,
+			apiResponses: []api.MockResponse{
+				{RespCode: http.StatusConflict},
+				{FileName: "./testdata/credentialrequestdefinition.json", RespCode: http.StatusOK},
+				{FileName: "./testdata/credentialrequestdefinition.json", RespCode: http.StatusOK},
+			},
+			expectCached: true,
+		},
+		"should return error when 409 recovery GET fails": {
+			gvk:          management.CredentialRequestDefinitionGVK(),
+			resourceName: "oauth-secret",
+			oldHash:      "1234",
+			newHash:      "1234",
+			skipCache:    true,
+			apiResponses: []api.MockResponse{
+				{RespCode: http.StatusConflict},
+				{RespCode: http.StatusInternalServerError},
+			},
+			expectErr: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			svcClient, mockHTTPClient := GetTestServiceClient()
 			cfg := GetTestServiceClientCentralConfiguration(svcClient)
 			cfg.Environment = "mockenv"
 			cfg.PlatformURL = "http://foo.bar:4080"
 
-			// There should be one request for each sub resource of the ResourceInstance
 			mockHTTPClient.SetResponses(tt.apiResponses)
+
+			resName := tt.resourceName
+			if resName == "" {
+				resName = name
+			}
 
 			res := apiv1.ResourceInstance{
 				ResourceMeta: apiv1.ResourceMeta{
-					Name:             tt.name,
+					Name:             resName,
 					GroupVersionKind: tt.gvk,
+					Metadata: apiv1.Metadata{
+						Scope: apiv1.MetadataScope{
+							Kind: management.EnvironmentGVK().Kind,
+							Name: "mockenv",
+						},
+					},
 					SubResources: map[string]interface{}{
 						defs.XAgentDetails: map[string]interface{}{
 							defs.AttrSpecHash: tt.oldHash,
@@ -331,12 +345,13 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 				Spec: map[string]interface{}{},
 			}
 
-			// setup the cachedResources
-			switch tt.gvk.Kind {
-			case management.AccessRequestDefinitionGVK().Kind:
-				svcClient.caches.AddAccessRequestDefinition(&res)
-			case management.CredentialRequestDefinitionGVK().Kind:
-				svcClient.caches.AddCredentialRequestDefinition(&res)
+			if !tt.skipCache {
+				switch tt.gvk.Kind {
+				case management.AccessRequestDefinitionGVK().Kind:
+					svcClient.caches.AddAccessRequestDefinition(&res)
+				case management.CredentialRequestDefinitionGVK().Kind:
+					svcClient.caches.AddCredentialRequestDefinition(&res)
+				}
 			}
 
 			newRes := res
@@ -346,11 +361,23 @@ func TestUpdateSpecORCreateResourceInstance(t *testing.T) {
 			ri, err := svcClient.updateSpecORCreateResourceInstance(&newRes)
 			if tt.expectErr {
 				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
+				return
+			}
+
+			assert.Nil(t, err)
+			assert.NotNil(t, ri)
+
+			if tt.expectedAttrVal != "" {
 				assert.Equal(t, tt.expectedAttrVal, ri.Attributes["existing"])
 			}
 
+			if tt.expectCached {
+				cached, cacheErr := svcClient.caches.GetCredentialRequestDefinitionByName(ri.Name)
+				assert.Nil(t, cacheErr)
+				assert.NotNil(t, cached)
+				// Verify the cached entry is the fetched resource, not the original local one.
+				assert.Equal(t, ri.Metadata.ID, cached.Metadata.ID)
+			}
 		})
 	}
 }

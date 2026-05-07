@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -662,6 +661,8 @@ func (c *ServiceClient) ExecuteAPIWithHeader(method, url string, query map[strin
 		return response.Body, nil
 	case response.Code == http.StatusUnauthorized:
 		return nil, ErrAuthentication
+	case response.Code == http.StatusConflict:
+		return nil, ErrConflict
 	default:
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
@@ -868,7 +869,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		method = coreapi.PUT
 
 		// check if either hash, tags or title have changed and mark for update
-		equalTags := slices.Equal(existingRI.GetTags(), data.GetTags())
+		equalTags := util.StringSlicesEqualUnordered(existingRI.GetTags(), data.GetTags())
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
 		if oldHash == newHash && existingRI.Title == data.Title && equalTags {
@@ -915,14 +916,25 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 			return nil, err
 		}
 
-		response, err := c.ExecuteAPI(method, url, nil, reqBytes)
-		if err != nil {
+		respBytes, err := c.ExecuteAPIWithHeader(method, url, nil, reqBytes, nil)
+		switch {
+		case err == ErrConflict && method == coreapi.POST:
+			// Resource exists on server but not in cache; fetch and cache it.
+			log.Warnf("resource %s %s already exists on the server but was not in the local cache, fetching existing resource", data.Kind, data.Name)
+			fetchedRI, fetchErr := c.GetResource(data.GetSelfLink())
+			if fetchErr != nil {
+				return nil, fetchErr
+			}
+			c.addResourceToCache(fetchedRI)
+			newRI = fetchedRI
+		case err != nil:
 			return nil, err
 		}
 
-		err = json.Unmarshal(response, newRI)
-		if err != nil {
-			return nil, err
+		if newRI.Name == "" {
+			if err = json.Unmarshal(respBytes, newRI); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		newRI = existingRI

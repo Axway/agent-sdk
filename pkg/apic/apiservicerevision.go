@@ -7,9 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -165,7 +163,15 @@ func (c *ServiceClient) getRevisionsIfUpdating(serviceBody *ServiceBody) ([]*man
 
 // checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
 func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody, apiServiceRevisions []*management.APIServiceRevision) (bool, error) {
+	// attempt to use the stripped spec hash
 	revName, found := serviceBody.specHashes[serviceBody.specHash]
+	if !found && serviceBody.originalSpecHash != "" {
+		// check if the original spec hash matches an existing revision,
+		// this is to cover the case where the spec content has not changed since the last publish,
+		// but the hash has changed due to non-content related changes (e.g. stripping servers)
+		revName, found = serviceBody.specHashes[serviceBody.originalSpecHash]
+	}
+
 	if !found {
 		return false, nil
 	}
@@ -205,24 +211,13 @@ func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody,
 // different, return the updated tags
 func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
 	// Extract values from map and convert to []string
-	var mapValues []string
-	for _, v := range serviceBodyTags {
-		if strVal, ok := v.(string); ok {
-			mapValues = append(mapValues, strVal)
-		}
-	}
-
-	// Sort both slices to allow unordered comparison
-	sort.Strings(mapValues)
-	sort.Strings(revisionTags)
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 
 	// Compare
-	if reflect.DeepEqual(mapValues, revisionTags) {
+	if util.StringSlicesEqualUnordered(tags, revisionTags) {
 		return []string{} // return empty string slice if equal
 	}
 
-	// If not equal, return the keys from serviceBodyTags
-	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 	return tags
 }
 

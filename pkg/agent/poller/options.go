@@ -53,7 +53,7 @@ func withOnStop(cb onClientStopCb) executorOpt {
 	}
 }
 
-func WithContext(ctx context.Context, cancel context.CancelFunc) executorOpt {
+func WithContext(ctx context.Context, cancel context.CancelCauseFunc) executorOpt {
 	return func(m *pollExecutor) {
 		m.ctx = ctx
 		m.cancel = cancel

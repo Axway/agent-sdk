@@ -350,29 +350,128 @@ func Test_PublishServiceError(t *testing.T) {
 func Test_processRevision(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 
-	// tests for updating existing revision
-	httpClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			RespCode: http.StatusOK,
+	testCases := map[string]struct {
+		skip            bool
+		httpResponses   []api.MockResponse
+		serviceBody     ServiceBody
+		expectedRevName string
+	}{
+		"publish new revision": {
+			httpResponses: []api.MockResponse{
+				{
+					FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
+					RespCode: http.StatusOK,
+				},
+			},
+			serviceBody: ServiceBody{
+				APIName:          "daleapi",
+				Documentation:    []byte("\"docs\""),
+				Image:            "abcde",
+				ImageContentType: "image/jpeg",
+				ResourceType:     Oas2,
+				RestAPIID:        "12345",
+			},
+			expectedRevName: "daleapi",
 		},
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
-			RespCode: http.StatusOK,
+		"skip publish when no changes": {
+			httpResponses: []api.MockResponse{
+				{
+					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
+					RespCode: http.StatusOK,
+				},
+			},
+			serviceBody: ServiceBody{
+				APIName:          "daleapi",
+				Documentation:    []byte("\"docs\""),
+				Image:            "abcde",
+				ImageContentType: "image/jpeg",
+				ResourceType:     Oas2,
+				RestAPIID:        "12345",
+				specHash:         "abc123",
+				specHashes: map[string]interface{}{
+					"abc123": "daleapi",
+				},
+				serviceContext: serviceContext{
+					serviceAction: updateAPI,
+				},
+			},
+			expectedRevName: "daleapi",
 		},
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision
-			RespCode: http.StatusOK,
+		"skip publish when previous revision found": {
+			httpResponses: []api.MockResponse{
+				{
+					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]},{"name": "daleapi-1","tags": ["tag1","tag2"]}]`,
+					RespCode: http.StatusOK,
+				},
+			},
+			serviceBody: ServiceBody{
+				APIName:          "daleapi",
+				Documentation:    []byte("\"docs\""),
+				Image:            "abcde",
+				ImageContentType: "image/jpeg",
+				ResourceType:     Oas2,
+				RestAPIID:        "12345",
+				specHash:         "abc123",
+				specHashes: map[string]interface{}{
+					"abc123": "daleapi-1",
+				},
+				serviceContext: serviceContext{
+					serviceAction: updateAPI,
+				},
+			},
+			expectedRevName: "daleapi-1",
 		},
-		{
-			FileName: "./testdata/servicerevision.json", // for call to update the serviceRevision x-agent-details
-			RespCode: http.StatusOK,
+		"find revision match using original spec hash": {
+			httpResponses: []api.MockResponse{
+				{
+					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]},{"name": "daleapi-1","tags": ["tag1","tag2"]}]`,
+					RespCode: http.StatusOK,
+				},
+			},
+			serviceBody: ServiceBody{
+				APIName:          "daleapi",
+				Documentation:    []byte("\"docs\""),
+				Image:            "abcde",
+				ImageContentType: "image/jpeg",
+				ResourceType:     Oas2,
+				RestAPIID:        "12345",
+				specHash:         "abc1234",
+				originalSpecHash: "abc123",
+				specHashes: map[string]interface{}{
+					"abc123": "daleapi-1",
+				},
+				serviceContext: serviceContext{
+					serviceAction: updateAPI,
+				},
+			},
+			expectedRevName: "daleapi-1",
 		},
-	})
-	cloneServiceBody := serviceBody
-	// Normal Revision
-	client.processRevision(&cloneServiceBody)
-	assert.NotEqual(t, "", cloneServiceBody.serviceContext.revisionName)
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.skip {
+				return
+			}
+			// tests for updating existing revision
+			httpClient.SetResponses(tc.httpResponses)
+
+			client.processRevision(&tc.serviceBody)
+			assert.NotEqual(t, "", tc.serviceBody.serviceContext.revisionName)
+			assert.Equal(t, tc.expectedRevName, tc.serviceBody.serviceContext.revisionName)
+		})
+	}
 }
 
 func TestDeleteServiceByAPIID(t *testing.T) {

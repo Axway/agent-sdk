@@ -84,6 +84,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetReferenceInstanceName("refInstance", "refEnv").
 		SetIgnoreSpecBasedCreds(true).
 		SetStripOASExtensions(true).
+		SetStripOASServersBeforePublish().
 		SetInstanceLifecycle("stage", "active", "").
 		SetServiceEndpoints(ep)
 
@@ -136,6 +137,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
 	assert.Equal(t, true, sb.ignoreSpecBasesCreds)
 	assert.Equal(t, true, sb.stripOASExtensions)
+	assert.Equal(t, true, sb.stripOASServersBeforePublish)
 	instanceLifecycle := sb.GetInstanceLifeCycle()
 	assert.NotNil(t, instanceLifecycle)
 	assert.Equal(t, "stage", instanceLifecycle.Stage)
@@ -222,7 +224,7 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 		"status":   "active",
 	}
 
-	sb, err = serviceBuilder.
+	serviceBuilder = serviceBuilder.
 		SetDescription("A sample Petstore server based on OpenAPI 3.0").
 		SetAPIName("petstore").
 		SetAuthPolicy("pass-through").
@@ -230,8 +232,9 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 		SetState(PublishedState).
 		SetServiceEndpoints(endpoints).
 		SetTags(tags).
-		SetTeamName("pet-team").
-		Build()
+		SetTeamName("pet-team")
+
+	sb, err = serviceBuilder.Build()
 
 	// Assertions
 	assert.Nil(t, err)
@@ -246,9 +249,17 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Equal(t, endpoints, sb.Endpoints)
 	assert.Equal(t, tags, sb.Tags)
 	assert.NotEmpty(t, sb.SpecDefinition)
+	assert.Empty(t, sb.originalSpecHash)
 	assert.Equal(t, Oas3, sb.ResourceType)
 
 	// Verify spec size constraints
 	assert.Less(t, len(sb.SpecDefinition), len(specBytes), "processed spec should be smaller than original")
 	assert.Less(t, len(sb.SpecDefinition), tenMB, "spec should be under 10MB limit")
+
+	sb, err = serviceBuilder.
+		SetStripOASServersBeforePublish().
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
 }

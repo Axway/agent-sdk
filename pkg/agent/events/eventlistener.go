@@ -28,7 +28,7 @@ type APIClient interface {
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
 	ctx             context.Context
-	cancel          context.CancelFunc
+	cancel          context.CancelCauseFunc
 	client          APIClient
 	handlers        []handler.Handler
 	logger          log.FieldLogger
@@ -37,10 +37,10 @@ type EventListener struct {
 }
 
 // NewListenerFunc type for creating a new listener
-type NewListenerFunc func(ctx context.Context, cancel context.CancelFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener
+type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(ctx context.Context, cancel context.CancelFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener {
+func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
@@ -59,7 +59,7 @@ func NewEventListener(ctx context.Context, cancel context.CancelFunc, source cha
 // Stop stops the listener
 func (em *EventListener) Stop() {
 	if em != nil {
-		em.cancel()
+		em.cancel(nil)
 	}
 }
 
@@ -92,10 +92,10 @@ func (em *EventListener) start() (done bool, err error) {
 		}
 
 		if err := em.handleEvent(event); err != nil {
-			em.logger.WithError(err).Error("stream event listener error")
+			em.logger.WithError(err).Error("stream event listener error handling event")
 		}
 	case <-em.ctx.Done():
-		em.logger.Trace("stream event listener has been gracefully stopped")
+		em.logger.Trace("stream event listener context is done")
 		done = true
 		err = nil
 		break

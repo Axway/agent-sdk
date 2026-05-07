@@ -17,9 +17,15 @@ enum RequestType {
     AGENT_STATUS = 1;
 }
 
+message AgentContext {
+    string environmentName = 2;
+    string agentName = 3;
+}
+
 message AgentStatus {
     string state = 1;
     string message = 2;
+    optional AgentContext context = 3;
 }
 
 message Request {

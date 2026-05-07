@@ -280,6 +280,11 @@ func (p *oas3SpecProcessor) StripExtensions() {
 	}
 }
 
+func (p *oas3SpecProcessor) stripEndpoints() {
+	// strip the endpoints from the spec, these will be added based on the API Service EndpointDefinitions
+	p.spec.Servers = []*openapi3.Server{}
+}
+
 func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
 	return s

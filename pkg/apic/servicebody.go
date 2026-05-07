@@ -14,59 +14,61 @@ type APIKeyInfo struct {
 
 // ServiceBody - details about a service to create
 type ServiceBody struct {
-	NameToPush                string
-	APIName                   string
-	RestAPIID                 string
-	PrimaryKey                string
-	URL                       string
-	Stage                     string
-	StageDescriptor           string
-	StageDisplayName          string
-	Description               string
-	Version                   string
-	AuthPolicy                string
-	authPolicies              []string
-	apiKeyInfo                []APIKeyInfo
-	scopes                    map[string]string
-	SpecDefinition            []byte
-	Documentation             []byte
-	Tags                      map[string]interface{}
-	Image                     string
-	ImageContentType          string
-	CreatedBy                 string
-	ResourceContentType       string
-	ResourceType              string
-	SubscriptionName          string
-	APIUpdateSeverity         string
-	State                     string
-	Status                    string
-	ServiceAttributes         map[string]string
-	RevisionAttributes        map[string]string
-	InstanceAttributes        map[string]string
-	ServiceAgentDetails       map[string]interface{}
-	InstanceAgentDetails      map[string]interface{}
-	RevisionAgentDetails      map[string]interface{}
-	serviceContext            serviceContext
-	Endpoints                 []EndpointDefinition
-	UnstructuredProps         *UnstructuredProperties
-	TeamName                  string
-	teamID                    string
-	credentialRequestPolicies []string
-	ardName                   string
-	uniqueARD                 bool
-	ignoreSpecBasesCreds      bool
-	stripOASExtensions        bool
-	specHash                  string
-	specVersion               string
-	accessRequestDefinition   *management.AccessRequestDefinition
-	specHashes                map[string]interface{} // map of hash values to revision names
-	requestDefinitionsAllowed bool                   // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
-	dataplaneType             DataplaneType
-	isDesignDataplane         bool
-	referencedServiceName     string
-	referencedInstanceName    string
-	logger                    log.FieldLogger
-	instanceLifecycle         *management.ApiServiceInstanceLifecycle
+	NameToPush                   string
+	APIName                      string
+	RestAPIID                    string
+	PrimaryKey                   string
+	URL                          string
+	Stage                        string
+	StageDescriptor              string
+	StageDisplayName             string
+	Description                  string
+	Version                      string
+	AuthPolicy                   string
+	authPolicies                 []string
+	apiKeyInfo                   []APIKeyInfo
+	scopes                       map[string]string
+	SpecDefinition               []byte
+	Documentation                []byte
+	Tags                         map[string]interface{}
+	Image                        string
+	ImageContentType             string
+	CreatedBy                    string
+	ResourceContentType          string
+	ResourceType                 string
+	SubscriptionName             string
+	APIUpdateSeverity            string
+	State                        string
+	Status                       string
+	ServiceAttributes            map[string]string
+	RevisionAttributes           map[string]string
+	InstanceAttributes           map[string]string
+	ServiceAgentDetails          map[string]interface{}
+	InstanceAgentDetails         map[string]interface{}
+	RevisionAgentDetails         map[string]interface{}
+	serviceContext               serviceContext
+	Endpoints                    []EndpointDefinition
+	UnstructuredProps            *UnstructuredProperties
+	TeamName                     string
+	teamID                       string
+	credentialRequestPolicies    []string
+	ardName                      string
+	uniqueARD                    bool
+	ignoreSpecBasesCreds         bool
+	stripOASExtensions           bool
+	stripOASServersBeforePublish bool
+	specHash                     string
+	specVersion                  string
+	accessRequestDefinition      *management.AccessRequestDefinition
+	specHashes                   map[string]interface{} // map of hash values to revision names
+	requestDefinitionsAllowed    bool                   // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
+	dataplaneType                DataplaneType
+	isDesignDataplane            bool
+	referencedServiceName        string
+	referencedInstanceName       string
+	logger                       log.FieldLogger
+	instanceLifecycle            *management.ApiServiceInstanceLifecycle
+	originalSpecHash             string
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body
