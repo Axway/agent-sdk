@@ -186,6 +186,7 @@ type CentralConfig interface {
 	GetTraceabilityHost() string
 	GetTraceabilityProtocol() string
 	GetPlatformURL() string
+	GetAPIServerVersionURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
 	GetEnvironmentACLsURL() string
@@ -451,6 +452,11 @@ func (c *CentralConfiguration) GetProxyURL() string {
 // GetAccessRequestsURL - Returns the accessrequest URL for access request API
 func (c *CentralConfiguration) GetAccessRequestsURL() string {
 	return c.GetEnvironmentURL() + "/accessrequests"
+}
+
+// GetAPIServerVersionURL - Returns the base path for the API server with version
+func (c *CentralConfiguration) GetAPIServerVersionURL() string {
+	return c.GetURL() + "/apis/management/" + c.APIServerVersion
 }
 
 // GetAPIServerURL - Returns the base path for the API server

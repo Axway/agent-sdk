@@ -223,7 +223,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 
 func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
 	if status.GetStatus() == prov.Success {
-		if provCreds.IsIDPCredential() {
+		if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
 			err := provCreds.idpProvisioner.UnregisterClient()
 			if err != nil {
 				logger.
@@ -339,19 +339,22 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	var err error
 	data := map[string]interface{}{}
 	idpAgentDetails := make(map[string]string)
+	isExternal := isExternalCredential(cred)
 	if status.GetStatus() == prov.Success {
 		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
 		if credentialData != nil {
-			sec := app.Spec.Security
-			d := credentialData.GetData()
-			if crd.Spec.Provision == nil {
-				data = d
-			} else if d != nil {
-				data, err = h.encryptSchema(
-					crd.Spec.Provision.Schema,
-					d,
-					sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
-				)
+			if !isExternal {
+				sec := app.Spec.Security
+				d := credentialData.GetData()
+				if crd.Spec.Provision == nil {
+					data = d
+				} else if d != nil {
+					data, err = h.encryptSchema(
+						crd.Spec.Provision.Schema,
+						d,
+						sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+					)
+				}
 			}
 			if provCreds.IsIDPCredential() {
 				idpAgentDetails, err = provCreds.idpProvisioner.GetAgentDetails()
@@ -386,6 +389,14 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
 	h.processCredentialLevelSuccess(provCreds, cred)
+
+	if isExternal {
+		cred.SubResources = map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(cred),
+			"state":            cred.State,
+		}
+		return
+	}
 
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
