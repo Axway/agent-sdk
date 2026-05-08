@@ -80,13 +80,6 @@ func makeIDPConfig(metadataURL string) *config.IDPConfiguration {
 	}
 }
 
-// idpInstanceRI builds a *ResourceInstance that looks like a fetched IdentityProvider.
-func idpInstanceRI(name string) *apiv1.ResourceInstance {
-	idp := management.NewIdentityProvider(name)
-	ri, _ := idp.AsInstance()
-	return ri
-}
-
 // idpMetadataInstanceRI builds a *ResourceInstance that looks like a fetched IdentityProviderMetadata
 // with idpScopeName as the scope name — used to test the ManageIDPResource Engage query path.
 func idpMetadataInstanceRI(idpScopeName string) *apiv1.ResourceInstance {
@@ -839,16 +832,13 @@ func TestManageIDPResource(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		metadata               *oauth.AuthorizationServerMetadata
-		preloadCacheName       string
-		tokenEndpointInstances []*apiv1.ResourceInstance
-		tokenEndpointErr       error
-		metadataURLInstances   []*apiv1.ResourceInstance
-		createErr              error
-		assertResult           func(t *testing.T, result string)
-		wantQueryCount         int
-		wantCreateCalled       bool
-		wantCachedAfter        bool
+		metadata         *oauth.AuthorizationServerMetadata
+		preloadCacheName string
+		createErr        error
+		assertResult     func(t *testing.T, result string)
+		wantQueryCount   int
+		wantCreateCalled bool
+		wantCachedAfter  bool
 	}{
 		"nil metadata returns empty without any API call": {
 			metadata:       nil,
@@ -863,13 +853,6 @@ func TestManageIDPResource(t *testing.T) {
 			wantCachedAfter:  true,
 		},
 		"creates resource when not in cache": {
-			metadata:         testMeta,
-			assertResult:     func(t *testing.T, result string) { assert.NotEmpty(t, result) },
-			wantQueryCount:   1,
-			wantCreateCalled: true,
-			wantCachedAfter:  true,
-		},
-		"creates and caches resource when not in cache": {
 			metadata:         testMeta,
 			assertResult:     func(t *testing.T, result string) { assert.NotEmpty(t, result) },
 			wantQueryCount:   1,
@@ -899,10 +882,7 @@ func TestManageIDPResource(t *testing.T) {
 			apicClient := &mock.Client{
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					queryCount++
-					if queryCount == 1 {
-						return tc.tokenEndpointInstances, tc.tokenEndpointErr
-					}
-					return tc.metadataURLInstances, nil
+					return []*apiv1.ResourceInstance{}, nil
 				},
 				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					createCalled = true
