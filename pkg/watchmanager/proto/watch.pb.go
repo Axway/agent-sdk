@@ -27,6 +27,7 @@ type RequestType int32
 const (
 	RequestType_TOKEN_REFRESH RequestType = 0
 	RequestType_AGENT_STATUS  RequestType = 1
+	RequestType_PING_RESPONSE RequestType = 2
 )
 
 // Enum value maps for RequestType.
@@ -34,10 +35,12 @@ var (
 	RequestType_name = map[int32]string{
 		0: "TOKEN_REFRESH",
 		1: "AGENT_STATUS",
+		2: "PING_RESPONSE",
 	}
 	RequestType_value = map[string]int32{
 		"TOKEN_REFRESH": 0,
 		"AGENT_STATUS":  1,
+		"PING_RESPONSE": 2,
 	}
 )
 
@@ -76,6 +79,7 @@ const (
 	Event_DELETED            Event_Type = 2
 	Event_SUBRESOURCEUPDATED Event_Type = 3
 	Event_TRIGGERACTION      Event_Type = 4
+	Event_PING               Event_Type = 5
 )
 
 // Enum value maps for Event_Type.
@@ -86,6 +90,7 @@ var (
 		2: "DELETED",
 		3: "SUBRESOURCEUPDATED",
 		4: "TRIGGERACTION",
+		5: "PING",
 	}
 	Event_Type_value = map[string]int32{
 		"CREATED":            0,
@@ -93,6 +98,7 @@ var (
 		"DELETED":            2,
 		"SUBRESOURCEUPDATED": 3,
 		"TRIGGERACTION":      4,
+		"PING":               5,
 	}
 )
 
@@ -120,7 +126,7 @@ func (x Event_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Event_Type.Descriptor instead.
 func (Event_Type) EnumDescriptor() ([]byte, []int) {
-	return file_watch_proto_rawDescGZIP(), []int{3, 0}
+	return file_watch_proto_rawDescGZIP(), []int{4, 0}
 }
 
 type AgentContext struct {
@@ -235,19 +241,65 @@ func (x *AgentStatus) GetContext() *AgentContext {
 	return nil
 }
 
+type PingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_watch_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_watch_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_watch_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PingResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SelfLink      string                 `protobuf:"bytes,1,opt,name=selfLink,proto3" json:"selfLink,omitempty"`
 	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	RequestType   *RequestType           `protobuf:"varint,3,opt,name=requestType,proto3,enum=central.events.v1.RequestType,oneof" json:"requestType,omitempty"`
-	AgentStatus   *AgentStatus           `protobuf:"bytes,4,opt,name=agentStatus,proto3" json:"agentStatus,omitempty"`
+	AgentStatus   *AgentStatus           `protobuf:"bytes,4,opt,name=agentStatus,proto3,oneof" json:"agentStatus,omitempty"`
+	Capabilities  []string               `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	PingResponse  *PingResponse          `protobuf:"bytes,6,opt,name=pingResponse,proto3,oneof" json:"pingResponse,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Request) Reset() {
 	*x = Request{}
-	mi := &file_watch_proto_msgTypes[2]
+	mi := &file_watch_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -259,7 +311,7 @@ func (x *Request) String() string {
 func (*Request) ProtoMessage() {}
 
 func (x *Request) ProtoReflect() protoreflect.Message {
-	mi := &file_watch_proto_msgTypes[2]
+	mi := &file_watch_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -272,7 +324,7 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request.ProtoReflect.Descriptor instead.
 func (*Request) Descriptor() ([]byte, []int) {
-	return file_watch_proto_rawDescGZIP(), []int{2}
+	return file_watch_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Request) GetSelfLink() string {
@@ -303,6 +355,20 @@ func (x *Request) GetAgentStatus() *AgentStatus {
 	return nil
 }
 
+func (x *Request) GetCapabilities() []string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *Request) GetPingResponse() *PingResponse {
+	if x != nil {
+		return x.PingResponse
+	}
+	return nil
+}
+
 type Event struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -320,7 +386,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_watch_proto_msgTypes[3]
+	mi := &file_watch_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -332,7 +398,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_watch_proto_msgTypes[3]
+	mi := &file_watch_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -345,7 +411,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_watch_proto_rawDescGZIP(), []int{3}
+	return file_watch_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Event) GetId() string {
@@ -424,7 +490,7 @@ type EventMeta struct {
 
 func (x *EventMeta) Reset() {
 	*x = EventMeta{}
-	mi := &file_watch_proto_msgTypes[4]
+	mi := &file_watch_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +502,7 @@ func (x *EventMeta) String() string {
 func (*EventMeta) ProtoMessage() {}
 
 func (x *EventMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_watch_proto_msgTypes[4]
+	mi := &file_watch_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +515,7 @@ func (x *EventMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventMeta.ProtoReflect.Descriptor instead.
 func (*EventMeta) Descriptor() ([]byte, []int) {
-	return file_watch_proto_rawDescGZIP(), []int{4}
+	return file_watch_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *EventMeta) GetWatchTopicID() string {
@@ -496,7 +562,7 @@ type Organization struct {
 
 func (x *Organization) Reset() {
 	*x = Organization{}
-	mi := &file_watch_proto_msgTypes[5]
+	mi := &file_watch_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +574,7 @@ func (x *Organization) String() string {
 func (*Organization) ProtoMessage() {}
 
 func (x *Organization) ProtoReflect() protoreflect.Message {
-	mi := &file_watch_proto_msgTypes[5]
+	mi := &file_watch_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +587,7 @@ func (x *Organization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Organization.ProtoReflect.Descriptor instead.
 func (*Organization) Descriptor() ([]byte, []int) {
-	return file_watch_proto_rawDescGZIP(), []int{5}
+	return file_watch_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Organization) GetId() string {
@@ -544,13 +610,19 @@ const file_watch_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12>\n" +
 	"\acontext\x18\x03 \x01(\v2\x1f.central.events.v1.AgentContextH\x00R\acontext\x88\x01\x01B\n" +
 	"\n" +
-	"\b_context\"\xd4\x01\n" +
+	"\b_context\"\x1e\n" +
+	"\fPingResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xe8\x02\n" +
 	"\aRequest\x12\x1a\n" +
 	"\bselfLink\x18\x01 \x01(\tR\bselfLink\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12E\n" +
-	"\vrequestType\x18\x03 \x01(\x0e2\x1e.central.events.v1.RequestTypeH\x00R\vrequestType\x88\x01\x01\x12@\n" +
-	"\vagentStatus\x18\x04 \x01(\v2\x1e.central.events.v1.AgentStatusR\vagentStatusB\x0e\n" +
-	"\f_requestType\"\xda\x03\n" +
+	"\vrequestType\x18\x03 \x01(\x0e2\x1e.central.events.v1.RequestTypeH\x00R\vrequestType\x88\x01\x01\x12E\n" +
+	"\vagentStatus\x18\x04 \x01(\v2\x1e.central.events.v1.AgentStatusH\x01R\vagentStatus\x88\x01\x01\x12\"\n" +
+	"\fcapabilities\x18\x05 \x03(\tR\fcapabilities\x12H\n" +
+	"\fpingResponse\x18\x06 \x01(\v2\x1f.central.events.v1.PingResponseH\x02R\fpingResponse\x88\x01\x01B\x0e\n" +
+	"\f_requestTypeB\x0e\n" +
+	"\f_agentStatusB\x0f\n" +
+	"\r_pingResponse\"\xe4\x03\n" +
 	"\x05Event\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04time\x18\x02 \x01(\tR\x04time\x12\x18\n" +
@@ -560,13 +632,14 @@ const file_watch_proto_rawDesc = "" +
 	"\forganization\x18\x06 \x01(\v2\x1f.central.events.v1.OrganizationR\forganization\x121\n" +
 	"\x04type\x18\a \x01(\x0e2\x1d.central.events.v1.Event.TypeR\x04type\x12G\n" +
 	"\apayload\x18\b \x01(\v2-.central.events.v1.datamodel.ResourceInstanceR\apayload\x128\n" +
-	"\bmetadata\x18\t \x01(\v2\x1c.central.events.v1.EventMetaR\bmetadata\"X\n" +
+	"\bmetadata\x18\t \x01(\v2\x1c.central.events.v1.EventMetaR\bmetadata\"b\n" +
 	"\x04Type\x12\v\n" +
 	"\aCREATED\x10\x00\x12\v\n" +
 	"\aUPDATED\x10\x01\x12\v\n" +
 	"\aDELETED\x10\x02\x12\x16\n" +
 	"\x12SUBRESOURCEUPDATED\x10\x03\x12\x11\n" +
-	"\rTRIGGERACTION\x10\x04\"\xf4\x01\n" +
+	"\rTRIGGERACTION\x10\x04\x12\b\n" +
+	"\x04PING\x10\x05\"\xf4\x01\n" +
 	"\tEventMeta\x12\"\n" +
 	"\fwatchTopicID\x18\x01 \x01(\tR\fwatchTopicID\x12.\n" +
 	"\x12watchTopicSelfLink\x18\x02 \x01(\tR\x12watchTopicSelfLink\x12\x1e\n" +
@@ -577,10 +650,11 @@ const file_watch_proto_rawDesc = "" +
 	"\ractionDetails\x18\x05 \x01(\v2\x14.google.protobuf.AnyH\x00R\ractionDetails\x88\x01\x01B\x10\n" +
 	"\x0e_actionDetails\"\x1e\n" +
 	"\fOrganization\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id*2\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id*E\n" +
 	"\vRequestType\x12\x11\n" +
 	"\rTOKEN_REFRESH\x10\x00\x12\x10\n" +
-	"\fAGENT_STATUS\x10\x012P\n" +
+	"\fAGENT_STATUS\x10\x01\x12\x11\n" +
+	"\rPING_RESPONSE\x10\x022P\n" +
 	"\x05watch\x12G\n" +
 	"\tsubscribe\x12\x1a.central.events.v1.Request\x1a\x18.central.events.v1.Event\"\x00(\x010\x01B\x18Z\x16pkg/watchmanager/protob\x06proto3"
 
@@ -597,35 +671,37 @@ func file_watch_proto_rawDescGZIP() []byte {
 }
 
 var file_watch_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_watch_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_watch_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_watch_proto_goTypes = []any{
 	(RequestType)(0),         // 0: central.events.v1.RequestType
 	(Event_Type)(0),          // 1: central.events.v1.Event.Type
 	(*AgentContext)(nil),     // 2: central.events.v1.AgentContext
 	(*AgentStatus)(nil),      // 3: central.events.v1.AgentStatus
-	(*Request)(nil),          // 4: central.events.v1.Request
-	(*Event)(nil),            // 5: central.events.v1.Event
-	(*EventMeta)(nil),        // 6: central.events.v1.EventMeta
-	(*Organization)(nil),     // 7: central.events.v1.Organization
-	(*ResourceInstance)(nil), // 8: central.events.v1.datamodel.ResourceInstance
-	(*anypb.Any)(nil),        // 9: google.protobuf.Any
+	(*PingResponse)(nil),     // 4: central.events.v1.PingResponse
+	(*Request)(nil),          // 5: central.events.v1.Request
+	(*Event)(nil),            // 6: central.events.v1.Event
+	(*EventMeta)(nil),        // 7: central.events.v1.EventMeta
+	(*Organization)(nil),     // 8: central.events.v1.Organization
+	(*ResourceInstance)(nil), // 9: central.events.v1.datamodel.ResourceInstance
+	(*anypb.Any)(nil),        // 10: google.protobuf.Any
 }
 var file_watch_proto_depIdxs = []int32{
-	2, // 0: central.events.v1.AgentStatus.context:type_name -> central.events.v1.AgentContext
-	0, // 1: central.events.v1.Request.requestType:type_name -> central.events.v1.RequestType
-	3, // 2: central.events.v1.Request.agentStatus:type_name -> central.events.v1.AgentStatus
-	7, // 3: central.events.v1.Event.organization:type_name -> central.events.v1.Organization
-	1, // 4: central.events.v1.Event.type:type_name -> central.events.v1.Event.Type
-	8, // 5: central.events.v1.Event.payload:type_name -> central.events.v1.datamodel.ResourceInstance
-	6, // 6: central.events.v1.Event.metadata:type_name -> central.events.v1.EventMeta
-	9, // 7: central.events.v1.EventMeta.actionDetails:type_name -> google.protobuf.Any
-	4, // 8: central.events.v1.watch.subscribe:input_type -> central.events.v1.Request
-	5, // 9: central.events.v1.watch.subscribe:output_type -> central.events.v1.Event
-	9, // [9:10] is the sub-list for method output_type
-	8, // [8:9] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	2,  // 0: central.events.v1.AgentStatus.context:type_name -> central.events.v1.AgentContext
+	0,  // 1: central.events.v1.Request.requestType:type_name -> central.events.v1.RequestType
+	3,  // 2: central.events.v1.Request.agentStatus:type_name -> central.events.v1.AgentStatus
+	4,  // 3: central.events.v1.Request.pingResponse:type_name -> central.events.v1.PingResponse
+	8,  // 4: central.events.v1.Event.organization:type_name -> central.events.v1.Organization
+	1,  // 5: central.events.v1.Event.type:type_name -> central.events.v1.Event.Type
+	9,  // 6: central.events.v1.Event.payload:type_name -> central.events.v1.datamodel.ResourceInstance
+	7,  // 7: central.events.v1.Event.metadata:type_name -> central.events.v1.EventMeta
+	10, // 8: central.events.v1.EventMeta.actionDetails:type_name -> google.protobuf.Any
+	5,  // 9: central.events.v1.watch.subscribe:input_type -> central.events.v1.Request
+	6,  // 10: central.events.v1.watch.subscribe:output_type -> central.events.v1.Event
+	10, // [10:11] is the sub-list for method output_type
+	9,  // [9:10] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_watch_proto_init() }
@@ -635,15 +711,15 @@ func file_watch_proto_init() {
 	}
 	file_apicentral_proto_init()
 	file_watch_proto_msgTypes[1].OneofWrappers = []any{}
-	file_watch_proto_msgTypes[2].OneofWrappers = []any{}
-	file_watch_proto_msgTypes[4].OneofWrappers = []any{}
+	file_watch_proto_msgTypes[3].OneofWrappers = []any{}
+	file_watch_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_watch_proto_rawDesc), len(file_watch_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
