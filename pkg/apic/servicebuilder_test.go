@@ -85,6 +85,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetIgnoreSpecBasedCreds(true).
 		SetStripOASExtensions(true).
 		SetStripOASServersBeforePublish().
+		SetIgnoreSpecTags([]string{"tag1"}).
 		SetInstanceLifecycle("stage", "active", "").
 		SetServiceEndpoints(ep)
 
@@ -142,6 +143,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.NotNil(t, instanceLifecycle)
 	assert.Equal(t, "stage", instanceLifecycle.Stage)
 	assert.Equal(t, "active", instanceLifecycle.ReleaseState.Name)
+	assert.Equal(t, []string{"tag1"}, sb.ignoreSpecTags)
 
 	sb, err = serviceBuilder.
 		SetSourceDataplaneType(GitHub, true).
@@ -262,4 +264,21 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sb)
 	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// SetIgnoreSpecTags strips matching top-level OAS tags from the spec before publishing.
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	sb, err = serviceBuilder.
+		SetIgnoreSpecTags([]string{"pet", "store", "user"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// A tag name that does not exist in the spec leaves hashes equal (spec is unchanged).
+	sb, err = serviceBuilder.
+		SetIgnoreSpecTags([]string{"nonexistent-tag"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
 }

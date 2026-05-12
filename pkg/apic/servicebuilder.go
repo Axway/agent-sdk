@@ -55,6 +55,7 @@ type ServiceBuilder interface {
 	AddCredentialRequestDefinition(credentialRequestDefName string) ServiceBuilder
 	SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder
 	SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
+	SetIgnoreSpecTags(tags []string) ServiceBuilder
 	SetStripOASExtensions(strip bool) ServiceBuilder
 	SetStripOASServersBeforePublish() ServiceBuilder
 
@@ -383,6 +384,14 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	if b.serviceBody.stripOASServersBeforePublish {
 		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		val.stripEndpoints()
+	}
+
+	if len(b.serviceBody.ignoreSpecTags) > 0 {
+		b.serviceBody.originalSpecHash = b.serviceBody.specHash
+		val.stripTags(b.serviceBody.ignoreSpecTags)
+	}
+
+	if b.serviceBody.stripOASServersBeforePublish || len(b.serviceBody.ignoreSpecTags) > 0 {
 		b.serviceBody.SpecDefinition = val.GetSpecBytes()
 		newHash, _ := util.ComputeHash(val.GetSpecBytes())
 		b.serviceBody.specHash = fmt.Sprintf("%v", newHash)
@@ -432,6 +441,11 @@ func (b *serviceBodyBuilder) SetAccessRequestDefinitionName(accessRequestDefName
 
 func (b *serviceBodyBuilder) SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder {
 	b.serviceBody.ignoreSpecBasesCreds = ignore
+	return b
+}
+
+func (b *serviceBodyBuilder) SetIgnoreSpecTags(tags []string) ServiceBuilder {
+	b.serviceBody.ignoreSpecTags = tags
 	return b
 }
 

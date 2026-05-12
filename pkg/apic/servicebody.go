@@ -55,6 +55,7 @@ type ServiceBody struct {
 	ardName                      string
 	uniqueARD                    bool
 	ignoreSpecBasesCreds         bool
+	ignoreSpecTags               []string
 	stripOASExtensions           bool
 	stripOASServersBeforePublish bool
 	specHash                     string
