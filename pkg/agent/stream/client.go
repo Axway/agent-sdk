@@ -36,7 +36,7 @@ import (
 type StreamerClient struct {
 	apiClient          events.APIClient
 	handlers           []handler.Handler
-	listener           *events.EventListener
+	listener           atomic.Pointer[events.EventListener]
 	manager            wm.Manager
 	newListener        events.NewListenerFunc
 	newManager         wm.NewManagerFunc
@@ -164,8 +164,9 @@ func (s *StreamerClient) Start() error {
 	defer cancel(nil) // local variable: safe to call without lock in the same goroutine
 
 	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
-	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
-	defer s.listener.Stop()
+	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
+	s.listener.Store(l)
+	defer l.Stop()
 
 	s.requestQueue = s.newRequestQueue(ctx, cancel, requestCh)
 	defer s.requestQueue.Stop()
@@ -182,7 +183,7 @@ func (s *StreamerClient) Start() error {
 	defer manager.CloseConn()
 
 	s.manager = manager
-	s.listener.Listen()
+	l.Listen()
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh)
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
@@ -214,7 +215,7 @@ func (s *StreamerClient) Status() error {
 		return fmt.Errorf("stream client is not yet initialized")
 	}
 
-	if s.manager == nil || s.listener == nil || s.requestQueue == nil {
+	if s.manager == nil || s.listener.Load() == nil || s.requestQueue == nil {
 		return fmt.Errorf("stream client is not ready")
 	}
 	if ok := s.manager.Status(); !ok {
@@ -252,7 +253,7 @@ func (s *StreamerClient) WaitForReady(ctx context.Context) error {
 // unlocks that exact listener instance. Returns nil if no listener is active.
 // The caller must invoke the returned func (typically via defer) to release the lock.
 func (s *StreamerClient) PauseListener() func() {
-	l := s.listener
+	l := s.listener.Load()
 	if l == nil {
 		return nil
 	}

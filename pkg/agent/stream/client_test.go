@@ -76,14 +76,14 @@ func TestNewStreamer(t *testing.T) {
 	<-manager.readyCh
 	assert.Equal(t, hc.OK, hc.RunChecks())
 	// should stop the listener and write nil to the listener's error channel
-	streamer.listener.Stop()
+	streamer.listener.Load().Stop()
 
 	err = <-errCh
 	assert.NotNil(t, err)
 
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
 	streamer.manager = nil
-	streamer.listener = nil
+	streamer.listener.Store(nil)
 
 	go func() {
 		err := streamer.Start()
@@ -260,34 +260,17 @@ func TestStatusUpdates(t *testing.T) {
 	}
 }
 
-func TestStreamerClient_PauseResumeListener(t *testing.T) {
+func TestPauseListener(t *testing.T) {
 	tests := map[string]struct {
-		setupListener  bool // whether to start the client so listener is live
-		expectResumeFn bool // whether PauseListener should return a non-nil resume func
+		run func(t *testing.T, streamer *StreamerClient)
 	}{
 		"returns nil when listener is nil (before Start)": {
-			setupListener:  false,
-			expectResumeFn: false,
+			run: func(t *testing.T, streamer *StreamerClient) {
+				assert.Nil(t, streamer.PauseListener())
+			},
 		},
 		"returns resume func and resumes live listener": {
-			setupListener:  true,
-			expectResumeFn: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			streamer, err := NewStreamerClient(
-				&mockAPIClient{},
-				NewConfig(),
-				&mockTokenGetter{},
-				nil,
-				WithCacheManager(agentcache.NewAgentCacheManager(NewConfig(), false)),
-				WithWatchTopic(&management.WatchTopic{}),
-			)
-			assert.Nil(t, err)
-
-			if tc.setupListener {
+			run: func(t *testing.T, streamer *StreamerClient) {
 				manager := &mockManager{status: true, readyCh: make(chan struct{})}
 				streamer.newManager = func(_ *wm.Config, _ ...wm.Option) (wm.Manager, error) {
 					return manager, nil
@@ -296,20 +279,84 @@ func TestStreamerClient_PauseResumeListener(t *testing.T) {
 				go func() { errCh <- streamer.Start() }()
 				<-manager.readyCh
 				defer func() {
-					streamer.listener.Stop()
+					streamer.listener.Load().Stop()
 					<-errCh
 				}()
-			}
-
-			assert.NotPanics(t, func() {
 				resume := streamer.PauseListener()
-				if tc.expectResumeFn {
-					assert.NotNil(t, resume)
-					resume()
-				} else {
-					assert.Nil(t, resume)
+				assert.NotNil(t, resume)
+				resume()
+			},
+		},
+		"resume closure is bound to paused instance, not current listener": {
+			run: func(t *testing.T, streamer *StreamerClient) {
+				ctx1, cancel1 := context.WithCancelCause(context.Background())
+				defer cancel1(nil)
+				ctx2, cancel2 := context.WithCancelCause(context.Background())
+				defer cancel2(nil)
+				l1 := events.NewEventListener(ctx1, cancel1, make(chan *proto.Event), &mockAPIClient{}, &mockSequence{})
+				l2 := events.NewEventListener(ctx2, cancel2, make(chan *proto.Event), &mockAPIClient{}, &mockSequence{})
+
+				streamer.listener.Store(l1)
+				resume := streamer.PauseListener()
+				assert.NotNil(t, resume)
+
+				// Simulate reconnect replacing the listener before resume fires.
+				streamer.listener.Store(l2)
+
+				// Must unlock L1, not L2 — unlocking L2 here would fatal.
+				assert.NotPanics(t, resume)
+
+				// L2 was never locked so must still be acquirable.
+				locked := make(chan struct{})
+				go func() {
+					l2.Pause()
+					close(locked)
+					l2.Resume()
+				}()
+				select {
+				case <-locked:
+				case <-time.After(time.Second):
+					t.Fatal("L2 mutex is still held — resume() incorrectly locked L2")
 				}
-			})
+			},
+		},
+		"no data race on concurrent listener replacement (race detector)": {
+			run: func(t *testing.T, streamer *StreamerClient) {
+				ctx, cancel := context.WithCancelCause(context.Background())
+				defer cancel(nil)
+				l := events.NewEventListener(ctx, cancel, make(chan *proto.Event), &mockAPIClient{}, &mockSequence{})
+				streamer.listener.Store(l)
+
+				const iterations = 1000
+				done := make(chan struct{})
+				go func() {
+					defer close(done)
+					for range iterations {
+						newCtx, newCancel := context.WithCancelCause(context.Background())
+						newL := events.NewEventListener(newCtx, newCancel, make(chan *proto.Event), &mockAPIClient{}, &mockSequence{})
+						streamer.listener.Store(newL)
+						newCancel(nil)
+					}
+				}()
+				for range iterations {
+					if resume := streamer.PauseListener(); resume != nil {
+						resume()
+					}
+				}
+				<-done
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			streamer, err := NewStreamerClient(
+				&mockAPIClient{}, NewConfig(), &mockTokenGetter{}, nil,
+				WithCacheManager(agentcache.NewAgentCacheManager(NewConfig(), false)),
+				WithWatchTopic(&management.WatchTopic{}),
+			)
+			assert.Nil(t, err)
+			tc.run(t, streamer)
 		})
 	}
 }
@@ -317,7 +364,7 @@ func TestStreamerClient_PauseResumeListener(t *testing.T) {
 func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 	t.Helper()
 	// should stop the listener and write nil to the listener's error channel
-	streamer.listener.Stop()
+	streamer.listener.Load().Stop()
 
 	err := <-errCh
 	assert.NotNil(t, err)
