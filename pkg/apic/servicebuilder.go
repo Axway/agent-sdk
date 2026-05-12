@@ -71,6 +71,7 @@ type ServiceBuilder interface {
 	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
 	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
 	SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder
+	SetPublishRevisionOnly() ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -480,5 +481,10 @@ func (b *serviceBodyBuilder) SetInstanceLifecycle(stage, releaseState, message s
 			},
 		}
 	}
+	return b
+}
+
+func (b *serviceBodyBuilder) SetPublishRevisionOnly() ServiceBuilder {
+	b.serviceBody.publishRevisionOnly = true
 	return b
 }

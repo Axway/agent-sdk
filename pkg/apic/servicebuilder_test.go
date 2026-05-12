@@ -171,6 +171,33 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.NotNil(t, sb)
 }
 
+func TestSetPublishRevisionOnly(t *testing.T) {
+	tests := map[string]struct {
+		setRevisionOnly  bool
+		wantRevisionOnly bool
+	}{
+		"default is false": {
+			setRevisionOnly:  false,
+			wantRevisionOnly: false,
+		},
+		"set publishes revision only": {
+			setRevisionOnly:  true,
+			wantRevisionOnly: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			b := NewServiceBodyBuilder()
+			if tc.setRevisionOnly {
+				b = b.SetPublishRevisionOnly()
+			}
+			sb, _ := b.Build()
+			assert.Equal(t, tc.wantRevisionOnly, sb.publishRevisionOnly)
+		})
+	}
+}
+
 func TestServiceBodyWithParseError(t *testing.T) {
 	serviceBuilder := NewServiceBodyBuilder()
 	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()

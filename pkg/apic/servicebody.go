@@ -62,6 +62,7 @@ type ServiceBody struct {
 	accessRequestDefinition      *management.AccessRequestDefinition
 	specHashes                   map[string]interface{} // map of hash values to revision names
 	requestDefinitionsAllowed    bool                   // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
+	publishRevisionOnly          bool                   // when true, skip instance processing (loser proxies that share a service with a published winner)
 	dataplaneType                DataplaneType
 	isDesignDataplane            bool
 	referencedServiceName        string

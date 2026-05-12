@@ -175,6 +175,63 @@ func TestCreateService(t *testing.T) {
 	assert.Nil(t, apiSvc)
 }
 
+func TestPublishServiceRevisionOnly(t *testing.T) {
+	oas2Json, _ := os.Open("./testdata/petstore-swagger2.json")
+	defer oas2Json.Close()
+	oas2Bytes, _ := io.ReadAll(oas2Json)
+
+	// Mirrors the happy-path sequence in TestCreateService (cache lookup is in-memory, no HTTP).
+	fullResponses := []api.MockResponse{
+		{FileName: "./testdata/apiservice.json", RespCode: http.StatusCreated},      // POST service
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // service subresource
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // spec hashes
+		{FileName: "./testdata/servicerevision.json", RespCode: http.StatusCreated}, // POST revision
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // revision subresource
+		{FileName: "./testdata/serviceinstance.json", RespCode: http.StatusCreated}, // POST instance
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // instance subresource
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // spec hashes update
+	}
+
+	// Same as above minus the POST instance and its subresource call.
+	revisionOnlyResponses := []api.MockResponse{
+		{FileName: "./testdata/apiservice.json", RespCode: http.StatusCreated},      // POST service
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // service subresource
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // spec hashes
+		{FileName: "./testdata/servicerevision.json", RespCode: http.StatusCreated}, // POST revision
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // revision subresource
+		{FileName: "./testdata/agent-details-sr.json", RespCode: http.StatusOK},    // spec hashes update
+	}
+
+	tests := map[string]struct {
+		revisionOnly bool
+		responses    []api.MockResponse
+	}{
+		"normal publish creates service, revision, and instance": {
+			revisionOnly: false,
+			responses:    fullResponses,
+		},
+		"revision only publish skips instance creation": {
+			revisionOnly: true,
+			responses:    revisionOnlyResponses,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			client, httpClient := GetTestServiceClient()
+			httpClient.SetResponses(tc.responses)
+
+			body := serviceBody
+			body.SpecDefinition = oas2Bytes
+			body.publishRevisionOnly = tc.revisionOnly
+
+			apiSvc, err := client.PublishService(&body)
+			assert.Nil(t, err)
+			assert.NotNil(t, apiSvc)
+		})
+	}
+}
+
 func Test_getAPIServiceFromCache(t *testing.T) {
 	cloneServiceBody := serviceBody
 	cloneServiceBody.APIName = "fake-name"
