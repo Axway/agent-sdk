@@ -2,6 +2,7 @@ package provisioning
 
 import (
 	"fmt"
+	"maps"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -165,7 +166,7 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	}
 
 	// clone and remove dependencies from the request schema for hashing
-	requestSchemaWithoutDependencies := c.requestSchema
+	requestSchemaWithoutDependencies := maps.Clone(c.requestSchema)
 	delete(requestSchemaWithoutDependencies, "dependencies")
 
 	spec := management.CredentialRequestDefinitionSpec{
