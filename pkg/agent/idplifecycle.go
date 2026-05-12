@@ -76,6 +76,10 @@ func manageIDPResourceWithMetadata(idpLogger log.FieldLogger, idp config.IDPConf
 // directly without a discovery URL.
 // Returns the Engage IdentityProvider resource name, or empty string on failure.
 func ManageIDPResource(idpLogger log.FieldLogger, idpName string, metadata *oauth.AuthorizationServerMetadata) string {
+	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.ManageIDPResourcesEnabled() {
+		return ""
+	}
+
 	if metadata == nil {
 		idpLogger.Error("metadata is nil; cannot manage IdentityProvider resource")
 		return ""
