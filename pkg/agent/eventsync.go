@@ -24,8 +24,13 @@ type EventSync struct {
 	sequence       events.SequenceProvider
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
-	cacheValidator *cacheValidator
+	cacheValidator CacheValidator
 	listenerPauser listenerPauser
+}
+
+// CacheValidator is satisfied by cacheValidator; allows EventSync to run cache validation.
+type CacheValidator interface {
+	Execute() ([]management.WatchTopicSpecFilters, error)
 }
 
 // listenerPauser is satisfied by StreamerClient; allows EventSync to pause the
@@ -190,14 +195,17 @@ func (es *EventSync) resetCacheTimer() {
 	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
 }
 
-func (es *EventSync) RebuildCache() {
+// RebuildCache is the single entry point for all cache rebuilds.
+// When filters are given it attempts a targeted rebuild first, falling back to full on error.
+// The listener is paused for the duration and the 7-day timer is reset on success.
+func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) {
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
 	PublishingLock()
 	defer PublishingUnlock()
 
-	es.waitForCacheRebuild()
+	es.waitForCacheRebuild(filters...)
 }
 
 // pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
@@ -211,12 +219,12 @@ func (es *EventSync) pausedInitCache(filters ...management.WatchTopicSpecFilters
 }
 
 // waitForCacheRebuild continuously attempts to rebuild the cache until successful
-func (es *EventSync) waitForCacheRebuild() {
+func (es *EventSync) waitForCacheRebuild(filters ...management.WatchTopicSpecFilters) {
 	adjustment := 2
 	maxBackoff := 5 * time.Minute
 	currentBackoff := 30 * time.Second
 	for {
-		err := es.pausedInitCache()
+		err := es.pausedInitCache(filters...)
 		if err == nil {
 			return
 		}
@@ -230,19 +238,6 @@ func (es *EventSync) waitForCacheRebuild() {
 	}
 }
 
-// rebuildFilters rebuilds the cache for the given subset of filters, then persists the cache.
-func (es *EventSync) rebuildFilters(filters []management.WatchTopicSpecFilters) error {
-	if es.listenerPauser != nil {
-		es.listenerPauser.PauseListener()
-		defer es.listenerPauser.ResumeListener()
-	}
-	if err := es.discoveryCache.execute(filters...); err != nil {
-		return err
-	}
-	agent.cacheManager.SaveCache()
-	return nil
-}
-
 // validateCache runs the cache validator to check if the persisted cache is in sync.
 // Returns the filters that are out of sync, plus a non-nil error if any failed.
 func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error) {
@@ -253,22 +248,18 @@ func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error)
 }
 
 // ValidateCache validates the cache against the API server.
-// If the cache is fully valid, the timer is reset to 7 days from now.
-// If only some filters are out of sync, only those kinds are rebuilt.
-func (es *EventSync) ValidateCache() error {
+// Returns the out-of-sync filters and a non-nil error if any kind failed validation.
+// If all kinds pass, the 7-day timer is reset.
+func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
 	failedFilters, err := es.validateCache()
-	if err != nil {
-		logger.WithError(err).Info("periodic cache validation failed, rebuilding out-of-sync kinds")
-		if rebuildErr := es.rebuildFilters(failedFilters); rebuildErr != nil {
-			return rebuildErr
-		}
+	if err == nil && len(failedFilters) == 0 {
+		es.resetCacheTimer()
 	}
-	es.resetCacheTimer()
-	return nil
+	return failedFilters, err
 }
 
 // validateAndRebuildCache validates the cache and rebuilds only the out-of-sync kinds.
-// Called when connection to Engage is restored.
+// Called when connection to Central is restored.
 func (es *EventSync) validateAndRebuildCache() {
 	if es.cacheValidator == nil {
 		return
@@ -277,10 +268,7 @@ func (es *EventSync) validateAndRebuildCache() {
 	failedFilters, err := es.validateCache()
 	if err != nil {
 		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding out-of-sync kinds")
-		if rebuildErr := es.rebuildFilters(failedFilters); rebuildErr != nil {
-			logger.WithError(rebuildErr).Error("targeted cache rebuild failed on reconnect, falling back to full rebuild")
-			es.RebuildCache()
-		}
+		es.RebuildCache(failedFilters...)
 	}
 }
 
@@ -299,7 +287,7 @@ func (es *EventSync) startPollMode() error {
 		agent.cfg,
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
-		poller.WithOnClientStop(es.RebuildCache),
+		poller.WithOnClientStop(func() { es.RebuildCache() }),
 		poller.WithOnConnect(),
 		poller.WithOnReconnect(es.validateAndRebuildCache),
 	)
@@ -329,7 +317,7 @@ func (es *EventSync) startStreamMode() error {
 		agent.tokenRequester,
 		handlers,
 		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(es.RebuildCache),
+		stream.WithEventSyncError(func() { es.RebuildCache() }),
 		stream.WithOnReconnect(es.validateAndRebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
