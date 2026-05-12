@@ -262,23 +262,16 @@ func TestStatusUpdates(t *testing.T) {
 
 func TestStreamerClient_PauseResumeListener(t *testing.T) {
 	tests := map[string]struct {
-		setupListener bool // whether to start the client so listener is live
-		callPause     bool
-		callResume    bool
+		setupListener  bool // whether to start the client so listener is live
+		expectResumeFn bool // whether PauseListener should return a non-nil resume func
 	}{
-		"no-op when listener is nil (before Start)": {
-			setupListener: false,
-			callPause:     true,
-			callResume:    true,
+		"returns nil when listener is nil (before Start)": {
+			setupListener:  false,
+			expectResumeFn: false,
 		},
-		"delegates pause to live listener": {
-			setupListener: true,
-			callPause:     true,
-		},
-		"delegates resume to live listener": {
-			setupListener: true,
-			callPause:     true,
-			callResume:    true,
+		"returns resume func and resumes live listener": {
+			setupListener:  true,
+			expectResumeFn: true,
 		},
 	}
 
@@ -308,13 +301,15 @@ func TestStreamerClient_PauseResumeListener(t *testing.T) {
 				}()
 			}
 
-			// Neither call should panic regardless of listener state.
-			if tc.callPause {
-				assert.NotPanics(t, func() { streamer.PauseListener() })
-			}
-			if tc.callResume {
-				assert.NotPanics(t, func() { streamer.ResumeListener() })
-			}
+			assert.NotPanics(t, func() {
+				resume := streamer.PauseListener()
+				if tc.expectResumeFn {
+					assert.NotNil(t, resume)
+					resume()
+				} else {
+					assert.Nil(t, resume)
+				}
+			})
 		})
 	}
 }

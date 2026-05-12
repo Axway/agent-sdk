@@ -35,9 +35,11 @@ type CacheValidator interface {
 
 // listenerPauser is satisfied by StreamerClient; allows EventSync to pause the
 // live event listener while mutating the cache.
+// PauseListener returns a resume func bound to the exact listener instance it
+// locked; call it (via defer) to release that lock. Returns nil if no listener
+// was active, in which case no resume is needed.
 type listenerPauser interface {
-	PauseListener()
-	ResumeListener()
+	PauseListener() func()
 }
 
 // newEventSync creates an EventSync
@@ -209,11 +211,13 @@ func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) {
 }
 
 // pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
-// A separate function ensures ResumeListener is always called even on panic.
+// PauseListener returns a resume func bound to the exact listener it locked, so
+// a reconnect replacing s.listener mid-rebuild cannot cause an unlock mismatch.
 func (es *EventSync) pausedInitCache(filters ...management.WatchTopicSpecFilters) error {
 	if es.listenerPauser != nil {
-		es.listenerPauser.PauseListener()
-		defer es.listenerPauser.ResumeListener()
+		if resume := es.listenerPauser.PauseListener(); resume != nil {
+			defer resume()
+		}
 	}
 	return es.initCache(filters...)
 }

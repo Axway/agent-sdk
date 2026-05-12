@@ -253,7 +253,7 @@ func TestEventSync(t *testing.T) {
 			"RebuildCache resumes even when harvester fails": {
 				run: func(_ *testing.T, es *EventSync) {
 					// Harvester failure causes initCache to return immediately, but
-					// pausedInitCache's deferred ResumeListener must still fire.
+					// pausedInitCache's deferred resume func must still fire.
 					es.harvester = &mockHarvester{err: fmt.Errorf("simulated error")}
 					_ = es.pausedInitCache(apiSvcFilter)
 				},
@@ -360,8 +360,10 @@ type mockListenerPauser struct {
 	resumeCount int
 }
 
-func (m *mockListenerPauser) PauseListener()  { m.pauseCount++ }
-func (m *mockListenerPauser) ResumeListener() { m.resumeCount++ }
+func (m *mockListenerPauser) PauseListener() func() {
+	m.pauseCount++
+	return func() { m.resumeCount++ }
+}
 
 // mockCacheValidator implements CacheValidator for testing.
 type mockCacheValidator struct {

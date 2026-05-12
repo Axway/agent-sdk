@@ -60,7 +60,7 @@ type StreamerClient struct {
 	cancelMu           sync.Mutex
 	cancel             context.CancelCauseFunc
 	connectedCh        chan struct{} // closed when the first connection is live in Start()
-	connectedOnce      sync.Once    // ensures connectedCh is closed at most once across reconnects
+	connectedOnce      sync.Once     // ensures connectedCh is closed at most once across reconnects
 	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
 }
 
@@ -248,20 +248,16 @@ func (s *StreamerClient) WaitForReady(ctx context.Context) error {
 }
 
 // PauseListener suspends event processing on the underlying listener.
-// Blocks until any in-flight event is done, then holds the pause until ResumeListener is called.
-// No-op when called before the listener has been created.
-func (s *StreamerClient) PauseListener() {
-	if s.listener != nil {
-		s.listener.Pause()
+// Blocks until any in-flight event is done, then returns a resume func that
+// unlocks that exact listener instance. Returns nil if no listener is active.
+// The caller must invoke the returned func (typically via defer) to release the lock.
+func (s *StreamerClient) PauseListener() func() {
+	l := s.listener
+	if l == nil {
+		return nil
 	}
-}
-
-// ResumeListener resumes event processing after a PauseListener call.
-// No-op when called before the listener has been created.
-func (s *StreamerClient) ResumeListener() {
-	if s.listener != nil {
-		s.listener.Resume()
-	}
+	l.Pause()
+	return l.Resume
 }
 
 // Healthcheck - health check for stream client
