@@ -30,7 +30,7 @@ func setIDPMetadataResourceName(tokenEndpoint, name string) {
 }
 
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.ManageIDPResourcesEnabled() {
+	if !ManageIDPResourcesEnabled() {
 		return ""
 	}
 
@@ -71,12 +71,16 @@ func manageIDPResourceWithMetadata(idpLogger log.FieldLogger, idp config.IDPConf
 	return name
 }
 
+func ManageIDPResourcesEnabled() bool {
+	return agent.agentFeaturesCfg != nil && agent.agentFeaturesCfg.ManageIDPResourcesEnabled()
+}
+
 // ManageIDPResource creates or reuses an IdentityProvider resource in Engage using
 // pre-resolved metadata. Public entry point for agents like v7 that supply metadata
 // directly without a discovery URL.
 // Returns the Engage IdentityProvider resource name, or empty string on failure.
 func ManageIDPResource(idpLogger log.FieldLogger, idpName string, metadata *oauth.AuthorizationServerMetadata) string {
-	if agent.agentFeaturesCfg == nil || !agent.agentFeaturesCfg.ManageIDPResourcesEnabled() {
+	if !ManageIDPResourcesEnabled() {
 		return ""
 	}
 
