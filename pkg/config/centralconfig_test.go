@@ -68,6 +68,8 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	centralConfig.APIServerVersion = "v1alpha1"
 
 	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1", cfg.GetAPIServerVersionURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/", cfg.GetAPIServerURL())
 
 	centralConfig.PollInterval = 0
 	err = cfgValidator.ValidateCfg()

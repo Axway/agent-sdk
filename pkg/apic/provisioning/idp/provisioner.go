@@ -25,11 +25,12 @@ type Provisioner interface {
 }
 
 type provisioner struct {
-	app            *management.ManagedApplication
-	credential     *management.Credential
-	idpProvider    oauth.Provider
-	credentialData *credData
-	agentDetail    map[string]string
+	app              *management.ManagedApplication
+	credential       *management.Credential
+	idpProvider      oauth.Provider
+	credentialData   *credData
+	agentDetail      map[string]string
+	provisioningMode string
 }
 
 type ProvisionerOption func(p *provisioner)
@@ -41,6 +42,10 @@ func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *man
 		credentialData: &credData{},
 		agentDetail:    make(map[string]string),
 	}
+	if credential.Spec.Provision != nil {
+		p.provisioningMode = credential.Spec.Provision.Mode
+	}
+
 	idpTokenURL, ok := p.credential.Spec.Data[IDPTokenURL].(string)
 	if ok && idpRegistry != nil {
 		idpProvider, err := idpRegistry.GetProviderByTokenEndpoint(ctx, idpTokenURL, opts...)
@@ -50,10 +55,12 @@ func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *man
 
 		if idpProvider != nil {
 			p.idpProvider = idpProvider
-			p.initCredentialData()
 		}
 	}
 
+	if p.idpProvider != nil || p.provisioningMode == provisioning.CredProvisionModeExternal {
+		p.initCredentialData()
+	}
 	return p, nil
 }
 

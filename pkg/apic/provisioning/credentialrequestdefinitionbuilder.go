@@ -2,6 +2,7 @@ package provisioning
 
 import (
 	"fmt"
+	"maps"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -12,19 +13,20 @@ import (
 type RegisterCredentialRequestDefinition func(credentialRequestDefinition *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error)
 
 type credentialRequestDef struct {
-	name            string
-	title           string
-	provisionSchema map[string]interface{}
-	requestSchema   map[string]interface{}
-	webhooks        []string
-	actions         []string
-	registerFunc    RegisterCredentialRequestDefinition
-	err             error
-	agentDetails    map[string]interface{}
-	renewable       bool
-	suspendable     bool
-	period          int
-	credType        string
+	name             string
+	title            string
+	provisionSchema  map[string]interface{}
+	requestSchema    map[string]interface{}
+	webhooks         []string
+	actions          []string
+	registerFunc     RegisterCredentialRequestDefinition
+	err              error
+	agentDetails     map[string]interface{}
+	renewable        bool
+	suspendable      bool
+	period           int
+	credType         string
+	identityProvider string
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -41,6 +43,7 @@ type CredentialRequestBuilder interface {
 	SetExpirationDays(days int) CredentialRequestBuilder
 	SetDeprovisionExpired() CredentialRequestBuilder
 	SetType(crdType string) CredentialRequestBuilder
+	SetIdentityProvider(name string) CredentialRequestBuilder
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
@@ -146,6 +149,12 @@ func (c *credentialRequestDef) SetType(credType string) CredentialRequestBuilder
 	return c
 }
 
+// SetIdentityProvider - set the identity provider resource name for this credential request definition
+func (c *credentialRequestDef) SetIdentityProvider(name string) CredentialRequestBuilder {
+	c.identityProvider = name
+	return c
+}
+
 // Register - create the credential request definition and send it to Central
 func (c *credentialRequestDef) Register() (*management.CredentialRequestDefinition, error) {
 	if c.err != nil {
@@ -157,12 +166,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	}
 
 	// clone and remove dependencies from the request schema for hashing
-	requestSchemaWithoutDependencies := c.requestSchema
+	requestSchemaWithoutDependencies := maps.Clone(c.requestSchema)
 	delete(requestSchemaWithoutDependencies, "dependencies")
 
 	spec := management.CredentialRequestDefinitionSpec{
-		Type:   c.credType,
-		Schema: requestSchemaWithoutDependencies,
+		Type:             c.credType,
+		Schema:           requestSchemaWithoutDependencies,
+		IdentityProvider: c.identityProvider,
 		Provision: &management.CredentialRequestDefinitionSpecProvision{
 			Schema: c.provisionSchema,
 			Policies: management.CredentialRequestDefinitionSpecProvisionPolicies{

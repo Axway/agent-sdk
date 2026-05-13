@@ -36,4 +36,6 @@ type CredentialRequest interface {
 	GetCredentialAction() CredentialAction
 	// GetCredentialExpirationDays returns the number of days this credential has to live
 	GetCredentialExpirationDays() int
+	// GetProvisionMode returns the provisioning mode for the credential (e.g. "external")
+	GetProvisionMode() string
 }

@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
-type ConfigOption func(config.IDPConfig) error
+var errMissingMetadataField = fmt.Errorf("agent-supplied metadata is missing one or more required fields: issuer, authorizationEndpoint, tokenEndpoint, introspectionEndpoint, jwksUri")
+
+type ConfigOption func(corecfg.IDPConfig) error
 
 type IdPRegistry interface {
 	// RegisterProvider - registers the provider using the config
 	RegisterProvider(ctx context.Context, idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error
+	// RegisterProviderWithMetadata - registers the provider using agent-supplied metadata, no outbound HTTP fetch
+	RegisterProviderWithMetadata(ctx context.Context, idp corecfg.IDPConfig, metadata *AuthorizationServerMetadata, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error
 	// UnregisterProvider - un-registers the provider
 	UnregisterProvider(ctx context.Context, provider Provider) error
 	// GetProviderByName - returns the provider from registry based on the name
@@ -26,11 +29,14 @@ type IdPRegistry interface {
 	GetProviderByAuthorizationEndpoint(ctx context.Context, authEndpoint string, opts ...ConfigOption) (Provider, error)
 	// GetProviderByMetadataURL - returns the provider from registry based on the IDP metadata URL
 	GetProviderByMetadataURL(ctx context.Context, metadataURL string, opts ...ConfigOption) (Provider, error)
+	// GetIDPResourceName - returns the Engage IdentityProvider resource name for a given metadata URL
+	GetIDPResourceName(metadataURL string) (string, bool)
 }
 
 type idpRegistry struct {
 	registry ProviderRegistry
 }
+
 type IdpRegistryOption func(r *idpRegistry)
 
 func WithProviderRegistry(providerRegistry ProviderRegistry) IdpRegistryOption {
@@ -52,6 +58,18 @@ func NewIdpRegistry(opts ...IdpRegistryOption) IdPRegistry {
 
 func (p *idpRegistry) RegisterProvider(_ context.Context, idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
 	return p.registry.RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
+}
+
+func (p *idpRegistry) RegisterProviderWithMetadata(_ context.Context, idp corecfg.IDPConfig, metadata *AuthorizationServerMetadata, tlsCfg corecfg.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
+	if metadata == nil ||
+		metadata.Issuer == "" ||
+		metadata.AuthorizationEndpoint == "" ||
+		metadata.TokenEndpoint == "" ||
+		metadata.IntrospectionEndpoint == "" ||
+		metadata.JwksURI == "" {
+		return errMissingMetadataField
+	}
+	return p.registry.RegisterProviderWithMetadata(idp, metadata, tlsCfg, proxyURL, clientTimeout)
 }
 
 func (p *idpRegistry) UnregisterProvider(_ context.Context, provider Provider) error {
@@ -76,4 +94,8 @@ func (p *idpRegistry) GetProviderByAuthorizationEndpoint(_ context.Context, auth
 
 func (p *idpRegistry) GetProviderByMetadataURL(_ context.Context, metadataURL string, _ ...ConfigOption) (Provider, error) {
 	return p.registry.GetProviderByMetadataURL(metadataURL)
+}
+
+func (p *idpRegistry) GetIDPResourceName(metadataURL string) (string, bool) {
+	return p.registry.GetIDPResourceName(metadataURL)
 }
