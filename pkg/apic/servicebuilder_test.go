@@ -281,4 +281,32 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sb)
 	assert.Equal(t, sb.originalSpecHash, sb.specHash)
+
+	// test OAS2 path
+	specPath = filepath.Join("testdata", "petstore-swagger2.json")
+	specBytes, err = os.ReadFile(specPath)
+	assert.Nil(t, err, "failed to read petstore OAS2 spec file")
+
+	// Test building service body with minimum required fields
+	serviceBuilder = NewServiceBodyBuilder().
+		SetResourceType(Oas2).
+		SetAPISpec(specBytes).
+		SetTitle("Petstore API").
+		SetVersion("1.0.0")
+	// SetIgnoreSpecTags strips matching top-level OAS2 tags from the spec before publishing.
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	sb, err = serviceBuilder.
+		SetIgnoreSpecTags([]string{"pet", "store", "user"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// A tag name that does not exist in the spec leaves hashes equal (spec is unchanged).
+	sb, err = serviceBuilder.
+		SetIgnoreSpecTags([]string{"nonexistent-tag"}).
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
 }
