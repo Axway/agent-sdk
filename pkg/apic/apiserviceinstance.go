@@ -179,6 +179,9 @@ func buildAPIServiceInstanceLifecycleSubResource(instance *management.APIService
 
 // processInstance - Creates or updates an API Service Instance based on the current API Service Revision.
 func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
+	if serviceBody.IsRevisionOnly() {
+		return nil
+	}
 	endpoints, err := createInstanceEndpoint(serviceBody.Endpoints)
 	if err != nil {
 		return err

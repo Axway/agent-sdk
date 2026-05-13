@@ -62,6 +62,7 @@ type ServiceBody struct {
 	accessRequestDefinition      *management.AccessRequestDefinition
 	specHashes                   map[string]interface{} // map of hash values to revision names
 	requestDefinitionsAllowed    bool                   // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
+	revisionOnly                 bool
 	dataplaneType                DataplaneType
 	isDesignDataplane            bool
 	referencedServiceName        string
@@ -161,6 +162,10 @@ func (s *ServiceBody) GetDataplaneType() DataplaneType {
 // IsDesignDataplane - returns true for design dataplane
 func (s *ServiceBody) IsDesignDataplane() bool {
 	return s.isDesignDataplane
+}
+
+func (s *ServiceBody) IsRevisionOnly() bool {
+	return s.revisionOnly
 }
 
 func (s *ServiceBody) GetReferencedServiceName() string {
