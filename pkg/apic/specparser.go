@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util"
@@ -75,10 +74,7 @@ type SpecResourceParser struct {
 type newSpecParserFunc func(resourceSpec []byte, resourceSpecType string) SpecResourceParser
 type specParserOpt func(*SpecResourceParser)
 
-var (
-	specParserFactoryMu   sync.RWMutex
-	NewSpecResourceParser newSpecParserFunc = newSpecResourceParser()
-)
+var NewSpecResourceParser newSpecParserFunc = newSpecResourceParser()
 
 func WithTagsToStrip(tags []string) specParserOpt {
 	return func(sp *SpecResourceParser) {
@@ -87,18 +83,7 @@ func WithTagsToStrip(tags []string) specParserOpt {
 }
 
 func NewSpecResourceParserFactory(opts ...specParserOpt) {
-	specParserFactoryMu.Lock()
-	defer specParserFactoryMu.Unlock()
-
 	NewSpecResourceParser = newSpecResourceParser(opts...)
-}
-
-func newParser(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
-	specParserFactoryMu.RLock()
-	parserConstructor := NewSpecResourceParser
-	specParserFactoryMu.RUnlock()
-
-	return parserConstructor(resourceSpec, resourceSpecType)
 }
 
 func newSpecResourceParser(opts ...specParserOpt) newSpecParserFunc {

@@ -293,7 +293,7 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.NotNil(t, sb)
 	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
 
-	t.Cleanup(resetSpecParserFactoryForTest)
+	t.Cleanup(func() { NewSpecResourceParser = newSpecResourceParser() })
 
 	// The original hash is computed before stripping, so it must differ from the final spec hash.
 	NewSpecResourceParserFactory(WithTagsToStrip([]string{"pet", "store", "user"}))
@@ -338,11 +338,4 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sb)
 	assert.Equal(t, sb.originalSpecHash, sb.specHash)
-}
-
-func resetSpecParserFactoryForTest() {
-	specParserFactoryMu.Lock()
-	defer specParserFactoryMu.Unlock()
-
-	NewSpecResourceParser = newSpecResourceParser()
 }
