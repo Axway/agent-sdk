@@ -199,6 +199,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		}
 	}
 
+	apic.NewSpecResourceParserFactory(apic.WithTagsToStrip(centralCfg.GetIgnoreSpecTags()))
+
 	agent.isInitialized = true
 	return nil
 }
