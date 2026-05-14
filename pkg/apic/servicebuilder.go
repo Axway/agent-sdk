@@ -381,8 +381,15 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 
 	if b.serviceBody.stripOASServersBeforePublish {
-		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		val.stripEndpoints()
+	}
+
+	if len(specParser.tagsToStrip) > 0 {
+		val.stripTags(specParser.tagsToStrip)
+	}
+
+	if b.serviceBody.stripOASServersBeforePublish || len(specParser.tagsToStrip) > 0 || b.serviceBody.stripOASExtensions {
+		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		b.serviceBody.SpecDefinition = val.GetSpecBytes()
 		newHash, _ := util.ComputeHash(val.GetSpecBytes())
 		b.serviceBody.specHash = fmt.Sprintf("%v", newHash)

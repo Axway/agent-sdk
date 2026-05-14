@@ -85,6 +85,19 @@ func (p *oas2SpecProcessor) stripEndpoints() {
 	p.spec.Schemes = []string{}
 }
 
+func (p *oas2SpecProcessor) stripTags(tags []string) {
+	if len(tags) == 0 {
+		return
+	}
+	for _, tagName := range tags {
+		for i := len(p.spec.Tags) - 1; i >= 0; i-- {
+			if p.spec.Tags[i].Name == tagName {
+				p.spec.Tags = append(p.spec.Tags[:i], p.spec.Tags[i+1:]...)
+			}
+		}
+	}
+}
+
 func (p *oas2SpecProcessor) ParseAuthInfo() {
 	authPolicies := []string{}
 	keyInfo := []APIKeyInfo{}

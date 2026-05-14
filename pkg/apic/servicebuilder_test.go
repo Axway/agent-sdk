@@ -262,4 +262,50 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sb)
 	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	t.Cleanup(func() { NewSpecResourceParser = newSpecResourceParser() })
+
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"pet", "store", "user"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// Factory can be reconfigured: subsequent calls overwrite previous settings.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"unfound"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
+
+	// test OAS2 path
+	specPath = filepath.Join("testdata", "petstore-swagger2.json")
+	specBytes, err = os.ReadFile(specPath)
+	assert.Nil(t, err, "failed to read petstore OAS2 spec file")
+
+	// Test building service body with minimum required fields
+	serviceBuilder = NewServiceBodyBuilder().
+		SetResourceType(Oas2).
+		SetAPISpec(specBytes).
+		SetTitle("Petstore API").
+		SetVersion("1.0.0")
+
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"pet", "store", "user"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// A tag name that does not exist in the spec leaves hashes equal (spec is unchanged).
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"unfound"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
 }

@@ -58,6 +58,7 @@ type OasSpecProcessor interface {
 	GetResourceType() string
 	GetVersion() string
 	stripEndpoints()
+	stripTags([]string)
 }
 
 // SpecResourceParser -
@@ -67,12 +68,36 @@ type SpecResourceParser struct {
 	resourceSpec        []byte
 	specProcessor       SpecProcessor
 	specHash            uint64
+	tagsToStrip         []string
 }
 
-// NewSpecResourceParser -
-func NewSpecResourceParser(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
-	hash, _ := util.ComputeHash(resourceSpec)
-	return SpecResourceParser{resourceSpec: resourceSpec, resourceSpecType: resourceSpecType, specHash: hash}
+type newSpecParserFunc func(resourceSpec []byte, resourceSpecType string) SpecResourceParser
+type specParserOpt func(*SpecResourceParser)
+
+var NewSpecResourceParser newSpecParserFunc = newSpecResourceParser()
+
+func WithTagsToStrip(tags []string) specParserOpt {
+	return func(sp *SpecResourceParser) {
+		sp.tagsToStrip = tags
+	}
+}
+
+func NewSpecResourceParserFactory(opts ...specParserOpt) {
+	NewSpecResourceParser = newSpecResourceParser(opts...)
+}
+
+func newSpecResourceParser(opts ...specParserOpt) newSpecParserFunc {
+	return func(resourceSpec []byte, resourceSpecType string) SpecResourceParser {
+		hash, _ := util.ComputeHash(resourceSpec)
+		sp := SpecResourceParser{}
+		sp.resourceSpec = resourceSpec
+		sp.resourceSpecType = resourceSpecType
+		sp.specHash = hash
+		for _, o := range opts {
+			o(&sp)
+		}
+		return sp
+	}
 }
 
 // Parse -
