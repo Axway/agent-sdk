@@ -940,7 +940,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		AddUsageReportingProperties(props)
 		props.AddBoolProperty(pathErrorSamplingEnabled, false, "Controls whether error sampling is enabled")
 	} else {
-		props.AddStringSliceProperty(pathIgnoreSpecTags, []string{}, "Controls whether an agent has instance validation enabled")
+		props.AddStringSliceProperty(pathIgnoreSpecTags, []string{}, "Strips specific tags from the spec")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		props.AddIntProperty(pathProvisioningRetryCount, 0, "The number of retries, in case it fails, for any provisioning event", properties.WithUpperLimitInt(3))
