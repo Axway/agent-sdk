@@ -66,6 +66,17 @@ func (c *cacheManager) getCacheForKind(kind string) cache.Cache {
 	}
 }
 
+// FlushKind empties the dedicated cache for the given resource kind.
+// Kinds without a dedicated cache are silently ignored.
+func (c *cacheManager) FlushKind(kind string) {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	if resourceCache := c.getCacheForKind(kind); resourceCache != nil {
+		resourceCache.Flush()
+	}
+}
+
 // ResourceCacheKey builds a unique cache key from kind, scope name, and resource name.
 func ResourceCacheKey(kind, scopeName, name string) string {
 	return kind + "/" + scopeName + "/" + name

@@ -297,30 +297,40 @@ func assertAgentStatusResource(t *testing.T, agentRes *v1.ResourceInstance, agen
 }
 
 type mockEventSyncCache struct {
-	rebuildCalled  int
-	validateCalled int
-	validateErr    error
+	rebuildCalled   int
+	rebuildFilters  []management.WatchTopicSpecFilters
+	validateCalled  int
+	validateFilters []management.WatchTopicSpecFilters
+	validateErr     error
 }
 
-func (m *mockEventSyncCache) RebuildCache() {
+func (m *mockEventSyncCache) RebuildCache(filters ...management.WatchTopicSpecFilters) {
 	m.rebuildCalled++
+	m.rebuildFilters = filters
 }
 
-func (m *mockEventSyncCache) ValidateCache() error {
+func (m *mockEventSyncCache) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
 	m.validateCalled++
-	return m.validateErr
+	return m.validateFilters, m.validateErr
 }
 
 func TestShouldRebuildCache(t *testing.T) {
 	pastDeadline := strconv.FormatInt(time.Now().Add(-7*24*time.Hour-time.Second).UnixNano(), 10)
 	futureDeadline := strconv.FormatInt(time.Now().Add(7*24*time.Hour).UnixNano(), 10)
 
+	apiSvcFilter := management.WatchTopicSpecFilters{
+		Group: management.APIServiceGVK().Group,
+		Kind:  management.APIServiceGVK().Kind,
+	}
+
 	tests := []struct {
-		name             string
-		agentDetails     interface{}
-		validateErr      error
-		expectedRebuild  bool
-		expectedValidate bool
+		name              string
+		agentDetails      interface{}
+		validateFilters   []management.WatchTopicSpecFilters
+		validateErr       error
+		expectedRebuild   bool
+		expectedFilters   []management.WatchTopicSpecFilters
+		expectedValidate  bool
 	}{
 		{
 			name:            "no x-agent-details - rebuild unconditionally",
@@ -345,10 +355,12 @@ func TestShouldRebuildCache(t *testing.T) {
 			expectedValidate: true,
 		},
 		{
-			name:             "7 days passed, cache invalid - rebuild",
+			name:             "7 days passed, cache invalid - rebuild with failed filters",
 			agentDetails:     map[string]interface{}{"cacheUpdateTime": pastDeadline},
+			validateFilters:  []management.WatchTopicSpecFilters{apiSvcFilter},
 			validateErr:      fmt.Errorf("cache out of sync"),
 			expectedRebuild:  true,
+			expectedFilters:  []management.WatchTopicSpecFilters{apiSvcFilter},
 			expectedValidate: true,
 		},
 		{
@@ -360,7 +372,7 @@ func TestShouldRebuildCache(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mockCache := &mockEventSyncCache{validateErr: tc.validateErr}
+			mockCache := &mockEventSyncCache{validateFilters: tc.validateFilters, validateErr: tc.validateErr}
 
 			resource := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
 			if tc.agentDetails != nil {
@@ -380,8 +392,9 @@ func TestShouldRebuildCache(t *testing.T) {
 				logger:        log.NewFieldLogger(),
 			}
 
-			shouldRebuild := m.shouldRebuildCache()
+			shouldRebuild, filters := m.shouldRebuildCache()
 			assert.Equal(t, tc.expectedRebuild, shouldRebuild)
+			assert.Equal(t, tc.expectedFilters, filters)
 			if tc.expectedValidate {
 				assert.Equal(t, 1, mockCache.validateCalled)
 			} else {

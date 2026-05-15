@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -41,17 +42,39 @@ func newCacheValidator(
 	}
 }
 
-func (cv *cacheValidator) Execute() error {
+// Execute validates each filter in the watch topic against the API server.
+// It returns the slice of filters whose cache is out of sync, plus errCacheOutOfSync
+// if any failed, or a nil slice and nil error if all filters are in sync.
+func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) {
 	cv.logger.Debug("executing cache validation")
 
-	for _, filter := range cv.watchTopic.Spec.Filters {
-		if !cv.validateKind(filter) {
-			return errCacheOutOfSync
-		}
+	filters := cv.watchTopic.Spec.Filters
+	ch := make(chan management.WatchTopicSpecFilters, len(filters))
+
+	var wg sync.WaitGroup
+	for _, filter := range filters {
+		wg.Add(1)
+		go func(f management.WatchTopicSpecFilters) {
+			defer wg.Done()
+			if !cv.validateKind(f) {
+				ch <- f
+			}
+		}(filter)
+	}
+	wg.Wait()
+	close(ch)
+
+	var failed []management.WatchTopicSpecFilters
+	for f := range ch {
+		failed = append(failed, f)
+	}
+
+	if len(failed) > 0 {
+		return failed, errCacheOutOfSync
 	}
 
 	cv.logger.Debug("cache validation passed")
-	return nil
+	return nil, nil
 }
 
 func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) bool {

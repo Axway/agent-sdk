@@ -219,3 +219,77 @@ func TestGetCachedResourcesByKind(t *testing.T) {
 		})
 	}
 }
+
+func TestFlushKind(t *testing.T) {
+	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
+
+	tests := map[string]struct {
+		setup     func(Manager)
+		flushKind string
+		// after flush, verify these kinds still have data
+		expectNonEmpty []struct{ group, kind string }
+		// after flush, verify these kinds are empty
+		expectEmpty []struct{ group, kind string }
+	}{
+		"flush APIService leaves other caches intact": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+				cm.AddAPIServiceInstance(makeRI("management", management.APIServiceInstanceGVK().Kind, "Environment", "env1", "inst1", "id1", modTime))
+			},
+			flushKind: management.APIServiceGVK().Kind,
+			expectEmpty: []struct{ group, kind string }{
+				{"management", management.APIServiceGVK().Kind},
+			},
+			expectNonEmpty: []struct{ group, kind string }{
+				{"management", management.APIServiceInstanceGVK().Kind},
+			},
+		},
+		"flush APIServiceInstance": {
+			setup: func(cm Manager) {
+				cm.AddAPIServiceInstance(makeRI("management", management.APIServiceInstanceGVK().Kind, "Environment", "env1", "inst1", "id1", modTime))
+			},
+			flushKind: management.APIServiceInstanceGVK().Kind,
+			expectEmpty: []struct{ group, kind string }{
+				{"management", management.APIServiceInstanceGVK().Kind},
+			},
+		},
+		"flush ManagedApplication": {
+			setup: func(cm Manager) {
+				cm.AddManagedApplication(makeRI("management", management.ManagedApplicationGVK().Kind, "Environment", "env1", "app1", "id1", modTime))
+			},
+			flushKind: management.ManagedApplicationGVK().Kind,
+			expectEmpty: []struct{ group, kind string }{
+				{"management", management.ManagedApplicationGVK().Kind},
+			},
+		},
+		"flush unknown kind is a no-op": {
+			setup: func(cm Manager) {
+				cm.AddAPIService(makeAPIServiceRI("env1", "svc1", "ext-id-1", modTime))
+			},
+			flushKind: "UnknownKind",
+			expectNonEmpty: []struct{ group, kind string }{
+				{"management", management.APIServiceGVK().Kind},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			if tc.setup != nil {
+				tc.setup(cm)
+			}
+
+			cm.FlushKind(tc.flushKind)
+
+			for _, e := range tc.expectEmpty {
+				result := cm.GetCachedResourcesByKind(e.group, e.kind, "")
+				assert.Empty(t, result, "expected %s cache to be empty after flush", e.kind)
+			}
+			for _, e := range tc.expectNonEmpty {
+				result := cm.GetCachedResourcesByKind(e.group, e.kind, "")
+				assert.NotEmpty(t, result, "expected %s cache to still have data", e.kind)
+			}
+		})
+	}
+}
