@@ -81,12 +81,19 @@ func newDiscoveryCache(
 	return dc
 }
 
-// execute rebuilds the discovery cache
-func (dc *discoveryCache) execute() error {
+// execute rebuilds the discovery cache.
+// When filters are provided only those kinds are rebuilt; with no arguments all
+// filters from the watch topic are used.
+func (dc *discoveryCache) execute(filters ...management.WatchTopicSpecFilters) error {
 	dc.logger.Debug("executing discovery cache")
 
-	discoveryFuncs := dc.buildDiscoveryFuncs()
-	if dc.additionalDiscoveryFuncs != nil {
+	active := dc.watchTopic.Spec.Filters
+	if len(filters) > 0 {
+		active = filters
+	}
+
+	discoveryFuncs := dc.buildDiscoveryFuncsForFilters(active)
+	if len(filters) == 0 && dc.additionalDiscoveryFuncs != nil {
 		discoveryFuncs = append(discoveryFuncs, dc.additionalDiscoveryFuncs...)
 	}
 
@@ -103,7 +110,7 @@ func (dc *discoveryCache) execute() error {
 
 	// Now do the marketplace discovery funcs as the other functions have completed
 	// AccessRequest cache need the APIServiceInstance cache to be fully loaded.
-	marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncs()
+	marketplaceDiscoveryFuncs := dc.buildMarketplaceDiscoveryFuncsForFilters(active)
 	err = dc.executeDiscoveryFuncs(marketplaceDiscoveryFuncs)
 	if err != nil {
 		return err
@@ -147,10 +154,10 @@ func (dc *discoveryCache) executeDiscoveryFuncs(discoveryFuncs []discoverFunc) e
 	return nil
 }
 
-func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
+func (dc *discoveryCache) buildDiscoveryFuncsForFilters(filters []management.WatchTopicSpecFilters) []discoverFunc {
 	resources := make(map[string]discoverFunc)
 
-	for _, filter := range dc.watchTopic.Spec.Filters {
+	for _, filter := range filters {
 		kind := filter.Kind
 		scope := ""
 		if filter.Scope != nil && filter.Scope.Name != "" {
@@ -173,9 +180,13 @@ func (dc *discoveryCache) buildDiscoveryFuncs() []discoverFunc {
 }
 
 func (dc *discoveryCache) buildMarketplaceDiscoveryFuncs() []discoverFunc {
+	return dc.buildMarketplaceDiscoveryFuncsForFilters(dc.watchTopic.Spec.Filters)
+}
+
+func (dc *discoveryCache) buildMarketplaceDiscoveryFuncsForFilters(filters []management.WatchTopicSpecFilters) []discoverFunc {
 	mpResources := make(map[string]discoverFunc)
 
-	for _, filter := range dc.watchTopic.Spec.Filters {
+	for _, filter := range filters {
 		if isMPResource(filter.Kind) {
 			f := dc.buildResourceFunc(filter)
 			mpResources[filter.Kind] = f
@@ -246,7 +257,8 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		resources, err := dc.client.GetAPIV1ResourceInstances(nil, ri.GetKindLink())
+		url := ri.GetKindLink()
+		resources, err := dc.client.GetAPIV1ResourceInstances(nil, url)
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}

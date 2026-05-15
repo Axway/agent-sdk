@@ -19,54 +19,63 @@ import (
 const envName = "mockEnv"
 
 func TestDiscoveryCache_execute(t *testing.T) {
-	tests := []struct {
+	tests := map[string]struct {
 		agentType       config.AgentType
-		name            string
+		wt              *management.WatchTopic
+		filters         []management.WatchTopicSpecFilters // nil = full rebuild (no args)
+		withMigration   bool
 		svcCount        int
 		managedAppCount int
 		accessReqCount  int
 		credCount       int
-		withMigration   bool
-		wt              *management.WatchTopic
 	}{
-		{
-			name:            "should fetch resources based on the watch topic",
+		"full rebuild with marketplace": {
 			agentType:       config.DiscoveryAgent,
-			svcCount:        2,
-			managedAppCount: 2,
-			accessReqCount:  2,
-			credCount:       2,
 			wt:              mpWatchTopic,
-		},
-		{
-			name:            "should fetch resources and perform a migration",
-			agentType:       config.DiscoveryAgent,
 			svcCount:        2,
 			managedAppCount: 2,
 			accessReqCount:  2,
 			credCount:       2,
+		},
+		"full rebuild with migration": {
+			agentType:       config.DiscoveryAgent,
+			wt:              mpWatchTopic,
 			withMigration:   true,
-			wt:              mpWatchTopic,
-		},
-		{
-			name:            "should fetch resources based on the watch topic with marketplace disabled",
-			agentType:       config.TraceabilityAgent,
 			svcCount:        2,
-			managedAppCount: 0,
-			accessReqCount:  0,
-			credCount:       0,
-			wt:              watchTopicNoMP,
+			managedAppCount: 2,
+			accessReqCount:  2,
+			credCount:       2,
+		},
+		"full rebuild no marketplace": {
+			agentType: config.TraceabilityAgent,
+			wt:        watchTopicNoMP,
+			svcCount:  2,
+		},
+		"filter subset - only APIService": {
+			agentType: config.DiscoveryAgent,
+			wt:        mpWatchTopic,
+			filters: []management.WatchTopicSpecFilters{
+				{
+					Group: management.APIServiceGVK().Group,
+					Kind:  management.APIServiceGVK().Kind,
+					Name:  "*",
+					Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: envName},
+				},
+			},
+			svcCount: 2,
+			// managedAppCount, accessReqCount, credCount all default to 0
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 			cfg := createCentralCfg("apicentral.axway.com", envName)
 			cfg.AgentType = tc.agentType
 			agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
 			agent.cfg = cfg
 			Initialize(cfg)
 			scopeName := agent.cfg.GetEnvironmentName()
+
 			c := &mockRIClient{
 				svcs:        newAPIServices(scopeName),
 				managedApps: newManagedApps(scopeName),
@@ -74,34 +83,15 @@ func TestDiscoveryCache_execute(t *testing.T) {
 				accessReqs:  newAccessReqs(scopeName),
 				creds:       newCredentials(scopeName),
 			}
-			svcHandler := &mockHandler{
-				kind: management.APIServiceGVK().Kind,
-			}
-			managedAppHandler := &mockHandler{
-				kind: management.ManagedApplicationGVK().Kind,
-			}
-			managedAppProfHandler := &mockHandler{
-				kind: management.ManagedApplicationProfileGVK().Kind,
-			}
-			accessReqHandler := &mockHandler{
-				kind: management.AccessRequestGVK().Kind,
-			}
-			credHandler := &mockHandler{
-				kind: management.CredentialGVK().Kind,
-			}
 
-			handlers := []handler.Handler{
-				svcHandler,
-				managedAppHandler,
-				managedAppProfHandler,
-				accessReqHandler,
-				credHandler,
-			}
+			svcHandler := &mockHandler{kind: management.APIServiceGVK().Kind}
+			managedAppHandler := &mockHandler{kind: management.ManagedApplicationGVK().Kind}
+			managedAppProfHandler := &mockHandler{kind: management.ManagedApplicationProfileGVK().Kind}
+			accessReqHandler := &mockHandler{kind: management.AccessRequestGVK().Kind}
+			credHandler := &mockHandler{kind: management.CredentialGVK().Kind}
 
 			opts := []discoveryOpt{
-				withAdditionalDiscoverFuncs(func() error {
-					return nil
-				}),
+				withAdditionalDiscoverFuncs(func() error { return nil }),
 			}
 
 			migration := &mockMigrator{mutex: sync.Mutex{}}
@@ -109,15 +99,13 @@ func TestDiscoveryCache_execute(t *testing.T) {
 				opts = append(opts, withMigration(migration))
 			}
 
-			dc := newDiscoveryCache(
-				cfg,
-				c,
-				handlers,
+			dc := newDiscoveryCache(cfg, c,
+				[]handler.Handler{svcHandler, managedAppHandler, managedAppProfHandler, accessReqHandler, credHandler},
 				tc.wt,
 				opts...,
 			)
 
-			err := dc.execute()
+			err := dc.execute(tc.filters...)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.svcCount, svcHandler.count)
 			assert.Equal(t, tc.managedAppCount, managedAppHandler.count)
@@ -130,7 +118,6 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 type mockHandler struct {

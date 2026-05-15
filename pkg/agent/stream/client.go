@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Axway/agent-sdk/pkg/agent/events"
@@ -35,13 +36,14 @@ import (
 type StreamerClient struct {
 	apiClient          events.APIClient
 	handlers           []handler.Handler
-	listener           *events.EventListener
+	listener           atomic.Pointer[events.EventListener]
 	manager            wm.Manager
 	newListener        events.NewListenerFunc
 	newManager         wm.NewManagerFunc
 	requestQueue       events.RequestQueue
 	newRequestQueue    events.NewRequestQueueFunc
 	onStreamConnection func()
+	onReconnect        func()
 	sequence           events.SequenceProvider
 	topicSelfLink      string
 	watchCfg           *wm.Config
@@ -54,7 +56,12 @@ type StreamerClient struct {
 	onEventSyncError   func()
 	isInitialized      atomic.Bool
 	isRunning          atomic.Bool
+	firstStart         bool
+	cancelMu           sync.Mutex
 	cancel             context.CancelCauseFunc
+	connectedCh        chan struct{} // closed when the first connection is live in Start()
+	connectedOnce      sync.Once     // ensures connectedCh is closed at most once across reconnects
+	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -88,6 +95,9 @@ func NewStreamerClient(
 		newRequestQueue: events.NewRequestQueue,
 		logger:          logger,
 		environmentURL:  cfg.GetEnvironmentURL(),
+		firstStart:      true,
+		connectedCh:     make(chan struct{}),
+		startErrCh:      make(chan error, 1),
 	}
 	s.isInitialized.Store(false)
 
@@ -148,12 +158,15 @@ func (s *StreamerClient) Start() error {
 	defer s.isRunning.Store(false)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
+	s.cancelMu.Lock()
 	s.cancel = cancel
-	defer cancel(nil)
+	s.cancelMu.Unlock()
+	defer cancel(nil) // local variable: safe to call without lock in the same goroutine
 
 	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
-	s.listener = s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
-	defer s.listener.Stop()
+	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
+	s.listener.Store(l)
+	defer l.Stop()
 
 	s.requestQueue = s.newRequestQueue(ctx, cancel, requestCh)
 	defer s.requestQueue.Stop()
@@ -161,16 +174,26 @@ func (s *StreamerClient) Start() error {
 	wmOptions := append(s.watchOpts, wm.WithRequestChannel(requestCh), wm.WithContext(ctx, cancel))
 	manager, err := s.newManager(s.watchCfg, wmOptions...)
 	if err != nil {
+		select {
+		case s.startErrCh <- err:
+		default:
+		}
 		return err
 	}
 	defer manager.CloseConn()
 
 	s.manager = manager
-	s.listener.Listen()
+	l.Listen()
 	_, err = s.manager.RegisterWatch(s.topicSelfLink, eventCh)
 	if s.onStreamConnection != nil {
 		s.onStreamConnection()
 	}
+	s.connectedOnce.Do(func() { close(s.connectedCh) })
+	if s.onReconnect != nil && !s.firstStart {
+		go s.onReconnect()
+	}
+	s.firstStart = false
+	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
@@ -192,7 +215,7 @@ func (s *StreamerClient) Status() error {
 		return fmt.Errorf("stream client is not yet initialized")
 	}
 
-	if s.manager == nil || s.listener == nil || s.requestQueue == nil {
+	if s.manager == nil || s.listener.Load() == nil || s.requestQueue == nil {
 		return fmt.Errorf("stream client is not ready")
 	}
 	if ok := s.manager.Status(); !ok {
@@ -204,9 +227,38 @@ func (s *StreamerClient) Status() error {
 
 // Stop stops the StreamerClient
 func (s *StreamerClient) Stop() {
+	s.cancelMu.Lock()
+	defer s.cancelMu.Unlock()
 	if s.cancel != nil {
 		s.cancel(nil)
 	}
+}
+
+// WaitForReady blocks until Start() has established a connection to Central,
+// or until ctx is cancelled, or until Start() exits with an error before connecting.
+func (s *StreamerClient) WaitForReady(ctx context.Context) error {
+	select {
+	case <-s.connectedCh:
+		return nil
+	case err := <-s.startErrCh:
+		s.logger.WithError(err).Error("stream client failed to connect")
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// PauseListener suspends event processing on the underlying listener.
+// Blocks until any in-flight event is done, then returns a resume func that
+// unlocks that exact listener instance. Returns nil if no listener is active.
+// The caller must invoke the returned func (typically via defer) to release the lock.
+func (s *StreamerClient) PauseListener() func() {
+	l := s.listener.Load()
+	if l == nil {
+		return nil
+	}
+	l.Pause()
+	return l.Resume
 }
 
 // Healthcheck - health check for stream client

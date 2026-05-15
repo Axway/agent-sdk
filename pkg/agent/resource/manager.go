@@ -23,7 +23,8 @@ import (
 const qaTriggerSevenDayRefreshCache = "QA_CENTRAL_TRIGGER_REFRESH_CACHE"
 
 type EventSyncCache interface {
-	RebuildCache()
+	RebuildCache(filters ...management.WatchTopicSpecFilters)
+	ValidateCache() ([]management.WatchTopicSpecFilters, error)
 }
 
 // Manager - interface to manage agent resource
@@ -164,9 +165,8 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	agentStatus := newDAStatus(agentInstance.ResourceMeta, status, prevStatus, message)
 
 	// See if we need to rebuildCache
-	timeToRebuild, _ := a.shouldRebuildCache()
-	if timeToRebuild && a.rebuildCache != nil {
-		a.rebuildCache.RebuildCache()
+	if needsRebuild, filters := a.shouldRebuildCache(); needsRebuild && a.rebuildCache != nil {
+		a.rebuildCache.RebuildCache(filters...)
 	}
 
 	subResources := make(map[string]interface{})
@@ -181,50 +181,65 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 	return err
 }
 
-// 1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
-// 2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.  If its pass 7 days, rebuildCache
-func (a *agentResourceManager) shouldRebuildCache() (bool, error) {
+//  1. On UpdateAgentStatus, if x-agent-details, key "cacheUpdateTime" doesn't exist or empty, rebuild cache to populate cacheUpdateTime
+//  2. On UpdateAgentStatus, if x-agent-details exists, check to see if its past 7 days since rebuildCache was ran.
+//     If past 7 days, validate the cache first and only rebuild if out of sync.
+func (a *agentResourceManager) shouldRebuildCache() (bool, []management.WatchTopicSpecFilters) {
 	// Only perform periodic/self-healing cache rebuild for non-gRPC agents
 	if a.cfg != nil && a.cfg.IsUsingGRPC() {
 		return false, nil
 	}
 
-	rebuildCache := false
 	agentInstance := a.GetAgentResource()
 	agentDetails := agentInstance.GetSubResource(definitions.XAgentDetails)
 
 	if agentDetails == nil {
 		// x-agent-details hasn't been established yet. Rebuild cache to populate cacheUpdateTime
 		a.logger.Trace("create x-agent-detail subresource and add key 'cacheUpdateTime'")
-		rebuildCache = true
-	} else {
-		value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
-		if value != nil {
-			logger := a.logger.WithField("cacheUpdateTime", value)
-			// get current cacheUpdateTime from x-agent-details
-			convToTimestamp, err := strconv.ParseInt(value.(string), 10, 64)
-			if err != nil {
-				logger.WithError(err).Error("unable to parse cache update time")
-				return false, err
-			}
-			currentCacheUpdateTime := time.Unix(0, convToTimestamp)
-			logger.Trace("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+		return true, nil
+	}
 
-			// check to see if 7 days have passed since last refresh cache. currentCacheUpdateTime is the date at the time we rebuilt cache plus 7 days(in event sync - RebuildCache)
-			if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
-				logger.Trace("the current date is greater than the current scheduled refresh date - time to rebuild cache")
-				rebuildCache = true
+	value, exists := agentDetails.(map[string]interface{})["cacheUpdateTime"]
+	if value == nil {
+		if !exists {
+			// x-agent-details exists, however, cacheUpdateTime key doesn't exist. Rebuild cache to populate cacheUpdateTime
+			a.logger.Trace("update x-agent-detail subresource and add key 'cacheUpdateTime'")
+			return true, nil
+		}
+		return false, nil
+	}
+
+	logger := a.logger.WithField("cacheUpdateTime", value)
+	strVal, ok := value.(string)
+	if !ok {
+		logger.Warn("cacheUpdateTime is not a string, triggering rebuild")
+		return true, nil
+	}
+
+	convToTimestamp, err := strconv.ParseInt(strVal, 10, 64)
+	if err != nil {
+		logger.WithError(err).Error("unable to parse cache update time")
+		return true, nil
+	}
+
+	currentCacheUpdateTime := time.Unix(0, convToTimestamp)
+	logger.Tracef("the current scheduled refresh cache date - %s", time.Unix(0, currentCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+
+	// check to see if 7 days have passed since last refresh cache
+	if a.getCurrentTime() > currentCacheUpdateTime.UnixNano() {
+		logger.Tracef("the current date is greater than the current scheduled refresh date - validating cache before deciding to rebuild")
+		if a.rebuildCache != nil {
+			failedFilters, err := a.rebuildCache.ValidateCache()
+			if err != nil || len(failedFilters) > 0 {
+				logger.WithError(err).Trace("cache validation failed - time to rebuild cache")
+				return true, failedFilters
 			}
 		} else {
-			if !exists {
-				// x-agent-details exists, however, cacheUpdateTime key doesn't exist. Rebuild cache to populate cacheUpdateTime
-				a.logger.Trace("update x-agent-detail subresource and add key 'cacheUpdateTime'")
-				rebuildCache = true
-			}
+			return true, nil
 		}
 	}
 
-	return rebuildCache, nil
+	return false, nil
 }
 
 func (a *agentResourceManager) getCurrentTime() int64 {
