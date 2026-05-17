@@ -94,12 +94,13 @@ type V4Data interface {
 	GetLogFields() logrus.Fields
 }
 
-// V4Event - represents V7 event
+// V4Event - represents V4 event
 type V4Event struct {
 	ID           string               `json:"id"`
 	Timestamp    int64                `json:"timestamp"`
 	Event        string               `json:"event"`
-	App          string               `json:"app,omitempty"` // ORG GUID
+	Org          string               `json:"org,omitempty"`
+	App          string               `json:"app,omitempty"`
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
 	Data         V4Data               `json:"data"`

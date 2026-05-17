@@ -127,22 +127,48 @@ func (b *CentralMetricBuilder) SetEventID(id string) *CentralMetricBuilder {
 	return b
 }
 
+func (b *CentralMetricBuilder) SetVersion(v string) *CentralMetricBuilder {
+	b.Version = v
+	return b
+}
+
+func (b *CentralMetricBuilder) SetAPICDeployment(d string) *CentralMetricBuilder {
+	b.APICDeployment = d
+	return b
+}
+
+func (b *CentralMetricBuilder) SetEnvironmentRuntimeType(t string) *CentralMetricBuilder {
+	if b.Environment == nil {
+		b.Environment = &EnvironmentInfo{}
+	}
+	b.Environment.RuntimeType = t
+	return b
+}
+
 func (b *CentralMetricBuilder) Build() *centralMetric {
 	return b.centralMetric
 }
 
+// EnvironmentInfo holds the environment runtime classification for metric v3 events.
+type EnvironmentInfo struct {
+	RuntimeType string `json:"runtimeType,omitempty"`
+}
+
 type centralMetric struct {
-	Marketplace   *models.MarketplaceReference         `json:"marketplace,omitempty"`
-	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
-	App           *models.ApplicationResourceReference `json:"application,omitempty"`
-	Product       *models.ProductResourceReference     `json:"product,omitempty"`
-	API           *models.APIResourceReference         `json:"api,omitempty"`
-	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
-	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
-	Units         *Units                               `json:"units,omitempty"`
-	Reporter      *Reporter                            `json:"reporter,omitempty"`
-	Observation   *models.ObservationDetails           `json:"-"`
-	EventID       string                               `json:"-"`
+	Version         string                               `json:"version,omitempty"`
+	APICDeployment  string                               `json:"apicDeployment,omitempty"`
+	Environment     *EnvironmentInfo                     `json:"environment,omitempty"`
+	Marketplace     *models.MarketplaceReference         `json:"marketplace,omitempty"`
+	Subscription    *models.ResourceReference            `json:"subscription,omitempty"`
+	App             *models.ApplicationResourceReference `json:"application,omitempty"`
+	Product         *models.ProductResourceReference     `json:"product,omitempty"`
+	API             *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource   *models.ResourceReference            `json:"assetResource,omitempty"`
+	ProductPlan     *models.ResourceReference            `json:"productPlan,omitempty"`
+	Units           *Units                               `json:"units,omitempty"`
+	Reporter        *Reporter                            `json:"reporter,omitempty"`
+	Observation     *models.ObservationDetails           `json:"-"`
+	EventID         string                               `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric

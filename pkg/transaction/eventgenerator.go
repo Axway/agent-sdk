@@ -2,8 +2,12 @@ package transaction
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/common"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -11,6 +15,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -19,8 +24,6 @@ import (
 	sdkErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 // EventGenerator - Create the events to be published to Condor
@@ -216,13 +219,55 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 // CreateEvent - Creates a new event to be sent to Amplify Observability
 func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	event := beat.Event{}
-	serializedLogEvent, err := json.Marshal(logEvent)
+
+	e.logger.
+		WithField("transactionID", logEvent.TransactionID).
+		WithField("eventType", logEvent.Type).
+		Debug("creating insights event")
+
+	cfg := agent.GetCentralConfig()
+	if cfg == nil {
+		return event, fmt.Errorf("central config unavailable; cannot construct insights event for type %q", logEvent.Type)
+	}
+
+	orgID := cfg.GetTenantID()
+	envID := cfg.GetEnvironmentID()
+	if orgID == "" {
+		return event, fmt.Errorf("required field \"org\" (tenantID) is empty for insights event type %q", logEvent.Type)
+	}
+	if envID == "" {
+		return event, fmt.Errorf("required field \"distribution.environment\" (environmentID) is empty for insights event type %q", logEvent.Type)
+	}
+
+	e.logger.
+		WithField("orgID", orgID).
+		WithField("envID", envID).
+		WithField("apicDeployment", cfg.GetAPICDeployment()).
+		Trace("insights event parameters")
+
+	// Populate app owner on summary from managed app if not already set by SaaS path
+	if logEvent.Type == TypeTransactionSummary && logEvent.TransactionSummary != nil && logEvent.TransactionSummary.AppOwnerInfo == nil {
+		logEvent.TransactionSummary.AppOwnerInfo = resolveAppOwnerFromCache(logEvent.TransactionSummary)
+	}
+
+	reporter := ReporterInfo{
+		AgentVersion:    cmd.BuildVersion,
+		AgentType:       cmd.BuildAgentName,
+		AgentSDKVersion: cmd.SDKBuildVersion,
+		AgentName:       cfg.GetAgentName(),
+	}
+
+	insightsEvent, err := BuildTransactionV2Data(e.logger, logEvent, orgID, envID, agent.GetCacheManager(), reporter)
+	if err != nil {
+		return event, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
+	}
+
+	serialized, err := json.Marshal(insightsEvent)
 	if err != nil {
 		return event, err
 	}
 
-	// No need to get the other field data if not being sampled
-	eventData, err := e.createEventData(serializedLogEvent, eventFields)
+	eventData, err := e.createEventData(serialized, eventFields)
 	if err != nil {
 		return event, err
 	}
@@ -454,6 +499,21 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	fields["token"] = token
 	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
+}
+
+func resolveAppOwnerFromCache(summary *Summary) *models.OwnerBlock {
+	if summary.Application == nil {
+		return nil
+	}
+	cacheManager := agent.GetCacheManager()
+	if cacheManager == nil {
+		return nil
+	}
+	managedApp := cacheManager.GetManagedApplicationByName(summary.Application.Name)
+	if managedApp == nil {
+		return nil
+	}
+	return transutil.ResolveAppOwner(managedApp)
 }
 
 func SetSampleInMetadata(metadata common.MapStr) common.MapStr {

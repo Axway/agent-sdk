@@ -254,8 +254,12 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		logger := dc.logger.WithField("kind", filter.Kind)
 		logger.Tracef("fetching %s and updating cache", filter.Kind)
 
-		url := ri.GetKindLink()
-		resources, err := dc.client.GetAPIV1ResourceInstances(nil, url)
+		var queryParams map[string]string
+		if filter.Kind == management.AccessRequestGVK().Kind {
+			queryParams = map[string]string{"embed": "metadata.references"}
+		}
+
+		resources, err := dc.client.GetAPIV1ResourceInstances(queryParams, ri.GetKindLink())
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}

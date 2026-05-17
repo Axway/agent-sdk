@@ -15,110 +15,149 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 		return nil
 	}
 
+	apicDeployment, agentName, runtimeType := centralConfigFields()
+
 	out := &centralMetric{
-		EventID: in.EventID,
-		Observation: &models.ObservationDetails{
-			Start: in.Observation.Start,
-		},
+		Version:        "3",
+		APICDeployment: apicDeployment,
+		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
+		EventID:        in.EventID,
+		Observation:    &models.ObservationDetails{Start: in.Observation.Start},
 		Reporter: &Reporter{
 			AgentVersion:     cmd.BuildVersion,
 			AgentType:        cmd.BuildAgentName,
 			AgentSDKVersion:  cmd.SDKBuildVersion,
-			AgentName:        agent.GetCentralConfig().GetAgentName(),
+			AgentName:        agentName,
 			ObservationDelta: in.Observation.End - in.Observation.Start,
 		},
 	}
 
-	if in.Unit == nil {
-		status := in.Status
-		if status == "" {
-			status = sampling.GetStatusFromCodeString(in.StatusCode).String()
-		}
-		// transaction units
-		out.Units = &Units{
-			Transactions: &Transactions{
-				UnitCount: UnitCount{
-					Count: in.Count,
-				},
-				Status: status,
-				Response: &ResponseMetrics{
-					Max: in.Response.Max,
-					Min: in.Response.Min,
-					Avg: in.Response.Avg,
-				},
-			},
-		}
-		if in.Quota.ID != unknown && in.Quota.ID != "" {
-			out.Units.Transactions.Quota = &models.ResourceReference{
-				ID: in.Quota.ID,
-			}
-		}
-	} else {
-		// custom units
-		out.Units = &Units{
-			CustomUnits: map[string]*UnitCount{
-				in.Unit.Name: {
-					Count: in.Count,
-				},
-			},
-		}
-		if in.Quota.ID != unknown && in.Quota.ID != "" {
-			out.Units.CustomUnits[in.Unit.Name].Quota = &models.ResourceReference{
-				ID: in.Quota.ID,
-			}
-		}
+	out.Units = buildUnits(in)
+
+	if id := in.Subscription.ID; isKnownID(id) {
+		out.Subscription = &models.ResourceReference{ID: id}
 	}
 
-	if in.Subscription.ID != unknown && in.Subscription.ID != "" {
-		out.Subscription = &models.ResourceReference{
-			ID: in.Subscription.ID,
-		}
+	if isKnownID(in.App.ID) {
+		out.App = buildAppRef(in.App)
 	}
 
-	if in.App.ID != unknown && in.App.ID != "" {
-		out.App = &models.ApplicationResourceReference{
-			ResourceReference: models.ResourceReference{
-				ID: in.App.ID,
-			},
-			ConsumerOrgID: in.App.ConsumerOrgID,
-		}
-	}
-
-	if in.Product.ID != unknown && in.Product.ID != "" {
+	if id := in.Product.ID; isKnownID(id) {
 		out.Product = &models.ProductResourceReference{
-			ResourceReference: models.ResourceReference{
-				ID: in.Product.ID,
-			},
-			VersionID: in.Product.VersionID,
+			ResourceReference: models.ResourceReference{ID: id},
+			VersionID:         in.Product.VersionID,
 		}
 	}
 
-	if in.API.ID != unknown && in.API.ID != "" {
-		out.API = &models.APIResourceReference{
-			ResourceReference: models.ResourceReference{
-				ID: in.API.ID,
-			},
-			Name: in.API.Name,
-		}
-		svc := agent.GetCacheManager().GetAPIServiceWithAPIID(strings.TrimPrefix(in.API.ID, transutil.SummaryEventProxyIDPrefix))
-		if svc != nil {
-			out.API.APIServiceID = svc.Metadata.ID
-		}
+	if isKnownID(in.API.ID) {
+		out.API = buildAPIRef(in.API)
 	}
 
-	if in.AssetResource.ID != unknown && in.AssetResource.ID != "" {
-		out.AssetResource = &models.ResourceReference{
-			ID: in.AssetResource.ID,
-		}
+	if id := in.AssetResource.ID; isKnownID(id) {
+		out.AssetResource = &models.ResourceReference{ID: id}
 	}
 
-	if in.ProductPlan.ID != unknown && in.ProductPlan.ID != "" {
-		out.ProductPlan = &models.ResourceReference{
-			ID: in.ProductPlan.ID,
-		}
+	if id := in.ProductPlan.ID; isKnownID(id) {
+		out.ProductPlan = &models.ResourceReference{ID: id}
 	}
 
 	return out
+}
+
+func centralConfigFields() (apicDeployment, agentName, runtimeType string) {
+	runtimeType = unknown
+	cfg := agent.GetCentralConfig()
+	if cfg == nil {
+		return
+	}
+	if cfg.IsAxwayManaged() {
+		runtimeType = "managed"
+	} else {
+		runtimeType = "connected"
+	}
+	apicDeployment = cfg.GetAPICDeployment()
+	agentName = cfg.GetAgentName()
+	return
+}
+
+func isKnownID(id string) bool {
+	return id != "" && id != unknown
+}
+
+func buildUnits(in *APIMetric) *Units {
+	if in.Unit != nil {
+		return buildCustomUnits(in)
+	}
+	return buildTransactionUnits(in)
+}
+
+func buildTransactionUnits(in *APIMetric) *Units {
+	status := in.Status
+	if status == "" {
+		status = sampling.GetStatusFromCodeString(in.StatusCode).String()
+	}
+	txn := &Transactions{
+		UnitCount: UnitCount{Count: in.Count},
+		Duration:  in.Observation.End - in.Observation.Start,
+		Status:    status,
+		Response: &ResponseMetrics{
+			Max: in.Response.Max,
+			Min: in.Response.Min,
+			Avg: in.Response.Avg,
+		},
+	}
+	if isKnownID(in.Quota.ID) {
+		txn.Quota = &models.ResourceReference{ID: in.Quota.ID}
+	}
+	return &Units{Transactions: txn}
+}
+
+func buildCustomUnits(in *APIMetric) *Units {
+	uc := &UnitCount{Count: in.Count}
+	if isKnownID(in.Quota.ID) {
+		uc.Quota = &models.ResourceReference{ID: in.Quota.ID}
+	}
+	return &Units{
+		CustomUnits: map[string]*UnitCount{in.Unit.Name: uc},
+	}
+}
+
+func buildAppRef(app models.AppDetails) *models.ApplicationResourceReference {
+	ref := &models.ApplicationResourceReference{
+		ResourceReference: models.ResourceReference{ID: app.ID},
+		ConsumerOrgID:     app.ConsumerOrgID,
+	}
+	ref.Owner = resolveAppOwnerFromCache(app.ID)
+	return ref
+}
+
+func resolveAppOwnerFromCache(appID string) *models.OwnerBlock {
+	cacheManager := agent.GetCacheManager()
+	if cacheManager == nil {
+		return &models.OwnerBlock{Type: unknown}
+	}
+	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
+	if managedApp == nil {
+		managedApp = cacheManager.GetManagedApplication(appID)
+	}
+	if managedApp != nil {
+		return transutil.ResolveAppOwner(managedApp)
+	}
+	return &models.OwnerBlock{Type: unknown}
+}
+
+func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
+	ref := &models.APIResourceReference{
+		ResourceReference: models.ResourceReference{ID: api.ID},
+		Name:              api.Name,
+	}
+	cacheManager := agent.GetCacheManager()
+	stripped := strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix)
+	if svc := cacheManager.GetAPIServiceWithAPIID(stripped); svc != nil {
+		ref.APIServiceID = svc.Metadata.ID
+	}
+	ref.Owner = transutil.ResolveAPIOwner(api.ID, cacheManager)
+	return ref
 }
 
 func splitMetricKey(key string) (string, string) {

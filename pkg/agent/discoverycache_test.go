@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -116,6 +115,15 @@ func TestDiscoveryCache_execute(t *testing.T) {
 			} else {
 				assert.False(t, migration.called)
 			}
+
+			// AccessRequest fetch must include embed=metadata.references; other kinds must not.
+			if tc.accessReqCount > 0 {
+				arParams := c.queryParams["accessrequests"]
+				assert.Equal(t, "metadata.references", arParams["embed"], "accessrequests must be fetched with embed=metadata.references")
+			}
+			if svcParams, ok := c.queryParams["apiservices"]; ok {
+				assert.Empty(t, svcParams["embed"], "apiservices must not include embed param")
+			}
 		})
 	}
 }
@@ -181,21 +189,31 @@ type mockRIClient struct {
 	accessReqs  []*apiv1.ResourceInstance
 	creds       []*apiv1.ResourceInstance
 	err         error
+	// queryParams records the query params passed per URL fragment (kind name)
+	queryParams map[string]map[string]string
 }
 
 func (m mockRIClient) GetAPIV1ResourceCount(_ string) (int, error) { return 0, nil }
 
 func (m mockRIClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
-	fmt.Println(URL)
-	if strings.Contains(URL, "apiservices") {
-		return m.svcs, m.err
-	} else if strings.Contains(URL, "managedapplications") {
-		return m.managedApps, m.err
-	} else if strings.Contains(URL, "managedapplicationprofiles") {
+	if m.queryParams == nil {
+		m.queryParams = make(map[string]map[string]string)
+	}
+	switch {
+	case strings.Contains(URL, "managedapplicationprofiles"):
+		m.queryParams["managedapplicationprofiles"] = query
 		return m.manAppProfs, m.err
-	} else if strings.Contains(URL, "accessrequests") {
+	case strings.Contains(URL, "managedapplications"):
+		m.queryParams["managedapplications"] = query
+		return m.managedApps, m.err
+	case strings.Contains(URL, "apiservices"):
+		m.queryParams["apiservices"] = query
+		return m.svcs, m.err
+	case strings.Contains(URL, "accessrequests"):
+		m.queryParams["accessrequests"] = query
 		return m.accessReqs, m.err
-	} else if strings.Contains(URL, "credentials") {
+	case strings.Contains(URL, "credentials"):
+		m.queryParams["credentials"] = query
 		return m.creds, m.err
 	}
 	return make([]*apiv1.ResourceInstance, 0), m.err

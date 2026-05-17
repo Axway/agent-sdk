@@ -71,7 +71,6 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	defer s.Close()
 
 	cfg := createMapperTestConfig(s.URL, "1111", "aaa", "env1", "1111")
-	// authCfg := cfg.Central.GetAuthConfig()
 	err := agent.Initialize(cfg.Central)
 	assert.Nil(t, err)
 
@@ -80,6 +79,12 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 		TenantID:      cfg.Central.GetTenantID(),
 		Environment:   cfg.Central.GetAPICDeployment(),
 		EnvironmentID: cfg.Central.GetEnvironmentID(),
+		Type:          TypeTransactionEvent,
+		TransactionID: "txn-test-1",
+		TransactionEvent: &Event{
+			ID:     "0",
+			Status: "Pass",
+		},
 	}
 	eventFields := make(common.MapStr)
 	eventFields["someKey.1"] = "someVal.1"
@@ -89,19 +94,28 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	events, _ := eventGenerator.CreateEvents(LogEvent{}, []LogEvent{dummyLogEvent}, time.Now(), nil, eventFields, nil)
 	assert.NotNil(t, events)
 	event := events[0]
-	// Validate that existing fields are added to generated event
+
+	// Forwarded fields must be present
 	assert.Equal(t, "someVal.1", event.Fields["someKey.1"])
 	assert.Equal(t, "someVal.2", event.Fields["someKey.2"])
 
 	msg := fmt.Sprintf("%v", event.Fields["message"])
 	fields := event.Fields["fields"].(map[string]string)
 	assert.NotNil(t, fields)
-	assert.NotNil(t, msg)
-	// Validate if message field from orgincal event fields is not included
+
+	// Original "message" field must not leak through
 	assert.NotEqual(t, "existingMessage", event.Fields["message"])
-	var logEvent LogEvent
-	json.Unmarshal([]byte(msg), &logEvent)
-	assert.Equal(t, dummyLogEvent, logEvent)
+
+	// Message must now be an InsightsEvent envelope (version "4").
+	// Use map to avoid interface{} unmarshaling issues with the Data field.
+	var envelope map[string]interface{}
+	err = json.Unmarshal([]byte(msg), &envelope)
+	assert.Nil(t, err)
+	assert.Equal(t, insightsEventVersion, envelope["version"])
+	assert.Equal(t, "api.transaction.event", envelope["event"])
+	assert.Equal(t, cfg.Central.GetTenantID(), envelope["org"])
+	assert.NotEmpty(t, envelope["id"])
+
 	assert.Equal(t, "somevalue", fields["token"])
 	assert.Equal(t, traceability.TransactionFlow, fields[traceability.FlowHeader])
 }
@@ -119,6 +133,12 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 		TenantID:      cfg.Central.GetTenantID(),
 		Environment:   cfg.Central.GetAPICDeployment(),
 		EnvironmentID: cfg.Central.GetEnvironmentID(),
+		Type:          TypeTransactionEvent,
+		TransactionID: "txn-invalid-token",
+		TransactionEvent: &Event{
+			ID:     "0",
+			Status: "Pass",
+		},
 	}
 
 	_, err := eventGenerator.CreateEvents(LogEvent{}, []LogEvent{dummyLogEvent}, time.Now(), nil, nil, nil)

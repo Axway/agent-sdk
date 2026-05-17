@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/rcrowley/go-metrics"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -21,7 +25,21 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/stretchr/testify/assert"
+)
+
+const (
+	testEnvID         = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
+	testInstID        = "inst-1"
+	testInstName      = "instance-1"
+	testManagedApp1   = "managed-app-1"
+	testManagedApp2   = "managed-app-2"
+	testConsumerOrg   = "test-consumer-org"
+	testAccessReq1    = "access-req-1"
+	testAccessReq2    = "access-req-2"
+	testSubscription1 = "subscription-1"
+	testSubscription2 = "subscription-2"
+	testCronSchedule  = "* * * * *"
+	testLighthouse    = "/lighthouse"
 )
 
 var (
@@ -76,7 +94,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
-var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNjE0NjA0NzE0LCJleHAiOjE2NDYxNDA3MTQsImF1ZCI6InRlc3RhdWQiLCJzdWIiOiIxMjM0NTYiLCJvcmdfZ3VpZCI6IjEyMzQtMTIzNC0xMjM0LTEyMzQifQ.5Uqt0oFhMgmI-sLQKPGkHwknqzlTxv-qs9I_LmZ18LQ"
+var accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNjE0NjA0NzE0LCJleHAiOjE2NDYxNDA3MTQsImF1ZCI6InRlc3RhdWQiLCJzdWIiOiIxMjM0NTYiLCJvcmdfZ3VpZCI6IjEyMzQtMTIzNC0xMjM0LTEyMzQifQ.5Uqt0oFhMgmI-sLQKPGkHwknqzlTxv-qs9I_LmZ18LQ" // NOSONAR - expired synthetic JWT used only in mock HTTP handler, not a real credential
 
 var teamID = "team123"
 
@@ -94,50 +112,70 @@ type testHTTPServer struct {
 
 func (s *testHTTPServer) startServer() {
 	s.server = httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"" + accessToken + "\",\"expires_in\": 12235677}"
-			resp.Write([]byte(token))
-		}
-		if strings.Contains(req.RequestURI, "/lighthouse") {
-			if s.failUsageEvent {
-				if s.failUsageResponse != nil {
-					b, _ := json.Marshal(*s.failUsageResponse)
-					resp.WriteHeader(s.failUsageResponse.StatusCode)
-					resp.Write(b)
-					return
-				}
-				resp.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			s.lighthouseEventCount++
-			req.ParseMultipartForm(1 << 20)
-			for _, fileHeaders := range req.MultipartForm.File {
-				for _, fileHeader := range fileHeaders {
-					file, err := fileHeader.Open()
-					if err != nil {
-						return
-					}
-					body, _ := io.ReadAll(file)
-					var usageEvent UsageEvent
-					json.Unmarshal(body, &usageEvent)
-					fmt.Printf("\n\n %+v \n\n", usageEvent)
-					for _, report := range usageEvent.Report {
-						for usageType, usage := range report.Usage {
-							if strings.Index(usageType, "Transactions") > 0 {
-								s.transactionCount += int(usage)
-							} else if strings.Index(usageType, "Volume") > 0 {
-								s.transactionVolume += int(usage)
-							}
-						}
-						s.reportCount++
-					}
-					s.givenGranularity = usageEvent.Granularity
-					s.eventTimestamp = usageEvent.Timestamp
-				}
-			}
+		switch {
+		case strings.Contains(req.RequestURI, "/auth"):
+			s.handleAuth(resp)
+		case strings.Contains(req.RequestURI, testLighthouse):
+			s.handleLighthouse(resp, req)
 		}
 		resp.WriteHeader(202)
 	}))
+}
+
+func (s *testHTTPServer) handleAuth(resp http.ResponseWriter) {
+	token := "{\"access_token\":\"" + accessToken + "\",\"expires_in\": 12235677}"
+	resp.Write([]byte(token))
+}
+
+func (s *testHTTPServer) handleLighthouse(resp http.ResponseWriter, req *http.Request) {
+	if s.failUsageEvent {
+		s.writeFailureResponse(resp)
+		return
+	}
+	s.lighthouseEventCount++
+	req.ParseMultipartForm(1 << 20)
+	for _, fileHeaders := range req.MultipartForm.File {
+		for _, fileHeader := range fileHeaders {
+			s.processFileHeader(fileHeader)
+		}
+	}
+}
+
+func (s *testHTTPServer) writeFailureResponse(resp http.ResponseWriter) {
+	if s.failUsageResponse != nil {
+		b, _ := json.Marshal(*s.failUsageResponse)
+		resp.WriteHeader(s.failUsageResponse.StatusCode)
+		resp.Write(b)
+		return
+	}
+	resp.WriteHeader(http.StatusBadRequest)
+}
+
+func (s *testHTTPServer) processFileHeader(fileHeader *multipart.FileHeader) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return
+	}
+	body, _ := io.ReadAll(file)
+	var usageEvent UsageEvent
+	json.Unmarshal(body, &usageEvent)
+	fmt.Printf("\n\n %+v \n\n", usageEvent)
+	s.givenGranularity = usageEvent.Granularity
+	s.eventTimestamp = usageEvent.Timestamp
+	for _, report := range usageEvent.Report {
+		s.tallyReport(report)
+	}
+}
+
+func (s *testHTTPServer) tallyReport(report UsageReport) {
+	for usageType, usage := range report.Usage {
+		if strings.Index(usageType, "Transactions") > 0 {
+			s.transactionCount += int(usage)
+		} else if strings.Index(usageType, "Volume") > 0 {
+			s.transactionVolume += int(usage)
+		}
+	}
+	s.reportCount++
 }
 
 func (s *testHTTPServer) closeServer() {
@@ -275,135 +313,92 @@ func runTestHealthcheck() {
 	healthcheck.RunChecks()
 }
 
-func TestMetricCollector(t *testing.T) {
-	defer cleanUpCachedMetricFile()
-	s := &testHTTPServer{}
-	defer s.closeServer()
-	s.startServer()
-	traceability.SetDataDirPath(".")
+type metricCollectorTestCase struct {
+	name                      string
+	loopCount                 int
+	retryBatchCount           int
+	apiTransactionCount       []int
+	failUsageEventOnServer    []bool
+	failUsageResponseOnServer []*UsageResponse
+	expectedLHEvents          []int
+	expectedTransactionCount  []int
+	trackVolume               bool
+	expectedTransactionVolume []int
+	expectedMetricEventsAcked int
+	appName                   string
+	publishPrior              bool
+	hcStatus                  healthcheck.StatusLevel
+	skipWaitForPub            bool
+}
 
-	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
-	cmd.BuildDataPlaneType = "Azure"
-	agent.Initialize(cfg)
-
-	cm := agent.GetCacheManager()
-	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
-
-	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
-	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
-
-	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
-	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
-
-	myCollector := createMetricCollector()
-	metricCollector := myCollector.(*collector)
-
-	testCases := []struct {
-		name                      string
-		loopCount                 int
-		retryBatchCount           int
-		apiTransactionCount       []int
-		failUsageEventOnServer    []bool
-		failUsageResponseOnServer []*UsageResponse
-		expectedLHEvents          []int
-		expectedTransactionCount  []int
-		trackVolume               bool
-		expectedTransactionVolume []int
-		expectedMetricEventsAcked int
-		appName                   string
-		publishPrior              bool
-		hcStatus                  healthcheck.StatusLevel
-		skipWaitForPub            bool
-	}{
-		// Success case with no usage report
+func metricCollectorTestCases() []metricCollectorTestCase {
+	return []metricCollectorTestCase{
 		{
 			name:                      "WithUsageNoUsageReport",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{0},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{0},
 			expectedTransactionCount:  []int{0},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0,
 			skipWaitForPub:            true,
 		},
-		// Success case with no app detail
 		{
-			name:                      "WithUsage",
+			name:                      "WithUsageNoApp",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
+			expectedMetricEventsAcked: 1,
 		},
 		{
 			name:                      "WithUsageWithPriorPublish",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1, // API metric + no Provider subscription metric
+			expectedMetricEventsAcked: 1,
 			publishPrior:              true,
 		},
-		// Success case
 		{
-			name:                      "WithUsage",
+			name:                      "WithUsageProviderApp",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1, // API metric + Provider subscription metric
-			appName:                   "managed-app-1",
+			expectedMetricEventsAcked: 1,
+			appName:                   testManagedApp1,
 		},
-		// Success case with consumer metric event
 		{
-			name:                      "WithUsage",
+			name:                      "WithUsageConsumerApp",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{5},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 1, // API metric + Provider + Consumer subscription metric
-			appName:                   "managed-app-2",
+			expectedMetricEventsAcked: 1,
+			appName:                   testManagedApp2,
 		},
-		// Test case with failing request to LH, the subsequent successful request should contain the total count since initial failure
 		{
 			name:                   "WithUsageWithFailure",
 			loopCount:              3,
-			retryBatchCount:        0,
 			apiTransactionCount:    []int{5, 10, 12},
 			failUsageEventOnServer: []bool{false, true, false, false},
 			failUsageResponseOnServer: []*UsageResponse{
-				nil, {
-					Description: "Regular failure",
-					StatusCode:  400,
-					Success:     false,
-				},
+				nil,
+				{Description: "Regular failure", StatusCode: 400, Success: false},
 				nil,
 				nil,
 			},
@@ -414,24 +409,14 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
-		// Test case with failing request to LH, no subsequent request triggered.
 		{
 			name:                   "WithUsageWithFailureWithSpecificDescription",
 			loopCount:              3,
-			retryBatchCount:        0,
 			apiTransactionCount:    []int{1, 1, 1},
 			failUsageEventOnServer: []bool{true, true, false},
 			failUsageResponseOnServer: []*UsageResponse{
-				{
-					Description: "The file exceeds the maximum upload size of 454545",
-					StatusCode:  400,
-					Success:     false,
-				},
-				{
-					Description: "Environment ID not found",
-					StatusCode:  404,
-					Success:     false,
-				},
+				{Description: "The file exceeds the maximum upload size of 454545", StatusCode: 400, Success: false},
+				{Description: "Environment ID not found", StatusCode: 404, Success: false},
 				nil,
 			},
 			expectedLHEvents:          []int{0, 0, 1},
@@ -441,7 +426,6 @@ func TestMetricCollector(t *testing.T) {
 			expectedMetricEventsAcked: 1,
 			appName:                   "unknown",
 		},
-		// Retry limit hit
 		{
 			name:                      "WithUsageAndFailedMetric",
 			loopCount:                 1,
@@ -451,30 +435,75 @@ func TestMetricCollector(t *testing.T) {
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{1},
 			expectedTransactionCount:  []int{5},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0,
 		},
-		// Traceability healthcheck failing, nothing reported
 		{
 			name:                      "WithUsageTraceabilityNotConnected",
 			loopCount:                 1,
-			retryBatchCount:           0,
 			apiTransactionCount:       []int{0},
 			failUsageEventOnServer:    []bool{false},
 			failUsageResponseOnServer: []*UsageResponse{nil},
 			expectedLHEvents:          []int{0},
 			expectedTransactionCount:  []int{0},
-			trackVolume:               false,
 			expectedTransactionVolume: []int{0},
-			expectedMetricEventsAcked: 0, // API metric + Provider subscription metric
-			appName:                   "managed-app-1",
+			appName:                   testManagedApp1,
 			hcStatus:                  healthcheck.FAIL,
 			skipWaitForPub:            true,
 		},
 	}
+}
 
-	for _, test := range testCases {
+func setupMetricCollectorTest(t *testing.T, s *testHTTPServer) (*collector, *config.CentralConfiguration) {
+	t.Helper()
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
+	cfg.SetEnvironmentID(testEnvID)
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance(testInstID, testInstName, "111"))
+	cm.AddManagedApplication(createManagedApplication("app-1", testManagedApp1, ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", testManagedApp2, testConsumerOrg))
+	cm.AddAccessRequest(createAccessRequest("ac-1", testAccessReq1, testManagedApp1, testInstID, testInstName, testSubscription1))
+	cm.AddAccessRequest(createAccessRequest("ac-2", testAccessReq2, testManagedApp2, testInstID, testInstName, testSubscription2))
+
+	return createMetricCollector().(*collector), cfg
+}
+
+func runMetricCollectorLoop(s *testHTTPServer, metricCollector *collector, test metricCollectorTestCase, l int) {
+	fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
+	for i := 0; i < test.apiTransactionCount[l]; i++ {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: "200",
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: "111", Name: test.appName},
+		})
+	}
+	s.failUsageEvent = test.failUsageEventOnServer[l]
+	s.failUsageResponse = test.failUsageResponseOnServer[l]
+	if test.publishPrior {
+		metricCollector.usagePublisher.Execute()
+		metricCollector.Execute()
+	} else {
+		metricCollector.Execute()
+		metricCollector.usagePublisher.Execute()
+	}
+}
+
+func TestMetricCollector(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, cfg := setupMetricCollectorTest(t, s)
+
+	for _, test := range metricCollectorTestCases() {
 		t.Run(test.name, func(t *testing.T) {
 			if test.hcStatus != "" {
 				traceStatus = test.hcStatus
@@ -483,34 +512,12 @@ func TestMetricCollector(t *testing.T) {
 			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)
-			mockClient := testClient.(*MockClient)
 
 			for l := 0; l < test.loopCount; l++ {
-				fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
-				for i := 0; i < test.apiTransactionCount[l]; i++ {
-					metricDetail := Detail{
-						APIDetails: apiDetails1,
-						StatusCode: "200",
-						Duration:   10,
-						Bytes:      10,
-						AppDetails: models.AppDetails{
-							ID:   "111",
-							Name: test.appName,
-						},
-					}
-					metricCollector.AddMetricDetail(metricDetail)
-				}
-				s.failUsageEvent = test.failUsageEventOnServer[l]
-				s.failUsageResponse = test.failUsageResponseOnServer[l]
-				if test.publishPrior {
-					metricCollector.usagePublisher.Execute()
-					metricCollector.Execute()
-				} else {
-					metricCollector.Execute()
-					metricCollector.usagePublisher.Execute()
-				}
+				runMetricCollectorLoop(s, metricCollector, test, l)
 			}
-			assert.Equal(t, test.expectedMetricEventsAcked, mockClient.eventsAcked)
+
+			assert.Equal(t, test.expectedMetricEventsAcked, testClient.(*MockClient).eventsAcked)
 			s.resetConfig()
 		})
 	}
@@ -525,9 +532,9 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 	traceability.SetDataDirPath(".")
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
 	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cfg.SetEnvironmentID(testEnvID)
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 	myCollector := createMetricCollector()
@@ -598,21 +605,21 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 	traceability.SetDataDirPath(".")
 
 	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
 	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cfg.SetEnvironmentID(testEnvID)
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
 	// setup the cache for handling custom metrics
 	cm := agent.GetCacheManager()
-	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+	cm.AddAPIServiceInstance(createAPIServiceInstance(testInstID, testInstName, "111"))
 
-	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
-	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+	cm.AddManagedApplication(createManagedApplication("app-1", testManagedApp1, ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", testManagedApp2, testConsumerOrg))
 
-	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
-	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+	cm.AddAccessRequest(createAccessRequest("ac-1", testAccessReq1, testManagedApp1, testInstID, testInstName, testSubscription1))
+	cm.AddAccessRequest(createAccessRequest("ac-2", testAccessReq2, testManagedApp2, testInstID, testInstName, testSubscription2))
 
 	traceStatus = healthcheck.OK
 	runTestHealthcheck()
@@ -651,7 +658,7 @@ func TestMetricCollectorUsageAggregation(t *testing.T) {
 			setupMockClient(0)
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
-			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.schedule = testCronSchedule
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			mockReports := generateMockReports(test.transactionsPerReport)
@@ -698,8 +705,8 @@ func TestMetricCollectorCache(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			cfg := createCentralCfg(s.server.URL, "demo")
-			cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-			cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+			cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+			cfg.SetEnvironmentID(testEnvID)
 			cfg.SetAxwayManaged(test.trackVolume)
 			cmd.BuildDataPlaneType = "Azure"
 			agent.Initialize(cfg)
@@ -707,7 +714,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			traceability.SetDataDirPath(".")
 			myCollector := createMetricCollector()
 			metricCollector := myCollector.(*collector)
-			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.schedule = testCronSchedule
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
@@ -731,7 +738,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			// Recreate the collector that loads the stored metrics, so 3 transactions
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
-			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.schedule = testCronSchedule
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.AddMetric(apiDetails1, "200", 5, 10, "")
@@ -753,7 +760,7 @@ func TestMetricCollectorCache(t *testing.T) {
 			// Recreate the collector that loads the stored metrics, 0 transactions
 			myCollector = createMetricCollector()
 			metricCollector = myCollector.(*collector)
-			metricCollector.usagePublisher.schedule = "* * * * *"
+			metricCollector.usagePublisher.schedule = testCronSchedule
 			metricCollector.usagePublisher.report.currTimeFunc = getFutureTime
 
 			metricCollector.Execute()
@@ -767,131 +774,117 @@ func TestMetricCollectorCache(t *testing.T) {
 	}
 }
 
+type offlineMetricTestCase struct {
+	name                string
+	loopCount           int
+	apiTransactionCount []int
+}
+
+func offlineMetricTestCases() []offlineMetricTestCase {
+	return []offlineMetricTestCase{
+		{name: "NoReports", loopCount: 0, apiTransactionCount: []int{}},
+		{name: "OneReport", loopCount: 1, apiTransactionCount: []int{10}},
+		{name: "ThreeReports", loopCount: 3, apiTransactionCount: []int{5, 10, 2}},
+		{name: "ThreeReportsNoUsage", loopCount: 3, apiTransactionCount: []int{0, 0, 0}},
+		{name: "SixReports", loopCount: 6, apiTransactionCount: []int{5, 10, 2, 0, 3, 9}},
+	}
+}
+
+func setupOfflineCollectorCfg(t *testing.T, s *testHTTPServer) *config.CentralConfiguration {
+	t.Helper()
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+	cfg.EnvironmentID = testEnvID
+	cmd.BuildDataPlaneType = "Azure"
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).Offline = true
+	agent.Initialize(cfg)
+	return cfg
+}
+
+func validateOfflineEvents(t *testing.T, cfg *config.CentralConfiguration, s *testHTTPServer, report UsageEvent, test offlineMetricTestCase, startDate time.Time) {
+	t.Helper()
+	for j := 0; j < test.loopCount; j++ {
+		reportKey := startDate.Add(time.Duration(j-1) * time.Hour).Format(ISO8601)
+		assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
+		assert.Equal(t, test.apiTransactionCount[j], int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
+	}
+	if test.loopCount == 0 {
+		return
+	}
+	assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+	assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
+	assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
+}
+
+func runOfflineCollectorLoops(myCollector Collector, test offlineMetricTestCase, startDate time.Time) {
+	metricCollector := myCollector.(*collector)
+	testLoops := 0
+	now = func() time.Time {
+		next := startDate.Add(time.Hour * time.Duration(testLoops))
+		fmt.Println(next.Format(ISO8601))
+		return next
+	}
+	for testLoops < test.loopCount {
+		for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
+			myCollector.AddMetric(apiDetails1, "200", 10, 10, "")
+		}
+		metricCollector.Execute()
+		testLoops++
+	}
+}
+
+func validateOfflineReportFile(t *testing.T, cfg *config.CentralConfiguration, s *testHTTPServer, myCollector Collector, test offlineMetricTestCase, startDate time.Time, testNum int) {
+	t.Helper()
+	metricCollector := myCollector.(*collector)
+	reportGenerator := metricCollector.reports
+	publisher := metricCollector.usagePublisher
+
+	events := metricCollector.reports.loadEvents()
+	validateOfflineEvents(t, cfg, s, events, test, startDate)
+
+	publisher.Execute()
+
+	if test.loopCount == 0 {
+		expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), 0)
+		assert.NoFileExists(t, expectedFile)
+		return
+	}
+
+	expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), testNum-1)
+	assert.FileExists(t, expectedFile)
+
+	data, err := os.ReadFile(expectedFile)
+	assert.Nil(t, err)
+
+	var reportEvents UsageEvent
+	err = json.Unmarshal(data, &reportEvents)
+	assert.Nil(t, err)
+	assert.NotNil(t, reportEvents)
+
+	validateOfflineEvents(t, cfg, s, reportEvents, test, startDate)
+	s.resetOffline(myCollector)
+}
+
 func TestOfflineMetricCollector(t *testing.T) {
 	defer cleanUpCachedMetricFile()
 	s := &testHTTPServer{}
 	defer s.closeServer()
 	s.startServer()
 	traceability.SetDataDirPath(".")
-
 	traceStatus = healthcheck.OK
 	runTestHealthcheck()
 
-	cfg := createCentralCfg(s.server.URL, "demo")
-	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-	cfg.EnvironmentID = "267bd671-e5e2-4679-bcc3-bbe7b70f30fd"
-	cmd.BuildDataPlaneType = "Azure"
-	usgCfg := cfg.UsageReporting.(*config.UsageReportingConfiguration)
-	usgCfg.Offline = true
-	agent.Initialize(cfg)
+	cfg := setupOfflineCollectorCfg(t, s)
 
-	testCases := []struct {
-		name                string
-		loopCount           int
-		apiTransactionCount []int
-		generateReport      bool
-	}{
-		{
-			name:                "NoReports",
-			loopCount:           0,
-			apiTransactionCount: []int{},
-			generateReport:      true,
-		},
-		{
-			name:                "OneReport",
-			loopCount:           1,
-			apiTransactionCount: []int{10},
-			generateReport:      true,
-		},
-		{
-			name:                "ThreeReports",
-			loopCount:           3,
-			apiTransactionCount: []int{5, 10, 2},
-			generateReport:      true,
-		},
-		{
-			name:                "ThreeReportsNoUsage",
-			loopCount:           3,
-			apiTransactionCount: []int{0, 0, 0},
-			generateReport:      true,
-		},
-		{
-			name:                "SixReports",
-			loopCount:           6,
-			apiTransactionCount: []int{5, 10, 2, 0, 3, 9},
-			generateReport:      true,
-		},
-	}
-
-	for testNum, test := range testCases {
+	for testNum, test := range offlineMetricTestCases() {
 		t.Run(test.name, func(t *testing.T) {
-			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
 			setupMockClient(0)
-			testLoops := 0
-			now = func() time.Time {
-				next := startDate.Add(time.Hour * time.Duration(testLoops))
-				fmt.Println(next.Format(ISO8601))
-				return next
-			}
-
-			validateEvents := func(report UsageEvent) {
-				for j := 0; j < test.loopCount; j++ {
-					reportKey := startDate.Add(time.Duration(j-1) * time.Hour).Format(ISO8601)
-					assert.Equal(t, cmd.BuildDataPlaneType, report.Report[reportKey].Product)
-					assert.Equal(t, test.apiTransactionCount[j], int(report.Report[reportKey].Usage[cmd.BuildDataPlaneType+".Transactions"]))
-				}
-				// validate granularity when reports not empty
-				if test.loopCount != 0 {
-					assert.Equal(t, int(time.Hour.Milliseconds()), report.Granularity)
-					cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/lighthouse"
-					assert.Equal(t, cfg.UsageReporting.GetURL()+schemaPath, report.SchemaID)
-					assert.Equal(t, cfg.GetEnvironmentID(), report.EnvID)
-				}
-			}
-
+			startDate := time.Date(2021, 1, 31, 12, 30, 0, 0, time.Local)
 			myCollector := createMetricCollector()
-			metricCollector := myCollector.(*collector)
 
-			reportGenerator := metricCollector.reports
-			publisher := metricCollector.usagePublisher
-			for testLoops < test.loopCount {
-				for i := 0; i < test.apiTransactionCount[testLoops]; i++ {
-					myCollector.AddMetric(apiDetails1, "200", 10, 10, "")
-				}
-				metricCollector.Execute()
-				testLoops++
-			}
-
-			// Get the usage reports from the cache and validate
-			events := myCollector.(*collector).reports.loadEvents()
-			validateEvents(events)
-
-			// generate the report file
-			publisher.Execute()
-
-			expectedFile := reportGenerator.generateReportPath(ISO8601Time(startDate), testNum-1)
-			if test.loopCount == 0 {
-				// no report expected, end the test here
-				expectedFile = reportGenerator.generateReportPath(ISO8601Time(startDate), 0)
-				assert.NoFileExists(t, expectedFile)
-				return
-			}
-
-			// validate the file exists and open it
-			assert.FileExists(t, expectedFile)
-			data, err := os.ReadFile(expectedFile)
-			assert.Nil(t, err)
-
-			// unmarshall it
-			var reportEvents UsageEvent
-			err = json.Unmarshal(data, &reportEvents)
-			assert.Nil(t, err)
-			assert.NotNil(t, reportEvents)
-
-			// validate event in generated reports
-			validateEvents(reportEvents)
-
-			s.resetOffline(myCollector)
+			runOfflineCollectorLoops(myCollector, test, startDate)
+			validateOfflineReportFile(t, cfg, s, myCollector, test, startDate, testNum)
 		})
 	}
 	cleanUpReportFiles()
@@ -909,18 +902,18 @@ func TestCustomMetrics(t *testing.T) {
 
 	cfg := createCentralCfg(s.server.URL, "demo")
 	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/usage"
-	cfg.SetEnvironmentID("267bd671-e5e2-4679-bcc3-bbe7b70f30fd")
+	cfg.SetEnvironmentID(testEnvID)
 	cmd.BuildDataPlaneType = "Azure"
 	agent.Initialize(cfg)
 
 	cm := agent.GetCacheManager()
-	cm.AddAPIServiceInstance(createAPIServiceInstance("inst-1", "instance-1", "111"))
+	cm.AddAPIServiceInstance(createAPIServiceInstance(testInstID, testInstName, "111"))
 
-	cm.AddManagedApplication(createManagedApplication("app-1", "managed-app-1", ""))
-	cm.AddManagedApplication(createManagedApplication("app-2", "managed-app-2", "test-consumer-org"))
+	cm.AddManagedApplication(createManagedApplication("app-1", testManagedApp1, ""))
+	cm.AddManagedApplication(createManagedApplication("app-2", testManagedApp2, testConsumerOrg))
 
-	cm.AddAccessRequest(createAccessRequest("ac-1", "access-req-1", "managed-app-1", "inst-1", "instance-1", "subscription-1"))
-	cm.AddAccessRequest(createAccessRequest("ac-2", "access-req-2", "managed-app-2", "inst-1", "instance-1", "subscription-2"))
+	cm.AddAccessRequest(createAccessRequest("ac-1", testAccessReq1, testManagedApp1, testInstID, testInstName, testSubscription1))
+	cm.AddAccessRequest(createAccessRequest("ac-2", testAccessReq2, testManagedApp2, testInstID, testInstName, testSubscription2))
 
 	myCollector := createMetricCollector()
 	metricCollector := myCollector.(*collector)
@@ -985,7 +978,7 @@ func TestCustomMetrics(t *testing.T) {
 	}
 }
 
-func TestCollector_CreateOrUpdateHistogram_IDResolution(t *testing.T) {
+func TestCollectorCreateOrUpdateHistogramIDResolution(t *testing.T) {
 	// Mock setup would go here - this is a conceptual test
 	tests := []struct {
 		name          string
@@ -1107,6 +1100,183 @@ func TestBuildDurations(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			result := buildDurations(tt.count, tt.response)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// noopStorage satisfies the storageCache interface with no-ops for all methods except
+// removeMetric, which records calls for assertion in cleanup tests.
+type noopStorage struct {
+	removed []*centralMetric
+}
+
+func (s *noopStorage) initialize()                                            { /* no-op */ }
+func (s *noopStorage) updateUsage(_ int)                                      { /* no-op */ }
+func (s *noopStorage) updateVolume(_ int64)                                   { /* no-op */ }
+func (s *noopStorage) updateAppUsage(_ int, _ string)                         { /* no-op */ }
+func (s *noopStorage) updateMetric(_ cachedMetricInterface, _ *centralMetric) { /* no-op */ }
+func (s *noopStorage) save()                                                  { /* no-op */ }
+func (s *noopStorage) removeMetric(m *centralMetric)                          { s.removed = append(s.removed, m) }
+
+func newCleanupCollector(metricMap map[string]map[string]map[string]map[string]*centralMetric) (*collector, *noopStorage) {
+	st := &noopStorage{}
+	c := &collector{
+		metricMap:     metricMap,
+		metricMapLock: &sync.Mutex{},
+		storage:       st,
+	}
+	return c, st
+}
+
+func TestRemoveMetricEntries(t *testing.T) {
+	metric1 := &centralMetric{EventID: "m1"}
+	metric2 := &centralMetric{EventID: "m2"}
+	counter1 := &centralMetric{EventID: "c1"}
+
+	tests := map[string]struct {
+		metricMap      map[string]map[string]map[string]map[string]*centralMetric
+		subID          string
+		appID          string
+		apiID          string
+		group          string
+		counters       map[string]metrics.Counter
+		wantRemoved    int
+		wantGroupGone  bool
+		wantCounterKey string
+	}{
+		"removes group entry and clears histogram": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"Success": metric1}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
+			counters:      map[string]metrics.Counter{},
+			wantRemoved:   1,
+			wantGroupGone: true,
+		},
+		"removes counter entries alongside group": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"Success": metric1, "ctr": counter1}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
+			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
+			wantRemoved:    2,
+			wantGroupGone:  true,
+			wantCounterKey: "ctr",
+		},
+		"missing apiID is a no-op": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
+			counters:    map[string]metrics.Counter{},
+			wantRemoved: 0,
+		},
+		"group key absent leaves counters still cleaned": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"ctr": counter1}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1", group: "Missing",
+			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
+			wantRemoved:    1,
+			wantGroupGone:  false,
+			wantCounterKey: "ctr",
+		},
+		"counter key absent from apiStatusMap does not panic": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"Success": metric2}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
+			counters:    map[string]metrics.Counter{"ghost": metrics.NewCounter()},
+			wantRemoved: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c, st := newCleanupCollector(tc.metricMap)
+			hist := metrics.NewHistogram(metrics.NewUniformSample(8))
+			hist.Update(42)
+
+			c.removeMetricEntries(tc.subID, tc.appID, tc.apiID, tc.group, hist, tc.counters)
+
+			assert.Len(t, st.removed, tc.wantRemoved)
+			if tc.wantGroupGone {
+				apiMap, ok := tc.metricMap[tc.subID][tc.appID][tc.apiID]
+				if ok {
+					_, present := apiMap[tc.group]
+					assert.False(t, present, "group key should have been deleted")
+				}
+			}
+			if tc.wantCounterKey != "" {
+				_, present := tc.counters[tc.wantCounterKey]
+				assert.False(t, present, "counter key should have been deleted from counters map")
+			}
+		})
+	}
+}
+
+func TestPruneEmptyMapLevels(t *testing.T) {
+	tests := map[string]struct {
+		metricMap   map[string]map[string]map[string]map[string]*centralMetric
+		subID       string
+		appID       string
+		apiID       string
+		wantAPIGone bool
+		wantAppGone bool
+		wantSubGone bool
+	}{
+		"non-empty apiID level is not pruned": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1",
+			wantAPIGone: false, wantAppGone: false, wantSubGone: false,
+		},
+		"empty apiID level is pruned, non-empty app level kept": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {}, "api2": {"Success": &centralMetric{}}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1",
+			wantAPIGone: true, wantAppGone: false, wantSubGone: false,
+		},
+		"empty apiID and app levels pruned, non-empty sub level kept": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {
+					"app1": {"api1": {}},
+					"app2": {"api2": {"Success": &centralMetric{}}},
+				},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1",
+			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
+		},
+		"all levels empty are fully pruned": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {}}},
+			},
+			subID: "sub1", appID: "app1", apiID: "api1",
+			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
+		},
+		"absent subID is a no-op": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{},
+			subID:     "missing", appID: "app1", apiID: "api1",
+			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			c, _ := newCleanupCollector(tc.metricMap)
+
+			c.pruneEmptyMapLevels(tc.subID, tc.appID, tc.apiID)
+
+			_, apiPresent := tc.metricMap[tc.subID][tc.appID][tc.apiID]
+			assert.Equal(t, tc.wantAPIGone, !apiPresent, "apiID level presence mismatch")
+
+			_, appPresent := tc.metricMap[tc.subID][tc.appID]
+			assert.Equal(t, tc.wantAppGone, !appPresent, "appID level presence mismatch")
+
+			_, subPresent := tc.metricMap[tc.subID]
+			assert.Equal(t, tc.wantSubGone, !subPresent, "subID level presence mismatch")
 		})
 	}
 }

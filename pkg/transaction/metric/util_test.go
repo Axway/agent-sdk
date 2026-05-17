@@ -41,7 +41,9 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 			},
 			expectedOutput: &centralMetric{
-				EventID: "id-1",
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: "connected"},
+				EventID:     "id-1",
 				Observation: &models.ObservationDetails{
 					Start: 10,
 				},
@@ -60,6 +62,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 								ID: "quota",
 							},
 						},
+						Duration: 5,
 						Response: &ResponseMetrics{
 							Max: 100,
 							Min: 10,
@@ -113,7 +116,9 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 			},
 			expectedOutput: &centralMetric{
-				EventID: "id-1",
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: "connected"},
+				EventID:     "id-1",
 				Reporter: &Reporter{
 					AgentVersion:     cmd.BuildVersion,
 					AgentType:        cmd.BuildAgentName,
@@ -146,6 +151,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 					},
 					Name:         "api",
 					APIServiceID: "",
+					Owner:        &models.OwnerBlock{Type: "unknown"},
 				},
 				Product: &models.ProductResourceReference{
 					ResourceReference: models.ResourceReference{
@@ -158,6 +164,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 						ID: "app",
 					},
 					ConsumerOrgID: "org",
+					Owner:         &models.OwnerBlock{Type: "unknown"},
 				},
 				Subscription: &models.ResourceReference{
 					ID: "sub",

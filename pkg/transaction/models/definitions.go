@@ -23,14 +23,16 @@ func (a ResourceReference) GetLogFields(fields logrus.Fields, idFieldName string
 
 type APIResourceReference struct {
 	ResourceReference
-	Name         string `json:"name,omitempty"`
-	APIServiceID string `json:"apiServiceId,omitempty"`
-	APIOwnerID   string `json:"apiTeamId,omitempty"`
+	Name         string      `json:"name,omitempty"`
+	APIServiceID string      `json:"apiServiceId,omitempty"`
+	APIOwnerID   string      `json:"apiTeamId,omitempty"`
+	Owner        *OwnerBlock `json:"owner,omitempty"`
 }
 
 type ApplicationResourceReference struct {
 	ResourceReference
-	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
+	ConsumerOrgID string      `json:"consumerOrgId,omitempty"`
+	Owner         *OwnerBlock `json:"owner,omitempty"`
 }
 
 type ProductResourceReference struct {
@@ -174,4 +176,12 @@ type CustomMetricDetail struct {
 type ObservationDetails struct {
 	Start int64 `json:"start,omitempty"`
 	End   int64 `json:"end,omitempty"`
+}
+
+// OwnerBlock - Represents the owner of an API or application resource in insights events.
+// Type is one of "team", "user", "none", or "unknown".
+type OwnerBlock struct {
+	Type     string `json:"type"`
+	TeamGUID string `json:"team_guid,omitempty"`
+	UserGUID string `json:"user_guid,omitempty"`
 }
