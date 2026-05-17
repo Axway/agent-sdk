@@ -87,7 +87,43 @@ func TestResolveAPIOwner(t *testing.T) {
 	}
 }
 
+func makeAccessRequest(name string, owner *v1.Owner) *management.AccessRequest {
+	ar := management.NewAccessRequest(name, "env1")
+	ar.Owner = owner
+	return ar
+}
+
 func TestResolveAppOwner(t *testing.T) {
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		expected      *models.OwnerBlock
+	}{
+		"nil access request returns unknown": {
+			accessRequest: nil,
+			expected:      &models.OwnerBlock{Type: "unknown"},
+		},
+		"nil owner returns none": {
+			accessRequest: makeAccessRequest("ar-1", nil),
+			expected:      &models.OwnerBlock{Type: "none"},
+		},
+		"team owner with GUID returns team block": {
+			accessRequest: makeAccessRequest("ar-2", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-2"}),
+			expected:      &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-2"},
+		},
+		"team owner with empty GUID returns unknown": {
+			accessRequest: makeAccessRequest("ar-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
+			expected:      &models.OwnerBlock{Type: "unknown"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ResolveAppOwner(tc.accessRequest))
+		})
+	}
+}
+
+func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 	tests := map[string]struct {
 		manApp   *v1.ResourceInstance
 		expected *models.OwnerBlock
@@ -112,7 +148,7 @@ func TestResolveAppOwner(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, ResolveAppOwner(tc.manApp))
+			assert.Equal(t, tc.expected, ResolveAppOwnerFromManagedApp(tc.manApp))
 		})
 	}
 }

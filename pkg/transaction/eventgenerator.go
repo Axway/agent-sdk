@@ -245,11 +245,6 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		WithField("apicDeployment", cfg.GetAPICDeployment()).
 		Trace("insights event parameters")
 
-	// Populate app owner on summary from managed app if not already set by SaaS path
-	if logEvent.Type == TypeTransactionSummary && logEvent.TransactionSummary != nil && logEvent.TransactionSummary.AppOwnerInfo == nil {
-		logEvent.TransactionSummary.AppOwnerInfo = resolveAppOwnerFromCache(logEvent.TransactionSummary)
-	}
-
 	reporter := ReporterInfo{
 		AgentVersion:    cmd.BuildVersion,
 		AgentType:       cmd.BuildAgentName,
@@ -343,6 +338,8 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 
 	// Update the consumer details
 	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+
+	summaryEvent.TransactionSummary.AppOwnerInfo = transutil.ResolveAppOwner(accessRequest)
 
 	// Update provider details
 	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
@@ -499,21 +496,6 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	fields["token"] = token
 	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
-}
-
-func resolveAppOwnerFromCache(summary *Summary) *models.OwnerBlock {
-	if summary.Application == nil {
-		return nil
-	}
-	cacheManager := agent.GetCacheManager()
-	if cacheManager == nil {
-		return nil
-	}
-	managedApp := cacheManager.GetManagedApplicationByName(summary.Application.Name)
-	if managedApp == nil {
-		return nil
-	}
-	return transutil.ResolveAppOwner(managedApp)
 }
 
 func SetSampleInMetadata(metadata common.MapStr) common.MapStr {

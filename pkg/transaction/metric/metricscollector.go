@@ -433,7 +433,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
 		Marketplace:    transutil.GetMarketplaceDetails(managedApp),
 		Subscription:   c.createSubscriptionDetail(accessRequest),
-		App:            c.createAppDetail(managedApp),
+		App:            c.createAppDetail(accessRequest, managedApp),
 		Product:        c.getProduct(accessRequest),
 		API:            c.createAPIDetail(detail.APIDetails),
 		AssetResource:  c.getAssetResource(accessRequest),
@@ -599,7 +599,7 @@ func (c *collector) createSubscriptionDetail(accessRequest *management.AccessReq
 	}
 }
 
-func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.ApplicationResourceReference {
+func (c *collector) createAppDetail(accessRequest *management.AccessRequest, appRI *v1.ResourceInstance) *models.ApplicationResourceReference {
 	if appRI == nil {
 		return nil
 	}
@@ -622,7 +622,7 @@ func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.Applicat
 			ID: appRef.ID,
 		},
 		ConsumerOrgID: orgID,
-		Owner:         transutil.ResolveAppOwner(appRI),
+		Owner:         transutil.ResolveAppOwner(accessRequest),
 	}
 }
 

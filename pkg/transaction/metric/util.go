@@ -141,7 +141,7 @@ func resolveAppOwnerFromCache(appID string) *models.OwnerBlock {
 		managedApp = cacheManager.GetManagedApplication(appID)
 	}
 	if managedApp != nil {
-		return transutil.ResolveAppOwner(managedApp)
+		return transutil.ResolveAppOwnerFromManagedApp(managedApp)
 	}
 	return &models.OwnerBlock{Type: unknown}
 }

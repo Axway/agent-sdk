@@ -14,10 +14,6 @@ var logger = log.NewFieldLogger().
 	WithPackage("sdk.transaction.util").
 	WithComponent("ownerresolver")
 
-// ResolveAPIOwner returns an OwnerBlock for the API identified by apiExternalID.
-// It strips the SummaryEventProxyIDPrefix before the cache lookup.
-// Returns type "team" with TeamGUID when the APIService has an owner,
-// "none" when the owner field is nil, and "unknown" on cache miss or empty GUID.
 func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.OwnerBlock {
 	if cacheManager == nil {
 		return &models.OwnerBlock{Type: "unknown"}
@@ -51,10 +47,29 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 	return &models.OwnerBlock{Type: "unknown"}
 }
 
-// ResolveAppOwner returns an OwnerBlock for the managed application resource instance.
-// Returns type "team" with TeamGUID, "none" when owner is nil,
-// or "unknown" when the GUID is missing or the input is nil.
-func ResolveAppOwner(manApp *v1.ResourceInstance) *models.OwnerBlock {
+func ResolveAppOwner(accessRequest *management.AccessRequest) *models.OwnerBlock {
+	if accessRequest == nil {
+		return &models.OwnerBlock{Type: "unknown"}
+	}
+
+	owner := accessRequest.Owner
+	if owner == nil {
+		logger.WithField("accessRequestName", accessRequest.Name).Trace("access request has no owner")
+		return &models.OwnerBlock{Type: "none"}
+	}
+
+	if owner.Type == v1.TeamOwner {
+		if owner.ID == "" {
+			return &models.OwnerBlock{Type: "unknown"}
+		}
+		logger.WithField("accessRequestName", accessRequest.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner from access request")
+		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}
+	}
+
+	return &models.OwnerBlock{Type: "unknown"}
+}
+
+func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.OwnerBlock {
 	if manApp == nil {
 		return &models.OwnerBlock{Type: "unknown"}
 	}
@@ -70,12 +85,11 @@ func ResolveAppOwner(manApp *v1.ResourceInstance) *models.OwnerBlock {
 		return &models.OwnerBlock{Type: "none"}
 	}
 
-	// Only TeamOwner is currently defined in v1.OwnerType; user ownership is not yet supported.
 	if owner.Type == v1.TeamOwner {
 		if owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
 		}
-		logger.WithField("appName", manApp.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner")
+		logger.WithField("appName", manApp.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner from managed application")
 		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}
 	}
 

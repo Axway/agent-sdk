@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -31,6 +32,14 @@ const (
 	testTxnUnknown    = "txn-1"
 	testEventLegName  = "api.transaction.event"
 	testEventSumName  = "api.transaction.summary"
+	testTxnOwner1     = "txn-owner-1"
+	testTxnOwner2     = "txn-owner-2"
+	testTxnOwner3     = "txn-owner-3"
+	testTxnOwner4     = "txn-owner-4"
+	testTxnOwner5     = "txn-owner-5"
+	testTxnNoFields1  = "txn-nofields-leg"
+	testTxnNoFields2  = "txn-nofields-sum"
+	testTeamGUID      = "team-guid-123"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -220,6 +229,166 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Contains(t, string(b), `"version":"4"`)
 				assert.Contains(t, string(b), `"api.transaction.summary"`)
+			},
+		},
+		// summary OwnerInfo pre-populated by agents-controller takes precedence over cache
+		"summary with pre-populated OwnerInfo uses it directly": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnOwner1,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					OwnerInfo: &models.OwnerBlock{
+						Type:     "team",
+						TeamGUID: testTeamGUID,
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.API)
+				require.NotNil(t, data.API.Owner)
+				assert.Equal(t, "team", data.API.Owner.Type)
+				assert.Equal(t, testTeamGUID, data.API.Owner.TeamGUID)
+			},
+		},
+		// summary AppOwnerInfo propagates to consumerDetails.application.owner
+		"summary AppOwnerInfo propagates to consumerDetails application owner": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnOwner2,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					AppOwnerInfo: &models.OwnerBlock{
+						Type:     "team",
+						TeamGUID: testTeamGUID,
+					},
+					ConsumerDetails: &models.ConsumerDetails{},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ConsumerDetails)
+				require.NotNil(t, data.ConsumerDetails.Application)
+				require.NotNil(t, data.ConsumerDetails.Application.Owner)
+				assert.Equal(t, "team", data.ConsumerDetails.Application.Owner.Type)
+				assert.Equal(t, testTeamGUID, data.ConsumerDetails.Application.Owner.TeamGUID)
+			},
+		},
+		// nil OwnerInfo falls through to "unknown" when cacheManager is nil
+		"summary nil OwnerInfo with nil cache produces unknown owner": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnOwner3,
+				TransactionSummary: &Summary{
+					Status:    "Success",
+					OwnerInfo: nil,
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.API)
+				require.NotNil(t, data.API.Owner)
+				assert.Equal(t, "unknown", data.API.Owner.Type)
+			},
+		},
+		// nil AppOwnerInfo produces no owner on consumerDetails application
+		"summary nil AppOwnerInfo produces no application owner": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnOwner4,
+				TransactionSummary: &Summary{
+					Status:       "Success",
+					AppOwnerInfo: nil,
+					ConsumerDetails: &models.ConsumerDetails{},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ConsumerDetails)
+				require.NotNil(t, data.ConsumerDetails.Application)
+				assert.Nil(t, data.ConsumerDetails.Application.Owner)
+			},
+		},
+		// marketplace GUID and consumerOrgId propagate through consumerDetails
+		"summary marketplace details propagate to consumerDetails": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnOwner5,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					ConsumerDetails: &models.ConsumerDetails{
+						Marketplace: &models.MarketplaceReference{
+							GUID:          "mp-guid-1",
+							ConsumerOrgID: "consumer-org-1",
+						},
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ConsumerDetails)
+				assert.Equal(t, "consumer-org-1", data.ConsumerDetails.ConsumerOrgID)
+				require.NotNil(t, data.ConsumerDetails.Marketplace)
+				assert.Equal(t, "mp-guid-1", data.ConsumerDetails.Marketplace.GUID)
+			},
+		},
+		// leg event data must not contain fields reserved for summary
+		"leg event JSON must not contain summary-only fields": {
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    testTxnNoFields1,
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				b, err := json.Marshal(ie)
+				require.NoError(t, err)
+				s := string(b)
+				assert.NotContains(t, s, `"isInMetricEvent"`)
+				assert.NotContains(t, s, `"team"`)
+				assert.NotContains(t, s, `"apiServiceInstance"`)
+				assert.NotContains(t, s, `"entryPoint"`)
+				assert.NotContains(t, s, `"statusDetail"`)
+				assert.Contains(t, s, `"api.transaction.event"`)
+				assert.Contains(t, s, `"version":"4"`)
+			},
+		},
+		// summary event data must not contain fields reserved for leg or metric
+		"summary event JSON must not contain leg-only or metric-only fields": {
+			logEvent: LogEvent{
+				Type:               TypeTransactionSummary,
+				TransactionID:      testTxnNoFields2,
+				TransactionSummary: &Summary{Status: "Success"},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				b, err := json.Marshal(ie)
+				require.NoError(t, err)
+				s := string(b)
+				assert.NotContains(t, s, `"isInMetricEvent"`)
+				assert.NotContains(t, s, `"legId"`)
+				assert.NotContains(t, s, `"direction"`)
+				assert.NotContains(t, s, `"uri"`)
+				assert.Contains(t, s, `"api.transaction.summary"`)
+				assert.Contains(t, s, `"version":"4"`)
 			},
 		},
 	}
