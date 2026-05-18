@@ -196,14 +196,15 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 		"full publish creates service, revision, and instance": {
 			revisionOnly: false,
 			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},      // POST service
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // spec hashes
-				{FileName: testRevisionFile, RespCode: http.StatusCreated}, // POST revision
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},  // POST service
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service x-agent-details subresource
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},    // POST revision
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // revision subresource
-				{FileName: testInstanceFile, RespCode: http.StatusCreated}, // POST instance
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},    // POST instance
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // instance subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // spec hashes update
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service source update
 			},
 		},
 		"revision-only publish skips instance creation": {
