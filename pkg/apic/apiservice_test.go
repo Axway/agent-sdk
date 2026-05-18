@@ -6,16 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/Axway/agent-sdk/pkg/util"
-
-	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/api"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/stretchr/testify/assert"
+	"github.com/Axway/agent-sdk/pkg/util"
 )
 
 const (
@@ -190,7 +187,7 @@ func TestCreateService(t *testing.T) {
 
 func TestPublishServiceRevisionOnly(t *testing.T) {
 	oas2Bytes, err := os.ReadFile(testPetstoreSpec)
-	require.NoError(t, err)
+	assert.Nil(t, err)
 
 	tests := map[string]struct {
 		revisionOnly bool
@@ -227,9 +224,19 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			client, httpClient := GetTestServiceClient()
 			httpClient.SetResponses(tc.responses)
 
-			body := serviceBody
-			body.SpecDefinition = oas2Bytes
-			body.revisionOnly = tc.revisionOnly
+			b := NewServiceBodyBuilder().
+				SetAPIName(serviceBody.APIName).
+				SetDocumentation(serviceBody.Documentation).
+				SetImage(serviceBody.Image).
+				SetImageContentType(serviceBody.ImageContentType).
+				SetResourceType(serviceBody.ResourceType).
+				SetID(serviceBody.RestAPIID).
+				SetAPISpec(oas2Bytes)
+			if tc.revisionOnly {
+				b = b.SetRevisionOnly()
+			}
+			body, err := b.Build()
+			assert.Nil(t, err)
 
 			apiSvc, err := client.PublishService(&body)
 			assert.Nil(t, err)
