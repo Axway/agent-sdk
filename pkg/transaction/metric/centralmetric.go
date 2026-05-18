@@ -189,9 +189,30 @@ func (a *centralMetric) GetEventID() string {
 func (a *centralMetric) GetLogFields() logrus.Fields {
 	fields := logrus.Fields{
 		"id":             a.EventID,
+		"dataVersion":    a.Version,
 		"startTimestamp": a.Observation.Start,
 		"endTimestamp":   a.Observation.End,
 	}
+	fields = a.addOwnerFields(fields)
+	fields = a.addReferenceFields(fields)
+	fields = a.addUnitFields(fields)
+	return fields
+}
+
+func (a *centralMetric) addOwnerFields(fields logrus.Fields) logrus.Fields {
+	if a.Environment != nil {
+		fields["runtimeType"] = a.Environment.RuntimeType
+	}
+	if a.API != nil && a.API.Owner != nil {
+		fields["apiOwnerType"] = a.API.Owner.Type
+	}
+	if a.App != nil && a.App.Owner != nil {
+		fields["appOwnerType"] = a.App.Owner.Type
+	}
+	return fields
+}
+
+func (a *centralMetric) addReferenceFields(fields logrus.Fields) logrus.Fields {
 	if a.Subscription != nil {
 		fields = a.Subscription.GetLogFields(fields, "subscriptionID")
 	}
@@ -210,23 +231,15 @@ func (a *centralMetric) GetLogFields() logrus.Fields {
 	if a.ProductPlan != nil {
 		fields = a.ProductPlan.GetLogFields(fields, "productPlanID")
 	}
+	return fields
+}
 
-	// add transaction unit info and custom units if they exist
+func (a *centralMetric) addUnitFields(fields logrus.Fields) logrus.Fields {
 	if a.Units == nil {
 		return fields
 	}
 	if a.Units.Transactions != nil {
-		if a.Units.Transactions.Quota != nil {
-			fields = a.Units.Transactions.Quota.GetLogFields(fields, "transactionQuotaID")
-		}
-		fields["transactionCount"] = a.Units.Transactions.Count
-		fields["status"] = a.Units.Transactions.Status
-		fields["minResponse"] = a.Units.Transactions.Response.Min
-		fields["maxResponse"] = a.Units.Transactions.Response.Max
-		fields["avgResponse"] = a.Units.Transactions.Response.Avg
-	}
-	if len(a.Units.CustomUnits) == 0 {
-		return fields
+		fields = a.addTransactionFields(fields)
 	}
 	for k, u := range a.Units.CustomUnits {
 		if u.Quota != nil {
@@ -234,6 +247,19 @@ func (a *centralMetric) GetLogFields() logrus.Fields {
 		}
 		fields[fmt.Sprintf("%sCount", k)] = u.Count
 	}
+	return fields
+}
+
+func (a *centralMetric) addTransactionFields(fields logrus.Fields) logrus.Fields {
+	t := a.Units.Transactions
+	if t.Quota != nil {
+		fields = t.Quota.GetLogFields(fields, "transactionQuotaID")
+	}
+	fields["transactionCount"] = t.Count
+	fields["status"] = t.Status
+	fields["minResponse"] = t.Response.Min
+	fields["maxResponse"] = t.Response.Max
+	fields["avgResponse"] = t.Response.Avg
 	return fields
 }
 

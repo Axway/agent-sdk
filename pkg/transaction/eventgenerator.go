@@ -223,7 +223,7 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	e.logger.
 		WithField("transactionID", logEvent.TransactionID).
 		WithField("eventType", logEvent.Type).
-		Debug("creating insights event")
+		Debug("building insights transaction event")
 
 	cfg := agent.GetCentralConfig()
 	if cfg == nil {
@@ -256,6 +256,12 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 	if err != nil {
 		return event, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
 	}
+
+	e.logger.
+		WithField("transactionID", logEvent.TransactionID).
+		WithField("eventType", logEvent.Type).
+		WithField("envelopeVersion", insightsEvent.Version).
+		Info("insights transaction event built")
 
 	serialized, err := json.Marshal(insightsEvent)
 	if err != nil {
@@ -340,6 +346,9 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
 
 	summaryEvent.TransactionSummary.AppOwnerInfo = transutil.ResolveAppOwner(accessRequest)
+	e.logger.
+		WithField("appOwnerType", summaryEvent.TransactionSummary.AppOwnerInfo.Type).
+		Trace("resolved app owner for summary event")
 
 	// Update provider details
 	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
