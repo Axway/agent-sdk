@@ -9,24 +9,28 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
+// IDPPolicyProvider defines the interface for retrieving IDP credential expiry policies
+type IDPPolicyProvider func(name string) management.IdentityProviderPoliciesCredentialsExpiry
+
 // RegisterCredentialRequestDefinition - the function signature used when calling the NewCredentialRequestBuilder function
 type RegisterCredentialRequestDefinition func(credentialRequestDefinition *management.CredentialRequestDefinition) (*management.CredentialRequestDefinition, error)
 
 type credentialRequestDef struct {
-	name             string
-	title            string
-	provisionSchema  map[string]interface{}
-	requestSchema    map[string]interface{}
-	webhooks         []string
-	actions          []string
-	registerFunc     RegisterCredentialRequestDefinition
-	err              error
-	agentDetails     map[string]interface{}
-	renewable        bool
-	suspendable      bool
-	period           int
-	credType         string
-	identityProvider string
+	name              string
+	title             string
+	provisionSchema   map[string]interface{}
+	requestSchema     map[string]interface{}
+	webhooks          []string
+	actions           []string
+	registerFunc      RegisterCredentialRequestDefinition
+	err               error
+	agentDetails      map[string]interface{}
+	renewable         bool
+	suspendable       bool
+	period            int
+	credType          string
+	identityProvider  string
+	idpPolicyProvider IDPPolicyProvider
 }
 
 // CredentialRequestBuilder - aids in creating a new credential request
@@ -47,13 +51,32 @@ type CredentialRequestBuilder interface {
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
+type CRDBuilderOption func(builder CredentialRequestBuilder) CredentialRequestBuilder
+
 // NewCRDBuilder - called by the agent package and sends in the function that registers this credential request
-func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialRequestBuilder {
-	return &credentialRequestDef{
+func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition, options ...CRDBuilderOption) CredentialRequestBuilder {
+	builder := &credentialRequestDef{
 		webhooks:     make([]string, 0),
 		registerFunc: registerFunc,
 		actions:      make([]string, 0),
 		agentDetails: map[string]interface{}{},
+	}
+
+	for _, option := range options {
+		if option != nil {
+			option(builder)
+		}
+	}
+
+	return builder
+}
+
+func WithIDPPolicyProvider(idpPolicyProvider IDPPolicyProvider) func(builder CredentialRequestBuilder) CredentialRequestBuilder {
+	return func(builder CredentialRequestBuilder) CredentialRequestBuilder {
+		if crdBuilder, ok := builder.(*credentialRequestDef); ok {
+			crdBuilder.idpPolicyProvider = idpPolicyProvider
+		}
+		return builder
 	}
 }
 
@@ -152,6 +175,15 @@ func (c *credentialRequestDef) SetType(credType string) CredentialRequestBuilder
 // SetIdentityProvider - set the identity provider resource name for this credential request definition
 func (c *credentialRequestDef) SetIdentityProvider(name string) CredentialRequestBuilder {
 	c.identityProvider = name
+	if c.idpPolicyProvider != nil {
+		idpExpiryPolicy := c.idpPolicyProvider(name)
+		if idpExpiryPolicy.Period > 0 {
+			if idpExpiryPolicy.Action == "deprovision" {
+				c.SetDeprovisionExpired()
+			}
+			c.SetExpirationDays(int(idpExpiryPolicy.Period))
+		}
+	}
 	return c
 }
 

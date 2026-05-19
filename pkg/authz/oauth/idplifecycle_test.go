@@ -30,19 +30,30 @@ func (m *mockIDPClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string
 	return m.createSubRes(rm, subs)
 }
 
-// mockBuilder satisfies IDPResourceBuilder for supplier tests.
-type mockBuilder struct {
-	idpResult      *management.IdentityProvider
-	idpErr         error
-	metadataResult *management.IdentityProviderMetadata
-	metadataErr    error
+// mockIdpCache satisfies idpCache for lifecycle tests.
+type mockIdpCache struct {
+	byName     map[string]*apiv1.ResourceInstance
+	byTokenURL map[string]*apiv1.ResourceInstance
 }
 
-func (b *mockBuilder) GetIdentityProvider(_ config.IDPConfig) (*management.IdentityProvider, error) {
-	return b.idpResult, b.idpErr
+func newMockIdpCache() *mockIdpCache {
+	return &mockIdpCache{
+		byName:     map[string]*apiv1.ResourceInstance{},
+		byTokenURL: map[string]*apiv1.ResourceInstance{},
+	}
 }
-func (b *mockBuilder) GetIdentityProviderMetadata(_ config.IDPConfig, _ *AuthorizationServerMetadata) (*management.IdentityProviderMetadata, error) {
-	return b.metadataResult, b.metadataErr
+
+func (c *mockIdpCache) GetIdentityProviderByName(name string) *apiv1.ResourceInstance {
+	return c.byName[name]
+}
+func (c *mockIdpCache) AddIdentityProvider(ri *apiv1.ResourceInstance) {
+	c.byName[ri.Name] = ri
+}
+func (c *mockIdpCache) GetIdentityProviderMetadataByTokenUrl(tokenURL string) *apiv1.ResourceInstance {
+	return c.byTokenURL[tokenURL]
+}
+func (c *mockIdpCache) AddIdentityProviderMetadata(ri *apiv1.ResourceInstance) {
+	c.byTokenURL[ri.Name] = ri
 }
 
 func makeTestProvider(t *testing.T) Provider {
@@ -102,7 +113,7 @@ func TestCreateEngageResourcesQueryError(t *testing.T) {
 			}
 
 			metadata, idpCfg := makeTestMetadata(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+			_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
 		})
@@ -137,7 +148,7 @@ func TestCreateEngageResourcesExistingFound(t *testing.T) {
 			}
 
 			metadata, idpCfg := makeTestMetadata(t)
-			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+			resultName, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.existingName, resultName)
 			assert.Equal(t, tc.wantCreated, created)
@@ -172,7 +183,7 @@ func TestCreateEngageResourcesIDPCreateError(t *testing.T) {
 			}
 
 			metadata, idpCfg := makeTestMetadata(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+			_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
 		})
@@ -212,7 +223,7 @@ func TestCreateEngageResourcesPolicyError(t *testing.T) {
 				Expiry: management.EnvironmentPoliciesCredentialsExpiry{Period: 90},
 			}
 			metadata, idpCfg := makeTestMetadata(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", policies)
+			_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", policies)
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
 		})
@@ -250,7 +261,7 @@ func TestCreateEngageResourcesMetadataWriteError(t *testing.T) {
 			}
 
 			metadata, idpCfg := makeTestMetadata(t)
-			_, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+			_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
 			assert.Equal(t, tc.wantErr, err != nil)
 			assert.Equal(t, tc.wantCreated, created)
 		})
@@ -303,70 +314,11 @@ func TestCreateEngageResourcesSuccess(t *testing.T) {
 			}
 
 			metadata, idpCfg := makeTestMetadata(t)
-			resultName, err := NewIDPEngageLifecycle(client).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", policies)
+			resultName, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", policies)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultName)
 			assert.Equal(t, tc.wantCreateCount, created)
 			assert.Equal(t, tc.wantSubRes, subResCalled)
-		})
-	}
-}
-
-const builderIDPName = "builder-idp"
-
-func TestCreateEngageResourcesWithBuilder(t *testing.T) {
-	tests := map[string]struct {
-		idpErr          error
-		metadataErr     error
-		wantCreateCount int
-		wantNameStored  bool
-	}{
-		"builder provides both IdP and metadata": {
-			wantCreateCount: 2,
-			wantNameStored:  true,
-		},
-		"builder IdP error returns error": {
-			idpErr:          errors.New("builder idp error"),
-			wantCreateCount: 0,
-			wantNameStored:  false,
-		},
-		// supplier metadata build failure is non-fatal — IdP name stored, no metadata written
-		"builder metadata error skips metadata but stores name": {
-			metadataErr:     errors.New("builder metadata error"),
-			wantCreateCount: 1,
-			wantNameStored:  true,
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			created := 0
-			client := &mockIDPClient{
-				getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
-					return []*apiv1.ResourceInstance{}, nil
-				},
-				createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
-					created++
-					inst, _ := ri.AsInstance()
-					return inst, nil
-				},
-				createSubRes: noOpCreateSubRes,
-			}
-
-			builder := &mockBuilder{
-				idpResult:      management.NewIdentityProvider(builderIDPName),
-				idpErr:         tc.idpErr,
-				metadataResult: management.NewIdentityProviderMetadata(builderIDPName, builderIDPName),
-				metadataErr:    tc.metadataErr,
-			}
-
-			metadata, idpCfg := makeTestMetadata(t)
-			resultName, err := NewIDPEngageLifecycle(client, WithResourceBuilder(builder)).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
-
-			assert.Equal(t, tc.wantCreateCount, created)
-			assert.Equal(t, tc.wantNameStored, resultName != "")
-			assert.Equal(t, tc.wantNameStored, err == nil)
 		})
 	}
 }

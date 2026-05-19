@@ -1,32 +1,42 @@
 package agent
 
 import (
-	"sync"
-
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// idpMetadataResourceCache is a local cache for v7 IdP metadata resource name lookups,
-// keyed by token endpoint. Separate from ProviderRegistry — v7 agents have no registered Provider.
-var (
-	idpMetadataResourceCache     = map[string]string{}
-	idpMetadataResourceCacheLock sync.RWMutex
-)
+func GetIDPCredentialExpiryPolicy(idpResourceName string) management.IdentityProviderPoliciesCredentialsExpiry {
+	expPolicies := management.IdentityProviderPoliciesCredentialsExpiry{}
+	if !ManageIDPResourcesEnabled() {
+		return expPolicies
+	}
 
-func getIDPMetadataResourceName(tokenEndpoint string) (string, bool) {
-	idpMetadataResourceCacheLock.RLock()
-	defer idpMetadataResourceCacheLock.RUnlock()
-	name, ok := idpMetadataResourceCache[tokenEndpoint]
-	return name, ok
-}
+	if idpResourceName == "" || agent.cacheManager == nil {
+		return expPolicies
+	}
 
-func setIDPMetadataResourceName(tokenEndpoint, name string) {
-	idpMetadataResourceCacheLock.Lock()
-	defer idpMetadataResourceCacheLock.Unlock()
-	idpMetadataResourceCache[tokenEndpoint] = name
+	ri := agent.cacheManager.GetIdentityProviderByName(idpResourceName)
+	if ri != nil {
+		idp := management.NewIdentityProvider("")
+		if err := idp.FromInstance(ri); err == nil {
+			return idp.Policies.Credentials.Expiry
+		}
+	}
+
+	ri, err := agent.apicClient.GetResource(management.NewIdentityProvider(idpResourceName).GetSelfLink())
+	if err != nil || ri == nil {
+		return expPolicies
+	}
+
+	idp := management.NewIdentityProvider("")
+	if err = idp.FromInstance(ri); err != nil {
+		return expPolicies
+	}
+
+	agent.cacheManager.AddIdentityProvider(ri)
+	return idp.Policies.Credentials.Expiry
 }
 
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
@@ -42,29 +52,7 @@ func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
 		return ""
 	}
 
-	name := manageIDPResourceFromMetadata(idpLogger, idp, "", provider.GetMetadata())
-	if name == "" {
-		idpLogger.Warn("IdentityProvider resource could not be created or found; CRD will be registered without an IdentityProvider reference")
-		return ""
-	}
-	GetAuthProviderRegistry().SetIDPResourceName(idp.GetMetadataURL(), name)
-	return name
-}
-
-func manageIDPResourceWithMetadata(idpLogger log.FieldLogger, idp config.IDPConfig, metadata *oauth.AuthorizationServerMetadata) string {
-	if metadata == nil ||
-		metadata.Issuer == "" ||
-		metadata.AuthorizationEndpoint == "" ||
-		metadata.TokenEndpoint == "" ||
-		metadata.IntrospectionEndpoint == "" ||
-		metadata.JwksURI == "" {
-		idpLogger.Error("agent-supplied metadata is missing one or more required fields: issuer, authorizationEndpoint, tokenEndpoint, introspectionEndpoint, jwksUri")
-		return ""
-	}
-
-	idpLogger = idpLogger.WithField("environmentName", agent.cfg.GetEnvironmentName())
-
-	name := manageIDPResourceFromMetadata(idpLogger, idp, "", metadata)
+	name := manageIDPResourceFromMetadata(idpLogger, nil, idp.GetIDPName(), provider.GetMetadata())
 	if name != "" {
 		GetAuthProviderRegistry().SetIDPResourceName(idp.GetMetadataURL(), name)
 	}
@@ -89,22 +77,10 @@ func ManageIDPResource(idpLogger log.FieldLogger, idpName string, metadata *oaut
 		return ""
 	}
 
-	// find existing idp with token url — check local cache first
-	if name, ok := getIDPMetadataResourceName(metadata.TokenEndpoint); ok {
-		idpLogger.WithField("name", name).Debug("found IdentityProvider resource name in local cache")
-		return name
-	}
-
-	// not found in cache — create the IdP resource and cache it by token endpoint
-	name := manageIDPResourceFromMetadata(idpLogger, nil, idpName, metadata)
-	if name != "" {
-		setIDPMetadataResourceName(metadata.TokenEndpoint, name)
-	}
-	return name
+	return manageIDPResourceFromMetadata(idpLogger, nil, idpName, metadata)
 }
 
 // manageIDPResourceFromMetadata is the shared internal entry point for both paths.
-// idpCfg is passed to the IDPResourceBuilder when a supplier is registered; may be nil for the v7 path.
 func manageIDPResourceFromMetadata(idpLogger log.FieldLogger, idpCfg config.IDPConfig, idpName string, metadata *oauth.AuthorizationServerMetadata) string {
 	if metadata == nil {
 		idpLogger.Error("metadata is nil; cannot manage IdentityProvider resource")
@@ -119,21 +95,13 @@ func manageIDPResourceFromMetadata(idpLogger log.FieldLogger, idpCfg config.IDPC
 		idpType = idpCfg.GetIDPType()
 	}
 
-	name, err := newLifecycle().CreateEngageResourcesFromMetadata(idpLogger, idpCfg, idpType, idpName, metadata, agent.cfg.GetAPIServerVersionURL(), getEnvCredentialPolicies(idpLogger))
+	idpLifecycle := oauth.NewIDPEngageLifecycle(agent.apicClient, agent.cacheManager)
+	name, err := idpLifecycle.CreateEngageResourcesFromMetadata(idpLogger, idpCfg, idpType, idpName, metadata, agent.cfg.GetAPIServerVersionURL(), getEnvCredentialPolicies(idpLogger))
 	if err != nil {
 		idpLogger.WithError(err).Warn("unable to create or find IdentityProvider resource in Engage")
 		return ""
 	}
 	return name
-}
-
-// newLifecycle builds an IDPEngageLifecycle, injecting the optional supplier if one is registered.
-func newLifecycle() oauth.IDPEngageLifecycle {
-	var opts []oauth.LifecycleOption
-	if s := agent.idpResourceSupplier; s != nil {
-		opts = append(opts, oauth.WithResourceBuilder(s))
-	}
-	return oauth.NewIDPEngageLifecycle(agent.apicClient, opts...)
 }
 
 func getEnvCredentialPolicies(idpLogger log.FieldLogger) management.EnvironmentPoliciesCredentials {

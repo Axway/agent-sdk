@@ -76,7 +76,6 @@ type agentData struct {
 
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
-	idpResourceSupplier  IDPResourceSupplier
 
 	finalizeAgentInit func() error
 	publishingLock    *sync.Mutex
@@ -363,6 +362,8 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	}
 
 	idpResourceName := manageIDPResource(idpLogger, idp)
+	expirationDays := agent.cfg.GetCredentialConfig().GetExpirationDays()
+	expiryAction := agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired()
 
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
@@ -370,16 +371,23 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		return err
 	}
 
-	crd, err := NewOAuthCredentialRequestBuilder(
+	builder := NewOAuthCredentialRequestBuilder(
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
+		WithCRDExpirationDays(expirationDays),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
 		WithCRDOAuthSecret(),
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
 		WithCRDIsSuspendable(),
-		WithCRDIdentityProvider(idpResourceName),
-	).Register()
+		WithCRDIDPPolicyProvider(GetIDPCredentialExpiryPolicy),
+		WithCRDIdentityProvider(idpResourceName))
+
+	if expiryAction {
+		builder.SetDeprovisionExpired()
+	}
+
+	crd, err := builder.Register()
 	if err != nil {
 		idpLogger.
 			WithField("title", idp.GetIDPTitle()).
@@ -817,6 +825,7 @@ func newHandlers() []handler.Handler {
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+			handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
 		)
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent
