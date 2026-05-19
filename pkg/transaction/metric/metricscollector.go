@@ -428,16 +428,17 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	apicDeployment, _, runtimeType := centralConfigFields()
 
 	me := &centralMetric{
-		Version:        "3",
-		APICDeployment: apicDeployment,
-		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
-		Marketplace:    transutil.GetMarketplaceDetails(managedApp),
-		Subscription:   c.createSubscriptionDetail(accessRequest),
-		App:            c.createAppDetail(accessRequest, managedApp),
-		Product:        c.getProduct(accessRequest),
-		API:            c.createAPIDetail(detail.APIDetails),
-		AssetResource:  c.getAssetResource(accessRequest),
-		ProductPlan:    c.getProductPlan(accessRequest),
+		Version:            metricDataVersion,
+		APICDeployment:     apicDeployment,
+		Environment:        &EnvironmentInfo{RuntimeType: runtimeType},
+		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
+		Subscription:       c.createSubscriptionDetail(accessRequest),
+		App:                c.createAppDetail(accessRequest, managedApp),
+		Product:            c.getProduct(accessRequest),
+		API:                c.createAPIDetail(detail.APIDetails),
+		AssetResource:      c.getAssetResource(accessRequest),
+		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
+		ProductPlan:        c.getProductPlan(accessRequest),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
@@ -643,6 +644,19 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	return ref
 }
 
+func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
+	if accessRequest == nil {
+		return nil
+	}
+
+	ref := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	if ref.ID == "" {
+		return nil
+	}
+
+	return &models.ResourceReference{ID: ref.ID}
+}
+
 func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
 		return nil
@@ -675,6 +689,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 			ID: productRef.ID,
 		},
 		VersionID: releaseRef.ID,
+		Owner:     transutil.ResolveProductOwner(accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())),
 	}
 }
 

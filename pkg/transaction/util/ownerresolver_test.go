@@ -123,6 +123,27 @@ func TestResolveAppOwner(t *testing.T) {
 	}
 }
 
+func TestResolveProductOwner(t *testing.T) {
+	tests := map[string]struct {
+		ref      v1.Reference
+		expected *models.OwnerBlock
+	}{
+		"empty reference returns none": {
+			ref:      v1.Reference{},
+			expected: &models.OwnerBlock{Type: "none"},
+		},
+		"reference with id returns none": {
+			ref:      v1.Reference{ID: "product-1", Kind: "PublishedProduct"},
+			expected: &models.OwnerBlock{Type: "none"},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ResolveProductOwner(tc.ref))
+		})
+	}
+}
+
 func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 	tests := map[string]struct {
 		manApp   *v1.ResourceInstance

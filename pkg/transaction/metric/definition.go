@@ -23,6 +23,9 @@ const (
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
 	unknown                 = "unknown"
+	metricDataVersion       = "3"
+	runtimeTypeManaged      = "managed"
+	runtimeTypeUnmanaged    = "unmanaged"
 )
 
 type transactionContext struct {

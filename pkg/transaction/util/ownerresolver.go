@@ -69,6 +69,12 @@ func ResolveAppOwner(accessRequest *management.AccessRequest) *models.OwnerBlock
 	return &models.OwnerBlock{Type: "unknown"}
 }
 
+// ResolveProductOwner returns the owner block for a product reference.
+// Currently returns {Type:"none"} unconditionally — pending v1.Reference.Owner being added to the generated model.
+func ResolveProductOwner(_ v1.Reference) *models.OwnerBlock {
+	return &models.OwnerBlock{Type: "none"}
+}
+
 func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.OwnerBlock {
 	if manApp == nil {
 		return &models.OwnerBlock{Type: "unknown"}

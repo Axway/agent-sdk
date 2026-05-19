@@ -37,7 +37,8 @@ type ApplicationResourceReference struct {
 
 type ProductResourceReference struct {
 	ResourceReference
-	VersionID string `json:"versionId,omitempty"`
+	VersionID string      `json:"versionId,omitempty"`
+	Owner     *OwnerBlock `json:"owner,omitempty"`
 }
 
 func (a ProductResourceReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {

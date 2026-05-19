@@ -40,6 +40,7 @@ const (
 	testTxnNoFields1  = "txn-nofields-leg"
 	testTxnNoFields2  = "txn-nofields-sum"
 	testTeamGUID      = "team-guid-123"
+	testTxnOutbound1  = "txn-outbound-1"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -98,6 +99,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, legDataVersion, data.Version)
 				assert.Equal(t, testTxnLeg1, data.TransactionID)
+				assert.Equal(t, "leg0", data.ID)
 			},
 		},
 		"transaction leg apic deployment and non-zero leg id": {
@@ -115,6 +117,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.Equal(t, legDataVersion, data.Version)
 				assert.Equal(t, "prod", data.APICDeployment)
 				assert.Equal(t, 1, data.LegID)
+				assert.Equal(t, "leg1", data.ID)
 			},
 		},
 		"entry leg id is zero": {
@@ -129,6 +132,98 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				data, ok := ie.Data.(*TransactionLegV2Data)
 				require.True(t, ok)
 				assert.Equal(t, 0, data.LegID)
+				assert.Equal(t, "leg0", data.ID)
+			},
+		},
+		"leg with protocol fields are nested under protocol object": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-proto-1",
+				TransactionEvent: &Event{
+					ID:     "0",
+					Status: "Pass",
+					Protocol: &Protocol{
+						URI:    "/v1/resource",
+						Method: "POST",
+						Status: 201,
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.Protocol)
+				assert.Equal(t, "/v1/resource", data.Protocol.URI)
+				assert.Equal(t, "POST", data.Protocol.Method)
+				assert.Equal(t, 201, data.Protocol.StatusCode)
+
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				var top map[string]interface{}
+				require.NoError(t, json.Unmarshal(b, &top))
+				assert.Contains(t, top, "protocol")
+				assert.NotContains(t, top, "uri")
+				assert.NotContains(t, top, "method")
+				assert.NotContains(t, top, "statusCode")
+			},
+		},
+		"leg without protocol has nil protocol field": {
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-no-proto",
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				assert.Nil(t, data.Protocol)
+			},
+		},
+		"outbound leg parentId source and destination are populated": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: testTxnOutbound1,
+				TransactionEvent: &Event{
+					ID:          "1",
+					ParentID:    testTxnOutbound1,
+					Source:      "client",
+					Destination: "backend-service",
+					Status:      "Pass",
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				assert.Equal(t, testTxnOutbound1, data.ParentID)
+				assert.Equal(t, "client", data.Source)
+				assert.Equal(t, "backend-service", data.Destination)
+			},
+		},
+		"entry leg has no parentId": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-entry-parent",
+				TransactionEvent: &Event{
+					ID:     "0",
+					Status: "Pass",
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				assert.Empty(t, data.ParentID)
+
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				assert.NotContains(t, string(b), `"parentId"`)
 			},
 		},
 		"transaction summary event has correct envelope": {

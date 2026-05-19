@@ -70,7 +70,7 @@ func TestContractMetricV3(t *testing.T) {
 			check: func(t *testing.T, cm *centralMetric, raw string) {
 				assert.Equal(t, "3", cm.Version)
 				require.NotNil(t, cm.Environment)
-				assert.Equal(t, "connected", cm.Environment.RuntimeType)
+				assert.Equal(t, runtimeTypeUnmanaged, cm.Environment.RuntimeType)
 
 				event := V4Event{
 					Version: "4",

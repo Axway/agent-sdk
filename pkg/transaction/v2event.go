@@ -65,18 +65,27 @@ type insightsReporter struct {
 	ObservationDelta int64  `json:"observationDelta,omitempty"`
 }
 
+// legProtocol is the protocol sub-object for TransactionLegV2Data.
+type legProtocol struct {
+	URI        string `json:"uri,omitempty"`
+	Method     string `json:"method,omitempty"`
+	StatusCode int    `json:"statusCode"`
+}
+
 // TransactionLegV2Data is the data payload for api.transaction.event (version "2").
 type TransactionLegV2Data struct {
 	Version         string                   `json:"version"`
 	APICDeployment  string                   `json:"apicDeployment,omitempty"`
 	TransactionID   string                   `json:"transactionId,omitempty"`
+	ID              string                   `json:"id,omitempty"`
 	LegID           int                      `json:"legId"`
+	ParentID        string                   `json:"parentId,omitempty"`
+	Source          string                   `json:"source,omitempty"`
+	Destination     string                   `json:"destination,omitempty"`
 	Status          string                   `json:"status,omitempty"`
-	StatusCode      int                      `json:"statusCode,omitempty"`
 	Duration        int                      `json:"duration"`
 	Direction       string                   `json:"direction,omitempty"`
-	URI             string                   `json:"uri,omitempty"`
-	Method          string                   `json:"method,omitempty"`
+	Protocol        *legProtocol             `json:"protocol,omitempty"`
 	API             *insightsAPIDetail       `json:"api,omitempty"`
 	Reporter        *insightsReporter        `json:"reporter,omitempty"`
 	ConsumerDetails *insightsConsumerDetails `json:"consumerDetails,omitempty"`
@@ -233,19 +242,18 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 
 	legID := 0
 	if txEvent.ID != "" {
-		// entry leg ID is "0", outbound legs are positive integers parsed from the ID suffix
 		if parsed, err := strconv.Atoi(txEvent.ID); err == nil && parsed > 0 {
 			legID = parsed
 		}
 	}
 
-	statusCode := 0
-	uri := ""
-	method := ""
-	if proto, ok := txEvent.Protocol.(*Protocol); ok && proto != nil {
-		statusCode = proto.Status
-		uri = proto.URI
-		method = proto.Method
+	var proto *legProtocol
+	if httpProto, ok := txEvent.Protocol.(*Protocol); ok && httpProto != nil {
+		proto = &legProtocol{
+			URI:        httpProto.URI,
+			Method:     httpProto.Method,
+			StatusCode: httpProto.Status,
+		}
 	}
 
 	apiID := ""
@@ -253,20 +261,20 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 
-	apiDetail := resolveAPIDetailFromCache(apiID, cacheManager)
-
 	data := &TransactionLegV2Data{
 		Version:        legDataVersion,
 		APICDeployment: logEvent.APICDeployment,
 		TransactionID:  logEvent.TransactionID,
+		ID:             fmt.Sprintf("leg%d", legID),
 		LegID:          legID,
+		ParentID:       txEvent.ParentID,
+		Source:         txEvent.Source,
+		Destination:    txEvent.Destination,
 		Status:         txEvent.Status,
-		StatusCode:     statusCode,
 		Duration:       txEvent.Duration,
 		Direction:      txEvent.Direction,
-		URI:            uri,
-		Method:         method,
-		API:            apiDetail,
+		Protocol:       proto,
+		API:            resolveAPIDetailFromCache(apiID, cacheManager),
 		Reporter: &insightsReporter{
 			Version:         reporter.AgentVersion,
 			Type:            reporter.AgentType,

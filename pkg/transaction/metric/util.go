@@ -18,7 +18,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	apicDeployment, agentName, runtimeType := centralConfigFields()
 
 	out := &centralMetric{
-		Version:        "3",
+		Version:        metricDataVersion,
 		APICDeployment: apicDeployment,
 		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
 		EventID:        in.EventID,
@@ -71,9 +71,9 @@ func centralConfigFields() (apicDeployment, agentName, runtimeType string) {
 		return
 	}
 	if cfg.IsAxwayManaged() {
-		runtimeType = "managed"
+		runtimeType = runtimeTypeManaged
 	} else {
-		runtimeType = "connected"
+		runtimeType = runtimeTypeUnmanaged
 	}
 	apicDeployment = cfg.GetAPICDeployment()
 	agentName = cfg.GetAgentName()

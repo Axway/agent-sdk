@@ -46,7 +46,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: "connected"},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
 				EventID:     "id-1",
 				Observation: &models.ObservationDetails{
 					Start: 10,
@@ -122,7 +122,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: "connected"},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
 				EventID:     "id-1",
 				Reporter: &Reporter{
 					AgentVersion:     cmd.BuildVersion,
@@ -224,16 +224,16 @@ func TestCentralConfigFields(t *testing.T) {
 		wantRuntime   string
 		wantAgentName string
 	}{
-		"non-managed config returns connected": {
+		"non-managed config returns unmanaged": {
 			axwayManaged:  false,
 			agentName:     "agent-connected",
-			wantRuntime:   "connected",
+			wantRuntime:   runtimeTypeUnmanaged,
 			wantAgentName: "agent-connected",
 		},
 		"axway-managed config returns managed": {
 			axwayManaged:  true,
 			agentName:     "agent-managed",
-			wantRuntime:   "managed",
+			wantRuntime:   runtimeTypeManaged,
 			wantAgentName: "agent-managed",
 		},
 	}
