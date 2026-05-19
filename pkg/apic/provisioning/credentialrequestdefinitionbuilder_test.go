@@ -102,6 +102,7 @@ func TestSetIdentityProvider(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expected, capturedSpec.IdentityProvider)
+			assert.Nil(t, capturedSpec.Provision.Policies.Expiry, "SetIdentityProvider must not apply an expiry policy")
 		})
 	}
 }

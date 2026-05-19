@@ -362,9 +362,6 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	}
 
 	idpResourceName := manageIDPResource(idpLogger, idp)
-	expirationDays := agent.cfg.GetCredentialConfig().GetExpirationDays()
-	expiryAction := agent.cfg.GetCredentialConfig().ShouldDeprovisionExpired()
-
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
 	if err != nil {
@@ -374,18 +371,12 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	builder := NewOAuthCredentialRequestBuilder(
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
-		WithCRDExpirationDays(expirationDays),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
 		WithCRDOAuthSecret(),
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
 		WithCRDIsSuspendable(),
-		WithCRDIDPPolicyProvider(GetIDPCredentialExpiryPolicy),
 		WithCRDIdentityProvider(idpResourceName))
-
-	if expiryAction {
-		builder.SetDeprovisionExpired()
-	}
 
 	crd, err := builder.Register()
 	if err != nil {

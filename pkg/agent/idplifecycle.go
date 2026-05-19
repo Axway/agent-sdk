@@ -7,38 +7,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-func GetIDPCredentialExpiryPolicy(idpResourceName string) management.IdentityProviderPoliciesCredentialsExpiry {
-	expPolicies := management.IdentityProviderPoliciesCredentialsExpiry{}
-	if !ManageIDPResourcesEnabled() {
-		return expPolicies
-	}
-
-	if idpResourceName == "" || agent.cacheManager == nil {
-		return expPolicies
-	}
-
-	ri := agent.cacheManager.GetIdentityProviderByName(idpResourceName)
-	if ri != nil {
-		idp := management.NewIdentityProvider("")
-		if err := idp.FromInstance(ri); err == nil {
-			return idp.Policies.Credentials.Expiry
-		}
-	}
-
-	ri, err := agent.apicClient.GetResource(management.NewIdentityProvider(idpResourceName).GetSelfLink())
-	if err != nil || ri == nil {
-		return expPolicies
-	}
-
-	idp := management.NewIdentityProvider("")
-	if err = idp.FromInstance(ri); err != nil {
-		return expPolicies
-	}
-
-	agent.cacheManager.AddIdentityProvider(ri)
-	return idp.Policies.Credentials.Expiry
-}
-
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
 	if !ManageIDPResourcesEnabled() {
 		return ""

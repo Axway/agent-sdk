@@ -87,7 +87,6 @@ type crdBuilderOptions struct {
 	registerFunc       provisioning.RegisterCredentialRequestDefinition
 	credType           string
 	identityProvider   string
-	idpPolicyProvider  provisioning.IDPPolicyProvider
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential request definition
@@ -118,7 +117,7 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		reqSchema.AddProperty(props)
 	}
 
-	builder := provisioning.NewCRDBuilder(thisCred.registerFunc, provisioning.WithIDPPolicyProvider(thisCred.idpPolicyProvider)).
+	builder := provisioning.NewCRDBuilder(thisCred.registerFunc).
 		SetName(thisCred.name).
 		SetTitle(thisCred.title).
 		SetProvisionSchema(provSchema).
@@ -215,12 +214,6 @@ func WithCRDType(credType string) func(c *crdBuilderOptions) {
 func WithCRDIdentityProvider(name string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.identityProvider = name
-	}
-}
-
-func WithCRDIDPPolicyProvider(idpPolicyProvider provisioning.IDPPolicyProvider) func(c *crdBuilderOptions) {
-	return func(c *crdBuilderOptions) {
-		c.idpPolicyProvider = idpPolicyProvider
 	}
 }
 
@@ -514,7 +507,6 @@ func NewBasicAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) p
 // NewOAuthCredentialRequestBuilder - add oauth base properties for provisioning schema
 func NewOAuthCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioning.CredentialRequestBuilder {
 	oauthOptions := []func(*crdBuilderOptions){
-		WithCRDIDPPolicyProvider(GetIDPCredentialExpiryPolicy),
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDProvisionSchemaProperty(
 			provisioning.NewSchemaPropertyBuilder().
