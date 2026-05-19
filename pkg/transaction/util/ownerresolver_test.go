@@ -125,15 +125,23 @@ func TestResolveAppOwner(t *testing.T) {
 
 func TestResolveProductOwner(t *testing.T) {
 	tests := map[string]struct {
-		ref      v1.Reference
+		ref      v1.EmbeddedReference
 		expected *models.OwnerBlock
 	}{
-		"empty reference returns none": {
-			ref:      v1.Reference{},
+		"nil owner returns none": {
+			ref:      v1.EmbeddedReference{},
 			expected: &models.OwnerBlock{Type: "none"},
 		},
-		"reference with id returns none": {
-			ref:      v1.Reference{ID: "product-1", Kind: "PublishedProduct"},
+		"team owner with GUID returns team block": {
+			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-1"}},
+			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-1"},
+		},
+		"team owner with empty GUID returns unknown": {
+			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: ""}},
+			expected: &models.OwnerBlock{Type: "unknown"},
+		},
+		"reference with name but no owner returns none": {
+			ref:      v1.EmbeddedReference{Kind: "PublishedProduct", Name: "product-1"},
 			expected: &models.OwnerBlock{Type: "none"},
 		},
 	}

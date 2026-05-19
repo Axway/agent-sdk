@@ -689,7 +689,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 			ID: productRef.ID,
 		},
 		VersionID: releaseRef.ID,
-		Owner:     transutil.ResolveProductOwner(accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())),
+		Owner:     transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK())),
 	}
 }
 
