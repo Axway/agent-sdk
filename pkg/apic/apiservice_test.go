@@ -240,12 +240,9 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			revisionOnly: true,
 			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
 			responses: []api.MockResponse{
-				{FileName: testRevisionListFile, RespCode: http.StatusOK},  // GET revision list (updateAPI path)
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision count
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision by name
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // PUT revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // spec hashes update
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},  // POST revision (addAPI path, no list fetch)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},   // revision x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},   // spec hashes update
 			},
 		},
 	}
