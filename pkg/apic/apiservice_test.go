@@ -191,31 +191,61 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 
 	tests := map[string]struct {
 		revisionOnly bool
+		existingSvc  *management.APIService
 		responses    []api.MockResponse
 	}{
-		"full publish creates service, revision, and instance": {
+		"new service: full publish creates service, revision, and instance": {
 			revisionOnly: false,
 			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},  // POST service
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service x-agent-details subresource
-				{FileName: testRevisionFile, RespCode: http.StatusCreated},    // POST revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // revision subresource
-				{FileName: testInstanceFile, RespCode: http.StatusCreated},    // POST instance
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // instance subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // spec hashes update
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service source update
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST instance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source update
 			},
 		},
-		"revision-only publish skips instance creation": {
+		"new service: revision-only creates service and revision, skips instance": {
 			revisionOnly: true,
 			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},      // POST service
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // service subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // spec hashes
-				{FileName: testRevisionFile, RespCode: http.StatusCreated}, // POST revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // revision subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},     // spec hashes update
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
+			},
+		},
+		"existing service: full publish updates service, revision, and instance": {
+			revisionOnly: false,
+			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
+			responses: []api.MockResponse{
+				{FileName: testAPIServiceFile, RespCode: http.StatusOK},      // PUT service
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
+				{FileName: testRevisionListFile, RespCode: http.StatusOK},    // GET revision list (updateAPI path)
+				{FileName: testRevisionFile, RespCode: http.StatusOK},        // GET revision count
+				{FileName: testRevisionFile, RespCode: http.StatusOK},        // GET revision by name
+				{FileName: testRevisionFile, RespCode: http.StatusOK},        // PUT revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision x-agent-details subresource
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST instance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
+			},
+		},
+		"existing service: revision-only skips service update and instance, creates revision only": {
+			revisionOnly: true,
+			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
+			responses: []api.MockResponse{
+				{FileName: testRevisionListFile, RespCode: http.StatusOK},  // GET revision list (updateAPI path)
+				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision count
+				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision by name
+				{FileName: testRevisionFile, RespCode: http.StatusOK},      // PUT revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // spec hashes update
 			},
 		},
 	}
@@ -224,6 +254,11 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client, httpClient := GetTestServiceClient()
 			httpClient.SetResponses(tc.responses)
+
+			if tc.existingSvc != nil {
+				ri, _ := tc.existingSvc.AsInstance()
+				client.caches.AddAPIService(ri)
+			}
 
 			b := NewServiceBodyBuilder().
 				SetAPIName(serviceBody.APIName).

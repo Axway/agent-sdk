@@ -195,9 +195,16 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 
 	if svc != nil {
 		serviceBody.serviceContext.serviceAction = updateAPI
+		c.updateAPIService(serviceBody, svc) // populates from existing service
+		if serviceBody.IsRevisionOnly() {
+			serviceBody.serviceContext.serviceName = svc.Name
+			serviceBody.serviceContext.serviceID = svc.Metadata.ID
+			ri, _ := svc.AsInstance()
+			c.caches.AddAPIService(ri)
+			return svc, nil
+		}
 		httpMethod = http.MethodPut
 		serviceURL += "/" + svc.Name
-		c.updateAPIService(serviceBody, svc)
 	} else {
 		svc = c.buildAPIService(serviceBody)
 	}
