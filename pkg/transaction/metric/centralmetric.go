@@ -145,6 +145,11 @@ func (b *CentralMetricBuilder) SetEnvironmentRuntimeType(t string) *CentralMetri
 	return b
 }
 
+func (b *CentralMetricBuilder) SetAPIServiceRevision(r *models.ResourceReference) *CentralMetricBuilder {
+	b.APIServiceRevision = r
+	return b
+}
+
 func (b *CentralMetricBuilder) Build() *centralMetric {
 	return b.centralMetric
 }
@@ -155,20 +160,21 @@ type EnvironmentInfo struct {
 }
 
 type centralMetric struct {
-	Version         string                               `json:"version,omitempty"`
-	APICDeployment  string                               `json:"apicDeployment,omitempty"`
-	Environment     *EnvironmentInfo                     `json:"environment,omitempty"`
-	Marketplace     *models.MarketplaceReference         `json:"marketplace,omitempty"`
-	Subscription    *models.ResourceReference            `json:"subscription,omitempty"`
-	App             *models.ApplicationResourceReference `json:"application,omitempty"`
-	Product         *models.ProductResourceReference     `json:"product,omitempty"`
-	API             *models.APIResourceReference         `json:"api,omitempty"`
-	AssetResource   *models.ResourceReference            `json:"assetResource,omitempty"`
-	ProductPlan     *models.ResourceReference            `json:"productPlan,omitempty"`
-	Units           *Units                               `json:"units,omitempty"`
-	Reporter        *Reporter                            `json:"reporter,omitempty"`
-	Observation     *models.ObservationDetails           `json:"-"`
-	EventID         string                               `json:"-"`
+	Version            string                               `json:"version,omitempty"`
+	APICDeployment     string                               `json:"apicDeployment,omitempty"`
+	Environment        *EnvironmentInfo                     `json:"environment,omitempty"`
+	Marketplace        *models.MarketplaceReference         `json:"marketplace,omitempty"`
+	Subscription       *models.ResourceReference            `json:"subscription,omitempty"`
+	App                *models.ApplicationResourceReference `json:"application,omitempty"`
+	Product            *models.ProductResourceReference     `json:"product,omitempty"`
+	API                *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource      *models.ResourceReference            `json:"assetResource,omitempty"`
+	APIServiceRevision *models.ResourceReference            `json:"apiServiceRevision,omitempty"`
+	ProductPlan        *models.ResourceReference            `json:"productPlan,omitempty"`
+	Units              *Units                               `json:"units,omitempty"`
+	Reporter           *Reporter                            `json:"reporter,omitempty"`
+	Observation        *models.ObservationDetails           `json:"-"`
+	EventID            string                               `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric

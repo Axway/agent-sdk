@@ -181,8 +181,8 @@ func (t ISO8601Time) MarshalJSON() ([]byte, error) {
 }
 
 type Reporter struct {
-	AgentVersion     string `json:"agentVersion,omitempty"`
-	AgentType        string `json:"agentType,omitempty"`
+	AgentVersion     string `json:"version,omitempty"`
+	AgentType        string `json:"type,omitempty"`
 	AgentSDKVersion  string `json:"agentSDKVersion,omitempty"`
 	AgentName        string `json:"agentName,omitempty"`
 	ObservationDelta int64  `json:"observationDelta,omitempty"`

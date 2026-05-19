@@ -22,7 +22,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 		APICDeployment: apicDeployment,
 		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
 		EventID:        in.EventID,
-		Observation:    &models.ObservationDetails{Start: in.Observation.Start},
+		Observation:    &models.ObservationDetails{Start: in.Observation.Start, End: in.Observation.End},
 		Reporter: &Reporter{
 			AgentVersion:     cmd.BuildVersion,
 			AgentType:        cmd.BuildAgentName,

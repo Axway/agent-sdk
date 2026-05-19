@@ -50,6 +50,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				EventID:     "id-1",
 				Observation: &models.ObservationDetails{
 					Start: 10,
+					End:   15,
 				},
 				Reporter: &Reporter{
 					AgentVersion:     cmd.BuildVersion,
@@ -132,6 +133,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 				Observation: &models.ObservationDetails{
 					Start: 10,
+					End:   15,
 				},
 				Units: &Units{
 					CustomUnits: map[string]*UnitCount{
