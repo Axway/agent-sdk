@@ -275,6 +275,7 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 
 	meta.Metadata.Scope.Name = "scope"
 	scopeKindMap[meta.GroupKind] = "scopeKind"
+	t.Cleanup(func() { delete(scopeKindMap, meta.GroupKind) })
 
 	// no scope kind
 	link = meta.GetSelfLink()
