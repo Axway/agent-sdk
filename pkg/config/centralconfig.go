@@ -229,7 +229,7 @@ type CentralConfig interface {
 	GetManagedEnvironments() []string
 	GetProvisioningRetryCount() int
 	IsInstanceValidationEnabled() bool
-	GetIgnoreSpecTags() []string
+	GetRootTagsToStrip() []string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -271,7 +271,7 @@ type CentralConfiguration struct {
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
 	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
 	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
-	IgnoreSpecTags            []string              `config:"ignoreSpecTags"`
+	RootTagsToStrip           []string              `config:"rootTagsToStrip"`
 	managedEnvironments       []string
 	environmentID             string
 	teamID                    string
@@ -703,8 +703,8 @@ func (c *CentralConfiguration) IsInstanceValidationEnabled() bool {
 	return c.InstanceValidatorEnabled
 }
 
-func (c *CentralConfiguration) GetIgnoreSpecTags() []string {
-	return c.IgnoreSpecTags
+func (c *CentralConfiguration) GetRootTagsToStrip() []string {
+	return c.RootTagsToStrip
 }
 
 const (
@@ -752,7 +752,7 @@ const (
 	pathProvisioningRetryCount    = "central.provisioningRetryCount"
 	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
 	pathInstanceValidatorEnabled  = "central.instanceValidatorEnabled"
-	pathIgnoreSpecTags            = "central.ignoreSpecTags"
+	pathRootTagsToStrip           = "central.rootTagsToStrip"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -946,7 +946,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		AddUsageReportingProperties(props)
 		props.AddBoolProperty(pathErrorSamplingEnabled, false, "Controls whether error sampling is enabled")
 	} else {
-		props.AddStringSliceProperty(pathIgnoreSpecTags, []string{}, "Strips specific tags from the spec")
+		props.AddStringSliceProperty(pathRootTagsToStrip, []string{}, "Strips specific tags from the root level of the spec")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		props.AddIntProperty(pathProvisioningRetryCount, 0, "The number of retries, in case it fails, for any provisioning event", properties.WithUpperLimitInt(3))
@@ -1029,7 +1029,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.MigrationSettings = ParseMigrationConfig(props)
 		cfg.CredentialConfig = newCredentialConfig()
 		cfg.CredentialConfig.SetAllowedOAuthMethods(props.StringSlicePropertyValue(pathCredentialsOAuthMethods))
-		cfg.IgnoreSpecTags = props.StringSlicePropertyValue(pathIgnoreSpecTags)
+		cfg.RootTagsToStrip = props.StringSlicePropertyValue(pathRootTagsToStrip)
 	}
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()
