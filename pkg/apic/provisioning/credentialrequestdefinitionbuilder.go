@@ -183,14 +183,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 			},
 		},
 	}
+	hashInt, _ := util.ComputeHash(spec)
 
 	if c.period > 0 {
 		spec.Provision.Policies.Expiry = &management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
 			Period: int32(c.period),
 		}
 	}
-
-	hashInt, _ := util.ComputeHash(spec)
 
 	// put back in spec the complete request schema
 	spec.Schema = c.requestSchema
