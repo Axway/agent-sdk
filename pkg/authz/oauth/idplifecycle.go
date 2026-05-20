@@ -14,6 +14,11 @@ const (
 	defaultIDPClientTimeoutSeconds = 60
 )
 
+type idpCache interface {
+	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *apiv1.ResourceInstance
+	AddIdentityProviderMetadata(resource *apiv1.ResourceInstance)
+}
+
 // IDPClient is the subset of apic.Client used by the IdP lifecycle manager,
 // defined here to avoid a circular import with pkg/apic.
 type IDPClient interface {
@@ -22,19 +27,10 @@ type IDPClient interface {
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
 }
 
-// IDPResourceBuilder is an optional override for building IdentityProvider and
-// IdentityProviderMetadata resources. Agent implementations that supply custom
-// resources set this via WithResourceBuilder.
-type IDPResourceBuilder interface {
-	GetIdentityProvider(cfg corecfg.IDPConfig) (*management.IdentityProvider, error)
-	GetIdentityProviderMetadata(cfg corecfg.IDPConfig, metadata *AuthorizationServerMetadata) (*management.IdentityProviderMetadata, error)
-}
-
 // IDPEngageLifecycle manages IdentityProvider and IdentityProviderMetadata resources in Engage.
 type IDPEngageLifecycle interface {
 	// CreateEngageResourcesFromMetadata creates or reuses IdentityProvider and IdentityProviderMetadata
 	// resources in Engage using pre-resolved metadata — no Provider or outbound HTTP fetch required.
-	// idpCfg is optional (may be nil for the v7 path); when set it is passed to the IDPResourceBuilder.
 	// Returns the Engage IdentityProvider resource name.
 	CreateEngageResourcesFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpType, idpName string, metadata *AuthorizationServerMetadata, baseURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error)
 }
@@ -42,19 +38,14 @@ type IDPEngageLifecycle interface {
 // LifecycleOption configures an idpEngageLifecycle.
 type LifecycleOption func(*idpEngageLifecycle)
 
-// WithResourceBuilder injects an optional custom builder for IdP and metadata resources.
-func WithResourceBuilder(b IDPResourceBuilder) LifecycleOption {
-	return func(l *idpEngageLifecycle) { l.builder = b }
-}
-
 type idpEngageLifecycle struct {
-	client  IDPClient
-	builder IDPResourceBuilder
+	client   IDPClient
+	idpCache idpCache
 }
 
 // NewIDPEngageLifecycle returns an IDPEngageLifecycle backed by the given Engage client.
-func NewIDPEngageLifecycle(client IDPClient, opts ...LifecycleOption) IDPEngageLifecycle {
-	l := &idpEngageLifecycle{client: client}
+func NewIDPEngageLifecycle(client IDPClient, cache idpCache, opts ...LifecycleOption) IDPEngageLifecycle {
+	l := &idpEngageLifecycle{client: client, idpCache: cache}
 	for _, o := range opts {
 		o(l)
 	}
@@ -62,7 +53,18 @@ func NewIDPEngageLifecycle(client IDPClient, opts ...LifecycleOption) IDPEngageL
 }
 
 func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpType, idpName string, metadata *AuthorizationServerMetadata, baseURL string, envPolicies management.EnvironmentPoliciesCredentials) (string, error) {
+	if metadata == nil || l.idpCache == nil {
+		return "", fmt.Errorf("metadata and cache are required to manage IdentityProvider resources")
+	}
+
 	tokenEndpoint := metadata.TokenEndpoint
+
+	// Attempt to find an existing IdentityProviderMetadat in cache
+	idpMetadata := l.idpCache.GetIdentityProviderMetadataByTokenUrl(tokenEndpoint)
+	if idpMetadata != nil {
+		idpLogger.WithField("name", idpMetadata.GetMetadata().Scope.Name).Debug("reusing existing IdentityProvider resource")
+		return idpMetadata.GetMetadata().Scope.Name, nil
+	}
 
 	idpLogger.Debug("querying Engage for existing IdentityProvider resource")
 	existing, err := l.client.GetAPIV1ResourceInstances(
@@ -75,7 +77,8 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 
 	if len(existing) > 0 {
 		name := existing[0].GetMetadata().Scope.Name
-		idpLogger.WithField("name", name).Info("reusing existing IdentityProvider resource")
+		l.idpCache.AddIdentityProviderMetadata(existing[0])
+		idpLogger.WithField("name", name).Debug("reusing existing IdentityProvider resource")
 		return name, nil
 	}
 
@@ -108,16 +111,6 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 }
 
 func (l *idpEngageLifecycle) buildIdentityProviderFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpType, idpName string) (*management.IdentityProvider, error) {
-	if l.builder != nil && idpCfg != nil {
-		idpLogger.Debug("building IdentityProvider resource via supplier")
-		res, err := l.builder.GetIdentityProvider(idpCfg)
-		if err != nil {
-			idpLogger.WithError(err).Error("supplier failed to build IdentityProvider resource")
-			return nil, err
-		}
-		return res, nil
-	}
-
 	name := util.NormalizeNameForCentral(idpName)
 	res := management.NewIdentityProvider(name)
 	res.Spec = management.IdentityProviderSpec{
@@ -132,20 +125,13 @@ func (l *idpEngageLifecycle) createMetadataFromServerMetadata(idpLogger log.Fiel
 
 	idpMetadata := newIdentityProviderMetadata(idpName, idpName, metadata)
 
-	if l.builder != nil && idpCfg != nil {
-		idpLogger.Debug("building IdentityProviderMetadata resource via supplier")
-		supplied, err := l.builder.GetIdentityProviderMetadata(idpCfg, metadata)
-		if err != nil {
-			idpLogger.WithError(err).Warn("supplier failed to build IdentityProviderMetadata resource; skipping metadata creation")
-			return nil
-		}
-		idpMetadata = supplied
-	}
-
-	if _, err := l.client.CreateOrUpdateResource(idpMetadata); err != nil {
+	ri, err := l.client.CreateOrUpdateResource(idpMetadata)
+	if err != nil {
 		idpLogger.WithField("name", idpName).WithError(err).Warn("unable to create IdentityProviderMetadata resource in Engage")
 		return err
 	}
+	l.idpCache.AddIdentityProviderMetadata(ri)
+
 	idpLogger.WithField("name", idpName).Info("IdentityProviderMetadata resource created successfully")
 	return nil
 }

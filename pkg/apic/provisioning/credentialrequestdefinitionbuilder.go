@@ -47,6 +47,8 @@ type CredentialRequestBuilder interface {
 	Register() (*management.CredentialRequestDefinition, error)
 }
 
+type CRDBuilderOption func(builder CredentialRequestBuilder) CredentialRequestBuilder
+
 // NewCRDBuilder - called by the agent package and sends in the function that registers this credential request
 func NewCRDBuilder(registerFunc RegisterCredentialRequestDefinition) CredentialRequestBuilder {
 	return &credentialRequestDef{
@@ -181,14 +183,13 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 			},
 		},
 	}
+	hashInt, _ := util.ComputeHash(spec)
 
 	if c.period > 0 {
 		spec.Provision.Policies.Expiry = &management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
 			Period: int32(c.period),
 		}
 	}
-
-	hashInt, _ := util.ComputeHash(spec)
 
 	// put back in spec the complete request schema
 	spec.Schema = c.requestSchema

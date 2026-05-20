@@ -76,7 +76,6 @@ type agentData struct {
 
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
-	idpResourceSupplier  IDPResourceSupplier
 
 	finalizeAgentInit func() error
 	publishingLock    *sync.Mutex
@@ -363,14 +362,13 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 	}
 
 	idpResourceName := manageIDPResource(idpLogger, idp)
-
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
 	if err != nil {
 		return err
 	}
 
-	crd, err := NewOAuthCredentialRequestBuilder(
+	builder := NewOAuthCredentialRequestBuilder(
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
@@ -378,8 +376,9 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
 		WithCRDIsSuspendable(),
-		WithCRDIdentityProvider(idpResourceName),
-	).Register()
+		WithCRDIdentityProvider(idpResourceName))
+
+	crd, err := builder.Register()
 	if err != nil {
 		idpLogger.
 			WithField("title", idp.GetIDPTitle()).
@@ -817,6 +816,7 @@ func newHandlers() []handler.Handler {
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+			handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
 		)
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent
