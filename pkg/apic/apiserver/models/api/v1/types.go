@@ -44,6 +44,11 @@ type EmbeddedReferenceMetadata struct {
 	ID string `json:"id,omitempty"`
 }
 
+// EmbeddedReferences is the wrapper object under each key in the _embedded map.
+type EmbeddedReferences struct {
+	References []EmbeddedReference `json:"references,omitempty"`
+}
+
 // EmbeddedReference is the richer reference type returned only when fetching a resource
 // with ?embed=metadata.references. It carries the referenced resource's owner inline,
 // whereas the flat Reference type (used by GetReferenceByGVK) does not.
