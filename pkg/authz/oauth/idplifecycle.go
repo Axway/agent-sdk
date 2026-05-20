@@ -62,7 +62,7 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 	// Attempt to find an existing IdentityProviderMetadat in cache
 	idpMetadata := l.idpCache.GetIdentityProviderMetadataByTokenUrl(tokenEndpoint)
 	if idpMetadata != nil {
-		idpLogger.WithField("name", idpMetadata.GetMetadata().Scope.Name).Info("reusing existing IdentityProvider resource")
+		idpLogger.WithField("name", idpMetadata.GetMetadata().Scope.Name).Debug("reusing existing IdentityProvider resource")
 		return idpMetadata.GetMetadata().Scope.Name, nil
 	}
 
@@ -78,7 +78,7 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 	if len(existing) > 0 {
 		name := existing[0].GetMetadata().Scope.Name
 		l.idpCache.AddIdentityProviderMetadata(existing[0])
-		idpLogger.WithField("name", name).Info("reusing existing IdentityProvider resource")
+		idpLogger.WithField("name", name).Debug("reusing existing IdentityProvider resource")
 		return name, nil
 	}
 
