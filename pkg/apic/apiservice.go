@@ -81,6 +81,16 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (
 	return nil, nil
 }
 
+func (c *ServiceClient) setSpecHashesOnServiceBody(serviceBody *ServiceBody, svc apiv1.Interface) {
+	agentDetails := util.GetAgentDetails(svc)
+	if revDetails, found := agentDetails[specHashes]; found {
+		if specHashes, ok := revDetails.(map[string]interface{}); ok {
+			serviceBody.specHashes = specHashes
+		}
+	}
+
+}
+
 func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *management.APIService) {
 	owner, ownerErr := c.getOwnerObject(serviceBody, true)
 
@@ -100,11 +110,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	util.SetAgentDetails(svc, newSVCDetails)
 
 	// get the specHashes from the existing service
-	if revDetails, found := newSVCDetails[specHashes]; found {
-		if specHashes, ok := revDetails.(map[string]interface{}); ok {
-			serviceBody.specHashes = specHashes
-		}
-	}
+	c.setSpecHashesOnServiceBody(serviceBody, svc)
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = management.ApiServiceSpecIcon{
@@ -194,8 +200,10 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	}
 
 	if svc != nil && serviceBody.IsRevisionOnly() {
+		serviceBody.serviceContext.serviceAction = updateAPI
 		serviceBody.serviceContext.serviceName = svc.Name
 		serviceBody.serviceContext.serviceID = svc.Metadata.ID
+		c.setSpecHashesOnServiceBody(serviceBody, svc)
 		return svc, nil
 	} else if svc != nil {
 		serviceBody.serviceContext.serviceAction = updateAPI
