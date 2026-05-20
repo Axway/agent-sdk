@@ -32,23 +32,15 @@ func (m *mockIDPClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string
 
 // mockIdpCache satisfies idpCache for lifecycle tests.
 type mockIdpCache struct {
-	byName     map[string]*apiv1.ResourceInstance
 	byTokenURL map[string]*apiv1.ResourceInstance
 }
 
 func newMockIdpCache() *mockIdpCache {
 	return &mockIdpCache{
-		byName:     map[string]*apiv1.ResourceInstance{},
 		byTokenURL: map[string]*apiv1.ResourceInstance{},
 	}
 }
 
-func (c *mockIdpCache) GetIdentityProviderByName(name string) *apiv1.ResourceInstance {
-	return c.byName[name]
-}
-func (c *mockIdpCache) AddIdentityProvider(ri *apiv1.ResourceInstance) {
-	c.byName[ri.Name] = ri
-}
 func (c *mockIdpCache) GetIdentityProviderMetadataByTokenUrl(tokenURL string) *apiv1.ResourceInstance {
 	return c.byTokenURL[tokenURL]
 }

@@ -29,7 +29,6 @@ const (
 	managedAppKey          = "managedApp"
 	subscriptionsKey       = "subscriptions"
 	accReqKey              = "accReq"
-	idpKey                 = "idp"
 	idpMetadataKey         = "idpMetadata"
 	watchSequenceKey       = "watchSequence"
 	watchResourceKey       = "watchResource"
@@ -125,11 +124,7 @@ type Manager interface {
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
 
-	// IdentityProvider cache related methods
-	GetIdentityProviderByName(name string) *v1.ResourceInstance
-	AddIdentityProvider(resource *v1.ResourceInstance)
-	DeleteIdentityProvider(id string) error
-	GetIdentityProviderByID(id string) *v1.ResourceInstance
+	// IdentityProviderMetadata cache related methods
 	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *v1.ResourceInstance
 	AddIdentityProviderMetadata(resource *v1.ResourceInstance)
 	DeleteIdentityProviderMetadata(id string) error
@@ -160,7 +155,6 @@ type cacheManager struct {
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
-	idpMap                  cache.Cache
 	idpMetadataMap          cache.Cache
 	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
@@ -218,7 +212,6 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
-		createResourceLoader(c.setLoadedCache, idpKey),
 		createResourceLoader(c.setLoadedCache, idpMetadataKey),
 	}
 
@@ -279,8 +272,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.sequenceCache = lc
 	case complianceRuntimeKey:
 		c.crrMap = lc
-	case idpKey:
-		c.idpMap = lc
 	case idpMetadataKey:
 		c.idpMetadataMap = lc
 	default:
@@ -441,7 +432,6 @@ func (c *cacheManager) Flush() {
 	c.sequenceCache.Flush()
 	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
-	c.idpMap.Flush()
 	c.idpMetadataMap.Flush()
 	c.SaveCache()
 	// delete the cache file in case the agent is restarted here

@@ -12,22 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func idpResource(id, name string) *apiv1.ResourceInstance {
-	return &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			Name: name,
-			Metadata: apiv1.Metadata{
-				ID: id,
-			},
-			GroupVersionKind: apiv1.GroupVersionKind{
-				GroupKind: apiv1.GroupKind{
-					Kind: management.IdentityProviderGVK().Kind,
-				},
-			},
-		},
-	}
-}
-
 func idpMetadataResource(id, name, scopeName, tokenEndpoint string) *apiv1.ResourceInstance {
 	return &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -73,31 +57,6 @@ func TestIDPHandler_Handle(t *testing.T) {
 						GroupKind: apiv1.GroupKind{Kind: catalog.CategoryGVK().Kind},
 					},
 				},
-			},
-		},
-		{
-			name:     "create IdentityProvider adds to cache",
-			action:   proto.Event_CREATED,
-			resource: idpResource("idp-1", "my-idp"),
-			checkCacheFunc: func(t *testing.T, cm agentcache.Manager, ri *apiv1.ResourceInstance) {
-				assert.NotNil(t, cm.GetIdentityProviderByID("idp-1"))
-				assert.NotNil(t, cm.GetIdentityProviderByName("my-idp"))
-			},
-		},
-		{
-			name:     "update IdentityProvider updates cache",
-			action:   proto.Event_UPDATED,
-			resource: idpResource("idp-2", "my-idp-2"),
-			checkCacheFunc: func(t *testing.T, cm agentcache.Manager, ri *apiv1.ResourceInstance) {
-				assert.NotNil(t, cm.GetIdentityProviderByID("idp-2"))
-			},
-		},
-		{
-			name:     "delete IdentityProvider removes from cache",
-			action:   proto.Event_DELETED,
-			resource: idpResource("idp-3", "my-idp-3"),
-			checkCacheFunc: func(t *testing.T, cm agentcache.Manager, ri *apiv1.ResourceInstance) {
-				assert.Nil(t, cm.GetIdentityProviderByID("idp-3"))
 			},
 		},
 		{
@@ -148,10 +107,7 @@ func TestIDPHandler_Handle(t *testing.T) {
 
 			// pre-populate cache for delete tests so there is something to remove
 			if tc.action == proto.Event_DELETED && tc.resource != nil {
-				switch tc.resource.Kind {
-				case management.IdentityProviderGVK().Kind:
-					cm.AddIdentityProvider(tc.resource)
-				case management.IdentityProviderMetadataGVK().Kind:
+				if tc.resource.Kind == management.IdentityProviderMetadataGVK().Kind {
 					cm.AddIdentityProviderMetadata(tc.resource)
 				}
 			}

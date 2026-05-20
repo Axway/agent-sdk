@@ -15,8 +15,6 @@ const (
 )
 
 type idpCache interface {
-	GetIdentityProviderByName(name string) *apiv1.ResourceInstance
-	AddIdentityProvider(resource *apiv1.ResourceInstance)
 	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *apiv1.ResourceInstance
 	AddIdentityProviderMetadata(resource *apiv1.ResourceInstance)
 }
@@ -103,9 +101,6 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 	if err = l.applyPolicies(idpLogger, idpResource, envPolicies); err != nil {
 		return "", err
 	}
-
-	ri, _ = idpResource.AsInstance()
-	l.idpCache.AddIdentityProvider(ri)
 
 	if err = l.createMetadataFromServerMetadata(idpLogger, idpCfg, createdName, metadata); err != nil {
 		return "", err

@@ -5,53 +5,6 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
-func (c *cacheManager) AddIdentityProvider(ri *v1.ResourceInstance) {
-	if ri == nil {
-		return
-	}
-
-	idp := &management.IdentityProvider{}
-	if idp.FromInstance(ri) != nil {
-		return
-	}
-
-	defer c.setCacheUpdated(true)
-	c.logger.
-		WithField("id", idp.Metadata.ID).
-		WithField("name", idp.Name).
-		Trace("add identity provider")
-
-	c.idpMap.Set(idp.Metadata.ID, ri)
-	c.idpMap.SetSecondaryKey(idp.Metadata.ID, idp.Name)
-}
-
-func (c *cacheManager) DeleteIdentityProvider(id string) error {
-	defer c.setCacheUpdated(true)
-	return c.idpMap.Delete(id)
-}
-
-func (c *cacheManager) GetIdentityProviderByID(id string) *v1.ResourceInstance {
-	ri, _ := c.idpMap.Get(id)
-	if ri != nil {
-		idp, ok := ri.(*v1.ResourceInstance)
-		if ok {
-			return idp
-		}
-	}
-	return nil
-}
-
-func (c *cacheManager) GetIdentityProviderByName(name string) *v1.ResourceInstance {
-	ri, _ := c.idpMap.GetBySecondaryKey(name)
-	if ri != nil {
-		idp, ok := ri.(*v1.ResourceInstance)
-		if ok {
-			return idp
-		}
-	}
-	return nil
-}
-
 func (c *cacheManager) AddIdentityProviderMetadata(ri *v1.ResourceInstance) {
 	if ri == nil {
 		return
