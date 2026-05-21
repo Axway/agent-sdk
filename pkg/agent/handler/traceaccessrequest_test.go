@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -12,68 +13,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTraceAccessRequestHandler_wrong_kind(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewTraceAccessRequestHandler(cm, c)
-	ri := &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: management.EnvironmentGVK(),
-		},
-	}
-	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
-	assert.Nil(t, err)
-}
-
-func TestTraceAccessRequestTraceHandler(t *testing.T) {
-	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	c := &mockClient{}
-	handler := NewTraceAccessRequestHandler(cm, c)
+func makeTraceAR(id, name, appName, instanceID string) *management.AccessRequest {
 	ar := &management.AccessRequest{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.AccessRequestGVK(),
 			Metadata: apiv1.Metadata{
-				ID: "ar",
+				ID: id,
 				References: []apiv1.Reference{
 					{
-						ID:    "instanceId",
+						ID:    instanceID,
 						Name:  "instance",
 						Group: management.APIServiceInstanceGVK().Group,
 						Kind:  management.APIServiceInstanceGVK().Kind,
 					},
 				},
 			},
-			Name: "ar",
+			Name: name,
 		},
 		Spec: management.AccessRequestSpec{
-			ManagedApplication: "app",
+			ManagedApplication: appName,
 			ApiServiceInstance: "instance",
 		},
-		References: []interface{}{
-			management.AccessRequestReferencesSubscription{
-				Kind: defs.Subscription,
-				Name: "catalog/subscription-name",
-			},
-		},
 	}
-	ri, _ := ar.AsInstance()
+	ar.Status = &apiv1.ResourceStatus{Level: "Success"}
+	return ar
+}
 
-	// no status
-	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{}, cm.GetAccessRequestCacheKeys())
-
-	ar.Status = &apiv1.ResourceStatus{
-		Level: "Success",
-	}
-	ri, _ = ar.AsInstance()
-
+func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	inst := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			Metadata: apiv1.Metadata{
-				ID: "instanceId",
-			},
-			Name: "instance",
+			Metadata: apiv1.Metadata{ID: "instanceId"},
+			Name:     "instance",
 			SubResources: map[string]interface{}{
 				defs.XAgentDetails: map[string]interface{}{
 					defs.AttrExternalAPIID: "api",
@@ -81,39 +51,115 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 			},
 		},
 	}
-	cm.AddAPIServiceInstance(inst)
 
-	managedApp := &apiv1.ResourceInstance{
-		ResourceMeta: apiv1.ResourceMeta{
-			Metadata: apiv1.Metadata{
-				ID: "app",
+	ar := makeTraceAR("ar", "ar", "app", "instanceId")
+	ri, _ := ar.AsInstance()
+
+	// enriched version of the same AR (simulates ?embed=metadata.references response)
+	arEnriched := makeTraceAR("ar", "ar", "app", "instanceId")
+	arEnriched.ResourceMeta.Embedded = map[string]apiv1.EmbeddedReferences{
+		"publishedproducts": {
+			References: []apiv1.EmbeddedReference{
+				{Kind: "PublishedProduct", Name: "pp1"},
 			},
-			Name: "app",
 		},
 	}
-	cm.AddManagedApplication(managedApp)
+	enrichedRI, _ := arEnriched.AsInstance()
 
-	c.getRI = &apiv1.ResourceInstance{
+	noStatusAR := &management.AccessRequest{
 		ResourceMeta: apiv1.ResourceMeta{
-			Metadata: apiv1.Metadata{
-				ID: "subscription-id",
-			},
-			Name: "subscription-name",
+			GroupVersionKind: management.AccessRequestGVK(),
+			Metadata:         apiv1.Metadata{ID: "ar2"},
+			Name:             "ar2",
+		},
+	}
+	noStatusRI, _ := noStatusAR.AsInstance()
+
+	wrongKindRI := &apiv1.ResourceInstance{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.EnvironmentGVK(),
 		},
 	}
 
-	err = handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
-	assert.Nil(t, err)
-	cachedAR := cm.GetAccessRequest("ar")
-	assert.NotNil(t, cachedAR)
+	tests := map[string]struct {
+		action          proto.Event_Type
+		ri              *apiv1.ResourceInstance
+		getRI           *apiv1.ResourceInstance
+		getErr          error
+		prePopulateInst bool
+		expectCached    bool
+		expectEnriched  bool
+	}{
+		"wrong kind - no-op": {
+			action:       proto.Event_CREATED,
+			ri:           wrongKindRI,
+			expectCached: false,
+		},
+		"no status - not cached": {
+			action:       proto.Event_CREATED,
+			ri:           noStatusRI,
+			expectCached: false,
+		},
+		"created, GET succeeds - enriched RI cached": {
+			action:         proto.Event_CREATED,
+			ri:             ri,
+			getRI:          enrichedRI,
+			expectCached:   true,
+			expectEnriched: true,
+		},
+		"created, GET fails - watch RI cached as fallback": {
+			action:       proto.Event_CREATED,
+			ri:           ri,
+			getErr:       fmt.Errorf("network error"),
+			expectCached: true,
+		},
+		"created, GET returns nil - watch RI cached as fallback": {
+			action:       proto.Event_CREATED,
+			ri:           ri,
+			getRI:        nil,
+			expectCached: true,
+		},
+		"created, already cached - no GET call": {
+			action:          proto.Event_CREATED,
+			ri:              ri,
+			prePopulateInst: true,
+			expectCached:    true,
+		},
+		"deleted - removed from cache": {
+			action:          proto.Event_DELETED,
+			ri:              ri,
+			prePopulateInst: true,
+			expectCached:    false,
+		},
+	}
 
-	cachedAR = cm.GetAccessRequestByAppAndAPI("app", "api", "")
-	assert.NotNil(t, cachedAR)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			cm.AddAPIServiceInstance(inst)
+			cm.AddManagedApplication(&apiv1.ResourceInstance{
+				ResourceMeta: apiv1.ResourceMeta{Metadata: apiv1.Metadata{ID: "app"}, Name: "app"},
+			})
 
-	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, ri.Kind, ri.Name), nil, ri)
-	assert.Nil(t, err)
+			if tc.prePopulateInst {
+				cm.AddAccessRequest(ri)
+			}
 
-	cachedAR = cm.GetAccessRequest("ar")
-	assert.Nil(t, cachedAR)
+			c := &mockClient{getRI: tc.getRI, getErr: tc.getErr}
+			handler := NewTraceAccessRequestHandler(cm, c)
 
+			err := handler.Handle(NewEventContext(tc.action, nil, tc.ri.Kind, tc.ri.Name), nil, tc.ri)
+			assert.Nil(t, err)
+
+			cached := cm.GetAccessRequest("ar")
+			if tc.expectCached {
+				assert.NotNil(t, cached)
+				if tc.expectEnriched && tc.getRI != nil {
+					assert.Equal(t, enrichedRI.Embedded, cached.Embedded)
+				}
+			} else {
+				assert.Nil(t, cached)
+			}
+		})
+	}
 }
