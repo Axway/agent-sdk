@@ -487,8 +487,11 @@ func TestProcessRevision(t *testing.T) {
 		"skip publish when no changes": {
 			httpResponses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
+					RespData: `[{"name": "daleapi","tags": []}]`,
 					RespCode: http.StatusOK,
+					RespHeaders: map[string][]string{
+						"X-Axway-Total-Count": {"1"},
+					},
 				},
 			},
 			serviceBody: ServiceBody{
@@ -499,7 +502,7 @@ func TestProcessRevision(t *testing.T) {
 				ResourceType:     Oas2,
 				RestAPIID:        "12345",
 				specHash:         "abc123",
-				specHashes: map[string]interface{}{
+				specHashes: map[string]string{
 					"abc123": "daleapi",
 				},
 				serviceContext: serviceContext{
@@ -511,8 +514,11 @@ func TestProcessRevision(t *testing.T) {
 		"skip publish when previous revision found": {
 			httpResponses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]},{"name": "` + testRevisionNameAlt + `","tags": ["tag1","tag2"]}]`,
+					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
 					RespCode: http.StatusOK,
+					RespHeaders: map[string][]string{
+						"X-Axway-Total-Count": {"1"},
+					},
 				},
 			},
 			serviceBody: ServiceBody{
@@ -523,7 +529,7 @@ func TestProcessRevision(t *testing.T) {
 				ResourceType:     Oas2,
 				RestAPIID:        "12345",
 				specHash:         "abc123",
-				specHashes: map[string]interface{}{
+				specHashes: map[string]string{
 					"abc123": testRevisionNameAlt,
 				},
 				serviceContext: serviceContext{
@@ -535,8 +541,11 @@ func TestProcessRevision(t *testing.T) {
 		"find revision match using original spec hash": {
 			httpResponses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]},{"name": "` + testRevisionNameAlt + `","tags": ["tag1","tag2"]}]`,
+					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
 					RespCode: http.StatusOK,
+					RespHeaders: map[string][]string{
+						"X-Axway-Total-Count": {"1"},
+					},
 				},
 			},
 			serviceBody: ServiceBody{
@@ -548,7 +557,7 @@ func TestProcessRevision(t *testing.T) {
 				RestAPIID:        "12345",
 				specHash:         "abc1234",
 				originalSpecHash: "abc123",
-				specHashes: map[string]interface{}{
+				specHashes: map[string]string{
 					"abc123": testRevisionNameAlt,
 				},
 				serviceContext: serviceContext{
@@ -772,6 +781,9 @@ func createAPIService(name, id string, refSvc string, dpType string, isDesign bo
 				defs.XAgentDetails: map[string]interface{}{
 					defs.AttrExternalAPIID:   id,
 					defs.AttrExternalAPIName: name,
+					"specHashes": map[string]string{
+						"10422419514905716117": "revision1",
+					},
 				},
 			},
 		},

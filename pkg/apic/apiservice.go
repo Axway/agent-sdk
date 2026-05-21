@@ -85,7 +85,7 @@ func (c *ServiceClient) setSpecHashesOnServiceBody(serviceBody *ServiceBody, svc
 	agentDetails := util.GetAgentDetails(svc)
 	if revDetails, found := agentDetails[specHashes]; found {
 		if specHashes, ok := revDetails.(map[string]interface{}); ok {
-			serviceBody.specHashes = specHashes
+			serviceBody.specHashes = util.MapStringInterfaceToStringString(specHashes)
 		}
 	}
 
@@ -191,7 +191,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	serviceURL := c.cfg.GetServicesURL()
 	httpMethod := http.MethodPost
 	serviceBody.serviceContext.serviceAction = addAPI
-	serviceBody.specHashes = map[string]interface{}{}
+	serviceBody.specHashes = map[string]string{}
 
 	// If service exists, update existing service
 	svc, err := c.getAPIServiceFromCache(serviceBody)
