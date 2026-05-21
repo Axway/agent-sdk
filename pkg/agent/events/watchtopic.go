@@ -12,6 +12,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalogv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 )
 
@@ -253,6 +255,7 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 		{GroupKind: management.ApplicationProfileDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
 		{GroupKind: management.IdentityProviderMetadataGVK().GroupKind, ScopeName: "*", ScopeKind: management.IdentityProviderGVK().Kind, EventTypes: all},
+		{GroupKind: catalog.PublishedProductGVK().GroupKind, ScopeName: "*", ScopeKind: catalogv1.MarketplaceGVK().Kind, EventTypes: all},
 	}
 
 	return WatchTopicValues{
@@ -271,6 +274,7 @@ func NewTraceWatchTopic(name, scope string, agentResourceGroupKind v1.GroupKind,
 		{GroupKind: management.APIServiceInstanceGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.AccessRequestGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.ManagedApplicationGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
+		{GroupKind: catalog.PublishedProductGVK().GroupKind, ScopeName: "*", ScopeKind: catalogv1.MarketplaceGVK().Kind, EventTypes: all},
 	}
 
 	return WatchTopicValues{

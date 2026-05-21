@@ -32,6 +32,7 @@ const (
 	watchSequenceKey       = "watchSequence"
 	watchResourceKey       = "watchResource"
 	complianceRuntimeKey   = "compRunRes"
+	publishedProductKey    = "publishedProduct"
 )
 
 // Manager - interface to manage agent resource
@@ -114,6 +115,12 @@ type Manager interface {
 	GetManagedApplicationByName(name string) *v1.ResourceInstance
 	DeleteManagedApplication(id string) error
 
+	// PublishedProduct cache related methods
+	AddPublishedProduct(resource *v1.ResourceInstance)
+	GetPublishedProductByID(id string) (*v1.ResourceInstance, error)
+	GetPublishedProductByName(name string) (*v1.ResourceInstance, error)
+	DeletePublishedProduct(id string) error
+
 	// AccessRequest cache related methods
 	GetAccessRequestCacheKeys() []string
 	AddAccessRequest(resource *v1.ResourceInstance)
@@ -166,6 +173,7 @@ type cacheManager struct {
 	apdMap                  cache.Cache
 	crdMap                  cache.Cache
 	crrMap                  cache.Cache
+	publishedProductMap     cache.Cache
 	cacheFilename           string
 	isPersistedCacheLoaded  bool
 	isCacheUpdated          bool
@@ -211,6 +219,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
 		createResourceLoader(c.setLoadedCache, idpMetadataKey),
+		createResourceLoader(c.setLoadedCache, publishedProductKey),
 	}
 
 	c.isPersistedCacheLoaded = true
@@ -268,6 +277,8 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.crrMap = lc
 	case idpMetadataKey:
 		c.idpMetadataMap = lc
+	case publishedProductKey:
+		c.publishedProductMap = lc
 	default:
 		c.logger.WithField("cacheKey", key).Error("unknown cache key")
 	}
@@ -426,6 +437,7 @@ func (c *cacheManager) Flush() {
 	c.sequenceCache.Flush()
 	c.watchResourceMap.Flush()
 	c.idpMetadataMap.Flush()
+	c.publishedProductMap.Flush()
 	c.SaveCache()
 	// delete the cache file in case the agent is restarted here
 	os.Remove(c.cacheFilename)

@@ -152,6 +152,32 @@ func TestResolveProductOwner(t *testing.T) {
 	}
 }
 
+func TestResolveOwner(t *testing.T) {
+	tests := map[string]struct {
+		owner    *v1.Owner
+		expected *models.OwnerBlock
+	}{
+		"resolve owner nil returns none": {
+			owner:    nil,
+			expected: &models.OwnerBlock{Type: "none"},
+		},
+		"resolve owner team with guid returns team block": {
+			owner:    &v1.Owner{Type: v1.TeamOwner, ID: "team-resolve-1"},
+			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-resolve-1"},
+		},
+		"resolve owner team with empty guid returns unknown": {
+			owner:    &v1.Owner{Type: v1.TeamOwner, ID: ""},
+			expected: &models.OwnerBlock{Type: "unknown"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ResolveOwner(tc.owner))
+		})
+	}
+}
+
 func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 	tests := map[string]struct {
 		manApp   *v1.ResourceInstance

@@ -434,7 +434,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
 		Subscription:       c.createSubscriptionDetail(accessRequest),
 		App:                c.createAppDetail(accessRequest, managedApp),
-		Product:            c.getProduct(accessRequest),
+		Product:            c.getProduct(accessRequest, agent.GetCacheManager()),
 		API:                c.createAPIDetail(detail.APIDetails),
 		AssetResource:      c.getAssetResource(accessRequest),
 		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
@@ -672,7 +672,7 @@ func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *m
 	}
 }
 
-func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.ProductResourceReference {
+func (c *collector) getProduct(accessRequest *management.AccessRequest, cacheManager cache.Manager) *models.ProductResourceReference {
 	if accessRequest == nil {
 		return nil
 	}
@@ -684,12 +684,23 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 		return nil
 	}
 
+	ppRef := accessRequest.GetReferenceByGVK(catalog.PublishedProductGVK())
+	var owner *models.OwnerBlock
+	if ppRef.Name != "" && cacheManager != nil {
+		if ppRI, _ := cacheManager.GetPublishedProductByName(ppRef.Name); ppRI != nil {
+			pp := &catalog.PublishedProduct{}
+			if err := pp.FromInstance(ppRI); err == nil {
+				owner = transutil.ResolveOwner(pp.Owner)
+			}
+		}
+	}
+
 	return &models.ProductResourceReference{
 		ResourceReference: models.ResourceReference{
 			ID: productRef.ID,
 		},
 		VersionID: releaseRef.ID,
-		Owner:     transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK())),
+		Owner:     owner,
 	}
 }
 
