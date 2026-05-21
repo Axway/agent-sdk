@@ -150,6 +150,11 @@ func (b *CentralMetricBuilder) SetAPIServiceRevision(r *models.ResourceReference
 	return b
 }
 
+func (b *CentralMetricBuilder) SetReporter(r *Reporter) *CentralMetricBuilder {
+	b.Reporter = r
+	return b
+}
+
 func (b *CentralMetricBuilder) Build() *centralMetric {
 	return b.centralMetric
 }
