@@ -819,7 +819,6 @@ func newHandlers() []handler.Handler {
 			handler.NewCRDHandler(agent.cacheManager),
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
-			handler.NewPublishedProductHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
 			handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager),
 			handler.NewDiscoveryAccessRequestHandler(agent.cacheManager),
@@ -833,7 +832,6 @@ func newHandlers() []handler.Handler {
 			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
 			handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient),
 			handler.NewTraceManagedApplicationHandler(agent.cacheManager),
-			handler.NewPublishedProductHandler(agent.cacheManager),
 		)
 	case config.ComplianceAgent:
 		handlers = append(

@@ -70,22 +70,14 @@ func ResolveAppOwner(accessRequest *management.AccessRequest) *models.OwnerBlock
 }
 
 func ResolveProductOwner(ref v1.EmbeddedReference) *models.OwnerBlock {
-	return resolveOwner(ref.Owner)
-}
-
-func ResolveOwner(owner *v1.Owner) *models.OwnerBlock {
-	return resolveOwner(owner)
-}
-
-func resolveOwner(owner *v1.Owner) *models.OwnerBlock {
-	if owner == nil {
+	if ref.Owner == nil {
 		return &models.OwnerBlock{Type: "none"}
 	}
-	if owner.Type == v1.TeamOwner {
-		if owner.ID == "" {
+	if ref.Owner.Type == v1.TeamOwner {
+		if ref.Owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
 		}
-		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}
+		return &models.OwnerBlock{Type: "team", TeamGUID: ref.Owner.ID}
 	}
 	return &models.OwnerBlock{Type: "unknown"}
 }
