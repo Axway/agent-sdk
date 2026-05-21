@@ -623,7 +623,7 @@ func (c *collector) createAppDetail(accessRequest *management.AccessRequest, app
 			ID: appRef.ID,
 		},
 		ConsumerOrgID: orgID,
-		Owner:         transutil.ResolveAppOwner(accessRequest),
+		Owner:         transutil.ResolveAppOwnerFromManagedApp(appRI),
 	}
 }
 
@@ -1003,7 +1003,6 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 		Version:   "4",
 		Distribution: &V4EventDistribution{
 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
-			Version:     "1",
 		},
 		Data: v4data,
 	}
