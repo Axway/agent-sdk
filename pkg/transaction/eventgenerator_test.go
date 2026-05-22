@@ -12,6 +12,7 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -144,6 +145,88 @@ func TestCreateEventWithInvalidTokenRequest(t *testing.T) {
 	_, err := eventGenerator.CreateEvents(LogEvent{}, []LogEvent{dummyLogEvent}, time.Now(), nil, nil, nil)
 	assert.NotNil(t, err)
 	assert.Equal(t, "bad response from AxwayId: 403 Forbidden", err.Error())
+}
+
+func TestCreateEvent(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		resp.Write([]byte(`{"access_token":"tok","expires_in":99999}`))
+	}))
+	defer s.Close()
+
+	const tenantID = "tenant-create-event"
+	const envID = "env-create-event"
+
+	cases := map[string]struct {
+		tenantID  string
+		envID     string
+		logEvent  LogEvent
+		wantErr   string
+		wantEvent string
+	}{
+		"missing environmentID returns error": {
+			tenantID: "tenant-123",
+			envID:    "",
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-guard",
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+			wantErr: "distribution.environment",
+		},
+		"leg event beat message is InsightsEvent JSON": {
+			tenantID: tenantID,
+			envID:    envID,
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-beat-leg",
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+			wantEvent: "api.transaction.event",
+		},
+		"summary event beat message is InsightsEvent JSON": {
+			tenantID: tenantID,
+			envID:    envID,
+			logEvent: LogEvent{
+				Type:               TypeTransactionSummary,
+				TransactionID:      "txn-beat-sum",
+				TransactionSummary: &Summary{Status: "Success"},
+			},
+			wantEvent: "api.transaction.summary",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			cfg := createMapperTestConfig(s.URL, tc.tenantID, "prod", "env-name", tc.envID)
+			err := agent.Initialize(cfg.Central)
+			assert.Nil(t, err)
+
+			gen := &Generator{
+				shouldAddFields:                false,
+				shouldUseTrafficForAggregation: false,
+				logger:                         log.NewFieldLogger(),
+			}
+
+			beatEvent, err := gen.createEvent(tc.logEvent, time.Now(), nil, nil, nil)
+			if tc.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			msg, ok := beatEvent.Fields["message"]
+			assert.True(t, ok)
+
+			var envelope map[string]interface{}
+			err = json.Unmarshal([]byte(msg.(string)), &envelope)
+			assert.NoError(t, err)
+			assert.Equal(t, insightsEventVersion, envelope["version"])
+			assert.Equal(t, tc.wantEvent, envelope["event"])
+			assert.Equal(t, tc.tenantID, envelope["org"])
+			assert.NotEmpty(t, envelope["id"])
+		})
+	}
 }
 
 func TestCreateEventsInOfflineMode(t *testing.T) {

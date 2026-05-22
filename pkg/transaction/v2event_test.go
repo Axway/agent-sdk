@@ -8,9 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+// compile-time assertions. Both data types must satisfy the V4Data interface.
+var _ metric.V4Data = (*TransactionLegV2Data)(nil)
+var _ metric.V4Data = (*TransactionSummaryV2Data)(nil)
 
 const (
 	testOrgID         = "org-1"
@@ -41,6 +46,12 @@ const (
 	testTxnNoFields2  = "txn-nofields-sum"
 	testTeamGUID      = "team-guid-123"
 	testTxnOutbound1  = "txn-outbound-1"
+	testTxnReporter   = "txn-reporter-1"
+	testTxnAsset      = "txn-asset-1"
+	testTxnRevision   = "txn-revision-1"
+	testTxnExclLeg    = "txn-excl-leg"
+	testTxnExclSum    = "txn-excl-sum"
+	testTxnIfaceLeg   = "txn-iface-leg"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -402,8 +413,8 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				Type:          TypeTransactionSummary,
 				TransactionID: testTxnOwner4,
 				TransactionSummary: &Summary{
-					Status:       "Success",
-					AppOwnerInfo: nil,
+					Status:          "Success",
+					AppOwnerInfo:    nil,
 					ConsumerDetails: &models.ConsumerDetails{},
 				},
 			},
@@ -502,4 +513,237 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildTransactionV2DataReporter(t *testing.T) {
+	reporter := ReporterInfo{
+		AgentVersion:    "2.1.0",
+		AgentType:       "MyAgent",
+		AgentSDKVersion: "1.0.5",
+		AgentName:       "my-agent",
+	}
+
+	cases := map[string]struct {
+		logEvent LogEvent
+	}{
+		"reporter fields populated on leg event": {
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    testTxnReporter,
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+		},
+		"reporter fields populated on summary event": {
+			logEvent: LogEvent{
+				Type:               TypeTransactionSummary,
+				TransactionID:      testTxnReporter + "-sum",
+				TransactionSummary: &Summary{Status: "Success"},
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			require.NoError(t, err)
+			require.NotNil(t, ie)
+
+			b, err := json.Marshal(ie)
+			require.NoError(t, err)
+			s := string(b)
+			assert.Contains(t, s, `"2.1.0"`)
+			assert.Contains(t, s, `"MyAgent"`)
+			assert.Contains(t, s, `"1.0.5"`)
+			assert.Contains(t, s, `"my-agent"`)
+		})
+	}
+}
+
+func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
+	reporter := ReporterInfo{AgentVersion: "1.0.0", AgentType: "T", AgentSDKVersion: "0.1", AgentName: "n"}
+
+	cases := map[string]struct {
+		logEvent LogEvent
+		check    func(t *testing.T, data *TransactionSummaryV2Data)
+	}{
+		"assetResource populated when present": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnAsset,
+				TransactionSummary: &Summary{
+					Status:        "Success",
+					AssetResource: &models.AssetResource{ID: "asset-abc"},
+				},
+			},
+			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+				require.NotNil(t, data.AssetResource)
+				assert.Equal(t, "asset-abc", data.AssetResource.ID)
+			},
+		},
+		"assetResource omitted when empty": {
+			logEvent: LogEvent{
+				Type:               TypeTransactionSummary,
+				TransactionID:      testTxnAsset + "-empty",
+				TransactionSummary: &Summary{Status: "Success"},
+			},
+			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+				assert.Nil(t, data.AssetResource)
+			},
+		},
+		"apiServiceRevision populated from API.APIServiceInstance": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnRevision,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					API: &models.APIDetails{
+						ID:                 "api-id",
+						Name:               "api-name",
+						APIServiceInstance: "rev-id-123",
+					},
+				},
+			},
+			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+				require.NotNil(t, data.APIServiceRevision)
+				assert.Equal(t, "rev-id-123", data.APIServiceRevision.ID)
+			},
+		},
+		"apiServiceRevision omitted when no revision id": {
+			logEvent: LogEvent{
+				Type:               TypeTransactionSummary,
+				TransactionID:      testTxnRevision + "-empty",
+				TransactionSummary: &Summary{Status: "Success"},
+			},
+			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+				assert.Nil(t, data.APIServiceRevision)
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				assert.NotContains(t, string(b), `"apiServiceRevision"`)
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			require.NoError(t, err)
+			require.NotNil(t, ie)
+			data, ok := ie.Data.(*TransactionSummaryV2Data)
+			require.True(t, ok)
+			tc.check(t, data)
+		})
+	}
+}
+
+// TestBuildTransactionV2DataLegExcludedFields verifies that leg events do not contain
+// fields excluded from the leg v2 format.
+func TestBuildTransactionV2DataLegExcludedFields(t *testing.T) {
+	reporter := ReporterInfo{AgentVersion: "1.0.0", AgentType: "T", AgentSDKVersion: "0.1", AgentName: "n"}
+
+	logEvent := LogEvent{
+		Type:          TypeTransactionEvent,
+		TransactionID: testTxnExclLeg,
+		TransactionEvent: &Event{
+			ID:     "0",
+			Status: "Pass",
+			Protocol: &Protocol{
+				URI:    "/api/v1",
+				Method: "GET",
+				Status: 200,
+			},
+		},
+	}
+
+	ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, reporter)
+	require.NoError(t, err)
+
+	// Unmarshal data as a map so we can inspect only top-level keys of the data object.
+	b, err := json.Marshal(ie.Data)
+	require.NoError(t, err)
+	var dataKeys map[string]interface{}
+	require.NoError(t, json.Unmarshal(b, &dataKeys))
+
+	absentTopLevel := []string{"app", "team", "teamId", "apiServiceInstance", "isInMetricEvent", "revision", "uri", "method", "statusCode"}
+	for _, key := range absentTopLevel {
+		assert.NotContains(t, dataKeys, key, "leg data must not have top-level key %q", key)
+	}
+
+	// URI/method/statusCode must be nested inside the protocol object.
+	protoRaw, ok := dataKeys["protocol"]
+	require.True(t, ok, "leg data must have a protocol field")
+	proto, ok := protoRaw.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "/api/v1", proto["uri"])
+	assert.Equal(t, "GET", proto["method"])
+	assert.Equal(t, float64(200), proto["statusCode"])
+}
+
+// TestBuildTransactionV2DataSummaryExcludedFields verifies that summary events do not
+// contain fields excluded from the summary v2 format.
+func TestBuildTransactionV2DataSummaryExcludedFields(t *testing.T) {
+	reporter := ReporterInfo{AgentVersion: "1.0.0", AgentType: "T", AgentSDKVersion: "0.1", AgentName: "n"}
+
+	cases := map[string]struct {
+		logEvent     LogEvent
+		absentFields []string
+	}{
+		"summary event excluded fields": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnExclSum,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					Proxy:  &Proxy{ID: "p-1", Name: "my-api"},
+				},
+			},
+			absentFields: []string{
+				`"app"`,
+				`"isInMetricEvent"`,
+				`"team"`,
+				`"teamId"`,
+				`"apiServiceInstance"`,
+				`"proxy.apiServiceInstance"`,
+				`"proxy.revision"`,
+				`"application.id"`,
+				`"legId"`,
+				`"direction"`,
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			require.NoError(t, err)
+			b, err := json.Marshal(ie)
+			require.NoError(t, err)
+			s := string(b)
+			for _, field := range tc.absentFields {
+				assert.NotContains(t, s, field, "summary event must not contain field %s", field)
+			}
+			// deprecated fields must be present when proxy is set
+			assert.Contains(t, s, `"proxy.id"`)
+			assert.Contains(t, s, `"proxy.name"`)
+		})
+	}
+}
+
+func TestV4DataInterfaceMethods(t *testing.T) {
+	t.Run("TransactionLegV2Data interface methods", func(t *testing.T) {
+		d := &TransactionLegV2Data{TransactionID: testTxnIfaceLeg, LegID: 0}
+		assert.Equal(t, TypeTransactionEvent, d.GetType())
+		assert.Equal(t, testTxnIfaceLeg, d.GetEventID())
+		assert.Equal(t, (time.Time{}), d.GetStartTime())
+		fields := d.GetLogFields()
+		assert.Equal(t, testTxnIfaceLeg, fields["transactionId"])
+	})
+
+	t.Run("TransactionSummaryV2Data interface methods", func(t *testing.T) {
+		d := &TransactionSummaryV2Data{Status: "Success"}
+		assert.Equal(t, TypeTransactionSummary, d.GetType())
+		assert.Empty(t, d.GetEventID())
+		assert.Equal(t, (time.Time{}), d.GetStartTime())
+		fields := d.GetLogFields()
+		assert.Equal(t, "Success", fields["status"])
+	})
 }

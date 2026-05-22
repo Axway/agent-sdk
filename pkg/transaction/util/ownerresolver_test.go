@@ -12,6 +12,13 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
+const (
+	ownerNilReturnsNone = "nil owner returns none"
+	ownerTeamWithGUID   = "team owner with GUID returns team block"
+	ownerTeamEmptyGUID  = "team owner with empty GUID returns unknown"
+	testOwnerTeamGUID2  = "team-guid-2"
+)
+
 func apiServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
 	svc := management.NewAPIService("svc-"+apiID, "env1")
 	svc.SubResources = map[string]interface{}{
@@ -58,17 +65,17 @@ func TestResolveAPIOwner(t *testing.T) {
 			cache:    newCacheWithAPIService("api-1", &v1.Owner{Type: v1.TeamOwner, ID: "team-1"}),
 			expected: &models.OwnerBlock{Type: "unknown"},
 		},
-		"nil owner returns none": {
+		ownerNilReturnsNone: {
 			apiID:    "api-2",
 			cache:    newCacheWithAPIService("api-2", nil),
 			expected: &models.OwnerBlock{Type: "none"},
 		},
-		"team owner with GUID returns team block": {
+		ownerTeamWithGUID: {
 			apiID:    "api-3",
 			cache:    newCacheWithAPIService("api-3", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-3"}),
 			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-3"},
 		},
-		"team owner with empty GUID returns unknown": {
+		ownerTeamEmptyGUID: {
 			apiID:    "api-4",
 			cache:    newCacheWithAPIService("api-4", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			expected: &models.OwnerBlock{Type: "unknown"},
@@ -102,15 +109,15 @@ func TestResolveAppOwner(t *testing.T) {
 			accessRequest: nil,
 			expected:      &models.OwnerBlock{Type: "unknown"},
 		},
-		"nil owner returns none": {
+		ownerNilReturnsNone: {
 			accessRequest: makeAccessRequest("ar-1", nil),
 			expected:      &models.OwnerBlock{Type: "none"},
 		},
-		"team owner with GUID returns team block": {
-			accessRequest: makeAccessRequest("ar-2", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-2"}),
-			expected:      &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-2"},
+		ownerTeamWithGUID: {
+			accessRequest: makeAccessRequest("ar-2", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2}),
+			expected:      &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID2},
 		},
-		"team owner with empty GUID returns unknown": {
+		ownerTeamEmptyGUID: {
 			accessRequest: makeAccessRequest("ar-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			expected:      &models.OwnerBlock{Type: "unknown"},
 		},
@@ -128,15 +135,15 @@ func TestResolveProductOwner(t *testing.T) {
 		ref      v1.EmbeddedReference
 		expected *models.OwnerBlock
 	}{
-		"nil owner returns none": {
+		ownerNilReturnsNone: {
 			ref:      v1.EmbeddedReference{},
 			expected: &models.OwnerBlock{Type: "none"},
 		},
-		"team owner with GUID returns team block": {
+		ownerTeamWithGUID: {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-1"}},
 			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-1"},
 		},
-		"team owner with empty GUID returns unknown": {
+		ownerTeamEmptyGUID: {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: ""}},
 			expected: &models.OwnerBlock{Type: "unknown"},
 		},
@@ -161,15 +168,15 @@ func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 			manApp:   nil,
 			expected: &models.OwnerBlock{Type: "unknown"},
 		},
-		"nil owner returns none": {
+		ownerNilReturnsNone: {
 			manApp:   managedAppRI("app-1", nil),
 			expected: &models.OwnerBlock{Type: "none"},
 		},
-		"team owner with GUID returns team block": {
-			manApp:   managedAppRI("app-2", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-2"}),
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-2"},
+		ownerTeamWithGUID: {
+			manApp:   managedAppRI("app-2", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2}),
+			expected: &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID2},
 		},
-		"team owner with empty GUID returns unknown": {
+		ownerTeamEmptyGUID: {
 			manApp:   managedAppRI("app-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			expected: &models.OwnerBlock{Type: "unknown"},
 		},
