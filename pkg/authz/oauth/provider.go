@@ -15,8 +15,8 @@ import (
 
 // to satisfy sonarqube linter for consistent log fields
 const (
-	logClientID = "clientID" // named to avoid actual values of clientID
-	logProvider = "provider"
+	logClientID      = "clientID" // named to avoid actual values of clientID
+	logProvider      = "provider"
 	logUnregisterURL = "unregisterUrl"
 )
 
@@ -40,6 +40,7 @@ type Provider interface {
 	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
+	GetIDPResourceName() string
 }
 
 type provider struct {
@@ -53,6 +54,7 @@ type provider struct {
 	authServerMetadata *AuthorizationServerMetadata
 	authClient         AuthClient
 	idpType            typedIDP
+	idpResourceName    *string
 }
 
 type typedIDP interface {
@@ -99,6 +101,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		idpType = &genericIDP{}
 	}
 
+	idpResourceName := new(string)
 	p := &provider{
 		logger:             logger,
 		metadataURL:        idp.GetMetadataURL(),
@@ -109,6 +112,7 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		apiClient:          apiClient,
 		idpType:            idpType,
 		authServerMetadata: pOpts.authServerMetadata,
+		idpResourceName:    idpResourceName,
 	}
 
 	if p.authServerMetadata == nil {
@@ -683,6 +687,13 @@ func (p *provider) GetConfig() corecfg.IDPConfig {
 
 func (p *provider) GetMetadata() *AuthorizationServerMetadata {
 	return p.authServerMetadata
+}
+
+func (p *provider) GetIDPResourceName() string {
+	if p.idpResourceName == nil {
+		return ""
+	}
+	return *p.idpResourceName
 }
 
 func (p *provider) Validate() error {

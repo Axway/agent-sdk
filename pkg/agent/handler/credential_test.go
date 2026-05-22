@@ -10,8 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -21,7 +22,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCredentialHandler(t *testing.T) {
@@ -946,7 +946,7 @@ func (m *credClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.Resource
 	return nil, nil
 }
 
-func (m *credClient) DeleteResourceInstance(ri v1.Interface) error {
+func (m *credClient) DeleteResourceInstance(ri apiv1.Interface) error {
 	return nil
 }
 
@@ -1031,5 +1031,147 @@ func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
 		AuthMethod:       config.ClientSecretBasic,
 		AuthResponseType: oauth.AuthResponseToken,
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
+	}
+}
+
+func TestExternalCredentialOnPending(t *testing.T) {
+	crdRI, _ := crd.AsInstance()
+
+	tests := map[string]struct {
+		provisionErr      error
+		wantProvCalled    bool
+		wantOutboundLevel string
+	}{
+		"external mode skips RegisterClient and still calls CredentialProvision": {
+			wantProvCalled:    true,
+			wantOutboundLevel: prov.Success.String(),
+		},
+		"external mode — CredentialProvision error is surfaced": {
+			provisionErr:      fmt.Errorf("provision failed"),
+			wantProvCalled:    true,
+			wantOutboundLevel: prov.Error.String(),
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			credApp.SubResources["status"].(map[string]interface{})["level"] = prov.Success.String()
+
+			cred := credential
+			cred.Status.Level = prov.Pending.String()
+			cred.Spec.State.Name = apiv1.Active
+			cred.Spec.Provision = &management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal}
+
+			expectedStatus := mock.MockRequestStatus{Status: prov.Success, Msg: "msg"}
+			if tc.provisionErr != nil {
+				expectedStatus = mock.MockRequestStatus{Status: prov.Error, Msg: tc.provisionErr.Error()}
+			}
+
+			p := &mockExternalCredProv{
+				t:             t,
+				expectedStatus: expectedStatus,
+				provisionErr:  tc.provisionErr,
+			}
+
+			c := &credClient{
+				t:              t,
+				expectedStatus: tc.wantOutboundLevel,
+				managedApp:     credApp,
+				crd:            crdRI,
+			}
+
+			handler := NewCredentialHandler(p, c, nil)
+			v := handler.(*credentials)
+			v.encryptSchema = func(_, _ map[string]interface{}, _, _, _ string) (map[string]interface{}, error) {
+				return map[string]interface{}{}, nil
+			}
+
+			ri, _ := cred.AsInstance()
+			err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.wantProvCalled, p.provCalled, "CredentialProvision should be called for external credentials")
+		})
+	}
+}
+
+// mockExternalCredProv records whether CredentialProvision was called and returns a configurable status.
+type mockExternalCredProv struct {
+	t              *testing.T
+	expectedStatus mock.MockRequestStatus
+	provisionErr   error
+	provCalled     bool
+}
+
+func (m *mockExternalCredProv) CredentialProvision(_ prov.CredentialRequest) (prov.RequestStatus, prov.Credential) {
+	m.provCalled = true
+	return m.expectedStatus, &mockProvCredential{}
+}
+
+func (m *mockExternalCredProv) CredentialDeprovision(_ prov.CredentialRequest) prov.RequestStatus {
+	return m.expectedStatus
+}
+
+func (m *mockExternalCredProv) CredentialUpdate(_ prov.CredentialRequest) (prov.RequestStatus, prov.Credential) {
+	return m.expectedStatus, &mockProvCredential{}
+}
+
+func (m *mockExternalCredProv) GetIgnoredCredentialTypes() []string { return nil }
+
+func TestIsExternalCredential(t *testing.T) {
+	tests := map[string]struct {
+		cred     *management.Credential
+		expected bool
+	}{
+		"nil credential returns false": {
+			cred:     nil,
+			expected: false,
+		},
+		"empty mode returns false": {
+			cred:     &management.Credential{},
+			expected: false,
+		},
+		"mode external returns true": {
+			cred: &management.Credential{
+				Spec: management.CredentialSpec{
+					Provision: &management.CredentialSpecProvision{Mode: prov.CredProvisionModeExternal},
+				},
+			},
+			expected: true,
+		},
+		"other mode returns false": {
+			cred: &management.Credential{
+				Spec: management.CredentialSpec{
+					Provision: &management.CredentialSpecProvision{Mode: "internal"},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, isExternalCredential(tc.cred))
+		})
+	}
+}
+
+func TestGetProvisionMode(t *testing.T) {
+	tests := map[string]struct {
+		mode     string
+		expected string
+	}{
+		"empty mode":    {mode: "", expected: ""},
+		"external mode": {mode: prov.CredProvisionModeExternal, expected: prov.CredProvisionModeExternal},
+		"other mode":    {mode: "internal", expected: "internal"},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			c := provCreds{provisionMode: tc.mode}
+			assert.Equal(t, tc.expected, c.GetProvisionMode())
+		})
 	}
 }

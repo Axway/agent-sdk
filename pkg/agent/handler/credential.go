@@ -223,7 +223,7 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 
 func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
 	if status.GetStatus() == prov.Success {
-		if provCreds.IsIDPCredential() {
+		if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
 			err := provCreds.idpProvisioner.UnregisterClient()
 			if err != nil {
 				logger.
@@ -272,9 +272,8 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	if provCreds.IsIDPCredential() {
-		err := provCreds.idpProvisioner.RegisterClient()
-		if err != nil {
+	if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
+		if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
 			logger.WithError(err).Error("error provisioning credential request with IDP")
 			h.onError(ctx, cred, err)
 			return cred
@@ -340,19 +339,22 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	var err error
 	data := map[string]interface{}{}
 	idpAgentDetails := make(map[string]string)
+	isExternal := isExternalCredential(cred)
 	if status.GetStatus() == prov.Success {
 		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
 		if credentialData != nil {
-			sec := app.Spec.Security
-			d := credentialData.GetData()
-			if crd.Spec.Provision == nil {
-				data = d
-			} else if d != nil {
-				data, err = h.encryptSchema(
-					crd.Spec.Provision.Schema,
-					d,
-					sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
-				)
+			if !isExternal {
+				sec := app.Spec.Security
+				d := credentialData.GetData()
+				if crd.Spec.Provision == nil {
+					data = d
+				} else if d != nil {
+					data, err = h.encryptSchema(
+						crd.Spec.Provision.Schema,
+						d,
+						sec.EncryptionKey, sec.EncryptionAlgorithm, sec.EncryptionHash,
+					)
+				}
 			}
 			if provCreds.IsIDPCredential() {
 				idpAgentDetails, err = provCreds.idpProvisioner.GetAgentDetails()
@@ -387,6 +389,14 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
 	h.processCredentialLevelSuccess(provCreds, cred)
+
+	if isExternal {
+		cred.SubResources = map[string]interface{}{
+			defs.XAgentDetails: util.GetAgentDetails(cred),
+			"state":            cred.State,
+		}
+		return
+	}
 
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
@@ -433,9 +443,8 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 		}
 
 		// if IDP and rotate the agent will register a new client
-		if action == prov.Rotate && provCreds.IsIDPCredential() {
-			err := provCreds.idpProvisioner.RegisterClient()
-			if err != nil {
+		if action == prov.Rotate && provCreds.IsIDPCredential() && !isExternalCredential(cred) {
+			if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
 				h.onError(ctx, cred, err)
 				return cred
@@ -447,6 +456,14 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 	}
 
 	return cred
+}
+
+// isExternalCredential - when mode is CredProvisionModeExternal the client was registered outside the SDK; skip RegisterClient.
+func isExternalCredential(cred *management.Credential) bool {
+	if cred == nil {
+		return false
+	}
+	return cred.Spec.Provision != nil && cred.Spec.Provision.Mode == prov.CredProvisionModeExternal
 }
 
 // onError updates the AccessRequest with an error status
@@ -525,21 +542,28 @@ type provCreds struct {
 	credSchema        map[string]interface{}
 	credProvSchema    map[string]interface{}
 	credSchemaDetails map[string]interface{}
+	provisionMode     string
 }
 
 func (h *credentials) newProvCreds(cr *management.Credential, app *management.ManagedApplication, action prov.CredentialAction, crd *management.CredentialRequestDefinition) (*provCreds, error) {
 	credDetails := util.GetAgentDetails(cr)
 
+	provisionMode := ""
+	if cr.Spec.Provision != nil {
+		provisionMode = cr.Spec.Provision.Mode
+	}
+
 	provCred := &provCreds{
-		appDetails:  util.GetAgentDetails(app),
-		credDetails: credDetails,
-		credType:    cr.Spec.CredentialRequestDefinition,
-		credData:    cr.Spec.Data,
-		managedApp:  cr.Spec.ManagedApplication,
-		id:          cr.Metadata.ID,
-		name:        cr.Name,
-		credAction:  action,
-		days:        0,
+		appDetails:    util.GetAgentDetails(app),
+		credDetails:   credDetails,
+		credType:      cr.Spec.CredentialRequestDefinition,
+		credData:      cr.Spec.Data,
+		managedApp:    cr.Spec.ManagedApplication,
+		id:            cr.Metadata.ID,
+		name:          cr.Name,
+		credAction:    action,
+		days:          0,
+		provisionMode: provisionMode,
 	}
 
 	if crd != nil {
@@ -591,6 +615,11 @@ func (c provCreds) GetCredentialData() map[string]interface{} {
 // GetCredentialAction gets the data of the credential
 func (c provCreds) GetCredentialAction() prov.CredentialAction {
 	return c.credAction
+}
+
+// GetProvisionMode returns the provisioning mode for the credential (e.g. "external")
+func (c provCreds) GetProvisionMode() string {
+	return c.provisionMode
 }
 
 // GetID gets the id of the credential resource

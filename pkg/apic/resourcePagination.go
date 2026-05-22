@@ -84,7 +84,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 	log := c.logger.WithField("endpoint", url)
 	log.Trace("retrieving all resources from endpoint")
-	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
+	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) && !strings.HasPrefix(url, c.cfg.GetAPIServerVersionURL()) {
 		url = c.createAPIServerURL(url)
 	}
 

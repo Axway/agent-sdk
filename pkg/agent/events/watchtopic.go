@@ -252,6 +252,7 @@ func NewDiscoveryWatchTopic(name, scope string, agentResourceGroupKind v1.GroupK
 		{GroupKind: management.ManagedApplicationProfileGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: createdOrUpdated},
 		{GroupKind: management.ApplicationProfileDefinitionGVK().GroupKind, ScopeName: scope, ScopeKind: management.EnvironmentGVK().Kind, EventTypes: all},
 		{GroupKind: management.EnvironmentGVK().GroupKind, Name: scope, EventTypes: updated},
+		{GroupKind: management.IdentityProviderMetadataGVK().GroupKind, ScopeName: "*", ScopeKind: management.IdentityProviderGVK().Kind, EventTypes: all},
 	}
 
 	return WatchTopicValues{
