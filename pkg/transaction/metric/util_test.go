@@ -14,6 +14,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
+const testTeamGUID1 = "team-guid-1"
+
 func TestCentralMetricFromAPIMetric(t *testing.T) {
 	agent.InitializeForTest(
 		nil,
@@ -177,6 +179,143 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 			},
 		},
+		"product owner nil when not set": {
+			input: &APIMetric{
+				EventID:    "id-no-owner",
+				Count:      1,
+				StatusCode: "200",
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				Product: models.Product{
+					ID:        "prod-no-owner",
+					VersionID: "ver-1",
+				},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "id-no-owner",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+				Product: &models.ProductResourceReference{
+					ResourceReference: models.ResourceReference{ID: "prod-no-owner"},
+					VersionID:         "ver-1",
+					Owner:             nil,
+				},
+			},
+		},
+		"product owner propagated when set": {
+			input: &APIMetric{
+				EventID:    "id-with-owner",
+				Count:      1,
+				StatusCode: "200",
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				Product: models.Product{
+					ID:        "prod-with-owner",
+					VersionID: "ver-2",
+					Owner:     &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID1},
+				},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "id-with-owner",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+				Product: &models.ProductResourceReference{
+					ResourceReference: models.ResourceReference{ID: "prod-with-owner"},
+					VersionID:         "ver-2",
+					Owner:             &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID1},
+				},
+			},
+		},
+		"api service revision nil when not set": {
+			input: &APIMetric{
+				EventID:    "id-no-revision",
+				Count:      1,
+				StatusCode: "200",
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "id-no-revision",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+			},
+		},
+		"api service revision propagated when set": {
+			input: &APIMetric{
+				EventID:              "id-with-revision",
+				Count:                1,
+				StatusCode:           "200",
+				Observation:          models.ObservationDetails{Start: 1, End: 2},
+				APIServiceRevisionID: "revision-id-1",
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "id-with-revision",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+				APIServiceRevision: &models.ResourceReference{ID: "revision-id-1"},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -263,10 +402,10 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 			wantType: "unknown",
 		},
 		"app found with team owner returns team block": {
-			appRI:    makeAppRI("app-team", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-1"}),
+			appRI:    makeAppRI("app-team", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}),
 			appID:    "app-team",
 			wantType: "team",
-			wantGUID: "team-guid-1",
+			wantGUID: testTeamGUID1,
 		},
 		"app with nil owner returns none": {
 			appRI:    makeAppRI("app-no-owner", nil),

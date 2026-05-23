@@ -46,6 +46,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 		out.Product = &models.ProductResourceReference{
 			ResourceReference: models.ResourceReference{ID: id},
 			VersionID:         in.Product.VersionID,
+			Owner:             in.Product.Owner,
 		}
 	}
 
@@ -55,6 +56,10 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 
 	if id := in.AssetResource.ID; isKnownID(id) {
 		out.AssetResource = &models.ResourceReference{ID: id}
+	}
+
+	if isKnownID(in.APIServiceRevisionID) {
+		out.APIServiceRevision = &models.ResourceReference{ID: in.APIServiceRevisionID}
 	}
 
 	if id := in.ProductPlan.ID; isKnownID(id) {

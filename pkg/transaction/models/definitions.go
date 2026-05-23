@@ -25,7 +25,6 @@ type APIResourceReference struct {
 	ResourceReference
 	Name         string      `json:"name,omitempty"`
 	APIServiceID string      `json:"apiServiceId,omitempty"`
-	APIOwnerID   string      `json:"apiTeamId,omitempty"`
 	Owner        *OwnerBlock `json:"owner,omitempty"`
 }
 
@@ -91,10 +90,11 @@ func (a AssetResource) GetLogFields(fields logrus.Fields) logrus.Fields {
 
 // Product - Represents the product used in the transaction summary provider details event
 type Product struct {
-	ID          string `json:"id,omitempty"`
-	Name        string `json:"name,omitempty"`
-	VersionName string `json:"versionName,omitempty"`
-	VersionID   string `json:"versionId,omitempty"`
+	ID          string      `json:"id,omitempty"`
+	Name        string      `json:"name,omitempty"`
+	VersionName string      `json:"versionName,omitempty"`
+	VersionID   string      `json:"versionId,omitempty"`
+	Owner       *OwnerBlock `json:"owner,omitempty"`
 }
 
 func (a Product) GetLogFields(fields logrus.Fields) logrus.Fields {

@@ -81,7 +81,6 @@ type cachedMetric struct {
 // V4EventDistribution - represents V4 distribution
 type V4EventDistribution struct {
 	Environment string `json:"environment"`
-	Version     string `json:"version,omitempty"`
 }
 
 // V4Session - represents V4 session

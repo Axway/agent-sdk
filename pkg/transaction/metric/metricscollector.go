@@ -632,8 +632,7 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		ResourceReference: models.ResourceReference{
 			ID: api.ID,
 		},
-		Name:       api.Name,
-		APIOwnerID: api.TeamID,
+		Name: api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
 	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
