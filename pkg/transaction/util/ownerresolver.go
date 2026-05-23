@@ -40,6 +40,10 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 		if svc.Owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
 		}
+		if svc.Owner.User != nil && svc.Owner.User.ID != "" {
+			logger.WithField("apiID", apiID).WithField("userGUID", svc.Owner.User.ID).Trace("resolved api owner as user (x-private team)")
+			return &models.OwnerBlock{Type: "user", TeamGUID: svc.Owner.ID, UserGUID: svc.Owner.User.ID}
+		}
 		logger.WithField("apiID", apiID).WithField("teamGUID", svc.Owner.ID).Trace("resolved api owner")
 		return &models.OwnerBlock{Type: "team", TeamGUID: svc.Owner.ID}
 	}
@@ -62,6 +66,10 @@ func ResolveAppOwner(accessRequest *management.AccessRequest) *models.OwnerBlock
 		if owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
 		}
+		if owner.User != nil && owner.User.ID != "" {
+			logger.WithField("accessRequestName", accessRequest.Name).WithField("userGUID", owner.User.ID).Trace("resolved app owner as user (x-private team)")
+			return &models.OwnerBlock{Type: "user", TeamGUID: owner.ID, UserGUID: owner.User.ID}
+		}
 		logger.WithField("accessRequestName", accessRequest.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner from access request")
 		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}
 	}
@@ -76,6 +84,9 @@ func ResolveProductOwner(ref v1.EmbeddedReference) *models.OwnerBlock {
 	if ref.Owner.Type == v1.TeamOwner {
 		if ref.Owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
+		}
+		if ref.Owner.User != nil && ref.Owner.User.ID != "" {
+			return &models.OwnerBlock{Type: "user", TeamGUID: ref.Owner.ID, UserGUID: ref.Owner.User.ID}
 		}
 		return &models.OwnerBlock{Type: "team", TeamGUID: ref.Owner.ID}
 	}
@@ -101,6 +112,10 @@ func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.OwnerBlo
 	if owner.Type == v1.TeamOwner {
 		if owner.ID == "" {
 			return &models.OwnerBlock{Type: "unknown"}
+		}
+		if owner.User != nil && owner.User.ID != "" {
+			logger.WithField("appName", manApp.Name).WithField("userGUID", owner.User.ID).Trace("resolved app owner as user (x-private team)")
+			return &models.OwnerBlock{Type: "user", TeamGUID: owner.ID, UserGUID: owner.User.ID}
 		}
 		logger.WithField("appName", manApp.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner from managed application")
 		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}

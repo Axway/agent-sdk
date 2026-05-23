@@ -16,7 +16,10 @@ const (
 	ownerNilReturnsNone = "nil owner returns none"
 	ownerTeamWithGUID   = "team owner with GUID returns team block"
 	ownerTeamEmptyGUID  = "team owner with empty GUID returns unknown"
+	ownerUserXPrivate   = "x-private team owner returns user block"
+	testOwnerTeamGUID1  = "team-guid-1"
 	testOwnerTeamGUID2  = "team-guid-2"
+	testOwnerUserGUID   = "user-guid-1"
 )
 
 func apiServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
@@ -85,6 +88,11 @@ func TestResolveAPIOwner(t *testing.T) {
 			cache:    newCacheWithAPIService("api-5", &v1.Owner{Type: v1.TeamOwner, ID: "team-5"}),
 			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-5"},
 		},
+		ownerUserXPrivate: {
+			apiID:    "api-6",
+			cache:    newCacheWithAPIService("api-6", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-6", User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
+			expected: &models.OwnerBlock{Type: "user", TeamGUID: "team-guid-6", UserGUID: testOwnerUserGUID},
+		},
 	}
 
 	for name, tc := range tests {
@@ -121,6 +129,10 @@ func TestResolveAppOwner(t *testing.T) {
 			accessRequest: makeAccessRequest("ar-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			expected:      &models.OwnerBlock{Type: "unknown"},
 		},
+		ownerUserXPrivate: {
+			accessRequest: makeAccessRequest("ar-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
+			expected:      &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID2, UserGUID: testOwnerUserGUID},
+		},
 	}
 
 	for name, tc := range tests {
@@ -140,8 +152,8 @@ func TestResolveProductOwner(t *testing.T) {
 			expected: &models.OwnerBlock{Type: "none"},
 		},
 		ownerTeamWithGUID: {
-			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-1"}},
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-1"},
+			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1}},
+			expected: &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID1},
 		},
 		ownerTeamEmptyGUID: {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: ""}},
@@ -150,6 +162,10 @@ func TestResolveProductOwner(t *testing.T) {
 		"reference with name but no owner returns none": {
 			ref:      v1.EmbeddedReference{Kind: "PublishedProduct", Name: "product-1"},
 			expected: &models.OwnerBlock{Type: "none"},
+		},
+		ownerUserXPrivate: {
+			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1, User: &v1.OwnerUser{ID: testOwnerUserGUID}}},
+			expected: &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID1, UserGUID: testOwnerUserGUID},
 		},
 	}
 	for name, tc := range tests {
@@ -179,6 +195,10 @@ func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 		ownerTeamEmptyGUID: {
 			manApp:   managedAppRI("app-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			expected: &models.OwnerBlock{Type: "unknown"},
+		},
+		ownerUserXPrivate: {
+			manApp:   managedAppRI("app-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
+			expected: &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID2, UserGUID: testOwnerUserGUID},
 		},
 	}
 
