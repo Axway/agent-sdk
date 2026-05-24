@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
-	"github.com/stretchr/testify/assert"
 )
 
 func makeTraceAR(id, name, appName, instanceID string) *management.AccessRequest {

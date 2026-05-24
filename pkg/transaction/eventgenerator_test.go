@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/elastic/beats/v7/libbeat/common"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/stretchr/testify/assert"
 )
 
 type Config struct {
@@ -173,6 +174,15 @@ func TestCreateEvent(t *testing.T) {
 			},
 			wantErr: "distribution.environment",
 		},
+		"unknown logEvent type returns error from BuildTransactionV2Data": {
+			tenantID: tenantID,
+			envID:    envID,
+			logEvent: LogEvent{
+				Type:          "unknown.type",
+				TransactionID: "txn-bad-type",
+			},
+			wantErr: "unknown logEvent type",
+		},
 		"leg event beat message is InsightsEvent JSON": {
 			tenantID: tenantID,
 			envID:    envID,
@@ -225,6 +235,44 @@ func TestCreateEvent(t *testing.T) {
 			assert.Equal(t, tc.wantEvent, envelope["event"])
 			assert.Equal(t, tc.tenantID, envelope["org"])
 			assert.NotEmpty(t, envelope["id"])
+		})
+	}
+}
+
+func TestCreateEventGuardCases(t *testing.T) {
+	cases := map[string]struct {
+		setupCfg func() corecfg.CentralConfig
+		logEvent LogEvent
+		wantErr  string
+	}{
+		"missing tenantID returns error": {
+			setupCfg: func() corecfg.CentralConfig {
+				cfg := &corecfg.CentralConfiguration{
+					EnvironmentID: "env-guard",
+				}
+				cfg.SetEnvironmentID("env-guard")
+				return cfg
+			},
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-guard-tenant",
+				TransactionEvent: &Event{ID: "0", Status: "Pass"},
+			},
+			wantErr: "tenantID",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			agent.InitializeForTest(nil, agent.TestWithCentralConfig(tc.setupCfg()))
+			gen := &Generator{
+				shouldAddFields:                false,
+				shouldUseTrafficForAggregation: false,
+				logger:                         log.NewFieldLogger(),
+			}
+			_, err := gen.createEvent(tc.logEvent, time.Now(), nil, nil, nil)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
 }

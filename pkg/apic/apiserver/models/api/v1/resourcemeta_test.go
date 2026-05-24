@@ -287,55 +287,82 @@ func TestResourceMetaGetSelfLink(t *testing.T) {
 	assert.Equal(t, "/selflink", link)
 }
 
-func TestResourceMetaGetKindLink(t *testing.T) {
+func TestGetKindLink(t *testing.T) {
+	const kindOnlyPath = "/group/v1/kinds"
 	plurals["kind"] = "kinds"
 	plurals["scopeKind"] = "scopeKinds"
 
-	// nil receiver
-	var nilMeta *ResourceMeta
-	assert.Equal(t, "", nilMeta.GetKindLink())
-
-	meta := &ResourceMeta{
-		GroupVersionKind: GroupVersionKind{
-			GroupKind: GroupKind{
-				Group: "group",
-				Kind:  "kind",
+	tests := map[string]struct {
+		setup    func() *ResourceMeta
+		expected string
+	}{
+		"nil receiver returns empty": {
+			setup:    func() *ResourceMeta { return nil },
+			expected: "",
+		},
+		"missing APIVersion returns empty": {
+			setup: func() *ResourceMeta {
+				return &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}},
+				}
 			},
+			expected: "",
 		},
-		Title: "title",
-		Metadata: Metadata{
-			ID: "333",
+		"no scope returns kind-only path": {
+			setup: func() *ResourceMeta {
+				return &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}, APIVersion: "v1"},
+				}
+			},
+			expected: kindOnlyPath,
 		},
-		Name: "name",
+		"scope kind set, empty scope name omits scope path": {
+			setup: func() *ResourceMeta {
+				return &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}, APIVersion: "v1"},
+					Metadata:         Metadata{Scope: MetadataScope{Kind: "scopeKind"}},
+				}
+			},
+			expected: kindOnlyPath,
+		},
+		"scope kind set, valid scope name includes scope path": {
+			setup: func() *ResourceMeta {
+				return &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}, APIVersion: "v1"},
+					Metadata:         Metadata{Scope: MetadataScope{Kind: "scopeKind", Name: "scope"}},
+				}
+			},
+			expected: "/group/v1/scopeKinds/scope/kinds",
+		},
+		"no scope kind, scopeKindMap lookup includes scope path": {
+			setup: func() *ResourceMeta {
+				m := &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}, APIVersion: "v1"},
+					Metadata:         Metadata{Scope: MetadataScope{Name: "scope"}},
+				}
+				scopeKindMap[m.GroupKind] = "scopeKind"
+				return m
+			},
+			expected: "/group/v1/scopeKinds/scope/kinds",
+		},
+		"no scope kind, scopeKindMap has no entry omits scope path": {
+			setup: func() *ResourceMeta {
+				return &ResourceMeta{
+					GroupVersionKind: GroupVersionKind{GroupKind: GroupKind{Group: "group", Kind: "kind"}, APIVersion: "v1"},
+					Metadata:         Metadata{Scope: MetadataScope{Name: "scope"}},
+				}
+			},
+			expected: kindOnlyPath,
+		},
 	}
 
-	// missing version
-	assert.Equal(t, "", meta.GetKindLink())
-
-	meta.APIVersion = "v1"
-
-	// no scope
-	assert.Equal(t, "/group/v1/kinds", meta.GetKindLink())
-
-	// scope kind set, no scope name → scope path omitted
-	meta.Metadata.Scope.Kind = "scopeKind"
-	assert.Equal(t, "/group/v1/kinds", meta.GetKindLink())
-
-	// scope kind set, wildcard scope name → scope path omitted
-	meta.Metadata.Scope.Name = "*"
-	assert.Equal(t, "/group/v1/kinds", meta.GetKindLink())
-
-	// scope kind set, valid scope name → scope path included
-	meta.Metadata.Scope.Name = "scope"
-	assert.Equal(t, "/group/v1/scopeKinds/scope/kinds", meta.GetKindLink())
-
-	// no scope kind, scopeKindMap lookup finds scope → scope path included
-	meta.Metadata.Scope.Kind = ""
-	meta.Metadata.Scope.Name = "scope"
-	scopeKindMap[meta.GroupKind] = "scopeKind"
-	assert.Equal(t, "/group/v1/scopeKinds/scope/kinds", meta.GetKindLink())
-
-	// no scope kind, scopeKindMap has no entry → scope path omitted
-	delete(scopeKindMap, meta.GroupKind)
-	assert.Equal(t, "/group/v1/kinds", meta.GetKindLink())
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			meta := tc.setup()
+			if meta != nil {
+				t.Cleanup(func() { delete(scopeKindMap, meta.GroupKind) })
+			}
+			assert.Equal(t, tc.expected, meta.GetKindLink())
+		})
+	}
 }
