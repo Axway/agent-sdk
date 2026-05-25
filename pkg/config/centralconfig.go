@@ -269,8 +269,8 @@ type CentralConfiguration struct {
 	CredentialConfig          CredentialConfig      `config:"credential"`
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
 	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
+	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
 	managedEnvironments       []string
-	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
 	isSingleURLSet            bool
