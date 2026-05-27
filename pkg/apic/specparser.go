@@ -149,6 +149,8 @@ func (s *SpecResourceParser) createProcessorWithResourceType() error {
 		s.specProcessor, err = s.parseAsyncAPISpec()
 	case GraphQL:
 		s.specProcessor, err = s.parseGraphQLSpec()
+	case Mcp:
+		s.specProcessor, err = s.parseMcpSpec()
 	case Raml:
 		s.specProcessor, err = s.parseRamlSpec()
 	}
@@ -280,6 +282,11 @@ func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 	}
 	return nil, errors.New("invalid protobuf specification")
 
+}
+
+func (s *SpecResourceParser) parseMcpSpec() (SpecProcessor, error) {
+	s.resourceContentType = mimeApplicationJSON
+	return newMCPSpecProcessor(s.resourceSpec), nil
 }
 
 func (s *SpecResourceParser) parseRamlSpec() (SpecProcessor, error) {
