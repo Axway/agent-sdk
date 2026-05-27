@@ -41,6 +41,9 @@ const (
 	BasicAuthPassword = "password"
 
 	CredExpDetail = "Agent: CredentialExpired"
+
+	// CredProvisionModeExternal - credential was provisioned outside the SDK; RegisterClient should be skipped.
+	CredProvisionModeExternal = "external"
 )
 
 // CrdType - the type of credential request definition

@@ -29,6 +29,7 @@ const (
 	managedAppKey          = "managedApp"
 	subscriptionsKey       = "subscriptions"
 	accReqKey              = "accReq"
+	idpMetadataKey         = "idpMetadata"
 	watchSequenceKey       = "watchSequence"
 	watchResourceKey       = "watchResource"
 	complianceRuntimeKey   = "compRunRes"
@@ -123,6 +124,11 @@ type Manager interface {
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
 
+	// IdentityProviderMetadata cache related methods
+	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *v1.ResourceInstance
+	AddIdentityProviderMetadata(resource *v1.ResourceInstance)
+	DeleteIdentityProviderMetadata(id string) error
+
 	GetWatchResourceCacheKeys(group, kind string) []string
 	AddWatchResource(resource *v1.ResourceInstance)
 	GetWatchResourceByKey(key string) *v1.ResourceInstance
@@ -149,6 +155,7 @@ type cacheManager struct {
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
+	idpMetadataMap          cache.Cache
 	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
@@ -205,6 +212,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
+		createResourceLoader(c.setLoadedCache, idpMetadataKey),
 	}
 
 	c.isPersistedCacheLoaded = true
@@ -264,6 +272,8 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.sequenceCache = lc
 	case complianceRuntimeKey:
 		c.crrMap = lc
+	case idpMetadataKey:
+		c.idpMetadataMap = lc
 	default:
 		c.logger.WithField("cacheKey", key).Error("unknown cache key")
 	}
@@ -422,6 +432,7 @@ func (c *cacheManager) Flush() {
 	c.sequenceCache.Flush()
 	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
+	c.idpMetadataMap.Flush()
 	c.SaveCache()
 	// delete the cache file in case the agent is restarted here
 	os.Remove(c.cacheFilename)

@@ -186,6 +186,7 @@ type CentralConfig interface {
 	GetTraceabilityHost() string
 	GetTraceabilityProtocol() string
 	GetPlatformURL() string
+	GetAPIServerVersionURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
 	GetEnvironmentACLsURL() string
@@ -268,8 +269,8 @@ type CentralConfiguration struct {
 	CredentialConfig          CredentialConfig      `config:"credential"`
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
 	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
+	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
 	managedEnvironments       []string
-	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
 	isSingleURLSet            bool
@@ -451,6 +452,11 @@ func (c *CentralConfiguration) GetProxyURL() string {
 // GetAccessRequestsURL - Returns the accessrequest URL for access request API
 func (c *CentralConfiguration) GetAccessRequestsURL() string {
 	return c.GetEnvironmentURL() + "/accessrequests"
+}
+
+// GetAPIServerVersionURL - Returns the base path for the API server with version
+func (c *CentralConfiguration) GetAPIServerVersionURL() string {
+	return c.GetURL() + "/apis/management/" + c.APIServerVersion
 }
 
 // GetAPIServerURL - Returns the base path for the API server

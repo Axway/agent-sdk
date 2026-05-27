@@ -44,7 +44,7 @@ func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, 
 	env := &management.Environment{}
 	err := env.FromInstance(resource)
 	if err != nil {
-		log.WithError(err).Error("could not handle access request")
+		log.WithError(err).Error("could not handle environment resource")
 		return nil
 	}
 

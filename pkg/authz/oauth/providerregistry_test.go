@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Axway/agent-sdk/pkg/config"
 )
 
 func createIDPConfig(name, metadataURL string) *config.IDPConfiguration {
@@ -92,4 +93,50 @@ func TestProviderRegistry(t *testing.T) {
 	p, err = idpRegistry.GetProviderByAuthorizationEndpoint(context.Background(), "test1")
 	assert.NotNil(t, err)
 	assert.Nil(t, p)
+}
+
+func TestIDPResourceName(t *testing.T) {
+	idpServer := NewMockIDPServer()
+	defer idpServer.Close()
+
+	tests := map[string]struct {
+		preSet        bool
+		expectedName  string
+		expectedFound bool
+	}{
+		"not found before set": {
+			preSet:        false,
+			expectedName:  "",
+			expectedFound: false,
+		},
+		"found after set — registry and provider both updated": {
+			preSet:        true,
+			expectedName:  "my-idp-resource",
+			expectedFound: true,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			providerReg := NewProviderRegistry()
+			err := providerReg.RegisterProvider(
+				createIDPConfig("test-idp", idpServer.GetMetadataURL()),
+				config.NewTLSConfig(), "", 30*time.Second,
+			)
+			assert.NoError(t, err)
+
+			if tc.preSet {
+				providerReg.SetIDPResourceName(idpServer.GetMetadataURL(), tc.expectedName)
+			}
+
+			gotName, ok := providerReg.GetIDPResourceName(idpServer.GetMetadataURL())
+			assert.Equal(t, tc.expectedFound, ok)
+			assert.Equal(t, tc.expectedName, gotName)
+
+			p, err := providerReg.GetProviderByName("test-idp")
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedName, p.GetIDPResourceName())
+		})
+	}
 }

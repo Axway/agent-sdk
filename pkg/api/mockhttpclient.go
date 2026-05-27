@@ -26,10 +26,11 @@ type MockHTTPClient struct {
 
 // MockResponse - use for mocking the MockHTTPClient responses
 type MockResponse struct {
-	FileName  string
-	RespData  string
-	RespCode  int
-	ErrString string
+	FileName    string
+	RespData    string
+	RespCode    int
+	RespHeaders map[string][]string
+	ErrString   string
 }
 
 // SetResponse -
@@ -122,7 +123,7 @@ func (c *MockHTTPClient) sendMultiple(request Request) (*Response, error) {
 	response := Response{
 		Code:    c.Responses[c.RespCount].RespCode,
 		Body:    dat,
-		Headers: map[string][]string{},
+		Headers: c.Responses[c.RespCount].RespHeaders,
 	}
 
 	if c.Responses[c.RespCount].ErrString != "" {

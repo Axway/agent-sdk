@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const invalidSpec = `{"test":"123"}`
+
 const longDescription = `This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
 Swagger at [http://swagger.io](http://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
 You can now help us improve the API whether it's by making changes to the definition itself or to the code.
@@ -171,24 +173,52 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.NotNil(t, sb)
 }
 
+func TestSetRevisionOnly(t *testing.T) {
+	tests := map[string]struct {
+		callSetter bool
+		want       bool
+	}{
+		"defaults to false": {
+			callSetter: false,
+			want:       false,
+		},
+		"SetRevisionOnly sets flag": {
+			callSetter: true,
+			want:       true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			b := NewServiceBodyBuilder().SetResourceType(Unstructured).SetAPISpec([]byte{})
+			if tc.callSetter {
+				b = b.SetRevisionOnly()
+			}
+			sb, err := b.Build()
+			assert.Nil(t, err)
+			assert.Equal(t, tc.want, sb.IsRevisionOnly())
+		})
+	}
+}
+
 func TestServiceBodyWithParseError(t *testing.T) {
 	serviceBuilder := NewServiceBodyBuilder()
-	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.Nil(t, err)
 }
 
