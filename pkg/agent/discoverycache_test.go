@@ -17,7 +17,7 @@ import (
 
 const envName = "mockEnv"
 
-func TestDiscoveryCache_execute(t *testing.T) {
+func TestDiscoveryCacheExecute(t *testing.T) {
 	tests := map[string]struct {
 		agentType       config.AgentType
 		wt              *management.WatchTopic
