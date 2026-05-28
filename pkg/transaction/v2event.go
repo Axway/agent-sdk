@@ -67,9 +67,10 @@ type insightsReporter struct {
 
 // legProtocol is the protocol sub-object for TransactionLegV2Data.
 type legProtocol struct {
-	URI        string `json:"uri,omitempty"`
-	Method     string `json:"method,omitempty"`
-	StatusCode int    `json:"statusCode"`
+	Type   string `json:"type,omitempty"`
+	URI    string `json:"uri,omitempty"`
+	Method string `json:"method,omitempty"`
+	Status int    `json:"status"`
 }
 
 // TransactionLegV2Data is the data payload for api.transaction.event (version "2").
@@ -92,6 +93,12 @@ type TransactionLegV2Data struct {
 	// Deprecated fields — populated for backward compatibility only (omitempty suppresses when empty)
 	ProxyID   string `json:"proxy.id,omitempty"`
 	ProxyName string `json:"proxy.name,omitempty"`
+}
+
+func (d *TransactionLegV2Data) SetConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBlock) {
+	if cd != nil {
+		d.ConsumerDetails = buildConsumerDetails(cd, appOwner)
+	}
 }
 
 // GetStartTime implements metric.V4Data.
@@ -250,9 +257,10 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 	var proto *legProtocol
 	if httpProto, ok := txEvent.Protocol.(*Protocol); ok && httpProto != nil {
 		proto = &legProtocol{
-			URI:        httpProto.URI,
-			Method:     httpProto.Method,
-			StatusCode: httpProto.Status,
+			Type:   httpProto.Type,
+			URI:    httpProto.URI,
+			Method: httpProto.Method,
+			Status: httpProto.Status,
 		}
 	}
 
@@ -294,13 +302,18 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 
 	apiID, apiName, apiServiceRevisionID := resolveSummaryAPIInfo(summary)
 
+	apiServiceID := ""
+	if summary.API != nil {
+		apiServiceID = summary.API.APIServiceID
+	}
+
 	data := &TransactionSummaryV2Data{
 		Version:            summaryDataVersion,
 		APICDeployment:     logEvent.APICDeployment,
 		Status:             summary.Status,
 		StatusDetail:       summary.StatusDetail,
 		Duration:           summary.Duration,
-		API:                buildSummaryAPIDetail(logger, apiID, apiName, summary.OwnerInfo, cacheManager),
+		API:                buildSummaryAPIDetail(logger, apiID, apiName, apiServiceID, summary.OwnerInfo, cacheManager),
 		EntryPoint:         buildEntryPoint(summary.EntryPoint),
 		AssetResource:      buildAssetResourceRef(summary.AssetResource),
 		APIServiceRevision: buildAPIServiceRevisionRef(apiServiceRevisionID, summary.API),
@@ -338,7 +351,7 @@ func resolveSummaryAPIInfo(summary *Summary) (apiID, apiName, apiServiceRevision
 	return
 }
 
-func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName string, ownerInfo *models.OwnerBlock, cacheManager cache.Manager) *insightsAPIDetail {
+func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName, apiServiceID string, ownerInfo *models.OwnerBlock, cacheManager cache.Manager) *insightsAPIDetail {
 	var apiOwner *models.OwnerBlock
 	if ownerInfo != nil {
 		apiOwner = ownerInfo
@@ -348,8 +361,8 @@ func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName string, ownerI
 		logger.WithField("apiID", apiID).WithField("ownerType", apiOwner.Type).Trace("resolved api owner from cache")
 	}
 
-	detail := &insightsAPIDetail{ID: apiID, Name: apiName, Owner: apiOwner}
-	if cacheManager != nil {
+	detail := &insightsAPIDetail{ID: apiID, Name: apiName, Owner: apiOwner, APIServiceID: apiServiceID}
+	if apiServiceID == "" && cacheManager != nil {
 		stripped := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
 		if svc := cacheManager.GetAPIServiceWithAPIID(stripped); svc != nil {
 			detail.APIServiceID = svc.Metadata.ID

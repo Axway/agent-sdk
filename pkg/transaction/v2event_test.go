@@ -168,7 +168,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, data.Protocol)
 				assert.Equal(t, "/v1/resource", data.Protocol.URI)
 				assert.Equal(t, "POST", data.Protocol.Method)
-				assert.Equal(t, 201, data.Protocol.StatusCode)
+				assert.Equal(t, 201, data.Protocol.Status)
 
 				b, err := json.Marshal(data)
 				require.NoError(t, err)
@@ -668,14 +668,15 @@ func TestBuildTransactionV2DataLegExcludedFields(t *testing.T) {
 		assert.NotContains(t, dataKeys, key, "leg data must not have top-level key %q", key)
 	}
 
-	// URI/method/statusCode must be nested inside the protocol object.
+	// URI/method/status must be nested inside the protocol object.
 	protoRaw, ok := dataKeys["protocol"]
 	require.True(t, ok, "leg data must have a protocol field")
 	proto, ok := protoRaw.(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "/api/v1", proto["uri"])
 	assert.Equal(t, "GET", proto["method"])
-	assert.Equal(t, float64(200), proto["statusCode"])
+	assert.Equal(t, float64(200), proto["status"])
+	assert.NotContains(t, proto, "statusCode", "protocol must use 'status' not 'statusCode'")
 }
 
 // TestBuildTransactionV2DataSummaryExcludedFields verifies that summary events do not

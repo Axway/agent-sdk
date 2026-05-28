@@ -136,6 +136,7 @@ type APIDetails struct {
 	Revision           int    `json:"revision,omitempty"`
 	TeamID             string `json:"teamId,omitempty"`
 	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	APIServiceID       string `json:"apiServiceId,omitempty"`
 	Stage              string `json:"-"`
 	Version            string `json:"-"`
 }
