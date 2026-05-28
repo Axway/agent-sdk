@@ -12,6 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testTargetPath   = "/targetPath"
+	testResourcePath = "/resourcePath"
+	testHost         = "somehost.com"
+)
+
 func TestTransactionEventBuilder(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
@@ -50,16 +56,16 @@ func TestTransactionEventBuilder(t *testing.T) {
 	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10, redactionConfig)
 
 	logEvent, err := NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		Build()
 	assert.Nil(t, logEvent)
 	assert.NotNil(t, err)
 	assert.Equal(t, "id property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -69,8 +75,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "direction property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -81,8 +87,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "status property not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -94,8 +100,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "invalid transaction event status", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -111,8 +117,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "protocol details not set in transaction event", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -130,8 +136,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Equal(t, "unsupported protocol type", err.Error())
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -148,8 +154,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.Nil(t, err)
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTransactionID("11111").
 		SetTimestamp(timeStamp).
 		SetID("1111").
@@ -188,8 +194,8 @@ func TestTransactionEventBuilder(t *testing.T) {
 	assert.True(t, ok)
 
 	logEvent, err = NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -252,15 +258,15 @@ func TestSummaryBuilder(t *testing.T) {
 	logEvent, err := NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
 		SetTransactionID("11111").
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTimestamp(timeStamp).
 		SetStatus(TxSummaryStatusSuccess, "200").
 		SetDuration(10).
 		SetApplication("1111", "TestApp").
 		SetTeam("1111").
 		SetProxy("", "proxy", 1).
-		SetEntryPoint("http", "GET", "/test", "somehost.com").
+		SetEntryPoint("http", "GET", "/test", testHost).
 		SetIsInMetricEvent(true).
 		Build()
 
@@ -298,13 +304,13 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "http", logEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
-	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
+	assert.Equal(t, testHost, logEvent.TransactionSummary.EntryPoint.Host)
 	assert.Equal(t, true, logEvent.TransactionSummary.IsInMetricEvent)
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetDuration(10).
 		Build()
 	assert.Nil(t, logEvent)
@@ -313,9 +319,9 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
-		SetEntryPoint("http", "GET", "/test", "somehost.com").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
+		SetEntryPoint("http", "GET", "/test", testHost).
 		SetDuration(10).
 		Build()
 	assert.Nil(t, logEvent)
@@ -324,9 +330,9 @@ func TestSummaryBuilder(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
-		SetEntryPoint("http", "GET", "/test", "somehost.com").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
+		SetEntryPoint("http", "GET", "/test", testHost).
 		SetDuration(10).
 		SetStatus("Pass", "200").
 		Build()
@@ -337,9 +343,9 @@ func TestSummaryBuilder(t *testing.T) {
 	// Test with explicitly setting properties that are set thru agent config by default
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
-		SetEntryPoint("http", "GET", "/test", "somehost.com").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
+		SetEntryPoint("http", "GET", "/test", testHost).
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -387,7 +393,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "http", logEvent.TransactionSummary.EntryPoint.Type)
 	assert.Equal(t, "GET", logEvent.TransactionSummary.EntryPoint.Method)
 	assert.Equal(t, "/{*}", logEvent.TransactionSummary.EntryPoint.Path, "Path was not redacted as it should have been")
-	assert.Equal(t, "somehost.com", logEvent.TransactionSummary.EntryPoint.Host)
+	assert.Equal(t, testHost, logEvent.TransactionSummary.EntryPoint.Host)
 	assert.Equal(t, false, logEvent.TransactionSummary.IsInMetricEvent)
 }
 
@@ -400,8 +406,8 @@ func TestLogRedactionOverride(t *testing.T) {
 	httpProtocol, _ := createHTTPProtocol("/testuri", "GET", "{}", "{}", 200, 10, 10, redactionConfig)
 
 	logEvent, err := NewTransactionEventBuilder().
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -428,9 +434,9 @@ func TestLogRedactionOverride(t *testing.T) {
 
 	logEvent, err = NewTransactionSummaryBuilder().
 		SetRedactionConfig(redactionConfig).
-		SetTargetPath("/targetPath").
-		SetResourcePath("/resourcePath").
-		SetEntryPoint("http", "GET", "/test", "somehost.com").
+		SetTargetPath(testTargetPath).
+		SetResourcePath(testResourcePath).
+		SetEntryPoint("http", "GET", "/test", testHost).
 		SetTenantID("2222").
 		SetTrcbltPartitionID("2222").
 		SetEnvironmentName("env2").
@@ -454,95 +460,149 @@ func TestLogRedactionOverride(t *testing.T) {
 	assert.False(t, redactionConfig.jmsPropertiesRedactionCalled)
 }
 
-func TestTransactionSummaryBuilder_SetProxyWithStageVersion_UnknownAPIID(t *testing.T) {
-	builder := NewTransactionSummaryBuilder()
-	builder.SetProxyWithStageVersion("", "", "stage", "version", 1)
-
-	logEvent := builder.(*transactionSummaryBuilder).logEvent
-	assert.Equal(t, "remoteApiId_unknown", logEvent.TransactionSummary.Proxy.ID)
-	assert.Equal(t, "", logEvent.TransactionSummary.Proxy.Name)
-	assert.Equal(t, "stage", logEvent.TransactionSummary.Proxy.Stage)
-	assert.Equal(t, "version", logEvent.TransactionSummary.Proxy.Version)
-	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
-}
-
-func TestTransactionSummaryBuilder_ResolveProxyID(t *testing.T) {
-	tests := []struct {
-		name        string
-		proxyID     string
-		proxyName   string
-		expected    string
-		description string
+func TestEventBuilderSetProxy(t *testing.T) {
+	const prefixedCatFactAPI = "remoteApiId_cat-fact-api"
+	cases := map[string]struct {
+		proxyID        string
+		proxyName      string
+		expectedSource string
 	}{
-		{
-			name:        "ProxyID with content after prefix and proxyName provided",
-			proxyID:     "remoteApiId_dwight",
-			proxyName:   "schrute",
-			expected:    "remoteApiId_dwight",
-			description: "Should return original proxyID when it has content after prefix, ignoring proxyName",
+		"already-prefixed ID is preserved": {
+			proxyID:        prefixedCatFactAPI,
+			proxyName:      "Cat Fact API",
+			expectedSource: prefixedCatFactAPI,
 		},
-		{
-			name:        "ProxyID with content after prefix and proxyName empty",
-			proxyID:     "remoteApiId_dwight",
-			proxyName:   "",
-			expected:    "remoteApiId_dwight",
-			description: "Should return original proxyID when it has content after prefix, even with empty proxyName",
+		"empty proxyID falls back to proxyName with prefix": {
+			proxyID:        "",
+			proxyName:      "fallback-api",
+			expectedSource: "remoteApiId_fallback-api",
 		},
-		{
-			name:        "ProxyID is just prefix and proxyName provided",
-			proxyID:     "remoteApiId_",
-			proxyName:   "schrute",
-			expected:    "remoteApiId_schrute",
-			description: "Should use proxyName with prefix when proxyID is just the prefix",
+		"both empty produces unknown with prefix": {
+			proxyID:        "",
+			proxyName:      "",
+			expectedSource: "remoteApiId_unknown",
 		},
-		{
-			name:        "Both proxyID and proxyName are empty",
-			proxyID:     "",
-			proxyName:   "",
-			expected:    "remoteApiId_unknown",
-			description: "Should use unknown with prefix when both are empty",
-		},
-		{
-			name:        "ProxyID is just prefix and proxyName is empty",
-			proxyID:     "remoteApiId_",
-			proxyName:   "",
-			expected:    "remoteApiId_unknown",
-			description: "Should use unknown with prefix when proxyID is just prefix and proxyName is empty",
-		},
-		{
-			name:        "ProxyID is empty and proxyName provided",
-			proxyID:     "",
-			proxyName:   "schrute",
-			expected:    "remoteApiId_schrute",
-			description: "Should use proxyName with prefix when proxyID is empty",
-		},
-		{
-			name:        "ProxyID without prefix and proxyName provided",
-			proxyID:     "dwight",
-			proxyName:   "schrute",
-			expected:    "dwight",
-			description: "Should return original proxyID when it doesn't start with prefix",
-		},
-		{
-			name:        "ProxyID with different prefix and proxyName provided",
-			proxyID:     "differentPrefix_dwight",
-			proxyName:   "schrute",
-			expected:    "differentPrefix_dwight",
-			description: "Should return original proxyID when it has a different prefix",
+		"only-prefix ID falls back to proxyName": {
+			proxyID:        "remoteApiId_",
+			proxyName:      "fallback-api",
+			expectedSource: "remoteApiId_fallback-api",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := transutil.ResolveIDWithPrefix(tt.proxyID, tt.proxyName)
-			assert.Equal(t, tt.expected, result, tt.description)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionEventBuilder().(*transactionEventBuilder)
+			result := b.SetProxy(tc.proxyID, tc.proxyName)
+			assert.Equal(t, b, result)
+			assert.Equal(t, tc.expectedSource, b.logEvent.TransactionEvent.Source)
 		})
 	}
 }
 
-func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
-	tests := []struct {
-		name         string
+func TestEventBuilderSetProxyWithStage(t *testing.T) {
+	cases := map[string]struct {
+		proxyID        string
+		proxyName      string
+		proxyStage     string
+		expectedSource string
+	}{
+		"already-prefixed ID preserved regardless of stage": {
+			proxyID:        "remoteApiId_ext-api-001",
+			proxyName:      "My API",
+			proxyStage:     "prod",
+			expectedSource: "remoteApiId_ext-api-001",
+		},
+		"empty stage does not affect source resolution": {
+			proxyID:        "remoteApiId_ext-api-002",
+			proxyName:      "My API",
+			proxyStage:     "",
+			expectedSource: "remoteApiId_ext-api-002",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionEventBuilder().(*transactionEventBuilder)
+			result := b.SetProxyWithStage(tc.proxyID, tc.proxyName, tc.proxyStage)
+			assert.Equal(t, b, result)
+			assert.Equal(t, tc.expectedSource, b.logEvent.TransactionEvent.Source)
+		})
+	}
+}
+
+func TestSummaryBuilderResolveProxyID(t *testing.T) {
+	cases := map[string]struct {
+		proxyID   string
+		proxyName string
+		expected  string
+	}{
+		"proxyID with content after prefix ignores proxyName": {
+			proxyID:   "remoteApiId_dwight",
+			proxyName: "schrute",
+			expected:  "remoteApiId_dwight",
+		},
+		"proxyID with content after prefix and empty proxyName": {
+			proxyID:   "remoteApiId_dwight",
+			proxyName: "",
+			expected:  "remoteApiId_dwight",
+		},
+		"proxyID is just prefix falls back to proxyName": {
+			proxyID:   "remoteApiId_",
+			proxyName: "schrute",
+			expected:  "remoteApiId_schrute",
+		},
+		"both empty produces unknown": {
+			proxyID:   "",
+			proxyName: "",
+			expected:  "remoteApiId_unknown",
+		},
+		"proxyID is just prefix and proxyName empty produces unknown": {
+			proxyID:   "remoteApiId_",
+			proxyName: "",
+			expected:  "remoteApiId_unknown",
+		},
+		"empty proxyID uses proxyName with prefix": {
+			proxyID:   "",
+			proxyName: "schrute",
+			expected:  "remoteApiId_schrute",
+		},
+		"proxyID without prefix preserved as-is": {
+			proxyID:   "dwight",
+			proxyName: "schrute",
+			expected:  "dwight",
+		},
+		"proxyID with different prefix preserved as-is": {
+			proxyID:   "differentPrefix_dwight",
+			proxyName: "schrute",
+			expected:  "differentPrefix_dwight",
+		},
+		"proxyID with multiple underscores preserved": {
+			proxyID:   "remoteApiId_dwight_test_api",
+			proxyName: "schrute",
+			expected:  "remoteApiId_dwight_test_api",
+		},
+		"proxyName with special characters": {
+			proxyID:   "",
+			proxyName: "proxy-name.with.dots",
+			expected:  "remoteApiId_proxy-name.with.dots",
+		},
+		"proxyID equals exactly the prefix falls back to proxyName": {
+			proxyID:   SummaryEventProxyIDPrefix,
+			proxyName: "fallback",
+			expected:  SummaryEventProxyIDPrefix + "fallback",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			result := transutil.ResolveIDWithPrefix(tc.proxyID, tc.proxyName)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestSummaryBuilderSetProxyWithStageVersion(t *testing.T) {
+	cases := map[string]struct {
 		proxyID      string
 		proxyName    string
 		proxyStage   string
@@ -550,8 +610,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 		revision     int
 		expectedID   string
 	}{
-		{
-			name:         "Complete proxy information with content after prefix",
+		"complete proxy information with content after prefix": {
 			proxyID:      "remoteApiId_dwight",
 			proxyName:    "schrute",
 			proxyStage:   "prod",
@@ -559,8 +618,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 			revision:     1,
 			expectedID:   "remoteApiId_dwight",
 		},
-		{
-			name:         "Proxy ID is just prefix, use proxyName",
+		"proxy ID is just prefix falls back to proxyName": {
 			proxyID:      "remoteApiId_",
 			proxyName:    "schrute",
 			proxyStage:   "test",
@@ -568,8 +626,7 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 			revision:     2,
 			expectedID:   "remoteApiId_schrute",
 		},
-		{
-			name:         "Empty proxy information, use unknown",
+		"empty proxy information produces unknown": {
 			proxyID:      "",
 			proxyName:    "",
 			proxyStage:   "",
@@ -577,89 +634,93 @@ func TestTransactionSummaryBuilder_SetProxyWithStageVersion(t *testing.T) {
 			revision:     0,
 			expectedID:   "remoteApiId_unknown",
 		},
+		"both empty with stage and version produces unknown": {
+			proxyID:      "",
+			proxyName:    "",
+			proxyStage:   "stage",
+			proxyVersion: "version",
+			revision:     1,
+			expectedID:   "remoteApiId_unknown",
+		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
-
-			result := builder.SetProxyWithStageVersion(tt.proxyID, tt.proxyName, tt.proxyStage, tt.proxyVersion, tt.revision)
-
-			// Verify the builder returned correctly
-			assert.Equal(t, builder, result)
-
-			// Verify the proxy was set correctly
-			assert.NotNil(t, builder.logEvent.TransactionSummary.Proxy)
-			assert.Equal(t, tt.expectedID, builder.logEvent.TransactionSummary.Proxy.ID)
-			assert.Equal(t, tt.proxyName, builder.logEvent.TransactionSummary.Proxy.Name)
-			assert.Equal(t, tt.proxyStage, builder.logEvent.TransactionSummary.Proxy.Stage)
-			assert.Equal(t, tt.proxyVersion, builder.logEvent.TransactionSummary.Proxy.Version)
-			assert.Equal(t, tt.revision, builder.logEvent.TransactionSummary.Proxy.Revision)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+			result := b.SetProxyWithStageVersion(tc.proxyID, tc.proxyName, tc.proxyStage, tc.proxyVersion, tc.revision)
+			assert.Equal(t, b, result)
+			assert.NotNil(t, b.logEvent.TransactionSummary.Proxy)
+			assert.Equal(t, tc.expectedID, b.logEvent.TransactionSummary.Proxy.ID)
+			assert.Equal(t, tc.proxyName, b.logEvent.TransactionSummary.Proxy.Name)
+			assert.Equal(t, tc.proxyStage, b.logEvent.TransactionSummary.Proxy.Stage)
+			assert.Equal(t, tc.proxyVersion, b.logEvent.TransactionSummary.Proxy.Version)
+			assert.Equal(t, tc.revision, b.logEvent.TransactionSummary.Proxy.Revision)
 		})
 	}
 }
 
-func TestTransactionSummaryBuilder_SetProxy_ChainedCalls(t *testing.T) {
-	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
-
-	// Test that SetProxy calls SetProxyWithStage with empty stage
-	result := builder.SetProxy("remoteApiId_dwight", "proxyName", 1)
-	assert.Equal(t, builder, result)
-	assert.Equal(t, "remoteApiId_dwight", builder.logEvent.TransactionSummary.Proxy.ID)
-	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
-	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Stage)
-	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
-	assert.Equal(t, 1, builder.logEvent.TransactionSummary.Proxy.Revision)
-}
-
-func TestTransactionSummaryBuilder_SetProxyWithStage_ChainedCalls(t *testing.T) {
-	builder := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
-
-	// Test that SetProxyWithStage calls SetProxyWithStageVersion with empty version
-	result := builder.SetProxyWithStage("remoteApiId_dwight", "proxyName", "prod", 1)
-	assert.Equal(t, builder, result)
-	assert.Equal(t, "remoteApiId_dwight", builder.logEvent.TransactionSummary.Proxy.ID)
-	assert.Equal(t, "proxyName", builder.logEvent.TransactionSummary.Proxy.Name)
-	assert.Equal(t, "prod", builder.logEvent.TransactionSummary.Proxy.Stage)
-	assert.Equal(t, "", builder.logEvent.TransactionSummary.Proxy.Version)
-	assert.Equal(t, 1, builder.logEvent.TransactionSummary.Proxy.Revision)
-}
-
-func TestTransactionSummaryBuilder_ResolveProxyID_EdgeCases(t *testing.T) {
-	tests := []struct {
-		name        string
-		proxyID     string
-		proxyName   string
-		expected    string
-		description string
+func TestSummaryBuilderSetProxy(t *testing.T) {
+	cases := map[string]struct {
+		proxyID    string
+		proxyName  string
+		revision   int
+		expectedID string
+		wantStage  string
+		wantVer    string
 	}{
-		{
-			name:        "ProxyID with multiple underscores",
-			proxyID:     "remoteApiId_dwight_test_api",
-			proxyName:   "schrute",
-			expected:    "remoteApiId_dwight_test_api",
-			description: "Should preserve full proxyID with multiple underscores",
-		},
-		{
-			name:        "ProxyName with special characters",
-			proxyID:     "",
-			proxyName:   "proxy-name.with.dots",
-			expected:    "remoteApiId_proxy-name.with.dots",
-			description: "Should handle proxyName with special characters",
-		},
-		{
-			name:        "ProxyID equals exactly the prefix",
-			proxyID:     SummaryEventProxyIDPrefix,
-			proxyName:   "fallback",
-			expected:    SummaryEventProxyIDPrefix + "fallback",
-			description: "Should treat proxyID that equals prefix as empty content",
+		"SetProxy delegates with empty stage and version": {
+			proxyID:    "remoteApiId_dwight",
+			proxyName:  "proxyName",
+			revision:   1,
+			expectedID: "remoteApiId_dwight",
+			wantStage:  "",
+			wantVer:    "",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := transutil.ResolveIDWithPrefix(tt.proxyID, tt.proxyName)
-			assert.Equal(t, tt.expected, result, tt.description)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+			result := b.SetProxy(tc.proxyID, tc.proxyName, tc.revision)
+			assert.Equal(t, b, result)
+			assert.Equal(t, tc.expectedID, b.logEvent.TransactionSummary.Proxy.ID)
+			assert.Equal(t, tc.proxyName, b.logEvent.TransactionSummary.Proxy.Name)
+			assert.Equal(t, tc.wantStage, b.logEvent.TransactionSummary.Proxy.Stage)
+			assert.Equal(t, tc.wantVer, b.logEvent.TransactionSummary.Proxy.Version)
+			assert.Equal(t, tc.revision, b.logEvent.TransactionSummary.Proxy.Revision)
+		})
+	}
+}
+
+func TestSummaryBuilderSetProxyWithStage(t *testing.T) {
+	cases := map[string]struct {
+		proxyID    string
+		proxyName  string
+		proxyStage string
+		revision   int
+		expectedID string
+		wantVer    string
+	}{
+		"SetProxyWithStage delegates with empty version": {
+			proxyID:    "remoteApiId_dwight",
+			proxyName:  "proxyName",
+			proxyStage: "prod",
+			revision:   1,
+			expectedID: "remoteApiId_dwight",
+			wantVer:    "",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionSummaryBuilder().(*transactionSummaryBuilder)
+			result := b.SetProxyWithStage(tc.proxyID, tc.proxyName, tc.proxyStage, tc.revision)
+			assert.Equal(t, b, result)
+			assert.Equal(t, tc.expectedID, b.logEvent.TransactionSummary.Proxy.ID)
+			assert.Equal(t, tc.proxyName, b.logEvent.TransactionSummary.Proxy.Name)
+			assert.Equal(t, tc.proxyStage, b.logEvent.TransactionSummary.Proxy.Stage)
+			assert.Equal(t, tc.wantVer, b.logEvent.TransactionSummary.Proxy.Version)
+			assert.Equal(t, tc.revision, b.logEvent.TransactionSummary.Proxy.Revision)
 		})
 	}
 }

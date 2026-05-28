@@ -53,6 +53,8 @@ type EventBuilder interface {
 	SetStatus(status TxEventStatus) EventBuilder
 	SetProtocolDetail(protocolDetail interface{}) EventBuilder
 	SetRedactionConfig(config redaction.Redactions) EventBuilder
+	SetProxy(proxyID, proxyName string) EventBuilder
+	SetProxyWithStage(proxyID, proxyName, proxyStage string) EventBuilder
 
 	Build() (*LogEvent, error)
 }
@@ -249,6 +251,18 @@ func (b *transactionEventBuilder) SetDestination(destination string) EventBuilde
 		return b
 	}
 	b.logEvent.TransactionEvent.Destination = destination
+	return b
+}
+
+func (b *transactionEventBuilder) SetProxy(proxyID, proxyName string) EventBuilder {
+	return b.SetProxyWithStage(proxyID, proxyName, "")
+}
+
+func (b *transactionEventBuilder) SetProxyWithStage(proxyID, proxyName, proxyStage string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.logEvent.TransactionEvent.Source = transutil.ResolveIDWithPrefix(proxyID, proxyName)
 	return b
 }
 
