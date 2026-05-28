@@ -13,12 +13,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/util"
-
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
-
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/util"
+	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 

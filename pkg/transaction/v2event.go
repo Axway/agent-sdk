@@ -34,10 +34,10 @@ type ReporterInfo struct {
 
 // insightsAPIDetail is the api sub-object shared by leg and summary v2 data.
 type insightsAPIDetail struct {
-	ID           string              `json:"id"`
-	APIServiceID string              `json:"apiServiceId,omitempty"`
-	Name         string              `json:"name,omitempty"`
-	Owner        *models.OwnerBlock  `json:"owner,omitempty"`
+	ID           string             `json:"id"`
+	APIServiceID string             `json:"apiServiceId,omitempty"`
+	Name         string             `json:"name,omitempty"`
+	Owner        *models.OwnerBlock `json:"owner,omitempty"`
 }
 
 // insightsConsumerAppDetail is the application sub-object within consumerDetails.
@@ -75,20 +75,20 @@ type legProtocol struct {
 
 // TransactionLegV2Data is the data payload for api.transaction.event (version "2").
 type TransactionLegV2Data struct {
-	Version         string                   `json:"version"`
-	APICDeployment  string                   `json:"apicDeployment,omitempty"`
-	TransactionID   string                   `json:"transactionId,omitempty"`
-	ID              string                   `json:"id,omitempty"`
-	LegID           int                      `json:"legId"`
-	ParentID        string                   `json:"parentId,omitempty"`
-	Source          string                   `json:"source,omitempty"`
-	Destination     string                   `json:"destination,omitempty"`
-	Status          string                   `json:"status,omitempty"`
-	Duration        int                      `json:"duration"`
-	Direction       string                   `json:"direction,omitempty"`
-	Protocol  *legProtocol       `json:"protocol,omitempty"`
-	API       *insightsAPIDetail `json:"api,omitempty"`
-	Reporter  *insightsReporter  `json:"reporter,omitempty"`
+	Version        string             `json:"version"`
+	APICDeployment string             `json:"apicDeployment,omitempty"`
+	TransactionID  string             `json:"transactionId,omitempty"`
+	ID             string             `json:"id,omitempty"`
+	LegID          int                `json:"legId"`
+	ParentID       string             `json:"parentId,omitempty"`
+	Source         string             `json:"source,omitempty"`
+	Destination    string             `json:"destination,omitempty"`
+	Status         string             `json:"status,omitempty"`
+	Duration       int                `json:"duration"`
+	Direction      string             `json:"direction,omitempty"`
+	Protocol       *legProtocol       `json:"protocol,omitempty"`
+	API            *insightsAPIDetail `json:"api,omitempty"`
+	Reporter       *insightsReporter  `json:"reporter,omitempty"`
 	// Deprecated fields — populated for backward compatibility only (omitempty suppresses when empty)
 	ProxyID   string `json:"proxy.id,omitempty"`
 	ProxyName string `json:"proxy.name,omitempty"`
@@ -162,14 +162,14 @@ func (d *TransactionSummaryV2Data) GetLogFields() logrus.Fields {
 
 // InsightsEvent is the top-level wire envelope for transaction leg and summary events.
 type InsightsEvent struct {
-	ID           string                       `json:"id"`
-	Org          string                       `json:"org"`
-	Event        string                       `json:"event"`
-	Version      string                       `json:"version"`
-	Timestamp    int64                        `json:"timestamp"`
-	Distribution *metric.V4EventDistribution  `json:"distribution"`
-	Data         metric.V4Data                `json:"data"`
-	Session      *metric.V4Session            `json:"session,omitempty"`
+	ID           string                      `json:"id"`
+	Org          string                      `json:"org"`
+	Event        string                      `json:"event"`
+	Version      string                      `json:"version"`
+	Timestamp    int64                       `json:"timestamp"`
+	Distribution *metric.V4EventDistribution `json:"distribution"`
+	Data         metric.V4Data               `json:"data"`
+	Session      *metric.V4Session           `json:"session,omitempty"`
 }
 
 // eventTypeMap maps LogEvent.Type to the insights event name.
@@ -210,7 +210,7 @@ func BuildTransactionV2Data(
 
 	switch logEvent.Type {
 	case TypeTransactionEvent:
-		data, err := buildLegV2Data(logEvent, cacheManager, reporter)
+		data, err := buildLegV2Data(logger, logEvent, cacheManager, reporter)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +234,7 @@ func BuildTransactionV2Data(
 	return ie, nil
 }
 
-func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegV2Data, error) {
+func buildLegV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegV2Data, error) {
 	txEvent := logEvent.TransactionEvent
 	if txEvent == nil {
 		return nil, fmt.Errorf("TransactionEvent is nil for logEvent type %q", logEvent.Type)
@@ -242,7 +242,10 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 
 	legID := 0
 	if txEvent.ID != "" {
-		if parsed, err := strconv.Atoi(txEvent.ID); err == nil && parsed > 0 {
+		parsed, err := strconv.Atoi(txEvent.ID)
+		if err != nil {
+			logger.WithField("legID", txEvent.ID).Warn("leg ID is not a valid integer, defaulting to 0. Check agent for a numeric leg ID")
+		} else if parsed > 0 {
 			legID = parsed
 		}
 	}
