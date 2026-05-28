@@ -86,19 +86,12 @@ type TransactionLegV2Data struct {
 	Status          string                   `json:"status,omitempty"`
 	Duration        int                      `json:"duration"`
 	Direction       string                   `json:"direction,omitempty"`
-	Protocol        *legProtocol             `json:"protocol,omitempty"`
-	API             *insightsAPIDetail       `json:"api,omitempty"`
-	Reporter        *insightsReporter        `json:"reporter,omitempty"`
-	ConsumerDetails *insightsConsumerDetails `json:"consumerDetails,omitempty"`
+	Protocol  *legProtocol       `json:"protocol,omitempty"`
+	API       *insightsAPIDetail `json:"api,omitempty"`
+	Reporter  *insightsReporter  `json:"reporter,omitempty"`
 	// Deprecated fields — populated for backward compatibility only (omitempty suppresses when empty)
 	ProxyID   string `json:"proxy.id,omitempty"`
 	ProxyName string `json:"proxy.name,omitempty"`
-}
-
-func (d *TransactionLegV2Data) SetConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBlock) {
-	if cd != nil {
-		d.ConsumerDetails = buildConsumerDetails(cd, appOwner)
-	}
 }
 
 // GetStartTime implements metric.V4Data.
