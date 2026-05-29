@@ -210,7 +210,7 @@ func BuildTransactionV2Data(
 
 	switch logEvent.Type {
 	case TypeTransactionEvent:
-		data, err := buildLegV2Data(logger, logEvent, cacheManager, reporter)
+		data, err := buildLegV2Data(logEvent, cacheManager, reporter)
 		if err != nil {
 			return nil, err
 		}
@@ -234,21 +234,13 @@ func BuildTransactionV2Data(
 	return ie, nil
 }
 
-func buildLegV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegV2Data, error) {
+func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegV2Data, error) {
 	txEvent := logEvent.TransactionEvent
 	if txEvent == nil {
 		return nil, fmt.Errorf("TransactionEvent is nil for logEvent type %q", logEvent.Type)
 	}
 
-	legID := 0
-	if txEvent.ID != "" {
-		parsed, err := strconv.Atoi(txEvent.ID)
-		if err != nil {
-			logger.WithField("legID", txEvent.ID).Warn("leg ID is not a valid integer, defaulting to 0. Check agent for a numeric leg ID")
-		} else if parsed > 0 {
-			legID = parsed
-		}
-	}
+	legID := parseLegID(txEvent.ID)
 
 	var proto *legProtocol
 	if httpProto, ok := txEvent.Protocol.(*Protocol); ok && httpProto != nil {
@@ -269,9 +261,9 @@ func buildLegV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager cach
 		Version:        legDataVersion,
 		APICDeployment: logEvent.APICDeployment,
 		TransactionID:  logEvent.TransactionID,
-		ID:             fmt.Sprintf("leg%d", legID),
+		ID:             fmt.Sprintf("leg%d", legID), // legID already normalized via parseLegID
 		LegID:          legID,
-		ParentID:       txEvent.ParentID,
+		ParentID:       formatLegID(txEvent.ParentID),
 		Source:         txEvent.Source,
 		Destination:    txEvent.Destination,
 		Status:         txEvent.Status,
@@ -408,8 +400,27 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBloc
 	return out
 }
 
-// resolveAPIDetailFromCache builds an insightsAPIDetail using only the cache, with no owner lookup
-// (used for leg events where the proxy ID may not be available in the leg itself).
+// parseLegID accepts "N" or "legN" and returns N; returns 0 on any other input.
+func parseLegID(s string) int {
+	n, err := strconv.Atoi(strings.TrimPrefix(s, "leg"))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
+// formatLegID normalizes s to "legN" form. Already-prefixed values ("leg0") pass through unchanged.
+// Plain integers ("0") are prefixed. Anything else is returned as-is for backwards compatibility.
+func formatLegID(s string) string {
+	if strings.HasPrefix(s, "leg") {
+		return s
+	}
+	if _, err := strconv.Atoi(s); err == nil {
+		return "leg" + s
+	}
+	return s
+}
+
 func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insightsAPIDetail {
 	detail := &insightsAPIDetail{
 		ID:    apiID,

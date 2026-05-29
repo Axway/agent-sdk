@@ -729,6 +729,89 @@ func TestBuildTransactionV2DataSummaryExcludedFields(t *testing.T) {
 	}
 }
 
+func TestParseLegID(t *testing.T) {
+	tests := map[string]struct {
+		input string
+		want  int
+	}{
+		"plain integer zero":       {input: "0", want: 0},
+		"plain integer one":        {input: "1", want: 1},
+		"plain integer two":        {input: "2", want: 2},
+		"prefixed leg0":            {input: "leg0", want: 0},
+		"prefixed leg1":            {input: "leg1", want: 1},
+		"prefixed leg2":            {input: "leg2", want: 2},
+		"empty string":             {input: "", want: 0},
+		"non-numeric non-prefixed": {input: testTxnOutbound1, want: 0},
+		"negative integer":         {input: "-1", want: 0},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, parseLegID(tc.input))
+		})
+	}
+}
+
+func TestFormatLegID(t *testing.T) {
+	tests := map[string]struct {
+		input string
+		want  string
+	}{
+		"empty string":             {input: "", want: ""},
+		"plain integer zero":       {input: "0", want: "leg0"},
+		"plain integer one":        {input: "1", want: "leg1"},
+		"already prefixed leg0":    {input: "leg0", want: "leg0"},
+		"already prefixed leg1":    {input: "leg1", want: "leg1"},
+		"non-numeric arbitrary ID": {input: testTxnOutbound1, want: testTxnOutbound1},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, formatLegID(tc.input))
+		})
+	}
+}
+
+func TestBuildTransactionV2DataLegIDs(t *testing.T) {
+	tests := map[string]struct {
+		id       string
+		parentID string
+		wantID   string
+		wantPID  string
+	}{
+		"plain integer IDs (new agent style)": {
+			id: "0", parentID: "", wantID: "leg0", wantPID: "",
+		},
+		"plain integer IDs outbound (new agent style)": {
+			id: "1", parentID: "0", wantID: "leg1", wantPID: "leg0",
+		},
+		"prefixed IDs (legacy agent style)": {
+			id: "leg0", parentID: "", wantID: "leg0", wantPID: "",
+		},
+		"prefixed IDs outbound (legacy agent style)": {
+			id: "leg1", parentID: "leg0", wantID: "leg1", wantPID: "leg0",
+		},
+		"arbitrary parentID is passed through unchanged": {
+			id: "1", parentID: testTxnOutbound1, wantID: "leg1", wantPID: testTxnOutbound1,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			logEvent := LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-leg-id-test",
+				TransactionEvent: &Event{
+					ID:       tc.id,
+					ParentID: tc.parentID,
+					Status:   "Pass",
+				},
+			}
+			data, err := buildLegV2Data(logEvent, nil, ReporterInfo{})
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantID, data.ID)
+			assert.Equal(t, tc.wantPID, data.ParentID)
+		})
+	}
+}
+
 func TestV4DataInterfaceMethods(t *testing.T) {
 	t.Run("TransactionLegV2Data interface methods", func(t *testing.T) {
 		d := &TransactionLegV2Data{TransactionID: testTxnIfaceLeg, LegID: 0}
