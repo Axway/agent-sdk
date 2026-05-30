@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -58,8 +59,15 @@ const (
 	testTxnConsumer1  = "txn-consumer-1"
 	testTxnConsumer2  = "txn-consumer-2"
 	testConsumerOrgID = "consumer-org-1"
-	testTxnProxyRev   = "txn-proxy-rev"
-	testTxnObsDelta   = "txn-obs-delta"
+	testTxnProxyRev    = "txn-proxy-rev"
+	testTxnObsDelta    = "txn-obs-delta"
+	testRevisionUUID1  = "revision-uuid-abc123"
+	testRevisionUUID2  = "revision-uuid-def456"
+	testRevisionUUID3  = "revision-uuid-ghi789"
+	testProxyName      = "proxy-name"
+	testProxyID        = "proxy-id"
+	testEntryPointHost = "host.example.com"
+	testAPIName        = "my-api"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -253,7 +261,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				TransactionSummary: &Summary{
 					Status:   "Success",
 					Duration: 150,
-					Proxy:    &Proxy{ID: "proxy-1", Name: "my-api"},
+					Proxy:    &Proxy{ID: "proxy-1", Name: testAPIName},
 				},
 			},
 			orgID:         testOrgXYZ,
@@ -315,7 +323,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 					EntryPoint: &EntryPoint{
 						Method: "GET",
 						Path:   "/path",
-						Host:   "host.example.com",
+						Host:   testEntryPointHost,
 					},
 				},
 			},
@@ -327,7 +335,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, data.EntryPoint)
 				assert.Equal(t, "GET", data.EntryPoint.Method)
 				assert.Equal(t, "/path", data.EntryPoint.Path)
-				assert.Equal(t, "host.example.com", data.EntryPoint.Host)
+				assert.Equal(t, testEntryPointHost, data.EntryPoint.Host)
 			},
 		},
 		"summary event is JSON serializable with correct version fields": {
@@ -589,10 +597,10 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				TransactionID: testTxnProxyRev,
 				TransactionSummary: &Summary{
 					Status: "Success",
-					Proxy:  &Proxy{ID: "proxy-id-rev", Name: "my-api"},
+					Proxy:  &Proxy{ID: "proxy-id-rev", Name: testAPIName},
 					API: &models.APIDetails{
 						ID:                 "api-id-rev",
-						APIServiceInstance: "revision-uuid-abc123",
+						APIServiceInstance: testRevisionUUID1,
 					},
 				},
 			},
@@ -602,7 +610,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				data, ok := ie.Data.(*TransactionSummaryV2Data)
 				require.True(t, ok)
 				require.NotNil(t, data.APIServiceRevision)
-				assert.Equal(t, "revision-uuid-abc123", data.APIServiceRevision.ID)
+				assert.Equal(t, testRevisionUUID1, data.APIServiceRevision.ID)
 			},
 		},
 		// leg event data must not contain fields reserved for summary
@@ -801,6 +809,75 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 	}
 }
 
+func testDefaultRedaction(t *testing.T) redaction.Redactions {
+	t.Helper()
+	cfg := redaction.DefaultConfig()
+	r, err := cfg.SetupRedactions()
+	require.NoError(t, err)
+	return r
+}
+
+func TestSetAPIServiceRevision(t *testing.T) {
+	rc := testDefaultRedaction(t)
+
+	cases := map[string]struct {
+		revisionID      string
+		withProxy       bool
+		wantAPIInstance string
+		wantAPIName     string
+		wantV2Revision  string
+	}{
+		"sets APIServiceInstance without proxy": {
+			revisionID:      testRevisionUUID1,
+			withProxy:       false,
+			wantAPIInstance: testRevisionUUID1,
+		},
+		"sets APIServiceInstance after SetProxy preserves proxy name": {
+			revisionID:      testRevisionUUID2,
+			withProxy:       true,
+			wantAPIInstance: testRevisionUUID2,
+			wantAPIName:     testProxyName,
+		},
+		"propagates through to v2 event apiServiceRevision.id": {
+			revisionID:     testRevisionUUID3,
+			withProxy:      true,
+			wantV2Revision: testRevisionUUID3,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			b := NewTransactionSummaryBuilder().
+				SetTransactionID("txn-rev").
+				SetStatus(TxSummaryStatusSuccess, "200").
+				SetDuration(100).
+				SetEntryPoint("http", "GET", "/path", testEntryPointHost).
+				SetRedactionConfig(rc)
+			if tc.withProxy {
+				b = b.SetProxy(testProxyID, testProxyName, 1)
+			}
+			le, err := b.SetAPIServiceRevision(tc.revisionID).Build()
+			require.NoError(t, err)
+
+			require.NotNil(t, le.TransactionSummary.API)
+			if tc.wantAPIInstance != "" {
+				assert.Equal(t, tc.wantAPIInstance, le.TransactionSummary.API.APIServiceInstance)
+			}
+			if tc.wantAPIName != "" {
+				assert.Equal(t, tc.wantAPIName, le.TransactionSummary.API.Name)
+			}
+			if tc.wantV2Revision != "" {
+				ie, err := BuildTransactionV2Data(log.NewFieldLogger(), *le, testOrgID, testEnvID, nil, ReporterInfo{})
+				require.NoError(t, err)
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.APIServiceRevision)
+				assert.Equal(t, tc.wantV2Revision, data.APIServiceRevision.ID)
+			}
+		})
+	}
+}
+
 // TestBuildTransactionV2DataLegExcludedFields verifies that leg events do not contain
 // fields excluded from the leg v2 format.
 func TestBuildTransactionV2DataLegExcludedFields(t *testing.T) {
@@ -860,7 +937,7 @@ func TestBuildTransactionV2DataSummaryExcludedFields(t *testing.T) {
 				TransactionID: testTxnExclSum,
 				TransactionSummary: &Summary{
 					Status: "Success",
-					Proxy:  &Proxy{ID: "p-1", Name: "my-api"},
+					Proxy:  &Proxy{ID: "p-1", Name: testAPIName},
 				},
 			},
 			absentFields: []string{

@@ -86,6 +86,7 @@ type SummaryBuilder interface {
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder
 	SetProxyWithStageVersion(proxyID, proxyName, proxyStage, proxyVersion string, proxyRevision int) SummaryBuilder
+	SetAPIServiceRevision(id string) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
 	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
@@ -553,6 +554,17 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 
 	return b
 }
+func (b *transactionSummaryBuilder) SetAPIServiceRevision(id string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
+	if b.logEvent.TransactionSummary.API == nil {
+		b.logEvent.TransactionSummary.API = &models.APIDetails{}
+	}
+	b.logEvent.TransactionSummary.API.APIServiceInstance = id
+	return b
+}
+
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
 	if b.err != nil {
 		return b
