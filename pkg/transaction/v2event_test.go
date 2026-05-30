@@ -52,6 +52,12 @@ const (
 	testTxnExclLeg    = "txn-excl-leg"
 	testTxnExclSum    = "txn-excl-sum"
 	testTxnIfaceLeg   = "txn-iface-leg"
+	testTxnProduct1   = "txn-product-1"
+	testTxnProduct2   = "txn-product-2"
+	testTxnProduct3   = "txn-product-3"
+	testTxnConsumer1  = "txn-consumer-1"
+	testTxnConsumer2  = "txn-consumer-2"
+	testConsumerOrgID = "consumer-org-1"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -438,7 +444,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 					ConsumerDetails: &models.ConsumerDetails{
 						Marketplace: &models.MarketplaceReference{
 							GUID:          "mp-guid-1",
-							ConsumerOrgID: "consumer-org-1",
+							ConsumerOrgID: testConsumerOrgID,
 						},
 					},
 				},
@@ -449,9 +455,129 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				data, ok := ie.Data.(*TransactionSummaryV2Data)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
-				assert.Equal(t, "consumer-org-1", data.ConsumerDetails.ConsumerOrgID)
+				assert.Equal(t, testConsumerOrgID, data.ConsumerDetails.ConsumerOrgID)
 				require.NotNil(t, data.ConsumerDetails.Marketplace)
 				assert.Equal(t, "mp-guid-1", data.ConsumerDetails.Marketplace.GUID)
+			},
+		},
+		"summary with product populates product block": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnProduct1,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					Product: &models.Product{
+						ID:          "prod-id-1",
+						Name:        "my-product",
+						VersionID:   "ver-id-1",
+						VersionName: "1.0.0",
+						Owner:       &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID},
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.Product)
+				assert.Equal(t, "prod-id-1", data.Product.ID)
+				assert.Equal(t, "my-product", data.Product.Name)
+				assert.Equal(t, "ver-id-1", data.Product.VersionID)
+				assert.Equal(t, "1.0.0", data.Product.VersionName)
+				require.NotNil(t, data.Product.Owner)
+				assert.Equal(t, testTeamGUID, data.Product.Owner.TeamGUID)
+			},
+		},
+		"summary with productPlan and quota populates those fields": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnProduct2,
+				TransactionSummary: &Summary{
+					Status:      "Success",
+					ProductPlan: &models.ProductPlan{ID: "plan-id-1"},
+					Quota:       &models.Quota{ID: "quota-id-1"},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ProductPlan)
+				assert.Equal(t, "plan-id-1", data.ProductPlan.ID)
+				require.NotNil(t, data.Quota)
+				assert.Equal(t, "quota-id-1", data.Quota.ID)
+			},
+		},
+		"summary with empty product ID omits product block": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnProduct3,
+				TransactionSummary: &Summary{
+					Status:  "Success",
+					Product: &models.Product{ID: ""},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				assert.Nil(t, data.Product)
+			},
+		},
+		"summary consumerDetails application fields are populated": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnConsumer1,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					ConsumerDetails: &models.ConsumerDetails{
+						Application: &models.AppDetails{
+							ID:            "app-id-1",
+							Name:          "my-app",
+							ConsumerOrgID: testConsumerOrgID,
+						},
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ConsumerDetails)
+				require.NotNil(t, data.ConsumerDetails.Application)
+				assert.Equal(t, "app-id-1", data.ConsumerDetails.Application.ID)
+				assert.Equal(t, "my-app", data.ConsumerDetails.Application.Name)
+				assert.Equal(t, testConsumerOrgID, data.ConsumerDetails.Application.ConsumerOrgID)
+			},
+		},
+		"summary consumerDetails publishedProduct and subscription are populated": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnConsumer2,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					ConsumerDetails: &models.ConsumerDetails{
+						PublishedProduct: &models.Product{ID: "pp-id-1", Name: "published-product"},
+						Subscription:     &models.Subscription{ID: "sub-id-1", Name: "my-sub"},
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.ConsumerDetails)
+				require.NotNil(t, data.ConsumerDetails.PublishedProduct)
+				assert.Equal(t, "pp-id-1", data.ConsumerDetails.PublishedProduct.ID)
+				assert.Equal(t, "published-product", data.ConsumerDetails.PublishedProduct.Name)
+				require.NotNil(t, data.ConsumerDetails.Subscription)
+				assert.Equal(t, "sub-id-1", data.ConsumerDetails.Subscription.ID)
+				assert.Equal(t, "my-sub", data.ConsumerDetails.Subscription.Name)
 			},
 		},
 		// leg event data must not contain fields reserved for summary

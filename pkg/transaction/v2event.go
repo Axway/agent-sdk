@@ -42,18 +42,44 @@ type insightsAPIDetail struct {
 
 // insightsConsumerAppDetail is the application sub-object within consumerDetails.
 type insightsConsumerAppDetail struct {
-	Owner *models.OwnerBlock `json:"owner,omitempty"`
+	ID            string             `json:"id,omitempty"`
+	Name          string             `json:"name,omitempty"`
+	ConsumerOrgID string             `json:"consumerOrgId,omitempty"`
+	Owner         *models.OwnerBlock `json:"owner,omitempty"`
+}
+
+// insightsPublishedProduct is the publishedProduct sub-object within consumerDetails.
+type insightsPublishedProduct struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+// insightsSubscription is the subscription sub-object within consumerDetails.
+type insightsSubscription struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // insightsConsumerDetails is the consumerDetails sub-object for leg and summary v2.
 type insightsConsumerDetails struct {
-	ConsumerOrgID string                     `json:"consumerOrgId,omitempty"`
-	Marketplace   *insightsMarketplace       `json:"marketplace,omitempty"`
-	Application   *insightsConsumerAppDetail `json:"application,omitempty"`
+	ConsumerOrgID    string                    `json:"consumerOrgId,omitempty"`
+	Marketplace      *insightsMarketplace      `json:"marketplace,omitempty"`
+	Application      *insightsConsumerAppDetail `json:"application,omitempty"`
+	PublishedProduct *insightsPublishedProduct  `json:"publishedProduct,omitempty"`
+	Subscription     *insightsSubscription     `json:"subscription,omitempty"`
 }
 
 type insightsMarketplace struct {
 	GUID string `json:"guid,omitempty"`
+}
+
+// insightsSummaryProduct is the product sub-object for summary v2.
+type insightsSummaryProduct struct {
+	ID          string             `json:"id,omitempty"`
+	Name        string             `json:"name,omitempty"`
+	VersionID   string             `json:"versionId,omitempty"`
+	VersionName string             `json:"versionName,omitempty"`
+	Owner       *models.OwnerBlock `json:"owner,omitempty"`
 }
 
 // insightsReporter is the reporter sub-object.
@@ -135,6 +161,9 @@ type TransactionSummaryV2Data struct {
 	EntryPoint         *insightsEntryPoint      `json:"entryPoint,omitempty"`
 	AssetResource      *insightsResourceRef     `json:"assetResource,omitempty"`
 	APIServiceRevision *insightsResourceRef     `json:"apiServiceRevision,omitempty"`
+	Product            *insightsSummaryProduct  `json:"product,omitempty"`
+	ProductPlan        *insightsResourceRef     `json:"productPlan,omitempty"`
+	Quota              *insightsResourceRef     `json:"quota,omitempty"`
 	Reporter           *insightsReporter        `json:"reporter,omitempty"`
 	ConsumerDetails    *insightsConsumerDetails `json:"consumerDetails,omitempty"`
 	// Deprecated fields — populated for backward compatibility only
@@ -313,6 +342,22 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 		},
 	}
 
+	if summary.Product != nil && summary.Product.ID != "" {
+		data.Product = &insightsSummaryProduct{
+			ID:          summary.Product.ID,
+			Name:        summary.Product.Name,
+			VersionID:   summary.Product.VersionID,
+			VersionName: summary.Product.VersionName,
+			Owner:       summary.Product.Owner,
+		}
+	}
+	if summary.ProductPlan != nil && summary.ProductPlan.ID != "" {
+		data.ProductPlan = &insightsResourceRef{ID: summary.ProductPlan.ID}
+	}
+	if summary.Quota != nil && summary.Quota.ID != "" {
+		data.Quota = &insightsResourceRef{ID: summary.Quota.ID}
+	}
+
 	if summary.ConsumerDetails != nil {
 		data.ConsumerDetails = buildConsumerDetails(summary.ConsumerDetails, summary.AppOwnerInfo)
 	}
@@ -392,10 +437,28 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBloc
 	}
 
 	appDetail := &insightsConsumerAppDetail{}
+	if cd.Application != nil {
+		appDetail.ID = cd.Application.ID
+		appDetail.Name = cd.Application.Name
+		appDetail.ConsumerOrgID = cd.Application.ConsumerOrgID
+	}
 	if appOwner != nil {
 		appDetail.Owner = appOwner
 	}
 	out.Application = appDetail
+
+	if cd.PublishedProduct != nil && cd.PublishedProduct.ID != "" {
+		out.PublishedProduct = &insightsPublishedProduct{
+			ID:   cd.PublishedProduct.ID,
+			Name: cd.PublishedProduct.Name,
+		}
+	}
+	if cd.Subscription != nil && cd.Subscription.ID != "" {
+		out.Subscription = &insightsSubscription{
+			ID:   cd.Subscription.ID,
+			Name: cd.Subscription.Name,
+		}
+	}
 
 	return out
 }
