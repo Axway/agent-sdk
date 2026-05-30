@@ -631,6 +631,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.NotContains(t, s, `"apiServiceInstance"`)
 				assert.NotContains(t, s, `"entryPoint"`)
 				assert.NotContains(t, s, `"statusDetail"`)
+				assert.NotContains(t, s, `"apiServiceId"`)
 				assert.Contains(t, s, `"api.transaction.event"`)
 				assert.Contains(t, s, `"version":"4"`)
 			},

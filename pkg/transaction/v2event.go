@@ -489,6 +489,8 @@ func formatLegID(s string) string {
 	return s
 }
 
+// resolveAPIDetailFromCache builds the api sub-object for leg events.
+// apiServiceId is intentionally omitted — it is summary-only per REQ-050.
 func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insightsAPIDetail {
 	detail := &insightsAPIDetail{
 		ID:    apiID,
@@ -496,10 +498,6 @@ func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insigh
 	}
 	if cacheManager == nil || apiID == "" {
 		return detail
-	}
-	stripped := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
-	if svc := cacheManager.GetAPIServiceWithAPIID(stripped); svc != nil {
-		detail.APIServiceID = svc.Metadata.ID
 	}
 	detail.Owner = transutil.ResolveAPIOwner(apiID, cacheManager)
 	return detail

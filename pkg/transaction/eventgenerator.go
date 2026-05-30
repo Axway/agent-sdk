@@ -578,12 +578,17 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		WithField("assetResourceName", summaryEvent.AssetResource.Name).
 		Trace("asset resource information")
 
+	apiSvcInstRef := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	apiSvcInstID := apiSvcInstRef.ID
+	if apiSvcInstID == "" {
+		apiSvcInstID = accessRequest.Spec.ApiServiceInstance
+	}
 	api := &models.APIDetails{
 		ID:                 summaryEvent.Proxy.ID,
 		Name:               summaryEvent.Proxy.Name,
 		Revision:           summaryEvent.Proxy.Revision,
 		TeamID:             summaryEvent.Team.ID,
-		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+		APIServiceInstance: apiSvcInstID,
 	}
 	summaryEvent.API = api
 	log.
