@@ -58,6 +58,8 @@ const (
 	testTxnConsumer1  = "txn-consumer-1"
 	testTxnConsumer2  = "txn-consumer-2"
 	testConsumerOrgID = "consumer-org-1"
+	testTxnProxyRev   = "txn-proxy-rev"
+	testTxnObsDelta   = "txn-obs-delta"
 )
 
 func TestBuildTransactionV2Data(t *testing.T) {
@@ -580,6 +582,29 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.Equal(t, "my-sub", data.ConsumerDetails.Subscription.Name)
 			},
 		},
+		// proxy path picks up apiServiceRevision from summary.API when both are set
+		"summary with proxy and API populates apiServiceRevision from API": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: testTxnProxyRev,
+				TransactionSummary: &Summary{
+					Status: "Success",
+					Proxy:  &Proxy{ID: "proxy-id-rev", Name: "my-api"},
+					API: &models.APIDetails{
+						ID:                 "api-id-rev",
+						APIServiceInstance: "revision-uuid-abc123",
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.APIServiceRevision)
+				assert.Equal(t, "revision-uuid-abc123", data.APIServiceRevision.ID)
+			},
+		},
 		// leg event data must not contain fields reserved for summary
 		"leg event JSON must not contain summary-only fields": {
 			logEvent: LogEvent{
@@ -683,6 +708,21 @@ func TestBuildTransactionV2DataReporter(t *testing.T) {
 			assert.Contains(t, s, `"my-agent"`)
 		})
 	}
+
+	t.Run("observationDelta propagates to summary reporter", func(t *testing.T) {
+		r := ReporterInfo{ObservationDelta: 60000}
+		logEvent := LogEvent{
+			Type:               TypeTransactionSummary,
+			TransactionID:      testTxnObsDelta,
+			TransactionSummary: &Summary{Status: "Success"},
+		}
+		ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, r)
+		require.NoError(t, err)
+		data, ok := ie.Data.(*TransactionSummaryV2Data)
+		require.True(t, ok)
+		require.NotNil(t, data.Reporter)
+		assert.Equal(t, int64(60000), data.Reporter.ObservationDelta)
+	})
 }
 
 func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {

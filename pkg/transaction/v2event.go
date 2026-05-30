@@ -62,11 +62,11 @@ type insightsSubscription struct {
 
 // insightsConsumerDetails is the consumerDetails sub-object for leg and summary v2.
 type insightsConsumerDetails struct {
-	ConsumerOrgID    string                    `json:"consumerOrgId,omitempty"`
-	Marketplace      *insightsMarketplace      `json:"marketplace,omitempty"`
+	ConsumerOrgID    string                     `json:"consumerOrgId,omitempty"`
+	Marketplace      *insightsMarketplace       `json:"marketplace,omitempty"`
 	Application      *insightsConsumerAppDetail `json:"application,omitempty"`
 	PublishedProduct *insightsPublishedProduct  `json:"publishedProduct,omitempty"`
-	Subscription     *insightsSubscription     `json:"subscription,omitempty"`
+	Subscription     *insightsSubscription      `json:"subscription,omitempty"`
 }
 
 type insightsMarketplace struct {
@@ -335,10 +335,11 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 		AssetResource:      buildAssetResourceRef(summary.AssetResource),
 		APIServiceRevision: buildAPIServiceRevisionRef(apiServiceRevisionID, summary.API),
 		Reporter: &insightsReporter{
-			Version:         reporter.AgentVersion,
-			Type:            reporter.AgentType,
-			AgentSDKVersion: reporter.AgentSDKVersion,
-			AgentName:       reporter.AgentName,
+			Version:          reporter.AgentVersion,
+			Type:             reporter.AgentType,
+			AgentSDKVersion:  reporter.AgentSDKVersion,
+			AgentName:        reporter.AgentName,
+			ObservationDelta: reporter.ObservationDelta,
 		},
 	}
 
@@ -374,6 +375,10 @@ func resolveSummaryAPIInfo(summary *Summary) (apiID, apiName, apiServiceRevision
 	if summary.Proxy != nil {
 		apiID = transutil.ResolveIDWithPrefix(summary.Proxy.ID, summary.Proxy.Name)
 		apiName = summary.Proxy.Name
+		// Still pick up the revision ID from summary.API when available.
+		if summary.API != nil {
+			apiServiceRevisionID = summary.API.APIServiceInstance
+		}
 		return
 	}
 	if summary.API != nil {
