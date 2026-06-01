@@ -295,11 +295,12 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			check: func(t *testing.T, ie *InsightsEvent) {
 				data, ok := ie.Data.(*TransactionSummaryV2Data)
 				require.True(t, ok)
-				assert.Equal(t, "proxy-id-2", data.ProxyID)
-				assert.Equal(t, "proxy-name-2", data.ProxyName)
+				require.NotNil(t, data.Proxy)
+				assert.Equal(t, "proxy-id-2", data.Proxy.ID)
+				assert.Equal(t, "proxy-name-2", data.Proxy.Name)
 			},
 		},
-		"summary without proxy has no deprecated fields": {
+		"summary without proxy has no proxy block": {
 			logEvent: LogEvent{
 				Type:               TypeTransactionSummary,
 				TransactionID:      testTxnSum3,
@@ -310,8 +311,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			check: func(t *testing.T, ie *InsightsEvent) {
 				data, ok := ie.Data.(*TransactionSummaryV2Data)
 				require.True(t, ok)
-				assert.Empty(t, data.ProxyID)
-				assert.Empty(t, data.ProxyName)
+				assert.Nil(t, data.Proxy)
 			},
 		},
 		"summary with entry point is populated": {
@@ -614,6 +614,62 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			},
 		},
 		// leg event data must not contain fields reserved for summary
+		// direction is lowercased regardless of what the agent passes
+		"leg direction is lowercased from Inbound": {
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-dir-lower",
+				TransactionEvent: &Event{ID: "0", Status: "Pass", Direction: "Inbound"},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				assert.Equal(t, "inbound", data.Direction)
+			},
+		},
+		"leg direction is lowercased from Outbound": {
+			logEvent: LogEvent{
+				Type:             TypeTransactionEvent,
+				TransactionID:    "txn-dir-lower-2",
+				TransactionEvent: &Event{ID: "1", Status: "Pass", Direction: "Outbound"},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				assert.Equal(t, "outbound", data.Direction)
+			},
+		},
+		// summary proxy serializes as nested object not flat dot-notation keys
+		"summary proxy is nested object": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: "txn-proxy-nested",
+				TransactionSummary: &Summary{
+					Status: "Success",
+					Proxy:  &Proxy{ID: "proxy-nested-id", Name: "proxy-nested-name"},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.Proxy)
+				assert.Equal(t, "proxy-nested-id", data.Proxy.ID)
+				assert.Equal(t, "proxy-nested-name", data.Proxy.Name)
+
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				s := string(b)
+				assert.Contains(t, s, `"proxy":{"id"`)
+				assert.NotContains(t, s, `"proxy.id"`)
+				assert.NotContains(t, s, `"proxy.name"`)
+			},
+		},
 		"leg event JSON must not contain summary-only fields": {
 			logEvent: LogEvent{
 				Type:             TypeTransactionEvent,
@@ -966,9 +1022,10 @@ func TestBuildTransactionV2DataSummaryExcludedFields(t *testing.T) {
 			for _, field := range tc.absentFields {
 				assert.NotContains(t, s, field, "summary event must not contain field %s", field)
 			}
-			// deprecated fields must be present when proxy is set
-			assert.Contains(t, s, `"proxy.id"`)
-			assert.Contains(t, s, `"proxy.name"`)
+			// proxy nested object must be present when proxy is set
+			assert.Contains(t, s, `"proxy":`)
+			assert.NotContains(t, s, `"proxy.id"`)
+			assert.NotContains(t, s, `"proxy.name"`)
 		})
 	}
 }

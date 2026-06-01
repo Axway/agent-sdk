@@ -99,6 +99,12 @@ type legProtocol struct {
 	Status int    `json:"status"`
 }
 
+// insightsProxy is the nested proxy sub-object for leg and summary v2 data.
+type insightsProxy struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
 // TransactionLegV2Data is the data payload for api.transaction.event (version "2").
 type TransactionLegV2Data struct {
 	Version        string             `json:"version"`
@@ -115,9 +121,7 @@ type TransactionLegV2Data struct {
 	Protocol       *legProtocol       `json:"protocol,omitempty"`
 	API            *insightsAPIDetail `json:"api,omitempty"`
 	Reporter       *insightsReporter  `json:"reporter,omitempty"`
-	// Deprecated fields — populated for backward compatibility only (omitempty suppresses when empty)
-	ProxyID   string `json:"proxy.id,omitempty"`
-	ProxyName string `json:"proxy.name,omitempty"`
+	Proxy          *insightsProxy     `json:"proxy,omitempty"`
 }
 
 // GetStartTime implements metric.V4Data.
@@ -166,9 +170,7 @@ type TransactionSummaryV2Data struct {
 	Quota              *insightsResourceRef     `json:"quota,omitempty"`
 	Reporter           *insightsReporter        `json:"reporter,omitempty"`
 	ConsumerDetails    *insightsConsumerDetails `json:"consumerDetails,omitempty"`
-	// Deprecated fields — populated for backward compatibility only
-	ProxyID   string `json:"proxy.id,omitempty"`
-	ProxyName string `json:"proxy.name,omitempty"`
+	Proxy              *insightsProxy           `json:"proxy,omitempty"`
 }
 
 // GetStartTime implements metric.V4Data.
@@ -297,7 +299,7 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		Destination:    txEvent.Destination,
 		Status:         txEvent.Status,
 		Duration:       txEvent.Duration,
-		Direction:      txEvent.Direction,
+		Direction:      strings.ToLower(txEvent.Direction),
 		Protocol:       proto,
 		API:            resolveAPIDetailFromCache(apiID, cacheManager),
 		Reporter: &insightsReporter{
@@ -363,9 +365,8 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 		data.ConsumerDetails = buildConsumerDetails(summary.ConsumerDetails, summary.AppOwnerInfo)
 	}
 
-	if summary.Proxy != nil {
-		data.ProxyID = summary.Proxy.ID
-		data.ProxyName = summary.Proxy.Name
+	if summary.Proxy != nil && (summary.Proxy.ID != "" || summary.Proxy.Name != "") {
+		data.Proxy = &insightsProxy{ID: summary.Proxy.ID, Name: summary.Proxy.Name}
 	}
 
 	return data, nil
