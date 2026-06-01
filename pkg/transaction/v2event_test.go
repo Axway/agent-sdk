@@ -669,6 +669,29 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.Equal(t, "outbound", data.Direction)
 			},
 		},
+		// summary proxy falls back to API details when Proxy is nil (controller path)
+		"summary proxy falls back to API when Proxy is nil": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionSummary,
+				TransactionID: "txn-proxy-api-fallback",
+				TransactionSummary: &Summary{
+					Status: "Success",
+					API: &models.APIDetails{
+						ID:   "remoteApiId_abc123",
+						Name: "my-api-name",
+					},
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.Proxy)
+				assert.Equal(t, "abc123", data.Proxy.ID)
+				assert.Equal(t, "my-api-name", data.Proxy.Name)
+			},
+		},
 		// summary proxy serializes as nested object not flat dot-notation keys
 		"summary proxy is nested object": {
 			logEvent: LogEvent{

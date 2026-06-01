@@ -288,10 +288,16 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 
-	var legProxy *insightsProxy
+	apiDetail := resolveAPIDetailFromCache(apiID, cacheManager)
+
 	proxyID := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
-	if proxyID != "" || txEvent.ProxyName != "" {
-		legProxy = &insightsProxy{ID: proxyID, Name: txEvent.ProxyName}
+	proxyName := txEvent.ProxyName
+	if proxyName == "" && apiDetail != nil {
+		proxyName = apiDetail.Name
+	}
+	var legProxy *insightsProxy
+	if proxyID != "" || proxyName != "" {
+		legProxy = &insightsProxy{ID: proxyID, Name: proxyName}
 	}
 
 	data := &TransactionLegV2Data{
@@ -307,7 +313,7 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		Duration:       txEvent.Duration,
 		Direction:      strings.ToLower(txEvent.Direction),
 		Protocol:       proto,
-		API:            resolveAPIDetailFromCache(apiID, cacheManager),
+		API:            apiDetail,
 		Proxy:          legProxy,
 		Reporter: &insightsReporter{
 			Version:         reporter.AgentVersion,
@@ -374,6 +380,11 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 
 	if summary.Proxy != nil && (summary.Proxy.ID != "" || summary.Proxy.Name != "") {
 		data.Proxy = &insightsProxy{ID: summary.Proxy.ID, Name: summary.Proxy.Name}
+	} else if summary.API != nil && (summary.API.ID != "" || summary.API.Name != "") {
+		// Proxy doesn't survive JSON round-trips (json:"-"); fall back to API details
+		// which carry the same proxy ID/name set by the controller enrichment path.
+		proxyID := strings.TrimPrefix(summary.API.ID, transutil.SummaryEventProxyIDPrefix)
+		data.Proxy = &insightsProxy{ID: proxyID, Name: summary.API.Name}
 	}
 
 	return data, nil
@@ -474,6 +485,16 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBloc
 	}
 
 	return out
+}
+
+// SetLegProxy sets the proxy block on a TransactionLegV2Data after it has been built.
+// Used by the agents-controller to populate proxy from enriched API details post-build,
+// since insightsProxy is unexported and cannot be constructed externally.
+func SetLegProxy(leg *TransactionLegV2Data, proxyID, proxyName string) {
+	if leg == nil || (proxyID == "" && proxyName == "") {
+		return
+	}
+	leg.Proxy = &insightsProxy{ID: proxyID, Name: proxyName}
 }
 
 // parseLegID accepts "N" or "legN" and returns N; returns 0 on any other input.
