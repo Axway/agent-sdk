@@ -632,7 +632,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				data, ok := ie.Data.(*TransactionLegV2Data)
 				require.True(t, ok)
 				require.NotNil(t, data.Proxy)
-				assert.Equal(t, "abc123", data.Proxy.ID)
+				assert.Equal(t, "remoteApiId_abc123", data.Proxy.ID)
 				assert.Equal(t, testAPIName, data.Proxy.Name)
 
 				b, err := json.Marshal(data)

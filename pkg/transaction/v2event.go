@@ -290,14 +290,13 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 
 	apiDetail := resolveAPIDetailFromCache(apiID, cacheManager)
 
-	proxyID := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
 	proxyName := txEvent.ProxyName
 	if proxyName == "" && apiDetail != nil {
 		proxyName = apiDetail.Name
 	}
 	var legProxy *insightsProxy
-	if proxyID != "" || proxyName != "" {
-		legProxy = &insightsProxy{ID: proxyID, Name: proxyName}
+	if apiID != "" || proxyName != "" {
+		legProxy = &insightsProxy{ID: apiID, Name: proxyName}
 	}
 
 	data := &TransactionLegV2Data{
