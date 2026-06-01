@@ -614,6 +614,32 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			},
 		},
 		// leg event data must not contain fields reserved for summary
+		// leg proxy is populated from SetProxy call
+		"leg proxy populated from SetProxy": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-leg-proxy",
+				TransactionEvent: &Event{
+					ID:        "0",
+					Status:    "Pass",
+					Source:    "remoteApiId_abc123",
+					ProxyName: testAPIName,
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.Proxy)
+				assert.Equal(t, "abc123", data.Proxy.ID)
+				assert.Equal(t, testAPIName, data.Proxy.Name)
+
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				assert.Contains(t, string(b), `"proxy":`)
+			},
+		},
 		// direction is lowercased regardless of what the agent passes
 		"leg direction is lowercased from Inbound": {
 			logEvent: LogEvent{

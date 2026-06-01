@@ -288,6 +288,12 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 
+	var legProxy *insightsProxy
+	proxyID := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
+	if proxyID != "" || txEvent.ProxyName != "" {
+		legProxy = &insightsProxy{ID: proxyID, Name: txEvent.ProxyName}
+	}
+
 	data := &TransactionLegV2Data{
 		Version:        legDataVersion,
 		APICDeployment: logEvent.APICDeployment,
@@ -302,6 +308,7 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		Direction:      strings.ToLower(txEvent.Direction),
 		Protocol:       proto,
 		API:            resolveAPIDetailFromCache(apiID, cacheManager),
+		Proxy:          legProxy,
 		Reporter: &insightsReporter{
 			Version:         reporter.AgentVersion,
 			Type:            reporter.AgentType,
