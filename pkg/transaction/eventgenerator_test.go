@@ -10,8 +10,13 @@ import (
 
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
@@ -273,6 +278,75 @@ func TestCreateEventGuardCases(t *testing.T) {
 			_, err := gen.createEvent(tc.logEvent, time.Now(), nil, nil, nil)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestUpdateWithProviderDetailsProductOwner(t *testing.T) {
+	const teamID = "team-guid-123"
+
+	makeAccessRequest := func(withEmbedded bool) *management.AccessRequest {
+		ar := &management.AccessRequest{
+			ResourceMeta: v1.ResourceMeta{
+				Metadata: v1.Metadata{
+					References: []v1.Reference{
+						{ID: "prod-id", Name: "prod-name", Group: catalog.ProductGVK().Group, Kind: catalog.ProductGVK().Kind},
+						{ID: "rel-id", Name: "rel-name", Group: catalog.ProductReleaseGVK().Group, Kind: catalog.ProductReleaseGVK().Kind},
+					},
+				},
+			},
+		}
+		if withEmbedded {
+			ar.Embedded = map[string]v1.EmbeddedReferences{
+				catalog.PublishedProductGVK().Kind: {
+					References: []v1.EmbeddedReference{
+						{
+							Group: catalog.PublishedProductGVK().Group,
+							Kind:  catalog.PublishedProductGVK().Kind,
+							Owner: &v1.Owner{Type: v1.TeamOwner, ID: teamID},
+						},
+					},
+				},
+			}
+		}
+		return ar
+	}
+
+	tests := map[string]struct {
+		withEmbedded  bool
+		wantOwnerType string
+		wantTeamGUID  string
+	}{
+		"product owner resolved from embedded reference": {
+			withEmbedded:  true,
+			wantOwnerType: "team",
+			wantTeamGUID:  teamID,
+		},
+		"product owner is none when embedded reference absent": {
+			withEmbedded:  false,
+			wantOwnerType: "none",
+			wantTeamGUID:  "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			summary := &Summary{
+				Proxy:         &Proxy{ID: "remoteApiId_test", Name: "test-api"},
+				Team:          &Team{ID: "team-id"},
+				Product:       &models.Product{},
+				ProductPlan:   &models.ProductPlan{},
+				Quota:         &models.Quota{},
+				AssetResource: &models.AssetResource{},
+			}
+			ar := makeAccessRequest(tc.withEmbedded)
+			manApp := &v1.ResourceInstance{}
+			result := updateWithProviderDetails(ar, manApp, summary, log.NewFieldLogger())
+			require.NotNil(t, result)
+			require.NotNil(t, result.Product)
+			require.NotNil(t, result.Product.Owner)
+			assert.Equal(t, tc.wantOwnerType, result.Product.Owner.Type)
+			assert.Equal(t, tc.wantTeamGUID, result.Product.Owner.TeamGUID)
 		})
 	}
 }

@@ -559,6 +559,8 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.Product.VersionID = productReleaseRef.ID
 		summaryEvent.Product.VersionName = productReleaseRef.Name
 	}
+	productOwnerRef := accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK())
+	summaryEvent.Product.Owner = transutil.ResolveProductOwner(productOwnerRef)
 	log.
 		WithField("productId", summaryEvent.Product.ID).
 		WithField("productName", summaryEvent.Product.Name).
