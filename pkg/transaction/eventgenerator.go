@@ -345,7 +345,7 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 	// Update the consumer details
 	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
 
-	summaryEvent.TransactionSummary.AppOwnerInfo = transutil.ResolveAppOwner(accessRequest)
+	summaryEvent.TransactionSummary.AppOwnerInfo = transutil.ResolveAppOwnerFromManagedApp(managedApp)
 	e.logger.
 		WithField("appOwnerType", summaryEvent.TransactionSummary.AppOwnerInfo.Type).
 		Trace("resolved app owner for summary event")
