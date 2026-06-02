@@ -138,6 +138,7 @@ type Event struct {
 	Status      string            `json:"status,omitempty"`
 	Protocol    TransportProtocol `json:"protocol,omitempty"`
 	ProxyName   string            `json:"proxyName,omitempty"`
+	ProxyID     string            `json:"proxyId,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events

@@ -264,6 +264,7 @@ func (b *transactionEventBuilder) SetProxyWithStage(proxyID, proxyName, proxySta
 		return b
 	}
 	b.logEvent.TransactionEvent.Source = transutil.ResolveIDWithPrefix(proxyID, proxyName)
+	b.logEvent.TransactionEvent.ProxyID = transutil.ResolveIDWithPrefix(proxyID, proxyName)
 	b.logEvent.TransactionEvent.ProxyName = proxyName
 	return b
 }

@@ -749,6 +749,12 @@ func (c *collector) cleanup() {
 }
 
 func (c *collector) getOrgGUID() string {
+	return GetOrgGUID()
+}
+
+// GetOrgGUID parses the provider org GUID from the central auth token JWT.
+// Returns empty string if the token is unavailable or the claim is absent.
+func GetOrgGUID() string {
 	authToken, _ := agent.GetCentralAuthToken()
 	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	claims := jwt.MapClaims{}
@@ -756,9 +762,7 @@ func (c *collector) getOrgGUID() string {
 	if err != nil {
 		return ""
 	}
-
-	claim, ok := claims["org_guid"]
-	if ok {
+	if claim, ok := claims["org_guid"]; ok {
 		return claim.(string)
 	}
 	return ""

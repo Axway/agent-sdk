@@ -614,6 +614,47 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			},
 		},
 		// leg event data must not contain fields reserved for summary
+		// ProxyID takes priority over Source for api.id when both are set
+		"leg api.id uses ProxyID when set, not Source": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-proxyid-priority",
+				TransactionEvent: &Event{
+					ID:      "0",
+					Status:  "Pass",
+					Source:  "10.0.0.1",
+					ProxyID: "remoteApiId_abc123",
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.API)
+				assert.Equal(t, "remoteApiId_abc123", data.API.ID)
+				assert.Equal(t, "10.0.0.1", data.Source)
+			},
+		},
+		"leg api.id falls back to Source when ProxyID is empty": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-source-fallback",
+				TransactionEvent: &Event{
+					ID:     "0",
+					Status: "Pass",
+					Source: "remoteApiId_abc123",
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegV2Data)
+				require.True(t, ok)
+				require.NotNil(t, data.API)
+				assert.Equal(t, "remoteApiId_abc123", data.API.ID)
+			},
+		},
 		// leg proxy is populated from SetProxy call
 		"leg proxy populated from SetProxy": {
 			logEvent: LogEvent{

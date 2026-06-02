@@ -284,7 +284,9 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 	}
 
 	apiID := ""
-	if txEvent.Source != "" {
+	if txEvent.ProxyID != "" {
+		apiID = txEvent.ProxyID
+	} else if txEvent.Source != "" {
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 

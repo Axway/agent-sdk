@@ -1280,3 +1280,22 @@ func TestPruneEmptyMapLevels(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOrgGUID(t *testing.T) {
+	tests := map[string]struct {
+		wantPanic bool
+	}{
+		"does not panic and returns a string": {
+			wantPanic: false,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				result := GetOrgGUID()
+				assert.IsType(t, "", result)
+			})
+			assert.False(t, tc.wantPanic)
+		})
+	}
+}
