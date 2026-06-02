@@ -124,7 +124,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 	assert.NotEmpty(t, envelope["id"])
 
 	assert.Equal(t, "somevalue", fields["token"])
-	assert.Equal(t, traceability.TransactionFlow, fields[traceability.FlowHeader])
+	assert.NotContains(t, fields, traceability.FlowHeader)
 }
 
 func TestCreateEventWithInvalidTokenRequest(t *testing.T) {

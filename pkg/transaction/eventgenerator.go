@@ -506,7 +506,6 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 		return
 	}
 	fields["token"] = token
-	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
 }
 
