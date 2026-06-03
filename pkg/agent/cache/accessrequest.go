@@ -63,13 +63,6 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 		WithField("secKey", secKey).
 		Trace("add access request and set secondary key")
 
-	// if the access request is already in the cache remove it before adding
-	//  in order to clean the old secondary keys
-	item, _ := c.accessRequestMap.Get(ar.Metadata.ID)
-	if item != nil {
-		c.accessRequestMap.Delete(ar.Metadata.ID)
-	}
-
 	c.accessRequestMap.SetWithSecondaryKey(ar.Metadata.ID, secKey, ri)
 	c.accessRequestMap.SetForeignKey(ar.Metadata.ID, formattedAppForeignKey)
 
