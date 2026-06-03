@@ -186,6 +186,7 @@ type CentralConfig interface {
 	GetTraceabilityHost() string
 	GetTraceabilityProtocol() string
 	GetPlatformURL() string
+	GetAPIServerVersionURL() string
 	GetAPIServerURL() string
 	GetEnvironmentURL() string
 	GetEnvironmentACLsURL() string
@@ -228,6 +229,7 @@ type CentralConfig interface {
 	GetManagedEnvironments() []string
 	GetProvisioningRetryCount() int
 	IsInstanceValidationEnabled() bool
+	GetRootTagsToStrip() []string
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -268,8 +270,9 @@ type CentralConfiguration struct {
 	CredentialConfig          CredentialConfig      `config:"credential"`
 	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
 	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
+	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
+	RootTagsToStrip           []string              `config:"rootTagsToStrip"`
 	managedEnvironments       []string
-	JobExecutionTimeout       time.Duration
 	environmentID             string
 	teamID                    string
 	isSingleURLSet            bool
@@ -451,6 +454,11 @@ func (c *CentralConfiguration) GetProxyURL() string {
 // GetAccessRequestsURL - Returns the accessrequest URL for access request API
 func (c *CentralConfiguration) GetAccessRequestsURL() string {
 	return c.GetEnvironmentURL() + "/accessrequests"
+}
+
+// GetAPIServerVersionURL - Returns the base path for the API server with version
+func (c *CentralConfiguration) GetAPIServerVersionURL() string {
+	return c.GetURL() + "/apis/management/" + c.APIServerVersion
 }
 
 // GetAPIServerURL - Returns the base path for the API server
@@ -695,6 +703,10 @@ func (c *CentralConfiguration) IsInstanceValidationEnabled() bool {
 	return c.InstanceValidatorEnabled
 }
 
+func (c *CentralConfiguration) GetRootTagsToStrip() []string {
+	return c.RootTagsToStrip
+}
+
 const (
 	pathRegion                    = "central.region"
 	pathTenantID                  = "central.organizationID"
@@ -740,6 +752,7 @@ const (
 	pathProvisioningRetryCount    = "central.provisioningRetryCount"
 	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
 	pathInstanceValidatorEnabled  = "central.instanceValidatorEnabled"
+	pathRootTagsToStrip           = "central.rootTagsToStrip"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -933,6 +946,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		AddUsageReportingProperties(props)
 		props.AddBoolProperty(pathErrorSamplingEnabled, false, "Controls whether error sampling is enabled")
 	} else {
+		props.AddStringSliceProperty(pathRootTagsToStrip, []string{}, "Strips specific tags from the root level of the spec")
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		props.AddIntProperty(pathProvisioningRetryCount, 0, "The number of retries, in case it fails, for any provisioning event", properties.WithUpperLimitInt(3))
@@ -1015,6 +1029,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		cfg.MigrationSettings = ParseMigrationConfig(props)
 		cfg.CredentialConfig = newCredentialConfig()
 		cfg.CredentialConfig.SetAllowedOAuthMethods(props.StringSlicePropertyValue(pathCredentialsOAuthMethods))
+		cfg.RootTagsToStrip = props.StringSlicePropertyValue(pathRootTagsToStrip)
 	}
 	if cfg.AgentName == "" && cfg.Environment != "" && agentType.ToShortString() != "" {
 		cfg.AgentName = cfg.Environment + "-" + agentType.ToShortString()

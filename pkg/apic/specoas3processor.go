@@ -280,6 +280,24 @@ func (p *oas3SpecProcessor) StripExtensions() {
 	}
 }
 
+func (p *oas3SpecProcessor) stripEndpoints() {
+	// strip the endpoints from the spec, these will be added based on the API Service EndpointDefinitions
+	p.spec.Servers = []*openapi3.Server{}
+}
+
+func (p *oas3SpecProcessor) stripTags(tags []string) {
+	if len(tags) == 0 {
+		return
+	}
+	for _, tagName := range tags {
+		for i := len(p.spec.Tags) - 1; i >= 0; i-- {
+			if p.spec.Tags[i].Name == tagName {
+				p.spec.Tags = append(p.spec.Tags[:i], p.spec.Tags[i+1:]...)
+			}
+		}
+	}
+}
+
 func (p *oas3SpecProcessor) GetSpecBytes() []byte {
 	s, _ := json.Marshal(p.spec)
 	return s

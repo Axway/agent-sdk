@@ -511,3 +511,12 @@ func TestGCMEcryptor(t *testing.T) {
 		})
 	}
 }
+
+func TestStringSlicesEqualUnordered(t *testing.T) {
+	slice1 := []string{"foo", "bar"}
+	slice2 := []string{"bar", "foo"}
+	slice3 := []string{"foo", "baz"}
+
+	assert.True(t, StringSlicesEqualUnordered(slice1, slice2))
+	assert.False(t, StringSlicesEqualUnordered(slice1, slice3))
+}

@@ -56,6 +56,7 @@ type ServiceBuilder interface {
 	SetAccessRequestDefinitionName(accessRequestDefName string, isUnique bool) ServiceBuilder
 	SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
 	SetStripOASExtensions(strip bool) ServiceBuilder
+	SetStripOASServersBeforePublish() ServiceBuilder
 
 	SetUnstructuredType(assetType string) ServiceBuilder
 	SetUnstructuredContentType(contentType string) ServiceBuilder
@@ -70,6 +71,7 @@ type ServiceBuilder interface {
 	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
 	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
 	SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder
+	SetRevisionOnly() ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -379,6 +381,21 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 		val.StripExtensions()
 	}
 
+	if b.serviceBody.stripOASServersBeforePublish {
+		val.stripEndpoints()
+	}
+
+	if len(specParser.tagsToStrip) > 0 {
+		val.stripTags(specParser.tagsToStrip)
+	}
+
+	if b.serviceBody.stripOASServersBeforePublish || len(specParser.tagsToStrip) > 0 || b.serviceBody.stripOASExtensions {
+		b.serviceBody.originalSpecHash = b.serviceBody.specHash
+		b.serviceBody.SpecDefinition = val.GetSpecBytes()
+		newHash, _ := util.ComputeHash(val.GetSpecBytes())
+		b.serviceBody.specHash = fmt.Sprintf("%v", newHash)
+	}
+
 	// only set ard name based on spec if not already set, use first auth we find
 	if b.serviceBody.ardName != "" {
 		return b.serviceBody, nil
@@ -426,6 +443,11 @@ func (b *serviceBodyBuilder) SetIgnoreSpecBasedCreds(ignore bool) ServiceBuilder
 	return b
 }
 
+func (b *serviceBodyBuilder) SetStripOASServersBeforePublish() ServiceBuilder {
+	b.serviceBody.stripOASServersBeforePublish = true
+	return b
+}
+
 func (b *serviceBodyBuilder) SetStripOASExtensions(strip bool) ServiceBuilder {
 	b.serviceBody.stripOASExtensions = strip
 	return b
@@ -466,5 +488,10 @@ func (b *serviceBodyBuilder) SetInstanceLifecycle(stage, releaseState, message s
 			},
 		}
 	}
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRevisionOnly() ServiceBuilder {
+	b.serviceBody.revisionOnly = true
 	return b
 }

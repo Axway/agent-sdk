@@ -7,9 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -20,7 +18,6 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	utilerrors "github.com/Axway/agent-sdk/pkg/util/errors"
 
-	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -77,13 +74,8 @@ func (c *ServiceClient) processRevision(serviceBody *ServiceBody) error {
 		logProcess = "Updating"
 	}
 
-	apiServiceRevisions, err := c.getRevisionsIfUpdating(serviceBody)
-	if err != nil {
-		return err
-	}
-
 	// check if a revision with the same hash was already published and update tags if needed
-	found, err := c.checkAndUpdateExistingRevision(serviceBody, apiServiceRevisions)
+	found, err := c.checkAndUpdateExistingRevision(serviceBody)
 	if err != nil {
 		return err
 	}
@@ -148,81 +140,50 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 	return apiServiceRevisions, count, nil
 }
 
-// getRevisionsIfUpdating returns revisions when the service action is an update
-func (c *ServiceClient) getRevisionsIfUpdating(serviceBody *ServiceBody) ([]*management.APIServiceRevision, error) {
-	apiServiceRevisions := make([]*management.APIServiceRevision, 0)
-	if serviceBody.serviceContext.serviceAction == updateAPI {
-		// get current revisions
-		revisions, totalCount, err := c.getRevisions("metadata.references.id==" + serviceBody.serviceContext.serviceID)
-		if err != nil {
-			return nil, err
-		}
-		serviceBody.serviceContext.revisionCount = totalCount
-		apiServiceRevisions = revisions
-	}
-	return apiServiceRevisions, nil
-}
-
 // checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
-func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody, apiServiceRevisions []*management.APIServiceRevision) (bool, error) {
+func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody) (bool, error) {
+	// attempt to use the stripped spec hash
 	revName, found := serviceBody.specHashes[serviceBody.specHash]
-	if !found {
+	if !found && serviceBody.originalSpecHash != "" {
+		// check if the original spec hash matches an existing revision,
+		// this is to cover the case where the spec content has not changed since the last publish,
+		// but the hash has changed due to non-content related changes (e.g. stripping servers)
+		revName, found = serviceBody.specHashes[serviceBody.originalSpecHash]
+	}
+
+	if !found || revName == "" {
 		return false, nil
 	}
 
-	name := revName.(string)
-
-	// check to see if the tags have changed from the latest
-	for _, apiServiceRevision := range apiServiceRevisions {
-		if apiServiceRevision.Name != name {
-			continue
-		}
-
-		serviceBody.serviceContext.revisionName = name
-
-		updatedTags := c.getUpdatedTagKeys(serviceBody.Tags, apiServiceRevision.Tags)
-		if len(updatedTags) == 0 {
-			return true, nil
-		}
-
-		updatedRevision := c.buildAPIServiceRevision(serviceBody)
-		updatedRevision.Name = apiServiceRevision.Name
-		updatedRevision.Metadata.Scope = v1.MetadataScope{
-			Kind: management.EnvironmentGVK().Kind,
-			Name: c.cfg.GetEnvironmentName(),
-		}
-		_, err := c.UpdateResourceInstance(updatedRevision)
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
+	// get the revision by name to compare tags and update if needed
+	revisions, totalCount, err := c.getRevisions(fmt.Sprintf("name==%s;metadata.references.id==%s", revName, serviceBody.serviceContext.serviceID))
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+
+	if totalCount == 0 {
+		return false, nil
+	}
+
+	if len(c.getUpdatedTagKeys(serviceBody.Tags, revisions[0].Tags)) != 0 {
+		return false, nil
+	}
+
+	serviceBody.serviceContext.revisionName = revName
+	return true, nil
 }
 
 // verify last revision tags against the serviceBody tags that are coming in to see if they are equal or not.  If they are not, return an empty[].  If they are
 // different, return the updated tags
 func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
 	// Extract values from map and convert to []string
-	var mapValues []string
-	for _, v := range serviceBodyTags {
-		if strVal, ok := v.(string); ok {
-			mapValues = append(mapValues, strVal)
-		}
-	}
-
-	// Sort both slices to allow unordered comparison
-	sort.Strings(mapValues)
-	sort.Strings(revisionTags)
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 
 	// Compare
-	if reflect.DeepEqual(mapValues, revisionTags) {
+	if util.StringSlicesEqualUnordered(tags, revisionTags) {
 		return []string{} // return empty string slice if equal
 	}
 
-	// If not equal, return the keys from serviceBodyTags
-	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
 	return tags
 }
 

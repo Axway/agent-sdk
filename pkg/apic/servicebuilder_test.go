@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const invalidSpec = `{"test":"123"}`
+
 const longDescription = `This is a sample Pet Store Server based on the OpenAPI 3.0 specification.  You can find out more about
 Swagger at [http://swagger.io](http://swagger.io). In the third iteration of the pet store, we've switched to the design first approach!
 You can now help us improve the API whether it's by making changes to the definition itself or to the code.
@@ -84,6 +86,7 @@ func TestServiceBodySetters(t *testing.T) {
 		SetReferenceInstanceName("refInstance", "refEnv").
 		SetIgnoreSpecBasedCreds(true).
 		SetStripOASExtensions(true).
+		SetStripOASServersBeforePublish().
 		SetInstanceLifecycle("stage", "active", "").
 		SetServiceEndpoints(ep)
 
@@ -136,6 +139,7 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.Equal(t, "refEnv/refInstance", sb.GetReferenceInstanceName())
 	assert.Equal(t, true, sb.ignoreSpecBasesCreds)
 	assert.Equal(t, true, sb.stripOASExtensions)
+	assert.Equal(t, true, sb.stripOASServersBeforePublish)
 	instanceLifecycle := sb.GetInstanceLifeCycle()
 	assert.NotNil(t, instanceLifecycle)
 	assert.Equal(t, "stage", instanceLifecycle.Stage)
@@ -169,24 +173,52 @@ func TestServiceBodySetters(t *testing.T) {
 	assert.NotNil(t, sb)
 }
 
+func TestSetRevisionOnly(t *testing.T) {
+	tests := map[string]struct {
+		callSetter bool
+		want       bool
+	}{
+		"defaults to false": {
+			callSetter: false,
+			want:       false,
+		},
+		"SetRevisionOnly sets flag": {
+			callSetter: true,
+			want:       true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			b := NewServiceBodyBuilder().SetResourceType(Unstructured).SetAPISpec([]byte{})
+			if tc.callSetter {
+				b = b.SetRevisionOnly()
+			}
+			sb, err := b.Build()
+			assert.Nil(t, err)
+			assert.Equal(t, tc.want, sb.IsRevisionOnly())
+		})
+	}
+}
+
 func TestServiceBodyWithParseError(t *testing.T) {
 	serviceBuilder := NewServiceBodyBuilder()
-	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err := serviceBuilder.SetResourceType(Oas3).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Oas2).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Wsdl).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Protobuf).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(AsyncAPI).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.NotNil(t, err)
 
-	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte("{\"test\":\"123\"}")).Build()
+	_, err = serviceBuilder.SetResourceType(Unstructured).SetAPISpec([]byte(invalidSpec)).Build()
 	assert.Nil(t, err)
 }
 
@@ -222,7 +254,7 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 		"status":   "active",
 	}
 
-	sb, err = serviceBuilder.
+	serviceBuilder = serviceBuilder.
 		SetDescription("A sample Petstore server based on OpenAPI 3.0").
 		SetAPIName("petstore").
 		SetAuthPolicy("pass-through").
@@ -230,8 +262,9 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 		SetState(PublishedState).
 		SetServiceEndpoints(endpoints).
 		SetTags(tags).
-		SetTeamName("pet-team").
-		Build()
+		SetTeamName("pet-team")
+
+	sb, err = serviceBuilder.Build()
 
 	// Assertions
 	assert.Nil(t, err)
@@ -246,9 +279,63 @@ func TestServiceBodyBuilderWithLargeSpec(t *testing.T) {
 	assert.Equal(t, endpoints, sb.Endpoints)
 	assert.Equal(t, tags, sb.Tags)
 	assert.NotEmpty(t, sb.SpecDefinition)
+	assert.Empty(t, sb.originalSpecHash)
 	assert.Equal(t, Oas3, sb.ResourceType)
 
 	// Verify spec size constraints
 	assert.Less(t, len(sb.SpecDefinition), len(specBytes), "processed spec should be smaller than original")
 	assert.Less(t, len(sb.SpecDefinition), tenMB, "spec should be under 10MB limit")
+
+	sb, err = serviceBuilder.
+		SetStripOASServersBeforePublish().
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	t.Cleanup(func() { NewSpecResourceParser = newSpecResourceParser() })
+
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"pet", "store", "user"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// Factory can be reconfigured: subsequent calls overwrite previous settings.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"unfound"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
+
+	// test OAS2 path
+	specPath = filepath.Join("testdata", "petstore-swagger2.json")
+	specBytes, err = os.ReadFile(specPath)
+	assert.Nil(t, err, "failed to read petstore OAS2 spec file")
+
+	// Test building service body with minimum required fields
+	serviceBuilder = NewServiceBodyBuilder().
+		SetResourceType(Oas2).
+		SetAPISpec(specBytes).
+		SetTitle("Petstore API").
+		SetVersion("1.0.0")
+
+	// The original hash is computed before stripping, so it must differ from the final spec hash.
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"pet", "store", "user"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.NotEqual(t, sb.originalSpecHash, sb.specHash)
+
+	// A tag name that does not exist in the spec leaves hashes equal (spec is unchanged).
+	NewSpecResourceParserFactory(WithTagsToStrip([]string{"unfound"}))
+	sb, err = serviceBuilder.
+		Build()
+	assert.Nil(t, err)
+	assert.NotNil(t, sb)
+	assert.Equal(t, sb.originalSpecHash, sb.specHash)
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -870,7 +869,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		method = coreapi.PUT
 
 		// check if either hash, tags or title have changed and mark for update
-		equalTags := slices.Equal(existingRI.GetTags(), data.GetTags())
+		equalTags := util.StringSlicesEqualUnordered(existingRI.GetTags(), data.GetTags())
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
 		if oldHash == newHash && existingRI.Title == data.Title && equalTags {
