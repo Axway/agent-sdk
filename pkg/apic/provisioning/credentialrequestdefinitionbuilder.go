@@ -166,8 +166,6 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 		c.requestSchema, _ = NewSchemaBuilder().Build()
 	}
 
-	// SDB - commit baca6c4d (APIGOV-31216) introduced a bug here: map assignment copies the reference,
-	// not the data, so delete mutates c.requestSchema directly — maps.Clone is needed. Talk to team about fix.
 	// clone and remove dependencies from the request schema for hashing
 	requestSchemaWithoutDependencies := maps.Clone(c.requestSchema)
 	delete(requestSchemaWithoutDependencies, "dependencies")

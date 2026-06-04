@@ -178,10 +178,13 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) error {
 			timeStamp = event.Content.Timestamp
 			allFields, err := event.Content.Fields.GetValue("fields")
 			if err != nil {
+				delete(client.headers, FlowHeader)
 				continue
 			}
 			if flow, ok := allFields.(map[string]interface{})[FlowHeader]; ok {
 				client.headers[FlowHeader] = flow.(string)
+			} else {
+				delete(client.headers, FlowHeader)
 			}
 		}
 	}

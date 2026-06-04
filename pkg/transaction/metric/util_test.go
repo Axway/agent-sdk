@@ -14,16 +14,29 @@ import (
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
-const testTeamGUID1 = "team-guid-1"
+const (
+	testTeamGUID1     = "team-guid-1"
+	testAPIEmptyGUID  = "api-empty-guid"
+	testAppEmptyGUID  = "app-empty-guid"
+)
+
+func makeAPIServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
+	svc := management.NewAPIService("svc-"+apiID, "env1")
+	svc.SubResources = map[string]any{
+		"x-agent-details": map[string]any{"externalAPIID": apiID},
+	}
+	svc.Owner = owner
+	ri, _ := svc.AsInstance()
+	return ri
+}
 
 func TestCentralMetricFromAPIMetric(t *testing.T) {
-	agent.InitializeForTest(
-		nil,
-		agent.TestWithCentralConfig(&config.CentralConfiguration{AgentName: "agent"}),
-	)
+	testCfg := &config.CentralConfiguration{AgentName: "agent"}
+	agent.InitializeForTest(nil, agent.TestWithCentralConfig(testCfg))
 
 	testCases := map[string]struct {
 		skip           bool
+		setupCache     func()
 		input          *APIMetric
 		expectedOutput *centralMetric
 	}{
@@ -316,11 +329,94 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				APIServiceRevision: &models.ResourceReference{ID: "revision-id-1"},
 			},
 		},
+		"api owner demoted to unknown when cached APIService has empty team GUID": {
+			setupCache: func() {
+				agent.GetCacheManager().AddAPIService(
+					makeAPIServiceRI(testAPIEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
+				)
+			},
+			input: &APIMetric{
+				EventID:     "evt-api-demotion",
+				Count:       1,
+				StatusCode:  "200",
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				API:         models.APIDetails{ID: testAPIEmptyGUID, Name: "api-svc"},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "evt-api-demotion",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+				API: &models.APIResourceReference{
+					ResourceReference: models.ResourceReference{ID: testAPIEmptyGUID},
+					Name:              "api-svc",
+					Owner:             &models.OwnerBlock{Type: "unknown"},
+				},
+			},
+		},
+		"app owner demoted to unknown when cached ManagedApp has empty team GUID": {
+			setupCache: func() {
+				agent.GetCacheManager().AddManagedApplication(
+					makeAppRI(testAppEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
+				)
+			},
+			input: &APIMetric{
+				EventID:     "evt-app-demotion",
+				Count:       1,
+				StatusCode:  "200",
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				App:         models.AppDetails{ID: testAppEmptyGUID},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				EventID:     "evt-app-demotion",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Transactions: &Transactions{
+						UnitCount: UnitCount{Count: 1},
+						Duration:  1,
+						Response:  &ResponseMetrics{},
+						Status:    "Success",
+					},
+				},
+				App: &models.ApplicationResourceReference{
+					ResourceReference: models.ResourceReference{ID: testAppEmptyGUID},
+					Owner:             &models.OwnerBlock{Type: "unknown"},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			if tc.skip {
 				return
+			}
+			agent.InitializeForTest(nil, agent.TestWithCentralConfig(testCfg))
+			if tc.setupCache != nil {
+				tc.setupCache()
 			}
 			output := centralMetricFromAPIMetric(tc.input)
 			assert.Equal(t, tc.expectedOutput, output)
@@ -413,8 +509,8 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 			wantType: "none",
 		},
 		"app with empty team GUID returns unknown": {
-			appRI:    makeAppRI("app-empty-guid", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			appID:    "app-empty-guid",
+			appRI:    makeAppRI(testAppEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
+			appID:    testAppEmptyGUID,
 			wantType: "unknown",
 		},
 	}
