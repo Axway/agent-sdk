@@ -102,46 +102,6 @@ func TestResolveAPIOwner(t *testing.T) {
 	}
 }
 
-func makeAccessRequest(name string, owner *v1.Owner) *management.AccessRequest {
-	ar := management.NewAccessRequest(name, "env1")
-	ar.Owner = owner
-	return ar
-}
-
-func TestResolveAppOwner(t *testing.T) {
-	tests := map[string]struct {
-		accessRequest *management.AccessRequest
-		expected      *models.OwnerBlock
-	}{
-		"nil access request returns unknown": {
-			accessRequest: nil,
-			expected:      &models.OwnerBlock{Type: "unknown"},
-		},
-		ownerNilReturnsNone: {
-			accessRequest: makeAccessRequest("ar-1", nil),
-			expected:      &models.OwnerBlock{Type: "none"},
-		},
-		ownerTeamWithGUID: {
-			accessRequest: makeAccessRequest("ar-2", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2}),
-			expected:      &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID2},
-		},
-		ownerTeamEmptyGUID: {
-			accessRequest: makeAccessRequest("ar-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected:      &models.OwnerBlock{Type: "unknown"},
-		},
-		ownerUserXPrivate: {
-			accessRequest: makeAccessRequest("ar-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
-			expected:      &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID2, UserGUID: testOwnerUserGUID},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, ResolveAppOwner(tc.accessRequest))
-		})
-	}
-}
-
 func TestResolveProductOwner(t *testing.T) {
 	tests := map[string]struct {
 		ref      v1.EmbeddedReference

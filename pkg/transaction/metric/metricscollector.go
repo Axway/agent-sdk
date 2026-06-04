@@ -433,7 +433,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		Environment:        &EnvironmentInfo{RuntimeType: runtimeType},
 		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
 		Subscription:       c.createSubscriptionDetail(accessRequest),
-		App:                c.createAppDetail(accessRequest, managedApp),
+		App:                c.createAppDetail(managedApp),
 		Product:            c.getProduct(accessRequest),
 		API:                c.createAPIDetail(detail.APIDetails),
 		AssetResource:      c.getAssetResource(accessRequest),
@@ -600,7 +600,7 @@ func (c *collector) createSubscriptionDetail(accessRequest *management.AccessReq
 	}
 }
 
-func (c *collector) createAppDetail(accessRequest *management.AccessRequest, appRI *v1.ResourceInstance) *models.ApplicationResourceReference {
+func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.ApplicationResourceReference {
 	if appRI == nil {
 		return nil
 	}
@@ -643,6 +643,8 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	return ref
 }
 
+// getAPIServiceRevision returns the APIServiceInstance ID as the apiServiceRevision identifier;
+// the instance reference is the accessible proxy for revision identity on AccessRequest.
 func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
 		return nil

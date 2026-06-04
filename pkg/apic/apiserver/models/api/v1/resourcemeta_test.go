@@ -9,7 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const xAgentDetails = "x-agent-details"
+const (
+	xAgentDetails  = "x-agent-details"
+	testEmbedGroup = "catalog"
+	testEmbedKind  = "PublishedProduct"
+	testEmbedRefID = "ref-abc-123"
+)
 
 func TestResourceMetaMarshal(t *testing.T) {
 	apiID := "99"
@@ -365,6 +370,57 @@ func TestGetKindLink(t *testing.T) {
 				t.Cleanup(func() { delete(scopeKindMap, meta.GroupKind) })
 			}
 			assert.Equal(t, tc.expected, meta.GetKindLink())
+		})
+	}
+}
+
+func TestGetEmbeddedReferenceByGVK(t *testing.T) {
+	matchGVK := GroupVersionKind{GroupKind: GroupKind{Group: testEmbedGroup, Kind: testEmbedKind}}
+	otherGVK := GroupVersionKind{GroupKind: GroupKind{Group: "management", Kind: "APIService"}}
+
+	matchRef := EmbeddedReference{
+		Group:    testEmbedGroup,
+		Kind:     testEmbedKind,
+		Name:     "my-product",
+		Metadata: EmbeddedReferenceMetadata{ID: testEmbedRefID},
+	}
+
+	cases := map[string]struct {
+		embedded map[string]EmbeddedReferences
+		gvk      GroupVersionKind
+		wantID   string
+	}{
+		"nil embedded map returns zero value": {
+			embedded: nil,
+			gvk:      matchGVK,
+			wantID:   "",
+		},
+		"empty embedded map returns zero value": {
+			embedded: map[string]EmbeddedReferences{},
+			gvk:      matchGVK,
+			wantID:   "",
+		},
+		"non-matching GVK returns zero value": {
+			embedded: map[string]EmbeddedReferences{
+				"metadata": {References: []EmbeddedReference{matchRef}},
+			},
+			gvk:    otherGVK,
+			wantID: "",
+		},
+		"matching GVK returns reference": {
+			embedded: map[string]EmbeddedReferences{
+				"metadata": {References: []EmbeddedReference{matchRef}},
+			},
+			gvk:    matchGVK,
+			wantID: testEmbedRefID,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			meta := &ResourceMeta{Embedded: tc.embedded}
+			got := meta.GetEmbeddedReferenceByGVK(tc.gvk)
+			assert.Equal(t, tc.wantID, got.Metadata.ID)
 		})
 	}
 }

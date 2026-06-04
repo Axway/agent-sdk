@@ -1,8 +1,8 @@
 package metric
 
 import (
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -159,7 +159,6 @@ func (s *testHTTPServer) processFileHeader(fileHeader *multipart.FileHeader) {
 	body, _ := io.ReadAll(file)
 	var usageEvent UsageEvent
 	json.Unmarshal(body, &usageEvent)
-	fmt.Printf("\n\n %+v \n\n", usageEvent)
 	s.givenGranularity = usageEvent.Granularity
 	s.eventTimestamp = usageEvent.Timestamp
 	for _, report := range usageEvent.Report {
@@ -473,7 +472,6 @@ func setupMetricCollectorTest(t *testing.T, s *testHTTPServer) (*collector, *con
 }
 
 func runMetricCollectorLoop(s *testHTTPServer, metricCollector *collector, test metricCollectorTestCase, l int) {
-	fmt.Printf("\n\nTransaction Info: %+v\n\n", test.apiTransactionCount[l])
 	for i := 0; i < test.apiTransactionCount[l]; i++ {
 		metricCollector.AddMetricDetail(Detail{
 			APIDetails: apiDetails1,
@@ -822,7 +820,6 @@ func runOfflineCollectorLoops(myCollector Collector, test offlineMetricTestCase,
 	testLoops := 0
 	now = func() time.Time {
 		next := startDate.Add(time.Hour * time.Duration(testLoops))
-		fmt.Println(next.Format(ISO8601))
 		return next
 	}
 	for testLoops < test.loopCount {
@@ -1217,13 +1214,14 @@ func TestRemoveMetricEntries(t *testing.T) {
 
 func TestPruneEmptyMapLevels(t *testing.T) {
 	tests := map[string]struct {
-		metricMap   map[string]map[string]map[string]map[string]*centralMetric
-		subID       string
-		appID       string
-		apiID       string
-		wantAPIGone bool
-		wantAppGone bool
-		wantSubGone bool
+		metricMap      map[string]map[string]map[string]map[string]*centralMetric
+		subID          string
+		appID          string
+		apiID          string
+		wantAPIGone    bool
+		wantAppGone    bool
+		wantSubGone    bool
+		preservedAppID string // when set, asserts this appID is still present after the call
 	}{
 		"non-empty apiID level is not pruned": {
 			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
@@ -1256,10 +1254,13 @@ func TestPruneEmptyMapLevels(t *testing.T) {
 			subID: "sub1", appID: "app1", apiID: "api1",
 			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
 		},
-		"absent subID is a no-op": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{},
-			subID:     "missing", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
+		"absent appID within existing subID is a no-op for subID": {
+			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
+				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
+			},
+			subID: "sub1", appID: "missing-app", apiID: "api1",
+			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
+			preservedAppID: "app1",
 		},
 	}
 
@@ -1277,25 +1278,61 @@ func TestPruneEmptyMapLevels(t *testing.T) {
 
 			_, subPresent := tc.metricMap[tc.subID]
 			assert.Equal(t, tc.wantSubGone, !subPresent, "subID level presence mismatch")
+
+			if tc.preservedAppID != "" {
+				_, preserved := tc.metricMap[tc.subID][tc.preservedAppID]
+				assert.True(t, preserved, "app %q should still be present after no-op call", tc.preservedAppID)
+			}
 		})
 	}
 }
 
+// buildTestJWT creates a minimal JWT with the given claims. The signature is
+// not verified by GetOrgGUID (uses ParseUnverified), so a placeholder is fine.
+func buildTestJWT(claims map[string]interface{}) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"typ":"JWT","alg":"HS256"}`))
+	payload, _ := json.Marshal(claims)
+	return header + "." + base64.RawURLEncoding.EncodeToString(payload) + ".fakesig"
+}
+
 func TestGetOrgGUID(t *testing.T) {
-	tests := map[string]struct {
-		wantPanic bool
+	const wantOrgGUID = "1234-1234-1234-1234" // matches org_guid in accessToken
+
+	cases := map[string]struct {
+		setupToken string // token returned by mock auth server; empty = InitializeForTest(nil)
+		wantGUID   string
 	}{
-		"does not panic and returns a string": {
-			wantPanic: false,
+		"valid token with org_guid returns GUID": {
+			setupToken: accessToken,
+			wantGUID:   wantOrgGUID,
+		},
+		"no auth token returns empty string": {
+			wantGUID: "",
+		},
+		"malformed token returns empty string": {
+			setupToken: "not-a-jwt",
+			wantGUID:   "",
+		},
+		"valid JWT without org_guid claim returns empty string": {
+			setupToken: buildTestJWT(map[string]interface{}{"sub": "test-user", "iss": "test"}),
+			wantGUID:   "",
 		},
 	}
-	for name, tc := range tests {
+
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() {
-				result := GetOrgGUID()
-				assert.IsType(t, "", result)
-			})
-			assert.False(t, tc.wantPanic)
+			token := tc.setupToken
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if token == "" {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
+				w.Write([]byte(`{"access_token":"` + token + `","expires_in":3600}`))
+			}))
+			defer srv.Close()
+			cfg := createCentralCfg(srv.URL, "test-env")
+			agent.Initialize(cfg)
+			assert.Equal(t, tc.wantGUID, GetOrgGUID())
 		})
 	}
 }

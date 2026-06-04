@@ -583,6 +583,10 @@ func setAssetResourceDetails(accessRequest *management.AccessRequest, summaryEve
 }
 
 func setAPIDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
+	if summaryEvent.Proxy == nil || summaryEvent.Team == nil {
+		log.Trace("proxy or team is nil, skipping api details population")
+		return
+	}
 	apiSvcInstID := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK()).ID
 	if apiSvcInstID == "" {
 		apiSvcInstID = accessRequest.Spec.ApiServiceInstance

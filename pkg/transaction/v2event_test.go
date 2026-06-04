@@ -19,46 +19,46 @@ var _ metric.V4Data = (*TransactionLegV2Data)(nil)
 var _ metric.V4Data = (*TransactionSummaryV2Data)(nil)
 
 const (
-	testOrgID         = "org-1"
-	testEnvID         = "env-1"
-	testOrgABC        = "org-abc"
-	testEnvABC        = "env-abc"
-	testOrgXYZ        = "org-xyz"
-	testEnvXYZ        = "env-xyz"
-	testTxnLeg1       = "txn-leg-1"
-	testTxnLeg2       = "txn-leg-2"
-	testTxnLeg3       = "txn-leg-3"
-	testTxnSum1       = "txn-sum-1"
-	testTxnSum2       = "txn-sum-2"
-	testTxnSum3       = "txn-sum-3"
-	testTxnSum4       = "txn-sum-4"
-	testTxnSumJSON    = "txn-sum-json"
-	testTxnErrLeg     = "txn-err-1"
-	testTxnErrSummary = "txn-err-2"
-	testTxnUnknown    = "txn-1"
-	testEventLegName  = "api.transaction.event"
-	testEventSumName  = "api.transaction.summary"
-	testTxnOwner1     = "txn-owner-1"
-	testTxnOwner2     = "txn-owner-2"
-	testTxnOwner3     = "txn-owner-3"
-	testTxnOwner4     = "txn-owner-4"
-	testTxnOwner5     = "txn-owner-5"
-	testTxnNoFields1  = "txn-nofields-leg"
-	testTxnNoFields2  = "txn-nofields-sum"
-	testTeamGUID      = "team-guid-123"
-	testTxnOutbound1  = "txn-outbound-1"
-	testTxnReporter   = "txn-reporter-1"
-	testTxnAsset      = "txn-asset-1"
-	testTxnRevision   = "txn-revision-1"
-	testTxnExclLeg    = "txn-excl-leg"
-	testTxnExclSum    = "txn-excl-sum"
-	testTxnIfaceLeg   = "txn-iface-leg"
-	testTxnProduct1   = "txn-product-1"
-	testTxnProduct2   = "txn-product-2"
-	testTxnProduct3   = "txn-product-3"
-	testTxnConsumer1  = "txn-consumer-1"
-	testTxnConsumer2  = "txn-consumer-2"
-	testConsumerOrgID = "consumer-org-1"
+	testOrgID          = "org-1"
+	testEnvID          = "env-1"
+	testOrgABC         = "org-abc"
+	testEnvABC         = "env-abc"
+	testOrgXYZ         = "org-xyz"
+	testEnvXYZ         = "env-xyz"
+	testTxnLeg1        = "txn-leg-1"
+	testTxnLeg2        = "txn-leg-2"
+	testTxnLeg3        = "txn-leg-3"
+	testTxnSum1        = "txn-sum-1"
+	testTxnSum2        = "txn-sum-2"
+	testTxnSum3        = "txn-sum-3"
+	testTxnSum4        = "txn-sum-4"
+	testTxnSumJSON     = "txn-sum-json"
+	testTxnErrLeg      = "txn-err-1"
+	testTxnErrSummary  = "txn-err-2"
+	testTxnUnknown     = "txn-1"
+	testEventLegName   = "api.transaction.event"
+	testEventSumName   = "api.transaction.summary"
+	testTxnOwner1      = "txn-owner-1"
+	testTxnOwner2      = "txn-owner-2"
+	testTxnOwner3      = "txn-owner-3"
+	testTxnOwner4      = "txn-owner-4"
+	testTxnOwner5      = "txn-owner-5"
+	testTxnNoFields1   = "txn-nofields-leg"
+	testTxnNoFields2   = "txn-nofields-sum"
+	testTeamGUID       = "team-guid-123"
+	testTxnOutbound1   = "txn-outbound-1"
+	testTxnReporter    = "txn-reporter-1"
+	testTxnAsset       = "txn-asset-1"
+	testTxnRevision    = "txn-revision-1"
+	testTxnExclLeg     = "txn-excl-leg"
+	testTxnExclSum     = "txn-excl-sum"
+	testTxnIfaceLeg    = "txn-iface-leg"
+	testTxnProduct1    = "txn-product-1"
+	testTxnProduct2    = "txn-product-2"
+	testTxnProduct3    = "txn-product-3"
+	testTxnConsumer1   = "txn-consumer-1"
+	testTxnConsumer2   = "txn-consumer-2"
+	testConsumerOrgID  = "consumer-org-1"
 	testTxnProxyRev    = "txn-proxy-rev"
 	testTxnObsDelta    = "txn-obs-delta"
 	testRevisionUUID1  = "revision-uuid-abc123"
@@ -1199,6 +1199,61 @@ func TestBuildTransactionV2DataLegIDs(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantID, data.ID)
 			assert.Equal(t, tc.wantPID, data.ParentID)
+		})
+	}
+}
+
+func TestSetLegProxy(t *testing.T) {
+	cases := map[string]struct {
+		leg           *TransactionLegV2Data
+		proxyID       string
+		proxyName     string
+		wantNilProxy  bool
+		wantProxyID   string
+		wantProxyName string
+	}{
+		"nil leg is a no-op": {
+			leg:          nil,
+			proxyID:      "id-1",
+			proxyName:    "name-1",
+			wantNilProxy: true,
+		},
+		"both IDs empty is a no-op": {
+			leg:          &TransactionLegV2Data{},
+			wantNilProxy: true,
+		},
+		"both IDs set populates proxy": {
+			leg:           &TransactionLegV2Data{},
+			proxyID:       "remoteApiId_ext-1",
+			proxyName:     testAPIName,
+			wantProxyID:   "remoteApiId_ext-1",
+			wantProxyName: testAPIName,
+		},
+		"only proxyID set populates proxy": {
+			leg:         &TransactionLegV2Data{},
+			proxyID:     "remoteApiId_ext-2",
+			wantProxyID: "remoteApiId_ext-2",
+		},
+		"only proxyName set populates proxy": {
+			leg:           &TransactionLegV2Data{},
+			proxyName:     "my-api-2",
+			wantProxyName: "my-api-2",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			SetLegProxy(tc.leg, tc.proxyID, tc.proxyName)
+			if tc.leg == nil {
+				return
+			}
+			if tc.wantNilProxy {
+				assert.Nil(t, tc.leg.Proxy)
+				return
+			}
+			assert.NotNil(t, tc.leg.Proxy)
+			assert.Equal(t, tc.wantProxyID, tc.leg.Proxy.ID)
+			assert.Equal(t, tc.wantProxyName, tc.leg.Proxy.Name)
 		})
 	}
 }

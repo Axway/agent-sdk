@@ -103,7 +103,7 @@ func buildTransactionUnits(in *APIMetric) *Units {
 	}
 	txn := &Transactions{
 		UnitCount: UnitCount{Count: in.Count},
-		Duration:  in.Observation.End - in.Observation.Start,
+		Duration:  int64(in.Response.Avg * float64(in.Count)),
 		Status:    status,
 		Response: &ResponseMetrics{
 			Max: in.Response.Max,

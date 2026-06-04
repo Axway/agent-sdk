@@ -51,32 +51,6 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 	return &models.OwnerBlock{Type: "unknown"}
 }
 
-func ResolveAppOwner(accessRequest *management.AccessRequest) *models.OwnerBlock {
-	if accessRequest == nil {
-		return &models.OwnerBlock{Type: "unknown"}
-	}
-
-	owner := accessRequest.Owner
-	if owner == nil {
-		logger.WithField("accessRequestName", accessRequest.Name).Trace("access request has no owner")
-		return &models.OwnerBlock{Type: "none"}
-	}
-
-	if owner.Type == v1.TeamOwner {
-		if owner.ID == "" {
-			return &models.OwnerBlock{Type: "unknown"}
-		}
-		if owner.User != nil && owner.User.ID != "" {
-			logger.WithField("accessRequestName", accessRequest.Name).WithField("userGUID", owner.User.ID).Trace("resolved app owner as user (x-private team)")
-			return &models.OwnerBlock{Type: "user", TeamGUID: owner.ID, UserGUID: owner.User.ID}
-		}
-		logger.WithField("accessRequestName", accessRequest.Name).WithField("teamGUID", owner.ID).Trace("resolved app owner from access request")
-		return &models.OwnerBlock{Type: "team", TeamGUID: owner.ID}
-	}
-
-	return &models.OwnerBlock{Type: "unknown"}
-}
-
 func ResolveProductOwner(ref v1.EmbeddedReference) *models.OwnerBlock {
 	if ref.Owner == nil {
 		return &models.OwnerBlock{Type: "none"}

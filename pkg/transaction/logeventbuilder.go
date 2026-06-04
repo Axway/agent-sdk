@@ -556,6 +556,7 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 
 	return b
 }
+
 func (b *transactionSummaryBuilder) SetAPIServiceRevision(id string) SummaryBuilder {
 	if b.err != nil {
 		return b

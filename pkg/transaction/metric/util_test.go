@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	testTeamGUID1     = "team-guid-1"
-	testAPIEmptyGUID  = "api-empty-guid"
-	testAppEmptyGUID  = "app-empty-guid"
+	testTeamGUID1    = "team-guid-1"
+	testAPIEmptyGUID = "api-empty-guid"
+	testAppEmptyGUID = "app-empty-guid"
 )
 
 func makeAPIServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
@@ -82,7 +82,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 								ID: "quota",
 							},
 						},
-						Duration: 5,
+						Duration: 5000,
 						Response: &ResponseMetrics{
 							Max: 100,
 							Min: 10,
@@ -194,9 +194,9 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 		},
 		"product owner nil when not set": {
 			input: &APIMetric{
-				EventID:    "id-no-owner",
-				Count:      1,
-				StatusCode: "200",
+				EventID:     "id-no-owner",
+				Count:       1,
+				StatusCode:  "200",
 				Observation: models.ObservationDetails{Start: 1, End: 2},
 				Product: models.Product{
 					ID:        "prod-no-owner",
@@ -218,7 +218,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -232,9 +232,9 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 		},
 		"product owner propagated when set": {
 			input: &APIMetric{
-				EventID:    "id-with-owner",
-				Count:      1,
-				StatusCode: "200",
+				EventID:     "id-with-owner",
+				Count:       1,
+				StatusCode:  "200",
 				Observation: models.ObservationDetails{Start: 1, End: 2},
 				Product: models.Product{
 					ID:        "prod-with-owner",
@@ -257,7 +257,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -271,9 +271,9 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 		},
 		"api service revision nil when not set": {
 			input: &APIMetric{
-				EventID:    "id-no-revision",
-				Count:      1,
-				StatusCode: "200",
+				EventID:     "id-no-revision",
+				Count:       1,
+				StatusCode:  "200",
 				Observation: models.ObservationDetails{Start: 1, End: 2},
 			},
 			expectedOutput: &centralMetric{
@@ -291,7 +291,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -321,7 +321,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -357,7 +357,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -397,7 +397,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Units: &Units{
 					Transactions: &Transactions{
 						UnitCount: UnitCount{Count: 1},
-						Duration:  1,
+						Duration:  0,
 						Response:  &ResponseMetrics{},
 						Status:    "Success",
 					},
@@ -427,7 +427,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 func makeAppRI(name string, owner *v1.Owner) *v1.ResourceInstance {
 	app := management.NewManagedApplication(name, "env1")
 	app.Marketplace = management.ManagedApplicationMarketplace{
-		Name: "mp1",
+		Name:     "mp1",
 		Resource: management.ManagedApplicationMarketplaceResource{Owner: owner},
 	}
 	ri, _ := app.AsInstance()

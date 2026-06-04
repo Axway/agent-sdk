@@ -88,7 +88,7 @@ func TestContractMetricV3(t *testing.T) {
 				assert.Contains(t, s, `"version":"3"`)
 			},
 		},
-		"duration equals observation end minus start": {
+		"duration equals sum of transaction response times": {
 			setup: func() {
 				agent.InitializeForTest(nil, agent.TestWithCentralConfig(&config.CentralConfiguration{AgentName: contractAgentName}))
 			},
@@ -96,6 +96,9 @@ func TestContractMetricV3(t *testing.T) {
 				EventID:    "contract-metric-dur",
 				StatusCode: "200",
 				Count:      5,
+				Response: ResponseMetrics{
+					Avg: 300,
+				},
 				Observation: models.ObservationDetails{
 					Start: 2000,
 					End:   3500,
@@ -114,9 +117,9 @@ func TestContractMetricV3(t *testing.T) {
 				agent.GetCacheManager().AddAPIService(contractAPIServiceRI("ctr-api-2", &v1.Owner{Type: v1.TeamOwner, ID: "team-ctr-2"}))
 			},
 			input: &APIMetric{
-				EventID:    "contract-metric-owner",
-				StatusCode: "200",
-				Count:      1,
+				EventID:     "contract-metric-owner",
+				StatusCode:  "200",
+				Count:       1,
 				Observation: models.ObservationDetails{Start: 100, End: 200},
 				API: models.APIDetails{
 					ID:   "ctr-api-2",
@@ -135,9 +138,9 @@ func TestContractMetricV3(t *testing.T) {
 				agent.InitializeForTest(nil, agent.TestWithCentralConfig(&config.CentralConfiguration{AgentName: contractAgentName}))
 			},
 			input: &APIMetric{
-				EventID:    "contract-metric-miss",
-				StatusCode: "200",
-				Count:      1,
+				EventID:     "contract-metric-miss",
+				StatusCode:  "200",
+				Count:       1,
 				Observation: models.ObservationDetails{Start: 100, End: 200},
 				API: models.APIDetails{
 					ID:   "not-in-cache",
@@ -156,9 +159,9 @@ func TestContractMetricV3(t *testing.T) {
 				agent.GetCacheManager().AddManagedApplication(contractManagedAppRI(contractAppID, &v1.Owner{Type: v1.TeamOwner, ID: "app-team-3"}))
 			},
 			input: &APIMetric{
-				EventID:    "contract-metric-app-owner",
-				StatusCode: "200",
-				Count:      1,
+				EventID:     "contract-metric-app-owner",
+				StatusCode:  "200",
+				Count:       1,
 				Observation: models.ObservationDetails{Start: 100, End: 200},
 				App: models.AppDetails{
 					ID:   contractAppID,
@@ -177,9 +180,9 @@ func TestContractMetricV3(t *testing.T) {
 				agent.InitializeForTest(nil, agent.TestWithCentralConfig(&config.CentralConfiguration{AgentName: contractAgentName}))
 			},
 			input: &APIMetric{
-				EventID:    "contract-metric-removed",
-				StatusCode: "200",
-				Count:      1,
+				EventID:     "contract-metric-removed",
+				StatusCode:  "200",
+				Count:       1,
 				Observation: models.ObservationDetails{Start: 100, End: 200},
 				API: models.APIDetails{
 					ID:       "ctr-api-r",
