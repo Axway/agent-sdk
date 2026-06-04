@@ -25,6 +25,7 @@ type IDPClient interface {
 	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
+	GetResource(url string) (*apiv1.ResourceInstance, error)
 }
 
 // IDPEngageLifecycle manages IdentityProvider and IdentityProviderMetadata resources in Engage.
@@ -87,32 +88,46 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 		return "", err
 	}
 
-	ri, err := l.client.CreateOrUpdateResource(idpResource)
+	// Check if an IdentityProvider with the same name already exists
+	ri, err := l.client.GetResource(idpResource.GetSelfLink())
 	if err != nil {
-		idpLogger.WithError(err).Error("unable to create IdentityProvider resource in Engage")
 		return "", err
 	}
-	if err = idpResource.FromInstance(ri); err != nil {
-		idpLogger.WithError(err).Error("failed to parse created IdentityProvider resource")
-		return "", err
+
+	if ri == nil {
+		ri, err = l.client.CreateOrUpdateResource(idpResource)
+		if err != nil {
+			idpLogger.WithError(err).Error("unable to create IdentityProvider resource in Engage")
+			return "", err
+		}
+		if err = idpResource.FromInstance(ri); err != nil {
+			idpLogger.WithError(err).Error("failed to parse created IdentityProvider resource")
+			return "", err
+		}
+		if err = l.applyPolicies(idpLogger, idpResource, envPolicies); err != nil {
+			return "", err
+		}
+		idpLogger.WithField("name", ri.GetName()).Info("IdentityProvider resource created successfully")
 	}
+
 	createdName := idpResource.Name
-
-	if err = l.applyPolicies(idpLogger, idpResource, envPolicies); err != nil {
-		return "", err
+	if ri != nil {
+		createdName = ri.GetName()
 	}
 
-	if err = l.createMetadataFromServerMetadata(idpLogger, idpCfg, createdName, metadata); err != nil {
+	if idpMetadata, err = l.createMetadataFromServerMetadata(idpLogger, idpCfg, createdName, metadata); err != nil {
 		return "", err
 	}
-
-	idpLogger.WithField("name", createdName).Info("IdentityProvider resource created successfully")
+	idpLogger.WithField("idpName", createdName).
+		WithField("name", idpMetadata.GetName()).
+		Info("IdentityProviderMetadata resource created successfully")
 	return createdName, nil
 }
 
 func (l *idpEngageLifecycle) buildIdentityProviderFromMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpType, idpName string) (*management.IdentityProvider, error) {
 	name := util.NormalizeNameForCentral(idpName)
 	res := management.NewIdentityProvider(name)
+	res.Title = name
 	res.Spec = management.IdentityProviderSpec{
 		ProviderType:  idpType,
 		ClientTimeout: defaultIDPClientTimeoutSeconds,
@@ -120,20 +135,20 @@ func (l *idpEngageLifecycle) buildIdentityProviderFromMetadata(idpLogger log.Fie
 	return res, nil
 }
 
-func (l *idpEngageLifecycle) createMetadataFromServerMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName string, metadata *AuthorizationServerMetadata) error {
+func (l *idpEngageLifecycle) createMetadataFromServerMetadata(idpLogger log.FieldLogger, idpCfg corecfg.IDPConfig, idpName string, metadata *AuthorizationServerMetadata) (*apiv1.ResourceInstance, error) {
 	idpLogger.WithField("name", idpName).Debug("creating IdentityProviderMetadata resource")
 
-	idpMetadata := newIdentityProviderMetadata(idpName, idpName, metadata)
+	idpMetadata := newIdentityProviderMetadata("", idpName, metadata)
 
 	ri, err := l.client.CreateOrUpdateResource(idpMetadata)
 	if err != nil {
 		idpLogger.WithField("name", idpName).WithError(err).Warn("unable to create IdentityProviderMetadata resource in Engage")
-		return err
+		return nil, err
 	}
 	l.idpCache.AddIdentityProviderMetadata(ri)
 
 	idpLogger.WithField("name", idpName).Info("IdentityProviderMetadata resource created successfully")
-	return nil
+	return ri, nil
 }
 
 func (l *idpEngageLifecycle) applyPolicies(idpLogger log.FieldLogger, idpResource *management.IdentityProvider, envPolicies management.EnvironmentPoliciesCredentials) error {
@@ -168,6 +183,7 @@ func (l *idpEngageLifecycle) applyPolicies(idpLogger log.FieldLogger, idpResourc
 
 func newIdentityProviderMetadata(name, scopeName string, m *AuthorizationServerMetadata) *management.IdentityProviderMetadata {
 	res := management.NewIdentityProviderMetadata(name, scopeName)
+	res.Title = name
 	res.Spec = management.IdentityProviderMetadataSpec{
 		Issuer:                m.Issuer,
 		AuthorizationEndpoint: m.AuthorizationEndpoint,
