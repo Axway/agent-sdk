@@ -28,7 +28,7 @@ type ReporterInfo struct {
 	AgentType       string
 	AgentSDKVersion string
 	AgentName       string
-	// ObservationDelta is only meaningful for metric events; leave 0 for transaction events.
+	// ObservationDelta is only meaningful for metric events. Leave 0 for transaction events.
 	ObservationDelta int64
 }
 
@@ -191,7 +191,7 @@ func (d *TransactionSummaryV2Data) GetLogFields() logrus.Fields {
 	return f
 }
 
-// InsightsEvent is the top-level wire envelope for transaction leg and summary events.
+// InsightsEvent is the top-level envelope for transaction leg and summary events.
 type InsightsEvent struct {
 	ID           string                      `json:"id"`
 	Org          string                      `json:"org"`
@@ -210,7 +210,7 @@ var eventTypeMap = map[string]string{
 }
 
 // BuildTransactionV2Data constructs an InsightsEvent from a LogEvent for the ground agent path.
-// cacheManager may be nil in tests; owner resolution will return "unknown" in that case.
+// cacheManager may be nil in tests. Owner resolution will return "unknown" in that case.
 func BuildTransactionV2Data(
 	logger log.FieldLogger,
 	logEvent LogEvent,
@@ -382,7 +382,7 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 	if summary.Proxy != nil && (summary.Proxy.ID != "" || summary.Proxy.Name != "") {
 		data.Proxy = &insightsProxy{ID: summary.Proxy.ID, Name: summary.Proxy.Name}
 	} else if summary.API != nil && (summary.API.ID != "" || summary.API.Name != "") {
-		// Proxy doesn't survive JSON round-trips (json:"-"); fall back to API details
+		// Proxy doesn't survive JSON round-trips (json:"-"). Fall back to API details
 		// which carry the same proxy ID/name set by the controller enrichment path.
 		proxyID := strings.TrimPrefix(summary.API.ID, transutil.SummaryEventProxyIDPrefix)
 		data.Proxy = &insightsProxy{ID: proxyID, Name: summary.API.Name}
@@ -520,7 +520,7 @@ func formatLegID(s string) string {
 }
 
 // resolveAPIDetailFromCache builds the api sub-object for leg events.
-// apiServiceId is intentionally omitted — it is summary-only per REQ-050.
+// apiServiceId is intentionally omitted — it is summary-only.
 func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insightsAPIDetail {
 	detail := &insightsAPIDetail{
 		ID:    apiID,

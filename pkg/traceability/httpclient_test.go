@@ -36,8 +36,6 @@ func makeFlowEvent(flow string) publisher.Event {
 
 // TestPublishEventsFlowHeader verifies that publishEvents correctly manages the
 // axway-target-flow header in client.headers for metric and transaction batches.
-// The stale-header case is the regression test for the BLOCKER fix: a metric batch
-// sets the header; a subsequent transaction batch must clear it.
 func TestPublishEventsFlowHeader(t *testing.T) {
 	cases := map[string]struct {
 		preSeedHeaders map[string]string // simulate headers left by a prior batch
@@ -61,9 +59,6 @@ func TestPublishEventsFlowHeader(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			// InitializeForTest leaves tokenRequester nil so addHeaders returns an auth
-			// error — but publishEvents assigns client.headers before calling request,
-			// so the header state is observable even when the HTTP call fails.
 			agent.InitializeForTest(nil)
 
 			headers := make(map[string]string)

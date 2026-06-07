@@ -1268,7 +1268,7 @@ func TestPruneEmptyMapLevels(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c, _ := newCleanupCollector(tc.metricMap)
 
-			c.pruneEmptyMapLevels(tc.subID, tc.appID, tc.apiID)
+			c.removeEmptyKeys(tc.subID, tc.appID, tc.apiID)
 
 			_, apiPresent := tc.metricMap[tc.subID][tc.appID][tc.apiID]
 			assert.Equal(t, tc.wantAPIGone, !apiPresent, "apiID level presence mismatch")

@@ -24,7 +24,7 @@ type APIMetric struct {
 	EventID       string                    `json:"-"`
 	StartTime     time.Time                 `json:"-"`
 	Unit          *models.Unit              `json:"unit,omitempty"`
-	// APIServiceRevisionID is populated by the agents-controller via CentralMetricBuilder.SetAPIServiceRevision; not set by the SDK collector path.
+	// APIServiceRevisionID is populated by the agents-controller via CentralMetricBuilder.SetAPIServiceRevision.
 	APIServiceRevisionID string `json:"-"`
 }
 

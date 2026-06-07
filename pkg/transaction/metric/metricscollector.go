@@ -643,8 +643,8 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	return ref
 }
 
-// getAPIServiceRevision returns the APIServiceInstance ID as the apiServiceRevision identifier;
-// the instance reference is the accessible proxy for revision identity on AccessRequest.
+// getAPIServiceRevision uses the APIServiceInstance reference on the AccessRequest as the
+// revision identifier. AccessRequests do not carry a direct APIServiceRevision reference.
 func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
 		return nil
@@ -1112,7 +1112,7 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 
 	subID, appID, apiID, group := metric.getKeyParts()
 	c.removeMetricEntries(subID, appID, apiID, group, histogram, counters)
-	c.pruneEmptyMapLevels(subID, appID, apiID)
+	c.removeEmptyKeys(subID, appID, apiID)
 
 	c.logger.
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
@@ -1142,7 +1142,7 @@ func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histo
 	}
 }
 
-func (c *collector) pruneEmptyMapLevels(subID, appID, apiID string) {
+func (c *collector) removeEmptyKeys(subID, appID, apiID string) {
 	if len(c.metricMap[subID][appID][apiID]) == 0 {
 		delete(c.metricMap[subID][appID], apiID)
 	}

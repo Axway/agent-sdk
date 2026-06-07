@@ -96,7 +96,7 @@ type V4Data interface {
 	GetLogFields() logrus.Fields
 }
 
-// V4Event - represents V4 event
+// V4Event is the top-level event envelope sent to the insights pipeline.
 type V4Event struct {
 	ID           string               `json:"id"`
 	Timestamp    int64                `json:"timestamp"`

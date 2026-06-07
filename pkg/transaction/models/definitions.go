@@ -180,7 +180,7 @@ type ObservationDetails struct {
 	End   int64 `json:"end,omitempty"`
 }
 
-// OwnerBlock - Represents the owner of an API or application resource in insights events.
+// OwnerBlock represents the owner of an API or application resource in insights events.
 // Type is one of "team", "user", "none", or "unknown".
 type OwnerBlock struct {
 	Type     string `json:"type"`
