@@ -19,6 +19,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
@@ -581,6 +582,13 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	s := newTestServer()
 	defer s.Close()
+	defer func() {
+		config.AgentVersion = ""
+		SDKBuildVersion = ""
+	}()
+
+	config.AgentVersion = "1.2.3-abc123"
+	SDKBuildVersion = "1.0.0"
 
 	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
 	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
@@ -614,7 +622,7 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	var logData map[string]string
 	level := "info"
-	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
+	msg := "Starting test_with_non_defaults"
 
 	for scanner.Scan() {
 		out := scanner.Text()
@@ -627,6 +635,8 @@ func TestRootCommandLoggerFile(t *testing.T) {
 
 	assert.Equal(t, level, logData["level"])
 	assert.Equal(t, msg, logData["message"])
+	assert.Equal(t, "1.2.3-abc123", logData["version"])
+	assert.Equal(t, "1.0.0", logData["sdkVersion"])
 }
 
 func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
