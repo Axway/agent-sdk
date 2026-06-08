@@ -28,6 +28,7 @@ type discoveryCache struct {
 
 type resourceClient interface {
 	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceCount(URL string) (int, error)
 }
 
 // discoverFunc is the func definition for discovering resources to cache

@@ -1,14 +1,18 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/harvester"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +54,7 @@ func (m *mockCacheGetter) setResources(group, kind string, resources map[string]
 
 // mockResourceClient implements resourceClient for tests
 type mockResourceClient struct {
-	resources map[string][]*apiv1.ResourceInstance // keyed by URL substring
+	resources map[string][]*apiv1.ResourceInstance // keyed by URL
 	err       error
 }
 
@@ -69,6 +73,35 @@ func (m *mockResourceClient) GetAPIV1ResourceInstances(_ map[string]string, URL 
 	}
 	return []*apiv1.ResourceInstance{}, nil
 }
+
+func (m *mockResourceClient) GetAPIV1ResourceCount(URL string) (int, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	return len(m.resources[URL]), nil
+}
+
+// mockCVHarvester is a harvester mock with a configurable latest sequence ID,
+// used to control the sequence pre-check inside cacheValidator.
+type mockCVHarvester struct {
+	latestSeq int64
+	err       error
+}
+
+func (m *mockCVHarvester) ReceiveSyncEvents(_ context.Context, _ string, _ int64, _ chan *proto.Event) (int64, error) {
+	return m.latestSeq, m.err
+}
+
+func (m *mockCVHarvester) EventCatchUp(_ context.Context, _ string, _ chan *proto.Event) error {
+	return nil
+}
+
+type mockSeqProvider struct {
+	seq int64
+}
+
+func (m *mockSeqProvider) GetSequence() int64   { return m.seq }
+func (m *mockSeqProvider) SetSequence(id int64) { m.seq = id }
 
 func makeServerResource(kind, scopeKind, scopeName, name string, modTime time.Time) *apiv1.ResourceInstance {
 	return &apiv1.ResourceInstance{
@@ -126,6 +159,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 	type testCase struct {
 		setup               func(*mockResourceClient, *mockCacheGetter)
 		watchTopic          *management.WatchTopic
+		harvester           harvester.Harvest
+		sequence            events.SequenceProvider
 		expectErr           error
 		expectedFailedKinds []string
 	}
@@ -327,6 +362,50 @@ func TestCacheValidator_Execute(t *testing.T) {
 			expectErr:           errCacheOutOfSync,
 			expectedFailedKinds: []string{crrGVK.Kind},
 		},
+		// Sequence in sync + count match: early exit without fetching metadata.
+		"sequence and count both in sync - early exit": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:           &mockCVHarvester{latestSeq: 10},
+			sequence:            &mockSeqProvider{seq: 10},
+			expectErr:           nil,
+			expectedFailedKinds: nil,
+		},
+		// Sequence out of sync + count match: must fetch metadata to detect the outdated timestamp.
+		"sequence out of sync, count matches, modify time mismatch detected": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				svcNewer := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", serverTime)
+				client.resources[svcNewer.GetKindLink()] = []*apiv1.ResourceInstance{svcNewer}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:           &mockCVHarvester{latestSeq: 20},
+			sequence:            &mockSeqProvider{seq: 10},
+			expectErr:           errCacheOutOfSync,
+			expectedFailedKinds: []string{svcGVK.Kind},
+		},
+		// Sequence out of sync + count matches (resource was swapped: server has svc1, cache has
+		// svc-other, both count=1): metadata fetch detects the stale cache entry.
+		"sequence out of sync, count matches, swapped resource detected via metadata fetch": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc-other"): modTime,
+				})
+			},
+			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:           &mockCVHarvester{latestSeq: 20},
+			sequence:            &mockSeqProvider{seq: 10},
+			expectErr:           errCacheOutOfSync,
+			expectedFailedKinds: []string{svcGVK.Kind},
+		},
 	}
 
 	for name, tc := range tests {
@@ -336,7 +415,7 @@ func TestCacheValidator_Execute(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(client, cacheMan)
 			}
-			cv := newCacheValidator(client, tc.watchTopic, cacheMan)
+			cv := newCacheValidator(client, tc.watchTopic, cacheMan, tc.harvester, tc.sequence)
 			failedFilters, err := cv.Execute()
 			assert.Equal(t, tc.expectErr, err)
 

@@ -26,6 +26,7 @@ type Client struct {
 	GetAPIServiceInstancesMock                func(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error)
 	GetAPIV1ResourceInstancesMock             func(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSizeMock func(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
+	GetAPIV1ResourceCountMock                 func(URL string) (int, error)
 	GetAPIServiceByNameMock                   func(serviceName string) (*management.APIService, error)
 	GetAPIServiceInstanceByNameMock           func(serviceInstanceName string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByNameMock                  func(serviceRevisionName string) (*management.APIServiceRevision, error)
@@ -110,6 +111,14 @@ func (m *Client) GetAPIV1ResourceInstances(queryParams map[string]string, URL st
 		return m.GetAPIV1ResourceInstancesMock(queryParams, URL)
 	}
 	return nil, nil
+}
+
+// GetAPIV1ResourceCount -
+func (m *Client) GetAPIV1ResourceCount(URL string) (int, error) {
+	if m.GetAPIV1ResourceCountMock != nil {
+		return m.GetAPIV1ResourceCountMock(URL)
+	}
+	return 0, nil
 }
 
 // GetAPIServiceByName -

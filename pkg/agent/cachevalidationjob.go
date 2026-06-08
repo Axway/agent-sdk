@@ -1,13 +1,16 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
@@ -23,12 +26,16 @@ type cacheValidator struct {
 	client     resourceClient
 	watchTopic *management.WatchTopic
 	cacheMan   cacheGetter
+	harvester  harvester.Harvest
+	sequence   events.SequenceProvider
 }
 
 func newCacheValidator(
 	client resourceClient,
 	watchTopic *management.WatchTopic,
 	cacheMan cacheGetter,
+	hClient harvester.Harvest,
+	seq events.SequenceProvider,
 ) *cacheValidator {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.agent").
@@ -39,6 +46,8 @@ func newCacheValidator(
 		client:     client,
 		watchTopic: watchTopic,
 		cacheMan:   cacheMan,
+		harvester:  hClient,
+		sequence:   seq,
 	}
 }
 
@@ -48,6 +57,8 @@ func newCacheValidator(
 func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) {
 	cv.logger.Debug("executing cache validation")
 
+	seqInSync := cv.sequenceInSync()
+
 	filters := cv.watchTopic.Spec.Filters
 	ch := make(chan management.WatchTopicSpecFilters, len(filters))
 
@@ -56,7 +67,7 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 		wg.Add(1)
 		go func(f management.WatchTopicSpecFilters) {
 			defer wg.Done()
-			if !cv.validateKind(f) {
+			if !cv.validateKind(f, seqInSync) {
 				ch <- f
 			}
 		}(filter)
@@ -77,7 +88,36 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	return nil, nil
 }
 
-func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) bool {
+// sequenceInSync fetches the latest sequence ID from the harvester and compares it
+// with the locally stored sequence. Returns true when they match, allowing Execute
+// to skip per-kind validation entirely. Returns false on any error or mismatch,
+// logging the discrepancy so callers have context for the validation that follows.
+func (cv *cacheValidator) sequenceInSync() bool {
+	if cv.harvester == nil || cv.sequence == nil {
+		return false
+	}
+
+	serverSeq, err := cv.harvester.ReceiveSyncEvents(
+		context.Background(), cv.watchTopic.GetSelfLink(), 0, nil,
+	)
+	if err != nil {
+		cv.logger.WithError(err).Debug("could not fetch latest harvester sequence, proceeding with per-kind validation")
+		return false
+	}
+
+	cachedSeq := cv.sequence.GetSequence()
+	if serverSeq != cachedSeq {
+		cv.logger.
+			WithField("cachedSeq", cachedSeq).
+			WithField("serverSeq", serverSeq).
+			Info("sequence mismatch detected, proceeding with per-kind cache validation")
+		return false
+	}
+
+	return true
+}
+
+func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters, seqInSync bool) bool {
 	logger := cv.logger.WithField("kind", filter.Kind).WithField("group", filter.Group)
 
 	if !agentcache.IsCachedKind(filter.Kind) {
@@ -107,7 +147,29 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 		return true
 	}
 
-	// Fetch only name, audit metadata, and scope
+	scopeName := ""
+	if filter.Scope != nil {
+		scopeName = filter.Scope.Name
+	}
+	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind, scopeName)
+
+	// HEAD pre-check: compare resource count before fetching full metadata.
+	// Returns early only when the count matches; otherwise logs and falls through
+	// to the full metadata fetch.
+	serverCount, err := cv.client.GetAPIV1ResourceCount(url)
+	if err != nil {
+		logger.WithError(err).Error("HEAD request failed, falling back to full metadata fetch")
+	} else if serverCount == len(cachedResources) && seqInSync {
+		logger.WithField("count", serverCount).Trace("cache validation passed for kind (count and sequence match)")
+		return true
+	} else if serverCount != len(cachedResources) {
+		logger.
+			WithField("serverCount", serverCount).
+			WithField("cacheCount", len(cachedResources)).
+			Info("cache validation: count mismatch, fetching metadata for timestamp check")
+	}
+
+	// Full metadata fetch for timestamp-level confirmation.
 	query := map[string]string{
 		"fields": "name,kind,metadata.audit,metadata.scope",
 	}
@@ -119,12 +181,6 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 		return false
 	}
 
-	scopeName := ""
-	if filter.Scope != nil {
-		scopeName = filter.Scope.Name
-	}
-	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind, scopeName)
-
 	// Build a map from server resources: composite key -> modifyTimestamp
 	serverMap := make(map[string]time.Time, len(serverResources))
 	for _, res := range serverResources {
@@ -132,16 +188,7 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 		serverMap[agentcache.ResourceCacheKey(res.Kind, res.Metadata.Scope.Name, res.Name)] = modTime
 	}
 
-	// Count mismatch
-	if len(serverMap) != len(cachedResources) {
-		logger.
-			WithField("serverCount", len(serverMap)).
-			WithField("cacheCount", len(cachedResources)).
-			Info("cache validation failed: resource count mismatch")
-		return false
-	}
-
-	// Each server resource exists in cache with matching mod date
+	// Each server resource must exist in cache with a matching mod timestamp.
 	for name, serverModTime := range serverMap {
 		cacheModTime, exists := cachedResources[name]
 		if !exists {

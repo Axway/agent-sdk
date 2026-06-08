@@ -331,6 +331,8 @@ type failThenSucceedClient struct {
 	svcs      []*apiv1.ResourceInstance
 }
 
+func (f *failThenSucceedClient) GetAPIV1ResourceCount(_ string) (int, error) { return 0, nil }
+
 func (f *failThenSucceedClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	*f.callCount++
 	if *f.callCount <= f.failCount {

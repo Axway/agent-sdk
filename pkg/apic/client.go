@@ -78,6 +78,7 @@ type Client interface {
 	GetAPIServiceInstances(query map[string]string, URL string) ([]*management.APIServiceInstance, error)
 	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
+	GetAPIV1ResourceCount(URL string) (int, error)
 	GetAPIServiceByName(name string) (*management.APIService, error)
 	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByName(name string) (*management.APIServiceRevision, error)

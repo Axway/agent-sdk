@@ -90,6 +90,8 @@ func newEventSync() (*EventSync, error) {
 		GetCentralClient(),
 		wt,
 		agent.cacheManager,
+		hClient,
+		sequence,
 	)
 
 	return &EventSync{
