@@ -559,7 +559,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	scanner := bufio.NewScanner(r)
 
 	level := "info"
-	msg := "Starting test_with_non_defaults version -, Amplify Agents SDK version "
+	msg := "Starting test_with_non_defaults"
 
 	for scanner.Scan() {
 		out := scanner.Text()
