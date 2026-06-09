@@ -413,7 +413,10 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			os.Exit(exitcode)
 		}
 
-		log.Infof("Starting %s", buildAgentInfo(c.rootCmd.Short))
+		log.NewFieldLogger().
+			WithField("version", config.AgentVersion).
+			WithField("sdkVersion", SDKBuildVersion).
+			Infof("Starting %s", c.rootCmd.Short)
 		if c.commandHandler != nil {
 			// Setup logp to use beats logger.
 			// Setting up late here as log entries for agent/command initialization are not logged

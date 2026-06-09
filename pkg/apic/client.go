@@ -951,9 +951,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		}
 	}
 
-	if existingRI == nil {
-		c.addResourceToCache(newRI)
-	}
+	c.addResourceToCache(newRI)
 	return newRI, err
 }
 
