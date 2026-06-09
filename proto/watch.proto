@@ -15,6 +15,7 @@ service watch {
 enum RequestType {
     TOKEN_REFRESH = 0;
     AGENT_STATUS = 1;
+    PING_RESPONSE = 2;
 }
 
 message AgentContext {
@@ -28,11 +29,17 @@ message AgentStatus {
     optional AgentContext context = 3;
 }
 
+message PingResponse {
+    string id = 1;
+}
+
 message Request {
     string selfLink = 1;
     string token = 2;
     optional RequestType requestType = 3;
-    .central.events.v1.AgentStatus agentStatus = 4;
+    optional .central.events.v1.AgentStatus agentStatus = 4;
+    repeated string capabilities = 5;
+    optional PingResponse pingResponse = 6;
 }
 
 message Event {
@@ -48,6 +55,7 @@ message Event {
         DELETED = 2;
         SUBRESOURCEUPDATED = 3;
         TRIGGERACTION = 4;
+        PING = 5;
     }
     Type type = 7;
 

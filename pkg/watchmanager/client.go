@@ -11,6 +11,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -34,6 +35,7 @@ type watchClient struct {
 	isRunning              atomic.Bool
 	stream                 proto.Watch_SubscribeClient
 	timer                  *time.Timer
+	logger                 log.FieldLogger
 }
 
 // newWatchClientFunc func signature to create a watch client
@@ -60,6 +62,7 @@ func newWatchClient(cc grpc.ClientConnInterface, clientCfg clientConfig, newClie
 		getTokenExpirationTime: getTokenExpirationTime,
 		stream:                 stream,
 		timer:                  time.NewTimer(initDuration),
+		logger:                 log.NewFieldLogger().WithComponent("watchManager").WithPackage("sdk.client"),
 	}
 	client.isRunning.Store(true)
 	return client, nil
@@ -83,6 +86,12 @@ func (c *watchClient) recv() error {
 		return err
 	}
 
+	if event != nil && event.Type == proto.Event_PING {
+		c.logger.Trace("received watch subscription server ping event")
+		go c.sendPingResponse(event.Id)
+		return nil
+	}
+
 	select {
 	case c.cfg.events <- event:
 		return nil
@@ -90,6 +99,16 @@ func (c *watchClient) recv() error {
 		return c.cfg.ctx.Err()
 	case <-c.stream.Context().Done():
 		return c.stream.Context().Err()
+	}
+}
+
+func (c *watchClient) sendPingResponse(id string) {
+	req := &proto.Request{
+		RequestType:  proto.RequestType_PING_RESPONSE.Enum(),
+		PingResponse: &proto.PingResponse{Id: id},
+	}
+	if err := c.enqueueRequest(req); err != nil {
+		c.logger.WithError(err).Warn("failed to send ping response")
 	}
 }
 
@@ -114,7 +133,7 @@ func (c *watchClient) processRequest() error {
 }
 
 func (c *watchClient) initialRequest() error {
-	return c.createTokenRefreshRequest()
+	return c.createTokenRefreshRequest(true)
 }
 
 func (c *watchClient) requestLoop(rl *initialRequestLock) {
@@ -129,7 +148,7 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 			c.handleError(c.stream.Context().Err())
 			return
 		case <-c.timer.C:
-			err = c.createTokenRefreshRequest()
+			err = c.createTokenRefreshRequest(false)
 			if err != nil {
 				c.handleError(err)
 				return
@@ -146,7 +165,7 @@ func (c *watchClient) requestLoop(rl *initialRequestLock) {
 }
 
 // create stream request with a new token to the grpc server and returns the expiration time
-func (c *watchClient) createTokenRefreshRequest() error {
+func (c *watchClient) createTokenRefreshRequest(initialRequest bool) error {
 	c.timer.Stop()
 
 	token, err := c.cfg.tokenGetter()
@@ -159,7 +178,7 @@ func (c *watchClient) createTokenRefreshRequest() error {
 		return err
 	}
 
-	req := createWatchRequest(c.cfg.topicSelfLink, token)
+	req := createWatchRequest(c.cfg.topicSelfLink, token, initialRequest)
 	if err = c.enqueueRequest(req); err != nil {
 		return err
 	}
@@ -198,11 +217,15 @@ func (c *watchClient) handleError(err error) {
 	c.cfg.cancel(err)
 }
 
-func createWatchRequest(watchTopicSelfLink, token string) *proto.Request {
-	return &proto.Request{
+func createWatchRequest(watchTopicSelfLink, token string, initialRequest bool) *proto.Request {
+	req := &proto.Request{
 		SelfLink: watchTopicSelfLink,
 		Token:    "Bearer " + token,
 	}
+	if initialRequest {
+		SetCapabilities(req, []Capability{CapabilityPing})
+	}
+	return req
 }
 
 func getTokenExpirationTime(token string) (time.Duration, error) {
