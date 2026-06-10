@@ -676,10 +676,7 @@ func (c *ServiceClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string
 }
 
 func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) (*apiv1.ResourceInstance, error) {
-	var execErr error
 	var instanceBytes []byte
-	wg := &sync.WaitGroup{}
-	bytesMutex := &sync.Mutex{}
 
 	subsToUpdate := map[string]string{}
 	for subName, sub := range subs {
@@ -696,8 +693,7 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 	}
 
 	rm.PrepareHashesForSending()
-	for subName, _ := range subsToUpdate {
-		wg.Add(1)
+	for subName := range subsToUpdate {
 		url := c.createAPIServerURL(fmt.Sprintf("%s/%s", rm.GetSelfLink(), subName))
 
 		r := map[string]interface{}{
@@ -708,24 +704,13 @@ func (c *ServiceClient) createSubResource(rm apiv1.ResourceMeta, subs map[string
 			return nil, err
 		}
 
-		go func(sn string) {
-			defer wg.Done()
-			var err error
-			bytesMutex.Lock()
-			instanceBytes, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
-			if err != nil {
-				execErr = err
-				c.logger.Errorf("failed to link sub resource %s to resource %s: %v", sn, rm.Name, err)
-			}
-			bytesMutex.Unlock()
-		}(subName)
+		instanceBytes, err = c.ExecuteAPI(http.MethodPut, url, nil, bts)
+		if err != nil {
+			c.logger.Errorf("failed to link sub resource %s to resource %s: %v", subName, rm.Name, err)
+			rm.ClearHashes()
+			return nil, err
+		}
 		c.logger.WithField("resourceName", rm.Name).WithField("subResourceName", subName).Trace("executed subResource update")
-	}
-	wg.Wait()
-
-	if execErr != nil {
-		rm.ClearHashes()
-		return nil, execErr
 	}
 
 	rm.SetIncomingHashes()
