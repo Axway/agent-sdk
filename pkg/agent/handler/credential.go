@@ -400,10 +400,21 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
-		"data":             cred.Data,
 		"policies":         cred.Policies,
 		"state":            cred.State,
 	}
+	if !isSuspendOrEnableAction(provCreds) {
+		cred.SubResources["data"] = cred.Data
+	}
+}
+
+func isSuspendOrEnableAction(provCreds *provCreds) bool {
+	if provCreds == nil {
+		return false
+	}
+
+	action := provCreds.GetCredentialAction()
+	return action == prov.Suspend || action == prov.Enable
 }
 
 func (h *credentials) processCredentialLevelSuccess(provCreds *provCreds, cred *management.Credential) {
