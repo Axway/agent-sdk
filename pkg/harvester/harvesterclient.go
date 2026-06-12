@@ -209,9 +209,7 @@ func (h *Client) EventCatchUp(parentCtx context.Context, link string, events cha
 		return nil
 	}
 
-	// TODO should this timeout duration be changed?
-	// allow up to a minute to sync events
-	ctx, cancel := context.WithTimeout(parentCtx, time.Minute)
+	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 	return h.syncEvents(ctx, link, events)
 }
