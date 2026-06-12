@@ -58,6 +58,9 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	cv.logger.Debug("executing cache validation")
 
 	seqInSync := cv.sequenceInSync()
+	if !seqInSync {
+		return nil, errCacheOutOfSync
+	}
 
 	filters := cv.watchTopic.Spec.Filters
 	ch := make(chan management.WatchTopicSpecFilters, len(filters))
@@ -153,61 +156,20 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters, 
 	}
 	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind, scopeName)
 
-	// HEAD pre-check: compare resource count before fetching full metadata.
-	// Returns early only when the count matches; otherwise logs and falls through
-	// to the full metadata fetch.
+	// Count check: if the number of resources in the cache does not match the number on the server, we know the cache is out of sync.
+	// Note: APIService cache with existing duplicates on server may always fail this check, as it gets cached based on externalAPIID and not the resource id.
 	serverCount, err := cv.client.GetAPIV1ResourceCount(url)
 	if err != nil {
 		logger.WithError(err).Error("HEAD request failed, falling back to full metadata fetch")
-	} else if serverCount == len(cachedResources) && seqInSync {
-		logger.WithField("count", serverCount).Trace("cache validation passed for kind (count and sequence match)")
-		return true
-	} else if serverCount != len(cachedResources) {
-		logger.
-			WithField("serverCount", serverCount).
-			WithField("cacheCount", len(cachedResources)).
-			Info("cache validation: count mismatch, fetching metadata for timestamp check")
-	}
-
-	// Full metadata fetch for timestamp-level confirmation.
-	query := map[string]string{
-		"fields": "name,kind,metadata.audit,metadata.scope",
-	}
-
-	logger.Trace("fetching resource metadata from API server for validation")
-	serverResources, err := cv.client.GetAPIV1ResourceInstances(query, url)
-	if err != nil {
-		logger.WithError(err).Error("failed to fetch resource metadata for cache validation")
 		return false
 	}
 
-	// Build a map from server resources: composite key -> modifyTimestamp
-	serverMap := make(map[string]time.Time, len(serverResources))
-	for _, res := range serverResources {
-		modTime := time.Time(res.Metadata.Audit.ModifyTimestamp)
-		serverMap[agentcache.ResourceCacheKey(res.Kind, res.Metadata.Scope.Name, res.Name)] = modTime
+	if serverCount != len(cachedResources) {
+		logger.
+			WithField("serverCount", serverCount).
+			WithField("cacheCount", len(cachedResources)).
+			Info("cache validation: count mismatch, cache is out of sync")
+		return false
 	}
-
-	// Each server resource must exist in cache with a matching mod timestamp.
-	for name, serverModTime := range serverMap {
-		cacheModTime, exists := cachedResources[name]
-		if !exists {
-			logger.
-				WithField("resource", name).
-				Info("cache validation failed: resource not found in cache")
-			return false
-		}
-
-		if !serverModTime.IsZero() && !cacheModTime.IsZero() && !serverModTime.Equal(cacheModTime) {
-			logger.
-				WithField("resource", name).
-				WithField("serverModTime", serverModTime).
-				WithField("cacheModTime", cacheModTime).
-				Info("cache validation failed: modification time mismatch")
-			return false
-		}
-	}
-
-	logger.WithField("count", len(serverMap)).Trace("cache validation passed for kind")
 	return true
 }
