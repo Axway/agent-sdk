@@ -22,7 +22,6 @@ const defaultCacheStoragePath = "./data/cache"
 const (
 	apiServicesKey         = "apiServices"
 	apiServiceInstancesKey = "apiServiceInstances"
-	instanceCountKey       = "instanceCount"
 	credReqDefKey          = "credReqDef"
 	accReqDefKey           = "accReqDef"
 	appProfDefKey          = "appProfDef"
@@ -154,13 +153,11 @@ type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
 	apiMap                  cache.Cache
-	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
 	idpMetadataMap          cache.Cache
-	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
@@ -212,7 +209,6 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createResourceLoader(c.setLoadedCache, subscriptionsKey),
 		createResourceLoader(c.setLoadedCache, accReqKey),
 		createResourceLoader(c.setLoadedCache, watchResourceKey),
-		createInstanceCountLoader(c.setLoadedCache, instanceCountKey),
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
@@ -254,8 +250,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.apiMap = lc
 	case apiServiceInstancesKey:
 		c.instanceMap = lc
-	case instanceCountKey:
-		c.instanceCountMap = lc
 	case credReqDefKey:
 		c.crdMap = lc
 	case accReqDefKey:
@@ -266,8 +260,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.teams = lc
 	case managedAppKey:
 		c.managedApplicationMap = lc
-	case subscriptionsKey:
-		c.subscriptionMap = lc
 	case accReqKey:
 		c.accessRequestMap = lc
 	case watchResourceKey:
@@ -434,7 +426,6 @@ func (c *cacheManager) Flush() {
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()
 	c.sequenceCache.Flush()
-	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
 	c.idpMetadataMap.Flush()
 	c.SaveCache()

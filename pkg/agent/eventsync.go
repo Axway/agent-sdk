@@ -154,37 +154,15 @@ func (es *EventSync) initCache(failedFilters ...management.WatchTopicSpecFilters
 		return err
 	}
 
-	// Attempt a targeted rebuild when only specific kinds are out of sync
-	if len(failedFilters) > 0 {
-		for _, f := range failedFilters {
-			agent.cacheManager.FlushKind(f.Kind)
-		}
-		if err = es.discoveryCache.execute(failedFilters...); err == nil {
-			if seqID > 0 {
-				es.sequence.SetSequence(seqID - 1)
-			}
-			agent.cacheManager.SaveCache()
-			es.resetCacheTimer()
-			return nil
-		}
-		logger.WithError(err).Info("targeted cache rebuild failed, falling back to full rebuild")
-	}
-
-	// Full rebuild: flush everything and re-populate
-	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
-	// when the poll/stream client is ready
 	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
-	agent.cacheManager.Flush()
 	if seqID > 0 {
 		es.sequence.SetSequence(seqID - 1)
 	}
-	err = es.discoveryCache.execute()
-	if err != nil {
-		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
-		agent.cacheManager.Flush()
+
+	defer agent.cacheManager.SaveCache()
+	if err = es.discoveryCache.execute(failedFilters...); err != nil {
 		return err
 	}
-	agent.cacheManager.SaveCache()
 
 	es.resetCacheTimer()
 	return nil
@@ -258,7 +236,7 @@ func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error)
 // If all kinds pass, the 7-day timer is reset.
 func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
 	failedFilters, err := es.validateCache()
-	if err == nil && len(failedFilters) == 0 {
+	if err == nil {
 		es.resetCacheTimer()
 	}
 	return failedFilters, err

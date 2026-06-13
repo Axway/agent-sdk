@@ -65,15 +65,19 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	filters := cv.watchTopic.Spec.Filters
 	ch := make(chan management.WatchTopicSpecFilters, len(filters))
 
+	cachedFilters := make([]management.WatchTopicSpecFilters, 0, len(filters))
 	var wg sync.WaitGroup
 	for _, filter := range filters {
-		wg.Add(1)
-		go func(f management.WatchTopicSpecFilters) {
-			defer wg.Done()
-			if !cv.validateKind(f, seqInSync) {
-				ch <- f
-			}
-		}(filter)
+		if agentcache.IsCachedKind(filter.Kind) {
+			wg.Add(1)
+			cachedFilters = append(cachedFilters, filter)
+			go func(f management.WatchTopicSpecFilters) {
+				defer wg.Done()
+				if !cv.validateKind(f) {
+					ch <- f
+				}
+			}(filter)
+		}
 	}
 	wg.Wait()
 	close(ch)
@@ -88,7 +92,7 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	}
 
 	cv.logger.Debug("cache validation passed")
-	return nil, nil
+	return cachedFilters, nil
 }
 
 // sequenceInSync fetches the latest sequence ID from the harvester and compares it
@@ -120,13 +124,8 @@ func (cv *cacheValidator) sequenceInSync() bool {
 	return true
 }
 
-func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters, seqInSync bool) bool {
+func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) bool {
 	logger := cv.logger.WithField("kind", filter.Kind).WithField("group", filter.Group)
-
-	if !agentcache.IsCachedKind(filter.Kind) {
-		logger.Trace("skipping validation for kind")
-		return true
-	}
 
 	ri := apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{

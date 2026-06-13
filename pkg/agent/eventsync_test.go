@@ -158,19 +158,6 @@ func TestEventSync(t *testing.T) {
 					assert.NotNil(t, cachedInst)
 				},
 			},
-			"targeted rebuild failure falls back to full rebuild": {
-				wtFilters:     []management.WatchTopicSpecFilters{apiSvcFilter},
-				failedFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
-				makeClient: func() resourceClient {
-					callCount := 0
-					return &failThenSucceedClient{
-						failCount: 1,
-						callCount: &callCount,
-						svcs:      newAPIServices(scopeName),
-					}
-				},
-				expectedCount: 2,
-			},
 			"no filters - full rebuild": {
 				wtFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
 				makeClient: func() resourceClient {
@@ -323,26 +310,6 @@ func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink stri
 	return 1, m.err
 }
 
-
-// failThenSucceedClient fails the first N calls, then returns normal results.
-type failThenSucceedClient struct {
-	failCount int
-	callCount *int
-	svcs      []*apiv1.ResourceInstance
-}
-
-func (f *failThenSucceedClient) GetAPIV1ResourceCount(_ string) (int, error) { return 0, nil }
-
-func (f *failThenSucceedClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
-	*f.callCount++
-	if *f.callCount <= f.failCount {
-		return nil, fmt.Errorf("simulated fetch error")
-	}
-	if strings.Contains(URL, "apiservices") {
-		return f.svcs, nil
-	}
-	return []*apiv1.ResourceInstance{}, nil
-}
 
 type mockSequence struct {
 	id int64

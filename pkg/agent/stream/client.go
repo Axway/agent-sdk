@@ -193,7 +193,6 @@ func (s *StreamerClient) Start() error {
 		go s.onReconnect()
 	}
 	s.firstStart = false
-	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
