@@ -36,7 +36,7 @@ type Provider interface {
 	GetSupportedTokenAuthMethods() []string
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
-	UnregisterClient(clientID, accessToken, registrationClientURI string) error
+	UnregisterClient(clientID, accessToken, registrationClientURI string, scopes []string, grantType string) error
 	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
@@ -62,7 +62,7 @@ type typedIDP interface {
 	preProcessClientRequest(clientRequest *clientMetadata)
 	validateExtraProperties(extraProps map[string]interface{}) error
 	postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error
-	postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error
+	postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error
 }
 
 type providerOptions struct {
@@ -96,7 +96,9 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	var idpType typedIDP
 	switch idp.GetIDPType() {
 	case TypeOkta:
-		idpType = &okta{}
+		idpType = &okta{
+			logger: log.NewFieldLogger().WithComponent("oktaProvider").WithPackage("sdk.agent.authz.oauth"),
+		}
 	default: // keycloak, generic
 		idpType = &genericIDP{}
 	}
@@ -130,13 +132,6 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		p.authServerMetadata = metadata
 	}
 
-	// Fail-fast Okta validation: if Okta group/policy is configured, verify the resources exist.
-	if idp.GetIDPType() == TypeOkta {
-		if err := validateOktaConfiguredResources(idp, apiClient); err != nil {
-			return nil, fmt.Errorf("failed to validate Okta configuration for provider %q: %w", p.cfg.GetIDPName(), err)
-		}
-	}
-
 	// No OAuth client is needed to request token for access token based authentication to IdP
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
 		authClient, err := p.createAuthClient()
@@ -151,7 +146,49 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		return nil, fmt.Errorf("invalid extra properties for %s provider: %w", idp.GetIDPType(), err)
 	}
 
+	if idp.GetIDPType() == TypeOkta {
+		if err := validateOktaTemplates(idp); err != nil {
+			return nil, err
+		}
+	}
+
 	return p, nil
+}
+
+func validateOktaTemplates(idp corecfg.IDPConfig) error {
+	appTmplCfg, ok := idp.(interface{ GetAppNameTemplate() string })
+	if !ok {
+		return nil
+	}
+	appTmpl := appTmplCfg.GetAppNameTemplate()
+	test := strings.NewReplacer(
+		corecfg.OktaPlaceholderMPApplicationName, "x",
+		corecfg.OktaPlaceholderOwningTeam, "x",
+		corecfg.OktaPlaceholderCredentialName, "x",
+	).Replace(appTmpl)
+	if strings.Contains(test, "%") {
+		return fmt.Errorf("%s contains unrecognized placeholder: %q", corecfg.OktaAppNameTemplateKey, appTmpl)
+	}
+
+	polTmplCfg, ok := idp.(interface{ GetPolicyNameTemplate() string })
+	if !ok {
+		return nil
+	}
+	polTmpl := polTmplCfg.GetPolicyNameTemplate()
+	if !strings.Contains(polTmpl, corecfg.OktaPlaceholderScope) {
+		return fmt.Errorf("%s missing required placeholder %s: %q", corecfg.OktaPolicyNameTemplateKey, corecfg.OktaPlaceholderScope, polTmpl)
+	}
+	if !strings.Contains(polTmpl, corecfg.OktaPlaceholderOAuthFlow) {
+		return fmt.Errorf("%s missing required placeholder %s: %q", corecfg.OktaPolicyNameTemplateKey, corecfg.OktaPlaceholderOAuthFlow, polTmpl)
+	}
+	test = strings.NewReplacer(
+		corecfg.OktaPlaceholderScope, "x",
+		corecfg.OktaPlaceholderOAuthFlow, "x",
+	).Replace(polTmpl)
+	if strings.Contains(test, "%") {
+		return fmt.Errorf("%s contains unrecognized placeholder: %q", corecfg.OktaPolicyNameTemplateKey, polTmpl)
+	}
+	return nil
 }
 
 func FetchMetadata(apiClient coreapi.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
@@ -547,7 +584,7 @@ func addResponseType(clientRequest *clientMetadata, responseType string) {
 }
 
 // UnregisterClient - removes the OAuth client from IDP
-func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string) error {
+func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string, scopes []string, grantType string) error {
 	logger := p.logger.
 		WithField(logProvider, p.cfg.GetIDPName()).
 		WithField(logClientID, clientID)
@@ -563,9 +600,8 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
-	// Run provider-specific cleanup first (for example, Okta group/policy unassignment), but always continue to OAuth client deletion so transient cleanup failures do not
-	// leave active clients behind. Return whichever error(s) occurred after both steps.
-	cleanupErr := p.runPostUnregisterHook(clientID)
+	// Continue to OAuth client deletion even on cleanup error; leave no active clients behind.
+	cleanupErr := p.runPostUnregisterHook(clientID, scopes, grantType)
 	unregisterErr := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken)
 
 	if unregisterErr == nil {
@@ -584,12 +620,11 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 	}
 }
 
-// runPostUnregisterHook calls provider-specific unregister hook when applicable.
-func (p *provider) runPostUnregisterHook(clientID string) error {
+func (p *provider) runPostUnregisterHook(clientID string, scopes []string, grantType string) error {
 	if p.cfg.GetIDPType() != TypeOkta {
 		return nil
 	}
-	return p.idpType.postProcessClientUnregister(clientID, p.cfg, p.apiClient)
+	return p.idpType.postProcessClientUnregister(clientID, p.cfg, p.apiClient, scopes, grantType)
 }
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard
@@ -649,7 +684,7 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		for k, v := range p.queryParameters {
 			queryParams[k] = v
 		}
-		queryParams["client_id"] = clientID
+		queryParams[metaClientID] = clientID
 	} else {
 		queryParams = p.queryParameters
 	}

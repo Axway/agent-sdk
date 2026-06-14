@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -13,27 +12,69 @@ import (
 
 const OktaAuthHeaderPrefix = "SSWS"
 
-var logger = log.NewFieldLogger().WithComponent("oktaClient").WithPackage("sdk.agent.authz.oauth.clients")
-
-// Okta wraps Okta Management API calls.
 type Okta struct {
 	BaseURL  string
 	APIToken string
 	Client   coreapi.Client
-}
-
-type oktaGroupSearchResult struct {
-	ID      string           `json:"id"`
-	Profile oktaGroupProfile `json:"profile"`
-}
-
-type oktaGroupProfile struct {
-	Name string `json:"name"`
+	logger   log.FieldLogger
 }
 
 type oktaPolicyListResult struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type oktaPolicyConditionsClients struct {
+	Include []string `json:"include"`
+}
+
+type oktaPolicyConditions struct {
+	Clients *oktaPolicyConditionsClients `json:"clients,omitempty"`
+}
+
+type oktaCreatePolicyRequest struct {
+	Name       string               `json:"name"`
+	Type       string               `json:"type"`
+	Status     string               `json:"status"`
+	Priority   int                  `json:"priority"`
+	Conditions oktaPolicyConditions `json:"conditions"`
+}
+
+type oktaPolicyRuleConditionGroups struct {
+	Include []string `json:"include"`
+}
+
+type oktaPolicyRuleConditionPeople struct {
+	Groups oktaPolicyRuleConditionGroups `json:"groups"`
+}
+
+type oktaPolicyRuleConditionGrantTypes struct {
+	Include []string `json:"include"`
+}
+
+type oktaPolicyRuleConditionScopes struct {
+	Include []string `json:"include"`
+}
+
+type oktaPolicyRuleConditions struct {
+	People     oktaPolicyRuleConditionPeople     `json:"people"`
+	GrantTypes oktaPolicyRuleConditionGrantTypes `json:"grantTypes"`
+	Scopes     oktaPolicyRuleConditionScopes     `json:"scopes"`
+}
+
+type oktaPolicyRuleActionToken struct {
+	AccessTokenLifetimeMinutes int `json:"accessTokenLifetimeMinutes"`
+}
+
+type oktaPolicyRuleActions struct {
+	Token oktaPolicyRuleActionToken `json:"token"`
+}
+
+type oktaCreatePolicyRuleRequest struct {
+	Name       string                   `json:"name"`
+	Type       string                   `json:"type"`
+	Conditions oktaPolicyRuleConditions `json:"conditions"`
+	Actions    oktaPolicyRuleActions    `json:"actions"`
 }
 
 func New(apiClient coreapi.Client, baseURL, apiToken string) *Okta {
@@ -44,6 +85,7 @@ func New(apiClient coreapi.Client, baseURL, apiToken string) *Okta {
 		BaseURL:  baseURL,
 		APIToken: apiToken,
 		Client:   apiClient,
+		logger:   log.NewFieldLogger().WithComponent("oktaClient").WithPackage("sdk.agent.authz.oauth.clients"),
 	}
 }
 
@@ -108,73 +150,7 @@ func isStatus(code int, allowed ...int) bool {
 	return false
 }
 
-
-
-func (o *Okta) FindGroupByName(groupName string) (string, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/groups?q=%s", o.BaseURL, url.QueryEscape(groupName))
-	resp, err := o.doRequest(coreapi.GET, endpoint, nil)
-	if err != nil {
-		return "", err
-	}
-	if !isStatus(resp.Code, http.StatusOK) {
-		return "", o.unexpectedStatusError(coreapi.GET, endpoint, resp)
-	}
-
-	var groups []oktaGroupSearchResult
-	if err := json.Unmarshal(resp.Body, &groups); err != nil {
-		return "", err
-	}
-	for _, g := range groups {
-		if g.Profile.Name == groupName {
-			return g.ID, nil
-		}
-	}
-	return "", nil
-}
-
-func (o *Okta) AssignGroupToApp(appID, groupID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
-	resp, err := o.doRequest(coreapi.PUT, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	if resp.Code == http.StatusConflict {
-		logger.
-			WithField("appID", appID).
-			WithField("groupID", groupID).
-			Warn("group assignment already exists")
-		return nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.PUT, endpoint, resp)
-	}
-	return nil
-}
-
-func (o *Okta) UnassignGroupFromApp(appID, groupID string) error {
-	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
-	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
-	if err != nil {
-		return err
-	}
-	if resp.Code == http.StatusNotFound {
-		logger.
-			WithField("appID", appID).
-			WithField("groupID", groupID).
-			Warn("group assignment not found during unassign. Assuming already unassigned")
-		return nil
-	}
-	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
-		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
-	}
-	return nil
-}
-
-// FindPolicyByName returns the policy object for the given policy name on the authorization server.
-// Returns nil if not found.
-//
-// Note: This does a list call to locate the policy ID and then retrieves the policy by ID
-// so callers can update it without needing an additional fetch.
+// Two-step: list to find the policy ID, then fetch the full object so callers can update it without an extra round-trip.
 func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]interface{}, error) {
 	policyName = strings.TrimSpace(policyName)
 	if authServerID == "" || policyName == "" {
@@ -206,7 +182,6 @@ func (o *Okta) FindPolicyByName(authServerID, policyName string) (map[string]int
 	return policy, nil
 }
 
-// UpdatePolicy updates an existing authorization server policy.
 func (o *Okta) UpdatePolicy(authServerID, policyID string, policy map[string]interface{}) error {
 	if authServerID == "" || policyID == "" {
 		return nil
@@ -222,23 +197,20 @@ func (o *Okta) UpdatePolicy(authServerID, policyID string, policy map[string]int
 	return nil
 }
 
-// AssignClientToPolicy updates the policy-level "Assigned to clients" list to include the given client.
-// If the policy is already assigned to ALL_CLIENTS or already includes the client, it no-ops.
-//
-// The policy map is modified in-place and then persisted via UpdatePolicy.
+// No-ops if the policy already includes the client or is assigned to ALL_CLIENTS.
 func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]interface{}, clientID string) error {
 	clientID = strings.TrimSpace(clientID)
 	if authServerID == "" || policy == nil || clientID == "" {
 		return fmt.Errorf("invalid input for policy assignment")
 	}
-	
+
 	policyID, _ := policy["id"].(string)
 	policyID = strings.TrimSpace(policyID)
 	if policyID == "" {
 		return fmt.Errorf("invalid input for policy assignment")
 	}
 
-	policyLogger := logger.
+	policyLogger := o.logger.
 		WithField("authServerID", authServerID).
 		WithField("policyID", policyID).
 		WithField("clientID", clientID)
@@ -258,19 +230,147 @@ func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]inter
 		return nil
 	}
 
-	// check if policy has all clients configured
 	if includeHasAllClients(include) {
 		policyLogger.Trace("policy assignment already includes ALL_CLIENTS. Skipping client-specific policy update")
 		return nil
 	}
 
-	// check if client is already included in policy assignment
 	if includeHasClient(include, clientID) {
 		policyLogger.Trace("policy assignment already includes client. Skipping client-specific policy update")
 		return nil
 	}
 	clients["include"] = append(include, clientID)
 	return o.UpdatePolicy(authServerID, policyID, policy)
+}
+
+func (o *Okta) CreatePolicy(authServerID, name string, priority int, clientID string) (map[string]interface{}, error) {
+	endpoint := o.authServerPoliciesEndpoint(authServerID)
+	o.logger.
+		WithField("authServerID", authServerID).
+		WithField("policyName", name).
+		WithField("endpoint", endpoint).
+		Trace("creating Okta authorization server policy")
+	req := oktaCreatePolicyRequest{
+		Name:     name,
+		Type:     "OAUTH_AUTHORIZATION_POLICY",
+		Status:   "ACTIVE",
+		Priority: priority,
+		Conditions: oktaPolicyConditions{
+			Clients: &oktaPolicyConditionsClients{Include: []string{clientID}},
+		},
+	}
+	resp, err := o.doRequest(coreapi.POST, endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+	if !isStatus(resp.Code, http.StatusCreated) {
+		return nil, o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+	}
+	var policy map[string]interface{}
+	if err := json.Unmarshal(resp.Body, &policy); err != nil {
+		return nil, err
+	}
+	return policy, nil
+}
+
+func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope string, tokenLifetimeMinutes int) error {
+	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
+	o.logger.
+		WithField("authServerID", authServerID).
+		WithField("policyID", policyID).
+		WithField("ruleName", name).
+		WithField("endpoint", endpoint).
+		Trace("creating Okta authorization server policy rule")
+	req := oktaCreatePolicyRuleRequest{
+		Name: name,
+		Type: "RESOURCE_ACCESS",
+		Conditions: oktaPolicyRuleConditions{
+			People:     oktaPolicyRuleConditionPeople{Groups: oktaPolicyRuleConditionGroups{Include: []string{"EVERYONE"}}},
+			GrantTypes: oktaPolicyRuleConditionGrantTypes{Include: []string{grantType}},
+			Scopes:     oktaPolicyRuleConditionScopes{Include: []string{scope}},
+		},
+		Actions: oktaPolicyRuleActions{
+			Token: oktaPolicyRuleActionToken{AccessTokenLifetimeMinutes: tokenLifetimeMinutes},
+		},
+	}
+	resp, err := o.doRequest(coreapi.POST, endpoint, req)
+	if err != nil {
+		return err
+	}
+	if !isStatus(resp.Code, http.StatusCreated) {
+		return o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+	}
+	return nil
+}
+
+// The policy is never deleted, even when the include list becomes empty.
+func (o *Okta) RemoveClientFromPolicy(authServerID string, policy map[string]interface{}, clientID string) error {
+	clientID = strings.TrimSpace(clientID)
+	policyID, _ := policy["id"].(string)
+	policyID = strings.TrimSpace(policyID)
+	if authServerID == "" || policyID == "" || clientID == "" {
+		return fmt.Errorf("invalid input for client removal from policy")
+	}
+	o.logger.
+		WithField("authServerID", authServerID).
+		WithField("policyID", policyID).
+		WithField("clientID", clientID).
+		Trace("removing client from Okta authorization server policy")
+
+	conditions := ensureMap(policy, "conditions")
+	clients := ensureMap(conditions, "clients")
+
+	includeRaw, _ := clients["include"]
+	include, ok := includeRaw.([]interface{})
+	if !ok || !includeHasClient(include, clientID) {
+		return nil
+	}
+
+	filtered := make([]interface{}, 0, len(include))
+	for _, v := range include {
+		s, _ := v.(string)
+		if strings.TrimSpace(s) != clientID {
+			filtered = append(filtered, v)
+		}
+	}
+	clients["include"] = filtered
+	return o.UpdatePolicy(authServerID, policyID, policy)
+}
+
+// DeactivateApp deactivates an Okta application. A 404 response is treated as success.
+// DeactivateApp must be called before DeleteApp.
+func (o *Okta) DeactivateApp(appID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/lifecycle/deactivate", o.BaseURL, appID)
+	o.logger.WithField("appID", appID).WithField("endpoint", endpoint).Trace("deactivating Okta app")
+	resp, err := o.doRequest(coreapi.POST, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+	}
+	return nil
+}
+
+// DeleteApp deletes an Okta application. A 404 response is treated as success.
+// DeactivateApp must be called before this method.
+func (o *Okta) DeleteApp(appID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/apps/%s", o.BaseURL, appID)
+	o.logger.WithField("appID", appID).WithField("endpoint", endpoint).Trace("deleting Okta app")
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
+	}
+	return nil
 }
 
 func ensureMap(parent map[string]interface{}, key string) map[string]interface{} {

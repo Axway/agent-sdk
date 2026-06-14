@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	testCredName = "my-cred"
+	testAppName  = "my-app"
+	fullTemplate = config.OktaPlaceholderMPApplicationName + "-" + config.OktaPlaceholderOwningTeam + "-" + config.OktaPlaceholderCredentialName
 )
 
 func TestProvisioner(t *testing.T) {
@@ -25,7 +32,7 @@ func TestProvisioner(t *testing.T) {
 	defer s.Close()
 	idpCfg := &config.IDPConfiguration{
 		Name: "test",
-		Type: "generic",
+		Type: oauth.TypeGeneric,
 		AuthConfig: &config.IDPAuthConfiguration{
 			Type:                 config.Client,
 			ClientID:             "test",
@@ -46,8 +53,7 @@ func TestProvisioner(t *testing.T) {
 	err = idpReg.RegisterProvider(context.Background(), idpCfg, config.NewTLSConfig(), "", 30*time.Second)
 	assert.Nil(t, err)
 
-	cases := []struct {
-		name                       string
+	cases := map[string]struct {
 		idpType                    string
 		appKey                     string
 		credTokenURL               string
@@ -60,14 +66,12 @@ func TestProvisioner(t *testing.T) {
 		expectRegistrationErr      bool
 		expectUnRegistrationErr    bool
 	}{
-		{
-			name:                       "provisioner for non-IdP credential",
+		"provisioner for non-IdP credential": {
 			credTokenURL:               "",
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
 		},
-		{
-			name:                       "provisioner for IdP credential with client_credential",
+		"provisioner for IdP credential with client_credential": {
 			credTokenURL:               s.GetTokenURL(),
 			tokenAuthMethod:            config.ClientSecretPost,
 			registrationResponseCode:   http.StatusCreated,
@@ -75,16 +79,14 @@ func TestProvisioner(t *testing.T) {
 			appKey:                     "test-app-key",
 			useRegistrationAccessToken: true,
 		},
-		{
-			name:                       "provisioner for IdP credential with private_key_jwt",
+		"provisioner for IdP credential with private_key_jwt": {
 			credTokenURL:               s.GetTokenURL(),
 			tokenAuthMethod:            config.PrivateKeyJWT,
 			registrationResponseCode:   http.StatusCreated,
 			unRegistrationResponseCode: http.StatusNoContent,
 			publicKey:                  string(publicKey),
 		},
-		{
-			name:                       "provisioner for IdP credential with tls_client_auth",
+		"provisioner for IdP credential with tls_client_auth": {
 			credTokenURL:               s.GetTokenURL(),
 			tokenAuthMethod:            config.TLSClientAuth,
 			registrationResponseCode:   http.StatusCreated,
@@ -92,12 +94,12 @@ func TestProvisioner(t *testing.T) {
 			certificate:                string(certificate),
 		},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			app := management.NewManagedApplication("", "")
 			app.Spec.Security.EncryptionKey = tc.appKey
 			cred := management.NewCredential("", "")
-			cred.Spec.Data = map[string]interface{}{
+			cred.Spec.Data = map[string]any{
 				IDPTokenURL:                       tc.credTokenURL,
 				provisioning.OauthTokenAuthMethod: tc.tokenAuthMethod,
 				provisioning.OauthJwks:            tc.publicKey,
@@ -134,7 +136,7 @@ func TestProvisioner(t *testing.T) {
 				assert.NotEmpty(t, cr.registrationAccessToken)
 				assert.NotEmpty(t, details)
 			}
-			cred.Data = map[string]interface{}{
+			cred.Data = map[string]any{
 				provisioning.OauthClientID:          data.GetClientID(),
 				provisioning.OauthRegistrationToken: cr.registrationAccessToken,
 			}
@@ -151,6 +153,147 @@ func TestProvisioner(t *testing.T) {
 			}
 			assert.Nil(t, err)
 			assert.NotNil(t, p)
+		})
+	}
+}
+
+type mockProvider struct {
+	cfg            config.IDPConfig
+	capturedScopes []string
+	capturedGrant  string
+	capturedName   string
+}
+
+func (m *mockProvider) GetName() string                                { return "" }
+func (m *mockProvider) GetTitle() string                               { return "" }
+func (m *mockProvider) GetIssuer() string                              { return "" }
+func (m *mockProvider) GetTokenEndpoint() string                       { return "" }
+func (m *mockProvider) GetMTLSTokenEndpoint() string                   { return "" }
+func (m *mockProvider) GetAuthorizationEndpoint() string               { return "" }
+func (m *mockProvider) GetSupportedScopes() []string                   { return nil }
+func (m *mockProvider) GetSupportedGrantTypes() []string               { return nil }
+func (m *mockProvider) GetSupportedTokenAuthMethods() []string         { return nil }
+func (m *mockProvider) GetSupportedResponseMethod() []string           { return nil }
+func (m *mockProvider) Validate() error                                { return nil }
+func (m *mockProvider) GetConfig() config.IDPConfig                    { return m.cfg }
+func (m *mockProvider) GetMetadata() *oauth.AuthorizationServerMetadata { return nil }
+func (m *mockProvider) GetIDPResourceName() string                     { return "" }
+
+func (m *mockProvider) RegisterClient(meta oauth.ClientMetadata) (oauth.ClientMetadata, error) {
+	m.capturedName = meta.GetClientName()
+	result, err := oauth.NewClientMetadataBuilder().SetClientName(meta.GetClientName()).Build()
+	return result, err
+}
+
+func (m *mockProvider) UnregisterClient(clientID, accessToken, registrationClientURI string, scopes []string, grantType string) error {
+	m.capturedScopes = scopes
+	m.capturedGrant = grantType
+	return nil
+}
+
+func TestScopeGrantTypeThreading(t *testing.T) {
+	cases := map[string]struct {
+		scopes    []string
+		grantType string
+	}{
+		"multiple scopes with client credentials grant are passed to provider": {
+			scopes:    []string{"scope1", "scope2"},
+			grantType: oauth.GrantTypeClientCredentials,
+		},
+		"single scope with authorization code grant is passed to provider": {
+			scopes:    []string{"read:api"},
+			grantType: oauth.GrantTypeAuthorizationCode,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			mock := &mockProvider{cfg: nil}
+			cred := management.NewCredential("", "")
+			p := &provisioner{
+				app:         management.NewManagedApplication("", ""),
+				credential:  cred,
+				idpProvider: mock,
+				credentialData: &credData{
+					scopes:     tc.scopes,
+					grantTypes: []string{tc.grantType},
+				},
+			}
+			assert.NoError(t, p.UnregisterClient())
+			assert.Equal(t, tc.scopes, mock.capturedScopes)
+			assert.Equal(t, tc.grantType, mock.capturedGrant)
+		})
+	}
+}
+
+func TestAppNameTemplate(t *testing.T) {
+	cases := map[string]struct {
+		cfg      config.IDPConfig
+		appName  string
+		teamName string
+		credName string
+		wantName string
+		wantErr  bool
+	}{
+		"nil config falls back to credential name": {
+			cfg:      nil,
+			credName: testCredName,
+			wantName: testCredName,
+		},
+		"non-okta IDP type falls back to credential name": {
+			cfg:      &config.IDPConfiguration{Type: oauth.TypeGeneric},
+			credName: testCredName,
+			wantName: testCredName,
+		},
+		"template with all fields set": {
+			cfg:      &config.IDPConfiguration{Type: oauth.TypeOkta, Okta: &config.OktaIDPConfiguration{AppNameTemplate: fullTemplate}},
+			appName:  testAppName,
+			teamName: "my-team",
+			credName: testCredName,
+			wantName: "my-app-my-team-my-cred",
+		},
+		"empty team name collapses double dash after normalize": {
+			cfg:      &config.IDPConfiguration{Type: oauth.TypeOkta, Okta: &config.OktaIDPConfiguration{AppNameTemplate: fullTemplate}},
+			appName:  testAppName,
+			teamName: "",
+			credName: testCredName,
+			wantName: "my-app-my-cred",
+		},
+		"name exactly 100 chars passes": {
+			cfg:      &config.IDPConfiguration{Type: oauth.TypeOkta, Okta: &config.OktaIDPConfiguration{AppNameTemplate: fullTemplate}},
+			appName:  strings.Repeat("a", 48),
+			teamName: strings.Repeat("b", 49),
+			credName: "c",
+			wantName: strings.Repeat("a", 48) + "-" + strings.Repeat("b", 49) + "-c",
+		},
+		"name exceeds 100 chars returns error": {
+			cfg:      &config.IDPConfiguration{Type: oauth.TypeOkta, Okta: &config.OktaIDPConfiguration{AppNameTemplate: fullTemplate}},
+			appName:  strings.Repeat("a", 50),
+			teamName: strings.Repeat("b", 49),
+			credName: strings.Repeat("c", 5),
+			wantErr:  true,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			mock := &mockProvider{cfg: tc.cfg}
+			app := management.NewManagedApplication(tc.appName, "")
+			if tc.teamName != "" {
+				assert.NoError(t, util.SetAgentDetailsKey(app, agentDetailTeamName, tc.teamName))
+			}
+			cred := management.NewCredential(tc.credName, "")
+			p := &provisioner{
+				app:            app,
+				credential:     cred,
+				idpProvider:    mock,
+				credentialData: &credData{},
+			}
+			got, err := p.appClientName()
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.wantName, got)
 		})
 	}
 }

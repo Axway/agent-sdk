@@ -19,6 +19,14 @@ const (
 	TLSClientAuth           = "tls_client_auth"
 	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
 
+	OktaPlaceholderMPApplicationName    = "%MP_APPLICATION_NAME%"
+	OktaPlaceholderOwningTeam           = "%OWNING_TEAM%"
+	OktaPlaceholderCredentialName       = "%CREDENTIAL_NAME%"
+	OktaPlaceholderScope                = "%SCOPE%"
+	OktaPlaceholderOAuthFlow            = "%OAUTH_FLOW%"
+	OktaAppNameTemplateKey       = "AGENTFEATURES_IDP_OKTA_APPNAME_TEMPLATE"
+	OktaPolicyNameTemplateKey    = "AGENTFEATURES_IDP_OKTA_POLICYNAME_TEMPLATE"
+
 	propInsecureSkipVerify      = "insecureSkipVerify"
 	propUseCachedToken          = "useCachedToken"
 	propUseRegistrationToken    = "useRegistrationToken"
@@ -27,8 +35,12 @@ const (
 	fldTitle                    = "title"
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
-	fldOktaGroup                = "okta.group"
-	fldOktaPolicy               = "okta.policy"
+	fldOktaTokenLifetimeMin     = "okta.token_lifetime_min"
+	fldOktaAppNameTemplate      = "okta.appname_template"
+	fldOktaPolicyNameTemplate   = "okta.policyname_template"
+	fldOktaPolicyPriority       = "okta.policy_priority"
+	fldOktaScopeSources         = "okta.scope_sources"
+	fldOktaScopeBlacklist       = "okta.scope_blacklist"
 	fldExtraProperties          = "extraProperties"
 	fldRequestHeaders           = "requestHeaders"
 	fldQueryParams              = "queryParams"
@@ -53,6 +65,13 @@ const (
 	fldSSLRootCACertPath        = "ssl.rootCACertPath"
 	fldSSLClientCertPath        = "ssl.clientCertPath"
 	fldSSLClientKeyPath         = "ssl.clientKeyPath"
+
+	defaultOktaAppNameTemplate    = OktaPlaceholderMPApplicationName + "-" + OktaPlaceholderOwningTeam + "-" + OktaPlaceholderCredentialName
+	defaultOktaPolicyNameTemplate = OktaPlaceholderScope + "-" + OktaPlaceholderOAuthFlow
+	defaultOktaPolicyPriority     = "1"
+	defaultOktaTokenLifetimeMin   = "60"
+	defaultOktaScopeSources       = "swagger,gateway,okta"
+	defaultOktaScopeBlacklist     = "openid,profile,email,address,phone,offline_access"
 )
 
 var configProperties = []string{
@@ -60,8 +79,12 @@ var configProperties = []string{
 	fldTitle,
 	fldType,
 	fldMetadataURL,
-	fldOktaGroup,
-	fldOktaPolicy,
+	fldOktaTokenLifetimeMin,
+	fldOktaAppNameTemplate,
+	fldOktaPolicyNameTemplate,
+	fldOktaPolicyPriority,
+	fldOktaScopeSources,
+	fldOktaScopeBlacklist,
 	fldExtraProperties,
 	fldRequestHeaders,
 	fldQueryParams,
@@ -236,10 +259,6 @@ type IDPConfig interface {
 	GetIDPTitle() string
 	// GetAuthConfig - to be used for authentication with IDP
 	GetAuthConfig() IDPAuthConfig
-	// GetOktaGroup - okta-specific group assignment configuration.
-	GetOktaGroup() string
-	// GetOktaPolicy - okta-specific authorization server policy name to look up.
-	GetOktaPolicy() string
 	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 	GetClientScopes() string
 	// GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
@@ -279,8 +298,12 @@ type IDPAuthConfiguration struct {
 
 // OktaIDPConfiguration - okta-specific configuration.
 type OktaIDPConfiguration struct {
-	Group  string `json:"group,omitempty"`
-	Policy string `json:"policy,omitempty"`
+	TokenLifetimeMin   string `json:"token_lifetime_min,omitempty"`
+	AppNameTemplate    string `json:"appname_template,omitempty"`
+	PolicyNameTemplate string `json:"policyname_template,omitempty"`
+	PolicyPriority     string `json:"policy_priority,omitempty"`
+	ScopeSources       string `json:"scope_sources,omitempty"`
+	ScopeBlacklist     string `json:"scope_blacklist,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -306,7 +329,7 @@ func (i *IDPConfiguration) GetIDPName() string {
 	return i.Name
 }
 
-// GetIDPName - for the identity provider frinedly name
+// GetIDPTitle - for the identity provider friendly name
 func (i *IDPConfiguration) GetIDPTitle() string {
 	return i.Title
 }
@@ -326,20 +349,60 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
 }
 
-// GetOktaGroup - returns Okta group name configured for this IDP (if any).
-func (i *IDPConfiguration) GetOktaGroup() string {
-	if i.Okta == nil {
-		return ""
+// GetTokenLifetimeMinutes - access token lifetime minutes for new Okta policy rules; defaults to 60.
+func (i *IDPConfiguration) GetTokenLifetimeMinutes() int {
+	if i.Okta == nil || i.Okta.TokenLifetimeMin == "" {
+		return 60
 	}
-	return i.Okta.Group
+	v, err := strconv.Atoi(i.Okta.TokenLifetimeMin)
+	if err != nil || v <= 0 {
+		return 60
+	}
+	return v
 }
 
-// GetOktaPolicy - returns Okta authorization server policy name for this IDP (if any).
-func (i *IDPConfiguration) GetOktaPolicy() string {
-	if i.Okta == nil {
-		return ""
+// GetAppNameTemplate - Okta application name template; defaults to MP_APPLICATION_NAME-OWNING_TEAM-CREDENTIAL_NAME pattern.
+func (i *IDPConfiguration) GetAppNameTemplate() string {
+	if i.Okta == nil || i.Okta.AppNameTemplate == "" {
+		return defaultOktaAppNameTemplate
 	}
-	return i.Okta.Policy
+	return i.Okta.AppNameTemplate
+}
+
+// GetPolicyNameTemplate - Okta access policy name template; defaults to SCOPE-OAUTH_FLOW pattern.
+func (i *IDPConfiguration) GetPolicyNameTemplate() string {
+	if i.Okta == nil || i.Okta.PolicyNameTemplate == "" {
+		return defaultOktaPolicyNameTemplate
+	}
+	return i.Okta.PolicyNameTemplate
+}
+
+// GetPolicyPriority - priority for new Okta authorization server policies; defaults to 1.
+func (i *IDPConfiguration) GetPolicyPriority() int {
+	if i.Okta == nil || i.Okta.PolicyPriority == "" {
+		return 1
+	}
+	v, err := strconv.Atoi(i.Okta.PolicyPriority)
+	if err != nil || v <= 0 {
+		return 1
+	}
+	return v
+}
+
+// GetScopeSources - comma-separated active scope sources (swagger, gateway, okta); consumed by the v7 agent.
+func (i *IDPConfiguration) GetScopeSources() string {
+	if i.Okta == nil || i.Okta.ScopeSources == "" {
+		return defaultOktaScopeSources
+	}
+	return i.Okta.ScopeSources
+}
+
+// GetScopeBlacklist - comma-separated scopes excluded from the Marketplace UI; consumed by the v7 agent.
+func (i *IDPConfiguration) GetScopeBlacklist() string {
+	if i.Okta == nil || i.Okta.ScopeBlacklist == "" {
+		return defaultOktaScopeBlacklist
+	}
+	return i.Okta.ScopeBlacklist
 }
 
 // GetExtraProperties - set of additional properties to be applied when registering the client
@@ -654,7 +717,7 @@ func ParseExternalIDPConfig(agentFeature AgentFeaturesConfig, props properties.P
 			QueryParams:      make(IDPQueryParams),
 			ClientScopes:     "resource.READ resource.WRITE",
 			GrantType:        "client_credentials",
-			AuthMethod:       "client_secret_basic",
+			AuthMethod:       ClientSecretBasic,
 			AuthResponseType: "token",
 		}
 

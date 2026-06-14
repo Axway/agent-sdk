@@ -247,7 +247,7 @@ func runProviderTestCase(t *testing.T, tc providerTestCase) {
 		assert.Equal(t, s.GetUnregisterEndpoint(), cr.GetRegistrationClientURI())
 	}
 	s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint())
+	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint(), cr.GetScopes(), "")
 	if tc.expectUnRegistrationErr {
 		assert.NotNil(t, err)
 		return
@@ -324,90 +324,6 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 	}
 }
 
-func TestNewProviderOktaValidatesConfiguredGroupAndPolicyExist(t *testing.T) {
-	token := testToken
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL:
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups":
-			if r.URL.Query().Get("q") == "Marketplace" {
-				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(`[{"id":"00g-123","profile":{"name":"Marketplace"}}]`))
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[]`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[{"id":"pol-123","name":"shane"}]`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies/pol-123":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"id":"pol-123","name":"shane","conditions":{"clients":{"include":[]}}}`))
-			return
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-	}))
-	defer srv.Close()
-
-	idpCfg := &config.IDPConfiguration{
-		Name:        "test",
-		Type:        TypeOkta,
-		MetadataURL: srv.URL + testAuthServerMetadataURL,
-		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace", Policy: "shane"},
-		AuthConfig: &config.IDPAuthConfiguration{
-			Type:        config.AccessToken,
-			AccessToken: token,
-		},
-	}
-
-	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
-	assert.NoError(t, err)
-	assert.NotNil(t, p)
-}
-
-func TestNewProviderOktaFailsFastWhenConfiguredGroupMissing(t *testing.T) {
-	token := testToken
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-			return
-		}
-		if r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups" {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[]`))
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-
-	idpCfg := &config.IDPConfiguration{
-		Name:        "test",
-		Type:        TypeOkta,
-		MetadataURL: srv.URL + testAuthServerMetadataURL,
-		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace"},
-		AuthConfig: &config.IDPAuthConfiguration{
-			Type:        config.AccessToken,
-			AccessToken: token,
-		},
-	}
-
-	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
-	assert.Error(t, err)
-	assert.Nil(t, p)
-	assert.Contains(t, err.Error(), "configured okta group")
-}
-
 type failingHookIDP struct {
 	authPrefix string
 	regErr     error
@@ -433,7 +349,7 @@ func (f *failingHookIDP) postProcessClientRegistration(clientRes ClientMetadata,
 	return f.regErr
 }
 
-func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config.IDPConfig, apiClient coreapi.Client) error {
+func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error {
 	return f.unregErr
 }
 
@@ -546,7 +462,7 @@ func TestUnregisterClientDeleteHookFails(t *testing.T) {
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL, nil, "")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration")
@@ -589,7 +505,7 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL, nil, "")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fully remove the Okta client")
