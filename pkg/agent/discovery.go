@@ -116,17 +116,23 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 }
 
 func PublishingLock() {
+	agent.publishingLockAcquired.Swap(true)
 	agent.publishingLock.Lock()
 }
 
 func PublishingUnlock() {
 	agent.publishingLock.Unlock()
+	agent.publishingLockAcquired.Swap(false)
 }
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
-	if agent.apicClient != nil {
+	if !agent.publishingLockAcquired.Load() {
+		PublishingLock()
+		defer PublishingUnlock()
+	}
 
+	if agent.apicClient != nil {
 		var err error
 		_, err = publishAccessRequestDefinition(&serviceBody)
 		if err != nil {
