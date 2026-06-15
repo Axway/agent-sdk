@@ -27,7 +27,6 @@ const (
 	appProfDefKey          = "appProfDef"
 	teamsKey               = "teams"
 	managedAppKey          = "managedApp"
-	subscriptionsKey       = "subscriptions"
 	accReqKey              = "accReq"
 	idpMetadataKey         = "idpMetadata"
 	watchSequenceKey       = "watchSequence"
@@ -206,7 +205,6 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createResourceLoader(c.setLoadedCache, accReqDefKey),
 		createResourceLoader(c.setLoadedCache, appProfDefKey),
 		createResourceLoader(c.setLoadedCache, managedAppKey),
-		createResourceLoader(c.setLoadedCache, subscriptionsKey),
 		createResourceLoader(c.setLoadedCache, accReqKey),
 		createResourceLoader(c.setLoadedCache, watchResourceKey),
 		createTeamLoader(c.setLoadedCache, teamsKey),

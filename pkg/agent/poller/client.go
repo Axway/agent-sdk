@@ -24,7 +24,7 @@ type PollClient struct {
 	newListener        events.NewListenerFunc
 	onClientStop       onClientStopCb
 	onStreamConnection func()
-	onReconnect        func(context.Context) error
+	onReconnect        func() error
 	poller             *pollExecutor
 	newPollManager     newPollExecutorFunc
 	harvesterConfig    harvesterConfig
@@ -76,7 +76,7 @@ func (p *PollClient) Start() error {
 	ctx, cancel := context.WithCancelCause(context.Background())
 	defer cancel(nil)
 	if p.onReconnect != nil && !p.firstStart {
-		err := p.onReconnect(ctx)
+		err := p.onReconnect()
 		if err != nil {
 			return err
 		}

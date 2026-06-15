@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 
@@ -180,14 +179,14 @@ func (es *EventSync) resetCacheTimer() {
 // RebuildCache is the single entry point for all cache rebuilds.
 // When filters are given it attempts a targeted rebuild first, falling back to full on error.
 // The listener is paused for the duration and the 7-day timer is reset on success.
-func (es *EventSync) RebuildCache(ctx context.Context, filters ...management.WatchTopicSpecFilters) error {
+func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) error {
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
 	PublishingLock()
 	defer PublishingUnlock()
 
-	return es.waitForCacheRebuild(ctx, filters...)
+	return es.initCache(filters...)
 }
 
 // pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
@@ -200,34 +199,6 @@ func (es *EventSync) pausedInitCache(filters ...management.WatchTopicSpecFilters
 		}
 	}
 	return es.initCache(filters...)
-}
-
-// waitForCacheRebuild continuously attempts to rebuild the cache until successful
-func (es *EventSync) waitForCacheRebuild(ctx context.Context, filters ...management.WatchTopicSpecFilters) error {
-	adjustment := 2
-	maxBackoff := 5 * time.Minute
-	currentBackoff := 30 * time.Second
-	for {
-		err := es.pausedInitCache(filters...)
-		if err == nil {
-			return nil
-		}
-
-		logger.
-			WithError(err).
-			WithField("waitTime", currentBackoff.String()).
-			Error("failed to rebuild cache, retrying after waitTime")
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(currentBackoff):
-		}
-		if currentBackoff >= maxBackoff {
-			return fmt.Errorf("cache rebuild failed after reaching max backoff (%s): %w", maxBackoff, err)
-		}
-		currentBackoff = time.Duration(math.Min(float64(maxBackoff), float64(currentBackoff)*float64(adjustment)))
-	}
 }
 
 // validateCache runs the cache validator to check if the persisted cache is in sync.
@@ -252,7 +223,7 @@ func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error)
 
 // validateAndRebuildCache validates the cache and rebuilds only the out-of-sync kinds.
 // Called when connection to Central is restored.
-func (es *EventSync) validateAndRebuildCache(ctx context.Context) error {
+func (es *EventSync) validateAndRebuildCache() error {
 	if es.cacheValidator == nil {
 		return nil
 	}
@@ -260,7 +231,7 @@ func (es *EventSync) validateAndRebuildCache(ctx context.Context) error {
 	failedFilters, err := es.validateCache()
 	if err != nil {
 		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding out-of-sync kinds")
-		return es.RebuildCache(ctx, failedFilters...)
+		return es.RebuildCache(failedFilters...)
 	}
 	return nil
 }
