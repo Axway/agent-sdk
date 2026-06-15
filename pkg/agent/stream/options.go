@@ -1,6 +1,8 @@
 package stream
 
 import (
+	"context"
+
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
@@ -60,7 +62,7 @@ func WithOnStreamConnection() StreamerOpt {
 
 // WithOnReconnect sets a callback to execute when a connection to central is restored.
 // This is used to validate the persisted cache after reconnection.
-func WithOnReconnect(cb func()) StreamerOpt {
+func WithOnReconnect(cb func(context.Context) error) StreamerOpt {
 	return func(client *StreamerClient) {
 		client.onReconnect = cb
 	}

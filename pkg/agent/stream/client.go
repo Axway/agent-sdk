@@ -43,7 +43,7 @@ type StreamerClient struct {
 	requestQueue       events.RequestQueue
 	newRequestQueue    events.NewRequestQueueFunc
 	onStreamConnection func()
-	onReconnect        func()
+	onReconnect        func(context.Context) error
 	sequence           events.SequenceProvider
 	topicSelfLink      string
 	watchCfg           *wm.Config
@@ -163,6 +163,13 @@ func (s *StreamerClient) Start() error {
 	s.cancelMu.Unlock()
 	defer cancel(nil) // local variable: safe to call without lock in the same goroutine
 
+	if s.onReconnect != nil && !s.firstStart {
+		err := s.onReconnect(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
 	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
 	s.listener.Store(l)
@@ -189,9 +196,7 @@ func (s *StreamerClient) Start() error {
 		s.onStreamConnection()
 	}
 	s.connectedOnce.Do(func() { close(s.connectedCh) })
-	if s.onReconnect != nil && !s.firstStart {
-		go s.onReconnect()
-	}
+
 	s.firstStart = false
 
 	if err != nil {

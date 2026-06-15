@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,7 +24,7 @@ import (
 const qaTriggerSevenDayRefreshCache = "QA_CENTRAL_TRIGGER_REFRESH_CACHE"
 
 type EventSyncCache interface {
-	RebuildCache(filters ...management.WatchTopicSpecFilters)
+	RebuildCache(ctx context.Context, filters ...management.WatchTopicSpecFilters) error
 	ValidateCache() ([]management.WatchTopicSpecFilters, error)
 }
 
@@ -166,7 +167,7 @@ func (a *agentResourceManager) UpdateAgentStatus(status, prevStatus, message str
 
 	// See if we need to rebuildCache
 	if needsRebuild, filters := a.shouldRebuildCache(); needsRebuild && a.rebuildCache != nil {
-		a.rebuildCache.RebuildCache(filters...)
+		a.rebuildCache.RebuildCache(context.Background(), filters...)
 	}
 
 	subResources := make(map[string]interface{})

@@ -39,7 +39,7 @@ func WithOnConnect() ClientOpt {
 
 // WithOnReconnect sets a callback to execute when a connection to central is restored.
 // This is used to validate the persisted cache after reconnection.
-func WithOnReconnect(cb func()) ClientOpt {
+func WithOnReconnect(cb func(context.Context) error) ClientOpt {
 	return func(pc *PollClient) {
 		pc.onReconnect = cb
 	}

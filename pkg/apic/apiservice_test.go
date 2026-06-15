@@ -391,10 +391,6 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testRevisionListFile, // for call to update the service subresource
-			RespCode: http.StatusOK,
-		},
-		{
 			FileName: testRevisionFile, // for call to get the serviceRevision count
 			RespCode: http.StatusOK,
 		},

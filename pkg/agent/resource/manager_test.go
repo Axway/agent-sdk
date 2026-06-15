@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -304,9 +305,10 @@ type mockEventSyncCache struct {
 	validateErr     error
 }
 
-func (m *mockEventSyncCache) RebuildCache(filters ...management.WatchTopicSpecFilters) {
+func (m *mockEventSyncCache) RebuildCache(ctx context.Context, filters ...management.WatchTopicSpecFilters) error {
 	m.rebuildCalled++
 	m.rebuildFilters = filters
+	return nil
 }
 
 func (m *mockEventSyncCache) ValidateCache() ([]management.WatchTopicSpecFilters, error) {

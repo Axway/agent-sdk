@@ -222,7 +222,7 @@ func TestEventSync(t *testing.T) {
 		}{
 			"RebuildCache pauses and resumes the listener": {
 				run: func(_ *testing.T, es *EventSync) {
-					es.RebuildCache(apiSvcFilter)
+					es.RebuildCache(context.Background(), apiSvcFilter)
 				},
 				expectedPauses:  1,
 				expectedResumes: 1,
@@ -251,7 +251,7 @@ func TestEventSync(t *testing.T) {
 				run: func(t *testing.T, es *EventSync) {
 					es.listenerPauser = nil
 					assert.NotPanics(t, func() {
-						es.RebuildCache(apiSvcFilter)
+						es.RebuildCache(context.Background(), apiSvcFilter)
 					})
 				},
 				expectedPauses:  0,
@@ -259,7 +259,7 @@ func TestEventSync(t *testing.T) {
 			},
 			"validateAndRebuildCache - cache in sync, no rebuild": {
 				validator:       &mockCacheValidator{},
-				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache() },
+				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache(context.Background()) },
 				expectedPauses:  0,
 				expectedResumes: 0,
 			},
@@ -268,7 +268,7 @@ func TestEventSync(t *testing.T) {
 					failedFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
 					err:           fmt.Errorf("out of sync"),
 				},
-				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache() },
+				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache(context.Background()) },
 				expectedPauses:  1,
 				expectedResumes: 1,
 			},
