@@ -22,7 +22,6 @@ const (
 	testClientID                = "app123"
 	accessToken                 = "access-token"
 	testAuthHeader              = "SSWS " + accessToken
-	testPolicyPriority          = 5
 	defaultAppTemplate          = corecfg.OktaPlaceholderMPApplicationName + "-" + corecfg.OktaPlaceholderOwningTeam + "-" + corecfg.OktaPlaceholderCredentialName
 	defaultPolicyTemplate       = corecfg.OktaPlaceholderScope + "-" + corecfg.OktaPlaceholderOAuthFlow
 	normalizedClientCredentials = "clientcredentials"
@@ -368,54 +367,6 @@ func TestNormalizeGrantType(t *testing.T) {
 	}
 }
 
-func TestOktaTokenLifetimeMinutes(t *testing.T) {
-	o := &okta{logger: log.NewFieldLogger()}
-	cases := map[string]struct {
-		cfg  corecfg.IDPConfig
-		want int
-	}{
-		"returns configured value": {
-			cfg:  &corecfg.IDPConfiguration{Okta: &corecfg.OktaIDPConfiguration{TokenLifetimeMin: "90"}},
-			want: 90,
-		},
-		"returns default 60 when nil okta cfg": {
-			cfg:  &corecfg.IDPConfiguration{},
-			want: 60,
-		},
-		"returns default 60 when zero value": {
-			cfg:  &corecfg.IDPConfiguration{Okta: &corecfg.OktaIDPConfiguration{TokenLifetimeMin: "0"}},
-			want: 60,
-		},
-	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.want, o.tokenLifetimeMinutes(tc.cfg))
-		})
-	}
-}
-
-func TestOktaPolicyPriority(t *testing.T) {
-	o := &okta{logger: log.NewFieldLogger()}
-	cases := map[string]struct {
-		cfg  corecfg.IDPConfig
-		want int
-	}{
-		"returns configured value": {
-			cfg:  &corecfg.IDPConfiguration{Okta: &corecfg.OktaIDPConfiguration{PolicyPriority: "5"}},
-			want: 5,
-		},
-		"returns default 1 when nil okta cfg": {
-			cfg:  &corecfg.IDPConfiguration{},
-			want: 1,
-		},
-	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.want, o.policyPriority(tc.cfg))
-		})
-	}
-}
-
 func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 	ts := httptest.NewServer(nil)
 	defer ts.Close()
@@ -656,7 +607,7 @@ func TestOktaPreProcessClientRequest(t *testing.T) {
 	}
 }
 
-func TestOktaCreatePolicyUsesConfigPriority(t *testing.T) {
+func TestOktaCreatePolicyUsesDefaultPriority(t *testing.T) {
 	apiClient := coreapi.NewClient(nil, "")
 	oktaProvider := &okta{logger: log.NewFieldLogger()}
 	var captured []byte
@@ -677,14 +628,13 @@ func TestOktaCreatePolicyUsesConfigPriority(t *testing.T) {
 	idpCfg := &corecfg.IDPConfiguration{
 		MetadataURL: ts.URL + oauthMetadataEndpoint,
 		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
-		Okta:        &corecfg.OktaIDPConfiguration{PolicyPriority: "5"},
 	}
 	clientRes := &clientMetadata{ClientID: testClientID, Scope: []string{testScope}, GrantTypes: []string{GrantTypeClientCredentials}}
 	assert.NoError(t, oktaProvider.postProcessClientRegistration(clientRes, idpCfg, apiClient))
 
 	var body map[string]any
 	assert.NoError(t, json.Unmarshal(captured, &body))
-	assert.EqualValues(t, testPolicyPriority, body["priority"])
+	assert.EqualValues(t, 1, body["priority"])
 }
 
 func TestOktaDeactivateThenDelete(t *testing.T) {

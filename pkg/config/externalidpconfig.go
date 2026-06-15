@@ -35,10 +35,8 @@ const (
 	fldTitle                    = "title"
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
-	fldOktaTokenLifetimeMin     = "okta.token_lifetime_min"
 	fldOktaAppNameTemplate      = "okta.appname_template"
 	fldOktaPolicyNameTemplate   = "okta.policyname_template"
-	fldOktaPolicyPriority       = "okta.policy_priority"
 	fldOktaScopeSources         = "okta.scope_sources"
 	fldOktaScopeBlacklist       = "okta.scope_blacklist"
 	fldExtraProperties          = "extraProperties"
@@ -68,8 +66,6 @@ const (
 
 	defaultOktaAppNameTemplate    = OktaPlaceholderMPApplicationName + "-" + OktaPlaceholderOwningTeam + "-" + OktaPlaceholderCredentialName
 	defaultOktaPolicyNameTemplate = OktaPlaceholderScope + "-" + OktaPlaceholderOAuthFlow
-	defaultOktaPolicyPriority     = "1"
-	defaultOktaTokenLifetimeMin   = "60"
 	defaultOktaScopeSources       = "swagger,gateway,okta"
 	defaultOktaScopeBlacklist     = "openid,profile,email,address,phone,offline_access"
 )
@@ -79,10 +75,8 @@ var configProperties = []string{
 	fldTitle,
 	fldType,
 	fldMetadataURL,
-	fldOktaTokenLifetimeMin,
 	fldOktaAppNameTemplate,
 	fldOktaPolicyNameTemplate,
-	fldOktaPolicyPriority,
 	fldOktaScopeSources,
 	fldOktaScopeBlacklist,
 	fldExtraProperties,
@@ -298,10 +292,8 @@ type IDPAuthConfiguration struct {
 
 // OktaIDPConfiguration - okta-specific configuration.
 type OktaIDPConfiguration struct {
-	TokenLifetimeMin   string `json:"token_lifetime_min,omitempty"`
 	AppNameTemplate    string `json:"appname_template,omitempty"`
 	PolicyNameTemplate string `json:"policyname_template,omitempty"`
-	PolicyPriority     string `json:"policy_priority,omitempty"`
 	ScopeSources       string `json:"scope_sources,omitempty"`
 	ScopeBlacklist     string `json:"scope_blacklist,omitempty"`
 }
@@ -349,18 +341,6 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
 }
 
-// GetTokenLifetimeMinutes - access token lifetime minutes for new Okta policy rules; defaults to 60.
-func (i *IDPConfiguration) GetTokenLifetimeMinutes() int {
-	if i.Okta == nil || i.Okta.TokenLifetimeMin == "" {
-		return 60
-	}
-	v, err := strconv.Atoi(i.Okta.TokenLifetimeMin)
-	if err != nil || v <= 0 {
-		return 60
-	}
-	return v
-}
-
 // GetAppNameTemplate - Okta application name template; defaults to MP_APPLICATION_NAME-OWNING_TEAM-CREDENTIAL_NAME pattern.
 func (i *IDPConfiguration) GetAppNameTemplate() string {
 	if i.Okta == nil || i.Okta.AppNameTemplate == "" {
@@ -375,18 +355,6 @@ func (i *IDPConfiguration) GetPolicyNameTemplate() string {
 		return defaultOktaPolicyNameTemplate
 	}
 	return i.Okta.PolicyNameTemplate
-}
-
-// GetPolicyPriority - priority for new Okta authorization server policies; defaults to 1.
-func (i *IDPConfiguration) GetPolicyPriority() int {
-	if i.Okta == nil || i.Okta.PolicyPriority == "" {
-		return 1
-	}
-	v, err := strconv.Atoi(i.Okta.PolicyPriority)
-	if err != nil || v <= 0 {
-		return 1
-	}
-	return v
 }
 
 // GetScopeSources - comma-separated active scope sources (swagger, gateway, okta); consumed by the v7 agent.

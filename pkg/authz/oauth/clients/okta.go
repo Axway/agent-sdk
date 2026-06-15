@@ -243,7 +243,7 @@ func (o *Okta) AssignClientToPolicy(authServerID string, policy map[string]inter
 	return o.UpdatePolicy(authServerID, policyID, policy)
 }
 
-func (o *Okta) CreatePolicy(authServerID, name string, priority int, clientID string) (map[string]interface{}, error) {
+func (o *Okta) CreatePolicy(authServerID, name string, clientID string) (map[string]interface{}, error) {
 	endpoint := o.authServerPoliciesEndpoint(authServerID)
 	o.logger.
 		WithField("authServerID", authServerID).
@@ -254,7 +254,7 @@ func (o *Okta) CreatePolicy(authServerID, name string, priority int, clientID st
 		Name:     name,
 		Type:     "OAUTH_AUTHORIZATION_POLICY",
 		Status:   "ACTIVE",
-		Priority: priority,
+		Priority: 1, //SDB - check to see if it defaults to 1
 		Conditions: oktaPolicyConditions{
 			Clients: &oktaPolicyConditionsClients{Include: []string{clientID}},
 		},
@@ -273,7 +273,7 @@ func (o *Okta) CreatePolicy(authServerID, name string, priority int, clientID st
 	return policy, nil
 }
 
-func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope string, tokenLifetimeMinutes int) error {
+func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
 	o.logger.
 		WithField("authServerID", authServerID).
@@ -290,7 +290,7 @@ func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope s
 			Scopes:     oktaPolicyRuleConditionScopes{Include: []string{scope}},
 		},
 		Actions: oktaPolicyRuleActions{
-			Token: oktaPolicyRuleActionToken{AccessTokenLifetimeMinutes: tokenLifetimeMinutes},
+			Token: oktaPolicyRuleActionToken{AccessTokenLifetimeMinutes: 60}, // SDB - see if this defaults to 60
 		},
 	}
 	resp, err := o.doRequest(coreapi.POST, endpoint, req)

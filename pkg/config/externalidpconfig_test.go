@@ -28,10 +28,8 @@ const (
 	envKeyIDPAuthClientSecret       = "AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1"
 	envKeyIDPAuthRequestHeaders     = "AGENTFEATURES_IDP_AUTH_REQUESTHEADERS_1"
 	envKeyIDPAuthQueryParams        = "AGENTFEATURES_IDP_AUTH_QUERYPARAMS_1"
-	envKeyIDPOktaTokenLifetimeMin   = "AGENTFEATURES_IDP_OKTA_TOKEN_LIFETIME_MIN_1"
 	envKeyIDPOktaAppNameTemplate    = "AGENTFEATURES_IDP_OKTA_APPNAME_TEMPLATE_1"
 	envKeyIDPOktaPolicyNameTemplate = "AGENTFEATURES_IDP_OKTA_POLICYNAME_TEMPLATE_1"
-	envKeyIDPOktaPolicyPriority     = "AGENTFEATURES_IDP_OKTA_POLICY_PRIORITY_1"
 	envKeyIDPOktaScopeSources       = "AGENTFEATURES_IDP_OKTA_SCOPE_SOURCES_1"
 	envKeyIDPOktaScopeBlacklist     = "AGENTFEATURES_IDP_OKTA_SCOPE_BLACKLIST_1"
 )
@@ -162,17 +160,11 @@ func TestExternalIDPConfig(t *testing.T) {
 				envKeyIDPAuthAccessToken: testAccessTok,
 			},
 		},
-		"okta token lifetime min config via env var": {
-			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaTokenLifetimeMin: "120"}),
-		},
 		"okta appname template config via env var": {
 			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaAppNameTemplate: OktaPlaceholderMPApplicationName}),
 		},
 		"okta policy name template config via env var": {
 			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaPolicyNameTemplate: OktaPlaceholderScope}),
-		},
-		"okta policy priority config via env var": {
-			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaPolicyPriority: "3"}),
 		},
 		"okta scope sources config via env var": {
 			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeSources: "swagger,okta"}),
@@ -221,8 +213,6 @@ func TestExternalIDPConfig(t *testing.T) {
 func TestOktaIDPConfigGetters(t *testing.T) {
 	cases := map[string]struct {
 		cfg                *IDPConfiguration
-		wantTokenLifetime  int
-		wantPolicyPriority int
 		wantAppTemplate    string
 		wantPolicyTemplate string
 		wantScopeSources   string
@@ -230,8 +220,6 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 	}{
 		"nil okta config returns all defaults": {
 			cfg:                &IDPConfiguration{},
-			wantTokenLifetime:  60,
-			wantPolicyPriority: 1,
 			wantAppTemplate:    defaultOktaAppNameTemplate,
 			wantPolicyTemplate: defaultOktaPolicyNameTemplate,
 			wantScopeSources:   defaultOktaScopeSources,
@@ -239,34 +227,19 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 		},
 		"configured values are returned": {
 			cfg: &IDPConfiguration{Okta: &OktaIDPConfiguration{
-				TokenLifetimeMin:   "90",
-				PolicyPriority:     "5",
 				AppNameTemplate:    "my-" + OktaPlaceholderCredentialName,
 				PolicyNameTemplate: OktaPlaceholderScope,
 				ScopeSources:       "swagger",
 				ScopeBlacklist:     "openid",
 			}},
-			wantTokenLifetime:  90,
-			wantPolicyPriority: 5,
 			wantAppTemplate:    "my-" + OktaPlaceholderCredentialName,
 			wantPolicyTemplate: OktaPlaceholderScope,
 			wantScopeSources:   "swagger",
 			wantScopeBlacklist: "openid",
 		},
-		"invalid int values fall back to defaults": {
-			cfg:                &IDPConfiguration{Okta: &OktaIDPConfiguration{TokenLifetimeMin: "bad", PolicyPriority: "bad"}},
-			wantTokenLifetime:  60,
-			wantPolicyPriority: 1,
-			wantAppTemplate:    defaultOktaAppNameTemplate,
-			wantPolicyTemplate: defaultOktaPolicyNameTemplate,
-			wantScopeSources:   defaultOktaScopeSources,
-			wantScopeBlacklist: defaultOktaScopeBlacklist,
-		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.wantTokenLifetime, tc.cfg.GetTokenLifetimeMinutes())
-			assert.Equal(t, tc.wantPolicyPriority, tc.cfg.GetPolicyPriority())
 			assert.Equal(t, tc.wantAppTemplate, tc.cfg.GetAppNameTemplate())
 			assert.Equal(t, tc.wantPolicyTemplate, tc.cfg.GetPolicyNameTemplate())
 			assert.Equal(t, tc.wantScopeSources, tc.cfg.GetScopeSources())

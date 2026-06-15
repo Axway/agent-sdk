@@ -73,28 +73,6 @@ func normalizeGrantType(grantType string) string {
 	}
 }
 
-func (i *okta) tokenLifetimeMinutes(idp corecfg.IDPConfig) int {
-	cfg, ok := idp.(interface{ GetTokenLifetimeMinutes() int })
-	if !ok {
-		return 60
-	}
-	if v := cfg.GetTokenLifetimeMinutes(); v > 0 {
-		return v
-	}
-	return 60
-}
-
-func (i *okta) policyPriority(idp corecfg.IDPConfig) int {
-	cfg, ok := idp.(interface{ GetPolicyPriority() int })
-	if !ok {
-		return 1
-	}
-	if v := cfg.GetPolicyPriority(); v > 0 {
-		return v
-	}
-	return 1
-}
-
 func policyNameTemplate(idp corecfg.IDPConfig) string {
 	cfg, ok := idp.(interface{ GetPolicyNameTemplate() string })
 	if !ok {
@@ -228,12 +206,12 @@ func (i *okta) assignScopePolicy(
 
 	if policy == nil {
 		i.logger.WithField("policyName", policyName).Trace("policy not found, creating")
-		createdPolicy, err := oktaClient.CreatePolicy(authServerID, policyName, i.policyPriority(idp), clientRes.GetClientID())
+		createdPolicy, err := oktaClient.CreatePolicy(authServerID, policyName, clientRes.GetClientID())
 		if err != nil {
 			return err
 		}
 		policyID, _ := createdPolicy["id"].(string)
-		if err := oktaClient.CreatePolicyRule(authServerID, policyID, policyName, grantType, scope, i.tokenLifetimeMinutes(idp)); err != nil {
+		if err := oktaClient.CreatePolicyRule(authServerID, policyID, policyName, grantType, scope); err != nil {
 			return err
 		}
 		i.logger.WithField("policyName", policyName).Trace("created policy and rule")

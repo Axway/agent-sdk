@@ -16,11 +16,9 @@ const (
 	caseErrForbidden = "returns error on forbidden"
 	testPolicyName   = "my-policy"
 	testClientID     = "client1"
-	testPriority     = 2
 	testRuleName     = "rule-1"
 	testGrantType    = "client_credentials"
 	testRuleScope    = "read:api"
-	testLifetime     = 90
 )
 
 func newTestOktaClient(t *testing.T, handler http.HandlerFunc) (*Okta, func()) {
@@ -68,7 +66,7 @@ func TestOktaCreatePolicy(t *testing.T) {
 		wantErr bool
 	}{
 		"returns created policy on 201": {code: http.StatusCreated, body: `{"id":"pol-new","name":"my-policy"}`, wantErr: false},
-		caseErrForbidden:               {code: http.StatusForbidden, body: `forbidden`, wantErr: true},
+		caseErrForbidden:                {code: http.StatusForbidden, body: `forbidden`, wantErr: true},
 	}
 	for name, tc := range cases {
 		tc := tc
@@ -78,7 +76,7 @@ func TestOktaCreatePolicy(t *testing.T) {
 				_, _ = w.Write([]byte(tc.body))
 			})
 			defer close()
-			_, err := client.CreatePolicy("as1", testPolicyName, 1, testClientID)
+			_, err := client.CreatePolicy("as1", testPolicyName, testClientID)
 			assertOktaErr(t, err, tc.wantErr)
 		})
 	}
@@ -92,14 +90,14 @@ func TestOktaCreatePolicyRequestBody(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"pol1"}`))
 	})
 	defer teardown()
-	_, err := client.CreatePolicy("as1", testPolicyName, testPriority, testClientID)
+	_, err := client.CreatePolicy("as1", testPolicyName, testClientID)
 	assertOktaErr(t, err, false)
 
 	var body map[string]interface{}
 	assert.NoError(t, json.Unmarshal(captured, &body))
 	assert.Equal(t, "OAUTH_AUTHORIZATION_POLICY", body["type"])
 	assert.Equal(t, "ACTIVE", body["status"])
-	assert.EqualValues(t, testPriority, body["priority"])
+	assert.EqualValues(t, 1, body["priority"])
 
 	conditions, _ := body["conditions"].(map[string]interface{})
 	clients, _ := conditions["clients"].(map[string]interface{})
@@ -126,7 +124,7 @@ func TestOktaCreatePolicyRule(t *testing.T) {
 				w.WriteHeader(tc.code)
 			})
 			defer close()
-			err := client.CreatePolicyRule("as1", "pol1", "rule", testGrantType, testRuleScope, 60)
+			err := client.CreatePolicyRule("as1", "pol1", "rule", testGrantType, testRuleScope)
 			assertOktaErr(t, err, tc.wantErr)
 		})
 	}
@@ -139,7 +137,7 @@ func TestOktaCreatePolicyRuleRequestBody(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 	})
 	defer teardown()
-	err := client.CreatePolicyRule("as1", "pol1", testRuleName, testGrantType, testRuleScope, testLifetime)
+	err := client.CreatePolicyRule("as1", "pol1", testRuleName, testGrantType, testRuleScope)
 	assertOktaErr(t, err, false)
 
 	var body map[string]interface{}
@@ -162,7 +160,7 @@ func TestOktaCreatePolicyRuleRequestBody(t *testing.T) {
 
 	actions, _ := body["actions"].(map[string]interface{})
 	token, _ := actions["token"].(map[string]interface{})
-	assert.EqualValues(t, testLifetime, token["accessTokenLifetimeMinutes"])
+	assert.EqualValues(t, 60, token["accessTokenLifetimeMinutes"])
 }
 
 func TestOktaRemoveClientFromPolicy(t *testing.T) {
@@ -238,10 +236,10 @@ func TestOktaDeactivateApp(t *testing.T) {
 		code    int
 		wantErr bool
 	}{
-		"returns nil on 200":        {code: http.StatusOK, wantErr: false},
-		"returns nil on 204":        {code: http.StatusNoContent, wantErr: false},
-		"treats 404 as success":     {code: http.StatusNotFound, wantErr: false},
-		caseErrForbidden:             {code: http.StatusForbidden, wantErr: true},
+		"returns nil on 200":    {code: http.StatusOK, wantErr: false},
+		"returns nil on 204":    {code: http.StatusNoContent, wantErr: false},
+		"treats 404 as success": {code: http.StatusNotFound, wantErr: false},
+		caseErrForbidden:        {code: http.StatusForbidden, wantErr: true},
 	}
 	for name, tc := range cases {
 		tc := tc
