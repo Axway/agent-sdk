@@ -75,7 +75,7 @@ func newEventSync() (*EventSync, error) {
 
 	sequence := events.NewSequenceProvider(agent.cacheManager, wt.Name)
 	hCfg := harvester.NewConfig(agent.cfg, agent.tokenRequester, sequence)
-	hClient := harvester.NewClient(hCfg)
+	hClient := harvester.NewClient(hCfg, harvester.WithPublishLock(PublishingLock, PublishingUnlock))
 
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
