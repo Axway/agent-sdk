@@ -21,6 +21,13 @@ const (
 	testAuthServerMetadataURL = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
 	testMetadataURL           = "/metadata"
 	testRegisterURL           = "/register/cid-1"
+
+	scopeOpenID   = "openid"
+	scopeProfile  = "profile"
+	scopeEmail    = "email"
+	scopeWriteAPI = "write:api"
+
+	blacklistOpenIDProfile = "openid,profile"
 )
 
 type providerTestCase struct {
@@ -74,7 +81,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key":               "value",
 					oktaApplicationType: oktaAppTypeWeb,
 				},
@@ -100,7 +107,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseToken},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -128,7 +135,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -152,7 +159,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -163,7 +170,6 @@ func TestProvider(t *testing.T) {
 		},
 	}
 	for name, tc := range cases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			runProviderTestCase(t, tc)
 		})
@@ -267,13 +273,13 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 
 	tests := map[string]struct {
 		idpType         string
-		extraProperties map[string]interface{}
+		extraProperties map[string]any
 		expectError     bool
 		errorContains   string
 	}{
 		"Valid Okta provider with PKCE and browser type": {
 			idpType: TypeOkta,
-			extraProperties: map[string]interface{}{
+			extraProperties: map[string]any{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeBrowser,
 			},
@@ -281,7 +287,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 		},
 		"Invalid Okta provider with PKCE and service type": {
 			idpType: TypeOkta,
-			extraProperties: map[string]interface{}{
+			extraProperties: map[string]any{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeService,
 			},
@@ -290,7 +296,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 		},
 		"Valid generic provider": {
 			idpType:         "generic",
-			extraProperties: map[string]interface{}{},
+			extraProperties: map[string]any{},
 			expectError:     false,
 		},
 	}
@@ -341,7 +347,7 @@ func (f *failingHookIDP) preProcessClientRequest(clientRequest *clientMetadata) 
 	// No preprocessing needed for this mock IDP implementation
 }
 
-func (f *failingHookIDP) validateExtraProperties(extraProps map[string]interface{}) error {
+func (f *failingHookIDP) validateExtraProperties(extraProps map[string]any) error {
 	return nil
 }
 
@@ -371,7 +377,6 @@ func TestRegisterClientRollBack(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			var deleteCalls atomic.Int32
 			var registerCalls atomic.Int32
@@ -649,6 +654,89 @@ func TestNewProviderValidatesOktaGroup(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.NotNil(t, provider)
+		})
+	}
+}
+
+func TestFilterScopeBlacklist(t *testing.T) {
+	cases := map[string]struct {
+		scopes    []string
+		blacklist string
+		want      []string
+	}{
+		"removes blacklisted scopes": {
+			scopes:    []string{scopeOpenID, scopeProfile, testScope, scopeWriteAPI},
+			blacklist: blacklistOpenIDProfile,
+			want:      []string{testScope, scopeWriteAPI},
+		},
+		"empty blacklist returns all scopes": {
+			scopes:    []string{scopeOpenID, testScope},
+			blacklist: "",
+			want:      []string{scopeOpenID, testScope},
+		},
+		"blacklist with whitespace is trimmed": {
+			scopes:    []string{scopeOpenID, testScope},
+			blacklist: " openid , profile ",
+			want:      []string{testScope},
+		},
+		"no scopes match blacklist returns all": {
+			scopes:    []string{testScope, scopeWriteAPI},
+			blacklist: blacklistOpenIDProfile,
+			want:      []string{testScope, scopeWriteAPI},
+		},
+		"all scopes blacklisted returns empty": {
+			scopes:    []string{scopeOpenID, scopeProfile},
+			blacklist: blacklistOpenIDProfile,
+			want:      []string{},
+		},
+		"nil scopes returns nil": {
+			scopes:    nil,
+			blacklist: scopeOpenID,
+			want:      nil,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := filterScopeBlacklist(tc.scopes, tc.blacklist)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGetSupportedScopesAppliesBlacklist(t *testing.T) {
+	cases := map[string]struct {
+		cfg        config.IDPConfig
+		rawScopes  []string
+		wantScopes []string
+	}{
+		"Okta config with blacklist filters scopes": {
+			cfg: &config.IDPConfiguration{
+				Type: TypeOkta,
+				Okta: &config.OktaIDPConfiguration{ScopeBlacklist: "openid,profile"},
+			},
+			rawScopes:  []string{"openid", "profile", "read:api"},
+			wantScopes: []string{"read:api"},
+		},
+		"Okta config with default blacklist filters defaults": {
+			cfg:        &config.IDPConfiguration{Type: TypeOkta, Okta: &config.OktaIDPConfiguration{}},
+			rawScopes:  []string{"openid", "profile", "email", "read:api"},
+			wantScopes: []string{"read:api"},
+		},
+		"non-Okta config returns scopes unfiltered": {
+			cfg:        &config.IDPConfiguration{Type: "generic"},
+			rawScopes:  []string{"openid", "profile", "read:api"},
+			wantScopes: []string{"openid", "profile", "read:api"},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := &provider{
+				cfg: tc.cfg,
+				authServerMetadata: &AuthorizationServerMetadata{
+					ScopesSupported: tc.rawScopes,
+				},
+			}
+			assert.Equal(t, tc.wantScopes, p.GetSupportedScopes())
 		})
 	}
 }

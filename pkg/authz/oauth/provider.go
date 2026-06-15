@@ -360,12 +360,44 @@ func (p *provider) GetAuthorizationEndpoint() string {
 	return ""
 }
 
-// GetSupportedScopes - returns the global scopes supported by provider
+// GetSupportedScopes - returns the scopes supported by the provider, with any
+// configured blacklist removed. Non-Okta providers receive the raw scope list
+// unchanged.
 func (p *provider) GetSupportedScopes() []string {
-	if p.authServerMetadata != nil {
-		return p.authServerMetadata.ScopesSupported
+	if p.authServerMetadata == nil {
+		return []string{""}
 	}
-	return []string{""}
+	scopes := p.authServerMetadata.ScopesSupported
+	if p.cfg.GetIDPType() != TypeOkta {
+		return scopes
+	}
+	bl, ok := p.cfg.(interface{ GetScopeBlacklist() string })
+	if !ok || bl.GetScopeBlacklist() == "" {
+		return scopes
+	}
+	return filterScopeBlacklist(scopes, bl.GetScopeBlacklist())
+}
+
+// filterScopeBlacklist removes any scope that appears in the comma-separated
+// blacklist string. Order of the remaining scopes is preserved.
+func filterScopeBlacklist(scopes []string, blacklist string) []string {
+	if len(scopes) == 0 {
+		return scopes
+	}
+	denied := make(map[string]struct{})
+	for _, s := range strings.Split(blacklist, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			denied[s] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(scopes))
+	for _, s := range scopes {
+		if _, blocked := denied[s]; !blocked {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // GetSupportedGrantTypes - returns the grant type supported by provider
