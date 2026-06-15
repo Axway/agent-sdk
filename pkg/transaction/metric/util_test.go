@@ -172,7 +172,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 					},
 					Name:         "api",
 					APIServiceID: "",
-					Owner:        &models.OwnerBlock{Type: "unknown"},
+					Owner:        &models.Owner{Type: "unknown"},
 				},
 				Product: &models.ProductResourceReference{
 					ResourceReference: models.ResourceReference{
@@ -185,7 +185,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 						ID: "app",
 					},
 					ConsumerOrgID: "org",
-					Owner:         &models.OwnerBlock{Type: "unknown"},
+					Owner:         &models.Owner{Type: "unknown"},
 				},
 				Subscription: &models.ResourceReference{
 					ID: "sub",
@@ -239,7 +239,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Product: models.Product{
 					ID:        "prod-with-owner",
 					VersionID: "ver-2",
-					Owner:     &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID1},
+					Owner:     &models.Owner{Type: "team", TeamGUID: testTeamGUID1},
 				},
 			},
 			expectedOutput: &centralMetric{
@@ -265,7 +265,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				Product: &models.ProductResourceReference{
 					ResourceReference: models.ResourceReference{ID: "prod-with-owner"},
 					VersionID:         "ver-2",
-					Owner:             &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID1},
+					Owner:             &models.Owner{Type: "team", TeamGUID: testTeamGUID1},
 				},
 			},
 		},
@@ -365,7 +365,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				API: &models.APIResourceReference{
 					ResourceReference: models.ResourceReference{ID: testAPIEmptyGUID},
 					Name:              "api-svc",
-					Owner:             &models.OwnerBlock{Type: "unknown"},
+					Owner:             &models.Owner{Type: "unknown"},
 				},
 			},
 		},
@@ -404,7 +404,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 				App: &models.ApplicationResourceReference{
 					ResourceReference: models.ResourceReference{ID: testAppEmptyGUID},
-					Owner:             &models.OwnerBlock{Type: "unknown"},
+					Owner:             &models.Owner{Type: "unknown"},
 				},
 			},
 		},

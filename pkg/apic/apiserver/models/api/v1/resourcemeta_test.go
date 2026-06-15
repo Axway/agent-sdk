@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	xAgentDetails  = "x-agent-details"
 	testEmbedGroup = "catalog"
 	testEmbedKind  = "PublishedProduct"
 	testEmbedRefID = "ref-abc-123"
@@ -42,17 +42,17 @@ func TestResourceMetaMarshal(t *testing.T) {
 	empty := meta1.GetSubResource("abc123")
 	assert.Nil(t, empty)
 
-	meta1.SetSubResource(xAgentDetails, map[string]interface{}{
+	meta1.SetSubResource(defs.XAgentDetails, map[string]interface{}{
 		"apiID": apiID,
 	})
 
 	// Get the sub resource by name, and update the value returned
-	resource := meta1.GetSubResource(xAgentDetails)
+	resource := meta1.GetSubResource(defs.XAgentDetails)
 	m := resource.(map[string]interface{})
 	m["primaryKey"] = primaryKey
 
 	// save the resource with the new value
-	meta1.SetSubResource(xAgentDetails, m)
+	meta1.SetSubResource(defs.XAgentDetails, m)
 
 	bts, err := json.Marshal(meta1)
 	assert.Nil(t, err)
@@ -64,7 +64,7 @@ func TestResourceMetaMarshal(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Get the x-agent-details sub resource, and convert it to a map
-	subResource := values[xAgentDetails]
+	subResource := values[defs.XAgentDetails]
 	xAgentDetailsSub, ok := subResource.(map[string]interface{})
 	assert.True(t, ok)
 
@@ -82,7 +82,7 @@ func TestResourceMetaMarshal(t *testing.T) {
 
 	// expect to the sub resources to be equal
 	assert.Equal(t, len(meta2.SubResources), len(meta1.SubResources))
-	assert.Equal(t, xAgentDetailsSub, meta2.GetSubResource(xAgentDetails))
+	assert.Equal(t, xAgentDetailsSub, meta2.GetSubResource(defs.XAgentDetails))
 
 	// unset the name
 	meta1.Name = ""

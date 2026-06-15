@@ -23,21 +23,21 @@ func (a ResourceReference) GetLogFields(fields logrus.Fields, idFieldName string
 
 type APIResourceReference struct {
 	ResourceReference
-	Name         string      `json:"name,omitempty"`
-	APIServiceID string      `json:"apiServiceId,omitempty"`
-	Owner        *OwnerBlock `json:"owner,omitempty"`
+	Name         string `json:"name,omitempty"`
+	APIServiceID string `json:"apiServiceId,omitempty"`
+	Owner        *Owner `json:"owner,omitempty"`
 }
 
 type ApplicationResourceReference struct {
 	ResourceReference
-	ConsumerOrgID string      `json:"consumerOrgId,omitempty"`
-	Owner         *OwnerBlock `json:"owner,omitempty"`
+	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
+	Owner         *Owner `json:"owner,omitempty"`
 }
 
 type ProductResourceReference struct {
 	ResourceReference
-	VersionID string      `json:"versionId,omitempty"`
-	Owner     *OwnerBlock `json:"owner,omitempty"`
+	VersionID string `json:"versionId,omitempty"`
+	Owner     *Owner `json:"owner,omitempty"`
 }
 
 func (a ProductResourceReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {
@@ -90,11 +90,11 @@ func (a AssetResource) GetLogFields(fields logrus.Fields) logrus.Fields {
 
 // Product - Represents the product used in the transaction summary provider details event
 type Product struct {
-	ID          string      `json:"id,omitempty"`
-	Name        string      `json:"name,omitempty"`
-	VersionName string      `json:"versionName,omitempty"`
-	VersionID   string      `json:"versionId,omitempty"`
-	Owner       *OwnerBlock `json:"owner,omitempty"`
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	VersionName string `json:"versionName,omitempty"`
+	VersionID   string `json:"versionId,omitempty"`
+	Owner       *Owner `json:"owner,omitempty"`
 }
 
 func (a Product) GetLogFields(fields logrus.Fields) logrus.Fields {
@@ -180,9 +180,9 @@ type ObservationDetails struct {
 	End   int64 `json:"end,omitempty"`
 }
 
-// OwnerBlock represents the owner of an API or application resource in insights events.
+// Owner represents the owner of an API or application resource in insights events.
 // Type is one of "team", "user", "none", or "unknown".
-type OwnerBlock struct {
+type Owner struct {
 	Type     string `json:"type"`
 	TeamGUID string `json:"team_guid,omitempty"`
 	UserGUID string `json:"user_guid,omitempty"`

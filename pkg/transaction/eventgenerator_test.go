@@ -222,7 +222,7 @@ func TestCreateEvent(t *testing.T) {
 				logger:                         log.NewFieldLogger(),
 			}
 
-			beatEvent, err := gen.createEvent(tc.logEvent, time.Now(), nil, nil, nil)
+			beatEvent, err := gen.createEvent(tc.logEvent, nil, time.Now(), nil, nil, nil)
 			if tc.wantErr != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.wantErr)
@@ -275,7 +275,7 @@ func TestCreateEventGuardCases(t *testing.T) {
 				shouldUseTrafficForAggregation: false,
 				logger:                         log.NewFieldLogger(),
 			}
-			_, err := gen.createEvent(tc.logEvent, time.Now(), nil, nil, nil)
+			_, err := gen.createEvent(tc.logEvent, nil, time.Now(), nil, nil, nil)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})

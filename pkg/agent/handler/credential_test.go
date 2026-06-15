@@ -24,7 +24,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-const algRSAOAEP = "RSA-OAEP"
 
 func TestCredentialHandler(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
@@ -845,7 +844,7 @@ func TestEncrypt(t *testing.T) {
 		},
 		{
 			name:       "should encrypt when the algorithm is RSA-OAEP",
-			alg:        algRSAOAEP,
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  pub,
 			privateKey: priv,
@@ -861,7 +860,7 @@ func TestEncrypt(t *testing.T) {
 		{
 			name:       "should return an error when the hash is unknown",
 			hasErr:     true,
-			alg:        algRSAOAEP,
+			alg:        util.RsaOaep,
 			hash:       "fake",
 			publicKey:  pub,
 			privateKey: priv,
@@ -869,7 +868,7 @@ func TestEncrypt(t *testing.T) {
 		{
 			name:       "should return an error when the public key cannot be parsed",
 			hasErr:     true,
-			alg:        algRSAOAEP,
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  "fake",
 			privateKey: priv,

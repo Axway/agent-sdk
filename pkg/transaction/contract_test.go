@@ -60,8 +60,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 				require.NotNil(t, ie.Session)
 				assert.Equal(t, contractLegTxnID, ie.Session.ID)
 
-				data, ok := ie.Data.(*TransactionLegV2Data)
-				require.True(t, ok, "data must be *TransactionLegV2Data")
+				data, ok := ie.Data.(*TransactionLegData)
+				require.True(t, ok, "data must be *TransactionLegData")
 				assert.Equal(t, "2", data.Version)
 				assert.Equal(t, contractAPICDeploy, data.APICDeployment)
 				assert.Equal(t, contractLegTxnID, data.TransactionID)
@@ -88,7 +88,7 @@ func TestContractTransactionV2Data(t *testing.T) {
 					Status:       "Success",
 					StatusDetail: "200",
 					Duration:     340,
-					OwnerInfo:    &models.OwnerBlock{Type: "team", TeamGUID: "team-contract"},
+					OwnerInfo:    &models.Owner{Type: "team", TeamGUID: "team-contract"},
 					EntryPoint: &EntryPoint{
 						Method: "GET",
 						Path:   "/pets/123",
@@ -100,7 +100,7 @@ func TestContractTransactionV2Data(t *testing.T) {
 							ConsumerOrgID: "consumer-org-contract",
 						},
 					},
-					AppOwnerInfo: &models.OwnerBlock{Type: "team", TeamGUID: "app-team-contract"},
+					AppOwnerInfo: &models.Owner{Type: "team", TeamGUID: "app-team-contract"},
 				},
 			},
 			orgID: contractOrg,
@@ -113,8 +113,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 				require.NotNil(t, ie.Session)
 				assert.Equal(t, "contract-sum-1", ie.Session.ID)
 
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
-				require.True(t, ok, "data must be *TransactionSummaryV2Data")
+				data, ok := ie.Data.(*TransactionSummaryData)
+				require.True(t, ok, "data must be *TransactionSummaryData")
 				assert.Equal(t, "2", data.Version)
 				assert.Equal(t, contractAPICDeploy, data.APICDeployment)
 				assert.Equal(t, "Success", data.Status)
@@ -194,7 +194,7 @@ func TestContractTransactionV2Data(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, tc.orgID, tc.envID, nil, reporter)
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, tc.orgID, tc.envID, nil, nil, reporter)
 			require.NoError(t, err)
 			require.NotNil(t, ie)
 

@@ -34,18 +34,18 @@ type ReporterInfo struct {
 
 // insightsAPIDetail is the api sub-object shared by leg and summary v2 data.
 type insightsAPIDetail struct {
-	ID           string             `json:"id"`
-	APIServiceID string             `json:"apiServiceId,omitempty"`
-	Name         string             `json:"name,omitempty"`
-	Owner        *models.OwnerBlock `json:"owner,omitempty"`
+	ID           string        `json:"id"`
+	APIServiceID string        `json:"apiServiceId,omitempty"`
+	Name         string        `json:"name,omitempty"`
+	Owner        *models.Owner `json:"owner,omitempty"`
 }
 
 // insightsConsumerAppDetail is the application sub-object within consumerDetails.
 type insightsConsumerAppDetail struct {
-	ID            string             `json:"id,omitempty"`
-	Name          string             `json:"name,omitempty"`
-	ConsumerOrgID string             `json:"consumerOrgId,omitempty"`
-	Owner         *models.OwnerBlock `json:"owner,omitempty"`
+	ID            string        `json:"id,omitempty"`
+	Name          string        `json:"name,omitempty"`
+	ConsumerOrgID string        `json:"consumerOrgId,omitempty"`
+	Owner         *models.Owner `json:"owner,omitempty"`
 }
 
 // insightsPublishedProduct is the publishedProduct sub-object within consumerDetails.
@@ -75,11 +75,11 @@ type insightsMarketplace struct {
 
 // insightsSummaryProduct is the product sub-object for summary v2.
 type insightsSummaryProduct struct {
-	ID          string             `json:"id,omitempty"`
-	Name        string             `json:"name,omitempty"`
-	VersionID   string             `json:"versionId,omitempty"`
-	VersionName string             `json:"versionName,omitempty"`
-	Owner       *models.OwnerBlock `json:"owner,omitempty"`
+	ID          string        `json:"id,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	VersionID   string        `json:"versionId,omitempty"`
+	VersionName string        `json:"versionName,omitempty"`
+	Owner       *models.Owner `json:"owner,omitempty"`
 }
 
 // insightsReporter is the reporter sub-object.
@@ -91,7 +91,7 @@ type insightsReporter struct {
 	ObservationDelta int64  `json:"observationDelta,omitempty"`
 }
 
-// legProtocol is the protocol sub-object for TransactionLegV2Data.
+// legProtocol is the protocol sub-object for TransactionLegData.
 type legProtocol struct {
 	Type   string `json:"type,omitempty"`
 	URI    string `json:"uri,omitempty"`
@@ -105,8 +105,8 @@ type insightsProxy struct {
 	Name string `json:"name,omitempty"`
 }
 
-// TransactionLegV2Data is the data payload for api.transaction.event (version "2").
-type TransactionLegV2Data struct {
+// TransactionLegData is the data payload for api.transaction.event (version "2").
+type TransactionLegData struct {
 	Version        string             `json:"version"`
 	APICDeployment string             `json:"apicDeployment,omitempty"`
 	TransactionID  string             `json:"transactionId,omitempty"`
@@ -125,16 +125,16 @@ type TransactionLegV2Data struct {
 }
 
 // GetStartTime implements metric.V4Data.
-func (d *TransactionLegV2Data) GetStartTime() time.Time { return time.Time{} }
+func (d *TransactionLegData) GetStartTime() time.Time { return time.Time{} }
 
 // GetType implements metric.V4Data.
-func (d *TransactionLegV2Data) GetType() string { return TypeTransactionEvent }
+func (d *TransactionLegData) GetType() string { return TypeTransactionEvent }
 
 // GetEventID implements metric.V4Data.
-func (d *TransactionLegV2Data) GetEventID() string { return d.TransactionID }
+func (d *TransactionLegData) GetEventID() string { return d.TransactionID }
 
 // GetLogFields implements metric.V4Data.
-func (d *TransactionLegV2Data) GetLogFields() logrus.Fields {
+func (d *TransactionLegData) GetLogFields() logrus.Fields {
 	f := logrus.Fields{"transactionId": d.TransactionID, "legId": d.LegID}
 	if d.API != nil {
 		f["apiId"] = d.API.ID
@@ -154,8 +154,8 @@ type insightsResourceRef struct {
 	ID string `json:"id,omitempty"`
 }
 
-// TransactionSummaryV2Data is the data payload for api.transaction.summary (version "2").
-type TransactionSummaryV2Data struct {
+// TransactionSummaryData is the data payload for api.transaction.summary (version "2").
+type TransactionSummaryData struct {
 	Version            string                   `json:"version"`
 	APICDeployment     string                   `json:"apicDeployment,omitempty"`
 	Status             string                   `json:"status,omitempty"`
@@ -174,16 +174,16 @@ type TransactionSummaryV2Data struct {
 }
 
 // GetStartTime implements metric.V4Data.
-func (d *TransactionSummaryV2Data) GetStartTime() time.Time { return time.Time{} }
+func (d *TransactionSummaryData) GetStartTime() time.Time { return time.Time{} }
 
 // GetType implements metric.V4Data.
-func (d *TransactionSummaryV2Data) GetType() string { return TypeTransactionSummary }
+func (d *TransactionSummaryData) GetType() string { return TypeTransactionSummary }
 
 // GetEventID implements metric.V4Data.
-func (d *TransactionSummaryV2Data) GetEventID() string { return "" }
+func (d *TransactionSummaryData) GetEventID() string { return "" }
 
 // GetLogFields implements metric.V4Data.
-func (d *TransactionSummaryV2Data) GetLogFields() logrus.Fields {
+func (d *TransactionSummaryData) GetLogFields() logrus.Fields {
 	f := logrus.Fields{"status": d.Status}
 	if d.API != nil {
 		f["apiId"] = d.API.ID
@@ -216,6 +216,7 @@ func BuildTransactionV2Data(
 	logEvent LogEvent,
 	orgID string,
 	environmentID string,
+	summaryProxy *Proxy,
 	cacheManager cache.Manager,
 	reporter ReporterInfo,
 ) (*InsightsEvent, error) {
@@ -241,7 +242,7 @@ func BuildTransactionV2Data(
 
 	switch logEvent.Type {
 	case TypeTransactionEvent:
-		data, err := buildLegV2Data(logEvent, cacheManager, reporter)
+		data, err := buildLegV2Data(logEvent, summaryProxy, cacheManager, reporter)
 		if err != nil {
 			return nil, err
 		}
@@ -265,7 +266,7 @@ func BuildTransactionV2Data(
 	return ie, nil
 }
 
-func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegV2Data, error) {
+func buildLegV2Data(logEvent LogEvent, summaryProxy *Proxy, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionLegData, error) {
 	txEvent := logEvent.TransactionEvent
 	if txEvent == nil {
 		return nil, fmt.Errorf("TransactionEvent is nil for logEvent type %q", logEvent.Type)
@@ -283,16 +284,20 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		}
 	}
 
-	apiID := ""
-	if txEvent.ProxyID != "" {
-		apiID = txEvent.ProxyID
-	} else if txEvent.Source != "" {
+	apiID := txEvent.ProxyID
+	proxyName := txEvent.ProxyName
+
+	if apiID == "" && summaryProxy != nil {
+		apiID = summaryProxy.ID
+		if proxyName == "" {
+			proxyName = summaryProxy.Name
+		}
+	}
+	if apiID == "" && txEvent.Source != "" {
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 
 	apiDetail := resolveAPIDetailFromCache(apiID, cacheManager)
-
-	proxyName := txEvent.ProxyName
 	if proxyName == "" && apiDetail != nil {
 		proxyName = apiDetail.Name
 	}
@@ -301,7 +306,7 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 		legProxy = &insightsProxy{ID: apiID, Name: proxyName}
 	}
 
-	data := &TransactionLegV2Data{
+	data := &TransactionLegData{
 		Version:        legDataVersion,
 		APICDeployment: logEvent.APICDeployment,
 		TransactionID:  logEvent.TransactionID,
@@ -327,7 +332,7 @@ func buildLegV2Data(logEvent LogEvent, cacheManager cache.Manager, reporter Repo
 	return data, nil
 }
 
-func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionSummaryV2Data, error) {
+func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager cache.Manager, reporter ReporterInfo) (*TransactionSummaryData, error) {
 	summary := logEvent.TransactionSummary
 	if summary == nil {
 		return nil, fmt.Errorf("TransactionSummary is nil for logEvent type %q", logEvent.Type)
@@ -340,7 +345,7 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 		apiServiceID = summary.API.APIServiceID
 	}
 
-	data := &TransactionSummaryV2Data{
+	data := &TransactionSummaryData{
 		Version:            summaryDataVersion,
 		APICDeployment:     logEvent.APICDeployment,
 		Status:             summary.Status,
@@ -409,8 +414,8 @@ func resolveSummaryAPIInfo(summary *Summary) (apiID, apiName, apiServiceRevision
 	return
 }
 
-func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName, apiServiceID string, ownerInfo *models.OwnerBlock, cacheManager cache.Manager) *insightsAPIDetail {
-	var apiOwner *models.OwnerBlock
+func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName, apiServiceID string, ownerInfo *models.Owner, cacheManager cache.Manager) *insightsAPIDetail {
+	var apiOwner *models.Owner
 	if ownerInfo != nil {
 		apiOwner = ownerInfo
 		logger.WithField("apiID", apiID).Trace("using pre-populated api owner from summary")
@@ -453,7 +458,7 @@ func buildAPIServiceRevisionRef(revisionID string, api *models.APIDetails) *insi
 	return &insightsResourceRef{ID: revisionID}
 }
 
-func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBlock) *insightsConsumerDetails {
+func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.Owner) *insightsConsumerDetails {
 	out := &insightsConsumerDetails{}
 
 	if cd.Marketplace != nil {
@@ -488,10 +493,10 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.OwnerBloc
 	return out
 }
 
-// SetLegProxy sets the proxy block on a TransactionLegV2Data after it has been built.
+// SetLegProxy sets the proxy block on a TransactionLegData after it has been built.
 // Used by the agents-controller to populate proxy from enriched API details post-build,
 // since insightsProxy is unexported and cannot be constructed externally.
-func SetLegProxy(leg *TransactionLegV2Data, proxyID, proxyName string) {
+func SetLegProxy(leg *TransactionLegData, proxyID, proxyName string) {
 	if leg == nil || (proxyID == "" && proxyName == "") {
 		return
 	}
@@ -524,7 +529,7 @@ func formatLegID(s string) string {
 func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insightsAPIDetail {
 	detail := &insightsAPIDetail{
 		ID:    apiID,
-		Owner: &models.OwnerBlock{Type: "unknown"},
+		Owner: &models.Owner{Type: "unknown"},
 	}
 	if cacheManager == nil || apiID == "" {
 		return detail

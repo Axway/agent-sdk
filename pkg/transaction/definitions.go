@@ -86,8 +86,8 @@ type Summary struct {
 	ProductPlan     *models.ProductPlan     `json:"productPlan,omitempty"`
 	Quota           *models.Quota           `json:"quota,omitempty"`
 	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
-	OwnerInfo       *models.OwnerBlock      `json:"-"`
-	AppOwnerInfo    *models.OwnerBlock      `json:"-"`
+	OwnerInfo       *models.Owner           `json:"-"`
+	AppOwnerInfo    *models.Owner           `json:"-"`
 }
 
 // Application  - Represents the application used in transaction summary event (dataplane)

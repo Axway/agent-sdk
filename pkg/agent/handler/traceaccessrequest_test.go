@@ -15,7 +15,7 @@ import (
 )
 
 func makeTraceAR(id, name, appName, instanceID string) *management.AccessRequest {
-	ar := &management.AccessRequest{
+	return &management.AccessRequest{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.AccessRequestGVK(),
 			Metadata: apiv1.Metadata{
@@ -35,9 +35,8 @@ func makeTraceAR(id, name, appName, instanceID string) *management.AccessRequest
 			ManagedApplication: appName,
 			ApiServiceInstance: "instance",
 		},
+		Status: &apiv1.ResourceStatus{Level: "Success"},
 	}
-	ar.Status = &apiv1.ResourceStatus{Level: "Success"}
-	return ar
 }
 
 func TestTraceAccessRequestTraceHandler(t *testing.T) {

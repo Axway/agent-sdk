@@ -13,13 +13,9 @@ import (
 )
 
 const (
-	ownerNilReturnsNone = "nil owner returns none"
-	ownerTeamWithGUID   = "team owner with GUID returns team block"
-	ownerTeamEmptyGUID  = "team owner with empty GUID returns unknown"
-	ownerUserXPrivate   = "x-private team owner returns user block"
-	testOwnerTeamGUID1  = "team-guid-1"
-	testOwnerTeamGUID2  = "team-guid-2"
-	testOwnerUserGUID   = "user-guid-1"
+	testOwnerTeamGUID1 = "team-guid-1"
+	testOwnerTeamGUID2 = "team-guid-2"
+	testOwnerUserGUID  = "user-guid-1"
 )
 
 func apiServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
@@ -56,42 +52,42 @@ func TestResolveAPIOwner(t *testing.T) {
 	tests := map[string]struct {
 		apiID    string
 		cache    agentcache.Manager
-		expected *models.OwnerBlock
+		expected *models.Owner
 	}{
 		"nil cache manager returns unknown": {
 			apiID:    "api-1",
 			cache:    nil,
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
 		"cache miss returns unknown": {
 			apiID:    "not-in-cache",
 			cache:    newCacheWithAPIService("api-1", &v1.Owner{Type: v1.TeamOwner, ID: "team-1"}),
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
-		ownerNilReturnsNone: {
+		"api service with nil owner": {
 			apiID:    "api-2",
 			cache:    newCacheWithAPIService("api-2", nil),
-			expected: &models.OwnerBlock{Type: "none"},
+			expected: &models.Owner{Type: "none"},
 		},
-		ownerTeamWithGUID: {
+		"api service team owner with GUID": {
 			apiID:    "api-3",
 			cache:    newCacheWithAPIService("api-3", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-3"}),
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-guid-3"},
+			expected: &models.Owner{Type: "team", TeamGUID: "team-guid-3"},
 		},
-		ownerTeamEmptyGUID: {
+		"api service team owner with empty GUID": {
 			apiID:    "api-4",
 			cache:    newCacheWithAPIService("api-4", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
 		"prefix stripped before lookup": {
 			apiID:    SummaryEventProxyIDPrefix + "api-5",
 			cache:    newCacheWithAPIService("api-5", &v1.Owner{Type: v1.TeamOwner, ID: "team-5"}),
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: "team-5"},
+			expected: &models.Owner{Type: "team", TeamGUID: "team-5"},
 		},
-		ownerUserXPrivate: {
+		"api service x-private owner": {
 			apiID:    "api-6",
 			cache:    newCacheWithAPIService("api-6", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-6", User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
-			expected: &models.OwnerBlock{Type: "user", TeamGUID: "team-guid-6", UserGUID: testOwnerUserGUID},
+			expected: &models.Owner{Type: "user", TeamGUID: "team-guid-6", UserGUID: testOwnerUserGUID},
 		},
 	}
 
@@ -105,27 +101,27 @@ func TestResolveAPIOwner(t *testing.T) {
 func TestResolveProductOwner(t *testing.T) {
 	tests := map[string]struct {
 		ref      v1.EmbeddedReference
-		expected *models.OwnerBlock
+		expected *models.Owner
 	}{
-		ownerNilReturnsNone: {
+		"empty embedded reference": {
 			ref:      v1.EmbeddedReference{},
-			expected: &models.OwnerBlock{Type: "none"},
+			expected: &models.Owner{Type: "none"},
 		},
-		ownerTeamWithGUID: {
+		"product ref team owner with GUID": {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1}},
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID1},
+			expected: &models.Owner{Type: "team", TeamGUID: testOwnerTeamGUID1},
 		},
-		ownerTeamEmptyGUID: {
+		"product ref team owner with empty GUID": {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: ""}},
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
 		"reference with name but no owner returns none": {
 			ref:      v1.EmbeddedReference{Kind: "PublishedProduct", Name: "product-1"},
-			expected: &models.OwnerBlock{Type: "none"},
+			expected: &models.Owner{Type: "none"},
 		},
-		ownerUserXPrivate: {
+		"product ref x-private owner": {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1, User: &v1.OwnerUser{ID: testOwnerUserGUID}}},
-			expected: &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID1, UserGUID: testOwnerUserGUID},
+			expected: &models.Owner{Type: "user", TeamGUID: testOwnerTeamGUID1, UserGUID: testOwnerUserGUID},
 		},
 	}
 	for name, tc := range tests {
@@ -138,27 +134,27 @@ func TestResolveProductOwner(t *testing.T) {
 func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 	tests := map[string]struct {
 		manApp   *v1.ResourceInstance
-		expected *models.OwnerBlock
+		expected *models.Owner
 	}{
 		"nil resource instance returns unknown": {
 			manApp:   nil,
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
-		ownerNilReturnsNone: {
+		"managed app with nil owner": {
 			manApp:   managedAppRI("app-1", nil),
-			expected: &models.OwnerBlock{Type: "none"},
+			expected: &models.Owner{Type: "none"},
 		},
-		ownerTeamWithGUID: {
+		"managed app team owner with GUID": {
 			manApp:   managedAppRI("app-2", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2}),
-			expected: &models.OwnerBlock{Type: "team", TeamGUID: testOwnerTeamGUID2},
+			expected: &models.Owner{Type: "team", TeamGUID: testOwnerTeamGUID2},
 		},
-		ownerTeamEmptyGUID: {
+		"managed app team owner with empty GUID": {
 			manApp:   managedAppRI("app-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected: &models.OwnerBlock{Type: "unknown"},
+			expected: &models.Owner{Type: "unknown"},
 		},
-		ownerUserXPrivate: {
+		"managed app x-private owner": {
 			manApp:   managedAppRI("app-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
-			expected: &models.OwnerBlock{Type: "user", TeamGUID: testOwnerTeamGUID2, UserGUID: testOwnerUserGUID},
+			expected: &models.Owner{Type: "user", TeamGUID: testOwnerTeamGUID2, UserGUID: testOwnerUserGUID},
 		},
 	}
 

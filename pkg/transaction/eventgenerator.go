@@ -115,7 +115,7 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if eventReport.GetSummaryEvent() == (LogEvent{}) {
-		return e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+		return e.handleTransactionEvents(eventReport.GetDetailEvents(), nil, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
@@ -134,13 +134,17 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		metadata = SetSampleInMetadata(metadata)
 	}
 
-	newEvent, err := e.createEvent(newSummaryEvent, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+	newEvent, err := e.createEvent(newSummaryEvent, nil, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
 		logger.WithError(err).Trace("handling summary event")
 		return events, err
 	}
 
-	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+	var summaryProxy *Proxy
+	if s := newSummaryEvent.TransactionSummary; s != nil {
+		summaryProxy = s.Proxy
+	}
+	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), summaryProxy, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
 		logger.WithError(err).Trace("handling detail event(s)")
 		return events, err
@@ -217,7 +221,7 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
-func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
+func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	event := beat.Event{}
 
 	e.logger.
@@ -255,7 +259,7 @@ func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData
 		AgentName:       cfg.GetAgentName(),
 	}
 
-	insightsEvent, err := BuildTransactionV2Data(e.logger, logEvent, orgID, envID, agent.GetCacheManager(), reporter)
+	insightsEvent, err := BuildTransactionV2Data(e.logger, logEvent, orgID, envID, summaryProxy, agent.GetCacheManager(), reporter)
 	if err != nil {
 		return event, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
 	}
@@ -294,14 +298,14 @@ func (e *Generator) getBytesSent(detailEvents []LogEvent) int {
 	return 0
 }
 
-func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
 	for _, event := range detailEvents {
 		if metaData == nil {
 			metaData = common.MapStr{}
 		}
 		metaData.Put(sampling.SampleKey, true)
-		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+		newEvent, err := e.createEvent(event, summaryProxy, eventTime, metaData, eventFields, privateData)
 		if err != nil {
 			return nil, err
 		}

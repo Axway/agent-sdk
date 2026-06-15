@@ -15,8 +15,8 @@ import (
 )
 
 // compile-time assertions. Both data types must satisfy the V4Data interface.
-var _ metric.V4Data = (*TransactionLegV2Data)(nil)
-var _ metric.V4Data = (*TransactionSummaryV2Data)(nil)
+var _ metric.V4Data = (*TransactionLegData)(nil)
+var _ metric.V4Data = (*TransactionSummaryData)(nil)
 
 const (
 	testOrgID          = "org-1"
@@ -122,7 +122,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, ie.Session)
 				assert.Equal(t, testTxnLeg1, ie.Session.ID)
 
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, legDataVersion, data.Version)
 				assert.Equal(t, testTxnLeg1, data.TransactionID)
@@ -139,7 +139,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, legDataVersion, data.Version)
 				assert.Equal(t, "prod", data.APICDeployment)
@@ -156,7 +156,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, 0, data.LegID)
 				assert.Equal(t, "leg0", data.ID)
@@ -179,7 +179,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				require.NotNil(t, data.Protocol)
 				assert.Equal(t, "/v1/resource", data.Protocol.URI)
@@ -205,7 +205,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Nil(t, data.Protocol)
 			},
@@ -225,7 +225,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, testTxnOutbound1, data.ParentID)
 				assert.Equal(t, "client", data.Source)
@@ -244,7 +244,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Empty(t, data.ParentID)
 
@@ -274,7 +274,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, ie.Session)
 				assert.Equal(t, testTxnSum1, ie.Session.ID)
 
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				assert.Equal(t, summaryDataVersion, data.Version)
 				assert.Equal(t, "Success", data.Status)
@@ -293,7 +293,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.Proxy)
 				assert.Equal(t, "proxy-id-2", data.Proxy.ID)
@@ -309,7 +309,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				assert.Nil(t, data.Proxy)
 			},
@@ -330,7 +330,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.EntryPoint)
 				assert.Equal(t, "GET", data.EntryPoint.Method)
@@ -360,7 +360,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				TransactionID: testTxnOwner1,
 				TransactionSummary: &Summary{
 					Status: "Success",
-					OwnerInfo: &models.OwnerBlock{
+					OwnerInfo: &models.Owner{
 						Type:     "team",
 						TeamGUID: testTeamGUID,
 					},
@@ -369,7 +369,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				require.NotNil(t, data.API.Owner)
@@ -384,7 +384,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				TransactionID: testTxnOwner2,
 				TransactionSummary: &Summary{
 					Status: "Success",
-					AppOwnerInfo: &models.OwnerBlock{
+					AppOwnerInfo: &models.Owner{
 						Type:     "team",
 						TeamGUID: testTeamGUID,
 					},
@@ -394,7 +394,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.Application)
@@ -416,7 +416,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				require.NotNil(t, data.API.Owner)
@@ -437,7 +437,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.Application)
@@ -462,7 +462,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
 				assert.Equal(t, testConsumerOrgID, data.ConsumerDetails.ConsumerOrgID)
@@ -481,14 +481,14 @@ func TestBuildTransactionV2Data(t *testing.T) {
 						Name:        "my-product",
 						VersionID:   "ver-id-1",
 						VersionName: "1.0.0",
-						Owner:       &models.OwnerBlock{Type: "team", TeamGUID: testTeamGUID},
+						Owner:       &models.Owner{Type: "team", TeamGUID: testTeamGUID},
 					},
 				},
 			},
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.Product)
 				assert.Equal(t, "prod-id-1", data.Product.ID)
@@ -512,7 +512,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ProductPlan)
 				assert.Equal(t, "plan-id-1", data.ProductPlan.ID)
@@ -532,7 +532,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				assert.Nil(t, data.Product)
 			},
@@ -555,7 +555,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.Application)
@@ -579,7 +579,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.PublishedProduct)
@@ -607,7 +607,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.APIServiceRevision)
 				assert.Equal(t, testRevisionUUID1, data.APIServiceRevision.ID)
@@ -629,7 +629,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				assert.Equal(t, "remoteApiId_abc123", data.API.ID)
@@ -649,7 +649,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				assert.Equal(t, "remoteApiId_abc123", data.API.ID)
@@ -670,7 +670,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				require.NotNil(t, data.Proxy)
 				assert.Equal(t, "remoteApiId_abc123", data.Proxy.ID)
@@ -691,7 +691,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, "inbound", data.Direction)
 			},
@@ -705,7 +705,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionLegV2Data)
+				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
 				assert.Equal(t, "outbound", data.Direction)
 			},
@@ -726,7 +726,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.Proxy)
 				assert.Equal(t, "abc123", data.Proxy.ID)
@@ -746,7 +746,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			orgID:         testOrgID,
 			environmentID: testEnvID,
 			check: func(t *testing.T, ie *InsightsEvent) {
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.Proxy)
 				assert.Equal(t, "proxy-nested-id", data.Proxy.ID)
@@ -807,7 +807,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, tc.orgID, tc.environmentID, nil, reporter)
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, tc.orgID, tc.environmentID, nil, nil, reporter)
 			if tc.wantErr {
 				assert.Error(t, err)
 				return
@@ -850,7 +850,7 @@ func TestBuildTransactionV2DataReporter(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, nil, reporter)
 			require.NoError(t, err)
 			require.NotNil(t, ie)
 
@@ -871,9 +871,9 @@ func TestBuildTransactionV2DataReporter(t *testing.T) {
 			TransactionID:      testTxnObsDelta,
 			TransactionSummary: &Summary{Status: "Success"},
 		}
-		ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, r)
+		ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, nil, r)
 		require.NoError(t, err)
-		data, ok := ie.Data.(*TransactionSummaryV2Data)
+		data, ok := ie.Data.(*TransactionSummaryData)
 		require.True(t, ok)
 		require.NotNil(t, data.Reporter)
 		assert.Equal(t, int64(60000), data.Reporter.ObservationDelta)
@@ -885,7 +885,7 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 
 	cases := map[string]struct {
 		logEvent LogEvent
-		check    func(t *testing.T, data *TransactionSummaryV2Data)
+		check    func(t *testing.T, data *TransactionSummaryData)
 	}{
 		"assetResource populated when present": {
 			logEvent: LogEvent{
@@ -896,7 +896,7 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 					AssetResource: &models.AssetResource{ID: "asset-abc"},
 				},
 			},
-			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+			check: func(t *testing.T, data *TransactionSummaryData) {
 				require.NotNil(t, data.AssetResource)
 				assert.Equal(t, "asset-abc", data.AssetResource.ID)
 			},
@@ -907,7 +907,7 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 				TransactionID:      testTxnAsset + "-empty",
 				TransactionSummary: &Summary{Status: "Success"},
 			},
-			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+			check: func(t *testing.T, data *TransactionSummaryData) {
 				assert.Nil(t, data.AssetResource)
 			},
 		},
@@ -924,7 +924,7 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 					},
 				},
 			},
-			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+			check: func(t *testing.T, data *TransactionSummaryData) {
 				require.NotNil(t, data.APIServiceRevision)
 				assert.Equal(t, "rev-id-123", data.APIServiceRevision.ID)
 			},
@@ -935,7 +935,7 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 				TransactionID:      testTxnRevision + "-empty",
 				TransactionSummary: &Summary{Status: "Success"},
 			},
-			check: func(t *testing.T, data *TransactionSummaryV2Data) {
+			check: func(t *testing.T, data *TransactionSummaryData) {
 				assert.Nil(t, data.APIServiceRevision)
 				b, err := json.Marshal(data)
 				require.NoError(t, err)
@@ -946,10 +946,10 @@ func TestBuildTransactionV2DataSummaryOptionalFields(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, nil, reporter)
 			require.NoError(t, err)
 			require.NotNil(t, ie)
-			data, ok := ie.Data.(*TransactionSummaryV2Data)
+			data, ok := ie.Data.(*TransactionSummaryData)
 			require.True(t, ok)
 			tc.check(t, data)
 		})
@@ -1014,9 +1014,9 @@ func TestSetAPIServiceRevision(t *testing.T) {
 				assert.Equal(t, tc.wantAPIName, le.TransactionSummary.API.Name)
 			}
 			if tc.wantV2Revision != "" {
-				ie, err := BuildTransactionV2Data(log.NewFieldLogger(), *le, testOrgID, testEnvID, nil, ReporterInfo{})
+				ie, err := BuildTransactionV2Data(log.NewFieldLogger(), *le, testOrgID, testEnvID, nil, nil, ReporterInfo{})
 				require.NoError(t, err)
-				data, ok := ie.Data.(*TransactionSummaryV2Data)
+				data, ok := ie.Data.(*TransactionSummaryData)
 				require.True(t, ok)
 				require.NotNil(t, data.APIServiceRevision)
 				assert.Equal(t, tc.wantV2Revision, data.APIServiceRevision.ID)
@@ -1044,7 +1044,7 @@ func TestBuildTransactionV2DataLegExcludedFields(t *testing.T) {
 		},
 	}
 
-	ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, reporter)
+	ie, err := BuildTransactionV2Data(log.NewFieldLogger(), logEvent, testOrgID, testEnvID, nil, nil, reporter)
 	require.NoError(t, err)
 
 	// Unmarshal data as a map so we can inspect only top-level keys of the data object.
@@ -1104,7 +1104,7 @@ func TestBuildTransactionV2DataSummaryExcludedFields(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, reporter)
+			ie, err := BuildTransactionV2Data(log.NewFieldLogger(), tc.logEvent, testOrgID, testEnvID, nil, nil, reporter)
 			require.NoError(t, err)
 			b, err := json.Marshal(ie)
 			require.NoError(t, err)
@@ -1195,7 +1195,7 @@ func TestBuildTransactionV2DataLegIDs(t *testing.T) {
 					Status:   "Pass",
 				},
 			}
-			data, err := buildLegV2Data(logEvent, nil, ReporterInfo{})
+			data, err := buildLegV2Data(logEvent, nil, nil, ReporterInfo{})
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantID, data.ID)
 			assert.Equal(t, tc.wantPID, data.ParentID)
@@ -1205,7 +1205,7 @@ func TestBuildTransactionV2DataLegIDs(t *testing.T) {
 
 func TestSetLegProxy(t *testing.T) {
 	cases := map[string]struct {
-		leg           *TransactionLegV2Data
+		leg           *TransactionLegData
 		proxyID       string
 		proxyName     string
 		wantNilProxy  bool
@@ -1219,23 +1219,23 @@ func TestSetLegProxy(t *testing.T) {
 			wantNilProxy: true,
 		},
 		"both IDs empty is a no-op": {
-			leg:          &TransactionLegV2Data{},
+			leg:          &TransactionLegData{},
 			wantNilProxy: true,
 		},
 		"both IDs set populates proxy": {
-			leg:           &TransactionLegV2Data{},
+			leg:           &TransactionLegData{},
 			proxyID:       "remoteApiId_ext-1",
 			proxyName:     testAPIName,
 			wantProxyID:   "remoteApiId_ext-1",
 			wantProxyName: testAPIName,
 		},
 		"only proxyID set populates proxy": {
-			leg:         &TransactionLegV2Data{},
+			leg:         &TransactionLegData{},
 			proxyID:     "remoteApiId_ext-2",
 			wantProxyID: "remoteApiId_ext-2",
 		},
 		"only proxyName set populates proxy": {
-			leg:           &TransactionLegV2Data{},
+			leg:           &TransactionLegData{},
 			proxyName:     "my-api-2",
 			wantProxyName: "my-api-2",
 		},
@@ -1259,8 +1259,8 @@ func TestSetLegProxy(t *testing.T) {
 }
 
 func TestV4DataInterfaceMethods(t *testing.T) {
-	t.Run("TransactionLegV2Data interface methods", func(t *testing.T) {
-		d := &TransactionLegV2Data{TransactionID: testTxnIfaceLeg, LegID: 0}
+	t.Run("TransactionLegData interface methods", func(t *testing.T) {
+		d := &TransactionLegData{TransactionID: testTxnIfaceLeg, LegID: 0}
 		assert.Equal(t, TypeTransactionEvent, d.GetType())
 		assert.Equal(t, testTxnIfaceLeg, d.GetEventID())
 		assert.Equal(t, (time.Time{}), d.GetStartTime())
@@ -1268,8 +1268,8 @@ func TestV4DataInterfaceMethods(t *testing.T) {
 		assert.Equal(t, testTxnIfaceLeg, fields["transactionId"])
 	})
 
-	t.Run("TransactionSummaryV2Data interface methods", func(t *testing.T) {
-		d := &TransactionSummaryV2Data{Status: "Success"}
+	t.Run("TransactionSummaryData interface methods", func(t *testing.T) {
+		d := &TransactionSummaryData{Status: "Success"}
 		assert.Equal(t, TypeTransactionSummary, d.GetType())
 		assert.Empty(t, d.GetEventID())
 		assert.Equal(t, (time.Time{}), d.GetStartTime())
