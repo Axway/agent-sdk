@@ -222,7 +222,7 @@ func (h *managedApplication) resolveTeamName(owner *apiv1.Owner) string {
 	if h.teamClient == nil || owner == nil || owner.ID == "" {
 		return ""
 	}
-	teams, err := h.teamClient.GetTeam(map[string]string{"query": fmt.Sprintf("id==%q", owner.ID)})
+	teams, err := h.teamClient.GetTeam(map[string]string{"query": fmt.Sprintf("guid==%q", owner.ID)})
 	if err != nil || len(teams) == 0 {
 		return ""
 	}

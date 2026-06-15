@@ -243,6 +243,7 @@ func TestManagedApplicationHandlerCacheMiss(t *testing.T) {
 			ri, _ := app.AsInstance()
 			err := h.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
 			assert.Nil(t, err)
+			assert.Equal(t, fmt.Sprintf("guid==%q", team.ID), c.gotTeamQuery["query"])
 		})
 	}
 }

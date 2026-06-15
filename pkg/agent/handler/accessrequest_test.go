@@ -420,6 +420,7 @@ type mockClient struct {
 	deleteResCalled bool
 	getTeamResult   []defs.PlatformTeam
 	getTeamErr      error
+	gotTeamQuery    map[string]string
 	t               *testing.T
 }
 
@@ -462,6 +463,7 @@ func (m *mockClient) DeleteResourceInstance(ri v1.Interface) error {
 }
 
 func (m *mockClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
+	m.gotTeamQuery = query
 	return m.getTeamResult, m.getTeamErr
 }
 
