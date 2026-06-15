@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"errors"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -131,16 +133,16 @@ func PublishAPI(serviceBody apic.ServiceBody) error {
 		PublishingLock()
 		defer PublishingUnlock()
 	}
-
-	if agent.apicClient != nil {
-		var err error
-		_, err = publishAccessRequestDefinition(&serviceBody)
-		if err != nil {
-			return err
-		}
+	if agent.apicClient == nil {
+		return errors.New("apic client is not initialized")
+	}
+	var err error
+	_, err = publishAccessRequestDefinition(&serviceBody)
+	if err != nil {
+		return err
 	}
 
-	_, err := agent.apicClient.PublishService(&serviceBody)
+	_, err = agent.apicClient.PublishService(&serviceBody)
 	if err != nil {
 		return err
 	}

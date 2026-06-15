@@ -32,57 +32,61 @@ func TestPublishingLockUnlock(t *testing.T) {
 	assert.False(t, agent.publishingLockAcquired.Load())
 }
 
-// TestPublishAPI_InternalLocking verifies that PublishAPI acquires and releases
-// the publishing lock internally when the caller has not pre-acquired it.
-func TestPublishAPI_InternalLocking(t *testing.T) {
-	defer setupDiscoveryTest(t)()
-
-	publishCalled := false
-	agent.apicClient = &mock.Client{
-		PublishServiceMock: func(_ *apic.ServiceBody) (*management.APIService, error) {
-			publishCalled = true
-			return nil, nil
+func TestPublishAPI_Locking(t *testing.T) {
+	tests := []struct {
+		name           string
+		preAcquireLock bool
+	}{
+		{
+			// PublishAPI acquires and releases the lock internally when the caller
+			// has not pre-acquired it.
+			name:           "internal locking",
+			preAcquireLock: false,
+		},
+		{
+			// PublishAPI must not deadlock when the caller has already acquired the
+			// lock. Before this fix, PublishAPI would attempt to re-acquire the
+			// non-reentrant mutex and deadlock.
+			name:           "pre-acquired lock",
+			preAcquireLock: true,
 		},
 	}
 
-	assert.False(t, agent.publishingLockAcquired.Load())
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			defer setupDiscoveryTest(t)()
 
-	err := PublishAPI(apic.ServiceBody{})
-	assert.Nil(t, err)
-	assert.True(t, publishCalled)
-	// flag is not set when PublishAPI manages the lock internally
-	assert.False(t, agent.publishingLockAcquired.Load())
-	// mutex must be released so it can be acquired again
-	assert.True(t, agent.publishingLock.TryLock(), "lock should be released after PublishAPI returns")
-	agent.publishingLock.Unlock()
-}
+			publishCalled := false
+			agent.apicClient = &mock.Client{
+				PublishServiceMock: func(_ *apic.ServiceBody) (*management.APIService, error) {
+					publishCalled = true
+					return nil, nil
+				},
+			}
 
-// TestPublishAPI_WithPreAcquiredLock verifies that PublishAPI does not deadlock
-// when called after PublishingLock() has already been acquired by the caller.
-// Before this fix, PublishAPI would attempt to re-acquire the non-reentrant
-// mutex and deadlock.
-func TestPublishAPI_WithPreAcquiredLock(t *testing.T) {
-	defer setupDiscoveryTest(t)()
+			if tc.preAcquireLock {
+				PublishingLock()
+				assert.True(t, agent.publishingLockAcquired.Load())
+			} else {
+				assert.False(t, agent.publishingLockAcquired.Load())
+			}
 
-	publishCalled := false
-	agent.apicClient = &mock.Client{
-		PublishServiceMock: func(_ *apic.ServiceBody) (*management.APIService, error) {
-			publishCalled = true
-			return nil, nil
-		},
+			err := PublishAPI(apic.ServiceBody{})
+			assert.Nil(t, err)
+			assert.True(t, publishCalled)
+
+			if tc.preAcquireLock {
+				// flag remains true because the caller still holds the lock
+				assert.True(t, agent.publishingLockAcquired.Load())
+				PublishingUnlock()
+				assert.False(t, agent.publishingLockAcquired.Load())
+			} else {
+				// flag is not set when PublishAPI manages the lock internally
+				assert.False(t, agent.publishingLockAcquired.Load())
+				// mutex must be released so it can be acquired again
+				assert.True(t, agent.publishingLock.TryLock(), "lock should be released after PublishAPI returns")
+				agent.publishingLock.Unlock()
+			}
+		})
 	}
-
-	// External caller acquires the lock (as instancevalidator and eventsync do)
-	PublishingLock()
-	assert.True(t, agent.publishingLockAcquired.Load())
-
-	// PublishAPI must not deadlock — it skips re-acquiring the already-held lock
-	err := PublishAPI(apic.ServiceBody{})
-	assert.Nil(t, err)
-	assert.True(t, publishCalled)
-	// flag remains true because the caller still holds the lock
-	assert.True(t, agent.publishingLockAcquired.Load())
-
-	PublishingUnlock()
-	assert.False(t, agent.publishingLockAcquired.Load())
 }
