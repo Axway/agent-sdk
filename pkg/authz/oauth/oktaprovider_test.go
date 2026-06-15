@@ -35,6 +35,10 @@ const (
 	oktaPolicyRulesEndpoint     = "/api/v1/authorizationServers/authorizationID/policies/pol-123/rules"
 	oktaDeactivateEndpoint      = "/api/v1/apps/app123/lifecycle/deactivate"
 	oktaDeleteEndpoint          = "/api/v1/apps/app123"
+	testGroupName               = "Marketplace"
+	testGroupID                 = "grp-456"
+	oktaGroupsEndpoint          = "/api/v1/groups"
+	oktaAppGroupEndpoint        = "/api/v1/apps/app123/groups/grp-456"
 )
 
 // oktaScriptedServer drives httptest with per-route handlers and call-count tracking.
@@ -691,6 +695,190 @@ func TestOktaPostProcessClientUnregisterAbortOnRemoveError(t *testing.T) {
 
 	calls := scripted.getCalls()
 	assert.Equal(t, 1, calls[http.MethodGet+" "+oktaPoliciesEndpointByID], "policy list GET must stop after first scope fails")
+}
+
+func groupListHandler(id, name string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintf(w, `[{"id":%q,"profile":{"name":%q}}]`, id, name)
+	}
+}
+
+func newIDPCredentialWithGroup(tsURL, group string) *corecfg.IDPConfiguration {
+	cfg := newIDPCredential(tsURL)
+	cfg.Okta = &corecfg.OktaIDPConfiguration{Group: group}
+	return cfg
+}
+
+func TestValidateOktaGroupExists(t *testing.T) {
+	apiClient := coreapi.NewClient(nil, "")
+
+	cases := map[string]struct {
+		group   string
+		routes  map[string]http.HandlerFunc
+		wantErr bool
+	}{
+		"no group configured is a no-op": {
+			group:   "",
+			routes:  map[string]http.HandlerFunc{},
+			wantErr: false,
+		},
+		"configured group found returns nil": {
+			group: testGroupName,
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaGroupsEndpoint: groupListHandler(testGroupID, testGroupName),
+			},
+			wantErr: false,
+		},
+		"configured group not found returns error": {
+			group: testGroupName,
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+				},
+			},
+			wantErr: true,
+		},
+		"API error returns error": {
+			group: testGroupName,
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusForbidden)
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ts, _ := newOktaScriptedServer(t, testAuthHeader, tc.routes)
+			defer ts.Close()
+			cfg := newIDPCredentialWithGroup(ts.URL, tc.group)
+			err := validateOktaGroupExists(cfg, apiClient)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestOktaPostProcessClientRegistrationWithGroup(t *testing.T) {
+	apiClient := coreapi.NewClient(nil, "")
+	oktaProvider := &okta{logger: log.NewFieldLogger()}
+
+	cases := map[string]struct {
+		routes       map[string]http.HandlerFunc
+		wantMinCalls map[string]int
+		wantErr      bool
+	}{
+		"group assigned after per-scope policy": {
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler(nil),
+				http.MethodPost + " " + oktaPoliciesEndpointByID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					_, _ = fmt.Fprintf(w, `{"id":%q}`, oktaPolicyID)
+				},
+				http.MethodPost + " " + oktaPolicyRulesEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+				},
+				http.MethodGet + " " + oktaGroupsEndpoint:    groupListHandler(testGroupID, testGroupName),
+				http.MethodPut + " " + oktaAppGroupEndpoint:  func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + oktaGroupsEndpoint:   1,
+				http.MethodPut + " " + oktaAppGroupEndpoint: 1,
+			},
+		},
+		"group not found returns error": {
+			routes: map[string]http.HandlerFunc{
+				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler(nil),
+				http.MethodPost + " " + oktaPoliciesEndpointByID: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					_, _ = fmt.Fprintf(w, `{"id":%q}`, oktaPolicyID)
+				},
+				http.MethodPost + " " + oktaPolicyRulesEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+				},
+				http.MethodGet + " " + oktaGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ts, scripted := newOktaScriptedServer(t, testAuthHeader, tc.routes)
+			defer ts.Close()
+			cfg := newIDPCredentialWithGroup(ts.URL, testGroupName)
+			clientRes := &clientMetadata{ClientID: testClientID, Scope: []string{testScope}, GrantTypes: []string{GrantTypeClientCredentials}}
+			err := oktaProvider.postProcessClientRegistration(clientRes, cfg, apiClient)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
+		})
+	}
+}
+
+func TestOktaPostProcessClientUnregisterWithGroup(t *testing.T) {
+	apiClient := coreapi.NewClient(nil, "")
+	oktaProvider := &okta{logger: log.NewFieldLogger()}
+
+	cases := map[string]struct {
+		routes       map[string]http.HandlerFunc
+		wantMinCalls map[string]int
+		wantErr      bool
+	}{
+		"group removed after app delete": {
+			routes: map[string]http.HandlerFunc{
+				http.MethodPost + " " + oktaDeactivateEndpoint: func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
+				http.MethodDelete + " " + oktaDeleteEndpoint:   func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) },
+				http.MethodGet + " " + oktaGroupsEndpoint:         groupListHandler(testGroupID, testGroupName),
+				http.MethodDelete + " " + oktaAppGroupEndpoint:    func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) },
+				http.MethodGet + " " + oktaPoliciesEndpointByID:   oktaPoliciesListHandler(nil),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + oktaGroupsEndpoint:        1,
+				http.MethodDelete + " " + oktaAppGroupEndpoint:   1,
+			},
+		},
+		"group not in Okta during unregister is skipped": {
+			routes: map[string]http.HandlerFunc{
+				http.MethodPost + " " + oktaDeactivateEndpoint: func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
+				http.MethodDelete + " " + oktaDeleteEndpoint:   func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) },
+				http.MethodGet + " " + oktaGroupsEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+				},
+				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler(nil),
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + oktaGroupsEndpoint: 1,
+			},
+			wantErr: false,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ts, scripted := newOktaScriptedServer(t, testAuthHeader, tc.routes)
+			defer ts.Close()
+			cfg := newIDPCredentialWithGroup(ts.URL, testGroupName)
+			err := oktaProvider.postProcessClientUnregister(testClientID, cfg, apiClient, nil, GrantTypeClientCredentials)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assertMinCalls(t, scripted.getCalls(), tc.wantMinCalls)
+		})
+	}
 }
 
 func TestPolicyNameTemplate(t *testing.T) {

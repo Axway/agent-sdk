@@ -150,6 +150,9 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		if err := validateOktaTemplates(idp); err != nil {
 			return nil, err
 		}
+		if err := validateOktaGroupExists(idp, apiClient); err != nil {
+			return nil, err
+		}
 	}
 
 	return p, nil

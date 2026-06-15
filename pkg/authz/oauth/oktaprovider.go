@@ -117,6 +117,10 @@ func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corec
 		return err
 	}
 
+	if err := i.handleGroupAssignment(oktaClient, clientRes.GetClientID(), idp); err != nil {
+		return err
+	}
+
 	i.logger.WithField("clientID", clientRes.GetClientID()).Info("completed Okta post-registration hook")
 	return nil
 }
@@ -149,6 +153,10 @@ func (i *okta) postProcessClientUnregister(clientID string, idp corecfg.IDPConfi
 		return err
 	}
 	if err := oktaClient.DeleteApp(clientID); err != nil {
+		return err
+	}
+
+	if err := i.handleGroupRemoval(oktaClient, clientID, idp); err != nil {
 		return err
 	}
 
@@ -307,4 +315,71 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 
 func (i *okta) getAuthorizationHeaderPrefix() string {
 	return clients.OktaAuthHeaderPrefix
+}
+
+func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientID string, idp corecfg.IDPConfig) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	i.logger.WithField("clientID", clientID).WithField("groupName", groupName).Trace("adding app to Okta group")
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error finding Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured Okta group %q not found", groupName)
+	}
+	return oktaClient.AssignGroupToApp(clientID, groupID)
+}
+
+func (i *okta) handleGroupRemoval(oktaClient *clients.Okta, clientID string, idp corecfg.IDPConfig) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	i.logger.WithField("clientID", clientID).WithField("groupName", groupName).Trace("removing app from Okta group")
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error finding Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return nil
+	}
+	return oktaClient.UnassignGroupFromApp(clientID, groupID)
+}
+
+func oktaGroupName(idp corecfg.IDPConfig) string {
+	cfg, ok := idp.(interface{ GetOktaGroup() string })
+	if !ok {
+		return ""
+	}
+	return cfg.GetOktaGroup()
+}
+
+func validateOktaGroupExists(idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	var apiToken string
+	if authCfg := idp.GetAuthConfig(); authCfg != nil {
+		apiToken = authCfg.GetAccessToken()
+	}
+	if apiToken == "" {
+		return nil
+	}
+	baseURL, err := oktaBaseURLFromMetadataURL(idp.GetMetadataURL())
+	if err != nil {
+		return err
+	}
+	oktaClient := clients.New(apiClient, baseURL, apiToken)
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error looking up Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured Okta group %q not found", groupName)
+	}
+	return nil
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -18,12 +19,17 @@ const (
 	maFinalizer = "agent.managedapplication.provisioned"
 )
 
+type teamFetcher interface {
+	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
+}
+
 type managedApplication struct {
 	marketplaceHandler
-	prov       prov.ApplicationProvisioner
-	cache      agentcache.Manager
-	client     client
-	retryCount int
+	prov        prov.ApplicationProvisioner
+	cache       agentcache.Manager
+	client      client
+	teamClient  teamFetcher
+	retryCount  int
 }
 
 func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
@@ -38,6 +44,9 @@ func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentc
 		prov:   prov,
 		cache:  cache,
 		client: client,
+	}
+	if tc, ok := client.(teamFetcher); ok {
+		ma.teamClient = tc
 	}
 	for _, o := range opts {
 		o(ma)
@@ -69,7 +78,7 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       getTeamName(h.cache, app.Owner),
+		teamName:       h.resolveTeamName(app.Owner),
 		data:           util.GetAgentDetails(app),
 		consumerOrgID:  getConsumerOrgID(app),
 		id:             app.Metadata.ID,
@@ -204,6 +213,21 @@ func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 // GetConsumerOrgID returns the ID of the consumer org for the managed application
 func (a provManagedApp) GetConsumerOrgID() string {
 	return a.consumerOrgID
+}
+
+func (h *managedApplication) resolveTeamName(owner *apiv1.Owner) string {
+	if name := getTeamName(h.cache, owner); name != "" {
+		return name
+	}
+	if h.teamClient == nil || owner == nil || owner.ID == "" {
+		return ""
+	}
+	teams, err := h.teamClient.GetTeam(map[string]string{"query": fmt.Sprintf("id==%q", owner.ID)})
+	if err != nil || len(teams) == 0 {
+		return ""
+	}
+	h.cache.AddTeam(&teams[0])
+	return teams[0].Name
 }
 
 func getTeamName(cache getTeamByID, owner *apiv1.Owner) string {

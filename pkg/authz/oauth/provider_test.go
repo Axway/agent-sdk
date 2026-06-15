@@ -512,3 +512,69 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	assert.Contains(t, err.Error(), "OAuth client deletion failed")
 	assert.Equal(t, int32(1), deleteCalls.Load())
 }
+
+func TestNewProviderValidatesOktaGroup(t *testing.T) {
+	cases := map[string]struct {
+		groupsCode  int
+		groupsBody  string
+		wantErr     bool
+		errContains string
+	}{
+		"group found — NewProvider succeeds": {
+			groupsCode: http.StatusOK,
+			groupsBody: `[{"id":"grp-1","profile":{"name":"` + testGroupName + `"}}]`,
+		},
+		"group not found — NewProvider fails": {
+			groupsCode:  http.StatusOK,
+			groupsBody:  `[]`,
+			wantErr:     true,
+			errContains: "configured Okta group",
+		},
+		"groups API error — NewProvider fails": {
+			groupsCode:  http.StatusForbidden,
+			groupsBody:  `forbidden`,
+			wantErr:     true,
+			errContains: "Okta group",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var ts *httptest.Server
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case strings.Contains(r.URL.Path, ".well-known"):
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"issuer":"` + ts.URL + `","token_endpoint":"` + ts.URL + `/token","registration_endpoint":"` + ts.URL + `/register","authorization_endpoint":"` + ts.URL + `/auth"}`))
+				case r.URL.Path == oktaGroupsEndpoint:
+					w.WriteHeader(tc.groupsCode)
+					_, _ = w.Write([]byte(tc.groupsBody))
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
+
+			idpCfg := &config.IDPConfiguration{
+				Name:        "test",
+				Type:        TypeOkta,
+				MetadataURL: ts.URL + testAuthServerMetadataURL,
+				Okta:        &config.OktaIDPConfiguration{Group: testGroupName},
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: testToken,
+				},
+			}
+			provider, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+			if tc.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, provider)
+				if tc.errContains != "" {
+					assert.Contains(t, err.Error(), tc.errContains)
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, provider)
+		})
+	}
+}

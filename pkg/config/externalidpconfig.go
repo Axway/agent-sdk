@@ -35,6 +35,7 @@ const (
 	fldTitle                    = "title"
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
+	fldOktaGroup                = "okta.group"
 	fldOktaAppNameTemplate      = "okta.appname_template"
 	fldOktaPolicyNameTemplate   = "okta.policyname_template"
 	fldOktaScopeSources         = "okta.scope_sources"
@@ -75,6 +76,7 @@ var configProperties = []string{
 	fldTitle,
 	fldType,
 	fldMetadataURL,
+	fldOktaGroup,
 	fldOktaAppNameTemplate,
 	fldOktaPolicyNameTemplate,
 	fldOktaScopeSources,
@@ -267,6 +269,8 @@ type IDPConfig interface {
 	GetRequestHeaders() map[string]string
 	// GetQueryParams - set of additional query parameters to be applied when registering the client
 	GetQueryParams() map[string]string
+	// GetOktaGroup - name of the Okta group that newly registered apps are added to
+	GetOktaGroup() string
 	// GetTLSConfig - tls config for IDP connection
 	GetTLSConfig() TLSConfig
 	// validate - Validates the IDP configuration
@@ -292,6 +296,7 @@ type IDPAuthConfiguration struct {
 
 // OktaIDPConfiguration - okta-specific configuration.
 type OktaIDPConfiguration struct {
+	Group              string `json:"group,omitempty"`
 	AppNameTemplate    string `json:"appname_template,omitempty"`
 	PolicyNameTemplate string `json:"policyname_template,omitempty"`
 	ScopeSources       string `json:"scope_sources,omitempty"`
@@ -371,6 +376,14 @@ func (i *IDPConfiguration) GetScopeBlacklist() string {
 		return defaultOktaScopeBlacklist
 	}
 	return i.Okta.ScopeBlacklist
+}
+
+// GetOktaGroup - name of the Okta group that newly registered apps are added to.
+func (i *IDPConfiguration) GetOktaGroup() string {
+	if i.Okta == nil {
+		return ""
+	}
+	return i.Okta.Group
 }
 
 // GetExtraProperties - set of additional properties to be applied when registering the client

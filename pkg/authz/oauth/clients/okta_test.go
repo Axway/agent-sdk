@@ -12,13 +12,19 @@ import (
 )
 
 const (
-	removeClientID   = "remove-me"
-	caseErrForbidden = "returns error on forbidden"
-	testPolicyName   = "my-policy"
-	testClientID     = "client1"
-	testRuleName     = "rule-1"
-	testGrantType    = "client_credentials"
-	testRuleScope    = "read:api"
+	removeClientID    = "remove-me"
+	errForbidden  = "returns error on forbidden"
+	nilOn200      = "returns nil on 200"
+	nilOn204      = "returns nil on 204"
+	notFoundAsSuccess  = "treats 404 as success"
+	testPolicyName    = "my-policy"
+	testClientID      = "client1"
+	testRuleName      = "rule-1"
+	testGrantType     = "client_credentials"
+	testRuleScope     = "read:api"
+	testGroupID       = "grp-123"
+	testGroupName     = "Marketplace"
+	testAppID         = "app-abc"
 )
 
 func newTestOktaClient(t *testing.T, handler http.HandlerFunc) (*Okta, func()) {
@@ -44,7 +50,7 @@ func TestOktaUpdatePolicy(t *testing.T) {
 		code    int
 		wantErr bool
 	}{
-		caseErrForbidden:    {code: http.StatusForbidden, wantErr: true},
+		errForbidden:    {code: http.StatusForbidden, wantErr: true},
 		"returns nil on ok": {code: http.StatusOK, wantErr: false},
 	}
 	for name, tc := range cases {
@@ -66,7 +72,7 @@ func TestOktaCreatePolicy(t *testing.T) {
 		wantErr bool
 	}{
 		"returns created policy on 201": {code: http.StatusCreated, body: `{"id":"pol-new","name":"my-policy"}`, wantErr: false},
-		caseErrForbidden:                {code: http.StatusForbidden, body: `forbidden`, wantErr: true},
+		errForbidden:                {code: http.StatusForbidden, body: `forbidden`, wantErr: true},
 	}
 	for name, tc := range cases {
 		tc := tc
@@ -187,7 +193,7 @@ func TestOktaRemoveClientFromPolicy(t *testing.T) {
 			wantErr: false,
 			wantPUT: true,
 		},
-		caseErrForbidden: {
+		errForbidden: {
 			code:    http.StatusForbidden,
 			policy:  policyWith("keep-me", removeClientID),
 			wantErr: true,
@@ -236,10 +242,10 @@ func TestOktaDeactivateApp(t *testing.T) {
 		code    int
 		wantErr bool
 	}{
-		"returns nil on 200":    {code: http.StatusOK, wantErr: false},
-		"returns nil on 204":    {code: http.StatusNoContent, wantErr: false},
-		"treats 404 as success": {code: http.StatusNotFound, wantErr: false},
-		caseErrForbidden:        {code: http.StatusForbidden, wantErr: true},
+		nilOn200:    {code: http.StatusOK, wantErr: false},
+		nilOn204:    {code: http.StatusNoContent, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:        {code: http.StatusForbidden, wantErr: true},
 	}
 	for name, tc := range cases {
 		tc := tc
@@ -253,14 +259,100 @@ func TestOktaDeactivateApp(t *testing.T) {
 	}
 }
 
+func TestOktaFindGroupByName(t *testing.T) {
+	cases := map[string]struct {
+		responseCode int
+		responseBody string
+		wantID       string
+		wantErr      bool
+	}{
+		"returns group ID when found": {
+			responseCode: http.StatusOK,
+			responseBody: `[{"id":"grp-123","profile":{"name":"Marketplace"}},{"id":"grp-999","profile":{"name":"MarketplaceOther"}}]`,
+			wantID:       testGroupID,
+		},
+		"returns empty string when no exact match": {
+			responseCode: http.StatusOK,
+			responseBody: `[{"id":"grp-999","profile":{"name":"MarketplaceOther"}}]`,
+			wantID:       "",
+		},
+		"returns empty string on empty list": {
+			responseCode: http.StatusOK,
+			responseBody: `[]`,
+			wantID:       "",
+		},
+		errForbidden: {
+			responseCode: http.StatusForbidden,
+			responseBody: `forbidden`,
+			wantErr:      true,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.responseCode)
+				_, _ = w.Write([]byte(tc.responseBody))
+			})
+			defer close()
+			got, err := client.FindGroupByName(testGroupName)
+			assertOktaErr(t, err, tc.wantErr)
+			if !tc.wantErr {
+				assert.Equal(t, tc.wantID, got)
+			}
+		})
+	}
+}
+
+func TestOktaAssignGroupToApp(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		wantErr bool
+	}{
+		nilOn200:   {code: http.StatusOK, wantErr: false},
+		"returns nil on 201":   {code: http.StatusCreated, wantErr: false},
+		errForbidden:       {code: http.StatusForbidden, wantErr: true},
+		"returns error on 404": {code: http.StatusNotFound, wantErr: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+			})
+			defer close()
+			assertOktaErr(t, client.AssignGroupToApp(testAppID, testGroupID), tc.wantErr)
+		})
+	}
+}
+
+func TestOktaUnassignGroupFromApp(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		wantErr bool
+	}{
+		nilOn204:    {code: http.StatusNoContent, wantErr: false},
+		nilOn200:    {code: http.StatusOK, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:        {code: http.StatusForbidden, wantErr: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+			})
+			defer close()
+			assertOktaErr(t, client.UnassignGroupFromApp(testAppID, testGroupID), tc.wantErr)
+		})
+	}
+}
+
 func TestOktaDeleteApp(t *testing.T) {
 	cases := map[string]struct {
 		code    int
 		wantErr bool
 	}{
-		"returns nil on 204":    {code: http.StatusNoContent, wantErr: false},
-		"treats 404 as success": {code: http.StatusNotFound, wantErr: false},
-		caseErrForbidden:        {code: http.StatusForbidden, wantErr: true},
+		nilOn204:    {code: http.StatusNoContent, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:        {code: http.StatusForbidden, wantErr: true},
 	}
 	for name, tc := range cases {
 		tc := tc

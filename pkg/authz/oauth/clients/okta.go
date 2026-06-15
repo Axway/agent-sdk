@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
@@ -17,6 +18,15 @@ type Okta struct {
 	APIToken string
 	Client   coreapi.Client
 	logger   log.FieldLogger
+}
+
+type oktaGroupProfile struct {
+	Name string `json:"name"`
+}
+
+type oktaGroupSearchResult struct {
+	ID      string           `json:"id"`
+	Profile oktaGroupProfile `json:"profile"`
 }
 
 type oktaPolicyListResult struct {
@@ -368,6 +378,61 @@ func (o *Okta) DeleteApp(appID string) error {
 		return nil
 	}
 	if !isStatus(resp.Code, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
+	}
+	return nil
+}
+
+// FindGroupByName searches Okta for a group with the given name and returns its ID.
+// Returns ("", nil) when no matching group exists.
+func (o *Okta) FindGroupByName(groupName string) (string, error) {
+	groupName = strings.TrimSpace(groupName)
+	if groupName == "" {
+		return "", nil
+	}
+	endpoint := fmt.Sprintf("%s/api/v1/groups?q=%s", o.BaseURL, url.QueryEscape(groupName))
+	o.logger.WithField("groupName", groupName).WithField("endpoint", endpoint).Trace("searching for Okta group")
+
+	var groups []oktaGroupSearchResult
+	if err := o.doGetJSON(endpoint, &groups); err != nil {
+		return "", err
+	}
+
+	for _, g := range groups {
+		if g.Profile.Name == groupName {
+			return g.ID, nil
+		}
+	}
+	return "", nil
+}
+
+// AssignGroupToApp adds an Okta application to the given group.
+func (o *Okta) AssignGroupToApp(appID, groupID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
+	o.logger.WithField("appID", appID).WithField("groupID", groupID).WithField("endpoint", endpoint).Trace("assigning group to Okta app")
+	resp, err := o.doRequest(coreapi.PUT, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if !isStatus(resp.Code, http.StatusOK, http.StatusCreated) {
+		return o.unexpectedStatusError(coreapi.PUT, endpoint, resp)
+	}
+	return nil
+}
+
+// UnassignGroupFromApp removes an Okta application from the given group.
+// A 404 response is treated as success (app or group already gone).
+func (o *Okta) UnassignGroupFromApp(appID, groupID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/apps/%s/groups/%s", o.BaseURL, appID, groupID)
+	o.logger.WithField("appID", appID).WithField("groupID", groupID).WithField("endpoint", endpoint).Trace("removing app from Okta group")
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusNoContent, http.StatusOK) {
 		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
 	}
 	return nil

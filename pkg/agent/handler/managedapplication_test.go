@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -190,6 +191,58 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 			} else {
 				assert.True(t, c.createSubCalled)
 			}
+		})
+	}
+}
+
+func TestManagedApplicationHandlerCacheMiss(t *testing.T) {
+	cases := map[string]struct {
+		getTeamResult []defs.PlatformTeam
+		getTeamErr    error
+		wantTeamName  string
+	}{
+		"API returns team on cache miss": {
+			getTeamResult: []defs.PlatformTeam{{ID: team.ID, Name: teamName}},
+			wantTeamName:  teamName,
+		},
+		"API returns empty on cache miss": {
+			getTeamResult: []defs.PlatformTeam{},
+			wantTeamName:  "",
+		},
+		"API errors on cache miss": {
+			getTeamErr:   fmt.Errorf("network error"),
+			wantTeamName: "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			app := managedAppForTest
+			app.Status.Level = prov.Pending.String()
+
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       tc.wantTeamName,
+				status: mock.MockRequestStatus{
+					Status:     prov.Success,
+					Msg:        "msg",
+					Properties: map[string]string{"status_key": "status_val"},
+				},
+				t: t,
+			}
+			c := &mockClient{
+				expectedStatus: prov.Success.String(),
+				getTeamResult:  tc.getTeamResult,
+				getTeamErr:     tc.getTeamErr,
+				t:              t,
+			}
+			// team intentionally NOT pre-loaded into cache to exercise the fallback path
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			h := NewManagedApplicationHandler(p, cm, c)
+
+			ri, _ := app.AsInstance()
+			err := h.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
 		})
 	}
 }

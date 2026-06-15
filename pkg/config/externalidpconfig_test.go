@@ -217,6 +217,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 		wantPolicyTemplate string
 		wantScopeSources   string
 		wantScopeBlacklist string
+		wantGroup          string
 	}{
 		"nil okta config returns all defaults": {
 			cfg:                &IDPConfiguration{},
@@ -224,9 +225,11 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 			wantPolicyTemplate: defaultOktaPolicyNameTemplate,
 			wantScopeSources:   defaultOktaScopeSources,
 			wantScopeBlacklist: defaultOktaScopeBlacklist,
+			wantGroup:          "",
 		},
 		"configured values are returned": {
 			cfg: &IDPConfiguration{Okta: &OktaIDPConfiguration{
+				Group:              "Marketplace",
 				AppNameTemplate:    "my-" + OktaPlaceholderCredentialName,
 				PolicyNameTemplate: OktaPlaceholderScope,
 				ScopeSources:       "swagger",
@@ -236,6 +239,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 			wantPolicyTemplate: OktaPlaceholderScope,
 			wantScopeSources:   "swagger",
 			wantScopeBlacklist: "openid",
+			wantGroup:          "Marketplace",
 		},
 	}
 	for name, tc := range cases {
@@ -244,6 +248,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 			assert.Equal(t, tc.wantPolicyTemplate, tc.cfg.GetPolicyNameTemplate())
 			assert.Equal(t, tc.wantScopeSources, tc.cfg.GetScopeSources())
 			assert.Equal(t, tc.wantScopeBlacklist, tc.cfg.GetScopeBlacklist())
+			assert.Equal(t, tc.wantGroup, tc.cfg.GetOktaGroup())
 		})
 	}
 }
@@ -251,7 +256,6 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 func TestRemovedSymbols(t *testing.T) {
 	typ := reflect.TypeFor[OktaIDPConfiguration]()
 	cases := map[string]struct{}{
-		"Group":  {},
 		"Policy": {},
 	}
 	for field := range cases {
