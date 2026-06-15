@@ -109,7 +109,7 @@ func (cv *cacheValidator) sequenceInSync() bool {
 	)
 	if err != nil {
 		cv.logger.WithError(err).Debug("could not fetch latest harvester sequence, proceeding with per-kind validation")
-		return false
+		return true
 	}
 
 	cachedSeq := cv.sequence.GetSequence()
