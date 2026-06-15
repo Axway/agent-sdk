@@ -76,9 +76,13 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		return nil
 	}
 
+	owner := app.Owner
+	if owner == nil {
+		owner = app.Marketplace.Resource.Owner
+	}
 	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       h.resolveTeamName(app.Owner),
+		teamName:       h.resolveTeamName(owner),
 		data:           util.GetAgentDetails(app),
 		consumerOrgID:  getConsumerOrgID(app),
 		id:             app.Metadata.ID,

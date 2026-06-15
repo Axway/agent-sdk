@@ -248,6 +248,57 @@ func TestManagedApplicationHandlerCacheMiss(t *testing.T) {
 	}
 }
 
+func TestMPOwnerFallback(t *testing.T) {
+	cases := map[string]struct {
+		mpOwner      *apiv1.Owner
+		wantTeamName string
+	}{
+		"MP owner resolves from cache when top-level owner is nil": {
+			mpOwner:      &apiv1.Owner{ID: team.ID},
+			wantTeamName: teamName,
+		},
+		"both owners nil yields empty team name": {
+			mpOwner:      nil,
+			wantTeamName: "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			app := management.ManagedApplication{
+				ResourceMeta: managedAppForTest.ResourceMeta,
+				Owner:        nil,
+				Marketplace: management.ManagedApplicationMarketplace{
+					Resource: management.ManagedApplicationMarketplaceResource{
+						Owner: tc.mpOwner,
+					},
+				},
+				Spec:   management.ManagedApplicationSpec{},
+				Status: &apiv1.ResourceStatus{Level: prov.Pending.String()},
+			}
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       tc.wantTeamName,
+				status: mock.MockRequestStatus{
+					Status:     prov.Success,
+					Msg:        "msg",
+					Properties: map[string]string{"status_key": "status_val"},
+				},
+				t: t,
+			}
+			c := &mockClient{expectedStatus: prov.Success.String(), t: t}
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			cm.AddTeam(team)
+
+			h := NewManagedApplicationHandler(p, cm, c)
+			ri, _ := app.AsInstance()
+			err := h.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Nil(t, c.gotTeamQuery, "team was in startup cache — no API call expected")
+		})
+	}
+}
+
 func TestManagedApplicationHandler_wrong_kind(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	c := &mockClient{
