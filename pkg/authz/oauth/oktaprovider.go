@@ -186,6 +186,9 @@ func (i *okta) handlePerScopePolicyAssign(
 
 	replacer := strings.NewReplacer(corecfg.OktaPlaceholderOAuthFlow, normalizedFlow)
 	for _, scope := range scopes {
+		if strings.TrimSpace(scope) == "" {
+			continue
+		}
 		policyName := replacer.Replace(strings.ReplaceAll(template, corecfg.OktaPlaceholderScope, scope))
 		if err := i.assignScopePolicy(oktaClient, clientRes, idp, authServerID, grantType, policyName, scope); err != nil {
 			return err

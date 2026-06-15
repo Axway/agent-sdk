@@ -449,6 +449,15 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		if !p.cfg.GetAuthConfig().UseRegistrationAccessToken() {
 			clientRes.RegistrationAccessToken = ""
 		}
+		// Some IdPs (notably Okta for client_credentials) omit scope/grant_types
+		// from the registration response. Carry them from the request so the
+		// post-hook (per-scope policy assignment) has the data it needs.
+		if len(clientRes.Scope) == 0 {
+			clientRes.Scope = Scopes(clientReq.GetScopes())
+		}
+		if len(clientRes.GrantTypes) == 0 {
+			clientRes.GrantTypes = clientReq.GetGrantTypes()
+		}
 
 		if err := p.runPostRegistrationHook(clientRes, authPrefix, token); err != nil {
 			return nil, err

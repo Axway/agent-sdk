@@ -513,6 +513,80 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	assert.Equal(t, int32(1), deleteCalls.Load())
 }
 
+func TestRegisterClientOktaScopesRequest(t *testing.T) {
+	cases := map[string]struct {
+		regResponseBody string
+		requestScopes   Scopes
+		wantPolicyCalls int32
+	}{
+		"response omits scopes — policy creation runs from request scopes": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1"}`,
+			requestScopes:   Scopes{testScope},
+			wantPolicyCalls: 1,
+		},
+		"response includes scopes — policy creation runs normally": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1","scope":"` + testScope + `","grant_types":["client_credentials"]}`,
+			requestScopes:   Scopes{testScope},
+			wantPolicyCalls: 1,
+		},
+		"no scopes in request — policy creation skipped": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1"}`,
+			requestScopes:   nil,
+			wantPolicyCalls: 0,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var policyCalls atomic.Int32
+			var srv *httptest.Server
+			srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case strings.Contains(r.URL.Path, ".well-known"):
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+				case r.Method == http.MethodPost && r.URL.Path == "/register":
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(tc.regResponseBody))
+				case r.Method == http.MethodGet && r.URL.Path == oktaPoliciesEndpointByID:
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+				case r.Method == http.MethodPost && r.URL.Path == oktaPoliciesEndpointByID:
+					policyCalls.Add(1)
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(`{"id":"` + oktaPolicyID + `"}`))
+				case r.Method == http.MethodPost && r.URL.Path == oktaPolicyRulesEndpoint:
+					w.WriteHeader(http.StatusCreated)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer srv.Close()
+
+			idpCfg := &config.IDPConfiguration{
+				Name:        "test",
+				Type:        TypeOkta,
+				MetadataURL: srv.URL + testAuthServerMetadataURL,
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: testToken,
+				},
+			}
+			p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+			assert.NoError(t, err)
+
+			clientReq := &clientMetadata{
+				ClientName: "test-app",
+				GrantTypes: []string{GrantTypeClientCredentials},
+				Scope:      tc.requestScopes,
+			}
+			cr, err := p.RegisterClient(clientReq)
+			assert.NoError(t, err)
+			assert.NotNil(t, cr)
+			assert.Equal(t, tc.wantPolicyCalls, policyCalls.Load())
+		})
+	}
+}
+
 func TestNewProviderValidatesOktaGroup(t *testing.T) {
 	cases := map[string]struct {
 		groupsCode  int
