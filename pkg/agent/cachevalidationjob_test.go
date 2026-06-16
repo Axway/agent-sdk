@@ -133,12 +133,16 @@ func TestCacheValidator_Execute(t *testing.T) {
 	svcGVK := management.APIServiceGVK()
 	instGVK := management.APIServiceInstanceGVK()
 	crrGVK := management.ComplianceRuntimeResultGVK()
+	managedAppGVK := management.ManagedApplicationGVK()
+	crdGVK := management.CredentialRequestDefinitionGVK()
 	scopeName := "testEnv"
 
 	svc1 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", modTime)
 	svc2 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc2", modTime)
 	inst1 := makeServerResource(instGVK.Kind, "Environment", scopeName, "inst1", modTime)
 	crr1 := makeServerResource(crrGVK.Kind, "Environment", scopeName, "crr1", modTime)
+	managedApp1 := makeServerResource(managedAppGVK.Kind, "Environment", scopeName, "managedApp1", modTime)
+	crd1 := makeServerResource(crdGVK.Kind, "Environment", scopeName, "crd1", modTime)
 
 	singleScopeWatchTopic := func(gvk apiv1.GroupVersionKind, scopeName string) *management.WatchTopic {
 		return &management.WatchTopic{
@@ -193,15 +197,43 @@ func TestCacheValidator_Execute(t *testing.T) {
 		"count mismatch": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
+				cacheMan.setResources(crrGVK.Group, crrGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(crrGVK.Kind, scopeName, "crr1"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(crrGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crrGVK.Kind},
+		},
+		// APIService count validation is intentionally relaxed: validateKind always
+		// returns true for APIService because the cache deduplicates by externalAPIID,
+		// so count mismatches are expected and not treated as out-of-sync.
+		"APIService higher count mismatch - not treated as out of sync will be treated with APIServiceInstances": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
 			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:     errCacheOutOfSync,
+			expectErr:     nil,
 			expectedKinds: []string{svcGVK.Kind},
 		},
 		"extra resource in cache - count mismatch detected": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[crd1.GetKindLink()] = []*apiv1.ResourceInstance{crd1}
+				cacheMan.setResources(crdGVK.Group, crdGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(crdGVK.Kind, scopeName, "crd1"): modTime,
+					agentcache.ResourceCacheKey(crdGVK.Kind, scopeName, "crd2"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(crdGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crdGVK.Kind},
+		},
+		// When the cache holds more APIService entries than the server, the count
+		// mismatch is logged but still not treated as out-of-sync (returns true).
+		"APIService extra resource in cache - still not treated as out of sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
@@ -281,6 +313,29 @@ func TestCacheValidator_Execute(t *testing.T) {
 		},
 		"second kind out of sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[managedApp1.GetKindLink()] = []*apiv1.ResourceInstance{managedApp1}
+				client.resources[crd1.GetKindLink()] = []*apiv1.ResourceInstance{crd1}
+				cacheMan.setResources(managedAppGVK.Group, managedAppGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(managedAppGVK.Kind, scopeName, "managedApp1"): modTime,
+				})
+				cacheMan.setResources(crdGVK.Group, crdGVK.Kind, map[string]time.Time{})
+			},
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{Group: managedAppGVK.Group, Kind: managedAppGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+						{Group: crdGVK.Group, Kind: crdGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+					},
+				},
+			},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crdGVK.Kind},
+		},
+		// When APIServiceInstance is out of sync, the APIService filter is also
+		// included in the failed set (cache is keyed by externalAPIID, so the
+		// full rebuild must include both kinds).
+		"second kind out of sync - APIServiceInstance fetches in APIService": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
@@ -297,7 +352,7 @@ func TestCacheValidator_Execute(t *testing.T) {
 				},
 			},
 			expectErr:     errCacheOutOfSync,
-			expectedKinds: []string{instGVK.Kind},
+			expectedKinds: []string{instGVK.Kind, svcGVK.Kind},
 		},
 		"both kinds out of sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -372,6 +427,37 @@ func TestCacheValidator_Execute(t *testing.T) {
 			sequence:      &mockSeqProvider{seq: 10},
 			expectErr:     errCacheOutOfSync,
 			expectedKinds: nil,
+		},
+		// Harvester unreachable (ReceiveSyncEvents returns an error): Execute falls back
+		// to per-kind count validation instead of immediately reporting out of sync.
+		// Cache and server are in sync, so no error is returned.
+		"harvester unreachable - falls back to per-kind validation, cache in sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:     &mockCVHarvester{err: fmt.Errorf("connection refused")},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
+		},
+		// Harvester unreachable and cache is out of sync: per-kind count validation
+		// runs and catches the mismatch, returning the failed filter.
+		// Uses APIServiceInstance (not APIService) because APIService count validation
+		// is intentionally relaxed and never reports out-of-sync.
+		"harvester unreachable - falls back to per-kind validation, cache out of sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
+				cacheMan.setResources(instGVK.Group, instGVK.Kind, map[string]time.Time{})
+			},
+			watchTopic:    singleScopeWatchTopic(instGVK, scopeName),
+			harvester:     &mockCVHarvester{err: fmt.Errorf("connection refused")},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{instGVK.Kind},
 		},
 	}
 

@@ -67,10 +67,14 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 
 	cachedFilters := make([]management.WatchTopicSpecFilters, 0, len(filters))
 	var wg sync.WaitGroup
+	apiSvcFilter := management.WatchTopicSpecFilters{}
 	for _, filter := range filters {
 		if agentcache.IsCachedKind(filter.Kind) {
 			wg.Add(1)
 			cachedFilters = append(cachedFilters, filter)
+			if filter.Kind == management.APIServiceGVK().Kind {
+				apiSvcFilter = filter
+			}
 			go func(f management.WatchTopicSpecFilters) {
 				defer wg.Done()
 				if !cv.validateKind(f) {
@@ -82,13 +86,24 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	wg.Wait()
 	close(ch)
 
-	var failed []management.WatchTopicSpecFilters
+	failed := make(map[string]management.WatchTopicSpecFilters)
 	for f := range ch {
-		failed = append(failed, f)
+		failed[f.Kind] = f
+	}
+
+	// APIService cache is keyed by external API ID instead of resource ID.
+	// Write APIService filter along with APIServiceInstance filter when APIServiceInstance counts are off.
+	_, ok := failed[management.APIServiceInstanceGVK().Kind]
+	if ok && apiSvcFilter.Kind != "" {
+		failed[apiSvcFilter.Kind] = apiSvcFilter
 	}
 
 	if len(failed) > 0 {
-		return failed, errCacheOutOfSync
+		filtersToProcess := make([]management.WatchTopicSpecFilters, 0, len(failed))
+		for _, f := range failed {
+			filtersToProcess = append(filtersToProcess, f)
+		}
+		return filtersToProcess, errCacheOutOfSync
 	}
 
 	cv.logger.Debug("cache validation passed")
@@ -161,6 +176,17 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 	if err != nil {
 		logger.WithError(err).Error("HEAD request failed, falling back to full metadata fetch")
 		return false
+	}
+
+	if filter.Kind == management.APIServiceGVK().Kind {
+		if serverCount < len(cachedResources) {
+			logger.
+				WithField("serverCount", serverCount).
+				WithField("cacheCount", len(cachedResources)).
+				Info("cache validation: APIService count mismatch, cache is out of sync")
+			return false
+		}
+		return true
 	}
 
 	if serverCount != len(cachedResources) {
