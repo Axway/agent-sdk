@@ -66,6 +66,21 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	}
 	enrichedRI, _ := arEnriched.AsInstance()
 
+	// simulates a resource that was cached via the error-fallback path (no embedded references)
+	arNoRefs := &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			GroupVersionKind: management.AccessRequestGVK(),
+			Metadata:         apiv1.Metadata{ID: "ar"},
+			Name:             "ar",
+		},
+		Spec: management.AccessRequestSpec{
+			ManagedApplication: "app",
+			ApiServiceInstance: "instance",
+		},
+		Status: &apiv1.ResourceStatus{Level: "Success"},
+	}
+	riNoRefs, _ := arNoRefs.AsInstance()
+
 	noStatusAR := &management.AccessRequest{
 		ResourceMeta: apiv1.ResourceMeta{
 			GroupVersionKind: management.AccessRequestGVK(),
@@ -82,13 +97,13 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		action          proto.Event_Type
-		ri              *apiv1.ResourceInstance
-		getRI           *apiv1.ResourceInstance
-		getErr          error
-		prePopulateInst bool
-		expectCached    bool
-		expectEnriched  bool
+		action         proto.Event_Type
+		ri             *apiv1.ResourceInstance
+		getRI          *apiv1.ResourceInstance
+		getErr         error
+		cachedRI       *apiv1.ResourceInstance
+		expectCached   bool
+		expectEnriched bool
 	}{
 		"wrong kind - no-op": {
 			action:       proto.Event_CREATED,
@@ -119,17 +134,25 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 			getRI:        nil,
 			expectCached: true,
 		},
-		"created, already cached - no GET call": {
-			action:          proto.Event_CREATED,
-			ri:              ri,
-			prePopulateInst: true,
-			expectCached:    true,
+		"created, already cached with references - no GET call": {
+			action:       proto.Event_CREATED,
+			ri:           ri,
+			cachedRI:     ri,
+			expectCached: true,
+		},
+		"updated, cached without references - re-fetches enriched RI": {
+			action:         proto.Event_UPDATED,
+			ri:             ri,
+			cachedRI:       riNoRefs,
+			getRI:          enrichedRI,
+			expectCached:   true,
+			expectEnriched: true,
 		},
 		"deleted - removed from cache": {
-			action:          proto.Event_DELETED,
-			ri:              ri,
-			prePopulateInst: true,
-			expectCached:    false,
+			action:       proto.Event_DELETED,
+			ri:           ri,
+			cachedRI:     ri,
+			expectCached: false,
 		},
 	}
 
@@ -141,8 +164,8 @@ func TestTraceAccessRequestTraceHandler(t *testing.T) {
 				ResourceMeta: apiv1.ResourceMeta{Metadata: apiv1.Metadata{ID: "app"}, Name: "app"},
 			})
 
-			if tc.prePopulateInst {
-				cm.AddAccessRequest(ri)
+			if tc.cachedRI != nil {
+				cm.AddAccessRequest(tc.cachedRI)
 			}
 
 			c := &mockClient{getRI: tc.getRI, getErr: tc.getErr}

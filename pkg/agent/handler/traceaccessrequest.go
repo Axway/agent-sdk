@@ -54,7 +54,7 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.Even
 
 	if h.shouldProcessForAgent(ar.Status, ar.Metadata.State) {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
-		if cachedAccessReq == nil {
+		if cachedAccessReq == nil || len(cachedAccessReq.Metadata.References) == 0 {
 			enriched, err := h.client.GetResource(resource.GetSelfLink() + "?embed=metadata.references")
 			if err != nil || enriched == nil {
 				enriched = resource

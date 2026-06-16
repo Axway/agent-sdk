@@ -121,10 +121,9 @@ func TestDiscoveryCacheExecute(t *testing.T) {
 				arParams := c.queryParams["accessrequests"]
 				assert.Equal(t, "metadata.references", arParams["embed"], "accessrequests must be fetched with embed=metadata.references")
 			}
-			// APIService fetch must include embed=x-agent-details so externalAPIID is populated in the cache.
-			if tc.svcCount > 0 {
-				svcParams := c.queryParams["apiservices"]
-				assert.Equal(t, "x-agent-details", svcParams["embed"], "apiservices must be fetched with embed=x-agent-details")
+			// APIService fetch must not include embed param; x-agent-details is already in the response.
+			if svcParams, ok := c.queryParams["apiservices"]; ok {
+				assert.Empty(t, svcParams["embed"], "apiservices must not include embed param")
 			}
 		})
 	}

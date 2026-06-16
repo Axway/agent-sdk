@@ -257,8 +257,6 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		var queryParams map[string]string
 		if filter.Kind == management.AccessRequestGVK().Kind {
 			queryParams = map[string]string{"embed": "metadata.references"}
-		} else if filter.Kind == management.APIServiceGVK().Kind {
-			queryParams = map[string]string{"embed": "x-agent-details"}
 		}
 
 		resources, err := dc.client.GetAPIV1ResourceInstances(queryParams, ri.GetKindLink())
