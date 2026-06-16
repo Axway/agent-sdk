@@ -13,10 +13,10 @@ import (
 
 const (
 	removeClientID    = "remove-me"
-	errForbidden  = "returns error on forbidden"
-	nilOn200      = "returns nil on 200"
-	nilOn204      = "returns nil on 204"
-	notFoundAsSuccess  = "treats 404 as success"
+	errForbidden      = "returns error on forbidden"
+	nilOn200          = "returns nil on 200"
+	nilOn204          = "returns nil on 204"
+	notFoundAsSuccess = "treats 404 as success"
 	testPolicyName    = "my-policy"
 	testClientID      = "client1"
 	testRuleName      = "rule-1"
@@ -25,6 +25,8 @@ const (
 	testGroupID       = "grp-123"
 	testGroupName     = "Marketplace"
 	testAppID         = "app-abc"
+	testAuthServerID  = "as1"
+	testPolicyID      = "pol1"
 )
 
 func newTestOktaClient(t *testing.T, handler http.HandlerFunc) (*Okta, func()) {
@@ -233,6 +235,49 @@ func TestOktaRemoveClientFromPolicy(t *testing.T) {
 			assertOktaErr(t, client.RemoveClientFromPolicy("as1", tc.policy, removeClientID), tc.wantErr)
 			assert.Equal(t, tc.wantPUT, putCalled, "PUT call expectation mismatch")
 			assert.False(t, deleteCalled, "policy must never be deleted")
+		})
+	}
+}
+
+func TestOktaDeactivatePolicy(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		wantErr bool
+	}{
+		nilOn200:          {code: http.StatusOK, wantErr: false},
+		nilOn204:          {code: http.StatusNoContent, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:      {code: http.StatusForbidden, wantErr: true},
+	}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+			})
+			defer close()
+			assertOktaErr(t, client.DeactivatePolicy(testAuthServerID, testPolicyID), tc.wantErr)
+		})
+	}
+}
+
+func TestOktaDeletePolicy(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		wantErr bool
+	}{
+		nilOn204:          {code: http.StatusNoContent, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:      {code: http.StatusForbidden, wantErr: true},
+	}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+			})
+			defer close()
+			assertOktaErr(t, client.DeletePolicy(testAuthServerID, testPolicyID), tc.wantErr)
 		})
 	}
 }

@@ -33,8 +33,9 @@ const (
 	oktaPolicyID                = "pol-123"
 	oktaPolicyEndpointByID      = "/api/v1/authorizationServers/authorizationID/policies/pol-123"
 	oktaPolicyRulesEndpoint     = "/api/v1/authorizationServers/authorizationID/policies/pol-123/rules"
-	oktaDeactivateEndpoint      = "/api/v1/apps/app123/lifecycle/deactivate"
-	oktaDeleteEndpoint          = "/api/v1/apps/app123"
+	oktaDeactivateEndpoint           = "/api/v1/apps/app123/lifecycle/deactivate"
+	oktaDeleteEndpoint               = "/api/v1/apps/app123"
+	oktaPolicyDeactivateEndpoint     = "/api/v1/authorizationServers/authorizationID/policies/pol-123/lifecycle/deactivate"
 	testGroupName               = "Marketplace"
 	testGroupID                 = "grp-456"
 	oktaGroupsEndpoint          = "/api/v1/groups"
@@ -279,7 +280,7 @@ func TestOktaPostProcessClientUnregister(t *testing.T) {
 		wantMinCalls map[string]int
 		wantErr      bool
 	}{
-		"deactivates app, deletes app, removes from policy": {
+		"deactivates app, deletes app, removes client from shared policy": {
 			scopes:    []string{testScope},
 			grantType: GrantTypeClientCredentials,
 			routes: map[string]http.HandlerFunc{
@@ -290,7 +291,7 @@ func TestOktaPostProcessClientUnregister(t *testing.T) {
 					w.WriteHeader(http.StatusNoContent)
 				},
 				http.MethodGet + " " + oktaPoliciesEndpointByID: oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: testPolicyName}}),
-				http.MethodGet + " " + oktaPolicyEndpointByID:   oktaPolicyGetHandler(oktaPolicyID, testPolicyName, []string{testClientID}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:   oktaPolicyGetHandler(oktaPolicyID, testPolicyName, []string{testClientID, "other-client"}),
 				http.MethodPut + " " + oktaPolicyEndpointByID:   func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
 			},
 			wantMinCalls: map[string]int{
@@ -299,6 +300,30 @@ func TestOktaPostProcessClientUnregister(t *testing.T) {
 				http.MethodGet + " " + oktaPoliciesEndpointByID: 1,
 				http.MethodGet + " " + oktaPolicyEndpointByID:   1,
 				http.MethodPut + " " + oktaPolicyEndpointByID:   1,
+			},
+		},
+		"policy deactivated and deleted when last client removed": {
+			scopes:    []string{testScope},
+			grantType: GrantTypeClientCredentials,
+			routes: map[string]http.HandlerFunc{
+				http.MethodPost + " " + oktaDeactivateEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				},
+				http.MethodDelete + " " + oktaDeleteEndpoint: func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				},
+				http.MethodGet + " " + oktaPoliciesEndpointByID:      oktaPoliciesListHandler([]oktaPolicyItem{{ID: oktaPolicyID, Name: testPolicyName}}),
+				http.MethodGet + " " + oktaPolicyEndpointByID:         oktaPolicyGetHandler(oktaPolicyID, testPolicyName, []string{testClientID}),
+				http.MethodPut + " " + oktaPolicyEndpointByID:         func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
+				http.MethodPost + " " + oktaPolicyDeactivateEndpoint:  func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
+				http.MethodDelete + " " + oktaPolicyEndpointByID:      func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) },
+			},
+			wantMinCalls: map[string]int{
+				http.MethodGet + " " + oktaPoliciesEndpointByID:     1,
+				http.MethodGet + " " + oktaPolicyEndpointByID:       1,
+				http.MethodPut + " " + oktaPolicyEndpointByID:       1,
+				http.MethodPost + " " + oktaPolicyDeactivateEndpoint: 1,
+				http.MethodDelete + " " + oktaPolicyEndpointByID:    1,
 			},
 		},
 		"missing policy during unassign is skipped": {

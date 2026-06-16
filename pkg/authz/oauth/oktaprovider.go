@@ -273,9 +273,38 @@ func (i *okta) handlePerScopePolicyUnassign(
 		if err := oktaClient.RemoveClientFromPolicy(authServerID, policy, clientID); err != nil {
 			return err
 		}
+
+		if err := i.deletePolicyIfEmpty(oktaClient, authServerID, policyName, policy); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+func (i *okta) deletePolicyIfEmpty(oktaClient *clients.Okta, authServerID, policyName string, policy map[string]interface{}) error {
+	conditions, _ := policy["conditions"].(map[string]any)
+	clientsCond, _ := conditions["clients"].(map[string]any)
+	include, ok := clientsCond["include"].([]any)
+
+	if !ok || len(include) > 0 {
+		return nil
+	}
+
+	policyID, _ := policy["id"].(string)
+	if policyID == "" {
+		return nil
+	}
+
+	i.logger.
+		WithField("policyID", policyID).
+		WithField("policyName", policyName).
+		Debug("client list empty after removal, deleting policy")
+		
+	if err := oktaClient.DeactivatePolicy(authServerID, policyID); err != nil {
+		return err
+	}
+	return oktaClient.DeletePolicy(authServerID, policyID)
 }
 
 func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {

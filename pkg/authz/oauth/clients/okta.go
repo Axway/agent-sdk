@@ -313,7 +313,9 @@ func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope s
 	return nil
 }
 
-// The policy is never deleted, even when the include list becomes empty.
+// RemoveClientFromPolicy removes clientID from the policy's conditions.clients.include list and updates
+// the policy via the Okta API. If the client is not present the call is a no-op. The caller is
+// responsible for deleting the policy when the include list becomes empty.
 func (o *Okta) RemoveClientFromPolicy(authServerID string, policy map[string]interface{}, clientID string) error {
 	clientID = strings.TrimSpace(clientID)
 	policyID, _ := policy["id"].(string)
@@ -370,6 +372,42 @@ func (o *Okta) DeactivateApp(appID string) error {
 func (o *Okta) DeleteApp(appID string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/apps/%s", o.BaseURL, appID)
 	o.logger.WithField("appID", appID).WithField("endpoint", endpoint).Trace("deleting Okta app")
+	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.DELETE, endpoint, resp)
+	}
+	return nil
+}
+
+// DeactivatePolicy deactivates an Okta authorization server policy. A 404 is treated as success.
+// DeactivatePolicy must be called before DeletePolicy.
+func (o *Okta) DeactivatePolicy(authServerID, policyID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/lifecycle/deactivate", o.BaseURL, authServerID, policyID)
+	o.logger.WithField("authServerID", authServerID).WithField("policyID", policyID).WithField("endpoint", endpoint).Trace("deactivating Okta authorization server policy")
+	resp, err := o.doRequest(coreapi.POST, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+	}
+	return nil
+}
+
+// DeletePolicy deletes an Okta authorization server policy. A 404 is treated as success.
+// DeactivatePolicy must be called before this method.
+func (o *Okta) DeletePolicy(authServerID, policyID string) error {
+	endpoint := o.authServerPolicyEndpoint(authServerID, policyID)
+	o.logger.WithField("authServerID", authServerID).WithField("policyID", policyID).WithField("endpoint", endpoint).Trace("deleting Okta authorization server policy")
 	resp, err := o.doRequest(coreapi.DELETE, endpoint, nil)
 	if err != nil {
 		return err
