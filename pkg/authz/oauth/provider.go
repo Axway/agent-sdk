@@ -361,7 +361,7 @@ func (p *provider) GetAuthorizationEndpoint() string {
 }
 
 // GetSupportedScopes - returns the scopes supported by the provider, with any
-// configured blacklist removed. Non-Okta providers receive the raw scope list
+// configured exclude list removed. Non-Okta providers receive the raw scope list
 // unchanged.
 func (p *provider) GetSupportedScopes() []string {
 	if p.authServerMetadata == nil {
@@ -371,21 +371,21 @@ func (p *provider) GetSupportedScopes() []string {
 	if p.cfg.GetIDPType() != TypeOkta {
 		return scopes
 	}
-	bl, ok := p.cfg.(interface{ GetScopeBlacklist() string })
-	if !ok || bl.GetScopeBlacklist() == "" {
+	ex, ok := p.cfg.(interface{ GetScopeExclude() string })
+	if !ok || ex.GetScopeExclude() == "" {
 		return scopes
 	}
-	return filterScopeBlacklist(scopes, bl.GetScopeBlacklist())
+	return filterScopeExclude(scopes, ex.GetScopeExclude())
 }
 
-// filterScopeBlacklist removes any scope that appears in the comma-separated
-// blacklist string. Order of the remaining scopes is preserved.
-func filterScopeBlacklist(scopes []string, blacklist string) []string {
+// filterScopeExclude removes any scope that appears in the comma-separated
+// exclude string. Order of the remaining scopes is preserved.
+func filterScopeExclude(scopes []string, exclude string) []string {
 	if len(scopes) == 0 {
 		return scopes
 	}
 	denied := make(map[string]struct{})
-	for _, s := range strings.Split(blacklist, ",") {
+	for _, s := range strings.Split(exclude, ",") {
 		s = strings.TrimSpace(s)
 		if s != "" {
 			denied[s] = struct{}{}

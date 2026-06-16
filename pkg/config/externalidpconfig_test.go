@@ -31,7 +31,7 @@ const (
 	envKeyIDPOktaAppNameTemplate    = "AGENTFEATURES_IDP_OKTA_APPNAME_TEMPLATE_1"
 	envKeyIDPOktaPolicyNameTemplate = "AGENTFEATURES_IDP_OKTA_POLICYNAME_TEMPLATE_1"
 	envKeyIDPOktaScopeSources       = "AGENTFEATURES_IDP_OKTA_SCOPE_SOURCES_1"
-	envKeyIDPOktaScopeBlacklist     = "AGENTFEATURES_IDP_OKTA_SCOPE_BLACKLIST_1"
+	envKeyIDPOktaScopeExclude       = "AGENTFEATURES_IDP_OKTA_SCOPE_EXCLUDE_1"
 )
 
 func setEnvVars(t *testing.T, env map[string]string) {
@@ -169,8 +169,8 @@ func TestExternalIDPConfig(t *testing.T) {
 		"okta scope sources config via env var": {
 			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeSources: "swagger,okta"}),
 		},
-		"okta scope blacklist config via env var": {
-			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeBlacklist: "openid,profile"}),
+		"okta scope exclude config via env var": {
+			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeExclude: "openid,profile"}),
 		},
 		"client auth config with no clientid/secret": {
 			envNames: map[string]string{
@@ -216,7 +216,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 		wantAppTemplate    string
 		wantPolicyTemplate string
 		wantScopeSources   string
-		wantScopeBlacklist string
+		wantScopeExclude string
 		wantGroup          string
 	}{
 		"nil okta config returns all defaults": {
@@ -224,7 +224,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 			wantAppTemplate:    defaultOktaAppNameTemplate,
 			wantPolicyTemplate: defaultOktaPolicyNameTemplate,
 			wantScopeSources:   defaultOktaScopeSources,
-			wantScopeBlacklist: defaultOktaScopeBlacklist,
+			wantScopeExclude: defaultOktaScopeExclude,
 			wantGroup:          "",
 		},
 		"configured values are returned": {
@@ -233,12 +233,12 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 				AppNameTemplate:    "my-" + OktaPlaceholderCredentialName,
 				PolicyNameTemplate: OktaPlaceholderScope,
 				ScopeSources:       "swagger",
-				ScopeBlacklist:     "openid",
+				ScopeExclude:     "openid",
 			}},
 			wantAppTemplate:    "my-" + OktaPlaceholderCredentialName,
 			wantPolicyTemplate: OktaPlaceholderScope,
 			wantScopeSources:   "swagger",
-			wantScopeBlacklist: "openid",
+			wantScopeExclude: "openid",
 			wantGroup:          "Marketplace",
 		},
 	}
@@ -247,7 +247,7 @@ func TestOktaIDPConfigGetters(t *testing.T) {
 			assert.Equal(t, tc.wantAppTemplate, tc.cfg.GetAppNameTemplate())
 			assert.Equal(t, tc.wantPolicyTemplate, tc.cfg.GetPolicyNameTemplate())
 			assert.Equal(t, tc.wantScopeSources, tc.cfg.GetScopeSources())
-			assert.Equal(t, tc.wantScopeBlacklist, tc.cfg.GetScopeBlacklist())
+			assert.Equal(t, tc.wantScopeExclude, tc.cfg.GetScopeExclude())
 			assert.Equal(t, tc.wantGroup, tc.cfg.GetOktaGroup())
 		})
 	}

@@ -27,7 +27,7 @@ const (
 	scopeEmail    = "email"
 	scopeWriteAPI = "write:api"
 
-	blacklistOpenIDProfile = "openid,profile"
+	excludeOpenIDProfile = "openid,profile"
 )
 
 type providerTestCase struct {
@@ -658,66 +658,66 @@ func TestNewProviderValidatesOktaGroup(t *testing.T) {
 	}
 }
 
-func TestFilterScopeBlacklist(t *testing.T) {
+func TestFilterScopeExclude(t *testing.T) {
 	cases := map[string]struct {
 		scopes    []string
-		blacklist string
+		exclude string
 		want      []string
 	}{
-		"removes blacklisted scopes": {
+		"removes excluded scopes": {
 			scopes:    []string{scopeOpenID, scopeProfile, testScope, scopeWriteAPI},
-			blacklist: blacklistOpenIDProfile,
+			exclude: excludeOpenIDProfile,
 			want:      []string{testScope, scopeWriteAPI},
 		},
-		"empty blacklist returns all scopes": {
+		"empty exclude returns all scopes": {
 			scopes:    []string{scopeOpenID, testScope},
-			blacklist: "",
+			exclude: "",
 			want:      []string{scopeOpenID, testScope},
 		},
-		"blacklist with whitespace is trimmed": {
+		"exclude with whitespace is trimmed": {
 			scopes:    []string{scopeOpenID, testScope},
-			blacklist: " openid , profile ",
+			exclude: " openid , profile ",
 			want:      []string{testScope},
 		},
-		"no scopes match blacklist returns all": {
+		"no scopes match exclude returns all": {
 			scopes:    []string{testScope, scopeWriteAPI},
-			blacklist: blacklistOpenIDProfile,
+			exclude: excludeOpenIDProfile,
 			want:      []string{testScope, scopeWriteAPI},
 		},
-		"all scopes blacklisted returns empty": {
+		"all scopes excludeed returns empty": {
 			scopes:    []string{scopeOpenID, scopeProfile},
-			blacklist: blacklistOpenIDProfile,
+			exclude: excludeOpenIDProfile,
 			want:      []string{},
 		},
 		"nil scopes returns nil": {
 			scopes:    nil,
-			blacklist: scopeOpenID,
+			exclude: scopeOpenID,
 			want:      nil,
 		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			got := filterScopeBlacklist(tc.scopes, tc.blacklist)
+			got := filterScopeExclude(tc.scopes, tc.exclude)
 			assert.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestGetSupportedScopesAppliesBlacklist(t *testing.T) {
+func TestGetSupportedScopesAppliesExclude(t *testing.T) {
 	cases := map[string]struct {
 		cfg        config.IDPConfig
 		rawScopes  []string
 		wantScopes []string
 	}{
-		"Okta config with blacklist filters scopes": {
+		"Okta config with exclude filters scopes": {
 			cfg: &config.IDPConfiguration{
 				Type: TypeOkta,
-				Okta: &config.OktaIDPConfiguration{ScopeBlacklist: "openid,profile"},
+				Okta: &config.OktaIDPConfiguration{ScopeExclude: "openid,profile"},
 			},
 			rawScopes:  []string{"openid", "profile", "read:api"},
 			wantScopes: []string{"read:api"},
 		},
-		"Okta config with default blacklist filters defaults": {
+		"Okta config with default exclude filters defaults": {
 			cfg:        &config.IDPConfiguration{Type: TypeOkta, Okta: &config.OktaIDPConfiguration{}},
 			rawScopes:  []string{"openid", "profile", "email", "read:api"},
 			wantScopes: []string{"read:api"},

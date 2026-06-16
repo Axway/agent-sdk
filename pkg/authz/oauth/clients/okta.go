@@ -264,7 +264,7 @@ func (o *Okta) CreatePolicy(authServerID, name string, clientID string) (map[str
 		Name:     name,
 		Type:     "OAUTH_AUTHORIZATION_POLICY",
 		Status:   "ACTIVE",
-		Priority: 1, //SDB - check to see if it defaults to 1
+		Priority: 1,
 		Conditions: oktaPolicyConditions{
 			Clients: &oktaPolicyConditionsClients{Include: []string{clientID}},
 		},
@@ -300,7 +300,7 @@ func (o *Okta) CreatePolicyRule(authServerID, policyID, name, grantType, scope s
 			Scopes:     oktaPolicyRuleConditionScopes{Include: []string{scope}},
 		},
 		Actions: oktaPolicyRuleActions{
-			Token: oktaPolicyRuleActionToken{AccessTokenLifetimeMinutes: 60}, // SDB - see if this defaults to 60
+			Token: oktaPolicyRuleActionToken{AccessTokenLifetimeMinutes: 60},
 		},
 	}
 	resp, err := o.doRequest(coreapi.POST, endpoint, req)

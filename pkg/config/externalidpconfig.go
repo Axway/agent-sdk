@@ -39,7 +39,7 @@ const (
 	fldOktaAppNameTemplate      = "okta.appname_template"
 	fldOktaPolicyNameTemplate   = "okta.policyname_template"
 	fldOktaScopeSources         = "okta.scope_sources"
-	fldOktaScopeBlacklist       = "okta.scope_blacklist"
+	fldOktaScopeExclude         = "okta.scope_exclude"
 	fldExtraProperties          = "extraProperties"
 	fldRequestHeaders           = "requestHeaders"
 	fldQueryParams              = "queryParams"
@@ -68,7 +68,7 @@ const (
 	defaultOktaAppNameTemplate    = OktaPlaceholderMPApplicationName + "-" + OktaPlaceholderOwningTeam + "-" + OktaPlaceholderCredentialName
 	defaultOktaPolicyNameTemplate = OktaPlaceholderScope + "-" + OktaPlaceholderOAuthFlow
 	defaultOktaScopeSources       = "swagger,gateway,okta"
-	defaultOktaScopeBlacklist     = "openid,profile,email,address,phone,offline_access"
+	defaultOktaScopeExclude       = "openid,profile,email,address,phone,offline_access"
 )
 
 var configProperties = []string{
@@ -80,7 +80,7 @@ var configProperties = []string{
 	fldOktaAppNameTemplate,
 	fldOktaPolicyNameTemplate,
 	fldOktaScopeSources,
-	fldOktaScopeBlacklist,
+	fldOktaScopeExclude,
 	fldExtraProperties,
 	fldRequestHeaders,
 	fldQueryParams,
@@ -300,7 +300,7 @@ type OktaIDPConfiguration struct {
 	AppNameTemplate    string `json:"appname_template,omitempty"`
 	PolicyNameTemplate string `json:"policyname_template,omitempty"`
 	ScopeSources       string `json:"scope_sources,omitempty"`
-	ScopeBlacklist     string `json:"scope_blacklist,omitempty"`
+	ScopeExclude       string `json:"scope_exclude,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -370,12 +370,12 @@ func (i *IDPConfiguration) GetScopeSources() string {
 	return i.Okta.ScopeSources
 }
 
-// GetScopeBlacklist - comma-separated scopes excluded from the Marketplace UI; consumed by the v7 agent.
-func (i *IDPConfiguration) GetScopeBlacklist() string {
-	if i.Okta == nil || i.Okta.ScopeBlacklist == "" {
-		return defaultOktaScopeBlacklist
+// GetScopeExclude - comma-separated scopes excluded from the Marketplace UI; consumed by the v7 agent.
+func (i *IDPConfiguration) GetScopeExclude() string {
+	if i.Okta == nil || i.Okta.ScopeExclude == "" {
+		return defaultOktaScopeExclude
 	}
-	return i.Okta.ScopeBlacklist
+	return i.Okta.ScopeExclude
 }
 
 // GetOktaGroup - name of the Okta group that newly registered apps are added to.
