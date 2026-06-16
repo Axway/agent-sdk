@@ -33,7 +33,7 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 			// if cached APIService is created after the incoming one, its likely a duplicate created due to a previous cache sync issue.
 			// Use the original APIService to cache the instance and remove the duplicate from cache to prevent flapping.
 			apiSvc, ok := existing.(*v1.ResourceInstance)
-			if ok && apiSvc != nil {
+			if ok && apiSvc != nil && apiSvc.Metadata.ID != svc.Metadata.ID {
 				existingAPITime := time.Time(apiSvc.Metadata.Audit.CreateTimestamp)
 				newAPITime := time.Time(svc.Metadata.Audit.CreateTimestamp)
 				if existingAPITime.After(newAPITime) {

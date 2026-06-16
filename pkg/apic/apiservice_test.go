@@ -200,6 +200,7 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
 				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST instance
@@ -214,6 +215,7 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
@@ -225,7 +227,8 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			responses: []api.MockResponse{
 				{FileName: testAPIServiceFile, RespCode: http.StatusOK},    // PUT service
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service status source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
 				{FileName: testRevisionListFile, RespCode: http.StatusOK},  // GET revision list (updateAPI path)
 				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision count
 				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision by name
@@ -348,7 +351,15 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testAPIServiceFile, // for call to update the service subresource
+			FileName: testAgentDetailsFile, // for call to update the service x-agent-details subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAPIServiceFile, // for call to update the service status subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAgentDetailsFile, // for call to update the service x-agent-details subresource with revision spec hash
 			RespCode: http.StatusOK,
 		},
 		{
@@ -365,10 +376,6 @@ func TestUpdateService(t *testing.T) {
 		},
 		{
 			FileName: testInstanceFile, // for call to update the serviceRevision subresource
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: testAPIServiceFile, // for call to update the service subresource
 			RespCode: http.StatusOK,
 		},
 	})
@@ -832,7 +839,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -851,7 +866,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -871,7 +894,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -891,7 +922,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -911,7 +950,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -932,7 +979,15 @@ func TestServiceSourceUpdates(t *testing.T) {
 					RespCode: http.StatusOK,
 				},
 				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
 					FileName: testAPIServiceFile, // call to update source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -952,7 +1007,14 @@ func TestServiceSourceUpdates(t *testing.T) {
 					FileName: testAPIServiceFile, // call to update x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
-				// no source subresource update
+				{
+					FileName: testAPIServiceFile, // call to update status source subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAPIServiceFile, // call to update x-agent-details subresource
+					RespCode: http.StatusOK,
+				},
 			},
 		},
 	}

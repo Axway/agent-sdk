@@ -62,6 +62,13 @@ const (
 // ValidPolicies - list of valid auth policies supported by Central.  Add to this list as more policies are supported.
 var ValidPolicies = []string{Apikey, Passthrough, Oauth, Basic}
 
+type UpdateOption func(*updateOptions)
+
+type updateOptions struct {
+	existingRI      *apiv1.ResourceInstance
+	skipSetSpecHash bool
+}
+
 // Client - interface
 type Client interface {
 	SetTokenGetter(tokenRequester auth.PlatformTokenGetter)
@@ -94,7 +101,7 @@ type Client interface {
 	UpdateResourceFinalizer(ri *apiv1.ResourceInstance, finalizer, description string, addAction bool) (*apiv1.ResourceInstance, error)
 
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
-	CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateOrUpdateResource(ri apiv1.Interface, opts ...UpdateOption) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	PatchSubResource(ri apiv1.Interface, subResourceName string, patches []map[string]interface{}) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
@@ -847,6 +854,8 @@ func (c *ServiceClient) addResourceToCache(data *apiv1.ResourceInstance) {
 		c.caches.AddCredentialRequestDefinition(data)
 	case management.ApplicationProfileDefinitionGVK().Kind:
 		c.caches.AddApplicationProfileDefinition(data)
+	case management.APIServiceGVK().Kind:
+		c.caches.AddAPIService(data)
 	case management.APIServiceInstanceGVK().Kind:
 		c.caches.AddAPIServiceInstance(data)
 	case management.ComplianceRuntimeResultGVK().Kind:
@@ -854,14 +863,40 @@ func (c *ServiceClient) addResourceToCache(data *apiv1.ResourceInstance) {
 	}
 }
 
+func WithExistingResourceInstance(existingRI *apiv1.ResourceInstance) UpdateOption {
+	return func(o *updateOptions) {
+		o.existingRI = existingRI
+	}
+}
+
+func WithSkipSetSpecHash(skip bool) UpdateOption {
+	return func(o *updateOptions) {
+		o.skipSetSpecHash = skip
+	}
+}
+
 // updateORCreateResourceInstance
-func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	// default to post
 	url := c.createAPIServerURL(data.GetKindLink())
 	method := coreapi.POST
 
+	// apply options
+	options := &updateOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	if !options.skipSetSpecHash {
+		addSpecHashToResource(data)
+	}
 	// check if the KIND and ID combo have an item in the cache
-	existingRI, err := c.getCachedResource(data)
+	var err error
+	existingRI := options.existingRI
+	if existingRI == nil {
+		existingRI, err = c.getCachedResource(data)
+	}
+
 	updateRI := true
 	updateAgentDetails := true
 
@@ -958,7 +993,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	return newRI, err
 }
 
-func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	if data.GetMetadata().Scope.Name == "" {
 		data.SetScopeName(c.cfg.GetEnvironmentName())
 	}
@@ -967,7 +1002,7 @@ func (c *ServiceClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.Res
 		return nil, err
 	}
 
-	ri, err = c.updateSpecORCreateResourceInstance(ri)
+	ri, err = c.updateSpecORCreateResourceInstance(ri, opts...)
 	return ri, err
 }
 

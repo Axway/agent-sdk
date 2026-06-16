@@ -77,13 +77,17 @@ func TestAddAPIServiceDuplicateDetection(t *testing.T) {
 			if firstIsOriginal {
 				firstEntry = createAPIServiceWithTime("id1", "api1", tc.primaryKey, tc.firstTS)
 				firstEntry.Name = "name-api1-original"
+				firstEntry.Metadata.ID = "id1"
 				secondEntry = createAPIServiceWithTime("id1", "api1", tc.primaryKey, tc.secondTS)
 				secondEntry.Name = "name-api1-duplicate"
+				secondEntry.Metadata.ID = "id2"
 			} else {
 				firstEntry = createAPIServiceWithTime("id1", "api1", tc.primaryKey, tc.firstTS)
 				firstEntry.Name = "name-api1-duplicate"
+				firstEntry.Metadata.ID = "id1"
 				secondEntry = createAPIServiceWithTime("id1", "api1", tc.primaryKey, tc.secondTS)
 				secondEntry.Name = "name-api1-original"
+				secondEntry.Metadata.ID = "id2"
 			}
 
 			err := m.AddAPIService(firstEntry)
