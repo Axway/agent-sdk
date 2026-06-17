@@ -43,7 +43,7 @@ type StreamerClient struct {
 	requestQueue       events.RequestQueue
 	newRequestQueue    events.NewRequestQueueFunc
 	onStreamConnection func()
-	onReconnect        func()
+	onReconnect        func() error
 	sequence           events.SequenceProvider
 	topicSelfLink      string
 	watchCfg           *wm.Config
@@ -163,6 +163,13 @@ func (s *StreamerClient) Start() error {
 	s.cancelMu.Unlock()
 	defer cancel(nil) // local variable: safe to call without lock in the same goroutine
 
+	if s.onReconnect != nil && !s.firstStart {
+		err := s.onReconnect()
+		if err != nil {
+			return err
+		}
+	}
+
 	eventCh, requestCh := make(chan *proto.Event), make(chan *proto.Request, 1)
 	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
 	s.listener.Store(l)
@@ -189,11 +196,8 @@ func (s *StreamerClient) Start() error {
 		s.onStreamConnection()
 	}
 	s.connectedOnce.Do(func() { close(s.connectedCh) })
-	if s.onReconnect != nil && !s.firstStart {
-		go s.onReconnect()
-	}
+
 	s.firstStart = false
-	s.isInitialized.Store(true)
 
 	if err != nil {
 		return err
@@ -246,19 +250,6 @@ func (s *StreamerClient) WaitForReady(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-}
-
-// PauseListener suspends event processing on the underlying listener.
-// Blocks until any in-flight event is done, then returns a resume func that
-// unlocks that exact listener instance. Returns nil if no listener is active.
-// The caller must invoke the returned func (typically via defer) to release the lock.
-func (s *StreamerClient) PauseListener() func() {
-	l := s.listener.Load()
-	if l == nil {
-		return nil
-	}
-	l.Pause()
-	return l.Resume
 }
 
 // Healthcheck - health check for stream client

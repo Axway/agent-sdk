@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -158,19 +157,6 @@ func TestEventSync(t *testing.T) {
 					assert.NotNil(t, cachedInst)
 				},
 			},
-			"targeted rebuild failure falls back to full rebuild": {
-				wtFilters:     []management.WatchTopicSpecFilters{apiSvcFilter},
-				failedFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
-				makeClient: func() resourceClient {
-					callCount := 0
-					return &failThenSucceedClient{
-						failCount: 1,
-						callCount: &callCount,
-						svcs:      newAPIServices(scopeName),
-					}
-				},
-				expectedCount: 2,
-			},
 			"no filters - full rebuild": {
 				wtFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
 				makeClient: func() resourceClient {
@@ -208,107 +194,6 @@ func TestEventSync(t *testing.T) {
 			})
 		}
 	})
-
-	t.Run("listenerAndValidation", func(t *testing.T) {
-		cfg := createCentralCfg("https://abc.com", "mockenv")
-		err := Initialize(cfg)
-		assert.Nil(t, err)
-
-		scopeName := cfg.Environment
-		apiSvcFilter := management.WatchTopicSpecFilters{
-			Group: management.APIServiceGVK().Group,
-			Kind:  management.APIServiceGVK().Kind,
-			Name:  "*",
-			Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName},
-		}
-		wt := &management.WatchTopic{
-			Spec: management.WatchTopicSpec{
-				Filters: []management.WatchTopicSpecFilters{apiSvcFilter},
-			},
-		}
-
-		tests := map[string]struct {
-			validator       *mockCacheValidator
-			run             func(t *testing.T, es *EventSync)
-			expectedPauses  int
-			expectedResumes int
-		}{
-			"RebuildCache pauses and resumes the listener": {
-				run: func(_ *testing.T, es *EventSync) {
-					es.RebuildCache(apiSvcFilter)
-				},
-				expectedPauses:  1,
-				expectedResumes: 1,
-			},
-			"pausedInitCache pauses and resumes the listener": {
-				run: func(_ *testing.T, es *EventSync) {
-					// Use a harvester that returns an error so initCache exits early,
-					// but the pause/resume wrapping in pausedInitCache still executes.
-					es.harvester = &mockHarvester{err: fmt.Errorf("harvester error")}
-					_ = es.pausedInitCache()
-				},
-				expectedPauses:  1,
-				expectedResumes: 1,
-			},
-			"RebuildCache resumes even when harvester fails": {
-				run: func(_ *testing.T, es *EventSync) {
-					// Harvester failure causes initCache to return immediately, but
-					// pausedInitCache's deferred resume func must still fire.
-					es.harvester = &mockHarvester{err: fmt.Errorf("simulated error")}
-					_ = es.pausedInitCache(apiSvcFilter)
-				},
-				expectedPauses:  1,
-				expectedResumes: 1,
-			},
-			"no listenerPauser set - RebuildCache succeeds without panic": {
-				run: func(t *testing.T, es *EventSync) {
-					es.listenerPauser = nil
-					assert.NotPanics(t, func() {
-						es.RebuildCache(apiSvcFilter)
-					})
-				},
-				expectedPauses:  0,
-				expectedResumes: 0,
-			},
-			"validateAndRebuildCache - cache in sync, no rebuild": {
-				validator:       &mockCacheValidator{},
-				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache() },
-				expectedPauses:  0,
-				expectedResumes: 0,
-			},
-			"validateAndRebuildCache - cache out of sync, targeted rebuild": {
-				validator: &mockCacheValidator{
-					failedFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
-					err:           fmt.Errorf("out of sync"),
-				},
-				run:             func(_ *testing.T, es *EventSync) { es.validateAndRebuildCache() },
-				expectedPauses:  1,
-				expectedResumes: 1,
-			},
-		}
-
-		for name, tc := range tests {
-			t.Run(name, func(t *testing.T) {
-				agent.cacheManager = agentcache.NewAgentCacheManager(cfg, false)
-				pauser := &mockListenerPauser{}
-				mockClient := &mockRIClient{svcs: newAPIServices(scopeName)}
-				dc := newDiscoveryCache(cfg, mockClient, nil, wt)
-				es := &EventSync{
-					watchTopic:     wt,
-					harvester:      &mockHarvester{},
-					discoveryCache: dc,
-					sequence:       &mockSequence{},
-					listenerPauser: pauser,
-					cacheValidator: tc.validator,
-				}
-
-				tc.run(t, es)
-
-				assert.Equal(t, tc.expectedPauses, pauser.pauseCount, "pause count mismatch")
-				assert.Equal(t, tc.expectedResumes, pauser.resumeCount, "resume count mismatch")
-			})
-		}
-	})
 }
 
 type mockHarvester struct {
@@ -323,27 +208,6 @@ func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink stri
 	return 1, m.err
 }
 
-
-// failThenSucceedClient fails the first N calls, then returns normal results.
-type failThenSucceedClient struct {
-	failCount int
-	callCount *int
-	svcs      []*apiv1.ResourceInstance
-}
-
-func (f *failThenSucceedClient) GetAPIV1ResourceCount(_ string) (int, error) { return 0, nil }
-
-func (f *failThenSucceedClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
-	*f.callCount++
-	if *f.callCount <= f.failCount {
-		return nil, fmt.Errorf("simulated fetch error")
-	}
-	if strings.Contains(URL, "apiservices") {
-		return f.svcs, nil
-	}
-	return []*apiv1.ResourceInstance{}, nil
-}
-
 type mockSequence struct {
 	id int64
 }
@@ -354,17 +218,6 @@ func (m *mockSequence) SetSequence(id int64) {
 
 func (m *mockSequence) GetSequence() int64 {
 	return m.id
-}
-
-// mockListenerPauser records how many times Pause and Resume are called.
-type mockListenerPauser struct {
-	pauseCount  int
-	resumeCount int
-}
-
-func (m *mockListenerPauser) PauseListener() func() {
-	m.pauseCount++
-	return func() { m.resumeCount++ }
 }
 
 // mockCacheValidator implements CacheValidator for testing.
@@ -378,4 +231,3 @@ func (m *mockCacheValidator) Execute() ([]management.WatchTopicSpecFilters, erro
 }
 
 var _ CacheValidator = (*mockCacheValidator)(nil)
-

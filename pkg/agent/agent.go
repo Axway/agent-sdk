@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -77,9 +78,10 @@ type agentData struct {
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
-	finalizeAgentInit func() error
-	publishingLock    *sync.Mutex
-	ardLock           sync.Mutex
+	finalizeAgentInit      func() error
+	publishingLock         *sync.Mutex
+	publishingLockAcquired atomic.Bool
+	ardLock                sync.Mutex
 
 	status                       string
 	applicationProfileDefinition string

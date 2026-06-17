@@ -72,6 +72,8 @@ func (c *cacheManager) FlushKind(kind string) {
 	c.ApplyResourceReadLock()
 	defer c.ReleaseResourceReadLock()
 
+	c.logger.WithField("kind", kind).Debug("flushing cache for resource kind")
+
 	if resourceCache := c.getCacheForKind(kind); resourceCache != nil {
 		resourceCache.Flush()
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -172,7 +173,7 @@ func (m *mockAttrMigClient) CreateSubResource(_ apiv1.ResourceMeta, _ map[string
 	return nil
 }
 
-func (m *mockAttrMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockAttrMigClient) CreateOrUpdateResource(data apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 	return m.execRes, nil
 }
 

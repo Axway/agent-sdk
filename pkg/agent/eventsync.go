@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 
@@ -25,21 +24,11 @@ type EventSync struct {
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
 	cacheValidator CacheValidator
-	listenerPauser listenerPauser
 }
 
 // CacheValidator is satisfied by cacheValidator; allows EventSync to run cache validation.
 type CacheValidator interface {
 	Execute() ([]management.WatchTopicSpecFilters, error)
-}
-
-// listenerPauser is satisfied by StreamerClient; allows EventSync to pause the
-// live event listener while mutating the cache.
-// PauseListener returns a resume func bound to the exact listener instance it
-// locked; call it (via defer) to release that lock. Returns nil if no listener
-// was active, in which case no resume is needed.
-type listenerPauser interface {
-	PauseListener() func()
 }
 
 // newEventSync creates an EventSync
@@ -76,7 +65,7 @@ func newEventSync() (*EventSync, error) {
 
 	sequence := events.NewSequenceProvider(agent.cacheManager, wt.Name)
 	hCfg := harvester.NewConfig(agent.cfg, agent.tokenRequester, sequence)
-	hClient := harvester.NewClient(hCfg)
+	hClient := harvester.NewClient(hCfg, harvester.WithPublishLock(PublishingLock, PublishingUnlock))
 
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
@@ -154,37 +143,15 @@ func (es *EventSync) initCache(failedFilters ...management.WatchTopicSpecFilters
 		return err
 	}
 
-	// Attempt a targeted rebuild when only specific kinds are out of sync
-	if len(failedFilters) > 0 {
-		for _, f := range failedFilters {
-			agent.cacheManager.FlushKind(f.Kind)
-		}
-		if err = es.discoveryCache.execute(failedFilters...); err == nil {
-			if seqID > 0 {
-				es.sequence.SetSequence(seqID - 1)
-			}
-			agent.cacheManager.SaveCache()
-			es.resetCacheTimer()
-			return nil
-		}
-		logger.WithError(err).Info("targeted cache rebuild failed, falling back to full rebuild")
+	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
+	if seqID > 0 {
+		es.sequence.SetSequence(seqID)
 	}
 
-	// Full rebuild: flush everything and re-populate
-	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
-	// when the poll/stream client is ready
-	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
-	agent.cacheManager.Flush()
-	if seqID > 0 {
-		es.sequence.SetSequence(seqID - 1)
-	}
-	err = es.discoveryCache.execute()
-	if err != nil {
-		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
-		agent.cacheManager.Flush()
+	defer agent.cacheManager.SaveCache()
+	if err = es.discoveryCache.execute(failedFilters...); err != nil {
 		return err
 	}
-	agent.cacheManager.SaveCache()
 
 	es.resetCacheTimer()
 	return nil
@@ -201,47 +168,15 @@ func (es *EventSync) resetCacheTimer() {
 
 // RebuildCache is the single entry point for all cache rebuilds.
 // When filters are given it attempts a targeted rebuild first, falling back to full on error.
-// The listener is paused for the duration and the 7-day timer is reset on success.
-func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) {
+// The 7-day timer is reset on success.
+func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) error {
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
 	PublishingLock()
 	defer PublishingUnlock()
 
-	es.waitForCacheRebuild(filters...)
-}
-
-// pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
-// PauseListener returns a resume func bound to the exact listener it locked, so
-// a reconnect replacing s.listener mid-rebuild cannot cause an unlock mismatch.
-func (es *EventSync) pausedInitCache(filters ...management.WatchTopicSpecFilters) error {
-	if es.listenerPauser != nil {
-		if resume := es.listenerPauser.PauseListener(); resume != nil {
-			defer resume()
-		}
-	}
 	return es.initCache(filters...)
-}
-
-// waitForCacheRebuild continuously attempts to rebuild the cache until successful
-func (es *EventSync) waitForCacheRebuild(filters ...management.WatchTopicSpecFilters) {
-	adjustment := 2
-	maxBackoff := 5 * time.Minute
-	currentBackoff := 30 * time.Second
-	for {
-		err := es.pausedInitCache(filters...)
-		if err == nil {
-			return
-		}
-
-		logger.
-			WithError(err).
-			WithField("waitTime", currentBackoff.String()).
-			Error("failed to rebuild cache, retrying after waitTime")
-		time.Sleep(currentBackoff)
-		currentBackoff = time.Duration(math.Min(float64(maxBackoff), float64(currentBackoff)*float64(adjustment)))
-	}
 }
 
 // validateCache runs the cache validator to check if the persisted cache is in sync.
@@ -258,7 +193,7 @@ func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error)
 // If all kinds pass, the 7-day timer is reset.
 func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
 	failedFilters, err := es.validateCache()
-	if err == nil && len(failedFilters) == 0 {
+	if err == nil {
 		es.resetCacheTimer()
 	}
 	return failedFilters, err
@@ -266,16 +201,17 @@ func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error)
 
 // validateAndRebuildCache validates the cache and rebuilds only the out-of-sync kinds.
 // Called when connection to Central is restored.
-func (es *EventSync) validateAndRebuildCache() {
+func (es *EventSync) validateAndRebuildCache() error {
 	if es.cacheValidator == nil {
-		return
+		return nil
 	}
 
 	failedFilters, err := es.validateCache()
 	if err != nil {
 		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding out-of-sync kinds")
-		es.RebuildCache(failedFilters...)
+		return es.RebuildCache(failedFilters...)
 	}
+	return nil
 }
 
 func (es *EventSync) startCentralEventProcessor() error {
@@ -293,7 +229,6 @@ func (es *EventSync) startPollMode() error {
 		agent.cfg,
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
-		poller.WithOnClientStop(func() { es.RebuildCache() }),
 		poller.WithOnConnect(),
 		poller.WithOnReconnect(es.validateAndRebuildCache),
 	)
@@ -323,7 +258,6 @@ func (es *EventSync) startStreamMode() error {
 		agent.tokenRequester,
 		handlers,
 		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(func() { es.RebuildCache() }),
 		stream.WithOnReconnect(es.validateAndRebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
@@ -335,7 +269,6 @@ func (es *EventSync) startStreamMode() error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	es.listenerPauser = sc
 	agent.streamer = sc
 
 	if util.IsNotTest() {

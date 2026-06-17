@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -146,12 +145,11 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 		}
 	}
 
-	hashInt, _ := util.ComputeHash(spec)
-
 	// put back in spec the complete request schema
 	spec.Schema = a.requestSchema
 
 	if a.name == "" {
+		hashInt, _ := util.ComputeHash(spec)
 		a.name = util.ConvertUnitToString(hashInt)
 	}
 
@@ -164,8 +162,6 @@ func (a *accessRequestDef) Register() (*management.AccessRequestDefinition, erro
 			Name: a.appProfDef,
 		}
 	}
-
-	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return a.registerFunc(ard)
 }

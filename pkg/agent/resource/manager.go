@@ -23,7 +23,7 @@ import (
 const qaTriggerSevenDayRefreshCache = "QA_CENTRAL_TRIGGER_REFRESH_CACHE"
 
 type EventSyncCache interface {
-	RebuildCache(filters ...management.WatchTopicSpecFilters)
+	RebuildCache(filters ...management.WatchTopicSpecFilters) error
 	ValidateCache() ([]management.WatchTopicSpecFilters, error)
 }
 

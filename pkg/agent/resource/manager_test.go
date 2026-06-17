@@ -304,9 +304,10 @@ type mockEventSyncCache struct {
 	validateErr     error
 }
 
-func (m *mockEventSyncCache) RebuildCache(filters ...management.WatchTopicSpecFilters) {
+func (m *mockEventSyncCache) RebuildCache(filters ...management.WatchTopicSpecFilters) error {
 	m.rebuildCalled++
 	m.rebuildFilters = filters
+	return nil
 }
 
 func (m *mockEventSyncCache) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
@@ -324,13 +325,13 @@ func TestShouldRebuildCache(t *testing.T) {
 	}
 
 	tests := []struct {
-		name              string
-		agentDetails      interface{}
-		validateFilters   []management.WatchTopicSpecFilters
-		validateErr       error
-		expectedRebuild   bool
-		expectedFilters   []management.WatchTopicSpecFilters
-		expectedValidate  bool
+		name             string
+		agentDetails     interface{}
+		validateFilters  []management.WatchTopicSpecFilters
+		validateErr      error
+		expectedRebuild  bool
+		expectedFilters  []management.WatchTopicSpecFilters
+		expectedValidate bool
 	}{
 		{
 			name:            "no x-agent-details - rebuild unconditionally",

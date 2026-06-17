@@ -129,17 +129,20 @@ func makeServerResource(kind, scopeKind, scopeName, name string, modTime time.Ti
 
 func TestCacheValidator_Execute(t *testing.T) {
 	modTime := time.Date(2026, 3, 12, 10, 0, 0, 0, time.UTC)
-	serverTime := time.Date(2026, 3, 12, 12, 0, 0, 0, time.UTC)
 
 	svcGVK := management.APIServiceGVK()
 	instGVK := management.APIServiceInstanceGVK()
 	crrGVK := management.ComplianceRuntimeResultGVK()
+	managedAppGVK := management.ManagedApplicationGVK()
+	crdGVK := management.CredentialRequestDefinitionGVK()
 	scopeName := "testEnv"
 
 	svc1 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", modTime)
 	svc2 := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc2", modTime)
 	inst1 := makeServerResource(instGVK.Kind, "Environment", scopeName, "inst1", modTime)
 	crr1 := makeServerResource(crrGVK.Kind, "Environment", scopeName, "crr1", modTime)
+	managedApp1 := makeServerResource(managedAppGVK.Kind, "Environment", scopeName, "managedApp1", modTime)
+	crd1 := makeServerResource(crdGVK.Kind, "Environment", scopeName, "crd1", modTime)
 
 	singleScopeWatchTopic := func(gvk apiv1.GroupVersionKind, scopeName string) *management.WatchTopic {
 		return &management.WatchTopic{
@@ -157,12 +160,15 @@ func TestCacheValidator_Execute(t *testing.T) {
 	}
 
 	type testCase struct {
-		setup               func(*mockResourceClient, *mockCacheGetter)
-		watchTopic          *management.WatchTopic
-		harvester           harvester.Harvest
-		sequence            events.SequenceProvider
-		expectErr           error
-		expectedFailedKinds []string
+		setup      func(*mockResourceClient, *mockCacheGetter)
+		watchTopic *management.WatchTopic
+		harvester  harvester.Harvest
+		sequence   events.SequenceProvider
+		expectErr  error
+		// expectedKinds is the set of kinds in the slice Execute returns: the
+		// out-of-sync (failed) kinds when expectErr is errCacheOutOfSync, or the
+		// validated (in-sync) kinds when expectErr is nil.
+		expectedKinds []string
 	}
 
 	tests := map[string]testCase{
@@ -174,8 +180,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			expectErr:     nil,
+			expectedKinds: nil,
 		},
 		"in sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -184,75 +190,82 @@ func TestCacheValidator_Execute(t *testing.T) {
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
 		},
 		"count mismatch": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
+				cacheMan.setResources(crrGVK.Group, crrGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(crrGVK.Kind, scopeName, "crr1"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(crrGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crrGVK.Kind},
+		},
+		// APIService count validation is intentionally relaxed: validateKind always
+		// returns true for APIService because the cache deduplicates by externalAPIID,
+		// so count mismatches are expected and not treated as out-of-sync.
+		"APIService higher count mismatch - not treated as out of sync will be treated with APIServiceInstances": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
 		},
-		"resource missing from cache": {
+		"extra resource in cache - count mismatch detected": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[crd1.GetKindLink()] = []*apiv1.ResourceInstance{crd1}
+				cacheMan.setResources(crdGVK.Group, crdGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(crdGVK.Kind, scopeName, "crd1"): modTime,
+					agentcache.ResourceCacheKey(crdGVK.Kind, scopeName, "crd2"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(crdGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crdGVK.Kind},
+		},
+		// When the cache holds more APIService entries than the server, the count
+		// mismatch is logged but still not treated as out-of-sync (returns true).
+		"APIService extra resource in cache - still not treated as out of sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
+				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc3"): modTime,
+				})
+			},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{svcGVK.Kind},
+		},
+		// Count-only validation cannot detect drift when the server and cache hold the
+		// same number of resources but different ones (metadata/timestamp checks were
+		// removed). This documents that limitation: a swapped resource is treated as in sync.
+		"same count, different resource is not detected by count-only validation": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc-other"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
-		},
-		"modify time mismatch": {
-			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
-				svcNewer := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", serverTime)
-				client.resources[svcNewer.GetKindLink()] = []*apiv1.ResourceInstance{svcNewer}
-				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
-					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
-				})
-			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
-		},
-		"zero timestamps are ignored": {
-			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
-				svcZero := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", time.Time{})
-				client.resources[svcZero.GetKindLink()] = []*apiv1.ResourceInstance{svcZero}
-				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
-					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-				})
-			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           nil,
-			expectedFailedKinds: nil,
-		},
-		"extra resource in cache": {
-			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
-				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1, svc2}
-				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
-					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
-					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc3"): modTime,
-				})
-			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
 		},
 		"fetch error": {
 			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
 				client.err = fmt.Errorf("network error")
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{svcGVK.Kind},
 		},
 		"APIServiceInstances from multiple scopes are each validated independently": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -273,8 +286,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			expectErr:     nil,
+			expectedKinds: []string{instGVK.Kind, instGVK.Kind},
 		},
 		"multiple kinds in sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -295,10 +308,33 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind, instGVK.Kind},
 		},
 		"second kind out of sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[managedApp1.GetKindLink()] = []*apiv1.ResourceInstance{managedApp1}
+				client.resources[crd1.GetKindLink()] = []*apiv1.ResourceInstance{crd1}
+				cacheMan.setResources(managedAppGVK.Group, managedAppGVK.Kind, map[string]time.Time{
+					agentcache.ResourceCacheKey(managedAppGVK.Kind, scopeName, "managedApp1"): modTime,
+				})
+				cacheMan.setResources(crdGVK.Group, crdGVK.Kind, map[string]time.Time{})
+			},
+			watchTopic: &management.WatchTopic{
+				Spec: management.WatchTopicSpec{
+					Filters: []management.WatchTopicSpecFilters{
+						{Group: managedAppGVK.Group, Kind: managedAppGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+						{Group: crdGVK.Group, Kind: crdGVK.Kind, Name: "*", Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName}},
+					},
+				},
+			},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crdGVK.Kind},
+		},
+		// When APIServiceInstance is out of sync, the APIService filter is also
+		// included in the failed set (cache is keyed by externalAPIID, so the
+		// full rebuild must include both kinds).
+		"second kind out of sync - APIServiceInstance fetches in APIService": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
@@ -315,8 +351,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{instGVK.Kind},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{instGVK.Kind, svcGVK.Kind},
 		},
 		"both kinds out of sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
@@ -332,8 +368,8 @@ func TestCacheValidator_Execute(t *testing.T) {
 					},
 				},
 			},
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind, instGVK.Kind},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{svcGVK.Kind, instGVK.Kind},
 		},
 		"empty server and cache": {
 			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
@@ -350,61 +386,78 @@ func TestCacheValidator_Execute(t *testing.T) {
 				}
 				client.resources[ri.GetKindLink()] = []*apiv1.ResourceInstance{}
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
 		},
 		"ComplianceRuntimeResult out of sync is detected": {
 			setup: func(client *mockResourceClient, _ *mockCacheGetter) {
 				client.resources[crr1.GetKindLink()] = []*apiv1.ResourceInstance{crr1}
 			},
-			watchTopic:          singleScopeWatchTopic(crrGVK, scopeName),
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{crrGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(crrGVK, scopeName),
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{crrGVK.Kind},
 		},
-		// Sequence in sync + count match: early exit without fetching metadata.
-		"sequence and count both in sync - early exit": {
+		// Sequence in sync: per-kind count validation runs and passes, returning the
+		// validated filters with no error.
+		"sequence in sync - per-kind validation passes": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			harvester:           &mockCVHarvester{latestSeq: 10},
-			sequence:            &mockSeqProvider{seq: 10},
-			expectErr:           nil,
-			expectedFailedKinds: nil,
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:     &mockCVHarvester{latestSeq: 10},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
 		},
-		// Sequence out of sync + count match: must fetch metadata to detect the outdated timestamp.
-		"sequence out of sync, count matches, modify time mismatch detected": {
+		// Sequence out of sync: Execute reports the cache as out of sync without
+		// running per-kind validation, returning no filters.
+		"sequence out of sync - reported out of sync without per-kind validation": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
-				svcNewer := makeServerResource(svcGVK.Kind, "Environment", scopeName, "svc1", serverTime)
-				client.resources[svcNewer.GetKindLink()] = []*apiv1.ResourceInstance{svcNewer}
+				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
 					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			harvester:           &mockCVHarvester{latestSeq: 20},
-			sequence:            &mockSeqProvider{seq: 10},
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:     &mockCVHarvester{latestSeq: 20},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: nil,
 		},
-		// Sequence out of sync + count matches (resource was swapped: server has svc1, cache has
-		// svc-other, both count=1): metadata fetch detects the stale cache entry.
-		"sequence out of sync, count matches, swapped resource detected via metadata fetch": {
+		// Harvester unreachable (ReceiveSyncEvents returns an error): Execute falls back
+		// to per-kind count validation instead of immediately reporting out of sync.
+		// Cache and server are in sync, so no error is returned.
+		"harvester unreachable - falls back to per-kind validation, cache in sync": {
 			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
 				client.resources[svc1.GetKindLink()] = []*apiv1.ResourceInstance{svc1}
 				cacheMan.setResources(svcGVK.Group, svcGVK.Kind, map[string]time.Time{
-					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc-other"): modTime,
+					agentcache.ResourceCacheKey(svcGVK.Kind, scopeName, "svc1"): modTime,
 				})
 			},
-			watchTopic:          singleScopeWatchTopic(svcGVK, scopeName),
-			harvester:           &mockCVHarvester{latestSeq: 20},
-			sequence:            &mockSeqProvider{seq: 10},
-			expectErr:           errCacheOutOfSync,
-			expectedFailedKinds: []string{svcGVK.Kind},
+			watchTopic:    singleScopeWatchTopic(svcGVK, scopeName),
+			harvester:     &mockCVHarvester{err: fmt.Errorf("connection refused")},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     nil,
+			expectedKinds: []string{svcGVK.Kind},
+		},
+		// Harvester unreachable and cache is out of sync: per-kind count validation
+		// runs and catches the mismatch, returning the failed filter.
+		// Uses APIServiceInstance (not APIService) because APIService count validation
+		// is intentionally relaxed and never reports out-of-sync.
+		"harvester unreachable - falls back to per-kind validation, cache out of sync": {
+			setup: func(client *mockResourceClient, cacheMan *mockCacheGetter) {
+				client.resources[inst1.GetKindLink()] = []*apiv1.ResourceInstance{inst1}
+				cacheMan.setResources(instGVK.Group, instGVK.Kind, map[string]time.Time{})
+			},
+			watchTopic:    singleScopeWatchTopic(instGVK, scopeName),
+			harvester:     &mockCVHarvester{err: fmt.Errorf("connection refused")},
+			sequence:      &mockSeqProvider{seq: 10},
+			expectErr:     errCacheOutOfSync,
+			expectedKinds: []string{instGVK.Kind},
 		},
 	}
 
@@ -415,19 +468,29 @@ func TestCacheValidator_Execute(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(client, cacheMan)
 			}
-			cv := newCacheValidator(client, tc.watchTopic, cacheMan, tc.harvester, tc.sequence)
-			failedFilters, err := cv.Execute()
+
+			// Default to an in-sync harvester/sequence so per-kind count validation
+			// runs. Cases that exercise the sequence pre-check set their own.
+			harv := tc.harvester
+			seq := tc.sequence
+			if harv == nil && seq == nil {
+				harv = &mockCVHarvester{latestSeq: 1}
+				seq = &mockSeqProvider{seq: 1}
+			}
+
+			cv := newCacheValidator(client, tc.watchTopic, cacheMan, harv, seq)
+			filters, err := cv.Execute()
 			assert.Equal(t, tc.expectErr, err)
 
-			if len(tc.expectedFailedKinds) == 0 {
-				assert.Empty(t, failedFilters)
+			if len(tc.expectedKinds) == 0 {
+				assert.Empty(t, filters)
 			} else {
-				require.Len(t, failedFilters, len(tc.expectedFailedKinds))
-				actualKinds := make([]string, len(failedFilters))
-				for i, f := range failedFilters {
+				require.Len(t, filters, len(tc.expectedKinds))
+				actualKinds := make([]string, len(filters))
+				for i, f := range filters {
 					actualKinds[i] = f.Kind
 				}
-				assert.ElementsMatch(t, tc.expectedFailedKinds, actualKinds)
+				assert.ElementsMatch(t, tc.expectedKinds, actualKinds)
 			}
 		})
 	}

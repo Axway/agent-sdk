@@ -58,34 +58,56 @@ func (cv *cacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) 
 	cv.logger.Debug("executing cache validation")
 
 	seqInSync := cv.sequenceInSync()
+	if !seqInSync {
+		return nil, errCacheOutOfSync
+	}
 
 	filters := cv.watchTopic.Spec.Filters
 	ch := make(chan management.WatchTopicSpecFilters, len(filters))
 
+	cachedFilters := make([]management.WatchTopicSpecFilters, 0, len(filters))
 	var wg sync.WaitGroup
+	apiSvcFilter := management.WatchTopicSpecFilters{}
 	for _, filter := range filters {
-		wg.Add(1)
-		go func(f management.WatchTopicSpecFilters) {
-			defer wg.Done()
-			if !cv.validateKind(f, seqInSync) {
-				ch <- f
+		if agentcache.IsCachedKind(filter.Kind) {
+			wg.Add(1)
+			cachedFilters = append(cachedFilters, filter)
+			if filter.Kind == management.APIServiceGVK().Kind {
+				apiSvcFilter = filter
 			}
-		}(filter)
+			go func(f management.WatchTopicSpecFilters) {
+				defer wg.Done()
+				if !cv.validateKind(f) {
+					ch <- f
+				}
+			}(filter)
+		}
 	}
 	wg.Wait()
 	close(ch)
 
-	var failed []management.WatchTopicSpecFilters
+	failed := make(map[string]management.WatchTopicSpecFilters)
 	for f := range ch {
-		failed = append(failed, f)
+		failed[f.Kind] = f
+	}
+
+	// APIService cache is keyed by external API ID instead of resource ID.
+	// Write APIService filter along with APIServiceInstance filter when APIServiceInstance counts are off.
+	_, ok := failed[management.APIServiceInstanceGVK().Kind]
+	if ok && apiSvcFilter.Kind != "" {
+		failed[apiSvcFilter.Kind] = apiSvcFilter
 	}
 
 	if len(failed) > 0 {
-		return failed, errCacheOutOfSync
+		filtersToProcess := make([]management.WatchTopicSpecFilters, 0, len(failed))
+		for _, f := range failed {
+			filtersToProcess = append(filtersToProcess, f)
+		}
+		return filtersToProcess, errCacheOutOfSync
 	}
 
 	cv.logger.Debug("cache validation passed")
-	return nil, nil
+	return cachedFilters, nil
 }
 
 // sequenceInSync fetches the latest sequence ID from the harvester and compares it
@@ -102,7 +124,7 @@ func (cv *cacheValidator) sequenceInSync() bool {
 	)
 	if err != nil {
 		cv.logger.WithError(err).Debug("could not fetch latest harvester sequence, proceeding with per-kind validation")
-		return false
+		return true
 	}
 
 	cachedSeq := cv.sequence.GetSequence()
@@ -117,13 +139,8 @@ func (cv *cacheValidator) sequenceInSync() bool {
 	return true
 }
 
-func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters, seqInSync bool) bool {
+func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) bool {
 	logger := cv.logger.WithField("kind", filter.Kind).WithField("group", filter.Group)
-
-	if !agentcache.IsCachedKind(filter.Kind) {
-		logger.Trace("skipping validation for kind")
-		return true
-	}
 
 	ri := apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
@@ -153,61 +170,31 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters, 
 	}
 	cachedResources := cv.cacheMan.GetCachedResourcesByKind(filter.Group, filter.Kind, scopeName)
 
-	// HEAD pre-check: compare resource count before fetching full metadata.
-	// Returns early only when the count matches; otherwise logs and falls through
-	// to the full metadata fetch.
+	// Count check: if the number of resources in the cache does not match the number on the server, we know the cache is out of sync.
+	// Note: APIService cache with existing duplicates on server may always fail this check, as it gets cached based on externalAPIID and not the resource id.
 	serverCount, err := cv.client.GetAPIV1ResourceCount(url)
 	if err != nil {
 		logger.WithError(err).Error("HEAD request failed, falling back to full metadata fetch")
-	} else if serverCount == len(cachedResources) && seqInSync {
-		logger.WithField("count", serverCount).Trace("cache validation passed for kind (count and sequence match)")
-		return true
-	} else if serverCount != len(cachedResources) {
-		logger.
-			WithField("serverCount", serverCount).
-			WithField("cacheCount", len(cachedResources)).
-			Info("cache validation: count mismatch, fetching metadata for timestamp check")
-	}
-
-	// Full metadata fetch for timestamp-level confirmation.
-	query := map[string]string{
-		"fields": "name,kind,metadata.audit,metadata.scope",
-	}
-
-	logger.Trace("fetching resource metadata from API server for validation")
-	serverResources, err := cv.client.GetAPIV1ResourceInstances(query, url)
-	if err != nil {
-		logger.WithError(err).Error("failed to fetch resource metadata for cache validation")
 		return false
 	}
 
-	// Build a map from server resources: composite key -> modifyTimestamp
-	serverMap := make(map[string]time.Time, len(serverResources))
-	for _, res := range serverResources {
-		modTime := time.Time(res.Metadata.Audit.ModifyTimestamp)
-		serverMap[agentcache.ResourceCacheKey(res.Kind, res.Metadata.Scope.Name, res.Name)] = modTime
-	}
-
-	// Each server resource must exist in cache with a matching mod timestamp.
-	for name, serverModTime := range serverMap {
-		cacheModTime, exists := cachedResources[name]
-		if !exists {
+	if filter.Kind == management.APIServiceGVK().Kind {
+		if serverCount < len(cachedResources) {
 			logger.
-				WithField("resource", name).
-				Info("cache validation failed: resource not found in cache")
+				WithField("serverCount", serverCount).
+				WithField("cacheCount", len(cachedResources)).
+				Info("cache validation: APIService count mismatch, cache is out of sync")
 			return false
 		}
-
-		if !serverModTime.IsZero() && !cacheModTime.IsZero() && !serverModTime.Equal(cacheModTime) {
-			logger.
-				WithField("resource", name).
-				WithField("serverModTime", serverModTime).
-				WithField("cacheModTime", cacheModTime).
-				Info("cache validation failed: modification time mismatch")
-			return false
-		}
+		return true
 	}
 
-	logger.WithField("count", len(serverMap)).Trace("cache validation passed for kind")
+	if serverCount != len(cachedResources) {
+		logger.
+			WithField("serverCount", serverCount).
+			WithField("cacheCount", len(cachedResources)).
+			Info("cache validation: count mismatch, cache is out of sync")
+		return false
+	}
 	return true
 }

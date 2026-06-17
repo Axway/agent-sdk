@@ -5,7 +5,6 @@ import (
 	"maps"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -183,7 +182,6 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 			},
 		},
 	}
-	hashInt, _ := util.ComputeHash(spec)
 
 	if c.period > 0 {
 		spec.Provision.Policies.Expiry = &management.CredentialRequestDefinitionSpecProvisionPoliciesExpiry{
@@ -202,8 +200,6 @@ func (c *credentialRequestDef) Register() (*management.CredentialRequestDefiniti
 	crd.Title = c.title
 
 	crd.Spec = spec
-
-	util.SetAgentDetailsKey(crd, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	d := util.GetAgentDetails(crd)
 	for key, value := range c.agentDetails {

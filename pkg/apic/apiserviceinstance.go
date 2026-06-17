@@ -202,8 +202,6 @@ func (c *ServiceClient) processInstance(serviceBody *ServiceBody) error {
 		}
 	}
 
-	addSpecHashToResource(instance)
-
 	ri, err := c.CreateOrUpdateResource(instance)
 	if err != nil {
 		if serviceBody.serviceContext.serviceAction == addAPI {

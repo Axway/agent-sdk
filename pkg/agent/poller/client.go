@@ -24,7 +24,7 @@ type PollClient struct {
 	newListener        events.NewListenerFunc
 	onClientStop       onClientStopCb
 	onStreamConnection func()
-	onReconnect        func()
+	onReconnect        func() error
 	poller             *pollExecutor
 	newPollManager     newPollExecutorFunc
 	harvesterConfig    harvesterConfig
@@ -32,7 +32,7 @@ type PollClient struct {
 	initialized        bool
 	firstStart         bool
 	connectedCh        chan struct{} // closed when the first connection is live in Start()
-	connectedOnce      sync.Once    // ensures connectedCh is closed at most once across reconnects
+	connectedOnce      sync.Once     // ensures connectedCh is closed at most once across reconnects
 	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
 }
 
@@ -75,6 +75,13 @@ func NewPollClient(
 func (p *PollClient) Start() error {
 	ctx, cancel := context.WithCancelCause(context.Background())
 	defer cancel(nil)
+	if p.onReconnect != nil && !p.firstStart {
+		err := p.onReconnect()
+		if err != nil {
+			return err
+		}
+	}
+
 	eventCh := make(chan *proto.Event)
 
 	p.mutex.Lock()
@@ -106,9 +113,6 @@ func (p *PollClient) Start() error {
 	}
 	p.connectedOnce.Do(func() { close(p.connectedCh) })
 
-	if p.onReconnect != nil && !p.firstStart {
-		go p.onReconnect()
-	}
 	p.firstStart = false
 
 	p.mutex.Lock()

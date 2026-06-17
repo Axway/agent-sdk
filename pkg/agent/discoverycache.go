@@ -180,10 +180,6 @@ func (dc *discoveryCache) buildDiscoveryFuncsForFilters(filters []management.Wat
 	return funcs
 }
 
-func (dc *discoveryCache) buildMarketplaceDiscoveryFuncs() []discoverFunc {
-	return dc.buildMarketplaceDiscoveryFuncsForFilters(dc.watchTopic.Spec.Filters)
-}
-
 func (dc *discoveryCache) buildMarketplaceDiscoveryFuncsForFilters(filters []management.WatchTopicSpecFilters) []discoverFunc {
 	mpResources := make(map[string]discoverFunc)
 
@@ -263,8 +259,14 @@ func (dc *discoveryCache) buildResourceFunc(filter management.WatchTopicSpecFilt
 		if err != nil {
 			return fmt.Errorf("failed to fetch resources of kind %s: %s", filter.Kind, err)
 		}
-
-		return dc.handleResourcesList(resources)
+		agent.cacheManager.FlushKind(filter.Kind)
+		err = dc.handleResourcesList(resources)
+		if err != nil {
+			// restore the existing cache if the discovery fails
+			// TODO: - may be this is not needed as handleResourcesList handles each resource and return nil error. Need to verify if errors returned from handler needs to be taken care
+			return fmt.Errorf("failed to handle resources of kind %s: %s", filter.Kind, err)
+		}
+		return nil
 	}
 }
 
@@ -288,7 +290,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 		if err := dc.handleResource(ri, action); err != nil {
 			logger.
 				WithError(err).
-				Error("failed to migrate resource")
+				Error("failed to handle resource")
 		}
 	}
 
