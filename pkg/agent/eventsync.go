@@ -24,21 +24,11 @@ type EventSync struct {
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
 	cacheValidator CacheValidator
-	listenerPauser listenerPauser
 }
 
 // CacheValidator is satisfied by cacheValidator; allows EventSync to run cache validation.
 type CacheValidator interface {
 	Execute() ([]management.WatchTopicSpecFilters, error)
-}
-
-// listenerPauser is satisfied by StreamerClient; allows EventSync to pause the
-// live event listener while mutating the cache.
-// PauseListener returns a resume func bound to the exact listener instance it
-// locked; call it (via defer) to release that lock. Returns nil if no listener
-// was active, in which case no resume is needed.
-type listenerPauser interface {
-	PauseListener() func()
 }
 
 // newEventSync creates an EventSync
@@ -178,7 +168,7 @@ func (es *EventSync) resetCacheTimer() {
 
 // RebuildCache is the single entry point for all cache rebuilds.
 // When filters are given it attempts a targeted rebuild first, falling back to full on error.
-// The listener is paused for the duration and the 7-day timer is reset on success.
+// The 7-day timer is reset on success.
 func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) error {
 	logger.Info("rebuild cache")
 
@@ -186,18 +176,6 @@ func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) e
 	PublishingLock()
 	defer PublishingUnlock()
 
-	return es.initCache(filters...)
-}
-
-// pausedInitCache pauses the event listener, calls initCache, then resumes via defer.
-// PauseListener returns a resume func bound to the exact listener it locked, so
-// a reconnect replacing s.listener mid-rebuild cannot cause an unlock mismatch.
-func (es *EventSync) pausedInitCache(filters ...management.WatchTopicSpecFilters) error {
-	if es.listenerPauser != nil {
-		if resume := es.listenerPauser.PauseListener(); resume != nil {
-			defer resume()
-		}
-	}
 	return es.initCache(filters...)
 }
 
@@ -291,7 +269,6 @@ func (es *EventSync) startStreamMode() error {
 		return fmt.Errorf("could not start the watch manager: %s", err)
 	}
 
-	es.listenerPauser = sc
 	agent.streamer = sc
 
 	if util.IsNotTest() {

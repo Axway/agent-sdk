@@ -252,19 +252,6 @@ func (s *StreamerClient) WaitForReady(ctx context.Context) error {
 	}
 }
 
-// PauseListener suspends event processing on the underlying listener.
-// Blocks until any in-flight event is done, then returns a resume func that
-// unlocks that exact listener instance. Returns nil if no listener is active.
-// The caller must invoke the returned func (typically via defer) to release the lock.
-func (s *StreamerClient) PauseListener() func() {
-	l := s.listener.Load()
-	if l == nil {
-		return nil
-	}
-	l.Pause()
-	return l.Resume
-}
-
 // Healthcheck - health check for stream client
 func (s *StreamerClient) Healthcheck(_ string) *hc.Status {
 	if err := s.Status(); err != nil {
