@@ -65,8 +65,9 @@ var ValidPolicies = []string{Apikey, Passthrough, Oauth, Basic}
 type UpdateOption func(*updateOptions)
 
 type updateOptions struct {
-	existingRI      *apiv1.ResourceInstance
-	skipSetSpecHash bool
+	existingRI             *apiv1.ResourceInstance
+	skipSetSpecHash        bool
+	skipXAgentDetailUpdate bool
 }
 
 // Client - interface
@@ -875,6 +876,12 @@ func WithSkipSetSpecHash(skip bool) UpdateOption {
 	}
 }
 
+func WithSkipXAgentDetailUpdate(skip bool) UpdateOption {
+	return func(o *updateOptions) {
+		o.skipXAgentDetailUpdate = skip
+	}
+}
+
 // updateORCreateResourceInstance
 func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceInstance, opts ...UpdateOption) (*apiv1.ResourceInstance, error) {
 	// default to post
@@ -898,7 +905,11 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	}
 
 	updateRI := true
-	updateAgentDetails := true
+	updateAgentDetails := !options.skipXAgentDetailUpdate
+	logger := c.logger.WithField("resourceName", data.Name).WithField("resourceKind", data.Kind)
+	if data.Metadata.ID != "" {
+		logger = logger.WithField("resourceID", data.Metadata.ID)
+	}
 
 	if err == nil && existingRI != nil && existingRI.Metadata.Scope.Name == data.Metadata.Scope.Name {
 		url = c.createAPIServerURL(data.GetSelfLink())
@@ -909,7 +920,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		oldHash, _ := util.GetAgentDetailsValue(existingRI, defs.AttrSpecHash)
 		newHash, _ := util.GetAgentDetailsValue(data, defs.AttrSpecHash)
 		if oldHash == newHash && existingRI.Title == data.Title && equalTags {
-			log.Debug("no updates to the hash or to the title")
+			logger.Debug("no updates to the hash or to the title")
 			updateRI = false
 		}
 
@@ -917,13 +928,13 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		oldAgentDetails := util.GetAgentDetails(existingRI)
 		newAgentDetails := util.GetAgentDetails(data)
 		if util.MapsEqual(oldAgentDetails, newAgentDetails) {
-			log.Debug("no updates to the x-agent-details")
+			logger.Debug("no updates to the x-agent-details")
 			updateAgentDetails = false
 		}
 
 		// if no changes altogether, return without update
 		if !updateRI && !updateAgentDetails {
-			log.Trace("no updates made to the resource instance or to the x-agent-details.")
+			logger.Trace("no updates made to the resource instance or to the x-agent-details.")
 			return existingRI, nil
 		}
 

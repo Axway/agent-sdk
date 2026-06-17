@@ -211,15 +211,17 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	} else {
 		svc = c.buildAPIService(serviceBody)
 	}
-
-	ri, err := c.CreateOrUpdateResource(svc, WithExistingResourceInstance(existingRI))
+	addSpecHashToResource(svc)
+	ri, err := c.CreateOrUpdateResource(svc,
+		WithExistingResourceInstance(existingRI),
+		WithSkipSetSpecHash(true),
+		WithSkipXAgentDetailUpdate(true),
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	if ri != nil {
-		svc.FromInstance(ri)
-
 		serviceBody.serviceContext.serviceName = ri.Name
 		serviceBody.serviceContext.serviceID = ri.Metadata.ID
 	}

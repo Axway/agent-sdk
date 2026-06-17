@@ -74,7 +74,8 @@ func TestNewStreamer(t *testing.T) {
 	}()
 
 	<-manager.readyCh
-	assert.Equal(t, hc.OK, hc.RunChecks())
+	// wait for isInitialized to be set after requestQueue.Start() before checking health check
+	assert.Eventually(t, func() bool { return hc.RunChecks() == hc.OK }, time.Second, 10*time.Millisecond)
 	// should stop the listener and write nil to the listener's error channel
 	streamer.listener.Load().Stop()
 
