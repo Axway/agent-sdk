@@ -89,11 +89,7 @@ func (l *idpEngageLifecycle) CreateEngageResourcesFromMetadata(idpLogger log.Fie
 	}
 
 	// Check if an IdentityProvider with the same name already exists
-	ri, err := l.client.GetResource(idpResource.GetSelfLink())
-	if err != nil {
-		return "", err
-	}
-
+	ri, _ := l.client.GetResource(idpResource.GetSelfLink())
 	if ri == nil {
 		ri, err = l.client.CreateOrUpdateResource(idpResource)
 		if err != nil {
