@@ -25,6 +25,7 @@ const (
 	Specification = "specification"
 	Swagger       = "swagger"
 	GraphQL       = "graphql-sdl"
+	Mcp           = "mcp"
 	Raml          = "RAML"
 
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
