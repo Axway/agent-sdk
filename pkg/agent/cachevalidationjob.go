@@ -132,7 +132,7 @@ func (cv *cacheValidator) sequenceInSync() bool {
 		cv.logger.
 			WithField("cachedSeq", cachedSeq).
 			WithField("serverSeq", serverSeq).
-			Info("sequence mismatch detected, proceeding with per-kind cache validation")
+			Info("sequence mismatch detected")
 		return false
 	}
 

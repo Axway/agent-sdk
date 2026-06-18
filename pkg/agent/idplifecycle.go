@@ -23,6 +23,10 @@ func (a *idpClientAdapter) CreateSubResource(rm apiv1.ResourceMeta, subs map[str
 	return a.client.CreateSubResource(rm, subs)
 }
 
+func (a *idpClientAdapter) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return a.client.GetResource(url)
+}
+
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
 	if !ManageIDPResourcesEnabled() {
 		return ""
