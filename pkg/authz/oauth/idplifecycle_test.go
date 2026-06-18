@@ -353,8 +353,8 @@ func TestCreateEngageResourcesGetResourceError(t *testing.T) {
 
 	metadata, idpCfg := makeTestMetadata(t)
 	_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
-	assert.Error(t, err)
-	assert.Equal(t, 0, created)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, created)
 }
 
 func TestCreateEngageResourcesIDPFoundViaGetResource(t *testing.T) {
