@@ -1031,6 +1031,7 @@ func createIDPConfig(s oauth.MockIDPServer) *config.IDPConfiguration {
 		AuthMethod:       config.ClientSecretBasic,
 		AuthResponseType: oauth.AuthResponseToken,
 		ExtraProperties:  config.ExtraProperties{"key": "value"},
+		LoggerOptions:    &config.IDPLoggerOptions{},
 	}
 }
 
@@ -1069,9 +1070,9 @@ func TestExternalCredentialOnPending(t *testing.T) {
 			}
 
 			p := &mockExternalCredProv{
-				t:             t,
+				t:              t,
 				expectedStatus: expectedStatus,
-				provisionErr:  tc.provisionErr,
+				provisionErr:   tc.provisionErr,
 			}
 
 			c := &credClient{

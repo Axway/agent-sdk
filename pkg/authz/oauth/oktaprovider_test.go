@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -163,8 +164,9 @@ func oktaPolicyPutMustIncludeClientHandler(clientID string) http.HandlerFunc {
 
 func newIDPCredential(tsURL, group, policy string) *corecfg.IDPConfiguration {
 	credentialObj := &corecfg.IDPConfiguration{
-		MetadataURL: tsURL + oauthMetadataEndpoint,
-		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+		MetadataURL:   tsURL + oauthMetadataEndpoint,
+		AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 	if strings.TrimSpace(group) != "" || strings.TrimSpace(policy) != "" {
 		credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: group, Policy: policy}
@@ -325,9 +327,10 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 			defer ts.Close()
 
 			credentialObj := &corecfg.IDPConfiguration{
-				MetadataURL: ts.URL + oauthMetadataEndpoint,
-				Okta:        &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup},
-				AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+				MetadataURL:   ts.URL + oauthMetadataEndpoint,
+				Okta:          &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup},
+				AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+				LoggerOptions: &config.IDPLoggerOptions{},
 			}
 			err := oktaProvider.postProcessClientUnregister("app123", credentialObj, apiClient)
 			if tc.wantErr {
@@ -355,8 +358,9 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 	defer ts.Close()
 
 	credentialObj := &corecfg.IDPConfiguration{
-		MetadataURL: ts.URL + oauthMetadataEndpoint,
-		AuthConfig:  &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+		MetadataURL:   ts.URL + oauthMetadataEndpoint,
+		AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	apiClient := coreapi.NewClient(nil, "")

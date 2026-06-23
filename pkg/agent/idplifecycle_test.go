@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	testEnvName = "test-env"
-	testIDPName = "test-idp"
+	testEnvName     = "test-env"
+	testIDPName     = "test-idp"
 	existingIDPName = "existing-idp"
 )
 
@@ -75,6 +75,7 @@ func makeIDPConfig(metadataURL string) *config.IDPConfiguration {
 		ClientScopes:     "read",
 		AuthMethod:       config.ClientSecretBasic,
 		AuthResponseType: oauth.AuthResponseToken,
+		LoggerOptions:    &config.IDPLoggerOptions{},
 	}
 }
 

@@ -84,6 +84,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 					AuthMethod:       config.ClientSecretBasic,
 					AuthResponseType: "token",
 					ExtraProperties:  config.ExtraProperties{"key": "value"},
+					LoggerOptions:    &config.IDPLoggerOptions{},
 				}
 
 				p, _ := oauth.NewProvider(cfg, config.NewTLSConfig(), "", 30*time.Second)
