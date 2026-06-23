@@ -44,17 +44,18 @@ type Provider interface {
 }
 
 type provider struct {
-	logger             log.FieldLogger
-	cfg                corecfg.IDPConfig
-	metadataURL        string
-	extraProperties    map[string]interface{}
-	requestHeaders     map[string]string
-	queryParameters    map[string]string
-	apiClient          coreapi.Client
-	authServerMetadata *AuthorizationServerMetadata
-	authClient         AuthClient
-	idpType            typedIDP
-	idpResourceName    *string
+	logger                log.FieldLogger
+	cfg                   corecfg.IDPConfig
+	metadataURL           string
+	extraProperties       map[string]interface{}
+	requestHeaders        map[string]string
+	queryParameters       map[string]string
+	apiClient             coreapi.Client
+	authServerMetadata    *AuthorizationServerMetadata
+	authClient            AuthClient
+	idpType               typedIDP
+	idpResourceName       *string
+	logRequestAndResponse bool
 }
 
 type typedIDP interface {
@@ -103,16 +104,17 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 
 	idpResourceName := new(string)
 	p := &provider{
-		logger:             logger,
-		metadataURL:        idp.GetMetadataURL(),
-		cfg:                idp,
-		extraProperties:    extraProps,
-		requestHeaders:     idp.GetRequestHeaders(),
-		queryParameters:    idp.GetQueryParams(),
-		apiClient:          apiClient,
-		idpType:            idpType,
-		authServerMetadata: pOpts.authServerMetadata,
-		idpResourceName:    idpResourceName,
+		logger:                logger,
+		metadataURL:           idp.GetMetadataURL(),
+		cfg:                   idp,
+		extraProperties:       extraProps,
+		requestHeaders:        idp.GetRequestHeaders(),
+		queryParameters:       idp.GetQueryParams(),
+		apiClient:             apiClient,
+		idpType:               idpType,
+		authServerMetadata:    pOpts.authServerMetadata,
+		idpResourceName:       idpResourceName,
+		logRequestAndResponse: idp.GetLoggingConfig().LogRequestResponse(),
 	}
 
 	if p.authServerMetadata == nil {
@@ -154,13 +156,17 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	return p, nil
 }
 
-func FetchMetadata(apiClient coreapi.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
+func FetchMetadata(apiClient coreapi.Client, metadataURL string, logReqAndRes bool) (*AuthorizationServerMetadata, error) {
 	if apiClient == nil || metadataURL == "" {
 		return nil, errors.New("unexpected arguments")
 	}
 	request := coreapi.Request{
 		Method: coreapi.GET,
 		URL:    metadataURL,
+		Options: coreapi.RequestOptions{
+			LogReqBody: logReqAndRes,
+			LogResBody: logReqAndRes,
+		},
 	}
 
 	response, err := apiClient.Send(request)
@@ -178,7 +184,7 @@ func FetchMetadata(apiClient coreapi.Client, metadataURL string) (*Authorization
 }
 
 func (p *provider) fetchMetadata() (*AuthorizationServerMetadata, error) {
-	return FetchMetadata(p.apiClient, p.metadataURL)
+	return FetchMetadata(p.apiClient, p.metadataURL, p.logRequestAndResponse)
 }
 
 func (p *provider) createAuthClient() (AuthClient, error) {
@@ -374,6 +380,8 @@ func (p *provider) prepareHeaders(authPrefix, token string) map[string]string {
 
 // RegisterClient - register the OAuth client with IDP
 func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, error) {
+	logger := p.logger.WithField(logProvider, p.cfg.GetIDPName())
+
 	authPrefix := p.idpType.getAuthorizationHeaderPrefix()
 	err := p.enrichClientReq(clientReq)
 	if err != nil {
@@ -383,6 +391,19 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 	clientBuffer, err := json.Marshal(clientReq)
 	if err != nil {
 		return nil, err
+	}
+
+	logger = logger.
+		WithField("clientName", clientReq.GetClientName()).
+		WithField("grantType", clientReq.GetGrantTypes()).
+		WithField("tokenAuthMethod", clientReq.GetTokenEndpointAuthMethod())
+
+	if len(clientReq.GetScopes()) > 0 {
+		logger = logger.WithField("requestScopes", clientReq.GetScopes())
+	}
+
+	if len(clientReq.GetRedirectURIs()) > 0 {
+		logger = logger.WithField("requestRedirectURIs", clientReq.GetRedirectURIs())
 	}
 
 	token, err := p.getClientToken()
@@ -396,8 +417,13 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		QueryParams: p.queryParameters,
 		Headers:     p.prepareHeaders(authPrefix, token),
 		Body:        clientBuffer,
+		Options: coreapi.RequestOptions{
+			LogReqBody: p.logRequestAndResponse,
+			LogResBody: p.logRequestAndResponse,
+		},
 	}
 
+	logger.Debug("requesting client")
 	response, err := p.apiClient.Send(request)
 	if err != nil {
 		return nil, err
@@ -414,15 +440,19 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 			return nil, err
 		}
 
-		p.logger.
-			WithField(logProvider, p.cfg.GetIDPName()).
-			WithField("clientName", clientReq.GetClientName()).
-			WithField(logClientID, clientReq.GetClientID()).
-			WithField("grantType", clientReq.GetGrantTypes()).
-			WithField("tokenAuthMethod", clientReq.GetTokenEndpointAuthMethod()).
-			WithField("responseType", clientReq.GetResponseTypes()).
-			WithField("redirectURIs", clientReq.GetRedirectURIs()).
-			Info("registered client")
+		if len(clientRes.GetResponseTypes()) > 0 {
+			logger = logger.WithField("responseTypes", clientRes.GetResponseTypes())
+		}
+
+		if len(clientRes.GetScopes()) > 0 {
+			logger = logger.WithField("responseScopes", clientRes.GetScopes())
+		}
+
+		if len(clientRes.GetRedirectURIs()) > 0 {
+			logger = logger.WithField("responseRedirectURIs", clientRes.GetRedirectURIs())
+		}
+
+		logger.WithField(logClientID, clientRes.GetClientID()).Info("registered client")
 		return clientRes, err
 	}
 
@@ -659,6 +689,10 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		URL:         unregisterURL,
 		QueryParams: queryParams,
 		Headers:     p.prepareHeaders(authPrefix, accessToken),
+		Options: coreapi.RequestOptions{
+			LogReqBody: p.logRequestAndResponse,
+			LogResBody: p.logRequestAndResponse,
+		},
 	}
 
 	response, err := p.apiClient.Send(request)

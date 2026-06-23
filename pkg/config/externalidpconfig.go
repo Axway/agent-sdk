@@ -22,6 +22,7 @@ const (
 	propInsecureSkipVerify      = "insecureSkipVerify"
 	propUseCachedToken          = "useCachedToken"
 	propUseRegistrationToken    = "useRegistrationToken"
+	propLogRequestAndResponse   = "requestAndResponse"
 	pathExternalIDP             = "agentFeatures.idp"
 	fldName                     = "name"
 	fldTitle                    = "title"
@@ -53,6 +54,8 @@ const (
 	fldSSLRootCACertPath        = "ssl.rootCACertPath"
 	fldSSLClientCertPath        = "ssl.clientCertPath"
 	fldSSLClientKeyPath         = "ssl.clientKeyPath"
+
+	fldLogRequestResponse = "log." + propLogRequestAndResponse
 )
 
 var configProperties = []string{
@@ -86,6 +89,7 @@ var configProperties = []string{
 	fldAuthTokenSigningMethod,
 	fldAuthUseCachedToken,
 	fldAuthUseRegistrationToken,
+	fldLogRequestResponse,
 }
 
 var validIDPAuthType = map[string]bool{
@@ -224,6 +228,11 @@ type IDPAuthConfig interface {
 	GetQueryParams() map[string]string
 }
 
+// IDPLoggingConfig - interface for IdP logger config
+type IDPLoggingConfig interface {
+	LogRequestResponse() bool
+}
+
 // IDPConfig - interface for IdP provider config
 type IDPConfig interface {
 	// GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
@@ -256,6 +265,8 @@ type IDPConfig interface {
 	GetQueryParams() map[string]string
 	// GetTLSConfig - tls config for IDP connection
 	GetTLSConfig() TLSConfig
+	// GetLoggingConfig - logging options
+	GetLoggingConfig() IDPLoggingConfig
 	// validate - Validates the IDP configuration
 	validate()
 }
@@ -283,6 +294,11 @@ type OktaIDPConfiguration struct {
 	Policy string `json:"policy,omitempty"`
 }
 
+// IDPLoggerOptions - logging options for IdP api requests
+type IDPLoggerOptions struct {
+	RequestResponse bool `json:"-"`
+}
+
 // IDPConfiguration - Structure to hold the IdP provider config
 type IDPConfiguration struct {
 	Name             string                `json:"name,omitempty"`
@@ -298,6 +314,7 @@ type IDPConfiguration struct {
 	ExtraProperties  ExtraProperties       `json:"extraProperties,omitempty"`
 	RequestHeaders   IDPRequestHeaders     `json:"requestHeaders,omitempty"`
 	QueryParams      IDPQueryParams        `json:"queryParams,omitempty"`
+	LoggerOptions    IDPLoggingConfig      `json:"log,omitempty"`
 	TLSConfig        TLSConfig             `json:"-"`
 }
 
@@ -324,6 +341,11 @@ func (i *IDPConfiguration) GetAuthConfig() IDPAuthConfig {
 // GetMetadataURL - URL exposed by OAuth authorization server to provide metadata information
 func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
+}
+
+// GetIDPLogConfig - to be used for authentication with IDP
+func (i *IDPConfiguration) GetIDPLogConfig() IDPAuthConfig {
+	return i.AuthConfig
 }
 
 // GetOktaGroup - returns Okta group name configured for this IDP (if any).
@@ -382,12 +404,17 @@ func (i *IDPConfiguration) GetTLSConfig() TLSConfig {
 	return i.TLSConfig
 }
 
+func (i *IDPConfiguration) GetLoggingConfig() IDPLoggingConfig {
+	return i.LoggerOptions
+}
+
 // UnmarshalJSON - custom unmarshaler for IDPConfiguration struct
 func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
 	type Alias IDPConfiguration
 	i.RequestHeaders = make(IDPRequestHeaders)
 	i.QueryParams = make(IDPQueryParams)
 	i.ExtraProperties = make(ExtraProperties)
+	i.LoggerOptions = &IDPLoggerOptions{}
 
 	i.AuthConfig = &IDPAuthConfiguration{
 		RequestHeaders: make(IDPRequestHeaders),
@@ -404,6 +431,11 @@ func (i *IDPConfiguration) UnmarshalJSON(data []byte) error {
 	if v, ok := b["auth"]; ok {
 		buf, _ := json.Marshal(v)
 		json.Unmarshal(buf, i.AuthConfig)
+	}
+
+	if v, ok := b["log"]; ok {
+		buf, _ := json.Marshal(v)
+		json.Unmarshal(buf, &i.LoggerOptions)
 	}
 
 	return nil
@@ -625,6 +657,53 @@ func (i *IDPAuthConfiguration) validateTLSClientAuthConfig(tlsCfg TLSConfig) {
 	}
 	validateAuthFileConfig(pathExternalIDP+"."+fldSSLClientCertPath, tlsCfg.(*TLSConfiguration).ClientCertificatePath, "", "tls client certificate")
 	validateAuthFileConfig(pathExternalIDP+"."+fldSSLClientKeyPath, tlsCfg.(*TLSConfiguration).ClientKeyPath, "", "tls client key")
+}
+
+// LogRequestResponse -
+func (i *IDPLoggerOptions) LogRequestResponse() bool {
+	return i.RequestResponse
+}
+
+// UnmarshalJSON - custom unmarshaler for IDPAuthConfiguration struct
+func (i *IDPLoggerOptions) UnmarshalJSON(data []byte) error {
+	type Alias IDPLoggerOptions // Create an intermittent type to unmarshal the base attributes
+
+	if err := json.Unmarshal(data, &struct{ *Alias }{Alias: (*Alias)(i)}); err != nil {
+		return err
+	}
+
+	var allFields interface{}
+	json.Unmarshal(data, &allFields)
+	b := allFields.(map[string]interface{})
+
+	// Default to use not use registration access token
+	i.RequestResponse = false
+	if v, ok := b[propLogRequestAndResponse]; ok {
+		i.RequestResponse = (v == "true")
+	}
+	return nil
+}
+
+// MarshalJSON - custom marshaler for Application struct
+func (i *IDPLoggerOptions) MarshalJSON() ([]byte, error) {
+	type Alias IDPLoggerOptions // Create an intermittent type to marshal the base attributes
+
+	app, err := json.Marshal(&struct{ *Alias }{Alias: (*Alias)(i)})
+	if err != nil {
+		return nil, err
+	}
+
+	// decode it back to get a map
+	var allFields interface{}
+	json.Unmarshal(app, &allFields)
+	b := allFields.(map[string]interface{})
+
+	if i.RequestResponse {
+		b[propLogRequestAndResponse] = "true"
+	}
+
+	// Return encoding of the map
+	return json.Marshal(b)
 }
 
 func addExternalIDPProperties(props properties.Properties) {
