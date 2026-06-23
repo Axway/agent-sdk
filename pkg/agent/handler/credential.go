@@ -342,6 +342,20 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	isExternal := isExternalCredential(cred)
 	if status.GetStatus() == prov.Success {
 		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
+		if provCreds.IsIDPCredential() && !isExternal {
+			if err := persistIDPClientOnManagedApplication(
+				fieldLogger,
+				h.client,
+				app,
+				provCreds.GetIDPCredentialData().GetClientID(),
+				provCreds.GetIDPProvider().GetTokenEndpoint(),
+			); err != nil {
+				status = prov.NewRequestStatusBuilder().
+					SetMessage(fmt.Sprintf("error storing IDP client reference on managed application: %s", err.Error())).
+					SetCurrentStatusReasons(cred.Status.Reasons).
+					Failed()
+			}
+		}
 		if credentialData != nil {
 			if !isExternal {
 				sec := app.Spec.Security

@@ -11,6 +11,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -24,17 +25,24 @@ type teamFetcher interface {
 }
 
 type managedApplication struct {
+	idpRegistry oauth.IdPRegistry
 	marketplaceHandler
-	prov        prov.ApplicationProvisioner
-	cache       agentcache.Manager
-	client      client
-	teamClient  teamFetcher
-	retryCount  int
+	prov       prov.ApplicationProvisioner
+	cache      agentcache.Manager
+	client     client
+	teamClient teamFetcher
+	retryCount int
 }
 
 func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
 	return func(c *managedApplication) {
 		c.retryCount = rc
+	}
+}
+
+func WithManagedAppIDPRegistry(registry oauth.IdPRegistry) func(c *managedApplication) {
+	return func(c *managedApplication) {
+		c.idpRegistry = registry
 	}
 }
 
@@ -159,8 +167,13 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
+	if err := cleanupManagedApplicationIDPClients(ctx, log, h.idpRegistry, app); err != nil {
+		log.WithError(err).Error("error cleaning up managed application IDP clients")
+		h.onError(app, err)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		return
+	}
 	status := h.prov.ApplicationRequestDeprovision(pma)
-
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
