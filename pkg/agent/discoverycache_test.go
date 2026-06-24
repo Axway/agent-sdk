@@ -194,6 +194,10 @@ type mockRIClient struct {
 	queryParams map[string]map[string]string
 }
 
+func (m *mockRIClient) GetAPIV1ResourceCount(_ string) (int, error) {
+	return 0, nil
+}
+
 func (m *mockRIClient) GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	if m.queryParams == nil {
 		m.queryParams = make(map[string]map[string]string)
