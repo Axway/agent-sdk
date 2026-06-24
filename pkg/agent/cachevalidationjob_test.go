@@ -64,10 +64,6 @@ func newMockResourceClient() *mockResourceClient {
 	}
 }
 
-func (m *mockResourceClient) GetAPIV1ResourceCount(_ string) (int, error) {
-	return 0, nil
-}
-
 func (m *mockResourceClient) GetAPIV1ResourceInstances(_ map[string]string, URL string) ([]*apiv1.ResourceInstance, error) {
 	if m.err != nil {
 		return nil, m.err
@@ -76,6 +72,13 @@ func (m *mockResourceClient) GetAPIV1ResourceInstances(_ map[string]string, URL 
 		return res, nil
 	}
 	return []*apiv1.ResourceInstance{}, nil
+}
+
+func (m *mockResourceClient) GetAPIV1ResourceCount(URL string) (int, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	return len(m.resources[URL]), nil
 }
 
 // mockCVHarvester is a harvester mock with a configurable latest sequence ID,
