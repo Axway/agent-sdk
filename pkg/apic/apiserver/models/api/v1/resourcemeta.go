@@ -45,6 +45,8 @@ type ResourceMeta struct {
 	Tags []string `json:"tags"`
 	// Finalizer on the API server resource
 	Finalizers []Finalizer `json:"finalizers"`
+	// Embedded contains the enriched references returned when fetching with ?embed=metadata.references.
+	Embedded map[string]EmbeddedReferences `json:"_embedded,omitempty"`
 	// SubResources contains all of the unique sub resources that may be added to a resource
 	SubResources map[string]interface{} `json:"-"`
 	// Contains the name of the subResource mapped to its hash value
@@ -212,6 +214,19 @@ func (rm *ResourceMeta) GetReferenceByGVK(gvk GroupVersionKind) Reference {
 		}
 	}
 	return Reference{}
+}
+
+// GetEmbeddedReferenceByGVK returns the first embedded reference that matches the GroupKind argument.
+// Embedded references are only populated when the resource was fetched with ?embed=metadata.references.
+func (rm *ResourceMeta) GetEmbeddedReferenceByGVK(gvk GroupVersionKind) EmbeddedReference {
+	for _, wrapper := range rm.Embedded {
+		for _, ref := range wrapper.References {
+			if ref.Group == gvk.Group && ref.Kind == gvk.Kind {
+				return ref
+			}
+		}
+	}
+	return EmbeddedReference{}
 }
 
 // GetReferenceByIDAndGVK returns the first found reference that matches the ID and GroupKind arguments.

@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+
 func TestCredentialHandler(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
@@ -196,7 +197,7 @@ func TestCredentialHandler(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_deleting(t *testing.T) {
+func TestCredentialHandlerDeleting(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
@@ -311,7 +312,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_update(t *testing.T) {
+func TestCredentialHandlerUpdate(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
@@ -412,7 +413,7 @@ func TestCredentialHandler_update(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_wrong_kind(t *testing.T) {
+func TestCredentialHandlerWrongKind(t *testing.T) {
 	c := &mockClient{}
 	p := &mockCredProv{}
 	handler := NewCredentialHandler(p, c, nil)
@@ -425,7 +426,7 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_creds(t *testing.T) {
+func TestCreds(t *testing.T) {
 	c := provCreds{
 		managedApp: "app-name",
 		credType:   "api-key",
@@ -792,7 +793,7 @@ func decrypt(pk string, alg, hash string, data map[string]interface{}) map[strin
 	return data
 }
 
-func Test_encrypt(t *testing.T) {
+func TestEncrypt(t *testing.T) {
 	var crdSchema = `{
     "type": "object",
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -843,7 +844,7 @@ func Test_encrypt(t *testing.T) {
 		},
 		{
 			name:       "should encrypt when the algorithm is RSA-OAEP",
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  pub,
 			privateKey: priv,
@@ -859,7 +860,7 @@ func Test_encrypt(t *testing.T) {
 		{
 			name:       "should return an error when the hash is unknown",
 			hasErr:     true,
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "fake",
 			publicKey:  pub,
 			privateKey: priv,
@@ -867,7 +868,7 @@ func Test_encrypt(t *testing.T) {
 		{
 			name:       "should return an error when the public key cannot be parsed",
 			hasErr:     true,
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  "fake",
 			privateKey: priv,

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOwner_MarshalJSON(t *testing.T) {
+func TestOwnerMarshalJSON(t *testing.T) {
 	o := &Owner{}
 	o.SetID("123")
 
@@ -60,4 +60,47 @@ func TestOwner_MarshalJSON(t *testing.T) {
 	assert.Equal(t, o3.Type, o4.Type)
 	assert.Equal(t, o3.ID, o4.ID)
 	assert.Equal(t, o3.Organization, o4.Organization)
+
+}
+
+func TestOwnerUserFieldMarshalJSON(t *testing.T) {
+	cases := map[string]struct {
+		user         *OwnerUser
+		wantContains string
+		wantUser     *OwnerUser
+	}{
+		"user set — marshals and round-trips correctly": {
+			user:         &OwnerUser{ID: "u-456"},
+			wantContains: `"user"`,
+			wantUser:     &OwnerUser{ID: "u-456"},
+		},
+		"user nil — omitted from JSON": {
+			user:         nil,
+			wantContains: "",
+			wantUser:     nil,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			o := &Owner{ID: "123", User: tc.user}
+			o.SetType(TeamOwner)
+
+			b, err := o.MarshalJSON()
+			assert.Nil(t, err)
+
+			if tc.wantContains != "" {
+				assert.Contains(t, string(b), tc.wantContains)
+			} else {
+				assert.NotContains(t, string(b), `"user"`)
+			}
+
+			got := &Owner{}
+			err = json.Unmarshal(b, got)
+			assert.Nil(t, err)
+			assert.Equal(t, o.Type, got.Type)
+			assert.Equal(t, o.ID, got.ID)
+			assert.Equal(t, tc.wantUser, got.User)
+		})
+	}
 }

@@ -153,7 +153,9 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 		}
 
 		resourceInstancePage := make([]*apiv1.ResourceInstance, 0)
-		json.Unmarshal(response, &resourceInstancePage)
+		if err := json.Unmarshal(response, &resourceInstancePage); err != nil {
+			log.WithError(err).Debug("error deserializing resource page response")
+		}
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 
