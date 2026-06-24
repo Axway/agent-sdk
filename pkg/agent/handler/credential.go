@@ -278,6 +278,14 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 			h.onError(ctx, cred, err)
 			return cred
 		}
+		if err := persistIDPClientOnManagedApplication(fieldLogger, h.client, app,
+			provCreds.GetIDPCredentialData().GetClientID(),
+			provCreds.GetIDPProvider().GetTokenEndpoint(),
+		); err != nil {
+			logger.WithError(err).Error("error storing IDP client reference on managed application")
+			h.onError(ctx, cred, err)
+			return cred
+		}
 	}
 
 	status, credentialData := h.provision(provCreds)
@@ -342,20 +350,6 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	isExternal := isExternalCredential(cred)
 	if status.GetStatus() == prov.Success {
 		credentialData := h.getProvisionedCredentialData(provCreds, credentialData)
-		if provCreds.IsIDPCredential() && !isExternal {
-			if err := persistIDPClientOnManagedApplication(
-				fieldLogger,
-				h.client,
-				app,
-				provCreds.GetIDPCredentialData().GetClientID(),
-				provCreds.GetIDPProvider().GetTokenEndpoint(),
-			); err != nil {
-				status = prov.NewRequestStatusBuilder().
-					SetMessage(fmt.Sprintf("error storing IDP client reference on managed application: %s", err.Error())).
-					SetCurrentStatusReasons(cred.Status.Reasons).
-					Failed()
-			}
-		}
 		if credentialData != nil {
 			if !isExternal {
 				sec := app.Spec.Security
@@ -471,6 +465,14 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 		if action == prov.Rotate && provCreds.IsIDPCredential() && !isExternalCredential(cred) {
 			if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
 				logger.WithError(err).Error("error provisioning credential request with IDP")
+				h.onError(ctx, cred, err)
+				return cred
+			}
+			if err := persistIDPClientOnManagedApplication(fieldLogger, h.client, app,
+				provCreds.GetIDPCredentialData().GetClientID(),
+				provCreds.GetIDPProvider().GetTokenEndpoint(),
+			); err != nil {
+				logger.WithError(err).Error("error storing IDP client reference on managed application")
 				h.onError(ctx, cred, err)
 				return cred
 			}
