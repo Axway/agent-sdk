@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
@@ -22,6 +23,7 @@ type eventsJob interface {
 	Status() error
 	Stop()
 	Healthcheck(_ string) *hc.Status
+	WaitForReady(ctx context.Context) error
 }
 
 // eventProcessorJob job wrapper for a streamerClient that starts a stream and an event manager.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -45,7 +46,7 @@ func (m mockArdMigClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.Res
 	return r, err
 }
 
-func (m mockArdMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m mockArdMigClient) CreateOrUpdateResource(data apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
 

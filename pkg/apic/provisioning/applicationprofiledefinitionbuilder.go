@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
 
@@ -79,20 +78,17 @@ func (a *applicationProfileDef) Register() (*management.ApplicationProfileDefini
 		Schema: a.requestSchema,
 	}
 
-	hashInt, _ := util.ComputeHash(spec)
-
 	// put back in spec the complete request schema
 	spec.Schema = a.requestSchema
 
 	if a.name == "" {
+		hashInt, _ := util.ComputeHash(spec)
 		a.name = util.ConvertUnitToString(hashInt)
 	}
 
 	ard := management.NewApplicationProfileDefinition(a.name, "")
 	ard.Title = a.title
 	ard.Spec = spec
-
-	util.SetAgentDetailsKey(ard, definitions.AttrSpecHash, fmt.Sprintf("%v", hashInt))
 
 	return a.registerFunc(ard)
 }

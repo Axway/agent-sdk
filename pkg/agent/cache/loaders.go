@@ -38,24 +38,6 @@ func (resourceLoader) unmarshaller(data []byte) (interface{}, error) {
 	return ri, nil
 }
 
-func createInstanceCountLoader(setter func(cache.Cache, string), key string) *instanceCountLoader {
-	return &instanceCountLoader{createResourceLoader(setter, key)}
-}
-
-// instanceCountLoader
-type instanceCountLoader struct {
-	*resourceLoader
-}
-
-func (l *instanceCountLoader) unmarshaller(data []byte) (interface{}, error) {
-	c := apiServiceToInstanceCount{}
-	err := json.Unmarshal(data, &c)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
 func createSequenceLoader(setter func(cache.Cache, string), key string) *sequenceLoader {
 	return &sequenceLoader{createResourceLoader(setter, key)}
 }

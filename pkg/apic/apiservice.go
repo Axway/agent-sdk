@@ -188,8 +188,6 @@ func buildAPIServiceStatusSubResource(status *apiv1.ResourceStatus, ownerErr err
 // processService -
 func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.APIService, error) {
 	// Default action to create service
-	serviceURL := c.cfg.GetServicesURL()
-	httpMethod := http.MethodPost
 	serviceBody.serviceContext.serviceAction = addAPI
 	serviceBody.specHashes = map[string]string{}
 
@@ -199,6 +197,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		return nil, err
 	}
 
+	var existingRI *apiv1.ResourceInstance
 	if svc != nil && serviceBody.IsRevisionOnly() {
 		serviceBody.serviceContext.serviceAction = updateAPI
 		serviceBody.serviceContext.serviceName = svc.Name
@@ -206,20 +205,18 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		c.setSpecHashesOnServiceBody(serviceBody, svc)
 		return svc, nil
 	} else if svc != nil {
+		existingRI, _ = svc.AsInstance()
 		serviceBody.serviceContext.serviceAction = updateAPI
-		httpMethod = http.MethodPut
-		serviceURL += "/" + svc.Name
 		c.updateAPIService(serviceBody, svc)
 	} else {
 		svc = c.buildAPIService(serviceBody)
 	}
-
-	buffer, err := json.Marshal(svc)
-	if err != nil {
-		return nil, err
-	}
-
-	ri, err := c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	addSpecHashToResource(svc)
+	ri, err := c.CreateOrUpdateResource(svc,
+		WithExistingResourceInstance(existingRI),
+		WithSkipSetSpecHash(true),
+		WithSkipXAgentDetailUpdate(true),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -247,12 +244,6 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService,
 	subResources := make(map[string]interface{})
 	if svc.Status != nil {
 		subResources[management.ApiServiceStatusSubResourceName] = svc.Status
-	}
-
-	if len(svc.SubResources) > 0 {
-		if xAgentDetail, ok := svc.SubResources[defs.XAgentDetails]; ok {
-			subResources[defs.XAgentDetails] = xAgentDetail
-		}
 	}
 
 	if updateSource && svc.Source != nil {

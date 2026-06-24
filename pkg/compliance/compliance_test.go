@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -61,7 +62,7 @@ func TestCompliance(t *testing.T) {
 		return nil
 	}
 
-	apicMockCli.CreateOrUpdateResourceMock = func(ri v1.Interface) (*v1.ResourceInstance, error) {
+	apicMockCli.CreateOrUpdateResourceMock = func(ri v1.Interface, _ ...apic.UpdateOption) (*v1.ResourceInstance, error) {
 		resInst, _ := ri.AsInstance()
 		crr := management.NewComplianceRuntimeResult("", "")
 		crr.FromInstance(resInst)

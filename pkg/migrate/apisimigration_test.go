@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -139,7 +140,7 @@ func (m *mockAPISIMigClient) UpdateResourceInstance(ri apiv1.Interface) (*apiv1.
 	return r, err
 }
 
-func (m *mockAPISIMigClient) CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error) {
+func (m *mockAPISIMigClient) CreateOrUpdateResource(data apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 	return nil, nil
 }
 

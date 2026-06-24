@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 
@@ -24,6 +23,12 @@ type EventSync struct {
 	sequence       events.SequenceProvider
 	harvester      harvester.Harvest
 	discoveryCache *discoveryCache
+	cacheValidator CacheValidator
+}
+
+// CacheValidator is satisfied by cacheValidator; allows EventSync to run cache validation.
+type CacheValidator interface {
+	Execute() ([]management.WatchTopicSpecFilters, error)
 }
 
 // newEventSync creates an EventSync
@@ -60,7 +65,7 @@ func newEventSync() (*EventSync, error) {
 
 	sequence := events.NewSequenceProvider(agent.cacheManager, wt.Name)
 	hCfg := harvester.NewConfig(agent.cfg, agent.tokenRequester, sequence)
-	hClient := harvester.NewClient(hCfg)
+	hClient := harvester.NewClient(hCfg, harvester.WithPublishLock(PublishingLock, PublishingUnlock))
 
 	discoveryCache := newDiscoveryCache(
 		agent.cfg,
@@ -70,11 +75,20 @@ func newEventSync() (*EventSync, error) {
 		opts...,
 	)
 
+	cacheValidator := newCacheValidator(
+		GetCentralClient(),
+		wt,
+		agent.cacheManager,
+		hClient,
+		sequence,
+	)
+
 	return &EventSync{
 		watchTopic:     wt,
 		sequence:       sequence,
 		harvester:      hClient,
 		discoveryCache: discoveryCache,
+		cacheValidator: cacheValidator,
 	}, nil
 }
 
@@ -85,10 +99,19 @@ func (es *EventSync) SyncCache() error {
 			return err
 		}
 	} else {
-		err := finalizeInitialization()
+		// Validate the persisted cache against the API server
+		failedFilters, err := es.validateCache()
 		if err != nil {
-			logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
-			return err
+			logger.WithError(err).Info("persisted cache validation failed, rebuilding out-of-sync kinds")
+			if err := es.initCache(failedFilters...); err != nil {
+				return err
+			}
+		} else {
+			err := finalizeInitialization()
+			if err != nil {
+				logger.WithError(err).Error("error finalizing setup prior to marketplace resource syncing")
+				return err
+			}
 		}
 	}
 
@@ -114,67 +137,81 @@ func (es *EventSync) registerInstanceValidator() error {
 	return nil
 }
 
-func (es *EventSync) initCache() error {
+func (es *EventSync) initCache(failedFilters ...management.WatchTopicSpecFilters) error {
 	seqID, err := es.harvester.ReceiveSyncEvents(context.Background(), es.watchTopic.GetSelfLink(), 0, nil)
 	if err != nil {
 		return err
 	}
-	// event channel is not ready yet, so subtract one from the latest sequence id to process the event
-	// when the poll/stream client is ready
+
 	// when no events returned by harvester the seqID will be 0, so not updated in sequence manager
-	agent.cacheManager.Flush()
 	if seqID > 0 {
-		es.sequence.SetSequence(seqID - 1)
+		es.sequence.SetSequence(seqID)
 	}
-	err = es.discoveryCache.execute()
-	if err != nil {
-		// flush cache again to clear out anything that may have been saved before the error to ensure a clean state for the next time through
-		agent.cacheManager.Flush()
+
+	defer agent.cacheManager.SaveCache()
+	if err = es.discoveryCache.execute(failedFilters...); err != nil {
 		return err
 	}
-	agent.cacheManager.SaveCache()
 
-	agentInstance := agent.agentResourceManager.GetAgentResource()
-
-	// add 7 days to the current date for the next rebuild cache
-	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
-
-	// persist cacheUpdateTime
-	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
-	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
-	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+	es.resetCacheTimer()
 	return nil
 }
 
-func (es *EventSync) RebuildCache() {
-	// SDB - NOTE : Do we need to pause jobs.
+// resetCacheTimer persists a new cacheUpdateTime 7 days from now in the agent's x-agent-details.
+func (es *EventSync) resetCacheTimer() {
+	agentInstance := agent.agentResourceManager.GetAgentResource()
+	nextCacheUpdateTime := time.Now().Add(7 * 24 * time.Hour)
+	util.SetAgentDetailsKey(agentInstance, "cacheUpdateTime", strconv.FormatInt(nextCacheUpdateTime.UnixNano(), 10))
+	agent.apicClient.CreateSubResource(agentInstance.ResourceMeta, util.GetSubResourceDetails(agentInstance))
+	logger.Tracef("setting next cache update time to - %s", time.Unix(0, nextCacheUpdateTime.UnixNano()).Format("2006-01-02 15:04:05.000000"))
+}
+
+// RebuildCache is the single entry point for all cache rebuilds.
+// When filters are given it attempts a targeted rebuild first, falling back to full on error.
+// The 7-day timer is reset on success.
+func (es *EventSync) RebuildCache(filters ...management.WatchTopicSpecFilters) error {
 	logger.Info("rebuild cache")
 
 	// close window so discovery doesn't happen during this cache rebuild
 	PublishingLock()
 	defer PublishingUnlock()
 
-	es.waitForCacheRebuild()
+	return es.initCache(filters...)
 }
 
-// waitForCacheRebuild continuously attempts to rebuild the cache until successful
-func (es *EventSync) waitForCacheRebuild() {
-	adjustment := 2
-	maxBackoff := 5 * time.Minute
-	currentBackoff := 30 * time.Second
-	for {
-		err := es.initCache()
-		if err == nil {
-			return
-		}
-
-		logger.
-			WithError(err).
-			WithField("waitTime", currentBackoff.String()).
-			Error("failed to rebuild cache, retrying after waitTime")
-		time.Sleep(currentBackoff)
-		currentBackoff = time.Duration(math.Min(float64(maxBackoff), float64(currentBackoff)*float64(adjustment)))
+// validateCache runs the cache validator to check if the persisted cache is in sync.
+// Returns the filters that are out of sync, plus a non-nil error if any failed.
+func (es *EventSync) validateCache() ([]management.WatchTopicSpecFilters, error) {
+	if es.cacheValidator == nil {
+		return nil, nil
 	}
+	return es.cacheValidator.Execute()
+}
+
+// ValidateCache validates the cache against the API server.
+// Returns the out-of-sync filters and a non-nil error if any kind failed validation.
+// If all kinds pass, the 7-day timer is reset.
+func (es *EventSync) ValidateCache() ([]management.WatchTopicSpecFilters, error) {
+	failedFilters, err := es.validateCache()
+	if err == nil {
+		es.resetCacheTimer()
+	}
+	return failedFilters, err
+}
+
+// validateAndRebuildCache validates the cache and rebuilds only the out-of-sync kinds.
+// Called when connection to Central is restored.
+func (es *EventSync) validateAndRebuildCache() error {
+	if es.cacheValidator == nil {
+		return nil
+	}
+
+	failedFilters, err := es.validateCache()
+	if err != nil {
+		logger.WithError(err).Info("cache validation failed on reconnect, rebuilding out-of-sync kinds")
+		return es.RebuildCache(failedFilters...)
+	}
+	return nil
 }
 
 func (es *EventSync) startCentralEventProcessor() error {
@@ -192,8 +229,8 @@ func (es *EventSync) startPollMode() error {
 		agent.cfg,
 		handlers,
 		poller.WithHarvester(es.harvester, es.sequence, es.watchTopic.GetSelfLink()),
-		poller.WithOnClientStop(es.RebuildCache),
 		poller.WithOnConnect(),
+		poller.WithOnReconnect(es.validateAndRebuildCache),
 	)
 
 	if err != nil {
@@ -202,9 +239,14 @@ func (es *EventSync) startPollMode() error {
 
 	if util.IsNotTest() {
 		newEventProcessorJob(pc, "Poll Client")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if err := pc.WaitForReady(ctx); err != nil {
+			return fmt.Errorf("poll client did not connect to Central within timeout: %w", err)
+		}
 	}
 
-	return err
+	return nil
 }
 
 func (es *EventSync) startStreamMode() error {
@@ -216,7 +258,7 @@ func (es *EventSync) startStreamMode() error {
 		agent.tokenRequester,
 		handlers,
 		stream.WithOnStreamConnection(),
-		stream.WithEventSyncError(es.RebuildCache),
+		stream.WithOnReconnect(es.validateAndRebuildCache),
 		stream.WithWatchTopic(es.watchTopic),
 		stream.WithHarvester(es.harvester, es.sequence),
 		stream.WithCacheManager(agent.cacheManager),
@@ -231,7 +273,12 @@ func (es *EventSync) startStreamMode() error {
 
 	if util.IsNotTest() {
 		newEventProcessorJob(sc, "Stream Client")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if err := sc.WaitForReady(ctx); err != nil {
+			return fmt.Errorf("stream client did not connect to Central within timeout: %w", err)
+		}
 	}
 
-	return err
+	return nil
 }

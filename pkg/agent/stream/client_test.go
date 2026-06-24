@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -73,16 +74,17 @@ func TestNewStreamer(t *testing.T) {
 	}()
 
 	<-manager.readyCh
-	assert.Equal(t, hc.OK, hc.RunChecks())
+	// wait for isInitialized to be set after requestQueue.Start() before checking health check
+	assert.Eventually(t, func() bool { return hc.RunChecks() == hc.OK }, time.Second, 10*time.Millisecond)
 	// should stop the listener and write nil to the listener's error channel
-	streamer.listener.Stop()
+	streamer.listener.Load().Stop()
 
 	err = <-errCh
 	assert.NotNil(t, err)
 
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
 	streamer.manager = nil
-	streamer.listener = nil
+	streamer.listener.Store(nil)
 
 	go func() {
 		err := streamer.Start()
@@ -98,6 +100,55 @@ func TestNewStreamer(t *testing.T) {
 
 	assert.NotNil(t, streamer.Status())
 	assert.Equal(t, hc.FAIL, hc.RunChecks())
+}
+
+func TestStreamerWaitForReady(t *testing.T) {
+	managerErr := fmt.Errorf("connection refused")
+
+	cases := map[string]struct {
+		newManager  func(*wm.Config, ...wm.Option) (wm.Manager, error)
+		ctxTimeout  time.Duration
+		expectedErr error
+	}{
+		"connects successfully": {
+			newManager: func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
+				return &mockManager{status: true}, nil // nil readyCh: RegisterWatch returns immediately
+			},
+			ctxTimeout:  2 * time.Second,
+			expectedErr: nil,
+		},
+		"context deadline exceeded before connection": {
+			newManager: func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
+				return &blockingManager{block: make(chan struct{})}, nil
+			},
+			ctxTimeout:  50 * time.Millisecond,
+			expectedErr: context.DeadlineExceeded,
+		},
+		"start fails before connecting": {
+			newManager: func(cfg *wm.Config, opts ...wm.Option) (wm.Manager, error) {
+				return nil, managerErr
+			},
+			ctxTimeout:  2 * time.Second,
+			expectedErr: managerErr,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			streamer, err := NewStreamerClient(&mockAPIClient{}, NewConfig(), &mockTokenGetter{}, nil)
+			assert.Nil(t, err)
+			streamer.newManager = tc.newManager
+
+			go func() { _ = streamer.Start() }()
+			defer streamer.Stop()
+
+			ctx, cancel := context.WithTimeout(context.Background(), tc.ctxTimeout)
+			defer cancel()
+
+			err = streamer.WaitForReady(ctx)
+			assert.ErrorIs(t, err, tc.expectedErr)
+		})
+	}
 }
 
 func TestClientOptions(t *testing.T) {
@@ -210,10 +261,11 @@ func TestStatusUpdates(t *testing.T) {
 	}
 }
 
+
 func stop(t *testing.T, streamer *StreamerClient, errCh chan error) {
 	t.Helper()
 	// should stop the listener and write nil to the listener's error channel
-	streamer.listener.Stop()
+	streamer.listener.Load().Stop()
 
 	err := <-errCh
 	assert.NotNil(t, err)
@@ -241,6 +293,20 @@ func (m *mockManager) CloseConn() {
 func (m *mockManager) Status() bool {
 	return m.status
 }
+
+// blockingManager blocks RegisterWatch until block is closed, simulating a slow/unresponsive Central.
+type blockingManager struct {
+	block chan struct{}
+}
+
+func (m *blockingManager) RegisterWatch(_ string, _ chan *proto.Event) (string, error) {
+	<-m.block
+	return "", nil
+}
+
+func (m *blockingManager) CloseWatch(_ string) error { return nil }
+func (m *blockingManager) CloseConn()                {}
+func (m *blockingManager) Status() bool              { return true }
 
 type mockAPIClient struct {
 	resource    *apiv1.ResourceInstance
