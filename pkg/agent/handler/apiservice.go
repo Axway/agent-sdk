@@ -57,6 +57,21 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 		return err
 	}
 
+	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(resource.Name)
+	if existing == nil {
+		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(resource.Name)
+	}
+	existingSvc, ok := existing.(*apiv1.ResourceInstance)
+	if !ok {
+		log.Debug("invalid resource type in cache, skipping delete")
+		return nil
+	}
+
+	if existingSvc.Metadata.ID != resource.Metadata.ID {
+		log.Debug("resource id mismatch, skipping delete")
+		return nil
+	}
+
 	// remove the service from the cache by name
 	return h.agentCacheManager.DeleteAPIService(resource.Name)
 }

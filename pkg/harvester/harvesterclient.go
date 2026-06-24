@@ -55,11 +55,13 @@ type Config struct {
 
 // Client for connecting to harvester
 type Client struct {
-	Cfg         *Config
-	Client      api.Client
-	URL         string
-	logger      log.FieldLogger
-	skipPublish bool
+	Cfg                *Config
+	Client             api.Client
+	URL                string
+	logger             log.FieldLogger
+	skipPublish        bool
+	publishingLocker   func()
+	publishingUnLocker func()
 }
 
 // NewConfig creates a config for harvester connections
@@ -81,8 +83,10 @@ func NewConfig(cfg config.CentralConfig, getToken auth.TokenGetter, seq events.S
 	}
 }
 
+type option func(*Client)
+
 // NewClient creates a new harvester client
-func NewClient(cfg *Config) *Client {
+func NewClient(cfg *Config, opts ...option) *Client {
 	if cfg.Protocol == "" {
 		cfg.Protocol = "https"
 	}
@@ -96,12 +100,23 @@ func NewClient(cfg *Config) *Client {
 
 	harvesterURL := fmt.Sprintf("%s://%s:%d/events", cfg.Protocol, cfg.Host, int(cfg.Port))
 
-	return &Client{
+	c := &Client{
 		URL:         harvesterURL,
 		Cfg:         cfg,
 		Client:      newSingleEntryClient(cfg),
 		logger:      logger,
 		skipPublish: cfg.skipPublish,
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+func WithPublishLock(publishingLocker, publishingUnLocker func()) option {
+	return func(c *Client) {
+		c.publishingLocker = publishingLocker
+		c.publishingUnLocker = publishingUnLocker
 	}
 }
 
@@ -209,9 +224,12 @@ func (h *Client) EventCatchUp(parentCtx context.Context, link string, events cha
 		return nil
 	}
 
-	// TODO should this timeout duration be changed?
-	// allow up to a minute to sync events
-	ctx, cancel := context.WithTimeout(parentCtx, time.Minute)
+	if h.publishingLocker != nil && h.publishingUnLocker != nil {
+		h.publishingLocker()
+		defer h.publishingUnLocker()
+	}
+
+	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
 	defer cancel()
 	return h.syncEvents(ctx, link, events)
 }

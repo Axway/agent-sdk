@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"errors"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiV1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -116,25 +118,31 @@ func GetOwnerOnPublishedAPIByPrimaryKey(primaryKey string) *apiV1.Owner {
 }
 
 func PublishingLock() {
+	agent.publishingLockAcquired.Swap(true)
 	agent.publishingLock.Lock()
 }
 
 func PublishingUnlock() {
 	agent.publishingLock.Unlock()
+	agent.publishingLockAcquired.Swap(false)
 }
 
 // PublishAPI - Publishes the API
 func PublishAPI(serviceBody apic.ServiceBody) error {
-	if agent.apicClient != nil {
-
-		var err error
-		_, err = publishAccessRequestDefinition(&serviceBody)
-		if err != nil {
-			return err
-		}
+	if !agent.publishingLockAcquired.Load() {
+		PublishingLock()
+		defer PublishingUnlock()
+	}
+	if agent.apicClient == nil {
+		return errors.New("apic client is not initialized")
+	}
+	var err error
+	_, err = publishAccessRequestDefinition(&serviceBody)
+	if err != nil {
+		return err
 	}
 
-	_, err := agent.apicClient.PublishService(&serviceBody)
+	_, err = agent.apicClient.PublishService(&serviceBody)
 	if err != nil {
 		return err
 	}

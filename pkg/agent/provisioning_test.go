@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
@@ -26,7 +27,7 @@ func TestNewCredentialRequestBuilder(t *testing.T) {
 	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, nil)
 
 	agent.apicClient = &mock.Client{
-		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+		CreateOrUpdateResourceMock: func(data v1.Interface, _ ...apic.UpdateOption) (*v1.ResourceInstance, error) {
 			ri, _ := data.AsInstance()
 			return ri, nil
 		},
@@ -110,7 +111,7 @@ func TestNewAccessRequestBuilder(t *testing.T) {
 	InitializeWithAgentFeatures(cfg, &config.AgentFeaturesConfiguration{}, postCfgFunc)
 
 	agent.apicClient = &mock.Client{
-		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+		CreateOrUpdateResourceMock: func(data v1.Interface, _ ...apic.UpdateOption) (*v1.ResourceInstance, error) {
 			ri, _ := data.AsInstance()
 			return ri, nil
 		},
@@ -169,7 +170,7 @@ func TestNewApplicationProfileDefinitionBuilder(t *testing.T) {
 	var createOrUpdateCalled bool
 
 	agent.apicClient = &mock.Client{
-		CreateOrUpdateResourceMock: func(data v1.Interface) (*v1.ResourceInstance, error) {
+		CreateOrUpdateResourceMock: func(data v1.Interface, _ ...apic.UpdateOption) (*v1.ResourceInstance, error) {
 			sentAPD, _ = data.AsInstance()
 			createOrUpdateCalled = true
 			return sentAPD, nil
