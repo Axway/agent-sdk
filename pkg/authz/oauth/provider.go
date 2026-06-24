@@ -645,35 +645,28 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 	}
 
 	// Continue to OAuth client deletion even on cleanup error; leave no active clients behind.
-	cleanupErr := p.runPostUnregisterHook(clientID, scopes, grantType)
+	if p.cfg.GetIDPType() == TypeOkta {
+		cleanupErr := p.runPostUnregisterHook(clientID, scopes, grantType)
+		if cleanupErr != nil {
+			return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
+		}
+	}
+
+	// if not Okta, attempt to unregister everything depending on the provided values
 	unregisterErr := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken)
-
-	if unregisterErr == nil {
-		logger.Info("unregistered client")
-	}
-
-	switch {
-	case cleanupErr != nil && unregisterErr != nil:
-		return fmt.Errorf("failed to fully remove the Okta client. Provider cleanup failed and OAuth client deletion failed. cleanup error: %v; delete error: %w", cleanupErr, unregisterErr)
-	case unregisterErr != nil:
+	if unregisterErr != nil {
 		return fmt.Errorf("failed to delete the OAuth client from the identity provider: %w", unregisterErr)
-	case cleanupErr != nil:
-		return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
-	default:
-		return nil
 	}
+	logger.Info("successfully unregistered client")
+	return nil
 }
 
 func (p *provider) runPostUnregisterHook(clientID string, scopes []string, grantType string) error {
-	if p.cfg.GetIDPType() != TypeOkta {
-		return nil
-	}
 	return p.idpType.postProcessClientUnregister(clientID, p.cfg, p.apiClient, scopes, grantType)
 }
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard
 // registration endpoint (base + /clientID) and finally as a query-parameter.
-
 func (p *provider) attemptUnregisterAll(logger log.FieldLogger, clientID, registrationClientURI, authPrefix, accessToken string) error {
 	var err error
 
