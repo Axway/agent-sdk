@@ -9,6 +9,10 @@ type Organization struct {
 	ID string `json:"id"`
 }
 
+type OwnerUser struct {
+	ID string `json:"id"`
+}
+
 // OwnerType -
 type OwnerType uint
 
@@ -29,6 +33,7 @@ type Owner struct {
 	Type         OwnerType    `json:"type,omitempty"`
 	ID           string       `json:"id"`
 	Organization Organization `json:"organization,omitempty"`
+	User         *OwnerUser   `json:"user,omitempty"`
 }
 
 // SetType sets the type of the owner
@@ -53,6 +58,7 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 		Type         string        `json:"type,omitempty"`
 		ID           string        `json:"id"`
 		Organization *Organization `json:"organization,omitempty"`
+		User         *OwnerUser    `json:"user,omitempty"`
 	}{}
 
 	aux.Type = t
@@ -62,6 +68,7 @@ func (o *Owner) MarshalJSON() ([]byte, error) {
 			ID: o.Organization.ID,
 		}
 	}
+	aux.User = o.User
 
 	return json.Marshal(aux)
 }
@@ -72,6 +79,7 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 		Type         string       `json:"type,omitempty"`
 		ID           string       `json:"id"`
 		Organization Organization `json:"organization,omitempty"`
+		User         *OwnerUser   `json:"user,omitempty"`
 	}{}
 
 	if err := json.Unmarshal(bytes, &aux); err != nil {
@@ -89,6 +97,7 @@ func (o *Owner) UnmarshalJSON(bytes []byte) error {
 	o.Type = ownerType
 	o.ID = aux.ID
 	o.Organization = aux.Organization
+	o.User = aux.User
 
 	return nil
 }

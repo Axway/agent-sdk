@@ -127,22 +127,59 @@ func (b *CentralMetricBuilder) SetEventID(id string) *CentralMetricBuilder {
 	return b
 }
 
+func (b *CentralMetricBuilder) SetVersion(v string) *CentralMetricBuilder {
+	b.Version = v
+	return b
+}
+
+func (b *CentralMetricBuilder) SetAPICDeployment(d string) *CentralMetricBuilder {
+	b.APICDeployment = d
+	return b
+}
+
+func (b *CentralMetricBuilder) SetEnvironmentRuntimeType(t string) *CentralMetricBuilder {
+	if b.Environment == nil {
+		b.Environment = &EnvironmentInfo{}
+	}
+	b.Environment.RuntimeType = t
+	return b
+}
+
+func (b *CentralMetricBuilder) SetAPIServiceRevision(r *models.ResourceReference) *CentralMetricBuilder {
+	b.APIServiceRevision = r
+	return b
+}
+
+func (b *CentralMetricBuilder) SetReporter(r *Reporter) *CentralMetricBuilder {
+	b.Reporter = r
+	return b
+}
+
 func (b *CentralMetricBuilder) Build() *centralMetric {
 	return b.centralMetric
 }
 
+// EnvironmentInfo holds the environment runtime classification for metric v3 events.
+type EnvironmentInfo struct {
+	RuntimeType string `json:"runtimeType,omitempty"`
+}
+
 type centralMetric struct {
-	Marketplace   *models.MarketplaceReference         `json:"marketplace,omitempty"`
-	Subscription  *models.ResourceReference            `json:"subscription,omitempty"`
-	App           *models.ApplicationResourceReference `json:"application,omitempty"`
-	Product       *models.ProductResourceReference     `json:"product,omitempty"`
-	API           *models.APIResourceReference         `json:"api,omitempty"`
-	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
-	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
-	Units         *Units                               `json:"units,omitempty"`
-	Reporter      *Reporter                            `json:"reporter,omitempty"`
-	Observation   *models.ObservationDetails           `json:"-"`
-	EventID       string                               `json:"-"`
+	Version            string                               `json:"version,omitempty"`
+	APICDeployment     string                               `json:"apicDeployment,omitempty"`
+	Environment        *EnvironmentInfo                     `json:"environment,omitempty"`
+	Marketplace        *models.MarketplaceReference         `json:"marketplace,omitempty"`
+	Subscription       *models.ResourceReference            `json:"subscription,omitempty"`
+	App                *models.ApplicationResourceReference `json:"application,omitempty"`
+	Product            *models.ProductResourceReference     `json:"product,omitempty"`
+	API                *models.APIResourceReference         `json:"api,omitempty"`
+	AssetResource      *models.ResourceReference            `json:"assetResource,omitempty"`
+	APIServiceRevision *models.ResourceReference            `json:"apiServiceRevision,omitempty"`
+	ProductPlan        *models.ResourceReference            `json:"productPlan,omitempty"`
+	Units              *Units                               `json:"units,omitempty"`
+	Reporter           *Reporter                            `json:"reporter,omitempty"`
+	Observation        *models.ObservationDetails           `json:"-"`
+	EventID            string                               `json:"-"`
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -163,9 +200,30 @@ func (a *centralMetric) GetEventID() string {
 func (a *centralMetric) GetLogFields() logrus.Fields {
 	fields := logrus.Fields{
 		"id":             a.EventID,
+		"dataVersion":    a.Version,
 		"startTimestamp": a.Observation.Start,
 		"endTimestamp":   a.Observation.End,
 	}
+	fields = a.addOwnerFields(fields)
+	fields = a.addReferenceFields(fields)
+	fields = a.addUnitFields(fields)
+	return fields
+}
+
+func (a *centralMetric) addOwnerFields(fields logrus.Fields) logrus.Fields {
+	if a.Environment != nil {
+		fields["runtimeType"] = a.Environment.RuntimeType
+	}
+	if a.API != nil && a.API.Owner != nil {
+		fields["apiOwnerType"] = a.API.Owner.Type
+	}
+	if a.App != nil && a.App.Owner != nil {
+		fields["appOwnerType"] = a.App.Owner.Type
+	}
+	return fields
+}
+
+func (a *centralMetric) addReferenceFields(fields logrus.Fields) logrus.Fields {
 	if a.Subscription != nil {
 		fields = a.Subscription.GetLogFields(fields, "subscriptionID")
 	}
@@ -184,23 +242,15 @@ func (a *centralMetric) GetLogFields() logrus.Fields {
 	if a.ProductPlan != nil {
 		fields = a.ProductPlan.GetLogFields(fields, "productPlanID")
 	}
+	return fields
+}
 
-	// add transaction unit info and custom units if they exist
+func (a *centralMetric) addUnitFields(fields logrus.Fields) logrus.Fields {
 	if a.Units == nil {
 		return fields
 	}
 	if a.Units.Transactions != nil {
-		if a.Units.Transactions.Quota != nil {
-			fields = a.Units.Transactions.Quota.GetLogFields(fields, "transactionQuotaID")
-		}
-		fields["transactionCount"] = a.Units.Transactions.Count
-		fields["status"] = a.Units.Transactions.Status
-		fields["minResponse"] = a.Units.Transactions.Response.Min
-		fields["maxResponse"] = a.Units.Transactions.Response.Max
-		fields["avgResponse"] = a.Units.Transactions.Response.Avg
-	}
-	if len(a.Units.CustomUnits) == 0 {
-		return fields
+		fields = a.addTransactionFields(fields)
 	}
 	for k, u := range a.Units.CustomUnits {
 		if u.Quota != nil {
@@ -208,6 +258,19 @@ func (a *centralMetric) GetLogFields() logrus.Fields {
 		}
 		fields[fmt.Sprintf("%sCount", k)] = u.Count
 	}
+	return fields
+}
+
+func (a *centralMetric) addTransactionFields(fields logrus.Fields) logrus.Fields {
+	t := a.Units.Transactions
+	if t.Quota != nil {
+		fields = t.Quota.GetLogFields(fields, "transactionQuotaID")
+	}
+	fields["transactionCount"] = t.Count
+	fields["status"] = t.Status
+	fields["minResponse"] = t.Response.Min
+	fields["maxResponse"] = t.Response.Max
+	fields["avgResponse"] = t.Response.Avg
 	return fields
 }
 

@@ -2,8 +2,12 @@ package transaction
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/beats/v7/libbeat/common"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -11,6 +15,7 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -19,8 +24,6 @@ import (
 	sdkErrors "github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 // EventGenerator - Create the events to be published to Condor
@@ -112,7 +115,7 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 
 	//if no summary is sent then prepare the array of TransactionEvents for publishing
 	if eventReport.GetSummaryEvent() == (LogEvent{}) {
-		return e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+		return e.handleTransactionEvents(eventReport.GetDetailEvents(), nil, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	}
 
 	// Check to see if marketplace provisioning/subs is enabled
@@ -131,13 +134,17 @@ func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event
 		metadata = SetSampleInMetadata(metadata)
 	}
 
-	newEvent, err := e.createEvent(newSummaryEvent, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+	newEvent, err := e.createEvent(newSummaryEvent, nil, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
 		logger.WithError(err).Trace("handling summary event")
 		return events, err
 	}
 
-	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
+	var summaryProxy *Proxy
+	if s := newSummaryEvent.TransactionSummary; s != nil {
+		summaryProxy = s.Proxy
+	}
+	detailEvents, err := e.handleTransactionEvents(eventReport.GetDetailEvents(), summaryProxy, eventReport.GetEventTime(), metadata, eventReport.GetFields(), eventReport.GetPrivateData())
 	if err != nil {
 		logger.WithError(err).Trace("handling detail event(s)")
 		return events, err
@@ -214,15 +221,61 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
-func (e *Generator) createEvent(logEvent LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
+func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
 	event := beat.Event{}
-	serializedLogEvent, err := json.Marshal(logEvent)
+
+	e.logger.
+		WithField("transactionID", logEvent.TransactionID).
+		WithField("eventType", logEvent.Type).
+		Debug("building insights transaction event")
+
+	cfg := agent.GetCentralConfig()
+	if cfg == nil {
+		return event, fmt.Errorf("central config unavailable; cannot construct insights event for type %q", logEvent.Type)
+	}
+
+	orgID := metric.GetOrgGUID()
+	if orgID == "" {
+		orgID = cfg.GetTenantID()
+	}
+	envID := cfg.GetEnvironmentID()
+	if orgID == "" {
+		return event, fmt.Errorf("required field \"org\" (tenantID) is empty for insights event type %q", logEvent.Type)
+	}
+	if envID == "" {
+		return event, fmt.Errorf("required field \"distribution.environment\" (environmentID) is empty for insights event type %q", logEvent.Type)
+	}
+
+	e.logger.
+		WithField("orgID", orgID).
+		WithField("envID", envID).
+		WithField("apicDeployment", cfg.GetAPICDeployment()).
+		Trace("insights event parameters")
+
+	reporter := ReporterInfo{
+		AgentVersion:    cmd.BuildVersion,
+		AgentType:       cmd.BuildAgentName,
+		AgentSDKVersion: cmd.SDKBuildVersion,
+		AgentName:       cfg.GetAgentName(),
+	}
+
+	insightsEvent, err := BuildTransactionV2Data(e.logger, logEvent, orgID, envID, summaryProxy, agent.GetCacheManager(), reporter)
+	if err != nil {
+		return event, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
+	}
+
+	e.logger.
+		WithField("transactionID", logEvent.TransactionID).
+		WithField("eventType", logEvent.Type).
+		WithField("envelopeVersion", insightsEvent.Version).
+		Info("insights transaction event built")
+
+	serialized, err := json.Marshal(insightsEvent)
 	if err != nil {
 		return event, err
 	}
 
-	// No need to get the other field data if not being sampled
-	eventData, err := e.createEventData(serializedLogEvent, eventFields)
+	eventData, err := e.createEventData(serialized, eventFields)
 	if err != nil {
 		return event, err
 	}
@@ -245,14 +298,14 @@ func (e *Generator) getBytesSent(detailEvents []LogEvent) int {
 	return 0
 }
 
-func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
 	events := make([]beat.Event, 0)
 	for _, event := range detailEvents {
 		if metaData == nil {
 			metaData = common.MapStr{}
 		}
 		metaData.Put(sampling.SampleKey, true)
-		newEvent, err := e.createEvent(event, eventTime, metaData, eventFields, privateData)
+		newEvent, err := e.createEvent(event, summaryProxy, eventTime, metaData, eventFields, privateData)
 		if err != nil {
 			return nil, err
 		}
@@ -298,6 +351,11 @@ func (e *Generator) updateTxnSummaryByAccessRequest(summaryEvent LogEvent) *Summ
 
 	// Update the consumer details
 	summaryEvent.TransactionSummary.ConsumerDetails = transutil.UpdateWithConsumerDetails(accessRequest, managedApp, e.logger)
+
+	summaryEvent.TransactionSummary.AppOwnerInfo = transutil.ResolveAppOwnerFromManagedApp(managedApp)
+	e.logger.
+		WithField("appOwnerType", summaryEvent.TransactionSummary.AppOwnerInfo.Type).
+		Trace("resolved app owner for summary event")
 
 	// Update provider details
 	updatedSummaryEvent := updateWithProviderDetails(accessRequest, managedApp, summaryEvent.TransactionSummary, e.logger)
@@ -452,7 +510,6 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 		return
 	}
 	fields["token"] = token
-	fields[traceability.FlowHeader] = traceability.TransactionFlow
 	return
 }
 
@@ -466,33 +523,30 @@ func SetSampleInMetadata(metadata common.MapStr) common.MapStr {
 
 // updateWithProviderDetails -
 func updateWithProviderDetails(accessRequest *management.AccessRequest, managedApp *v1.ResourceInstance, summaryEvent *Summary, log log.FieldLogger) *Summary {
-
-	// Set default to provider details in case access request or managed apps comes back nil
-	summaryEvent.AssetResource = &models.AssetResource{
-		ID:   unknown,
-		Name: unknown,
-	}
-
-	summaryEvent.Product = &models.Product{
-		ID:          unknown,
-		Name:        unknown,
-		VersionID:   unknown,
-		VersionName: unknown,
-	}
-
-	summaryEvent.ProductPlan = &models.ProductPlan{
-		ID: unknown,
-	}
-
-	summaryEvent.Quota = &models.Quota{
-		ID: unknown,
-	}
+	setProviderDefaults(summaryEvent)
 
 	if accessRequest == nil || managedApp == nil {
 		log.Trace("access request or managed app is nil. Setting default values to unknown")
 		return summaryEvent
 	}
 
+	setProductDetails(accessRequest, summaryEvent, log)
+	setAssetResourceDetails(accessRequest, summaryEvent, log)
+	setAPIDetails(accessRequest, summaryEvent, log)
+	setProductPlanDetails(accessRequest, summaryEvent, log)
+	setQuotaDetails(accessRequest, summaryEvent, log)
+
+	return summaryEvent
+}
+
+func setProviderDefaults(summaryEvent *Summary) {
+	summaryEvent.AssetResource = &models.AssetResource{ID: unknown, Name: unknown}
+	summaryEvent.Product = &models.Product{ID: unknown, Name: unknown, VersionID: unknown, VersionName: unknown}
+	summaryEvent.ProductPlan = &models.ProductPlan{ID: unknown}
+	summaryEvent.Quota = &models.Quota{ID: unknown}
+}
+
+func setProductDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
 	productRef := accessRequest.GetReferenceByGVK(catalog.ProductGVK())
 	if productRef.ID == "" || productRef.Name == "" {
 		log.Trace("could not get product information, setting product to unknown")
@@ -508,33 +562,46 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		summaryEvent.Product.VersionID = productReleaseRef.ID
 		summaryEvent.Product.VersionName = productReleaseRef.Name
 	}
+
+	summaryEvent.Product.Owner = transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK()))
 	log.
 		WithField("productId", summaryEvent.Product.ID).
 		WithField("productName", summaryEvent.Product.Name).
 		WithField("productVersionId", summaryEvent.Product.VersionID).
 		WithField("productVersionName", summaryEvent.Product.VersionName).
 		Trace("product information")
+}
 
-	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
-	if assetResourceRef.ID == "" || assetResourceRef.Name == "" {
+func setAssetResourceDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
+	ref := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
+	if ref.ID == "" || ref.Name == "" {
 		log.Trace("could not get asset resource, setting asset resource to unknown")
 	} else {
-		summaryEvent.AssetResource.ID = assetResourceRef.ID
-		summaryEvent.AssetResource.Name = assetResourceRef.Name
+		summaryEvent.AssetResource.ID = ref.ID
+		summaryEvent.AssetResource.Name = ref.Name
 	}
 	log.
 		WithField("assetResourceId", summaryEvent.AssetResource.ID).
 		WithField("assetResourceName", summaryEvent.AssetResource.Name).
 		Trace("asset resource information")
+}
 
-	api := &models.APIDetails{
+func setAPIDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
+	if summaryEvent.Proxy == nil || summaryEvent.Team == nil {
+		log.Trace("proxy or team is nil, skipping api details population")
+		return
+	}
+	apiSvcInstID := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK()).ID
+	if apiSvcInstID == "" {
+		apiSvcInstID = accessRequest.Spec.ApiServiceInstance
+	}
+	summaryEvent.API = &models.APIDetails{
 		ID:                 summaryEvent.Proxy.ID,
 		Name:               summaryEvent.Proxy.Name,
 		Revision:           summaryEvent.Proxy.Revision,
 		TeamID:             summaryEvent.Team.ID,
-		APIServiceInstance: accessRequest.Spec.ApiServiceInstance,
+		APIServiceInstance: apiSvcInstID,
 	}
-	summaryEvent.API = api
 	log.
 		WithField("proxyId", summaryEvent.Proxy.ID).
 		WithField("proxyName", summaryEvent.Proxy.Name).
@@ -542,26 +609,24 @@ func updateWithProviderDetails(accessRequest *management.AccessRequest, managedA
 		WithField("proxyTeamId", summaryEvent.Team.ID).
 		WithField("apiService", accessRequest.Spec.ApiServiceInstance).
 		Trace("api details information")
+}
 
-	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
-	if productPlanRef.ID == "" {
+func setProductPlanDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
+	ref := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
+	if ref.ID == "" {
 		log.Debug("could not get product plan ID, setting product plan to unknown")
 	} else {
-		summaryEvent.ProductPlan.ID = productPlanRef.ID
+		summaryEvent.ProductPlan.ID = ref.ID
 	}
-	log.
-		WithField("productPlanId", summaryEvent.ProductPlan.ID).
-		Trace("product plan ID information")
+	log.WithField("productPlanId", summaryEvent.ProductPlan.ID).Trace("product plan ID information")
+}
 
-	quotaRef := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
-	if quotaRef.ID == "" {
+func setQuotaDetails(accessRequest *management.AccessRequest, summaryEvent *Summary, log log.FieldLogger) {
+	ref := accessRequest.GetReferenceByGVK(catalog.QuotaGVK())
+	if ref.ID == "" {
 		log.Debug("could not get quota ID, setting quota to unknown")
 	} else {
-		summaryEvent.Quota.ID = quotaRef.ID
+		summaryEvent.Quota.ID = ref.ID
 	}
-	log.
-		WithField("quotaId", summaryEvent.Quota.ID).
-		Trace("quota ID information")
-
-	return summaryEvent
+	log.WithField("quotaId", summaryEvent.Quota.ID).Trace("quota ID information")
 }

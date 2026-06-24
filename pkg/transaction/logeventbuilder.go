@@ -53,6 +53,8 @@ type EventBuilder interface {
 	SetStatus(status TxEventStatus) EventBuilder
 	SetProtocolDetail(protocolDetail interface{}) EventBuilder
 	SetRedactionConfig(config redaction.Redactions) EventBuilder
+	SetProxy(proxyID, proxyName string) EventBuilder
+	SetProxyWithStage(proxyID, proxyName, proxyStage string) EventBuilder
 
 	Build() (*LogEvent, error)
 }
@@ -84,6 +86,7 @@ type SummaryBuilder interface {
 	SetProxy(proxyID, proxyName string, proxyRevision int) SummaryBuilder
 	SetProxyWithStage(proxyID, proxyName, proxyStage string, proxyRevision int) SummaryBuilder
 	SetProxyWithStageVersion(proxyID, proxyName, proxyStage, proxyVersion string, proxyRevision int) SummaryBuilder
+	SetAPIServiceRevision(id string) SummaryBuilder
 	SetRunTime(runtimeID, runtimeName string) SummaryBuilder
 	SetEntryPoint(entryPointType, method, path, host string) SummaryBuilder
 	SetIsInMetricEvent(isInMetricEvent bool) SummaryBuilder
@@ -249,6 +252,20 @@ func (b *transactionEventBuilder) SetDestination(destination string) EventBuilde
 		return b
 	}
 	b.logEvent.TransactionEvent.Destination = destination
+	return b
+}
+
+func (b *transactionEventBuilder) SetProxy(proxyID, proxyName string) EventBuilder {
+	return b.SetProxyWithStage(proxyID, proxyName, "")
+}
+
+func (b *transactionEventBuilder) SetProxyWithStage(proxyID, proxyName, proxyStage string) EventBuilder {
+	if b.err != nil {
+		return b
+	}
+	b.logEvent.TransactionEvent.Source = transutil.ResolveIDWithPrefix(proxyID, proxyName)
+	b.logEvent.TransactionEvent.ProxyID = transutil.ResolveIDWithPrefix(proxyID, proxyName)
+	b.logEvent.TransactionEvent.ProxyName = proxyName
 	return b
 }
 
@@ -539,6 +556,18 @@ func (b *transactionSummaryBuilder) SetProxyWithStageVersion(proxyID, proxyName,
 
 	return b
 }
+
+func (b *transactionSummaryBuilder) SetAPIServiceRevision(id string) SummaryBuilder {
+	if b.err != nil {
+		return b
+	}
+	if b.logEvent.TransactionSummary.API == nil {
+		b.logEvent.TransactionSummary.API = &models.APIDetails{}
+	}
+	b.logEvent.TransactionSummary.API.APIServiceInstance = id
+	return b
+}
+
 func (b *transactionSummaryBuilder) SetRunTime(runtimeID, runtimeName string) SummaryBuilder {
 	if b.err != nil {
 		return b

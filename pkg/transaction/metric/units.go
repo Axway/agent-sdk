@@ -13,6 +13,7 @@ type UnitCount struct {
 
 type Transactions struct {
 	UnitCount
+	Duration int64            `json:"duration,omitempty"`
 	Response *ResponseMetrics `json:"response,omitempty"`
 	Status   string           `json:"status,omitempty"`
 }

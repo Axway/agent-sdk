@@ -23,6 +23,9 @@ const (
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
 	unknown                 = "unknown"
+	metricDataVersion       = "3"
+	runtimeTypeManaged      = "managed"
+	runtimeTypeUnmanaged    = "unmanaged"
 )
 
 type transactionContext struct {
@@ -78,7 +81,6 @@ type cachedMetric struct {
 // V4EventDistribution - represents V4 distribution
 type V4EventDistribution struct {
 	Environment string `json:"environment"`
-	Version     string `json:"version"`
 }
 
 // V4Session - represents V4 session
@@ -94,12 +96,13 @@ type V4Data interface {
 	GetLogFields() logrus.Fields
 }
 
-// V4Event - represents V7 event
+// V4Event is the top-level event envelope sent to the insights pipeline.
 type V4Event struct {
 	ID           string               `json:"id"`
 	Timestamp    int64                `json:"timestamp"`
 	Event        string               `json:"event"`
-	App          string               `json:"app,omitempty"` // ORG GUID
+	Org          string               `json:"org,omitempty"`
+	App          string               `json:"app,omitempty"`
 	Version      string               `json:"version"`
 	Distribution *V4EventDistribution `json:"distribution"`
 	Data         V4Data               `json:"data"`
@@ -180,8 +183,8 @@ func (t ISO8601Time) MarshalJSON() ([]byte, error) {
 }
 
 type Reporter struct {
-	AgentVersion     string `json:"agentVersion,omitempty"`
-	AgentType        string `json:"agentType,omitempty"`
+	AgentVersion     string `json:"version,omitempty"`
+	AgentType        string `json:"type,omitempty"`
 	AgentSDKVersion  string `json:"agentSDKVersion,omitempty"`
 	AgentName        string `json:"agentName,omitempty"`
 	ObservationDelta int64  `json:"observationDelta,omitempty"`
