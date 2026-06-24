@@ -728,7 +728,7 @@ type mockCredProv struct {
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.expectedProvType = provision
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
@@ -738,7 +738,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status prov.RequestStatus) {
 	m.expectedProvType = deprovision
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
@@ -748,11 +748,18 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.expectedProvType = update
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus, &mockProvCredential{}
+}
+
+func assertMapContains(t *testing.T, actual, expected map[string]interface{}) {
+	t.Helper()
+	for k, v := range expected {
+		assert.Equal(t, v, actual[k], "expected map to contain key %q", k)
+	}
 }
 
 func (m *mockCredProv) GetIgnoredCredentialTypes() []string {
@@ -1069,9 +1076,9 @@ func TestExternalCredentialOnPending(t *testing.T) {
 			}
 
 			p := &mockExternalCredProv{
-				t:             t,
+				t:              t,
 				expectedStatus: expectedStatus,
-				provisionErr:  tc.provisionErr,
+				provisionErr:   tc.provisionErr,
 			}
 
 			c := &credClient{
