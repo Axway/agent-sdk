@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
-	"github.com/Axway/agent-sdk/pkg/config"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -166,7 +165,7 @@ func newIDPCredential(tsURL, group, policy string) *corecfg.IDPConfiguration {
 	credentialObj := &corecfg.IDPConfiguration{
 		MetadataURL:   tsURL + oauthMetadataEndpoint,
 		AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
-		LoggerOptions: &config.IDPLoggerOptions{},
+		LoggerOptions: &corecfg.IDPLoggerOptions{},
 	}
 	if strings.TrimSpace(group) != "" || strings.TrimSpace(policy) != "" {
 		credentialObj.Okta = &corecfg.OktaIDPConfiguration{Group: group, Policy: policy}
@@ -330,7 +329,7 @@ func TestOktaPostProcessClientUnreg(t *testing.T) {
 				MetadataURL:   ts.URL + oauthMetadataEndpoint,
 				Okta:          &corecfg.OktaIDPConfiguration{Group: tc.oktaGroup},
 				AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
-				LoggerOptions: &config.IDPLoggerOptions{},
+				LoggerOptions: &corecfg.IDPLoggerOptions{},
 			}
 			err := oktaProvider.postProcessClientUnregister("app123", credentialObj, apiClient)
 			if tc.wantErr {
@@ -360,7 +359,7 @@ func TestOktaPostProcessClientRegUsesIDPAccessToken(t *testing.T) {
 	credentialObj := &corecfg.IDPConfiguration{
 		MetadataURL:   ts.URL + oauthMetadataEndpoint,
 		AuthConfig:    &corecfg.IDPAuthConfiguration{AccessToken: accessToken},
-		LoggerOptions: &config.IDPLoggerOptions{},
+		LoggerOptions: &corecfg.IDPLoggerOptions{},
 	}
 
 	apiClient := coreapi.NewClient(nil, "")

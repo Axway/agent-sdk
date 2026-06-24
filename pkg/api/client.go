@@ -379,7 +379,10 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	statusCode = res.StatusCode
 	receivedData = res.ContentLength
 	parseResponse, err := c.prepareAPIResponse(res, timer)
-	responseBody = parseResponse.Body
+
+	if responseBody != nil {
+		responseBody = parseResponse.Body
+	}
 
 	return parseResponse, err
 }

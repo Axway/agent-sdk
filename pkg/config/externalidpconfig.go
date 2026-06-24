@@ -343,11 +343,6 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
 }
 
-// GetIDPLogConfig - to be used for authentication with IDP
-func (i *IDPConfiguration) GetIDPLogConfig() IDPAuthConfig {
-	return i.AuthConfig
-}
-
 // GetOktaGroup - returns Okta group name configured for this IDP (if any).
 func (i *IDPConfiguration) GetOktaGroup() string {
 	if i.Okta == nil {
