@@ -650,6 +650,7 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		if cleanupErr != nil {
 			return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
 		}
+		return nil
 	}
 
 	// if not Okta, attempt to unregister everything depending on the provided values
