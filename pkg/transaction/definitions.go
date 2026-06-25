@@ -86,6 +86,8 @@ type Summary struct {
 	ProductPlan     *models.ProductPlan     `json:"productPlan,omitempty"`
 	Quota           *models.Quota           `json:"quota,omitempty"`
 	ConsumerDetails *models.ConsumerDetails `json:"consumerDetails,omitempty"`
+	OwnerInfo       *models.Owner           `json:"-"`
+	AppOwnerInfo    *models.Owner           `json:"-"`
 }
 
 // Application  - Represents the application used in transaction summary event (dataplane)
@@ -135,6 +137,8 @@ type Event struct {
 	Direction   string            `json:"direction,omitempty"`
 	Status      string            `json:"status,omitempty"`
 	Protocol    TransportProtocol `json:"protocol,omitempty"`
+	ProxyName   string            `json:"proxyName,omitempty"`
+	ProxyID     string            `json:"proxyId,omitempty"`
 }
 
 // Protocol - Represents the protocol details in transaction detail events

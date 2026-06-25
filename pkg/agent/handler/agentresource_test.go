@@ -124,7 +124,8 @@ func (m *mockApicClient) CreateSubResource(_ v1.ResourceMeta, sub map[string]int
 }
 
 type EventSyncCache interface {
-	RebuildCache()
+	RebuildCache(filters ...management.WatchTopicSpecFilters)
+	ValidateCache() ([]management.WatchTopicSpecFilters, error)
 }
 
 type mockResourceManager struct {

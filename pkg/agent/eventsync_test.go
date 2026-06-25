@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/agent/resource"
 	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -16,104 +18,216 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEventSync_pollMode(t *testing.T) {
-	cfg := createCentralCfg("https://abc.com", "mockenv")
-	err := Initialize(cfg)
-	cfg.AgentName = "Test-DA"
-	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
+func TestEventSync(t *testing.T) {
+	t.Run("syncCache", func(t *testing.T) {
+		tests := map[string]struct {
+			cfgFn         func(cfg *config.CentralConfiguration)
+			agentFeatsCfg *config.AgentFeaturesConfiguration
+		}{
+			"poll mode": {},
+			"stream mode": {
+				cfgFn: func(cfg *config.CentralConfiguration) {
+					cfg.GRPCCfg = config.GRPCConfig{Enabled: true, Insecure: true}
+				},
+				agentFeatsCfg: &config.AgentFeaturesConfiguration{
+					ConnectToCentral:     true,
+					ProcessSystemSignals: true,
+					VersionChecker:       false,
+					PersistCache:         true,
+				},
+			},
+		}
 
-	mc := &mock.Client{
-		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-			if method == api.PUT {
-				return buffer, nil
-			}
-			return json.Marshal(agentRes)
-		},
-		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
-			if strings.Contains(url, "/discoveryagents") {
-				return agentRes, nil
-			}
-			wt := management.NewWatchTopic("mock-wt")
-			ri, err := wt.AsInstance()
-			return ri, err
-		},
-	}
+		for name, tc := range tests {
+			t.Run(name, func(t *testing.T) {
+				cfg := createCentralCfg("https://abc.com", "mockenv")
+				if tc.cfgFn != nil {
+					tc.cfgFn(cfg)
+				}
+				err := Initialize(cfg)
+				if tc.agentFeatsCfg != nil {
+					agent.agentFeaturesCfg = tc.agentFeatsCfg
+				}
 
-	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
-	agent.agentResourceManager = m
+				cfg.AgentName = "Test-DA"
+				agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
 
-	InitializeForTest(mc)
-	assert.Nil(t, err)
+				mc := &mock.Client{
+					ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+						if method == api.PUT {
+							return buffer, nil
+						}
+						return json.Marshal(agentRes)
+					},
+					GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
+						if strings.Contains(url, "/discoveryagents") {
+							return agentRes, nil
+						}
+						wt := management.NewWatchTopic("mock-wt")
+						ri, err := wt.AsInstance()
+						return ri, err
+					},
+				}
 
-	es, err := newEventSync()
-	assert.Nil(t, err)
-	assert.NotNil(t, es.watchTopic)
-	assert.NotNil(t, es.discoveryCache)
-	assert.NotNil(t, es.sequence)
-	assert.NotNil(t, es.harvester)
+				m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
+				agent.agentResourceManager = m
+				InitializeForTest(mc)
+				assert.Nil(t, err)
 
-	es.harvester = &mockHarvester{}
-	err = es.SyncCache()
-	assert.Nil(t, err)
+				es, err := newEventSync()
+				assert.Nil(t, err)
+				assert.NotNil(t, es.watchTopic)
+				assert.NotNil(t, es.discoveryCache)
+				assert.NotNil(t, es.sequence)
+				assert.NotNil(t, es.harvester)
+
+				es.harvester = &mockHarvester{}
+				err = es.SyncCache()
+				assert.Nil(t, err)
+			})
+		}
+	})
+
+	t.Run("initCache", func(t *testing.T) {
+		cfg := createCentralCfg("https://abc.com", "mockenv")
+		err := Initialize(cfg)
+		assert.Nil(t, err)
+		cfg.AgentName = "Test-DA"
+		agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
+
+		mc := &mock.Client{
+			ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
+				if method == api.PUT {
+					return buffer, nil
+				}
+				return json.Marshal(agentRes)
+			},
+			GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
+				if strings.Contains(url, "/discoveryagents") {
+					return agentRes, nil
+				}
+				wt := management.NewWatchTopic("mock-wt")
+				ri, err := wt.AsInstance()
+				return ri, err
+			},
+		}
+
+		m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
+		agent.agentResourceManager = m
+		InitializeForTest(mc)
+
+		scopeName := cfg.Environment
+
+		apiSvcFilter := management.WatchTopicSpecFilters{
+			Group: management.APIServiceGVK().Group,
+			Kind:  management.APIServiceGVK().Kind,
+			Name:  "*",
+			Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName},
+		}
+		instFilter := management.WatchTopicSpecFilters{
+			Group: management.APIServiceInstanceGVK().Group,
+			Kind:  management.APIServiceInstanceGVK().Kind,
+			Name:  "*",
+			Scope: &management.WatchTopicSpecScope{Kind: "Environment", Name: scopeName},
+		}
+
+		tests := map[string]struct {
+			setup         func()
+			wtFilters     []management.WatchTopicSpecFilters
+			failedFilters []management.WatchTopicSpecFilters
+			makeClient    func() resourceClient
+			expectedCount int
+			verify        func(t *testing.T)
+		}{
+			"targeted rebuild flushes only failed kind and rebuilds it": {
+				setup: func() {
+					inst1, _ := management.NewAPIServiceInstance("inst1", scopeName).AsInstance()
+					agent.cacheManager.AddAPIServiceInstance(inst1)
+				},
+				wtFilters:     []management.WatchTopicSpecFilters{apiSvcFilter, instFilter},
+				failedFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
+				makeClient: func() resourceClient {
+					return &mockRIClient{svcs: newAPIServices(scopeName)}
+				},
+				expectedCount: 2,
+				verify: func(t *testing.T) {
+					// Instance cache was NOT flushed — the instance we added before should still be there
+					cachedInst, instErr := agent.cacheManager.GetAPIServiceInstanceByName("inst1")
+					assert.Nil(t, instErr)
+					assert.NotNil(t, cachedInst)
+				},
+			},
+			"no filters - full rebuild": {
+				wtFilters: []management.WatchTopicSpecFilters{apiSvcFilter},
+				makeClient: func() resourceClient {
+					return &mockRIClient{svcs: newAPIServices(scopeName)}
+				},
+				expectedCount: 2,
+			},
+		}
+
+		for name, tc := range tests {
+			t.Run(name, func(t *testing.T) {
+				agent.cacheManager = agentcache.NewAgentCacheManager(cfg, false)
+				if tc.setup != nil {
+					tc.setup()
+				}
+
+				svcHandler := &mockHandler{kind: management.APIServiceGVK().Kind}
+				wt := &management.WatchTopic{Spec: management.WatchTopicSpec{Filters: tc.wtFilters}}
+				dc := newDiscoveryCache(cfg, tc.makeClient(), []handler.Handler{svcHandler}, wt)
+
+				es := &EventSync{
+					watchTopic:     wt,
+					harvester:      &mockHarvester{},
+					discoveryCache: dc,
+					sequence:       &mockSequence{},
+				}
+
+				err := es.initCache(tc.failedFilters...)
+				assert.Nil(t, err)
+				assert.Equal(t, tc.expectedCount, svcHandler.count)
+
+				if tc.verify != nil {
+					tc.verify(t)
+				}
+			})
+		}
+	})
 }
 
-func TestEventSync_streamMode(t *testing.T) {
-	cfg := createCentralCfg("https://abc.com", "mockenv")
-	cfg.GRPCCfg = config.GRPCConfig{
-		Enabled:  true,
-		Insecure: true,
-	}
-	err := Initialize(cfg)
-	agent.agentFeaturesCfg = &config.AgentFeaturesConfiguration{
-		ConnectToCentral:     true,
-		ProcessSystemSignals: true,
-		VersionChecker:       false,
-		PersistCache:         true,
-	}
-
-	cfg.AgentName = "Test-DA"
-	agentRes := createDiscoveryAgentRes("111", "Test-DA", "test-dataplane", "")
-	mc := &mock.Client{
-		ExecuteAPIMock: func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error) {
-			if method == api.PUT {
-				return buffer, nil
-			}
-			return json.Marshal(agentRes)
-		},
-		GetResourceMock: func(url string) (*apiv1.ResourceInstance, error) {
-			if strings.Contains(url, "/discoveryagents") {
-				return agentRes, nil
-			}
-			wt := management.NewWatchTopic("mock-wt")
-			ri, err := wt.AsInstance()
-			return ri, err
-		},
-	}
-
-	m, _ := resource.NewAgentResourceManager(cfg, mc, nil)
-	agent.agentResourceManager = m
-
-	InitializeForTest(mc)
-	assert.Nil(t, err)
-
-	es, err := newEventSync()
-	assert.Nil(t, err)
-	assert.NotNil(t, es.watchTopic)
-	assert.NotNil(t, es.discoveryCache)
-	assert.NotNil(t, es.sequence)
-	assert.NotNil(t, es.harvester)
-
-	es.harvester = &mockHarvester{}
-	err = es.SyncCache()
-	assert.Nil(t, err)
+type mockHarvester struct {
+	err error
 }
-
-type mockHarvester struct{}
 
 func (m mockHarvester) EventCatchUp(ctx context.Context, link string, events chan *proto.Event) error {
-	return nil
+	return m.err
 }
 
 func (m mockHarvester) ReceiveSyncEvents(ctx context.Context, topicSelfLink string, sequenceID int64, eventCh chan *proto.Event) (int64, error) {
-	return 1, nil
+	return 1, m.err
 }
+
+type mockSequence struct {
+	id int64
+}
+
+func (m *mockSequence) SetSequence(id int64) {
+	m.id = id
+}
+
+func (m *mockSequence) GetSequence() int64 {
+	return m.id
+}
+
+// mockCacheValidator implements CacheValidator for testing.
+type mockCacheValidator struct {
+	failedFilters []management.WatchTopicSpecFilters
+	err           error
+}
+
+func (m *mockCacheValidator) Execute() ([]management.WatchTopicSpecFilters, error) {
+	return m.failedFilters, m.err
+}
+
+var _ CacheValidator = (*mockCacheValidator)(nil)

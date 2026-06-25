@@ -3,7 +3,9 @@ package events
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -193,4 +195,31 @@ type mockHandler struct {
 
 func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
 	return m.err
+}
+
+// slowHandler blocks for the given duration each time Handle is called,
+// and atomically increments callCount.
+type slowHandler struct {
+	delay     time.Duration
+	callCount atomic.Int32
+}
+
+func (h *slowHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
+	time.Sleep(h.delay)
+	h.callCount.Add(1)
+	return nil
+}
+
+func newTestEvent(seqID int64) *proto.Event {
+	return &proto.Event{
+		Type: proto.Event_CREATED,
+		Payload: &proto.ResourceInstance{
+			Metadata: &proto.Metadata{
+				SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+			},
+		},
+		Metadata: &proto.EventMeta{
+			SequenceID: seqID,
+		},
+	}
 }

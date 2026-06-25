@@ -86,6 +86,7 @@ type crdBuilderOptions struct {
 	reqProps           []provisioning.PropertyBuilder
 	registerFunc       provisioning.RegisterCredentialRequestDefinition
 	credType           string
+	identityProvider   string
 }
 
 // NewCredentialRequestBuilder - called by the agents to build and register a new credential request definition
@@ -122,7 +123,8 @@ func NewCredentialRequestBuilder(options ...func(*crdBuilderOptions)) provisioni
 		SetProvisionSchema(provSchema).
 		SetRequestSchema(reqSchema).
 		SetExpirationDays(thisCred.expirationDays).
-		SetType(thisCred.credType)
+		SetType(thisCred.credType).
+		SetIdentityProvider(thisCred.identityProvider)
 
 	if thisCred.renewable {
 		builder.IsRenewable()
@@ -206,6 +208,12 @@ func WithCRDRegisterFunc(registerFunc provisioning.RegisterCredentialRequestDefi
 func WithCRDType(credType string) func(c *crdBuilderOptions) {
 	return func(c *crdBuilderOptions) {
 		c.credType = credType
+	}
+}
+
+func WithCRDIdentityProvider(name string) func(c *crdBuilderOptions) {
+	return func(c *crdBuilderOptions) {
+		c.identityProvider = name
 	}
 }
 

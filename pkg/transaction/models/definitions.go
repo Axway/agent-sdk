@@ -25,17 +25,19 @@ type APIResourceReference struct {
 	ResourceReference
 	Name         string `json:"name,omitempty"`
 	APIServiceID string `json:"apiServiceId,omitempty"`
-	APIOwnerID   string `json:"apiTeamId,omitempty"`
+	Owner        *Owner `json:"owner,omitempty"`
 }
 
 type ApplicationResourceReference struct {
 	ResourceReference
 	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
+	Owner         *Owner `json:"owner,omitempty"`
 }
 
 type ProductResourceReference struct {
 	ResourceReference
 	VersionID string `json:"versionId,omitempty"`
+	Owner     *Owner `json:"owner,omitempty"`
 }
 
 func (a ProductResourceReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {
@@ -92,6 +94,7 @@ type Product struct {
 	Name        string `json:"name,omitempty"`
 	VersionName string `json:"versionName,omitempty"`
 	VersionID   string `json:"versionId,omitempty"`
+	Owner       *Owner `json:"owner,omitempty"`
 }
 
 func (a Product) GetLogFields(fields logrus.Fields) logrus.Fields {
@@ -133,6 +136,7 @@ type APIDetails struct {
 	Revision           int    `json:"revision,omitempty"`
 	TeamID             string `json:"teamId,omitempty"`
 	APIServiceInstance string `json:"apiServiceInstance,omitempty"`
+	APIServiceID       string `json:"apiServiceId,omitempty"`
 	Stage              string `json:"-"`
 	Version            string `json:"-"`
 }
@@ -174,4 +178,12 @@ type CustomMetricDetail struct {
 type ObservationDetails struct {
 	Start int64 `json:"start,omitempty"`
 	End   int64 `json:"end,omitempty"`
+}
+
+// Owner represents the owner of an API or application resource in insights events.
+// Type is one of "team", "user", "none", or "unknown".
+type Owner struct {
+	Type     string `json:"type"`
+	TeamGUID string `json:"team_guid,omitempty"`
+	UserGUID string `json:"user_guid,omitempty"`
 }

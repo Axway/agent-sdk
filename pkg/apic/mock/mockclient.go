@@ -26,6 +26,7 @@ type Client struct {
 	GetAPIServiceInstancesMock                func(queryParams map[string]string, URL string) ([]*management.APIServiceInstance, error)
 	GetAPIV1ResourceInstancesMock             func(queryParams map[string]string, URL string) ([]*v1.ResourceInstance, error)
 	GetAPIV1ResourceInstancesWithPageSizeMock func(queryParams map[string]string, URL string, pageSize int) ([]*v1.ResourceInstance, error)
+	GetAPIV1ResourceCountMock                 func(URL string) (int, error)
 	GetAPIServiceByNameMock                   func(serviceName string) (*management.APIService, error)
 	GetAPIServiceInstanceByNameMock           func(serviceInstanceName string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByNameMock                  func(serviceRevisionName string) (*management.APIServiceRevision, error)
@@ -45,7 +46,7 @@ type Client struct {
 	CreateResourceMock                        func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceMock                        func(url string, bts []byte) (*v1.ResourceInstance, error)
 	UpdateResourceFinalizerMock               func(res *v1.ResourceInstance, finalizer, description string, addAction bool) (*v1.ResourceInstance, error)
-	CreateOrUpdateResourceMock                func(v1.Interface) (*v1.ResourceInstance, error)
+	CreateOrUpdateResourceMock                func(v1.Interface, ...apic.UpdateOption) (*v1.ResourceInstance, error)
 	GetEntitlementsMock                       func() (map[string]interface{}, error)
 }
 
@@ -110,6 +111,14 @@ func (m *Client) GetAPIV1ResourceInstances(queryParams map[string]string, URL st
 		return m.GetAPIV1ResourceInstancesMock(queryParams, URL)
 	}
 	return nil, nil
+}
+
+// GetAPIV1ResourceCount -
+func (m *Client) GetAPIV1ResourceCount(URL string) (int, error) {
+	if m.GetAPIV1ResourceCountMock != nil {
+		return m.GetAPIV1ResourceCountMock(URL)
+	}
+	return 0, nil
 }
 
 // GetAPIServiceByName -
@@ -319,9 +328,9 @@ func (m *Client) UpdateResourceFinalizer(res *v1.ResourceInstance, finalizer, de
 }
 
 // CreateOrUpdateResource -
-func (m *Client) CreateOrUpdateResource(iface v1.Interface) (*v1.ResourceInstance, error) {
+func (m *Client) CreateOrUpdateResource(iface v1.Interface, opts ...apic.UpdateOption) (*v1.ResourceInstance, error) {
 	if m.CreateOrUpdateResourceMock != nil {
-		return m.CreateOrUpdateResourceMock(iface)
+		return m.CreateOrUpdateResourceMock(iface, opts...)
 	}
 	return nil, nil
 }

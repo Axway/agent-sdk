@@ -81,6 +81,16 @@ func (c *ServiceClient) getOwnerObject(serviceBody *ServiceBody, warning bool) (
 	return nil, nil
 }
 
+func (c *ServiceClient) setSpecHashesOnServiceBody(serviceBody *ServiceBody, svc apiv1.Interface) {
+	agentDetails := util.GetAgentDetails(svc)
+	if revDetails, found := agentDetails[specHashes]; found {
+		if specHashes, ok := revDetails.(map[string]interface{}); ok {
+			serviceBody.specHashes = util.MapStringInterfaceToStringString(specHashes)
+		}
+	}
+
+}
+
 func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *management.APIService) {
 	owner, ownerErr := c.getOwnerObject(serviceBody, true)
 
@@ -100,11 +110,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	util.SetAgentDetails(svc, newSVCDetails)
 
 	// get the specHashes from the existing service
-	if revDetails, found := newSVCDetails[specHashes]; found {
-		if specHashes, ok := revDetails.(map[string]interface{}); ok {
-			serviceBody.specHashes = specHashes
-		}
-	}
+	c.setSpecHashesOnServiceBody(serviceBody, svc)
 
 	if serviceBody.Image != "" {
 		svc.Spec.Icon = management.ApiServiceSpecIcon{
@@ -182,10 +188,8 @@ func buildAPIServiceStatusSubResource(status *apiv1.ResourceStatus, ownerErr err
 // processService -
 func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.APIService, error) {
 	// Default action to create service
-	serviceURL := c.cfg.GetServicesURL()
-	httpMethod := http.MethodPost
 	serviceBody.serviceContext.serviceAction = addAPI
-	serviceBody.specHashes = map[string]interface{}{}
+	serviceBody.specHashes = map[string]string{}
 
 	// If service exists, update existing service
 	svc, err := c.getAPIServiceFromCache(serviceBody)
@@ -193,21 +197,26 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 		return nil, err
 	}
 
-	if svc != nil {
+	var existingRI *apiv1.ResourceInstance
+	if svc != nil && serviceBody.IsRevisionOnly() {
 		serviceBody.serviceContext.serviceAction = updateAPI
-		httpMethod = http.MethodPut
-		serviceURL += "/" + svc.Name
+		serviceBody.serviceContext.serviceName = svc.Name
+		serviceBody.serviceContext.serviceID = svc.Metadata.ID
+		c.setSpecHashesOnServiceBody(serviceBody, svc)
+		return svc, nil
+	} else if svc != nil {
+		existingRI, _ = svc.AsInstance()
+		serviceBody.serviceContext.serviceAction = updateAPI
 		c.updateAPIService(serviceBody, svc)
 	} else {
 		svc = c.buildAPIService(serviceBody)
 	}
-
-	buffer, err := json.Marshal(svc)
-	if err != nil {
-		return nil, err
-	}
-
-	ri, err := c.apiServiceDeployAPI(httpMethod, serviceURL, buffer)
+	addSpecHashToResource(svc)
+	ri, err := c.CreateOrUpdateResource(svc,
+		WithExistingResourceInstance(existingRI),
+		WithSkipSetSpecHash(true),
+		WithSkipXAgentDetailUpdate(true),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -235,12 +244,6 @@ func (c *ServiceClient) updateAPIServiceSubresources(svc *management.APIService,
 	subResources := make(map[string]interface{})
 	if svc.Status != nil {
 		subResources[management.ApiServiceStatusSubResourceName] = svc.Status
-	}
-
-	if len(svc.SubResources) > 0 {
-		if xAgentDetail, ok := svc.SubResources[defs.XAgentDetails]; ok {
-			subResources[defs.XAgentDetails] = xAgentDetail
-		}
 	}
 
 	if updateSource && svc.Source != nil {

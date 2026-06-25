@@ -41,6 +41,9 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	instID = instRef.ID
 
 	instance, _ := c.GetAPIServiceInstanceByID(instID)
+	if instance == nil && ar.Spec.ApiServiceInstance != "" {
+		instance, _ = c.GetAPIServiceInstanceByName(ar.Spec.ApiServiceInstance)
+	}
 	apiID := ""
 	apiStage := ""
 	apiVersion := ""

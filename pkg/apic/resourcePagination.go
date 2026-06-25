@@ -3,6 +3,7 @@ package apic
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -61,6 +62,34 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 	return c.GetAPIV1ResourceInstancesWithPageSize(queryParams, url, c.cfg.GetPageSize())
 }
 
+// GetAPIV1ResourceCount issues a HEAD request and returns the total resource count
+// from the X-Axway-total-count response header. Returns 0 if the header is absent.
+func (c *ServiceClient) GetAPIV1ResourceCount(url string) (int, error) {
+	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) && !strings.HasPrefix(url, c.cfg.GetAPIServerVersionURL()) {
+		url = c.createAPIServerURL(url)
+	}
+
+	response, err := c.executeAPI(http.MethodHead, url, nil, nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	if response.Code != http.StatusOK {
+		return 0, fmt.Errorf("HEAD %s returned %d", url, response.Code)
+	}
+
+	vals := response.Headers[http.CanonicalHeaderKey("X-Axway-total-count")]
+	if len(vals) == 0 {
+		return 0, nil
+	}
+
+	count, err := strconv.Atoi(vals[0])
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (c *ServiceClient) getPageSize(url string) (int, bool) {
 	c.pageSizeMutex.Lock()
 	defer c.pageSizeMutex.Unlock()
@@ -84,7 +113,7 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 
 	log := c.logger.WithField("endpoint", url)
 	log.Trace("retrieving all resources from endpoint")
-	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) {
+	if !strings.HasPrefix(url, c.cfg.GetAPIServerURL()) && !strings.HasPrefix(url, c.cfg.GetAPIServerVersionURL()) {
 		url = c.createAPIServerURL(url)
 	}
 
@@ -124,7 +153,9 @@ func (c *ServiceClient) GetAPIV1ResourceInstancesWithPageSize(queryParams map[st
 		}
 
 		resourceInstancePage := make([]*apiv1.ResourceInstance, 0)
-		json.Unmarshal(response, &resourceInstancePage)
+		if err := json.Unmarshal(response, &resourceInstancePage); err != nil {
+			log.WithError(err).Debug("error deserializing resource page response")
+		}
 
 		resourceInstance = append(resourceInstance, resourceInstancePage...)
 

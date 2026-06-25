@@ -71,6 +71,7 @@ type ServiceBuilder interface {
 	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
 	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
 	SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder
+	SetRevisionOnly() ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -381,8 +382,15 @@ func (b *serviceBodyBuilder) Build() (ServiceBody, error) {
 	}
 
 	if b.serviceBody.stripOASServersBeforePublish {
-		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		val.stripEndpoints()
+	}
+
+	if len(specParser.tagsToStrip) > 0 {
+		val.stripTags(specParser.tagsToStrip)
+	}
+
+	if b.serviceBody.stripOASServersBeforePublish || len(specParser.tagsToStrip) > 0 || b.serviceBody.stripOASExtensions {
+		b.serviceBody.originalSpecHash = b.serviceBody.specHash
 		b.serviceBody.SpecDefinition = val.GetSpecBytes()
 		newHash, _ := util.ComputeHash(val.GetSpecBytes())
 		b.serviceBody.specHash = fmt.Sprintf("%v", newHash)
@@ -480,5 +488,10 @@ func (b *serviceBodyBuilder) SetInstanceLifecycle(stage, releaseState, message s
 			},
 		}
 	}
+	return b
+}
+
+func (b *serviceBodyBuilder) SetRevisionOnly() ServiceBuilder {
+	b.serviceBody.revisionOnly = true
 	return b
 }

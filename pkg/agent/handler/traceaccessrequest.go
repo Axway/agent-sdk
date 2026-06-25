@@ -6,6 +6,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -24,7 +25,7 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 }
 
 // Handle processes grpc events triggered for AccessRequests for trace agent
-func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if resource.Kind != management.AccessRequestGVK().Kind {
 		return nil
@@ -32,6 +33,12 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 
 	if action == proto.Event_DELETED {
 		return h.cache.DeleteAccessRequest(resource.Metadata.ID)
+	}
+
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
+		// update the cache with the new x-agent-details subresource
+		h.cache.AddAccessRequest(resource)
+		return nil
 	}
 
 	ar := &management.AccessRequest{}
@@ -45,10 +52,14 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, _ *proto.EventMe
 		return nil
 	}
 
-	if h.shouldProcessForTrace(ar.Status, ar.Metadata.State) {
+	if h.shouldProcessForAgent(ar.Status, ar.Metadata.State) {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
-		if cachedAccessReq == nil {
-			h.cache.AddAccessRequest(resource)
+		if cachedAccessReq == nil || len(cachedAccessReq.Metadata.References) == 0 {
+			enriched, err := h.client.GetResource(resource.GetSelfLink() + "?embed=metadata.references")
+			if err != nil || enriched == nil {
+				enriched = resource
+			}
+			h.cache.AddAccessRequest(enriched)
 		}
 	}
 	return nil

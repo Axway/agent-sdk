@@ -91,8 +91,8 @@ func (em *EventListener) start() (done bool, err error) {
 			break
 		}
 
-		if err := em.handleEvent(event); err != nil {
-			em.logger.WithError(err).Error("stream event listener error handling event")
+		if handleErr := em.handleEvent(event); handleErr != nil {
+			em.logger.WithError(handleErr).Error("stream event listener error handling event")
 		}
 	case <-em.ctx.Done():
 		em.logger.Trace("stream event listener context is done")

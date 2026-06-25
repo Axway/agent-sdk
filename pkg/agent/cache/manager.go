@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -21,14 +22,13 @@ const defaultCacheStoragePath = "./data/cache"
 const (
 	apiServicesKey         = "apiServices"
 	apiServiceInstancesKey = "apiServiceInstances"
-	instanceCountKey       = "instanceCount"
 	credReqDefKey          = "credReqDef"
 	accReqDefKey           = "accReqDef"
 	appProfDefKey          = "appProfDef"
 	teamsKey               = "teams"
 	managedAppKey          = "managedApp"
-	subscriptionsKey       = "subscriptions"
 	accReqKey              = "accReq"
+	idpMetadataKey         = "idpMetadata"
 	watchSequenceKey       = "watchSequence"
 	watchResourceKey       = "watchResource"
 	complianceRuntimeKey   = "compRunRes"
@@ -41,6 +41,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 	Flush()
+	FlushKind(kind string)
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error
@@ -123,12 +124,19 @@ type Manager interface {
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
 
+	// IdentityProviderMetadata cache related methods
+	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *v1.ResourceInstance
+	AddIdentityProviderMetadata(resource *v1.ResourceInstance)
+	DeleteIdentityProviderMetadata(id string) error
+
 	GetWatchResourceCacheKeys(group, kind string) []string
 	AddWatchResource(resource *v1.ResourceInstance)
 	GetWatchResourceByKey(key string) *v1.ResourceInstance
 	GetWatchResourceByID(group, kind, id string) *v1.ResourceInstance
 	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
 	DeleteWatchResource(group, kind, id string) error
+
+	GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time
 
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
@@ -144,12 +152,11 @@ type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
 	apiMap                  cache.Cache
-	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
-	subscriptionMap         cache.Cache
+	idpMetadataMap          cache.Cache
 	sequenceCache           cache.Cache
 	resourceCacheReadLock   sync.Mutex
 	cacheLock               sync.Mutex
@@ -198,13 +205,12 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createResourceLoader(c.setLoadedCache, accReqDefKey),
 		createResourceLoader(c.setLoadedCache, appProfDefKey),
 		createResourceLoader(c.setLoadedCache, managedAppKey),
-		createResourceLoader(c.setLoadedCache, subscriptionsKey),
 		createResourceLoader(c.setLoadedCache, accReqKey),
 		createResourceLoader(c.setLoadedCache, watchResourceKey),
-		createInstanceCountLoader(c.setLoadedCache, instanceCountKey),
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
+		createResourceLoader(c.setLoadedCache, idpMetadataKey),
 	}
 
 	c.isPersistedCacheLoaded = true
@@ -242,8 +248,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.apiMap = lc
 	case apiServiceInstancesKey:
 		c.instanceMap = lc
-	case instanceCountKey:
-		c.instanceCountMap = lc
 	case credReqDefKey:
 		c.crdMap = lc
 	case accReqDefKey:
@@ -254,8 +258,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.teams = lc
 	case managedAppKey:
 		c.managedApplicationMap = lc
-	case subscriptionsKey:
-		c.subscriptionMap = lc
 	case accReqKey:
 		c.accessRequestMap = lc
 	case watchResourceKey:
@@ -264,6 +266,8 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.sequenceCache = lc
 	case complianceRuntimeKey:
 		c.crrMap = lc
+	case idpMetadataKey:
+		c.idpMetadataMap = lc
 	default:
 		c.logger.WithField("cacheKey", key).Error("unknown cache key")
 	}
@@ -420,8 +424,8 @@ func (c *cacheManager) Flush() {
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()
 	c.sequenceCache.Flush()
-	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
+	c.idpMetadataMap.Flush()
 	c.SaveCache()
 	// delete the cache file in case the agent is restarted here
 	os.Remove(c.cacheFilename)

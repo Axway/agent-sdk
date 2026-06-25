@@ -24,6 +24,6 @@ func (m *marketplaceHandler) shouldProcessDeleting(status *v1.ResourceStatus, st
 	return status.Level == prov.Success.String() && state == v1.ResourceDeleting && len(finalizers) > 0
 }
 
-func (m *marketplaceHandler) shouldProcessForTrace(status *v1.ResourceStatus, state string) bool {
+func (m *marketplaceHandler) shouldProcessForAgent(status *v1.ResourceStatus, state string) bool {
 	return status.Level == prov.Success.String() && state != v1.ResourceDeleting
 }

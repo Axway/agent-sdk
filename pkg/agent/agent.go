@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -77,9 +78,10 @@ type agentData struct {
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
-	finalizeAgentInit func() error
-	publishingLock    *sync.Mutex
-	ardLock           sync.Mutex
+	finalizeAgentInit      func() error
+	publishingLock         *sync.Mutex
+	publishingLockAcquired atomic.Bool
+	ardLock                sync.Mutex
 
 	status                       string
 	applicationProfileDefinition string
@@ -198,6 +200,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 			return err
 		}
 	}
+
+	apic.NewSpecResourceParserFactory(apic.WithTagsToStrip(centralCfg.GetRootTagsToStrip()))
 
 	agent.isInitialized = true
 	return nil
@@ -353,18 +357,22 @@ func CacheInitSync() error {
 }
 
 func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, proxyURL string, clientTimeout time.Duration) error {
-	logger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadata-url", idp.GetMetadataURL())
+	idpLogger := logger.WithField("title", idp.GetIDPTitle()).WithField("name", idp.GetIDPName()).WithField("type", idp.GetIDPType()).WithField("metadataUrl", idp.GetMetadataURL())
+
 	err := GetAuthProviderRegistry().RegisterProvider(idp, tlsCfg, proxyURL, clientTimeout)
 	if err != nil {
-		logger.WithError(err).Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed.")
+		idpLogger.WithError(err).Errorf("unable to register external IdP provider, any credential request to the IdP will not be processed.")
 		return err
 	}
+
+	idpResourceName := manageIDPResource(idpLogger, idp)
 	crdName := idp.GetIDPName() + "-" + provisioning.OAuthIDPCRD
 	provider, err := GetAuthProviderRegistry().GetProviderByName(idp.GetIDPName())
 	if err != nil {
 		return err
 	}
-	crd, err := NewOAuthCredentialRequestBuilder(
+
+	builder := NewOAuthCredentialRequestBuilder(
 		WithCRDType(provisioning.CrdTypeOauth),
 		WithCRDName(crdName),
 		WithCRDForIDP(provider, provider.GetSupportedScopes()),
@@ -372,13 +380,15 @@ func registerCredentialProvider(idp config.IDPConfig, tlsCfg config.TLSConfig, p
 		WithCRDRequestSchemaProperty(getCorsSchemaPropertyBuilder()),
 		WithCRDRequestSchemaProperty(getAuthRedirectSchemaPropertyBuilder()),
 		WithCRDIsSuspendable(),
-	).Register()
+		WithCRDIdentityProvider(idpResourceName))
+
+	crd, err := builder.Register()
 	if err != nil {
-		logger.
+		idpLogger.
 			WithField("title", idp.GetIDPTitle()).
 			Errorf("unable to create and register credential request definition. %s", err.Error())
 	} else {
-		logger.
+		idpLogger.
 			WithField("name", crd.Name).
 			WithField("title", idp.GetIDPTitle()).
 			Info("successfully created and registered credential request definition.")
@@ -810,6 +820,9 @@ func newHandlers() []handler.Handler {
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+			handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager),
+			handler.NewDiscoveryAccessRequestHandler(agent.cacheManager),
+			handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
 		)
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent

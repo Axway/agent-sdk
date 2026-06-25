@@ -29,6 +29,7 @@ func TestAccessRequestHandler(t *testing.T) {
 		inboundStatus      string
 		name               string
 		outboundStatus     string
+		subresource        string
 		references         []v1.Reference
 		subError           error
 		appStatus          string
@@ -66,8 +67,14 @@ func TestAccessRequestHandler(t *testing.T) {
 			appStatus:      prov.Error.String(),
 		},
 		{
-			action: proto.Event_SUBRESOURCEUPDATED,
-			name:   "should return nil when the event is for subresources",
+			action:      proto.Event_SUBRESOURCEUPDATED,
+			name:        "should return nil when the event is for xagentdetails subresources",
+			subresource: defs.XAgentDetails,
+		},
+		{
+			action:      proto.Event_SUBRESOURCEUPDATED,
+			name:        "should return nil when the event is for other subresources",
+			subresource: "other",
 		},
 		{
 			action:        proto.Event_UPDATED,
@@ -258,7 +265,7 @@ func TestAccessRequestHandler(t *testing.T) {
 			}
 
 			ri, _ := ar.AsInstance()
-			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), nil, ri)
+			err := handler.Handle(NewEventContext(tc.action, nil, ri.Kind, ri.Name), &proto.EventMeta{Subresource: tc.subresource}, ri)
 
 			if tc.hasError {
 				assert.Error(t, err)
