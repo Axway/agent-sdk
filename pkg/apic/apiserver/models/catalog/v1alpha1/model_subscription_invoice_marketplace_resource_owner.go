@@ -16,4 +16,5 @@ type SubscriptionInvoiceMarketplaceResourceOwner struct {
 	// Id of the owner of the resource.
 	Id           string                                                  `json:"id,omitempty"`
 	Organization SubscriptionInvoiceMarketplaceResourceOwnerOrganization `json:"organization"`
+	User         SubscriptionInvoiceMarketplaceResourceOwnerUser         `json:"user,omitempty"`
 }

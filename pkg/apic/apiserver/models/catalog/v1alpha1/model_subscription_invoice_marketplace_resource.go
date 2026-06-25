@@ -14,6 +14,7 @@ import apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 
 // SubscriptionInvoiceMarketplaceResource The Marketplace Subscription Invoice resource details. (catalog.v1alpha1.SubscriptionInvoice)
 type SubscriptionInvoiceMarketplaceResource struct {
+	Metadata SubscriptionInvoiceMarketplaceResourceMetadata `json:"metadata,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	Owner *apiv1.Owner `json:"owner,omitempty"`
 }

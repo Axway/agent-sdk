@@ -16,4 +16,5 @@ type CredentialMarketplaceResourceOwner struct {
 	// Id of the owner of the resource.
 	Id           string                                         `json:"id,omitempty"`
 	Organization CredentialMarketplaceResourceOwnerOrganization `json:"organization"`
+	User         CredentialMarketplaceResourceOwnerUser         `json:"user,omitempty"`
 }

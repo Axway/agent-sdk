@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	AssetMappingResourceName          = "assetmappings"
-	AssetMappingStatusSubResourceName = "status"
+	AssetMappingResourceName             = "assetmappings"
+	AssetMappingOverridesSubResourceName = "overrides"
+	AssetMappingStatusSubResourceName    = "status"
 )
 
 func AssetMappingGVK() apiv1.GroupVersionKind {
@@ -43,9 +44,10 @@ func init() {
 // AssetMapping Resource
 type AssetMapping struct {
 	apiv1.ResourceMeta
-	Owner  *apiv1.Owner       `json:"owner"`
-	Spec   AssetMappingSpec   `json:"spec"`
-	Status AssetMappingStatus `json:"status"`
+	Overrides AssetMappingOverrides `json:"overrides"`
+	Owner     *apiv1.Owner          `json:"owner"`
+	Spec      AssetMappingSpec      `json:"spec"`
+	Status    AssetMappingStatus    `json:"status"`
 }
 
 // NewAssetMapping creates an empty *AssetMapping
@@ -148,6 +150,7 @@ func (res *AssetMapping) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
+	out["overrides"] = res.Overrides
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 	out["status"] = res.Status
@@ -178,6 +181,20 @@ func (res *AssetMapping) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(sr, &res.Spec)
 	if err != nil {
 		return err
+	}
+
+	// marshalling subresource Overrides
+	if v, ok := aux.SubResources["overrides"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "overrides")
+		err = json.Unmarshal(sr, &res.Overrides)
+		if err != nil {
+			return err
+		}
 	}
 
 	// marshalling subresource Status

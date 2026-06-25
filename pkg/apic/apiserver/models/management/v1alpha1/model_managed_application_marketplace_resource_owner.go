@@ -16,4 +16,5 @@ type ManagedApplicationMarketplaceResourceOwner struct {
 	// Id of the owner of the resource.
 	Id           string                                                 `json:"id,omitempty"`
 	Organization ManagedApplicationMarketplaceResourceOwnerOrganization `json:"organization"`
+	User         ManagedApplicationMarketplaceResourceOwnerUser         `json:"user,omitempty"`
 }

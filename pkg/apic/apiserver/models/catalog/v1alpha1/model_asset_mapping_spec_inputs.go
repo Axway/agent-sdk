@@ -20,4 +20,6 @@ type AssetMappingSpecInputs struct {
 	Categories []string `json:"categories,omitempty"`
 	// title for generated asset resource.
 	AssetResourceTitle string `json:"assetResourceTitle,omitempty"`
+	// Set true to use mapping's \"overrides\" subresource to alter the API spec.
+	Overridden bool `json:"overridden,omitempty"`
 }

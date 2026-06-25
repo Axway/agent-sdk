@@ -22,6 +22,8 @@ type AssetResourceSpec struct {
 	Version string `json:"version,omitempty"`
 	// Base64 encoded value of the api specification.
 	Definition string `json:"definition"`
+	// Indicates if API spec was not copied as-is to \"definition\" and was altered by asset mapping.
+	DefinitionOverridden bool `json:"definitionOverridden,omitempty"`
 	// Resource availability
 	Status string `json:"status"`
 	// information to access the definition.
