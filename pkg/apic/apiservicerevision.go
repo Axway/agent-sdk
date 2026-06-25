@@ -138,39 +138,6 @@ func (c *ServiceClient) getRevisions(queryString string) ([]*management.APIServi
 	return apiServiceRevisions, count, nil
 }
 
-// // checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
-// func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody) (bool, error) {
-// 	// attempt to use the stripped spec hash
-// 	revName, found := serviceBody.specHashes[serviceBody.specHash]
-// 	if !found && serviceBody.originalSpecHash != "" {
-// 		// check if the original spec hash matches an existing revision,
-// 		// this is to cover the case where the spec content has not changed since the last publish,
-// 		// but the hash has changed due to non-content related changes (e.g. stripping servers)
-// 		revName, found = serviceBody.specHashes[serviceBody.originalSpecHash]
-// 	}
-
-// 	if !found || revName == "" {
-// 		return false, nil
-// 	}
-
-// 	// get the revision by name to compare tags and update if needed
-// 	revisions, totalCount, err := c.getRevisions(fmt.Sprintf("metadata.references.id==%s;information.hash==%s", serviceBody.serviceContext.serviceID, serviceBody.specHash))
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	if totalCount == 0 {
-// 		return false, nil
-// 	}
-
-// 	if len(c.getUpdatedTagKeys(serviceBody.Tags, revisions[0].Tags)) != 0 {
-// 		return false, nil
-// 	}
-
-// 	serviceBody.serviceContext.revisionName = revName
-// 	return true, nil
-// }
-
 // checkAndUpdateExistingRevision checks if a revision with the same hash exists and updates tags if needed
 func (c *ServiceClient) checkAndUpdateExistingRevision(serviceBody *ServiceBody) (bool, error) {
 
