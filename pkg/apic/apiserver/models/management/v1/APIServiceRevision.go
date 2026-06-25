@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	APIServiceRevisionResourceName              = "apiservicerevisions"
-	ApiServiceRevisionComplianceSubResourceName = "compliance"
+	APIServiceRevisionResourceName               = "apiservicerevisions"
+	ApiServiceRevisionComplianceSubResourceName  = "compliance"
+	ApiServiceRevisionInformationSubResourceName = "information"
 )
 
 func APIServiceRevisionGVK() apiv1.GroupVersionKind {
@@ -43,9 +44,16 @@ func init() {
 // APIServiceRevision Resource
 type APIServiceRevision struct {
 	apiv1.ResourceMeta
-	Compliance ApiServiceRevisionCompliance `json:"compliance"`
-	Owner      *apiv1.Owner                 `json:"owner"`
-	Spec       ApiServiceRevisionSpec       `json:"spec"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Compliance  ApiServiceRevisionCompliance  `json:"compliance"`
+	Compliance *ApiServiceRevisionCompliance `json:"compliance,omitempty"`
+	// GENERATE: The following code has been modified after code generation
+	//
+	//	Information ApiServiceRevisionInformation `json:"information"`
+	Information *ApiServiceRevisionInformation `json:"information,omitempty"`
+	Owner       *apiv1.Owner                   `json:"owner"`
+	Spec        ApiServiceRevisionSpec         `json:"spec"`
 }
 
 // NewAPIServiceRevision creates an empty *APIServiceRevision
@@ -149,6 +157,7 @@ func (res *APIServiceRevision) MarshalJSON() ([]byte, error) {
 	}
 
 	out["compliance"] = res.Compliance
+	out["information"] = res.Information
 	out["owner"] = res.Owner
 	out["spec"] = res.Spec
 
@@ -189,6 +198,20 @@ func (res *APIServiceRevision) UnmarshalJSON(data []byte) error {
 
 		delete(aux.SubResources, "compliance")
 		err = json.Unmarshal(sr, &res.Compliance)
+		if err != nil {
+			return err
+		}
+	}
+
+	// marshalling subresource Information
+	if v, ok := aux.SubResources["information"]; ok {
+		sr, err = json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		delete(aux.SubResources, "information")
+		err = json.Unmarshal(sr, &res.Information)
 		if err != nil {
 			return err
 		}
