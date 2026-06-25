@@ -186,6 +186,33 @@ $SED -i "/ApiServiceSourceReferences\s/a ${REPLACE}" ${MODEL_PATH}/model_api_ser
 # reformat the code
 go fmt ${MODEL_PATH}/model_api_service_source.go
 
+######################
+# For APIServiceRevision.go, we want to turn    "Compliance ApiServiceRevisionCompliance `json:"compliance"`" into
+# "Compliance *ApiServiceRevisionCompliance `json:"compliance,omitempty"`"
+######################
+SEARCH="\s*Compliance\s*ApiServiceRevisionCompliance.*"
+REPLACE="Compliance *ApiServiceRevisionCompliance \`json:\"compliance,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceRevision.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceRevision.go
+# add in the new line we want
+$SED -i "/ApiServiceRevisionCompliance\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceRevision.go
+go fmt ${MODEL_PATH}/APIServiceRevision.go
+
+######################
+# For APIServiceRevision.go, we want to turn    "Information ApiServiceRevisionInformation `json:"information"`" into
+# "Information *ApiServiceRevisionInformation `json:"information,omitempty"`"
+######################
+SEARCH="\s*Information\s*ApiServiceRevisionInformation.*"
+REPLACE="Information *ApiServiceRevisionInformation \`json:\"information,omitempty\"\`"
+# add a comment to the code
+$SED -i -e "/${SEARCH}/i ${COMMENT}" ${MODEL_PATH}/APIServiceRevision.go
+# comment out the line we're changing
+$SED -i -e "s/${SEARCH}/\/\/ &/" ${MODEL_PATH}/APIServiceRevision.go
+# add in the new line we want
+$SED -i "/ApiServiceRevisionInformation\s/a ${REPLACE}" ${MODEL_PATH}/APIServiceRevision.go
+go fmt ${MODEL_PATH}/APIServiceRevision.go
 
 ######################
 # For APIServiceInstance.go, we want to turn    "Compliance ApiServiceInstanceCompliance `json:"compliance"`" into
