@@ -157,11 +157,11 @@ func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
 		Name:              api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
-	stripped := strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix)
-	if svc := cacheManager.GetAPIServiceWithAPIID(stripped); svc != nil {
+	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}
-	ref.Owner = transutil.ResolveAPIOwner(api.ID, cacheManager)
+	ref.Owner = transutil.ResolveAPIOwnerFromInstance(svc)
 	return ref
 }
 

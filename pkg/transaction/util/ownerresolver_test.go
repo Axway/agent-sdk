@@ -98,6 +98,41 @@ func TestResolveAPIOwner(t *testing.T) {
 	}
 }
 
+func TestResolveAPIOwnerFromInstance(t *testing.T) {
+	tests := map[string]struct {
+		ri       *v1.ResourceInstance
+		expected *models.Owner
+	}{
+		"nil resource instance returns unknown": {
+			ri:       nil,
+			expected: &models.Owner{Type: "unknown"},
+		},
+		"api service with nil owner returns none": {
+			ri:       apiServiceRI("api-1", nil),
+			expected: &models.Owner{Type: "none"},
+		},
+		"api service team owner with GUID": {
+			ri:       apiServiceRI("api-2", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2}),
+			expected: &models.Owner{Type: "team", TeamGUID: testOwnerTeamGUID2},
+		},
+		"api service team owner with empty GUID": {
+			ri:       apiServiceRI("api-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
+			expected: &models.Owner{Type: "unknown"},
+		},
+		"api service x-private owner": {
+			ri:       apiServiceRI("api-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
+			expected: &models.Owner{Type: "user", TeamGUID: testOwnerTeamGUID1, UserGUID: testOwnerUserGUID},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, ResolveAPIOwnerFromInstance(tc.ri))
+		})
+	}
+}
+
 func TestResolveProductOwner(t *testing.T) {
 	tests := map[string]struct {
 		ref      v1.EmbeddedReference
