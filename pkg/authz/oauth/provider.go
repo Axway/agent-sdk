@@ -739,7 +739,7 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		return err
 	}
 
-	if response.Code == http.StatusNoContent {
+	if response.Code >= 200 && response.Code < 400 {
 		return nil
 	}
 

@@ -100,7 +100,7 @@ func TestProvisioner(t *testing.T) {
 			app.Spec.Security.EncryptionKey = tc.appKey
 			cred := management.NewCredential("", "")
 			cred.Spec.Data = map[string]any{
-				IDPTokenURL:                       tc.credTokenURL,
+				provisioning.IDPTokenURL:          tc.credTokenURL,
 				provisioning.OauthTokenAuthMethod: tc.tokenAuthMethod,
 				provisioning.OauthJwks:            tc.publicKey,
 				provisioning.OauthCertificate:     tc.certificate,
@@ -164,20 +164,20 @@ type mockProvider struct {
 	capturedName   string
 }
 
-func (m *mockProvider) GetName() string                                { return "" }
-func (m *mockProvider) GetTitle() string                               { return "" }
-func (m *mockProvider) GetIssuer() string                              { return "" }
-func (m *mockProvider) GetTokenEndpoint() string                       { return "" }
-func (m *mockProvider) GetMTLSTokenEndpoint() string                   { return "" }
-func (m *mockProvider) GetAuthorizationEndpoint() string               { return "" }
-func (m *mockProvider) GetSupportedScopes() []string                   { return nil }
-func (m *mockProvider) GetSupportedGrantTypes() []string               { return nil }
-func (m *mockProvider) GetSupportedTokenAuthMethods() []string         { return nil }
-func (m *mockProvider) GetSupportedResponseMethod() []string           { return nil }
-func (m *mockProvider) Validate() error                                { return nil }
-func (m *mockProvider) GetConfig() config.IDPConfig                    { return m.cfg }
+func (m *mockProvider) GetName() string                                 { return "" }
+func (m *mockProvider) GetTitle() string                                { return "" }
+func (m *mockProvider) GetIssuer() string                               { return "" }
+func (m *mockProvider) GetTokenEndpoint() string                        { return "" }
+func (m *mockProvider) GetMTLSTokenEndpoint() string                    { return "" }
+func (m *mockProvider) GetAuthorizationEndpoint() string                { return "" }
+func (m *mockProvider) GetSupportedScopes() []string                    { return nil }
+func (m *mockProvider) GetSupportedGrantTypes() []string                { return nil }
+func (m *mockProvider) GetSupportedTokenAuthMethods() []string          { return nil }
+func (m *mockProvider) GetSupportedResponseMethod() []string            { return nil }
+func (m *mockProvider) Validate() error                                 { return nil }
+func (m *mockProvider) GetConfig() config.IDPConfig                     { return m.cfg }
 func (m *mockProvider) GetMetadata() *oauth.AuthorizationServerMetadata { return nil }
-func (m *mockProvider) GetIDPResourceName() string                     { return "" }
+func (m *mockProvider) GetIDPResourceName() string                      { return "" }
 
 func (m *mockProvider) RegisterClient(meta oauth.ClientMetadata) (oauth.ClientMetadata, error) {
 	m.capturedName = meta.GetClientName()
@@ -278,7 +278,7 @@ func TestAppNameTemplate(t *testing.T) {
 			mock := &mockProvider{cfg: tc.cfg}
 			app := management.NewManagedApplication(tc.appName, "")
 			if tc.teamName != "" {
-				assert.NoError(t, util.SetAgentDetailsKey(app, agentDetailTeamName, tc.teamName))
+				assert.NoError(t, util.SetAgentDetailsKey(app, provisioning.AgentDetailTeamName, tc.teamName))
 			}
 			cred := management.NewCredential(tc.credName, "")
 			p := &provisioner{

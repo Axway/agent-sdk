@@ -114,6 +114,7 @@ func (h *managedApplication) onPending(ctx context.Context, app *management.Mana
 	status := h.provision(pma)
 	app.Status = prov.NewStatusReason(status)
 
+	util.SetAgentDetailsKey(app, prov.AgentDetailTeamName, pma.GetTeamName())
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
 	util.SetAgentDetails(app, util.MapStringStringToMapStringInterface(details))
 

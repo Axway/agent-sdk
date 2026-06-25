@@ -13,9 +13,7 @@ import (
 )
 
 const (
-	IDPTokenURL              = "idpTokenURL"
 	registrationClientURIKey = "registrationClientURI"
-	agentDetailTeamName      = "teamName"
 )
 
 type Provisioner interface {
@@ -50,7 +48,7 @@ func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *man
 		p.provisioningMode = credential.Spec.Provision.Mode
 	}
 
-	idpTokenURL, ok := p.credential.Spec.Data[IDPTokenURL].(string)
+	idpTokenURL, ok := p.credential.Spec.Data[provisioning.IDPTokenURL].(string)
 	if ok && idpRegistry != nil {
 		idpProvider, err := idpRegistry.GetProviderByTokenEndpoint(ctx, idpTokenURL, opts...)
 		if err != nil {
@@ -262,7 +260,7 @@ func (p *provisioner) appClientName() (string, error) {
 	}
 
 	template := oktaCfg.GetAppNameTemplate()
-	teamName, _ := util.GetAgentDetailsValue(p.app, agentDetailTeamName)
+	teamName, _ := util.GetAgentDetailsValue(p.app, provisioning.AgentDetailTeamName)
 	name := strings.NewReplacer(
 		config.OktaPlaceholderMPApplicationName, p.app.Name,
 		config.OktaPlaceholderOwningTeam, teamName,

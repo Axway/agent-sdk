@@ -49,7 +49,6 @@ type providerTestCase struct {
 }
 
 func TestProvider(t *testing.T) {
-
 	cases := map[string]providerTestCase{
 		"IDP metadata bad request": {
 			idpType:              "generic",
@@ -66,7 +65,7 @@ func TestProvider(t *testing.T) {
 			expectRegistrationErr:    true,
 		},
 		"unregistration bad request": {
-			idpType: "okta",
+			idpType: "generic",
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
 				RedirectURIs: []string{testLocalHost},
@@ -82,8 +81,7 @@ func TestProvider(t *testing.T) {
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
 				extraProperties: map[string]any{
-					"key":               "value",
-					oktaApplicationType: oktaAppTypeWeb,
+					"key": "value",
 				},
 			},
 			metadataResponseCode:       http.StatusOK,
@@ -471,7 +469,7 @@ func TestUnregisterClientDeleteHookFails(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration")
-	assert.Equal(t, int32(1), deleteCalls.Load())
+	assert.Equal(t, int32(0), deleteCalls.Load())
 }
 
 func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
@@ -513,9 +511,9 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL, nil, "")
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to fully remove the Okta client")
-	assert.Contains(t, err.Error(), "OAuth client deletion failed")
-	assert.Equal(t, int32(1), deleteCalls.Load())
+	assert.Contains(t, err.Error(), "cleanup failed")
+	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required")
+	assert.Equal(t, int32(0), deleteCalls.Load())
 }
 
 func TestRegisterClientOktaScopesRequest(t *testing.T) {
@@ -660,39 +658,39 @@ func TestNewProviderValidatesOktaGroup(t *testing.T) {
 
 func TestFilterScopeExclude(t *testing.T) {
 	cases := map[string]struct {
-		scopes    []string
+		scopes  []string
 		exclude string
-		want      []string
+		want    []string
 	}{
 		"removes excluded scopes": {
-			scopes:    []string{scopeOpenID, scopeProfile, testScope, scopeWriteAPI},
+			scopes:  []string{scopeOpenID, scopeProfile, testScope, scopeWriteAPI},
 			exclude: excludeOpenIDProfile,
-			want:      []string{testScope, scopeWriteAPI},
+			want:    []string{testScope, scopeWriteAPI},
 		},
 		"empty exclude returns all scopes": {
-			scopes:    []string{scopeOpenID, testScope},
+			scopes:  []string{scopeOpenID, testScope},
 			exclude: "",
-			want:      []string{scopeOpenID, testScope},
+			want:    []string{scopeOpenID, testScope},
 		},
 		"exclude with whitespace is trimmed": {
-			scopes:    []string{scopeOpenID, testScope},
+			scopes:  []string{scopeOpenID, testScope},
 			exclude: " openid , profile ",
-			want:      []string{testScope},
+			want:    []string{testScope},
 		},
 		"no scopes match exclude returns all": {
-			scopes:    []string{testScope, scopeWriteAPI},
+			scopes:  []string{testScope, scopeWriteAPI},
 			exclude: excludeOpenIDProfile,
-			want:      []string{testScope, scopeWriteAPI},
+			want:    []string{testScope, scopeWriteAPI},
 		},
 		"all scopes excludeed returns empty": {
-			scopes:    []string{scopeOpenID, scopeProfile},
+			scopes:  []string{scopeOpenID, scopeProfile},
 			exclude: excludeOpenIDProfile,
-			want:      []string{},
+			want:    []string{},
 		},
 		"nil scopes returns nil": {
-			scopes:    nil,
+			scopes:  nil,
 			exclude: scopeOpenID,
-			want:      nil,
+			want:    nil,
 		},
 	}
 	for name, tc := range cases {
