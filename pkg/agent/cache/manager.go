@@ -158,7 +158,7 @@ type cacheManager struct {
 	watchResourceMap        cache.Cache
 	idpMetadataMap          cache.Cache
 	sequenceCache           cache.Cache
-	resourceCacheReadLock   sync.Mutex
+	resourceCacheReadLock   sync.RWMutex
 	cacheLock               sync.Mutex
 	persistedCache          cache.Cache
 	teams                   cache.Cache
@@ -402,17 +402,17 @@ func (c *cacheManager) GetSequence(watchTopicName string) int64 {
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {
-	c.resourceCacheReadLock.Lock()
+	c.resourceCacheReadLock.RLock()
 }
 
 func (c *cacheManager) ReleaseResourceReadLock() {
-	c.resourceCacheReadLock.Unlock()
+	c.resourceCacheReadLock.RUnlock()
 }
 
 // Flush empties the persistent cache and all internal caches
 func (c *cacheManager) Flush() {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
+	c.resourceCacheReadLock.Lock()
+	defer c.resourceCacheReadLock.Unlock()
 	c.logger.Debug("resetting the persistent cache")
 
 	c.accessRequestMap.Flush()

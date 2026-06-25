@@ -26,13 +26,21 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 		return &models.Owner{Type: "unknown"}
 	}
 
+	return ResolveAPIOwnerFromInstance(ri)
+}
+
+func ResolveAPIOwnerFromInstance(ri *v1.ResourceInstance) *models.Owner {
+	if ri == nil {
+		return &models.Owner{Type: "unknown"}
+	}
+
 	svc := &management.APIService{}
 	if err := svc.FromInstance(ri); err != nil {
 		return &models.Owner{Type: "unknown"}
 	}
 
 	if svc.Owner == nil {
-		logger.WithField("apiID", apiID).Trace("api service has no owner")
+		logger.WithField("apiName", ri.Name).Trace("api service has no owner")
 		return &models.Owner{Type: "none"}
 	}
 
@@ -41,10 +49,10 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 			return &models.Owner{Type: "unknown"}
 		}
 		if svc.Owner.User != nil && svc.Owner.User.ID != "" {
-			logger.WithField("apiID", apiID).WithField("userGUID", svc.Owner.User.ID).Trace("resolved api owner as user (x-private team)")
+			logger.WithField("apiName", ri.Name).WithField("userGUID", svc.Owner.User.ID).Trace("resolved api owner as user (x-private team)")
 			return &models.Owner{Type: "user", TeamGUID: svc.Owner.ID, UserGUID: svc.Owner.User.ID}
 		}
-		logger.WithField("apiID", apiID).WithField("teamGUID", svc.Owner.ID).Trace("resolved api owner")
+		logger.WithField("apiName", ri.Name).WithField("teamGUID", svc.Owner.ID).Trace("resolved api owner")
 		return &models.Owner{Type: "team", TeamGUID: svc.Owner.ID}
 	}
 

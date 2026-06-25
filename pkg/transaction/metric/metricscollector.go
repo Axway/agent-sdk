@@ -639,7 +639,7 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}
-	ref.Owner = transutil.ResolveAPIOwner(api.ID, cacheManager)
+	ref.Owner = transutil.ResolveAPIOwnerFromInstance(svc)
 	return ref
 }
 
