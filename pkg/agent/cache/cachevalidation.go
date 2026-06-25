@@ -69,8 +69,8 @@ func (c *cacheManager) getCacheForKind(kind string) cache.Cache {
 // FlushKind empties the dedicated cache for the given resource kind.
 // Kinds without a dedicated cache are silently ignored.
 func (c *cacheManager) FlushKind(kind string) {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
+	c.resourceCacheReadLock.Lock()
+	defer c.resourceCacheReadLock.Unlock()
 
 	c.logger.WithField("kind", kind).Debug("flushing cache for resource kind")
 
