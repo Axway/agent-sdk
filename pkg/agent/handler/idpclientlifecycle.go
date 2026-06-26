@@ -53,6 +53,38 @@ func persistIDPClientOnManagedApplication(logger log.FieldLogger, client client,
 	return nil
 }
 
+func removeClientIDFromManagedApp(logger log.FieldLogger, client client, app *management.ManagedApplication, clientID, tokenURL string) error {
+	if app == nil || clientID == "" {
+		return nil
+	}
+
+	details := util.GetAgentDetails(app)
+	if details == nil {
+		return nil
+	}
+
+	clientIDs := extractClientIDs(details[oktaClientIDsAgentDetail])
+	if len(clientIDs) == 0 {
+		logger.Trace("empty clientIDs agent detail")
+		return nil
+	}
+
+	for i := len(clientIDs) - 1; i >= 0; i-- {
+		if clientIDs[i] != clientID {
+			continue
+		}
+		clientIDs = append(clientIDs[:i], clientIDs[i+1:]...)
+		details[oktaClientIDsAgentDetail] = clientIDs
+		if err := client.CreateSubResource(app.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
+			return fmt.Errorf("could not persist IDP client reference on managed application %s: %w", app.Name, err)
+		}
+		return nil
+	}
+
+	logger.WithField("clientID", clientID).Trace("could not find the clientID to remove from managedApp x-agent-details")
+	return nil
+}
+
 // cleanupManagedApplicationIDPClients removes any tracked IDP clients for a ManagedApplication.
 func cleanupManagedApplicationIDPClients(ctx context.Context, logger log.FieldLogger, registry oauth.IdPRegistry, app *management.ManagedApplication) error {
 	if registry == nil || app == nil {
