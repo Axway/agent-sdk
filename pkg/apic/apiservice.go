@@ -224,6 +224,7 @@ func (c *ServiceClient) processService(serviceBody *ServiceBody) (*management.AP
 	if ri != nil {
 		serviceBody.serviceContext.serviceName = ri.Name
 		serviceBody.serviceContext.serviceID = ri.Metadata.ID
+		svc.Metadata.ID = ri.Metadata.ID
 	}
 
 	svc.Name = serviceBody.serviceContext.serviceName
