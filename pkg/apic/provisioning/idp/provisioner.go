@@ -2,6 +2,8 @@ package idp
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -11,7 +13,7 @@ import (
 )
 
 const (
-	IDPTokenURL = "idpTokenURL"
+	registrationClientURIKey = "registrationClientURI"
 )
 
 type Provisioner interface {
@@ -46,7 +48,7 @@ func NewProvisioner(ctx context.Context, idpRegistry oauth.IdPRegistry, app *man
 		p.provisioningMode = credential.Spec.Provision.Mode
 	}
 
-	idpTokenURL, ok := p.credential.Spec.Data[IDPTokenURL].(string)
+	idpTokenURL, ok := p.credential.Spec.Data[provisioning.IDPTokenURL].(string)
 	if ok && idpRegistry != nil {
 		idpProvider, err := idpRegistry.GetProviderByTokenEndpoint(ctx, idpTokenURL, opts...)
 		if err != nil {
@@ -116,9 +118,13 @@ func (p *provisioner) RegisterClient() error {
 		return nil
 	}
 
-	// prepare external client metadata from CRD data
+	clientName, err := p.appClientName()
+	if err != nil {
+		return err
+	}
+
 	builder := oauth.NewClientMetadataBuilder().
-		SetClientName(p.credential.GetName()).
+		SetClientName(clientName).
 		SetScopes(p.credentialData.GetScopes()).
 		SetGrantTypes(p.credentialData.GetGrantTypes()).
 		SetTokenEndpointAuthMethod(p.credentialData.GetTokenEndpointAuthMethod()).
@@ -144,7 +150,6 @@ func (p *provisioner) RegisterClient() error {
 		return err
 	}
 
-	// provision external client
 	resClientMetadata, err := p.idpProvider.RegisterClient(clientMetadata)
 	if err != nil {
 		return err
@@ -155,7 +160,7 @@ func (p *provisioner) RegisterClient() error {
 	p.credentialData.clientSecret = resClientMetadata.GetClientSecret()
 
 	if resClientMetadata.GetRegistrationClientURI() != "" {
-		util.SetAgentDetailsKey(p.credential, "registrationClientURI", resClientMetadata.GetRegistrationClientURI())
+		util.SetAgentDetailsKey(p.credential, registrationClientURIKey, resClientMetadata.GetRegistrationClientURI())
 	}
 
 	return nil
@@ -166,9 +171,15 @@ func (p *provisioner) UnregisterClient() error {
 		return nil
 	}
 
-	registrationClientURI, _ := util.GetAgentDetailsValue(p.credential, "registrationClientURI")
+	registrationClientURI, _ := util.GetAgentDetailsValue(p.credential, registrationClientURIKey)
 
-	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken, registrationClientURI)
+	scopes := p.credentialData.GetScopes()
+	grantType := ""
+	if gt := p.credentialData.GetGrantTypes(); len(gt) > 0 {
+		grantType = gt[0]
+	}
+
+	err := p.idpProvider.UnregisterClient(p.credentialData.GetClientID(), p.credentialData.registrationAccessToken, registrationClientURI, scopes, grantType)
 	if err != nil {
 		return err
 	}
@@ -236,4 +247,29 @@ func (p *provisioner) createAgentDetails(registrationToken string) map[string]st
 func (p *provisioner) getRegistrationTokenFromAgentDetails() string {
 	registrationToken, _ := util.GetAgentDetailsValue(p.credential, provisioning.OauthRegistrationToken)
 	return registrationToken
+}
+
+func (p *provisioner) appClientName() (string, error) {
+	idpCfg := p.idpProvider.GetConfig()
+	if idpCfg == nil || idpCfg.GetIDPType() != oauth.TypeOkta {
+		return p.credential.GetName(), nil
+	}
+	oktaCfg, ok := idpCfg.(interface{ GetAppNameTemplate() string })
+	if !ok {
+		return p.credential.GetName(), nil
+	}
+
+	template := oktaCfg.GetAppNameTemplate()
+	teamName, _ := util.GetAgentDetailsValue(p.app, provisioning.AgentDetailTeamName)
+	name := strings.NewReplacer(
+		config.OktaPlaceholderMPApplicationName, p.app.Name,
+		config.OktaPlaceholderOwningTeam, teamName,
+		config.OktaPlaceholderCredentialName, p.credential.GetName(),
+	).Replace(template)
+
+	name = util.NormalizeNameForCentral(name)
+	if len(name) > 100 {
+		return "", fmt.Errorf("Okta app name exceeds 100-character limit after normalization: %d chars", len(name))
+	}
+	return name, nil
 }

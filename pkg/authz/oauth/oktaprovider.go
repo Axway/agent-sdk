@@ -9,6 +9,7 @@ import (
 	coreapi "github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth/clients"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -20,7 +21,9 @@ const (
 	oktaSpa             = "okta-spa"
 )
 
-type okta struct{}
+type okta struct {
+	logger log.FieldLogger
+}
 
 func oktaBaseURLFromMetadataURL(metadataURL string) (string, error) {
 	if metadataURL == "" {
@@ -57,240 +60,262 @@ func oktaAuthServerIDFromMetadataURL(metadataURL string) (string, error) {
 	return "", fmt.Errorf("unable to determine Okta authorization server from metadata URL")
 }
 
-func validateOktaConfiguredResources(idp corecfg.IDPConfig, apiClient coreapi.Client) error {
-	groupName, policyName := oktaValidationNames(idp)
-	if groupName == "" && policyName == "" {
-		return nil
+func normalizeGrantType(grantType string) string {
+	switch grantType {
+	case GrantTypeClientCredentials:
+		return "clientcredentials"
+	case GrantTypeAuthorizationCode:
+		return "authorizationcode"
+	case GrantTypeImplicit:
+		return "implicitgrant"
+	default:
+		return strings.ReplaceAll(grantType, "_", "")
 	}
-
-	apiToken := oktaManagementAPIToken(idp)
-	if apiToken == "" {
-		return fmt.Errorf("okta group/policy validation requires a management API access token. Set %q in the IDP auth configuration", "auth.accessToken")
-	}
-
-	metadataURL := idp.GetMetadataURL()
-	oktaClient, err := oktaClientFromMetadataURL(apiClient, metadataURL, apiToken)
-	if err != nil {
-		return err
-	}
-
-	authServerID := ""
-	if policyName != "" {
-		authServerID, err = oktaAuthServerIDFromMetadataURL(metadataURL)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := validateOktaGroupExists(oktaClient, groupName); err != nil {
-		return err
-	}
-	if err := validateOktaPolicyExists(oktaClient, authServerID, policyName); err != nil {
-		return err
-	}
-	return nil
 }
 
-func oktaValidationNames(idp corecfg.IDPConfig) (groupName, policyName string) {
-	return strings.TrimSpace(idp.GetOktaGroup()), strings.TrimSpace(idp.GetOktaPolicy())
+func policyNameTemplate(idp corecfg.IDPConfig) string {
+	cfg, ok := idp.(interface{ GetPolicyNameTemplate() string })
+	if !ok {
+		return corecfg.OktaPlaceholderScope + "-" + corecfg.OktaPlaceholderOAuthFlow
+	}
+	if t := cfg.GetPolicyNameTemplate(); t != "" {
+		return t
+	}
+	return corecfg.OktaPlaceholderScope + "-" + corecfg.OktaPlaceholderOAuthFlow
 }
 
-func oktaManagementAPIToken(idp corecfg.IDPConfig) string {
-	authCfg := idp.GetAuthConfig()
-	if authCfg == nil {
-		return ""
-	}
-	return strings.TrimSpace(authCfg.GetAccessToken())
-}
-
-func oktaClientFromMetadataURL(apiClient coreapi.Client, metadataURL, apiToken string) (*clients.Okta, error) {
-	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
-	if err != nil {
-		return nil, err
-	}
-	if baseURL == "" {
-		return nil, fmt.Errorf("invalid okta metadata URL: %q", metadataURL)
-	}
-	return clients.New(apiClient, baseURL, apiToken), nil
-}
-
-func validateOktaGroupExists(oktaClient *clients.Okta, groupName string) error {
-	if strings.TrimSpace(groupName) == "" {
-		return nil
-	}
-	groupID, err := oktaClient.FindGroupByName(groupName)
-	if err != nil {
-		return err
-	}
-	if groupID == "" {
-		return fmt.Errorf("configured okta group %q was not found", groupName)
-	}
-	return nil
-}
-
-func validateOktaPolicyExists(oktaClient *clients.Okta, authServerID, policyName string) error {
-	if strings.TrimSpace(policyName) == "" {
-		return nil
-	}
-	if authServerID == "" {
-		return fmt.Errorf("unable to determine Okta authorization server from metadata URL")
-	}
-	policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
-	if err != nil {
-		return err
-	}
-	if policy == nil {
-		return fmt.Errorf("configured okta policy %q was not found on authorization server %q", policyName, authServerID)
-	}
-	return nil
-}
-
-// postProcessClientRegistration handles Okta provisioning after client registration
 func (i *okta) postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	i.logger.WithField("clientID", clientRes.GetClientID()).Debug("running Okta post-registration hook")
+
 	metadataURL := idp.GetMetadataURL()
 	var apiToken string
 	if authCfg := idp.GetAuthConfig(); authCfg != nil {
 		apiToken = authCfg.GetAccessToken()
 	}
-	groupName := idp.GetOktaGroup()
-	policyName := idp.GetOktaPolicy()
 
 	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
 	if err != nil {
 		return err
 	}
 	if baseURL == "" || apiToken == "" {
-		return nil // skip if not configured
+		return nil
 	}
-	oktaClient := clients.New(apiClient, baseURL, apiToken)
 
-	if err := i.handleGroupAssignment(oktaClient, clientRes, groupName); err != nil {
+	authServerID, err := oktaAuthServerIDFromMetadataURL(metadataURL)
+	if err != nil {
 		return err
 	}
 
-	authServerID := ""
-	if strings.TrimSpace(policyName) != "" {
-		authServerID, err = oktaAuthServerIDFromMetadataURL(metadataURL)
-		if err != nil {
+	oktaClient := clients.New(apiClient, baseURL, apiToken)
+
+	grantType := ""
+	if gt := clientRes.GetGrantTypes(); len(gt) > 0 {
+		grantType = gt[0]
+	}
+
+	if err := i.handlePerScopePolicyAssign(oktaClient, clientRes, idp, authServerID, grantType); err != nil {
+		return err
+	}
+
+	if err := i.handleGroupAssignment(oktaClient, clientRes.GetClientID(), idp); err != nil {
+		return err
+	}
+
+	i.logger.WithField("clientID", clientRes.GetClientID()).Info("completed Okta post-registration hook")
+	return nil
+}
+
+func (i *okta) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error {
+	i.logger.WithField("clientID", clientID).Debug("running Okta post-unregister hook")
+
+	metadataURL := idp.GetMetadataURL()
+	var apiToken string
+	if authCfg := idp.GetAuthConfig(); authCfg != nil {
+		apiToken = authCfg.GetAccessToken()
+	}
+
+	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
+	if err != nil {
+		return err
+	}
+	if baseURL == "" || apiToken == "" {
+		return nil
+	}
+
+	authServerID, err := oktaAuthServerIDFromMetadataURL(metadataURL)
+	if err != nil {
+		return err
+	}
+
+	oktaClient := clients.New(apiClient, baseURL, apiToken)
+
+	if err := oktaClient.DeactivateApp(clientID); err != nil {
+		return err
+	}
+	if err := oktaClient.DeleteApp(clientID); err != nil {
+		return err
+	}
+
+	if err := i.handleGroupRemoval(oktaClient, clientID, idp); err != nil {
+		return err
+	}
+
+	if err := i.handlePerScopePolicyUnassign(oktaClient, clientID, scopes, idp, authServerID, grantType); err != nil {
+		return err
+	}
+
+	i.logger.WithField("clientID", clientID).Info("completed Okta post-unregister hook")
+	return nil
+}
+
+func (i *okta) handlePerScopePolicyAssign(
+	oktaClient *clients.Okta,
+	clientRes ClientMetadata,
+	idp corecfg.IDPConfig,
+	authServerID string,
+	grantType string,
+) error {
+	i.logger.
+		WithField("clientID", clientRes.GetClientID()).
+		WithField("authServerID", authServerID).
+		Trace("handling per-scope policy assignment")
+
+	normalizedFlow := normalizeGrantType(grantType)
+	template := policyNameTemplate(idp)
+	scopes := clientRes.GetScopes()
+
+	replacer := strings.NewReplacer(corecfg.OktaPlaceholderOAuthFlow, normalizedFlow)
+	for _, scope := range scopes {
+		if strings.TrimSpace(scope) == "" {
+			continue
+		}
+		policyName := replacer.Replace(strings.ReplaceAll(template, corecfg.OktaPlaceholderScope, scope))
+		if err := i.assignScopePolicy(oktaClient, clientRes, idp, authServerID, grantType, policyName, scope); err != nil {
 			return err
 		}
 	}
-	if err := i.handlePolicyAssignment(oktaClient, clientRes.GetClientID(), authServerID, policyName); err != nil {
-		return err
-	}
 
 	return nil
 }
 
-// postProcessClientUnregister removes the app→group assignment for the client.
-// Explicit policy cleanup is not required: when the group assignment is removed, Okta
-// automatically removes the client from any policy include lists that were scoped to that
-// group, so no separate policy deprovision step is needed.
-func (i *okta) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
-	metadataURL := idp.GetMetadataURL()
-	var apiToken string
-	if authCfg := idp.GetAuthConfig(); authCfg != nil {
-		apiToken = authCfg.GetAccessToken()
+func (i *okta) assignScopePolicy(
+	oktaClient *clients.Okta,
+	clientRes ClientMetadata,
+	idp corecfg.IDPConfig,
+	authServerID, grantType, policyName, scope string,
+) error {
+	if len(policyName) > 100 {
+		return fmt.Errorf("Okta policy name exceeds 100-character limit: %s (%d chars)", policyName, len(policyName))
 	}
 
-	baseURL, err := oktaBaseURLFromMetadataURL(metadataURL)
-	if err != nil {
-		return err
-	}
-	if baseURL == "" || apiToken == "" {
-		return nil // skip if not configured
-	}
+	i.logger.WithField("policyName", policyName).Trace("looking up policy")
 
-	oktaClient := clients.New(apiClient, baseURL, apiToken)
-	return i.handleGroupUnassignment(oktaClient, clientID, idp.GetOktaGroup())
-}
-
-// handleGroupUnassignment unassigns the configured group from the app.
-func (i *okta) handleGroupUnassignment(oktaClient *clients.Okta, clientID, groupName string) error {
-	groupName = strings.TrimSpace(groupName)
-	if groupName == "" {
-		return nil
-	}
-
-	groupID, err := oktaClient.FindGroupByName(groupName)
-	if err != nil {
-		return err
-	}
-	if groupID == "" {
-		return fmt.Errorf("configured okta group %q was not found during client cleanup", groupName)
-	}
-
-	if err := oktaClient.UnassignGroupFromApp(clientID, groupID); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (i *okta) getAuthorizationHeaderPrefix() string {
-	return clients.OktaAuthHeaderPrefix
-}
-
-// handleGroupAssignment looks up the named group and assigns it to the app.
-// Returns an error if the group is not found.  Even though we fail fast at the start, we check again to guard against the possibility that the group was deleted between validation and assignment.
-func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientRes ClientMetadata, groupName string) error {
-	groupName = strings.TrimSpace(groupName)
-	if groupName == "" {
-		return nil
-	}
-	groupId, err := oktaClient.FindGroupByName(groupName)
-	if err != nil {
-		return err
-	}
-	if groupId == "" {
-		return fmt.Errorf("configured okta group %q was not found", groupName)
-	}
-	if err := oktaClient.AssignGroupToApp(clientRes.GetClientID(), groupId); err != nil {
-		return err
-	}
-	return nil
-}
-
-// handlePolicyAssignment looks up the named policy on the authorization server and assigns the client to it.
-// Returns an error if the policy is not found. Even though we fail fast at the start, we check again to guard against the possibility that the policy was deleted between validation and assignment.
-func (i *okta) handlePolicyAssignment(oktaClient *clients.Okta, clientID, authServerID string, policyName string) error {
-	policyName = strings.TrimSpace(policyName)
-	if policyName == "" {
-		return nil
-	}
-	if authServerID == "" {
-		return fmt.Errorf("unable to determine Okta authorization server from metadata URL")
-	}
 	policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
 	if err != nil {
 		return err
 	}
+
 	if policy == nil {
-		return fmt.Errorf("configured okta policy %q was not found on authorization server %q", policyName, authServerID)
+		i.logger.WithField("policyName", policyName).Trace("policy not found, creating")
+		createdPolicy, err := oktaClient.CreatePolicy(authServerID, policyName, clientRes.GetClientID())
+		if err != nil {
+			return err
+		}
+		policyID, _ := createdPolicy["id"].(string)
+		if err := oktaClient.CreatePolicyRule(authServerID, policyID, policyName, grantType, scope); err != nil {
+			return err
+		}
+		i.logger.WithField("policyName", policyName).Trace("created policy and rule")
+		return nil
 	}
-	policyID, _ := policy["id"].(string)
-	policyID = strings.TrimSpace(policyID)
-	if policyID == "" {
-		return fmt.Errorf("okta policy %q has no id field", policyName)
-	}
-	// Update policy-level client assignment (no rules).
-	return oktaClient.AssignClientToPolicy(authServerID, policy, clientID)
+
+	i.logger.WithField("policyName", policyName).Trace("policy found, assigning client")
+	return oktaClient.AssignClientToPolicy(authServerID, policy, clientRes.GetClientID())
 }
 
-// validateExtraProperties validates Okta-specific extra properties and sets defaults
+func (i *okta) handlePerScopePolicyUnassign(
+	oktaClient *clients.Okta,
+	clientID string,
+	scopes []string,
+	idp corecfg.IDPConfig,
+	authServerID string,
+	grantType string,
+) error {
+	i.logger.
+		WithField("clientID", clientID).
+		WithField("authServerID", authServerID).
+		Trace("handling per-scope policy unassignment")
+
+	normalizedFlow := normalizeGrantType(grantType)
+	template := policyNameTemplate(idp)
+
+	for _, scope := range scopes {
+		policyName := strings.NewReplacer(corecfg.OktaPlaceholderScope, scope, corecfg.OktaPlaceholderOAuthFlow, normalizedFlow).Replace(template)
+		i.logger.WithField("policyName", policyName).Trace("looking up policy for removal")
+
+		policy, err := oktaClient.FindPolicyByName(authServerID, policyName)
+		if err != nil {
+			return err
+		}
+
+		if policy == nil {
+			i.logger.
+				WithField("scope", scope).
+				WithField("policyName", policyName).
+				Trace("policy not found for scope during unassign, skipping")
+			continue
+		}
+
+		i.logger.
+			WithField("clientID", clientID).
+			WithField("policyName", policyName).
+			Trace("removing client from policy")
+		if err := oktaClient.RemoveClientFromPolicy(authServerID, policy, clientID); err != nil {
+			return err
+		}
+
+		if err := i.deletePolicyIfEmpty(oktaClient, authServerID, policyName, policy); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (i *okta) deletePolicyIfEmpty(oktaClient *clients.Okta, authServerID, policyName string, policy map[string]interface{}) error {
+	conditions, _ := policy["conditions"].(map[string]any)
+	clientsCond, _ := conditions["clients"].(map[string]any)
+	include, ok := clientsCond["include"].([]any)
+
+	if !ok || len(include) > 0 {
+		return nil
+	}
+
+	policyID, _ := policy["id"].(string)
+	if policyID == "" {
+		return nil
+	}
+
+	i.logger.
+		WithField("policyID", policyID).
+		WithField("policyName", policyName).
+		Debug("client list empty after removal, deleting policy")
+		
+	if err := oktaClient.DeactivatePolicy(authServerID, policyID); err != nil {
+		return err
+	}
+	return oktaClient.DeletePolicy(authServerID, policyID)
+}
+
 func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {
 	pkceRequired, _ := extraProps[oktaPKCERequired].(bool)
 	appType, _ := extraProps[oktaApplicationType].(string)
 
-	// Validate that if PKCE is required and application_type is explicitly set, it must be 'browser'
 	if pkceRequired && appType != "" && appType != oktaAppTypeBrowser {
 		return fmt.Errorf("when %s is true, %s must be '%s' or unset, got '%s'",
 			oktaPKCERequired, oktaApplicationType, oktaAppTypeBrowser, appType)
 	}
 
-	// Set default application_type only if not explicitly set by user
-	// Check appType == "" to preserve valid explicit user choices (e.g., "service")
-	// Default to 'web', override to 'browser' if PKCE is required
-	// Note: May be further overridden to 'service' in preProcessClientRequest for client credentials flows
 	if appType == "" {
 		extraProps[oktaApplicationType] = oktaAppTypeWeb
 		if pkceRequired {
@@ -308,8 +333,6 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 
 	pkceRequired, _ := clientRequest.extraProperties[oktaPKCERequired].(bool)
 
-	// Override application_type to 'service' for client credentials flows
-	// (validateExtraProperties sets default to 'web' or 'browser')
 	if slices.Contains(clientRequest.GrantTypes, GrantTypeClientCredentials) {
 		clientRequest.extraProperties[oktaApplicationType] = oktaAppTypeService
 		if len(clientRequest.ResponseTypes) == 0 {
@@ -320,4 +343,75 @@ func (i *okta) preProcessClientRequest(clientRequest *clientMetadata) {
 	if pkceRequired {
 		clientRequest.TokenEndpointAuthMethod = "none"
 	}
+}
+
+func (i *okta) getAuthorizationHeaderPrefix() string {
+	return clients.OktaAuthHeaderPrefix
+}
+
+func (i *okta) handleGroupAssignment(oktaClient *clients.Okta, clientID string, idp corecfg.IDPConfig) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	i.logger.WithField("clientID", clientID).WithField("groupName", groupName).Trace("adding app to Okta group")
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error finding Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured Okta group %q not found", groupName)
+	}
+	return oktaClient.AssignGroupToApp(clientID, groupID)
+}
+
+func (i *okta) handleGroupRemoval(oktaClient *clients.Okta, clientID string, idp corecfg.IDPConfig) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	i.logger.WithField("clientID", clientID).WithField("groupName", groupName).Trace("removing app from Okta group")
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error finding Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return nil
+	}
+	return oktaClient.UnassignGroupFromApp(clientID, groupID)
+}
+
+func oktaGroupName(idp corecfg.IDPConfig) string {
+	cfg, ok := idp.(interface{ GetOktaGroup() string })
+	if !ok {
+		return ""
+	}
+	return cfg.GetOktaGroup()
+}
+
+func validateOktaGroupExists(idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+	groupName := oktaGroupName(idp)
+	if groupName == "" {
+		return nil
+	}
+	var apiToken string
+	if authCfg := idp.GetAuthConfig(); authCfg != nil {
+		apiToken = authCfg.GetAccessToken()
+	}
+	if apiToken == "" {
+		return nil
+	}
+	baseURL, err := oktaBaseURLFromMetadataURL(idp.GetMetadataURL())
+	if err != nil {
+		return err
+	}
+	oktaClient := clients.New(apiClient, baseURL, apiToken)
+	groupID, err := oktaClient.FindGroupByName(groupName)
+	if err != nil {
+		return fmt.Errorf("error looking up Okta group %q: %w", groupName, err)
+	}
+	if groupID == "" {
+		return fmt.Errorf("configured Okta group %q not found", groupName)
+	}
+	return nil
 }

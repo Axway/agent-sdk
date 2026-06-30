@@ -58,7 +58,6 @@ func NewMockIDPServer() MockIDPServer {
 		tokenResponseCode:    http.StatusOK,
 		registerResponseCode: http.StatusCreated,
 	}
-
 	m.server = httptest.NewServer(http.HandlerFunc(m.handleRequest))
 	m.serverMetadata = &AuthorizationServerMetadata{
 		Issuer:                m.GetIssuer(),
@@ -115,9 +114,6 @@ func (m *mockIDPServer) handleRequest(resp http.ResponseWriter, req *http.Reques
 	if strings.Contains(req.RequestURI, "/register") {
 		m.reqHeaders = req.Header
 		m.reqQueryParam = req.URL.Query()
-		defer func() {
-			m.registerResponseCode = http.StatusCreated
-		}()
 		if req.Method == http.MethodPost {
 			if m.registerResponseCode != http.StatusCreated {
 				resp.WriteHeader(m.registerResponseCode)

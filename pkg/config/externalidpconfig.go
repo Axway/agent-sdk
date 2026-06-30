@@ -19,6 +19,14 @@ const (
 	TLSClientAuth           = "tls_client_auth"
 	SelfSignedTLSClientAuth = "self_signed_tls_client_auth"
 
+	OktaPlaceholderMPApplicationName    = "%MP_APPLICATION_NAME%"
+	OktaPlaceholderOwningTeam           = "%OWNING_TEAM%"
+	OktaPlaceholderCredentialName       = "%CREDENTIAL_NAME%"
+	OktaPlaceholderScope                = "%SCOPE%"
+	OktaPlaceholderOAuthFlow            = "%OAUTH_FLOW%"
+	OktaAppNameTemplateKey       = "AGENTFEATURES_IDP_OKTA_APPNAME_TEMPLATE"
+	OktaPolicyNameTemplateKey    = "AGENTFEATURES_IDP_OKTA_POLICYNAME_TEMPLATE"
+
 	propInsecureSkipVerify      = "insecureSkipVerify"
 	propUseCachedToken          = "useCachedToken"
 	propUseRegistrationToken    = "useRegistrationToken"
@@ -28,7 +36,10 @@ const (
 	fldType                     = "type"
 	fldMetadataURL              = "metadataUrl"
 	fldOktaGroup                = "okta.group"
-	fldOktaPolicy               = "okta.policy"
+	fldOktaAppNameTemplate      = "okta.appname_template"
+	fldOktaPolicyNameTemplate   = "okta.policyname_template"
+	fldOktaScopeSources         = "okta.scope_sources"
+	fldOktaScopeExclude         = "okta.scope_exclude"
 	fldExtraProperties          = "extraProperties"
 	fldRequestHeaders           = "requestHeaders"
 	fldQueryParams              = "queryParams"
@@ -53,6 +64,11 @@ const (
 	fldSSLRootCACertPath        = "ssl.rootCACertPath"
 	fldSSLClientCertPath        = "ssl.clientCertPath"
 	fldSSLClientKeyPath         = "ssl.clientKeyPath"
+
+	defaultOktaAppNameTemplate    = OktaPlaceholderMPApplicationName + "-" + OktaPlaceholderOwningTeam + "-" + OktaPlaceholderCredentialName
+	defaultOktaPolicyNameTemplate = OktaPlaceholderScope + "-" + OktaPlaceholderOAuthFlow
+	defaultOktaScopeSources       = "swagger,gateway,okta"
+	defaultOktaScopeExclude       = "openid,profile,email,address,phone,offline_access"
 )
 
 var configProperties = []string{
@@ -61,7 +77,10 @@ var configProperties = []string{
 	fldType,
 	fldMetadataURL,
 	fldOktaGroup,
-	fldOktaPolicy,
+	fldOktaAppNameTemplate,
+	fldOktaPolicyNameTemplate,
+	fldOktaScopeSources,
+	fldOktaScopeExclude,
 	fldExtraProperties,
 	fldRequestHeaders,
 	fldQueryParams,
@@ -236,10 +255,6 @@ type IDPConfig interface {
 	GetIDPTitle() string
 	// GetAuthConfig - to be used for authentication with IDP
 	GetAuthConfig() IDPAuthConfig
-	// GetOktaGroup - okta-specific group assignment configuration.
-	GetOktaGroup() string
-	// GetOktaPolicy - okta-specific authorization server policy name to look up.
-	GetOktaPolicy() string
 	// GetClientScopes - default list of scopes that are included in the client metadata request to IDP
 	GetClientScopes() string
 	// GetGrantType - default grant type to be used when creating the client. (default :  "client_credentials")
@@ -254,6 +269,8 @@ type IDPConfig interface {
 	GetRequestHeaders() map[string]string
 	// GetQueryParams - set of additional query parameters to be applied when registering the client
 	GetQueryParams() map[string]string
+	// GetOktaGroup - name of the Okta group that newly registered apps are added to
+	GetOktaGroup() string
 	// GetTLSConfig - tls config for IDP connection
 	GetTLSConfig() TLSConfig
 	// validate - Validates the IDP configuration
@@ -279,8 +296,11 @@ type IDPAuthConfiguration struct {
 
 // OktaIDPConfiguration - okta-specific configuration.
 type OktaIDPConfiguration struct {
-	Group  string `json:"group,omitempty"`
-	Policy string `json:"policy,omitempty"`
+	Group              string `json:"group,omitempty"`
+	AppNameTemplate    string `json:"appname_template,omitempty"`
+	PolicyNameTemplate string `json:"policyname_template,omitempty"`
+	ScopeSources       string `json:"scope_sources,omitempty"`
+	ScopeExclude       string `json:"scope_exclude,omitempty"`
 }
 
 // IDPConfiguration - Structure to hold the IdP provider config
@@ -306,7 +326,7 @@ func (i *IDPConfiguration) GetIDPName() string {
 	return i.Name
 }
 
-// GetIDPName - for the identity provider frinedly name
+// GetIDPTitle - for the identity provider friendly name
 func (i *IDPConfiguration) GetIDPTitle() string {
 	return i.Title
 }
@@ -326,20 +346,44 @@ func (i *IDPConfiguration) GetMetadataURL() string {
 	return i.MetadataURL
 }
 
-// GetOktaGroup - returns Okta group name configured for this IDP (if any).
+// GetAppNameTemplate - Okta application name template; defaults to MP_APPLICATION_NAME-OWNING_TEAM-CREDENTIAL_NAME pattern.
+func (i *IDPConfiguration) GetAppNameTemplate() string {
+	if i.Okta == nil || i.Okta.AppNameTemplate == "" {
+		return defaultOktaAppNameTemplate
+	}
+	return i.Okta.AppNameTemplate
+}
+
+// GetPolicyNameTemplate - Okta access policy name template; defaults to SCOPE-OAUTH_FLOW pattern.
+func (i *IDPConfiguration) GetPolicyNameTemplate() string {
+	if i.Okta == nil || i.Okta.PolicyNameTemplate == "" {
+		return defaultOktaPolicyNameTemplate
+	}
+	return i.Okta.PolicyNameTemplate
+}
+
+// GetScopeSources - comma-separated active scope sources (swagger, gateway, okta); consumed by the v7 agent.
+func (i *IDPConfiguration) GetScopeSources() string {
+	if i.Okta == nil || i.Okta.ScopeSources == "" {
+		return defaultOktaScopeSources
+	}
+	return i.Okta.ScopeSources
+}
+
+// GetScopeExclude - comma-separated scopes excluded from the Marketplace UI; consumed by the v7 agent.
+func (i *IDPConfiguration) GetScopeExclude() string {
+	if i.Okta == nil || i.Okta.ScopeExclude == "" {
+		return defaultOktaScopeExclude
+	}
+	return i.Okta.ScopeExclude
+}
+
+// GetOktaGroup - name of the Okta group that newly registered apps are added to.
 func (i *IDPConfiguration) GetOktaGroup() string {
 	if i.Okta == nil {
 		return ""
 	}
 	return i.Okta.Group
-}
-
-// GetOktaPolicy - returns Okta authorization server policy name for this IDP (if any).
-func (i *IDPConfiguration) GetOktaPolicy() string {
-	if i.Okta == nil {
-		return ""
-	}
-	return i.Okta.Policy
 }
 
 // GetExtraProperties - set of additional properties to be applied when registering the client
@@ -654,7 +698,7 @@ func ParseExternalIDPConfig(agentFeature AgentFeaturesConfig, props properties.P
 			QueryParams:      make(IDPQueryParams),
 			ClientScopes:     "resource.READ resource.WRITE",
 			GrantType:        "client_credentials",
-			AuthMethod:       "client_secret_basic",
+			AuthMethod:       ClientSecretBasic,
 			AuthResponseType: "token",
 		}
 
