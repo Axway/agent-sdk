@@ -13,6 +13,4 @@ package management
 type DataplaneSpecAwsCognito struct {
 	// The Cognito user pool ID.
 	UserPoolId string `json:"userPoolId"`
-	// The AWS region of the Cognito user pool. Defaults to the agent region if omitted.
-	Region string `json:"region,omitempty"`
 }
