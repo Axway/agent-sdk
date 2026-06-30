@@ -32,9 +32,10 @@ func TestProvisioner(t *testing.T) {
 			ClientSecret:         "test",
 			UseRegistrationToken: true,
 		},
-		GrantType:   oauth.GrantTypeClientCredentials,
-		AuthMethod:  config.ClientSecretBasic,
-		MetadataURL: s.GetMetadataURL(),
+		GrantType:     oauth.GrantTypeClientCredentials,
+		AuthMethod:    config.ClientSecretBasic,
+		MetadataURL:   s.GetMetadataURL(),
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	s.SetMetadataResponseCode(http.StatusOK)

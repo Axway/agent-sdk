@@ -191,6 +191,7 @@ func runProviderTestCase(t *testing.T, tc providerTestCase) {
 		ExtraProperties: config.ExtraProperties{"key": "value"},
 		RequestHeaders:  tc.headers,
 		QueryParams:     tc.queryParams,
+		LoggerOptions:   &config.IDPLoggerOptions{},
 	}
 
 	s.SetMetadataResponseCode(tc.metadataResponseCode)
@@ -306,6 +307,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 					Type:        config.AccessToken,
 					AccessToken: testToken,
 				},
+				LoggerOptions: &config.IDPLoggerOptions{},
 			}
 
 			provider, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
@@ -366,6 +368,7 @@ func TestNewProviderOktaValidatesConfiguredGroupAndPolicyExist(t *testing.T) {
 			Type:        config.AccessToken,
 			AccessToken: token,
 		},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
@@ -400,6 +403,7 @@ func TestNewProviderOktaFailsFastWhenConfiguredGroupMissing(t *testing.T) {
 			Type:        config.AccessToken,
 			AccessToken: token,
 		},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
@@ -490,6 +494,7 @@ func TestRegisterClientRollBack(t *testing.T) {
 					Type:        config.AccessToken,
 					AccessToken: testToken,
 				},
+				LoggerOptions: &config.IDPLoggerOptions{},
 			}
 
 			pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
@@ -537,6 +542,7 @@ func TestUnregisterClientDeleteHookFails(t *testing.T) {
 			Type:        config.AccessToken,
 			AccessToken: testToken,
 		},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
@@ -580,6 +586,7 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 			Type:        config.AccessToken,
 			AccessToken: testToken,
 		},
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 
 	pIntf, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)

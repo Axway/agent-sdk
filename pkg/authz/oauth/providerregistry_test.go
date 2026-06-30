@@ -13,8 +13,9 @@ import (
 
 func createIDPConfig(name, metadataURL string) *config.IDPConfiguration {
 	return &config.IDPConfiguration{
-		Name:        name,
-		MetadataURL: metadataURL,
+		Name:          name,
+		MetadataURL:   metadataURL,
+		LoggerOptions: &config.IDPLoggerOptions{},
 	}
 }
 

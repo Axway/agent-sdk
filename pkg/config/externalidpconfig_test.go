@@ -52,6 +52,9 @@ func assertIDPRoundTrip(t *testing.T, idp IDPConfig, expectedOktaGroup string, e
 	assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIDP.GetAuthConfig().GetClientSecret())
 	assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIDP.GetAuthConfig().GetRequestHeaders()))
 	assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIDP.GetAuthConfig().GetQueryParams()))
+	if idp.GetLoggingConfig() != nil {
+		assert.Equal(t, idp.GetLoggingConfig().LogRequestResponse(), parsedIDP.GetLoggingConfig().LogRequestResponse())
+	}
 
 	if expectedOktaGroup != "" {
 		assert.Equal(t, expectedOktaGroup, idp.GetOktaGroup())
@@ -204,11 +207,141 @@ func TestExternalIDPConfig(t *testing.T) {
 			},
 			hasError: false,
 		},
+		{
+			name: "log request/response disabled by default",
+			envNames: map[string]string{
+				"AGENTFEATURES_IDP_NAME_1":             "test",
+				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
+				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
+				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
+			},
+			hasError: false,
+		},
+		{
+			name: "log request/response enabled via env var",
+			envNames: map[string]string{
+				"AGENTFEATURES_IDP_NAME_1":                        "test",
+				"AGENTFEATURES_IDP_METADATAURL_1":                 "test",
+				"AGENTFEATURES_IDP_AUTH_TYPE_1":                   "accessToken",
+				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1":            "accessToken",
+				"AGENTFEATURES_IDP_LOG_REQUESTANDRESPONSE_1":      "true",
+			},
+			hasError: false,
+		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			runExternalIDPTestCase(t, tc)
+		})
+	}
+}
+
+func TestIDPLoggerOptions(t *testing.T) {
+	t.Run("default is false", func(t *testing.T) {
+		opts := &IDPLoggerOptions{}
+		assert.False(t, opts.LogRequestResponse())
+	})
+
+	t.Run("unmarshal requestAndResponse true", func(t *testing.T) {
+		opts := &IDPLoggerOptions{}
+		assert.NoError(t, json.Unmarshal([]byte(`{"requestAndResponse":"true"}`), opts))
+		assert.True(t, opts.LogRequestResponse())
+	})
+
+	t.Run("unmarshal requestAndResponse false", func(t *testing.T) {
+		opts := &IDPLoggerOptions{}
+		assert.NoError(t, json.Unmarshal([]byte(`{"requestAndResponse":"false"}`), opts))
+		assert.False(t, opts.LogRequestResponse())
+	})
+
+	t.Run("unmarshal missing requestAndResponse defaults to false", func(t *testing.T) {
+		opts := &IDPLoggerOptions{}
+		assert.NoError(t, json.Unmarshal([]byte(`{}`), opts))
+		assert.False(t, opts.LogRequestResponse())
+	})
+
+	t.Run("marshal with requestAndResponse true includes field", func(t *testing.T) {
+		opts := &IDPLoggerOptions{RequestResponse: true}
+		buf, err := json.Marshal(opts)
+		assert.NoError(t, err)
+		var m map[string]interface{}
+		assert.NoError(t, json.Unmarshal(buf, &m))
+		assert.Equal(t, "true", m["requestAndResponse"])
+	})
+
+	t.Run("marshal with requestAndResponse false omits field", func(t *testing.T) {
+		opts := &IDPLoggerOptions{RequestResponse: false}
+		buf, err := json.Marshal(opts)
+		assert.NoError(t, err)
+		var m map[string]interface{}
+		assert.NoError(t, json.Unmarshal(buf, &m))
+		_, exists := m["requestAndResponse"]
+		assert.False(t, exists)
+	})
+
+	t.Run("round-trip preserves true", func(t *testing.T) {
+		opts := &IDPLoggerOptions{RequestResponse: true}
+		buf, err := json.Marshal(opts)
+		assert.NoError(t, err)
+		opts2 := &IDPLoggerOptions{}
+		assert.NoError(t, json.Unmarshal(buf, opts2))
+		assert.True(t, opts2.LogRequestResponse())
+	})
+
+	t.Run("round-trip preserves false", func(t *testing.T) {
+		opts := &IDPLoggerOptions{RequestResponse: false}
+		buf, err := json.Marshal(opts)
+		assert.NoError(t, err)
+		opts2 := &IDPLoggerOptions{}
+		assert.NoError(t, json.Unmarshal(buf, opts2))
+		assert.False(t, opts2.LogRequestResponse())
+	})
+}
+
+func TestIDPConfigurationGetLoggingConfig(t *testing.T) {
+	testCases := []struct {
+		name               string
+		idp                *IDPConfiguration
+		jsonData           string
+		expectNil          bool
+		expectLogReqResp   bool
+	}{
+		{
+			name:      "GetLoggingConfig returns nil when not set",
+			idp:       &IDPConfiguration{},
+			expectNil: true,
+		},
+		{
+			name: "GetLoggingConfig returns logger options when set",
+			idp: &IDPConfiguration{
+				LoggerOptions: &IDPLoggerOptions{RequestResponse: true},
+			},
+			expectLogReqResp: true,
+		},
+		{
+			name:             "UnmarshalJSON initializes LoggerOptions",
+			jsonData:         `{"name":"test","metadataUrl":"http://example.com","log":{"requestAndResponse":"true"}}`,
+			expectLogReqResp: true,
+		},
+		{
+			name:             "UnmarshalJSON sets LoggerOptions default false when log absent",
+			jsonData:         `{"name":"test","metadataUrl":"http://example.com"}`,
+			expectLogReqResp: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			idp := tc.idp
+			if tc.jsonData != "" {
+				idp = &IDPConfiguration{}
+				assert.NoError(t, json.Unmarshal([]byte(tc.jsonData), idp))
+			}
+			if tc.expectNil {
+				assert.Nil(t, idp.GetLoggingConfig())
+				return
+			}
+			assert.NotNil(t, idp.GetLoggingConfig())
+			assert.Equal(t, tc.expectLogReqResp, idp.GetLoggingConfig().LogRequestResponse())
 		})
 	}
 }

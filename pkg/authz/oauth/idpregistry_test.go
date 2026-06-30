@@ -63,11 +63,12 @@ func TestRegisterProviderWithMetadata(t *testing.T) {
 
 			reg := NewIdpRegistry()
 			idpCfg := &config.IDPConfiguration{
-				Name:        "test-idp",
-				MetadataURL: idpServer.GetMetadataURL(),
-				AuthConfig:  &config.IDPAuthConfiguration{Type: "client", ClientID: "id", ClientSecret: "secret"},
-				GrantType:   GrantTypeClientCredentials,
-				AuthMethod:  config.ClientSecretBasic,
+				Name:          "test-idp",
+				MetadataURL:   idpServer.GetMetadataURL(),
+				AuthConfig:    &config.IDPAuthConfiguration{Type: "client", ClientID: "id", ClientSecret: "secret"},
+				GrantType:     GrantTypeClientCredentials,
+				AuthMethod:    config.ClientSecretBasic,
+				LoggerOptions: &config.IDPLoggerOptions{},
 			}
 
 			err := reg.RegisterProviderWithMetadata(context.Background(), idpCfg, tc.metadata, config.NewTLSConfig(), "", 30*time.Second)

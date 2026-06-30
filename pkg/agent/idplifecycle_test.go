@@ -76,6 +76,7 @@ func makeIDPConfig(metadataURL string) *config.IDPConfiguration {
 		ClientScopes:     "read",
 		AuthMethod:       config.ClientSecretBasic,
 		AuthResponseType: oauth.AuthResponseToken,
+		LoggerOptions:    &config.IDPLoggerOptions{},
 	}
 }
 
