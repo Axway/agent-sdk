@@ -223,14 +223,51 @@ func (i *okta) assignScopePolicy(
 		}
 		policyID, _ := createdPolicy["id"].(string)
 		if err := oktaClient.CreatePolicyRule(authServerID, policyID, policyName, grantType, scope); err != nil {
+			i.cleanupOrphanedPolicy(oktaClient, authServerID, policyID)
 			return err
 		}
 		i.logger.WithField("policyName", policyName).Trace("created policy and rule")
 		return nil
 	}
 
-	i.logger.WithField("policyName", policyName).Trace("policy found, assigning client")
+	i.logger.WithField("policyName", policyName).Trace("policy found, checking rule before assigning client")
+
+	policyID, _ := policy["id"].(string)
+	hasRule, err := oktaClient.PolicyHasRuleForScope(authServerID, policyID, scope)
+	if err != nil {
+		return err
+	}
+
+	if !hasRule {
+		i.logger.WithField("policyName", policyName).WithField("policyID", policyID).Debug("repairing policy, missing rule for scope")
+		status, _ := policy["status"].(string)
+		if err := i.ensurePolicyHasRule(oktaClient, authServerID, policyID, policyName, grantType, scope, status); err != nil {
+			return err
+		}
+	}
+
 	return oktaClient.AssignClientToPolicy(authServerID, policy, clientRes.GetClientID())
+}
+
+func (i *okta) ensurePolicyHasRule(oktaClient *clients.Okta, authServerID, policyID, policyName, grantType, scope, status string) error {
+	if err := oktaClient.CreatePolicyRule(authServerID, policyID, policyName, grantType, scope); err != nil {
+		return err
+	}
+	if status == "INACTIVE" {
+		return oktaClient.ActivatePolicy(authServerID, policyID)
+	}
+	return nil
+}
+
+func (i *okta) cleanupOrphanedPolicy(oktaClient *clients.Okta, authServerID, policyID string) {
+	i.logger.WithField("policyID", policyID).Debug("removing orphaned policy after rule creation failure")
+	if err := oktaClient.DeactivatePolicy(authServerID, policyID); err != nil {
+		i.logger.WithField("policyID", policyID).WithError(err).Error("failed to deactivate orphaned policy, manual cleanup required in Okta")
+		return
+	}
+	if err := oktaClient.DeletePolicy(authServerID, policyID); err != nil {
+		i.logger.WithField("policyID", policyID).WithError(err).Error("failed to delete orphaned policy, manual cleanup required in Okta")
+	}
 }
 
 func (i *okta) handlePerScopePolicyUnassign(
@@ -300,11 +337,20 @@ func (i *okta) deletePolicyIfEmpty(oktaClient *clients.Okta, authServerID, polic
 		WithField("policyID", policyID).
 		WithField("policyName", policyName).
 		Debug("client list empty after removal, deleting policy")
-		
+
 	if err := oktaClient.DeactivatePolicy(authServerID, policyID); err != nil {
 		return err
 	}
-	return oktaClient.DeletePolicy(authServerID, policyID)
+
+	if err := oktaClient.DeletePolicy(authServerID, policyID); err != nil {
+		i.logger.
+			WithField("policyID", policyID).
+			WithField("policyName", policyName).
+			WithError(err).
+			Error("failed to delete deactivated empty Okta policy, manual cleanup required in Okta")
+		return err
+	}
+	return nil
 }
 
 func (i *okta) validateExtraProperties(extraProps map[string]interface{}) error {

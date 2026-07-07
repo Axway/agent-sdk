@@ -385,6 +385,52 @@ func (o *Okta) DeleteApp(appID string) error {
 	return nil
 }
 
+// ActivatePolicy activates an Okta authorization server policy. A 404 is treated as success.
+func (o *Okta) ActivatePolicy(authServerID, policyID string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/lifecycle/activate", o.BaseURL, authServerID, policyID)
+	o.logger.WithField("authServerID", authServerID).WithField("policyID", policyID).WithField("endpoint", endpoint).Trace("activating Okta authorization server policy")
+	resp, err := o.doRequest(coreapi.POST, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	if isStatus(resp.Code, http.StatusNotFound) {
+		return nil
+	}
+	if !isStatus(resp.Code, http.StatusOK, http.StatusNoContent) {
+		return o.unexpectedStatusError(coreapi.POST, endpoint, resp)
+	}
+	return nil
+}
+
+// PolicyHasRuleForScope reports whether the given Okta authorization server policy has at least
+// one rule that grants the specified scope.
+func (o *Okta) PolicyHasRuleForScope(authServerID, policyID, scope string) (bool, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/authorizationServers/%s/policies/%s/rules", o.BaseURL, authServerID, policyID)
+	o.logger.
+		WithField("authServerID", authServerID).
+		WithField("policyID", policyID).
+		WithField("scope", scope).
+		WithField("endpoint", endpoint).
+		Trace("checking Okta authorization server policy rules for scope")
+
+	var rules []struct {
+		Conditions struct {
+			Scopes oktaPolicyRuleConditionScopes `json:"scopes"`
+		} `json:"conditions"`
+	}
+	if err := o.doGetJSON(endpoint, &rules); err != nil {
+		return false, err
+	}
+	for _, rule := range rules {
+		for _, s := range rule.Conditions.Scopes.Include {
+			if strings.TrimSpace(s) == scope {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 // DeactivatePolicy deactivates an Okta authorization server policy. A 404 is treated as success.
 // DeactivatePolicy must be called before DeletePolicy.
 func (o *Okta) DeactivatePolicy(authServerID, policyID string) error {

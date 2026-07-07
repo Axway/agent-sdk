@@ -2,6 +2,7 @@ package clients
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -235,6 +236,83 @@ func TestOktaRemoveClientFromPolicy(t *testing.T) {
 			assertOktaErr(t, client.RemoveClientFromPolicy("as1", tc.policy, removeClientID), tc.wantErr)
 			assert.Equal(t, tc.wantPUT, putCalled, "PUT call expectation mismatch")
 			assert.False(t, deleteCalled, "policy must never be deleted")
+		})
+	}
+}
+
+func TestOktaActivatePolicy(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		wantErr bool
+	}{
+		nilOn200:          {code: http.StatusOK, wantErr: false},
+		nilOn204:          {code: http.StatusNoContent, wantErr: false},
+		notFoundAsSuccess: {code: http.StatusNotFound, wantErr: false},
+		errForbidden:      {code: http.StatusForbidden, wantErr: true},
+	}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+			})
+			defer close()
+			assertOktaErr(t, client.ActivatePolicy(testAuthServerID, testPolicyID), tc.wantErr)
+		})
+	}
+}
+
+func TestOktaPolicyHasRuleForScope(t *testing.T) {
+	cases := map[string]struct {
+		code    int
+		body    string
+		scope   string
+		wantHas bool
+		wantErr bool
+	}{
+		"returns true when rule contains scope": {
+			code:    http.StatusOK,
+			body:    fmt.Sprintf(`[{"conditions":{"scopes":{"include":[%q,"write:api"]}}}]`, testRuleScope),
+			scope:   testRuleScope,
+			wantHas: true,
+		},
+		"returns false when rules list is empty": {
+			code:    http.StatusOK,
+			body:    `[]`,
+			scope:   testRuleScope,
+			wantHas: false,
+		},
+		"returns false when no rule contains scope": {
+			code:    http.StatusOK,
+			body:    `[{"conditions":{"scopes":{"include":["write:api"]}}}]`,
+			scope:   testRuleScope,
+			wantHas: false,
+		},
+		"trims whitespace when matching scope": {
+			code:    http.StatusOK,
+			body:    fmt.Sprintf(`[{"conditions":{"scopes":{"include":[" %s "]}}}]`, testRuleScope),
+			scope:   testRuleScope,
+			wantHas: true,
+		},
+		errForbidden: {
+			code:    http.StatusForbidden,
+			body:    `forbidden`,
+			wantErr: true,
+		},
+	}
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			client, close := newTestOktaClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.code)
+				_, _ = w.Write([]byte(tc.body))
+			})
+			defer close()
+			got, err := client.PolicyHasRuleForScope(testAuthServerID, testPolicyID, tc.scope)
+			assertOktaErr(t, err, tc.wantErr)
+			if !tc.wantErr {
+				assert.Equal(t, tc.wantHas, got)
+			}
 		})
 	}
 }
