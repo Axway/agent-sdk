@@ -296,7 +296,7 @@ func TestSummaryBuilder(t *testing.T) {
 	assert.Equal(t, "1111", logEvent.TransactionSummary.Team.ID)
 
 	assert.NotNil(t, logEvent.TransactionSummary.Proxy)
-	assert.Equal(t, "remoteApiId_proxy", logEvent.TransactionSummary.Proxy.ID)
+	assert.Equal(t, "remoteApiName_proxy", logEvent.TransactionSummary.Proxy.ID)
 	assert.Equal(t, "proxy", logEvent.TransactionSummary.Proxy.Name)
 	assert.Equal(t, 1, logEvent.TransactionSummary.Proxy.Revision)
 
@@ -472,20 +472,20 @@ func TestEventBuilderSetProxy(t *testing.T) {
 			proxyName:      "Cat Fact API",
 			expectedSource: prefixedCatFactAPI,
 		},
-		"empty proxyID falls back to proxyName with prefix": {
+		"empty proxyID falls back to proxyName with name prefix": {
 			proxyID:        "",
 			proxyName:      "fallback-api",
-			expectedSource: "remoteApiId_fallback-api",
+			expectedSource: "remoteApiName_fallback-api",
 		},
 		"both empty produces unknown with prefix": {
 			proxyID:        "",
 			proxyName:      "",
 			expectedSource: "remoteApiId_unknown",
 		},
-		"only-prefix ID falls back to proxyName": {
+		"only-prefix ID falls back to proxyName with name prefix": {
 			proxyID:        "remoteApiId_",
 			proxyName:      "fallback-api",
-			expectedSource: "remoteApiId_fallback-api",
+			expectedSource: "remoteApiName_fallback-api",
 		},
 	}
 
@@ -549,7 +549,7 @@ func TestSummaryBuilderResolveProxyID(t *testing.T) {
 		"proxyID is just prefix falls back to proxyName": {
 			proxyID:   "remoteApiId_",
 			proxyName: "schrute",
-			expected:  "remoteApiId_schrute",
+			expected:  "remoteApiName_schrute",
 		},
 		"both empty produces unknown": {
 			proxyID:   "",
@@ -561,10 +561,10 @@ func TestSummaryBuilderResolveProxyID(t *testing.T) {
 			proxyName: "",
 			expected:  "remoteApiId_unknown",
 		},
-		"empty proxyID uses proxyName with prefix": {
+		"empty proxyID uses proxyName with name prefix": {
 			proxyID:   "",
 			proxyName: "schrute",
-			expected:  "remoteApiId_schrute",
+			expected:  "remoteApiName_schrute",
 		},
 		"proxyID without prefix preserved as-is": {
 			proxyID:   "dwight",
@@ -584,12 +584,12 @@ func TestSummaryBuilderResolveProxyID(t *testing.T) {
 		"proxyName with special characters": {
 			proxyID:   "",
 			proxyName: "proxy-name.with.dots",
-			expected:  "remoteApiId_proxy-name.with.dots",
+			expected:  "remoteApiName_proxy-name.with.dots",
 		},
 		"proxyID equals exactly the prefix falls back to proxyName": {
 			proxyID:   SummaryEventProxyIDPrefix,
 			proxyName: "fallback",
-			expected:  SummaryEventProxyIDPrefix + "fallback",
+			expected:  SummaryEventAPINamePrefix + "fallback",
 		},
 	}
 
@@ -624,7 +624,7 @@ func TestSummaryBuilderSetProxyWithStageVersion(t *testing.T) {
 			proxyStage:   "test",
 			proxyVersion: "v2.0",
 			revision:     2,
-			expectedID:   "remoteApiId_schrute",
+			expectedID:   "remoteApiName_schrute",
 		},
 		"empty proxy information produces unknown": {
 			proxyID:      "",

@@ -18,6 +18,9 @@ const (
 	// SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 	SummaryEventProxyIDPrefix = "remoteApiId_"
 
+	// SummaryEventAPINamePrefix - Prefix for proxyID in summary event when falling back to the API name
+	SummaryEventAPINamePrefix = "remoteApiName_"
+
 	// SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
 	SummaryEventApplicationIDPrefix = "remoteAppId_"
 )
@@ -249,11 +252,11 @@ func ResolveIDWithPrefix(id, name string) string {
 		return id
 	}
 
-	// ID is empty or just the prefix - use fallback with prefix
-	fallback := name
-	if fallback == "" {
-		fallback = unknown
+	// ID is empty or just the prefix and there is no name to fall back to
+	if name == "" {
+		return SummaryEventProxyIDPrefix + unknown
 	}
 
-	return SummaryEventProxyIDPrefix + fallback
+	// ID is empty or just the prefix - fall back to the name, prefixed to indicate it is not a resolvable ID
+	return SummaryEventAPINamePrefix + name
 }
