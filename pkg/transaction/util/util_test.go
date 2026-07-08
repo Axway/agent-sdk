@@ -100,6 +100,20 @@ func TestResolveIDWithPrefix(t *testing.T) {
 			expected:    "differentPrefix_dwight",
 			description: "Should return original ID when it has a different prefix",
 		},
+		{
+			name:        "prefixed ID content equals name is not a real ID",
+			id:          "remoteApiId_schrute",
+			inputName:   "schrute",
+			expected:    "remoteApiName_schrute",
+			description: "Should use name prefix when the prefixed ID content is identical to the name, since a resolvable ID would not match the display name",
+		},
+		{
+			name:        "prefixed ID content differs from name only by case is still preserved",
+			id:          "remoteApiId_Schrute",
+			inputName:   "schrute",
+			expected:    "remoteApiId_Schrute",
+			description: "Should preserve original ID since the comparison is exact and case differences count as distinct content",
+		},
 	}
 
 	for _, tt := range tests {

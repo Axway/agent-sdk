@@ -16,6 +16,10 @@ const (
 	testTargetPath   = "/targetPath"
 	testResourcePath = "/resourcePath"
 	testHost         = "somehost.com"
+
+	prefixedCatFactAPI      = "remoteApiId_cat-fact-api"
+	fallbackAPIName         = "fallback-api"
+	prefixedFallbackAPIName = SummaryEventAPINamePrefix + fallbackAPIName
 )
 
 func TestTransactionEventBuilder(t *testing.T) {
@@ -461,7 +465,6 @@ func TestLogRedactionOverride(t *testing.T) {
 }
 
 func TestEventBuilderSetProxy(t *testing.T) {
-	const prefixedCatFactAPI = "remoteApiId_cat-fact-api"
 	cases := map[string]struct {
 		proxyID        string
 		proxyName      string
@@ -474,8 +477,8 @@ func TestEventBuilderSetProxy(t *testing.T) {
 		},
 		"empty proxyID falls back to proxyName with name prefix": {
 			proxyID:        "",
-			proxyName:      "fallback-api",
-			expectedSource: "remoteApiName_fallback-api",
+			proxyName:      fallbackAPIName,
+			expectedSource: prefixedFallbackAPIName,
 		},
 		"both empty produces unknown with prefix": {
 			proxyID:        "",
@@ -484,8 +487,13 @@ func TestEventBuilderSetProxy(t *testing.T) {
 		},
 		"only-prefix ID falls back to proxyName with name prefix": {
 			proxyID:        "remoteApiId_",
-			proxyName:      "fallback-api",
-			expectedSource: "remoteApiName_fallback-api",
+			proxyName:      fallbackAPIName,
+			expectedSource: prefixedFallbackAPIName,
+		},
+		"prefixed ID content equal to proxyName is treated as not a real ID": {
+			proxyID:        SummaryEventProxyIDPrefix + fallbackAPIName,
+			proxyName:      fallbackAPIName,
+			expectedSource: prefixedFallbackAPIName,
 		},
 	}
 
