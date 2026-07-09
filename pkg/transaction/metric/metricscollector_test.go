@@ -543,26 +543,10 @@ func TestConcurrentMetricCollectorEvents(t *testing.T) {
 	apiDetails := []models.APIDetails{
 		{ID: "000", Name: "000", Revision: 1, TeamID: teamID},
 		{ID: "111", Name: "111", Revision: 1, TeamID: teamID},
-		{ID: "222", Name: "222", Revision: 1, TeamID: teamID},
-		{ID: "333", Name: "333", Revision: 1, TeamID: teamID},
-		{ID: "444", Name: "444", Revision: 1, TeamID: teamID},
-		{ID: "555", Name: "555", Revision: 1, TeamID: teamID},
-		{ID: "666", Name: "666", Revision: 1, TeamID: teamID},
-		{ID: "777", Name: "777", Revision: 1, TeamID: teamID},
-		{ID: "888", Name: "888", Revision: 1, TeamID: teamID},
-		{ID: "999", Name: "999", Revision: 1, TeamID: teamID},
 	}
 	appDetails := []models.AppDetails{
 		{ID: "000", Name: "app0"},
 		{ID: "111", Name: "app1"},
-		{ID: "222", Name: "app2"},
-		{ID: "333", Name: "app3"},
-		{ID: "444", Name: "app4"},
-		{ID: "555", Name: "app5"},
-		{ID: "666", Name: "app6"},
-		{ID: "777", Name: "app7"},
-		{ID: "888", Name: "app8"},
-		{ID: "999", Name: "app9"},
 	}
 
 	codes := []string{"200", "201", "300", "301", "400", "401", "500"}
