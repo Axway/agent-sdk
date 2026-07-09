@@ -31,6 +31,11 @@ const (
 	responseBufferSize = 2048
 )
 
+type RequestOptions struct {
+	LogReqBody bool
+	LogResBody bool
+}
+
 // Request - the request object used when communicating to an API
 type Request struct {
 	Method      string
@@ -39,6 +44,7 @@ type Request struct {
 	Headers     map[string]string
 	Body        []byte
 	FormData    map[string]string
+	Options     RequestOptions
 }
 
 // Response - the response object given back when communicating to an API
@@ -311,6 +317,7 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	// Logging for the HTTP request
 	statusCode := 0
 	receivedData := int64(0)
+	responseBody := []byte{}
 	defer func() {
 		duration := time.Since(startTime)
 		targetURL := req.URL.String()
@@ -334,6 +341,14 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 
 		if receivedData > 0 {
 			logger = logger.WithField("received(bytes)", receivedData)
+		}
+
+		if request.Options.LogReqBody && len(request.Body) > 0 {
+			logger = logger.WithField("requestBody", string(request.Body))
+		}
+
+		if request.Options.LogResBody && len(responseBody) > 0 {
+			logger = logger.WithField("responseBody", string(responseBody))
 		}
 
 		if err != nil {
@@ -364,6 +379,10 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 	statusCode = res.StatusCode
 	receivedData = res.ContentLength
 	parseResponse, err := c.prepareAPIResponse(res, timer)
+
+	if responseBody != nil {
+		responseBody = parseResponse.Body
+	}
 
 	return parseResponse, err
 }
