@@ -418,6 +418,9 @@ type mockClient struct {
 	isDeleting      bool
 	subError        error
 	deleteResCalled bool
+	getTeamResult   []defs.PlatformTeam
+	getTeamErr      error
+	gotTeamQuery    map[string]string
 	t               *testing.T
 }
 
@@ -457,6 +460,11 @@ func (m *mockClient) UpdateResourceInstance(ri v1.Interface) (*v1.ResourceInstan
 func (m *mockClient) DeleteResourceInstance(ri v1.Interface) error {
 	m.deleteResCalled = true
 	return nil
+}
+
+func (m *mockClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
+	m.gotTeamQuery = query
+	return m.getTeamResult, m.getTeamErr
 }
 
 type mockARProvision struct {

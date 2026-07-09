@@ -21,6 +21,13 @@ const (
 	testAuthServerMetadataURL = "/oauth2/authorizationID/.well-known/oauth-authorization-server"
 	testMetadataURL           = "/metadata"
 	testRegisterURL           = "/register/cid-1"
+
+	scopeOpenID   = "openid"
+	scopeProfile  = "profile"
+	scopeEmail    = "email"
+	scopeWriteAPI = "write:api"
+
+	excludeOpenIDProfile = "openid,profile"
 )
 
 type providerTestCase struct {
@@ -42,7 +49,6 @@ type providerTestCase struct {
 }
 
 func TestProvider(t *testing.T) {
-
 	cases := map[string]providerTestCase{
 		"IDP metadata bad request": {
 			idpType:              "generic",
@@ -59,7 +65,7 @@ func TestProvider(t *testing.T) {
 			expectRegistrationErr:    true,
 		},
 		"unregistration bad request": {
-			idpType: "okta",
+			idpType: "generic",
 			clientRequest: &clientMetadata{
 				ClientName:   "test",
 				RedirectURIs: []string{testLocalHost},
@@ -74,9 +80,8 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseCode},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
-					"key":               "value",
-					oktaApplicationType: oktaAppTypeWeb,
+				extraProperties: map[string]any{
+					"key": "value",
 				},
 			},
 			metadataResponseCode:       http.StatusOK,
@@ -100,7 +105,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{AuthResponseToken},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -128,7 +133,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -152,7 +157,7 @@ func TestProvider(t *testing.T) {
 				TokenEndpointAuthMethod: config.ClientSecretBasic,
 				ResponseTypes:           []string{},
 				Scope:                   []string{"read", "write"},
-				extraProperties: map[string]interface{}{
+				extraProperties: map[string]any{
 					"key": "value",
 				},
 			},
@@ -163,7 +168,6 @@ func TestProvider(t *testing.T) {
 		},
 	}
 	for name, tc := range cases {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			runProviderTestCase(t, tc)
 		})
@@ -247,7 +251,7 @@ func runProviderTestCase(t *testing.T, tc providerTestCase) {
 		assert.Equal(t, s.GetUnregisterEndpoint(), cr.GetRegistrationClientURI())
 	}
 	s.SetRegistrationResponseCode(tc.unRegistrationResponseCode)
-	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint())
+	err = p.UnregisterClient(cr.GetClientID(), cr.GetRegistrationAccessToken(), s.GetUnregisterEndpoint(), cr.GetScopes(), "")
 	if tc.expectUnRegistrationErr {
 		assert.NotNil(t, err)
 		return
@@ -267,13 +271,13 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 
 	tests := map[string]struct {
 		idpType         string
-		extraProperties map[string]interface{}
+		extraProperties map[string]any
 		expectError     bool
 		errorContains   string
 	}{
 		"Valid Okta provider with PKCE and browser type": {
 			idpType: TypeOkta,
-			extraProperties: map[string]interface{}{
+			extraProperties: map[string]any{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeBrowser,
 			},
@@ -281,7 +285,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 		},
 		"Invalid Okta provider with PKCE and service type": {
 			idpType: TypeOkta,
-			extraProperties: map[string]interface{}{
+			extraProperties: map[string]any{
 				oktaPKCERequired:    true,
 				oktaApplicationType: oktaAppTypeService,
 			},
@@ -290,7 +294,7 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 		},
 		"Valid generic provider": {
 			idpType:         "generic",
-			extraProperties: map[string]interface{}{},
+			extraProperties: map[string]any{},
 			expectError:     false,
 		},
 	}
@@ -324,90 +328,6 @@ func TestNewProviderValidatesExtraProperties(t *testing.T) {
 	}
 }
 
-func TestNewProviderOktaValidatesConfiguredGroupAndPolicyExist(t *testing.T) {
-	token := testToken
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL:
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups":
-			if r.URL.Query().Get("q") == "Marketplace" {
-				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(`[{"id":"00g-123","profile":{"name":"Marketplace"}}]`))
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[]`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[{"id":"pol-123","name":"shane"}]`))
-			return
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/authorizationServers/authorizationID/policies/pol-123":
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"id":"pol-123","name":"shane","conditions":{"clients":{"include":[]}}}`))
-			return
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-	}))
-	defer srv.Close()
-
-	idpCfg := &config.IDPConfiguration{
-		Name:        "test",
-		Type:        TypeOkta,
-		MetadataURL: srv.URL + testAuthServerMetadataURL,
-		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace", Policy: "shane"},
-		AuthConfig: &config.IDPAuthConfiguration{
-			Type:        config.AccessToken,
-			AccessToken: token,
-		},
-	}
-
-	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
-	assert.NoError(t, err)
-	assert.NotNil(t, p)
-}
-
-func TestNewProviderOktaFailsFastWhenConfiguredGroupMissing(t *testing.T) {
-	token := testToken
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == testAuthServerMetadataURL {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
-			return
-		}
-		if r.Method == http.MethodGet && r.URL.Path == "/api/v1/groups" {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`[]`))
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-
-	idpCfg := &config.IDPConfiguration{
-		Name:        "test",
-		Type:        TypeOkta,
-		MetadataURL: srv.URL + testAuthServerMetadataURL,
-		Okta:        &config.OktaIDPConfiguration{Group: "Marketplace"},
-		AuthConfig: &config.IDPAuthConfiguration{
-			Type:        config.AccessToken,
-			AccessToken: token,
-		},
-	}
-
-	p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
-	assert.Error(t, err)
-	assert.Nil(t, p)
-	assert.Contains(t, err.Error(), "configured okta group")
-}
-
 type failingHookIDP struct {
 	authPrefix string
 	regErr     error
@@ -425,7 +345,7 @@ func (f *failingHookIDP) preProcessClientRequest(clientRequest *clientMetadata) 
 	// No preprocessing needed for this mock IDP implementation
 }
 
-func (f *failingHookIDP) validateExtraProperties(extraProps map[string]interface{}) error {
+func (f *failingHookIDP) validateExtraProperties(extraProps map[string]any) error {
 	return nil
 }
 
@@ -433,7 +353,7 @@ func (f *failingHookIDP) postProcessClientRegistration(clientRes ClientMetadata,
 	return f.regErr
 }
 
-func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config.IDPConfig, apiClient coreapi.Client) error {
+func (f *failingHookIDP) postProcessClientUnregister(clientID string, idp config.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error {
 	return f.unregErr
 }
 
@@ -455,7 +375,6 @@ func TestRegisterClientRollBack(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			var deleteCalls atomic.Int32
 			var registerCalls atomic.Int32
@@ -546,11 +465,11 @@ func TestUnregisterClientDeleteHookFails(t *testing.T) {
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL, nil, "")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration")
-	assert.Equal(t, int32(1), deleteCalls.Load())
+	assert.Equal(t, int32(0), deleteCalls.Load())
 }
 
 func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
@@ -589,10 +508,233 @@ func TestUnregisterClientCleanupAndDeleteFail(t *testing.T) {
 	idpCfg.Type = TypeOkta
 	p.idpType = &failingHookIDP{unregErr: errors.New("cleanup failed")}
 
-	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL)
+	err = p.UnregisterClient("cid-1", testToken, srv.URL+testRegisterURL, nil, "")
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to fully remove the Okta client")
-	assert.Contains(t, err.Error(), "OAuth client deletion failed")
-	assert.Equal(t, int32(1), deleteCalls.Load())
+	assert.Contains(t, err.Error(), "cleanup failed")
+	assert.Contains(t, err.Error(), "failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required")
+	assert.Equal(t, int32(0), deleteCalls.Load())
+}
+
+func TestRegisterClientOktaScopesRequest(t *testing.T) {
+	cases := map[string]struct {
+		regResponseBody string
+		requestScopes   Scopes
+		wantPolicyCalls int32
+	}{
+		"response omits scopes — policy creation runs from request scopes": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1"}`,
+			requestScopes:   Scopes{testScope},
+			wantPolicyCalls: 1,
+		},
+		"response includes scopes — policy creation runs normally": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1","scope":"` + testScope + `","grant_types":["client_credentials"]}`,
+			requestScopes:   Scopes{testScope},
+			wantPolicyCalls: 1,
+		},
+		"no scopes in request — policy creation skipped": {
+			regResponseBody: `{"client_id":"` + testClientID + `","client_secret":"sec-1"}`,
+			requestScopes:   nil,
+			wantPolicyCalls: 0,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var policyCalls atomic.Int32
+			var srv *httptest.Server
+			srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case strings.Contains(r.URL.Path, ".well-known"):
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"issuer":"` + srv.URL + `","token_endpoint":"` + srv.URL + `/token","registration_endpoint":"` + srv.URL + `/register","authorization_endpoint":"` + srv.URL + `/auth"}`))
+				case r.Method == http.MethodPost && r.URL.Path == "/register":
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(tc.regResponseBody))
+				case r.Method == http.MethodGet && r.URL.Path == oktaPoliciesEndpointByID:
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`[]`))
+				case r.Method == http.MethodPost && r.URL.Path == oktaPoliciesEndpointByID:
+					policyCalls.Add(1)
+					w.WriteHeader(http.StatusCreated)
+					_, _ = w.Write([]byte(`{"id":"` + oktaPolicyID + `"}`))
+				case r.Method == http.MethodPost && r.URL.Path == oktaPolicyRulesEndpoint:
+					w.WriteHeader(http.StatusCreated)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer srv.Close()
+
+			idpCfg := &config.IDPConfiguration{
+				Name:        "test",
+				Type:        TypeOkta,
+				MetadataURL: srv.URL + testAuthServerMetadataURL,
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: testToken,
+				},
+			}
+			p, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+			assert.NoError(t, err)
+
+			clientReq := &clientMetadata{
+				ClientName: "test-app",
+				GrantTypes: []string{GrantTypeClientCredentials},
+				Scope:      tc.requestScopes,
+			}
+			cr, err := p.RegisterClient(clientReq)
+			assert.NoError(t, err)
+			assert.NotNil(t, cr)
+			assert.Equal(t, tc.wantPolicyCalls, policyCalls.Load())
+		})
+	}
+}
+
+func TestNewProviderValidatesOktaGroup(t *testing.T) {
+	cases := map[string]struct {
+		groupsCode  int
+		groupsBody  string
+		wantErr     bool
+		errContains string
+	}{
+		"group found — NewProvider succeeds": {
+			groupsCode: http.StatusOK,
+			groupsBody: `[{"id":"grp-1","profile":{"name":"` + testGroupName + `"}}]`,
+		},
+		"group not found — NewProvider fails": {
+			groupsCode:  http.StatusOK,
+			groupsBody:  `[]`,
+			wantErr:     true,
+			errContains: "configured Okta group",
+		},
+		"groups API error — NewProvider fails": {
+			groupsCode:  http.StatusForbidden,
+			groupsBody:  `forbidden`,
+			wantErr:     true,
+			errContains: "Okta group",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var ts *httptest.Server
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case strings.Contains(r.URL.Path, ".well-known"):
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"issuer":"` + ts.URL + `","token_endpoint":"` + ts.URL + `/token","registration_endpoint":"` + ts.URL + `/register","authorization_endpoint":"` + ts.URL + `/auth"}`))
+				case r.URL.Path == oktaGroupsEndpoint:
+					w.WriteHeader(tc.groupsCode)
+					_, _ = w.Write([]byte(tc.groupsBody))
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
+
+			idpCfg := &config.IDPConfiguration{
+				Name:        "test",
+				Type:        TypeOkta,
+				MetadataURL: ts.URL + testAuthServerMetadataURL,
+				Okta:        &config.OktaIDPConfiguration{Group: testGroupName},
+				AuthConfig: &config.IDPAuthConfiguration{
+					Type:        config.AccessToken,
+					AccessToken: testToken,
+				},
+			}
+			provider, err := NewProvider(idpCfg, config.NewTLSConfig(), "", 10*time.Second)
+			if tc.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, provider)
+				if tc.errContains != "" {
+					assert.Contains(t, err.Error(), tc.errContains)
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, provider)
+		})
+	}
+}
+
+func TestFilterScopeExclude(t *testing.T) {
+	cases := map[string]struct {
+		scopes  []string
+		exclude string
+		want    []string
+	}{
+		"removes excluded scopes": {
+			scopes:  []string{scopeOpenID, scopeProfile, testScope, scopeWriteAPI},
+			exclude: excludeOpenIDProfile,
+			want:    []string{testScope, scopeWriteAPI},
+		},
+		"empty exclude returns all scopes": {
+			scopes:  []string{scopeOpenID, testScope},
+			exclude: "",
+			want:    []string{scopeOpenID, testScope},
+		},
+		"exclude with whitespace is trimmed": {
+			scopes:  []string{scopeOpenID, testScope},
+			exclude: " openid , profile ",
+			want:    []string{testScope},
+		},
+		"no scopes match exclude returns all": {
+			scopes:  []string{testScope, scopeWriteAPI},
+			exclude: excludeOpenIDProfile,
+			want:    []string{testScope, scopeWriteAPI},
+		},
+		"all scopes excludeed returns empty": {
+			scopes:  []string{scopeOpenID, scopeProfile},
+			exclude: excludeOpenIDProfile,
+			want:    []string{},
+		},
+		"nil scopes returns nil": {
+			scopes:  nil,
+			exclude: scopeOpenID,
+			want:    nil,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := filterScopeExclude(tc.scopes, tc.exclude)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGetSupportedScopesAppliesExclude(t *testing.T) {
+	cases := map[string]struct {
+		cfg        config.IDPConfig
+		rawScopes  []string
+		wantScopes []string
+	}{
+		"Okta config with exclude filters scopes": {
+			cfg: &config.IDPConfiguration{
+				Type: TypeOkta,
+				Okta: &config.OktaIDPConfiguration{ScopeExclude: "openid,profile"},
+			},
+			rawScopes:  []string{"openid", "profile", "read:api"},
+			wantScopes: []string{"read:api"},
+		},
+		"Okta config with default exclude filters defaults": {
+			cfg:        &config.IDPConfiguration{Type: TypeOkta, Okta: &config.OktaIDPConfiguration{}},
+			rawScopes:  []string{"openid", "profile", "email", "read:api"},
+			wantScopes: []string{"read:api"},
+		},
+		"non-Okta config returns scopes unfiltered": {
+			cfg:        &config.IDPConfiguration{Type: "generic"},
+			rawScopes:  []string{"openid", "profile", "read:api"},
+			wantScopes: []string{"openid", "profile", "read:api"},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := &provider{
+				cfg: tc.cfg,
+				authServerMetadata: &AuthorizationServerMetadata{
+					ScopesSupported: tc.rawScopes,
+				},
+			}
+			assert.Equal(t, tc.wantScopes, p.GetSupportedScopes())
+		})
+	}
 }

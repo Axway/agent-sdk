@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -10,6 +11,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -18,11 +20,17 @@ const (
 	maFinalizer = "agent.managedapplication.provisioned"
 )
 
+type teamFetcher interface {
+	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
+}
+
 type managedApplication struct {
+	idpRegistry oauth.IdPRegistry
 	marketplaceHandler
 	prov       prov.ApplicationProvisioner
 	cache      agentcache.Manager
 	client     client
+	teamClient teamFetcher
 	retryCount int
 }
 
@@ -32,12 +40,21 @@ func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
 	}
 }
 
+func WithManagedAppIDPRegistry(registry oauth.IdPRegistry) func(c *managedApplication) {
+	return func(c *managedApplication) {
+		c.idpRegistry = registry
+	}
+}
+
 // NewManagedApplicationHandler creates a Handler for Credentials
 func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client, opts ...func(c *managedApplication)) Handler {
 	ma := &managedApplication{
 		prov:   prov,
 		cache:  cache,
 		client: client,
+	}
+	if tc, ok := client.(teamFetcher); ok {
+		ma.teamClient = tc
 	}
 	for _, o := range opts {
 		o(ma)
@@ -67,9 +84,13 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		return nil
 	}
 
+	owner := app.Owner
+	if owner == nil {
+		owner = app.Marketplace.Resource.Owner
+	}
 	ma := provManagedApp{
 		managedAppName: app.Name,
-		teamName:       getTeamName(h.cache, app.Owner),
+		teamName:       h.resolveTeamName(owner),
 		data:           util.GetAgentDetails(app),
 		consumerOrgID:  getConsumerOrgID(app),
 		id:             app.Metadata.ID,
@@ -93,6 +114,7 @@ func (h *managedApplication) onPending(ctx context.Context, app *management.Mana
 	status := h.provision(pma)
 	app.Status = prov.NewStatusReason(status)
 
+	util.SetAgentDetailsKey(app, prov.AgentDetailTeamName, pma.GetTeamName())
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(app), status.GetProperties())
 	util.SetAgentDetails(app, util.MapStringStringToMapStringInterface(details))
 
@@ -146,8 +168,13 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
+	if err := cleanupManagedApplicationIDPClients(ctx, log, h.idpRegistry, app); err != nil {
+		log.WithError(err).Error("error cleaning up managed application IDP clients")
+		h.onError(app, err)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		return
+	}
 	status := h.prov.ApplicationRequestDeprovision(pma)
-
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
@@ -204,6 +231,21 @@ func (a provManagedApp) GetApplicationDetailsValue(key string) string {
 // GetConsumerOrgID returns the ID of the consumer org for the managed application
 func (a provManagedApp) GetConsumerOrgID() string {
 	return a.consumerOrgID
+}
+
+func (h *managedApplication) resolveTeamName(owner *apiv1.Owner) string {
+	if name := getTeamName(h.cache, owner); name != "" {
+		return name
+	}
+	if h.teamClient == nil || owner == nil || owner.ID == "" {
+		return ""
+	}
+	teams, err := h.teamClient.GetTeam(map[string]string{"query": fmt.Sprintf("guid==%q", owner.ID)})
+	if err != nil || len(teams) == 0 {
+		return ""
+	}
+	h.cache.AddTeam(&teams[0])
+	return teams[0].Name
 }
 
 func getTeamName(cache getTeamByID, owner *apiv1.Owner) string {

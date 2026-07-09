@@ -28,6 +28,6 @@ func (i *genericIDP) postProcessClientRegistration(clientRes ClientMetadata, idp
 	return nil
 }
 
-func (i *genericIDP) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error {
+func (i *genericIDP) postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error {
 	return nil
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"testing"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -190,6 +191,110 @@ func TestManagedApplicationHandler_deleting(t *testing.T) {
 			} else {
 				assert.True(t, c.createSubCalled)
 			}
+		})
+	}
+}
+
+func TestManagedApplicationHandlerCacheMiss(t *testing.T) {
+	cases := map[string]struct {
+		getTeamResult []defs.PlatformTeam
+		getTeamErr    error
+		wantTeamName  string
+	}{
+		"API returns team on cache miss": {
+			getTeamResult: []defs.PlatformTeam{{ID: team.ID, Name: teamName}},
+			wantTeamName:  teamName,
+		},
+		"API returns empty on cache miss": {
+			getTeamResult: []defs.PlatformTeam{},
+			wantTeamName:  "",
+		},
+		"API errors on cache miss": {
+			getTeamErr:   fmt.Errorf("network error"),
+			wantTeamName: "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			app := managedAppForTest
+			app.Status.Level = prov.Pending.String()
+
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       tc.wantTeamName,
+				status: mock.MockRequestStatus{
+					Status:     prov.Success,
+					Msg:        "msg",
+					Properties: map[string]string{"status_key": "status_val"},
+				},
+				t: t,
+			}
+			c := &mockClient{
+				expectedStatus: prov.Success.String(),
+				getTeamResult:  tc.getTeamResult,
+				getTeamErr:     tc.getTeamErr,
+				t:              t,
+			}
+			// team intentionally NOT pre-loaded into cache to exercise the fallback path
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			h := NewManagedApplicationHandler(p, cm, c)
+
+			ri, _ := app.AsInstance()
+			err := h.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Equal(t, fmt.Sprintf("guid==%q", team.ID), c.gotTeamQuery["query"])
+		})
+	}
+}
+
+func TestMPOwnerFallback(t *testing.T) {
+	cases := map[string]struct {
+		mpOwner      *apiv1.Owner
+		wantTeamName string
+	}{
+		"MP owner resolves from cache when top-level owner is nil": {
+			mpOwner:      &apiv1.Owner{ID: team.ID},
+			wantTeamName: teamName,
+		},
+		"both owners nil yields empty team name": {
+			mpOwner:      nil,
+			wantTeamName: "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			app := management.ManagedApplication{
+				ResourceMeta: managedAppForTest.ResourceMeta,
+				Owner:        nil,
+				Marketplace: management.ManagedApplicationMarketplace{
+					Resource: management.ManagedApplicationMarketplaceResource{
+						Owner: tc.mpOwner,
+					},
+				},
+				Spec:   management.ManagedApplicationSpec{},
+				Status: &apiv1.ResourceStatus{Level: prov.Pending.String()},
+			}
+			p := &mockManagedAppProv{
+				expectedManagedApp:     app.Name,
+				expectedManagedAppData: util.GetAgentDetails(&app),
+				expectedTeamName:       tc.wantTeamName,
+				status: mock.MockRequestStatus{
+					Status:     prov.Success,
+					Msg:        "msg",
+					Properties: map[string]string{"status_key": "status_val"},
+				},
+				t: t,
+			}
+			c := &mockClient{expectedStatus: prov.Success.String(), t: t}
+			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			cm.AddTeam(team)
+
+			h := NewManagedApplicationHandler(p, cm, c)
+			ri, _ := app.AsInstance()
+			err := h.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
+			assert.Nil(t, err)
+			assert.Nil(t, c.gotTeamQuery, "team was in startup cache — no API call expected")
 		})
 	}
 }

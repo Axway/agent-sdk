@@ -604,10 +604,12 @@ func CleanApplicationProfileDefinition(name string) error {
 // application provisioner
 func registerApplicationProvisioner(provisioner interface{}) {
 	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
+		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			"managedappHandler",
 			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient,
-				handler.WithManagedAppRetryCount(agent.cfg.GetProvisioningRetryCount())),
+				handler.WithManagedAppRetryCount(agent.cfg.GetProvisioningRetryCount()),
+				handler.WithManagedAppIDPRegistry(registry)),
 		)
 	}
 }
