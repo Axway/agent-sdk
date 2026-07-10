@@ -979,8 +979,8 @@ func TestCollectorCreateOrUpdateHistogramIDResolution(t *testing.T) {
 			name:          "API ID is just prefix, use name",
 			apiID:         "remoteApiId_",
 			apiName:       "schrute",
-			expectedAPIID: "remoteApiId_schrute",
-			description:   "Should use API name with prefix when ID is just the prefix",
+			expectedAPIID: "remoteApiName_schrute",
+			description:   "Should use API name with name prefix when ID is just the prefix",
 		},
 		{
 			name:          "Empty API ID and name",

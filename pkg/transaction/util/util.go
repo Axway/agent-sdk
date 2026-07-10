@@ -18,6 +18,9 @@ const (
 	// SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 	SummaryEventProxyIDPrefix = "remoteApiId_"
 
+	// SummaryEventAPINamePrefix - Prefix for proxyID in summary event when falling back to the API name
+	SummaryEventAPINamePrefix = "remoteApiName_"
+
 	// SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
 	SummaryEventApplicationIDPrefix = "remoteAppId_"
 )
@@ -244,16 +247,25 @@ func UpdateWithConsumerDetails(accessRequest *management.AccessRequest, managedA
 
 // ResolveIDWithPrefix determines the appropriate ID based on input values and prefix
 func ResolveIDWithPrefix(id, name string) string {
-	// If ID has content beyond the prefix, keep it as-is
-	if trimmed := strings.TrimPrefix(id, SummaryEventProxyIDPrefix); trimmed != "" {
+	trimmed := strings.TrimPrefix(id, SummaryEventProxyIDPrefix)
+	hasPrefix := trimmed != id
+
+	// no proxy ID prefix - already resolved elsewhere, keep as-is
+	if !hasPrefix && id != "" {
 		return id
 	}
 
-	// ID is empty or just the prefix - use fallback with prefix
-	fallback := name
-	if fallback == "" {
-		fallback = unknown
+	// prefixed ID has content that isn't just the name reused as an ID, keep it as-is.
+	// When trimmed == name, the caller (e.g. the Azure agent's traceability path, or
+	// Apigee's product-metric path) blindly prefixed the display name as if it were
+	// a resolvable ID - fall through so it gets corrected to the name prefix below.
+	if hasPrefix && trimmed != "" && trimmed != name {
+		return id
 	}
 
-	return SummaryEventProxyIDPrefix + fallback
+	// nothing resolvable as an ID - fall back to the name, or unknown if the name is also empty
+	if name == "" {
+		return SummaryEventProxyIDPrefix + unknown
+	}
+	return SummaryEventAPINamePrefix + name
 }

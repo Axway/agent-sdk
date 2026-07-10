@@ -14,6 +14,9 @@ const TypeTransactionEvent = "transactionEvent"
 // SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 const SummaryEventProxyIDPrefix = util.SummaryEventProxyIDPrefix
 
+// SummaryEventAPINamePrefix - Prefix for proxyID in summary event when falling back to the API name
+const SummaryEventAPINamePrefix = util.SummaryEventAPINamePrefix
+
 // SummaryEventApplicationIDPrefix - Prefix for application.ID in summary event
 const SummaryEventApplicationIDPrefix = util.SummaryEventApplicationIDPrefix
 

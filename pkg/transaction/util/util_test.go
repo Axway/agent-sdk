@@ -69,15 +69,15 @@ func TestResolveIDWithPrefix(t *testing.T) {
 			name:        "ID is just prefix, use name",
 			id:          "remoteApiId_",
 			inputName:   "schrute",
-			expected:    "remoteApiId_schrute",
-			description: "Should use name with prefix when ID is just the prefix",
+			expected:    "remoteApiName_schrute",
+			description: "Should use name with name prefix when ID is just the prefix",
 		},
 		{
 			name:        "ID is empty, use name",
 			id:          "",
 			inputName:   "schrute",
-			expected:    "remoteApiId_schrute",
-			description: "Should use name with prefix when ID is empty",
+			expected:    "remoteApiName_schrute",
+			description: "Should use name with name prefix when ID is empty",
 		},
 		{
 			name:        "Both ID and name are empty",
@@ -99,6 +99,20 @@ func TestResolveIDWithPrefix(t *testing.T) {
 			inputName:   "schrute",
 			expected:    "differentPrefix_dwight",
 			description: "Should return original ID when it has a different prefix",
+		},
+		{
+			name:        "prefixed ID content equals name is not a real ID",
+			id:          "remoteApiId_schrute",
+			inputName:   "schrute",
+			expected:    "remoteApiName_schrute",
+			description: "Should use name prefix when the prefixed ID content is identical to the name, since a resolvable ID would not match the display name",
+		},
+		{
+			name:        "prefixed ID content differs from name only by case is still preserved",
+			id:          "remoteApiId_Schrute",
+			inputName:   "schrute",
+			expected:    "remoteApiId_Schrute",
+			description: "Should preserve original ID since the comparison is exact and case differences count as distinct content",
 		},
 	}
 
