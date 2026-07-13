@@ -40,12 +40,21 @@ func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner
 	}
 }
 
+func (h *managedApplicationProfile) Kinds() []string {
+	return []string{management.ManagedApplicationProfileGVK().Kind}
+}
+
+func (h *managedApplicationProfile) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	action := GetActionFromContext(ctx)
+	if event.Payload.Kind != management.ManagedApplicationProfileGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for ManagedApplicationProfiles
 func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
-	action := GetActionFromContext(ctx)
-	if resource.Kind != management.ManagedApplicationProfileGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
-		return nil
-	}
 
 	log := getLoggerFromContext(ctx).WithComponent("managedApplicationProfileHandler")
 	ctx = setLoggerInContext(ctx, log)

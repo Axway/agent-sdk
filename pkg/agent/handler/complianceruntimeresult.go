@@ -20,6 +20,18 @@ func NewCRRHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
+func (h *crrHandler) Kinds() []string {
+	return []string{management.ComplianceRuntimeResultGVK().Kind}
+}
+
+func (h *crrHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.ComplianceRuntimeResultGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for Compliance Runtime Results
 func (h *crrHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

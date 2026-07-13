@@ -20,13 +20,21 @@ func NewCRDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
+func (h *crdHandler) Kinds() []string {
+	return []string{management.CredentialRequestDefinitionGVK().Kind}
+}
+
+func (h *crdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.CredentialRequestDefinitionGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for Credentials
 func (h *crdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.CredentialRequestDefinitionGVK().Kind {
-		return nil
-	}
-
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddCredentialRequestDefinition(resource)
 		return nil

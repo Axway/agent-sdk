@@ -23,11 +23,19 @@ func NewIDPHandler(agentCacheManager agentcache.Manager, credentialConfig config
 	}
 }
 
-func (c *idpHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource == nil || resource.Kind != management.IdentityProviderMetadataGVK().Kind {
-		return nil
+func (c *idpHandler) Kinds() []string {
+	return []string{management.IdentityProviderMetadataGVK().Kind}
+}
+
+func (c *idpHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.IdentityProviderMetadataGVK().Kind {
+		return false
 	}
 
+	return true
+}
+
+func (c *idpHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_DELETED {
 		c.removeIDPMetadata(resource)
@@ -39,9 +47,6 @@ func (c *idpHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource
 }
 
 func (c *idpHandler) updateIDPMetadata(resource *v1.ResourceInstance) {
-	if resource == nil {
-		return
-	}
 	meta := &management.IdentityProviderMetadata{}
 	if err := meta.FromInstance(resource); err != nil {
 		return
@@ -53,8 +58,5 @@ func (c *idpHandler) updateIDPMetadata(resource *v1.ResourceInstance) {
 }
 
 func (c *idpHandler) removeIDPMetadata(resource *v1.ResourceInstance) {
-	if resource == nil {
-		return
-	}
 	c.agentCacheManager.DeleteIdentityProviderMetadata(resource.Metadata.ID)
 }

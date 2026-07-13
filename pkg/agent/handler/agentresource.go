@@ -72,27 +72,38 @@ func NewAgentResourceHandler(agentResourceManager resource.Manager, sampler samp
 	return h
 }
 
-func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	// skip any processing if the agent resource manager is not set
-	if h.agentResourceManager == nil {
-		return nil
+func (h *agentResourceHandler) Kinds() []string {
+	kinds := make([]string, 0, len(h.agentTypeHandler))
+	for kind := range h.agentTypeHandler {
+		kinds = append(kinds, kind)
 	}
+	return kinds
+}
+
+func (h *agentResourceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if h.agentResourceManager == nil {
+		return false
+	}
+	if _, ok := h.agentTypeHandler[event.Payload.Kind]; !ok {
+		return false
+	}
+	agentRes := h.agentResourceManager.GetAgentResource()
+	if agentRes == nil || agentRes.Metadata.ID != event.Payload.Metadata.Id {
+		h.logger.WithField("id", event.Payload.Metadata.Id).Trace("skipping handling agent resource")
+		return false
+	}
+	return true
+}
+
+func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	subres := ""
 	if meta != nil {
 		subres = meta.Subresource
 	}
 
+	handlerFunc := h.agentTypeHandler[resource.Kind]
 	action := GetActionFromContext(ctx)
-	handlerFunc, ok := h.agentTypeHandler[resource.Kind]
-	if !ok {
-		return nil
-	}
-	agentRes := h.agentResourceManager.GetAgentResource()
-	if agentRes == nil || agentRes.Metadata.ID != resource.Metadata.ID {
-		h.logger.WithField("id", resource.Metadata.ID).
-			WithField("selfLink", resource.GetSelfLink()).Trace("skipping handling agent resource")
-		return nil
-	}
+
 	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
 		h.handleUpdateTrigger(resource)
 	}

@@ -13,6 +13,7 @@ import (
 type watchResourceHandler struct {
 	agentCacheManager agentcache.Manager
 	watchGroupKindMap map[string]bool
+	kinds             map[string]bool
 }
 
 type watchTopicFeatures interface {
@@ -31,6 +32,7 @@ func WithWatchTopicFeatures(feature watchTopicFeatures) watchTopicOptions {
 		for _, filter := range filters {
 			key := getWatchResourceKey(filter.Group, filter.Kind)
 			w.watchGroupKindMap[key] = filter.IsCachedResource
+			w.kinds[filter.Kind] = true
 		}
 	}
 }
@@ -40,6 +42,7 @@ func WithWatchTopicGroupKind(groupKinds []v1.GroupKind) watchTopicOptions {
 		for _, gk := range groupKinds {
 			key := getWatchResourceKey(gk.Group, gk.Kind)
 			w.watchGroupKindMap[key] = true
+			w.kinds[gk.Kind] = true
 		}
 	}
 }
@@ -49,6 +52,7 @@ func NewWatchResourceHandler(agentCacheManager agentcache.Manager, opts ...watch
 	w := &watchResourceHandler{
 		agentCacheManager: agentCacheManager,
 		watchGroupKindMap: map[string]bool{},
+		kinds:             map[string]bool{},
 	}
 
 	for _, o := range opts {
@@ -58,13 +62,25 @@ func NewWatchResourceHandler(agentCacheManager agentcache.Manager, opts ...watch
 	return w
 }
 
+func (h *watchResourceHandler) Kinds() []string {
+	kinds := make([]string, 0, len(h.kinds))
+	for kind := range h.kinds {
+		kinds = append(kinds, kind)
+	}
+	return kinds
+}
+
+func (h *watchResourceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	key := getWatchResourceKey(event.Payload.Group, event.Payload.Kind)
+	if ok := h.watchGroupKindMap[key]; !ok {
+		return false
+	}
+
+	return true
+}
+
 func (h *watchResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	key := getWatchResourceKey(resource.Group, resource.Kind)
-	ok := h.watchGroupKindMap[key]
-	if !ok {
-		return nil
-	}
 
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddWatchResource(resource)

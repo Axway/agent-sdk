@@ -197,6 +197,14 @@ func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.Res
 	return m.err
 }
 
+func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+func (m *mockHandler) Kinds() []string {
+	return nil
+}
+
 // slowHandler blocks for the given duration each time Handle is called,
 // and atomically increments callCount.
 type slowHandler struct {
@@ -207,6 +215,14 @@ type slowHandler struct {
 func (h *slowHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
 	time.Sleep(h.delay)
 	h.callCount.Add(1)
+	return nil
+}
+
+func (h *slowHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+func (h *slowHandler) Kinds() []string {
 	return nil
 }
 

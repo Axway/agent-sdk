@@ -64,13 +64,20 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 	return c
 }
 
+func (h *credentials) Kinds() []string {
+	return []string{management.CredentialGVK().Kind}
+}
+
+func (h *credentials) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	action := GetActionFromContext(ctx)
+	if event.Payload.Kind != management.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+		return false
+	}
+	return true
+}
+
 // Handle processes grpc events triggered for Credentials
 func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	action := GetActionFromContext(ctx)
-	if resource.Kind != management.CredentialGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
-		return nil
-	}
-
 	logger := getLoggerFromContext(ctx).WithComponent("credentialHandler")
 	ctx = setLoggerInContext(ctx, logger)
 
@@ -82,7 +89,7 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	}
 
 	if ok := isStatusFound(cr.Status); !ok {
-		logger.Debugf("could not handle credential request as it did not have a status subresource")
+		logger.Debug("could not handle credential request as it did not have a status subresource")
 		return nil
 	}
 

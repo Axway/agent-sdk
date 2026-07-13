@@ -22,15 +22,20 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager, envName string) Ha
 	}
 }
 
-func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
-	action := GetActionFromContext(ctx)
-	if resource.Kind != management.APIServiceInstanceGVK().Kind {
-		return nil
+func (h *instanceHandler) Kinds() []string {
+	return []string{management.APIServiceInstanceGVK().Kind}
+}
+
+func (h *instanceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.APIServiceInstanceGVK().Kind || event.Payload.Metadata.Scope.Name != h.envName {
+		return false
 	}
 
-	if resource.Metadata.Scope.Name != h.envName {
-		return nil
-	}
+	return true
+}
+
+func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+	action := GetActionFromContext(ctx)
 
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddAPIServiceInstance(resource)

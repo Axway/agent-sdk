@@ -24,12 +24,21 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 	}
 }
 
+func (h *traceAccessRequestHandler) Kinds() []string {
+	return []string{management.AccessRequestGVK().Kind}
+}
+
+func (h *traceAccessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.AccessRequestGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for AccessRequests for trace agent
 func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.AccessRequestGVK().Kind {
-		return nil
-	}
 
 	if action == proto.Event_DELETED {
 		return h.cache.DeleteAccessRequest(resource.Metadata.ID)

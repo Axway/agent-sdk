@@ -20,6 +20,18 @@ func NewAPDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
+func (h *apdHandler) Kinds() []string {
+	return []string{management.ApplicationProfileDefinitionGVK().Kind}
+}
+
+func (h *apdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.ApplicationProfileDefinitionGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for Application Profile Definitions
 func (h *apdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
