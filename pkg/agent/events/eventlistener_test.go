@@ -75,7 +75,7 @@ func TestEventListener_start(t *testing.T) {
 					Type: proto.Event_CREATED,
 					Payload: &proto.ResourceInstance{
 						Metadata: &proto.Metadata{
-							SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+							SelfLink: "/management/v1/watchtopics/mock-watch-topic",
 						},
 					},
 					Metadata: &proto.EventMeta{
@@ -162,7 +162,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 				Type: tc.event,
 				Payload: &proto.ResourceInstance{
 					Metadata: &proto.Metadata{
-						SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+						SelfLink: "/management/v1/watchtopics/mock-watch-topic",
 						Scope: &proto.Metadata_ScopeKind{
 							Kind:     "Kind",
 							Name:     "Name",
@@ -215,7 +215,7 @@ func newTestEvent(seqID int64) *proto.Event {
 		Type: proto.Event_CREATED,
 		Payload: &proto.ResourceInstance{
 			Metadata: &proto.Metadata{
-				SelfLink: "/management/v1alpha1/watchtopics/mock-watch-topic",
+				SelfLink: "/management/v1/watchtopics/mock-watch-topic",
 			},
 		},
 		Metadata: &proto.EventMeta{

@@ -6,7 +6,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
-	v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/mock"
@@ -32,7 +32,7 @@ func (m mockCache) GetApplicationProfileDefinitionByName(name string) (*apiv1.Re
 func TestManagedApplicationProfileHandler(t *testing.T) {
 	//setup test cache
 	apd, _ := prov.NewApplicationProfileBuilder(
-		func(a *v1alpha1.ApplicationProfileDefinition) (*v1alpha1.ApplicationProfileDefinition, error) {
+		func(a *v1.ApplicationProfileDefinition) (*v1.ApplicationProfileDefinition, error) {
 			return a, nil
 		}).
 		SetName("APD").
@@ -164,7 +164,7 @@ func TestManagedApplicationProfileHandler_wrong_kind(t *testing.T) {
 	handler := NewManagedApplicationHandler(p, cm, c)
 	ri := &apiv1.ResourceInstance{
 		ResourceMeta: apiv1.ResourceMeta{
-			GroupVersionKind: v1alpha1.EnvironmentGVK(),
+			GroupVersionKind: v1.EnvironmentGVK(),
 		},
 	}
 	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, ri.Kind, ri.Name), nil, ri)
@@ -218,7 +218,7 @@ var managedAppForProfTest = management.ManagedApplicationProfile{
 		Metadata: apiv1.Metadata{
 			ID: "11",
 			Scope: apiv1.MetadataScope{
-				Kind: v1alpha1.EnvironmentGVK().Kind,
+				Kind: v1.EnvironmentGVK().Kind,
 				Name: "env-1",
 			},
 		},

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	asyncSpec "github.com/swaggest/go-asyncapi/spec-2.4.0"
 )
 

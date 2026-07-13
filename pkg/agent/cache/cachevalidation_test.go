@@ -5,7 +5,7 @@ import (
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ func makeRI(group, kind, scopeKind, scopeName, name, id string, modTime time.Tim
 					Group: group,
 					Kind:  kind,
 				},
-				APIVersion: "v1alpha1",
+				APIVersion: "v1",
 			},
 			Metadata: v1.Metadata{
 				ID: id,
