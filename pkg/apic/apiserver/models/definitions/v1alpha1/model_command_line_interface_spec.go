@@ -9,7 +9,7 @@
 
 package definitions
 
-// CommandLineInterfaceSpec  (definitions.v1alpha1.CommandLineInterface)
+// CommandLineInterfaceSpec  (definitions.v1.CommandLineInterface)
 type CommandLineInterfaceSpec struct {
 	// A reference to a resource definition.
 	ResourceDefinition string                        `json:"resourceDefinition"`

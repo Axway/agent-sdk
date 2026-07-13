@@ -20,7 +20,7 @@ var (
 			Group: "definitions",
 			Kind:  "ResourceDefinitionVersion",
 		},
-		APIVersion: "v1alpha1",
+		APIVersion: "v1",
 	}
 
 	ResourceDefinitionVersionScopes = []string{"ResourceGroup"}

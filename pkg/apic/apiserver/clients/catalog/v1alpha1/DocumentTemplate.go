@@ -9,7 +9,7 @@ import (
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
+	m "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 )
 
 type DocumentTemplateMergeFunc func(*m.DocumentTemplate, *m.DocumentTemplate) (*m.DocumentTemplate, error)

@@ -9,7 +9,7 @@
 
 package definitions
 
-// ResourceDefinitionSpec  (definitions.v1alpha1.ResourceDefinition)
+// ResourceDefinitionSpec  (definitions.v1.ResourceDefinition)
 type ResourceDefinitionSpec struct {
 	// List of versions that are sorted in latest release order.
 	ApiVersions []ResourceDefinitionSpecApiVersions `json:"apiVersions,omitempty"`

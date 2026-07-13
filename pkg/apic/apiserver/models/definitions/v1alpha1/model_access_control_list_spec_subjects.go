@@ -9,7 +9,7 @@
 
 package definitions
 
-// AccessControlListSpecSubjects  (definitions.v1alpha1.AccessControlList)
+// AccessControlListSpecSubjects  (definitions.v1.AccessControlList)
 type AccessControlListSpecSubjects struct {
 	// Type of the subject
 	Type string `json:"type,omitempty"`

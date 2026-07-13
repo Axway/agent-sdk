@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	cv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/api/v1"
-	cMgmgt "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1"
+	cMgmgt "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	aMgmgt "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	aMgmgt "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 )
 
 func TestExampleFake(t *testing.T) {

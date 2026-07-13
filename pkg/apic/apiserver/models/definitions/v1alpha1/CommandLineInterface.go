@@ -20,7 +20,7 @@ var (
 			Group: "definitions",
 			Kind:  "CommandLineInterface",
 		},
-		APIVersion: "v1alpha1",
+		APIVersion: "v1",
 	}
 
 	CommandLineInterfaceScopes = []string{"ResourceGroup"}

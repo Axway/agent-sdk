@@ -20,7 +20,7 @@ var (
 			Group: "definitions",
 			Kind:  "Component",
 		},
-		APIVersion: "v1alpha1",
+		APIVersion: "v1",
 	}
 
 	ComponentScopes = []string{""}

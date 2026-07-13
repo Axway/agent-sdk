@@ -21,7 +21,7 @@ var (
 			Group: "definitions",
 			Kind:  "AccessControlList",
 		},
-		APIVersion: "v1alpha1",
+		APIVersion: "v1",
 	}
 
 	AccessControlListScopes = []string{"Component", "ResourceGroup"}
