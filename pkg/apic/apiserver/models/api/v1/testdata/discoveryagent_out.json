@@ -1,6 +1,6 @@
 {
   "group": "management",
-  "apiVersion": "v1alpha1",
+  "apiVersion": "v1",
   "kind": "DiscoveryAgent",
   "name": "edgeda",
   "title": "edgeda",
@@ -16,10 +16,10 @@
           "id": "8a2e8abb7e4b300e017e4f39fa3a2eab",
           "kind": "Environment",
           "name": "v7edge",
-          "selfLink": "/management/v1alpha1/environments/v7edge"
+          "selfLink": "/management/v1/environments/v7edge"
       },
       "resourceVersion": "0",
-      "selfLink": "/management/v1alpha1/environments/v7edge/discoveryagents/edgeda"
+      "selfLink": "/management/v1/environments/v7edge/discoveryagents/edgeda"
   },
   "attributes": {},
   "finalizers": [],
