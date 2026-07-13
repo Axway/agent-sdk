@@ -18,9 +18,9 @@ type Handler interface {
 	// Handle receives the type of the event context, event metadata and the API Server resource, if it exists.
 	Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
 	ShouldHandle(context.Context, *proto.Event) bool
-	// Kinds returns the resource Kinds this Handler cares about, used to index Handlers by Kind for
-	// dispatch. A nil/empty return means the Handler may care about any Kind (e.g. it multiplexes to
-	// other Handlers, or its set of Kinds can change at runtime), so it is checked for every event.
+	// Kinds returns the resource Kinds this Handler cares about, used by EventListener to index
+	// Handlers by Kind so events are only dispatched to Handlers whose Kinds() include them. A
+	// nil/empty return means the Handler is never dispatched to.
 	Kinds() []string
 }
 

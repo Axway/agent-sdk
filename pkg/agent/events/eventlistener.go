@@ -27,14 +27,13 @@ type APIClient interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
-	ctx              context.Context
-	cancel           context.CancelCauseFunc
-	client           APIClient
-	handlersByKind   map[string][]handler.Handler
-	wildcardHandlers []handler.Handler
-	logger           log.FieldLogger
-	sequenceManager  SequenceProvider
-	source           chan *proto.Event
+	ctx             context.Context
+	cancel          context.CancelCauseFunc
+	client          APIClient
+	handlersByKind  map[string][]handler.Handler
+	logger          log.FieldLogger
+	sequenceManager SequenceProvider
+	source          chan *proto.Event
 }
 
 // NewListenerFunc type for creating a new listener
@@ -47,11 +46,11 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		WithPackage("sdk.agent.events")
 
 	handlersByKind := map[string][]handler.Handler{}
-	var wildcardHandlers []handler.Handler
 	for _, h := range cbs {
 		kinds := h.Kinds()
 		if len(kinds) == 0 {
-			wildcardHandlers = append(wildcardHandlers, h)
+			logger.WithField("handler", fmt.Sprintf("%T", h)).
+				Warn("handler declares no Kinds() and will never be dispatched to")
 			continue
 		}
 		for _, kind := range kinds {
@@ -60,14 +59,13 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 	}
 
 	return &EventListener{
-		ctx:              ctx,
-		cancel:           cancel,
-		client:           client,
-		handlersByKind:   handlersByKind,
-		wildcardHandlers: wildcardHandlers,
-		logger:           logger,
-		sequenceManager:  sequenceManager,
-		source:           source,
+		ctx:             ctx,
+		cancel:          cancel,
+		client:          client,
+		handlersByKind:  handlersByKind,
+		logger:          logger,
+		sequenceManager: sequenceManager,
+		source:          source,
 	}
 }
 
@@ -131,9 +129,9 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	var ri *apiv1.ResourceInstance
 	var err error
-	process := func(h handler.Handler) error {
+	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
-			return nil
+			continue
 		}
 		if ri == nil {
 			ri, err = em.getEventResource(event)
@@ -143,18 +141,6 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		}
 		if err := h.Handle(ctx, event.Metadata, ri); err != nil {
 			em.logger.Error(err)
-		}
-		return nil
-	}
-
-	for _, h := range em.handlersByKind[event.Payload.Kind] {
-		if err := process(h); err != nil {
-			return err
-		}
-	}
-	for _, h := range em.wildcardHandlers {
-		if err := process(h); err != nil {
-			return err
 		}
 	}
 
