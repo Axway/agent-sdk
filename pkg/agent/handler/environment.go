@@ -43,7 +43,6 @@ func (c *environmentHandler) ShouldHandle(ctx context.Context, event *proto.Even
 }
 
 func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-
 	log := getLoggerFromContext(ctx).WithComponent("environmentHandler")
 	env := &management.Environment{}
 	err := env.FromInstance(resource)

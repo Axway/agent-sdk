@@ -29,6 +29,10 @@ func (h *discoveryAccessRequest) ShouldHandle(ctx context.Context, event *proto.
 	if event.Payload.Kind != management.AccessRequestGVK().Kind {
 		return false
 	}
+	cachedAccessReq := h.cache.GetAccessRequest(event.Payload.Metadata.Id)
+	if cachedAccessReq != nil {
+		return false
+	}
 
 	return true
 }

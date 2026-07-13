@@ -125,6 +125,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		WithField("kind", event.Payload.Kind).
 		WithField("name", event.Payload.Name).
 		WithField("type", event.Type.String()).
+		WithField("subResource", event.Metadata.Subresource).
 		Debug("processing watch event")
 
 	var ri *apiv1.ResourceInstance

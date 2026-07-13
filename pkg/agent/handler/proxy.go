@@ -56,14 +56,13 @@ func (h *StreamWatchProxyHandler) Kinds() []string {
 }
 
 func (h *StreamWatchProxyHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if h.targetResourceHandlerMap == nil {
-		return false
-	}
-	if len(h.targetResourceHandlerMap) == 0 {
-		return false
+	for _, handler := range h.targetResourceHandlerMap {
+		if handler.ShouldHandle(ctx, event) {
+			return true
+		}
 	}
 
-	return true
+	return false
 }
 
 // Handle receives the type of the event (add, update, delete), event metadata and updated API Server resource
