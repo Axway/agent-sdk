@@ -25,20 +25,24 @@ func NewEnvironmentHandler(agentCacheManager agentcache.Manager, credentialConfi
 	}
 }
 
-func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if resource.Kind != management.EnvironmentGVK().Kind {
-		return nil
-	}
+func (c *environmentHandler) Kinds() []string {
+	return []string{management.EnvironmentGVK().Kind}
+}
 
-	if resource.Metadata.Scope.Name != c.envName {
-		return nil
+func (c *environmentHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.EnvironmentGVK().Kind || event.Payload.Metadata.Scope.Name != c.envName {
+		return false
 	}
-
 	// verify that action is subresource updated and meta subsresource is environment policy
 	action := GetActionFromContext(ctx)
-	if action != proto.Event_SUBRESOURCEUPDATED || meta.Subresource != management.EnvironmentPoliciesSubResourceName {
-		return nil
+	if action != proto.Event_SUBRESOURCEUPDATED || event.Metadata.Subresource != management.EnvironmentPoliciesSubResourceName {
+		return false
 	}
+
+	return true
+}
+
+func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 
 	log := getLoggerFromContext(ctx).WithComponent("environmentHandler")
 	env := &management.Environment{}

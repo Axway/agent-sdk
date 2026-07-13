@@ -27,13 +27,14 @@ type APIClient interface {
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
-	ctx             context.Context
-	cancel          context.CancelCauseFunc
-	client          APIClient
-	handlers        []handler.Handler
-	logger          log.FieldLogger
-	sequenceManager SequenceProvider
-	source          chan *proto.Event
+	ctx              context.Context
+	cancel           context.CancelCauseFunc
+	client           APIClient
+	handlersByKind   map[string][]handler.Handler
+	wildcardHandlers []handler.Handler
+	logger           log.FieldLogger
+	sequenceManager  SequenceProvider
+	source           chan *proto.Event
 }
 
 // NewListenerFunc type for creating a new listener
@@ -45,14 +46,28 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
 
+	handlersByKind := map[string][]handler.Handler{}
+	var wildcardHandlers []handler.Handler
+	for _, h := range cbs {
+		kinds := h.Kinds()
+		if len(kinds) == 0 {
+			wildcardHandlers = append(wildcardHandlers, h)
+			continue
+		}
+		for _, kind := range kinds {
+			handlersByKind[kind] = append(handlersByKind[kind], h)
+		}
+	}
+
 	return &EventListener{
-		ctx:             ctx,
-		cancel:          cancel,
-		client:          client,
-		handlers:        cbs,
-		logger:          logger,
-		sequenceManager: sequenceManager,
-		source:          source,
+		ctx:              ctx,
+		cancel:           cancel,
+		client:           client,
+		handlersByKind:   handlersByKind,
+		wildcardHandlers: wildcardHandlers,
+		logger:           logger,
+		sequenceManager:  sequenceManager,
+		source:           source,
 	}
 }
 
@@ -114,12 +129,35 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		WithField("type", event.Type.String()).
 		Debug("processing watch event")
 
-	ri, err := em.getEventResource(event)
-	if err != nil {
-		return err
+	var ri *apiv1.ResourceInstance
+	var err error
+	process := func(h handler.Handler) error {
+		if !h.ShouldHandle(ctx, event) {
+			return nil
+		}
+		if ri == nil {
+			ri, err = em.getEventResource(event)
+			if err != nil {
+				return err
+			}
+		}
+		if err := h.Handle(ctx, event.Metadata, ri); err != nil {
+			em.logger.Error(err)
+		}
+		return nil
 	}
 
-	em.HandleResource(ctx, event.Metadata, ri)
+	for _, h := range em.handlersByKind[event.Payload.Kind] {
+		if err := process(h); err != nil {
+			return err
+		}
+	}
+	for _, h := range em.wildcardHandlers {
+		if err := process(h); err != nil {
+			return err
+		}
+	}
+
 	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
 	return nil
 }
@@ -129,20 +167,6 @@ func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceIn
 		return em.convertEventPayload(event), nil
 	}
 	return em.client.GetResource(event.Payload.Metadata.SelfLink)
-}
-
-// HandleResource loops through all the handlers and passes the event to each one for processing.
-func (em *EventListener) HandleResource(
-	ctx context.Context,
-	eventMetadata *proto.EventMeta,
-	resource *apiv1.ResourceInstance,
-) {
-	for _, h := range em.handlers {
-		err := h.Handle(ctx, eventMetadata, resource)
-		if err != nil {
-			em.logger.Error(err)
-		}
-	}
 }
 
 func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {

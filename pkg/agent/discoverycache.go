@@ -303,7 +303,11 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 
 func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action proto.Event_Type) error {
 	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
+	event := handler.NewEventFromResource(action, nil, ri)
 	for _, h := range dc.handlers {
+		if !h.ShouldHandle(ctx, event) {
+			continue
+		}
 		err := h.Handle(ctx, nil, ri)
 		if err != nil {
 			return err

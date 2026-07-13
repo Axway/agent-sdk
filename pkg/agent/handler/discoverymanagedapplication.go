@@ -21,13 +21,21 @@ func NewDiscoveryManagedApplicationHandler(cache agentcache.Manager) Handler {
 	}
 }
 
+func (h *discoveryManagedApplication) Kinds() []string {
+	return []string{management.ManagedApplicationGVK().Kind}
+}
+
+func (h *discoveryManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes events triggered for ManagedApplications during discovery cache building
 func (h *discoveryManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.ManagedApplicationGVK().Kind {
-		return nil
-	}
-
 	if action == proto.Event_DELETED {
 		return h.cache.DeleteManagedApplication(resource.Metadata.ID)
 	}

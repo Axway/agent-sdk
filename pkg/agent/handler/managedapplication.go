@@ -62,13 +62,21 @@ func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentc
 	return ma
 }
 
-// Handle processes grpc events triggered for ManagedApplications
-func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+func (h *managedApplication) Kinds() []string {
+	return []string{management.ManagedApplicationGVK().Kind}
+}
+
+func (h *managedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
-		return nil
+	if event.Payload.Kind != management.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+		return false
 	}
 
+	return true
+}
+
+// Handle processes grpc events triggered for ManagedApplications
+func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	log := getLoggerFromContext(ctx).WithComponent("managedApplicationHandler")
 	ctx = setLoggerInContext(ctx, log)
 

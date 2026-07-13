@@ -21,13 +21,21 @@ func NewDiscoveryAccessRequestHandler(cache agentcache.Manager) Handler {
 	}
 }
 
+func (h *discoveryAccessRequest) Kinds() []string {
+	return []string{management.AccessRequestGVK().Kind}
+}
+
+func (h *discoveryAccessRequest) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.AccessRequestGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes events triggered for AccessRequests during discovery cache building
 func (h *discoveryAccessRequest) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.AccessRequestGVK().Kind {
-		return nil
-	}
-
 	if action == proto.Event_DELETED {
 		return h.cache.DeleteAccessRequest(resource.Metadata.ID)
 	}

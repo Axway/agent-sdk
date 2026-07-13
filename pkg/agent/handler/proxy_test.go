@@ -18,6 +18,14 @@ func (c *customHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *v1.Reso
 	return c.err
 }
 
+func (c *customHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+func (c *customHandler) Kinds() []string {
+	return nil
+}
+
 func TestProxyHandler(t *testing.T) {
 	tests := []struct {
 		name     string

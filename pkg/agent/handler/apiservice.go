@@ -8,6 +8,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -24,15 +25,42 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Hand
 	}
 }
 
-func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
-	action := GetActionFromContext(ctx)
-	if resource.Kind != management.APIServiceGVK().Kind {
-		return nil
+func (h *apiSvcHandler) Kinds() []string {
+	return []string{management.APIServiceGVK().Kind}
+}
+
+func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.APIServiceGVK().Kind {
+		return false
 	}
 
-	if resource.Metadata.Scope.Name != h.envName {
-		return nil
+	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
+		return false
 	}
+
+	if action := GetActionFromContext(ctx); action != proto.Event_DELETED {
+		return true
+	}
+
+	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(event.Payload.Name)
+	if existing == nil {
+		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(event.Payload.Name)
+	}
+	existingSvc, ok := existing.(*apiv1.ResourceInstance)
+	if !ok {
+		log.Trace("invalid resource type in cache, skipping delete")
+		return false
+	}
+
+	if existingSvc.Metadata.ID != event.Payload.Metadata.Id {
+		log.Trace("resource id mismatch, skipping delete")
+		return false
+	}
+	return true
+}
+
+func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+	action := GetActionFromContext(ctx)
 
 	log := getLoggerFromContext(ctx).
 		WithComponent("apiServiceHandler").
@@ -48,30 +76,16 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 
 	defer log.Trace("finished processing request")
 
-	if action != proto.Event_DELETED {
-		log.Debug("adding or updating api service in cache")
-		err := h.agentCacheManager.AddAPIService(resource)
-		if err != nil {
-			log.WithError(err).Error("could not handle api service event")
-		}
-		return err
+	if action == proto.Event_DELETED {
+		// remove the service from the cache by name
+		return h.agentCacheManager.DeleteAPIService(resource.Name)
 	}
 
-	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(resource.Name)
-	if existing == nil {
-		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(resource.Name)
+	log.Debug("adding or updating api service in cache")
+	err = h.agentCacheManager.AddAPIService(resource)
+	if err != nil {
+		log.WithError(err).Error("could not handle api service event")
 	}
-	existingSvc, ok := existing.(*apiv1.ResourceInstance)
-	if !ok {
-		log.Debug("invalid resource type in cache, skipping delete")
-		return nil
-	}
+	return err
 
-	if existingSvc.Metadata.ID != resource.Metadata.ID {
-		log.Debug("resource id mismatch, skipping delete")
-		return nil
-	}
-
-	// remove the service from the cache by name
-	return h.agentCacheManager.DeleteAPIService(resource.Name)
 }

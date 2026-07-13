@@ -21,6 +21,18 @@ func NewTraceManagedApplicationHandler(cache agentcache.Manager) Handler {
 	}
 }
 
+func (h *traceManagedApplication) Kinds() []string {
+	return []string{management.ManagedApplicationGVK().Kind}
+}
+
+func (h *traceManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
+		return false
+	}
+
+	return true
+}
+
 // Handle processes grpc events triggered for ManagedApplications for trace agent
 func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

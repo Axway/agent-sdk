@@ -17,6 +17,11 @@ func init() {
 type Handler interface {
 	// Handle receives the type of the event context, event metadata and the API Server resource, if it exists.
 	Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
+	ShouldHandle(context.Context, *proto.Event) bool
+	// Kinds returns the resource Kinds this Handler cares about, used to index Handlers by Kind for
+	// dispatch. A nil/empty return means the Handler may care about any Kind (e.g. it multiplexes to
+	// other Handlers, or its set of Kinds can change at runtime), so it is checked for every event.
+	Kinds() []string
 }
 
 // This type is used for values added to context
@@ -53,6 +58,34 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 		return false
 	}
 	return true
+}
+
+// NewEventFromResource builds a synthetic *proto.Event from an already-fetched resource, for
+// callers (e.g. StreamWatchProxyHandler, discoveryCache) that only have a *v1.ResourceInstance
+// and need to invoke Handler.ShouldHandle before Handle.
+func NewEventFromResource(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) *proto.Event {
+	payload := &proto.ResourceInstance{
+		Metadata: &proto.Metadata{},
+	}
+	if resource != nil {
+		payload.Group = resource.Group
+		payload.Kind = resource.Kind
+		payload.Name = resource.Name
+		payload.Attributes = resource.Attributes
+		payload.Metadata.Id = resource.Metadata.ID
+		payload.Metadata.SelfLink = resource.Metadata.SelfLink
+		payload.Metadata.Scope = &proto.Metadata_ScopeKind{
+			Id:       resource.Metadata.Scope.ID,
+			Kind:     resource.Metadata.Scope.Kind,
+			Name:     resource.Metadata.Scope.Name,
+			SelfLink: resource.Metadata.Scope.SelfLink,
+		}
+	}
+	return &proto.Event{
+		Type:     action,
+		Metadata: eventMetadata,
+		Payload:  payload,
+	}
 }
 
 // NewEventContext - create a context for the new event
