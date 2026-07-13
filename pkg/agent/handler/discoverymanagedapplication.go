@@ -29,6 +29,10 @@ func (h *discoveryManagedApplication) ShouldHandle(ctx context.Context, event *p
 	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
 		return false
 	}
+	cachedApp := h.cache.GetManagedApplication(event.Payload.Metadata.Id)
+	if cachedApp != nil {
+		return false
+	}
 
 	return true
 }
