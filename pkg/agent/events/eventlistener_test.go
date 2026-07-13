@@ -201,8 +201,9 @@ func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 	return true
 }
 
+// Kinds matches the empty Kind left on test events' Payload, since none of them set one.
 func (m *mockHandler) Kinds() []string {
-	return nil
+	return []string{""}
 }
 
 // slowHandler blocks for the given duration each time Handle is called,
@@ -222,8 +223,9 @@ func (h *slowHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 	return true
 }
 
+// Kinds matches the empty Kind left on test events' Payload, since none of them set one.
 func (h *slowHandler) Kinds() []string {
-	return nil
+	return []string{""}
 }
 
 func newTestEvent(seqID int64) *proto.Event {

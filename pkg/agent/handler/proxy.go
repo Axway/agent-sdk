@@ -37,10 +37,22 @@ func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
-// Kinds returns nil since the set of target Kinds changes at runtime via RegisterTargetHandler /
-// UnregisterTargetHandler, so this Handler must be checked for every event.
+// Kinds returns the union of Kinds of the currently registered target handlers. It is read once,
+// when the EventListener indexes its handlers at construction time, so target handlers must be
+// registered (e.g. via RegisterProvisioner) before that point for their Kinds to be picked up.
 func (h *StreamWatchProxyHandler) Kinds() []string {
-	return nil
+	kindSet := map[string]struct{}{}
+	for _, resourceHandler := range h.targetResourceHandlerMap {
+		for _, kind := range resourceHandler.Kinds() {
+			kindSet[kind] = struct{}{}
+		}
+	}
+
+	kinds := make([]string, 0, len(kindSet))
+	for kind := range kindSet {
+		kinds = append(kinds, kind)
+	}
+	return kinds
 }
 
 func (h *StreamWatchProxyHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {

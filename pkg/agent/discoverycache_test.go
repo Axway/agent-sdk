@@ -148,7 +148,7 @@ func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 }
 
 func (m *mockHandler) Kinds() []string {
-	return nil
+	return []string{m.kind}
 }
 
 func newAPIServices(scope string) []*apiv1.ResourceInstance {
