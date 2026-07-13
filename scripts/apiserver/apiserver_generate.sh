@@ -28,27 +28,27 @@ if node ./generate.js ${PROTOCOL} ${HOST} ${PORT} ${DEBUG}; then
   ./modify_models.sh
 
   # copy over the fake example test file
-  cp ./fake_example_test.tmpl ${OUTDIR}/clients/management/v1alpha1/fake_example_test.go
+  cp ./fake_example_test.tmpl ${OUTDIR}/clients/management/v1/fake_example_test.go
 
   # replace the discovery agent config file
-  # cp ./model_discovery_agent_spec_config.tmpl ${OUTDIR}/models/management/v1alpha1/model_discovery_agent_spec_config.go
+  # cp ./model_discovery_agent_spec_config.tmpl ${OUTDIR}/models/management/v1/model_discovery_agent_spec_config.go
 
   # replace the access control model files
-  cp ./model_access_control_list_spec-catalog.tmpl ${OUTDIR}/models/catalog/v1alpha1/model_access_control_list_spec.go
-  cp ./model_access_control_list_spec-definitions.tmpl ${OUTDIR}/models/definitions/v1alpha1/model_access_control_list_spec.go
-  cp ./model_access_control_list_spec-management.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-catalog.tmpl ${OUTDIR}/models/catalog/v1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-definitions.tmpl ${OUTDIR}/models/definitions/v1/model_access_control_list_spec.go
+  cp ./model_access_control_list_spec-management.tmpl ${OUTDIR}/models/management/v1/model_access_control_list_spec.go
 
   # replace the credential request definition spec files
-  # cp ./model_credential_request_definition_spec_capabilities.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_capabilities.go
-  cp ./model_credential_request_definition_spec_provision.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_provision.go
-  cp ./model_credential_request_definition_spec_provision_policies.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_provision_policies.go
-  cp ./model_credential_request_definition_spec_webhook.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec_webhook.go
-  cp ./model_credential_request_definition_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_request_definition_spec.go
-  cp ./model_credential_policies.tmpl ${OUTDIR}/models/management/v1alpha1/model_credential_policies.go
+  # cp ./model_credential_request_definition_spec_capabilities.tmpl ${OUTDIR}/models/management/v1/model_credential_request_definition_spec_capabilities.go
+  cp ./model_credential_request_definition_spec_provision.tmpl ${OUTDIR}/models/management/v1/model_credential_request_definition_spec_provision.go
+  cp ./model_credential_request_definition_spec_provision_policies.tmpl ${OUTDIR}/models/management/v1/model_credential_request_definition_spec_provision_policies.go
+  cp ./model_credential_request_definition_spec_webhook.tmpl ${OUTDIR}/models/management/v1/model_credential_request_definition_spec_webhook.go
+  cp ./model_credential_request_definition_spec.tmpl ${OUTDIR}/models/management/v1/model_credential_request_definition_spec.go
+  cp ./model_credential_policies.tmpl ${OUTDIR}/models/management/v1/model_credential_policies.go
 
   # replace an access request definition spec files
-  cp ./model_access_request_definition_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_request_definition_spec.go
-  cp ./model_access_request_spec.tmpl ${OUTDIR}/models/management/v1alpha1/model_access_request_spec.go
+  cp ./model_access_request_definition_spec.tmpl ${OUTDIR}/models/management/v1/model_access_request_definition_spec.go
+  cp ./model_access_request_spec.tmpl ${OUTDIR}/models/management/v1/model_access_request_spec.go
 
   chown -R ${USERID}:${GROUPID} ${OUTDIR}
 else
