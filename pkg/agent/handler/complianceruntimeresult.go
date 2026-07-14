@@ -20,10 +20,6 @@ func NewCRRHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *crrHandler) Kinds() []string {
-	return []string{management.ComplianceRuntimeResultGVK().Kind}
-}
-
 func (h *crrHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.ComplianceRuntimeResultGVK().Kind {
 		return false

@@ -99,7 +99,13 @@ func TestDiscoveryCacheExecute(t *testing.T) {
 			}
 
 			dc := newDiscoveryCache(cfg, c,
-				[]handler.Handler{svcHandler, managedAppHandler, managedAppProfHandler, accessReqHandler, credHandler},
+				map[string][]handler.Handler{
+					management.APIServiceGVK().Kind:               {svcHandler},
+					management.ManagedApplicationGVK().Kind:        {managedAppHandler},
+					management.ManagedApplicationProfileGVK().Kind: {managedAppProfHandler},
+					management.AccessRequestGVK().Kind:             {accessReqHandler},
+					management.CredentialGVK().Kind:                {credHandler},
+				},
 				tc.wt,
 				opts...,
 			)
@@ -145,10 +151,6 @@ func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.Re
 
 func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 	return true
-}
-
-func (m *mockHandler) Kinds() []string {
-	return []string{m.kind}
 }
 
 func newAPIServices(scope string) []*apiv1.ResourceInstance {

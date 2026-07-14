@@ -21,10 +21,6 @@ func NewDiscoveryManagedApplicationHandler(cache agentcache.Manager) Handler {
 	}
 }
 
-func (h *discoveryManagedApplication) Kinds() []string {
-	return []string{management.ManagedApplicationGVK().Kind}
-}
-
 func (h *discoveryManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
 		return false

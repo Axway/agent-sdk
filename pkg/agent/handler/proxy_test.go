@@ -22,10 +22,6 @@ func (c *customHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 	return true
 }
 
-func (c *customHandler) Kinds() []string {
-	return nil
-}
-
 func TestProxyHandler(t *testing.T) {
 	tests := []struct {
 		name     string

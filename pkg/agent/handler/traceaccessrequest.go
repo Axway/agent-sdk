@@ -24,12 +24,12 @@ func NewTraceAccessRequestHandler(cache agentcache.Manager, client client) Handl
 	}
 }
 
-func (h *traceAccessRequestHandler) Kinds() []string {
-	return []string{management.AccessRequestGVK().Kind}
-}
-
 func (h *traceAccessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.AccessRequestGVK().Kind {
+		return false
+	}
+	cachedAccessReq := h.cache.GetAccessRequest(event.Payload.Metadata.Id)
+	if cachedAccessReq != nil && len(cachedAccessReq.Metadata.References) > 0 {
 		return false
 	}
 

@@ -37,26 +37,14 @@ type EventListener struct {
 }
 
 // NewListenerFunc type for creating a new listener
-type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener
+type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener
 
-// NewEventListener creates a new EventListener to process events based on the provided Handlers.
-func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, cbs ...handler.Handler) *EventListener {
+// NewEventListener creates a new EventListener to process events based on the provided Handlers,
+// indexed by the resource Kind they should be dispatched for.
+func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
-
-	handlersByKind := map[string][]handler.Handler{}
-	for _, h := range cbs {
-		kinds := h.Kinds()
-		if len(kinds) == 0 {
-			logger.WithField("handler", fmt.Sprintf("%T", h)).
-				Warn("handler declares no Kinds() and will never be dispatched to")
-			continue
-		}
-		for _, kind := range kinds {
-			handlersByKind[kind] = append(handlersByKind[kind], h)
-		}
-	}
 
 	return &EventListener{
 		ctx:             ctx,

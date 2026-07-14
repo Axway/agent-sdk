@@ -37,13 +37,25 @@ func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
+// kindsProvider is implemented by target handlers that can report the resource Kind(s) they
+// handle. Handler itself doesn't declare Kinds(), since most Handlers are registered directly by
+// Kind and don't need to report it; target handlers registered here that don't implement it
+// (e.g. externally registered custom handlers) simply don't contribute to the union below.
+type kindsProvider interface {
+	Kinds() []string
+}
+
 // Kinds returns the union of Kinds of the currently registered target handlers. It is read once,
-// when the EventListener indexes its handlers at construction time, so target handlers must be
-// registered (e.g. via RegisterProvisioner) before that point for their Kinds to be picked up.
+// by newHandlers() at agent construction time, so target handlers must be registered (e.g. via
+// RegisterProvisioner) before that point for their Kinds to be picked up.
 func (h *StreamWatchProxyHandler) Kinds() []string {
 	kindSet := map[string]struct{}{}
 	for _, resourceHandler := range h.targetResourceHandlerMap {
-		for _, kind := range resourceHandler.Kinds() {
+		kp, ok := resourceHandler.(kindsProvider)
+		if !ok {
+			continue
+		}
+		for _, kind := range kp.Kinds() {
 			kindSet[kind] = struct{}{}
 		}
 	}

@@ -20,10 +20,6 @@ func NewAPDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *apdHandler) Kinds() []string {
-	return []string{management.ApplicationProfileDefinitionGVK().Kind}
-}
-
 func (h *apdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.ApplicationProfileDefinitionGVK().Kind {
 		return false

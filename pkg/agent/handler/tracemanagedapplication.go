@@ -21,12 +21,12 @@ func NewTraceManagedApplicationHandler(cache agentcache.Manager) Handler {
 	}
 }
 
-func (h *traceManagedApplication) Kinds() []string {
-	return []string{management.ManagedApplicationGVK().Kind}
-}
-
 func (h *traceManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
+		return false
+	}
+	cachedApp := h.cache.GetManagedApplication(event.Payload.Metadata.Id)
+	if cachedApp != nil {
 		return false
 	}
 

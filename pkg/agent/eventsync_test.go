@@ -175,7 +175,7 @@ func TestEventSync(t *testing.T) {
 
 				svcHandler := &mockHandler{kind: management.APIServiceGVK().Kind}
 				wt := &management.WatchTopic{Spec: management.WatchTopicSpec{Filters: tc.wtFilters}}
-				dc := newDiscoveryCache(cfg, tc.makeClient(), []handler.Handler{svcHandler}, wt)
+				dc := newDiscoveryCache(cfg, tc.makeClient(), map[string][]handler.Handler{management.APIServiceGVK().Kind: {svcHandler}}, wt)
 
 				es := &EventSync{
 					watchTopic:     wt,

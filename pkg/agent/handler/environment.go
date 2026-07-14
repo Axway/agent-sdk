@@ -25,10 +25,6 @@ func NewEnvironmentHandler(agentCacheManager agentcache.Manager, credentialConfi
 	}
 }
 
-func (c *environmentHandler) Kinds() []string {
-	return []string{management.EnvironmentGVK().Kind}
-}
-
 func (c *environmentHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.EnvironmentGVK().Kind || event.Payload.Metadata.Scope.Name != c.envName {
 		return false

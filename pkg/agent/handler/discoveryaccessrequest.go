@@ -21,10 +21,6 @@ func NewDiscoveryAccessRequestHandler(cache agentcache.Manager) Handler {
 	}
 }
 
-func (h *discoveryAccessRequest) Kinds() []string {
-	return []string{management.AccessRequestGVK().Kind}
-}
-
 func (h *discoveryAccessRequest) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.AccessRequestGVK().Kind {
 		return false
