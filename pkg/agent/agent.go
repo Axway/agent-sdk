@@ -829,7 +829,9 @@ func newHandlers() map[string][]handler.Handler {
 	handlers[management.DiscoveryAgentGVK().Kind] = append(handlers[management.DiscoveryAgentGVK().Kind], agentResHandler)
 	handlers[management.TraceabilityAgentGVK().Kind] = append(handlers[management.TraceabilityAgentGVK().Kind], agentResHandler)
 	handlers[management.ComplianceAgentGVK().Kind] = append(handlers[management.ComplianceAgentGVK().Kind], agentResHandler)
-	addByKindsProvider(agent.proxyResourceHandler)
+	for kind, proxyHandler := range agent.proxyResourceHandler.GetHandlers() {
+		handlers[kind] = append(handlers[kind], proxyHandler)
+	}
 
 	switch agent.cfg.GetAgentType() {
 	case config.DiscoveryAgent:

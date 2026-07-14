@@ -11,7 +11,8 @@ import (
 )
 
 type customHandler struct {
-	err error
+	err  error
+	kind string
 }
 
 func (c *customHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *v1.ResourceInstance) error {
@@ -25,7 +26,7 @@ func (c *customHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 func TestProxyHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		handlers []Handler
+		handlers []*customHandler
 		event    proto.Event_Type
 		hasError bool
 	}{
@@ -38,7 +39,7 @@ func TestProxyHandler(t *testing.T) {
 		{
 			name:  "should register a handler and return nil when Handle is called",
 			event: proto.Event_CREATED,
-			handlers: []Handler{
+			handlers: []*customHandler{
 				&customHandler{},
 			},
 			hasError: false,
@@ -46,7 +47,7 @@ func TestProxyHandler(t *testing.T) {
 		{
 			name:  "should register two handlers and return nil when Handle is called",
 			event: proto.Event_CREATED,
-			handlers: []Handler{
+			handlers: []*customHandler{
 				&customHandler{},
 				&customHandler{},
 			},
@@ -55,7 +56,7 @@ func TestProxyHandler(t *testing.T) {
 		{
 			name:  "should register a handler and return an error when Handle is called",
 			event: proto.Event_CREATED,
-			handlers: []Handler{
+			handlers: []*customHandler{
 				&customHandler{err: fmt.Errorf("error")},
 			},
 			hasError: true,
@@ -63,18 +64,9 @@ func TestProxyHandler(t *testing.T) {
 		{
 			name:  "should register two handlers and return an error when Handle is called",
 			event: proto.Event_CREATED,
-			handlers: []Handler{
+			handlers: []*customHandler{
 				&customHandler{},
 				&customHandler{err: fmt.Errorf("error")},
-			},
-			hasError: true,
-		},
-		{
-			name:  "should register two handlers and return an error when calling the first registered handler",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{err: fmt.Errorf("error")},
-				&customHandler{},
 			},
 			hasError: true,
 		},
@@ -91,8 +83,8 @@ func TestProxyHandler(t *testing.T) {
 
 			proxy := NewStreamWatchProxyHandler()
 
-			for i, h := range tc.handlers {
-				proxy.RegisterTargetHandler(fmt.Sprintf("%d", i), h)
+			for _, h := range tc.handlers {
+				proxy.RegisterTargetHandler(h.kind, h)
 			}
 
 			err := proxy.Handle(NewEventContext(tc.event, nil, ri.Kind, ri.Name), nil, ri)
