@@ -40,12 +40,6 @@ func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner
 	}
 }
 
-// Kinds lets StreamWatchProxyHandler discover this handler's Kind once it's registered as a
-// target handler via RegisterTargetHandler/RegisterResourceEventHandler.
-func (h *managedApplicationProfile) Kinds() []string {
-	return []string{management.ManagedApplicationProfileGVK().Kind}
-}
-
 func (h *managedApplicationProfile) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
 	if event.Payload.Kind != management.ManagedApplicationProfileGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
