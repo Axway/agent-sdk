@@ -20,10 +20,6 @@ func NewARDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *ardHandler) Kinds() []string {
-	return []string{management.AccessRequestDefinitionGVK().Kind}
-}
-
 func (h *ardHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.AccessRequestDefinitionGVK().Kind {
 		return false

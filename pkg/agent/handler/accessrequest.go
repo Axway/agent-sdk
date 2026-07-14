@@ -58,6 +58,8 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 	return arh
 }
 
+// Kinds lets StreamWatchProxyHandler discover this handler's Kind once it's registered as a
+// target handler via RegisterTargetHandler/RegisterResourceEventHandler.
 func (h *accessRequestHandler) Kinds() []string {
 	return []string{management.AccessRequestGVK().Kind}
 }

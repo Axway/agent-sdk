@@ -802,52 +802,63 @@ func cleanUp() {
 	}
 }
 
-func newHandlers() []handler.Handler {
+// kindsProvider is implemented by Handlers whose Kind set isn't known statically at the call
+// sites below - it's derived from config (watchResourceHandler) or from target handlers
+// registered elsewhere via RegisterProvisioner/RegisterResourceEventHandler (proxyResourceHandler).
+type kindsProvider interface {
+	Kinds() []string
+}
+
+func newHandlers() map[string][]handler.Handler {
 	envName := GetCentralConfig().GetEnvironmentName()
-	handlers := []handler.Handler{
-		handler.NewAPISvcHandler(agent.cacheManager, envName),
-		handler.NewInstanceHandler(agent.cacheManager, envName),
-		handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager, agent.apicClient),
-		agent.proxyResourceHandler,
+
+	handlers := map[string][]handler.Handler{}
+	addByKindsProvider := func(h handler.Handler) {
+		kp, ok := h.(kindsProvider)
+		if !ok {
+			return
+		}
+		for _, kind := range kp.Kinds() {
+			handlers[kind] = append(handlers[kind], h)
+		}
 	}
+
+	agentResHandler := handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager, agent.apicClient)
+	handlers[management.APIServiceGVK().Kind] = append(handlers[management.APIServiceGVK().Kind], handler.NewAPISvcHandler(agent.cacheManager, envName))
+	handlers[management.APIServiceInstanceGVK().Kind] = append(handlers[management.APIServiceInstanceGVK().Kind], handler.NewInstanceHandler(agent.cacheManager, envName))
+	handlers[management.DiscoveryAgentGVK().Kind] = append(handlers[management.DiscoveryAgentGVK().Kind], agentResHandler)
+	handlers[management.TraceabilityAgentGVK().Kind] = append(handlers[management.TraceabilityAgentGVK().Kind], agentResHandler)
+	handlers[management.ComplianceAgentGVK().Kind] = append(handlers[management.ComplianceAgentGVK().Kind], agentResHandler)
+	addByKindsProvider(agent.proxyResourceHandler)
 
 	switch agent.cfg.GetAgentType() {
 	case config.DiscoveryAgent:
-		handlers = append(
-			handlers,
-			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
-			handler.NewCRDHandler(agent.cacheManager),
-			handler.NewARDHandler(agent.cacheManager),
-			handler.NewAPDHandler(agent.cacheManager),
-			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
-			handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager),
-			handler.NewDiscoveryAccessRequestHandler(agent.cacheManager),
-			handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
-		)
+		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)))
+		handlers[management.CredentialRequestDefinitionGVK().Kind] = append(handlers[management.CredentialRequestDefinitionGVK().Kind], handler.NewCRDHandler(agent.cacheManager))
+		handlers[management.AccessRequestDefinitionGVK().Kind] = append(handlers[management.AccessRequestDefinitionGVK().Kind], handler.NewARDHandler(agent.cacheManager))
+		handlers[management.ApplicationProfileDefinitionGVK().Kind] = append(handlers[management.ApplicationProfileDefinitionGVK().Kind], handler.NewAPDHandler(agent.cacheManager))
+		handlers[management.EnvironmentGVK().Kind] = append(handlers[management.EnvironmentGVK().Kind], handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName))
+		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager))
+		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewDiscoveryAccessRequestHandler(agent.cacheManager))
+		handlers[management.IdentityProviderMetadataGVK().Kind] = append(handlers[management.IdentityProviderMetadataGVK().Kind], handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()))
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent
 		// For discovery agent, the handlers gets registered while setting up provisioner
-		handlers = append(
-			handlers,
-			handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)),
-			handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient),
-			handler.NewTraceManagedApplicationHandler(agent.cacheManager),
-		)
+		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)))
+		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
+		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewTraceManagedApplicationHandler(agent.cacheManager))
 	case config.ComplianceAgent:
-		handlers = append(
-			handlers,
-			handler.NewWatchResourceHandler(agent.cacheManager,
-				handler.WithWatchTopicFeatures(agent.cfg),
-				handler.WithWatchTopicGroupKind(
-					[]apiV1.GroupKind{
-						management.EnvironmentGVK().GroupKind,
-						management.APIServiceInstanceGVK().GroupKind,
-						management.ComplianceRuntimeResultGVK().GroupKind,
-					},
-				),
+		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager,
+			handler.WithWatchTopicFeatures(agent.cfg),
+			handler.WithWatchTopicGroupKind(
+				[]apiV1.GroupKind{
+					management.EnvironmentGVK().GroupKind,
+					management.APIServiceInstanceGVK().GroupKind,
+					management.ComplianceRuntimeResultGVK().GroupKind,
+				},
 			),
-			handler.NewCRRHandler(agent.cacheManager),
-		)
+		))
+		handlers[management.ComplianceRuntimeResultGVK().Kind] = append(handlers[management.ComplianceRuntimeResultGVK().Kind], handler.NewCRRHandler(agent.cacheManager))
 	}
 
 	return handlers

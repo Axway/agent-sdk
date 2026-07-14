@@ -23,10 +23,6 @@ func NewIDPHandler(agentCacheManager agentcache.Manager, credentialConfig config
 	}
 }
 
-func (c *idpHandler) Kinds() []string {
-	return []string{management.IdentityProviderMetadataGVK().Kind}
-}
-
 func (c *idpHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.IdentityProviderMetadataGVK().Kind {
 		return false

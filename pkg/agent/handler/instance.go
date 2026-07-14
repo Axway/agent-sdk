@@ -22,10 +22,6 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager, envName string) Ha
 	}
 }
 
-func (h *instanceHandler) Kinds() []string {
-	return []string{management.APIServiceInstanceGVK().Kind}
-}
-
 func (h *instanceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.APIServiceInstanceGVK().Kind || event.Payload.Metadata.Scope.Name != h.envName {
 		return false

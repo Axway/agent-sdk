@@ -25,10 +25,6 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Hand
 	}
 }
 
-func (h *apiSvcHandler) Kinds() []string {
-	return []string{management.APIServiceGVK().Kind}
-}
-
 func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.APIServiceGVK().Kind {
 		return false

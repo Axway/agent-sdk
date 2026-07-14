@@ -64,6 +64,8 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 	return c
 }
 
+// Kinds lets StreamWatchProxyHandler discover this handler's Kind once it's registered as a
+// target handler via RegisterTargetHandler/RegisterResourceEventHandler.
 func (h *credentials) Kinds() []string {
 	return []string{management.CredentialGVK().Kind}
 }

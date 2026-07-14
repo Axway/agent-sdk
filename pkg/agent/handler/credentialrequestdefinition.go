@@ -20,10 +20,6 @@ func NewCRDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
-func (h *crdHandler) Kinds() []string {
-	return []string{management.CredentialRequestDefinitionGVK().Kind}
-}
-
 func (h *crdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if event.Payload.Kind != management.CredentialRequestDefinitionGVK().Kind {
 		return false

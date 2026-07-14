@@ -19,7 +19,7 @@ type discoveryCache struct {
 	centralURL               string
 	migrator                 migrate.Migrator
 	logger                   log.FieldLogger
-	handlers                 []handler.Handler
+	handlersByKind           map[string][]handler.Handler
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
@@ -59,7 +59,7 @@ func preMarketplaceSetup(f func() error) discoveryOpt {
 func newDiscoveryCache(
 	cfg config.CentralConfig,
 	client resourceClient,
-	handlers []handler.Handler,
+	handlersByKind map[string][]handler.Handler,
 	watchTopic *management.WatchTopic,
 	opts ...discoveryOpt,
 ) *discoveryCache {
@@ -69,7 +69,7 @@ func newDiscoveryCache(
 
 	dc := &discoveryCache{
 		logger:                   logger,
-		handlers:                 handlers,
+		handlersByKind:           handlersByKind,
 		centralURL:               cfg.GetURL(),
 		client:                   client,
 		additionalDiscoveryFuncs: make([]discoverFunc, 0),
@@ -304,7 +304,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action proto.Event_Type) error {
 	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
 	event := handler.NewEventFromResource(action, nil, ri)
-	for _, h := range dc.handlers {
+	for _, h := range dc.handlersByKind[ri.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
