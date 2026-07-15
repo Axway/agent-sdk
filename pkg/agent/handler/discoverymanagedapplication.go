@@ -22,9 +22,6 @@ func NewDiscoveryManagedApplicationHandler(cache agentcache.Manager) Handler {
 }
 
 func (h *discoveryManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
-		return false
-	}
 	cachedApp := h.cache.GetManagedApplication(event.Payload.Metadata.Id)
 	if cachedApp != nil {
 		return false

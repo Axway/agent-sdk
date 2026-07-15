@@ -66,8 +66,7 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 
 func (h *credentials) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if event.Payload.Kind != management.CredentialGVK().Kind || action == proto.Event_DELETED ||
-		h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+	if action == proto.Event_DELETED || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
 		return false
 	}
 	return true

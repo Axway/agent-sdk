@@ -42,7 +42,7 @@ func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner
 
 func (h *managedApplicationProfile) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if event.Payload.Kind != management.ManagedApplicationProfileGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
 		return false
 	}
 

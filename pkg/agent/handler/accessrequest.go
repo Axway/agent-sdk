@@ -60,9 +60,6 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 
 func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if event.Payload.Kind != management.AccessRequestGVK().Kind {
-		return false
-	}
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
 		return true
 	}
