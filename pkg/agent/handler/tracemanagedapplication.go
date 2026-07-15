@@ -22,9 +22,6 @@ func NewTraceManagedApplicationHandler(cache agentcache.Manager) Handler {
 }
 
 func (h *traceManagedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Kind != management.ManagedApplicationGVK().Kind {
-		return false
-	}
 	cachedApp := h.cache.GetManagedApplication(event.Payload.Metadata.Id)
 	if cachedApp != nil {
 		return false
@@ -36,10 +33,6 @@ func (h *traceManagedApplication) ShouldHandle(ctx context.Context, event *proto
 // Handle processes grpc events triggered for ManagedApplications for trace agent
 func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.ManagedApplicationGVK().Kind {
-		return nil
-	}
-
 	if action == proto.Event_DELETED {
 		return h.cache.DeleteManagedApplication(resource.Metadata.ID)
 	}

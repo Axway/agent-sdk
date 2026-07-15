@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -21,20 +20,12 @@ func NewAPDHandler(agentCacheManager agentcache.Manager) Handler {
 }
 
 func (h *apdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Kind != management.ApplicationProfileDefinitionGVK().Kind {
-		return false
-	}
-
 	return true
 }
 
 // Handle processes grpc events triggered for Application Profile Definitions
 func (h *apdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.ApplicationProfileDefinitionGVK().Kind {
-		return nil
-	}
-
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddApplicationProfileDefinition(resource)
 		return nil

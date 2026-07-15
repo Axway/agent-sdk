@@ -26,10 +26,6 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Hand
 }
 
 func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Kind != management.APIServiceGVK().Kind {
-		return false
-	}
-
 	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
 		return false
 	}

@@ -64,7 +64,7 @@ func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentc
 
 func (h *managedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if event.Payload.Kind != management.ManagedApplicationGVK().Kind || h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
 		return false
 	}
 
