@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
 func TestGetTransactionEventStatus(t *testing.T) {
@@ -120,6 +123,28 @@ func TestResolveIDWithPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ResolveIDWithPrefix(tt.id, tt.inputName)
 			assert.Equal(t, tt.expected, result, tt.description)
+		})
+	}
+}
+
+func TestGetMarketplaceDetails(t *testing.T) {
+	tests := map[string]struct {
+		ri       *v1.ResourceInstance
+		expected *models.MarketplaceReference
+	}{
+		"nil managed application returns none placeholders": {
+			ri:       nil,
+			expected: &models.MarketplaceReference{GUID: none, ConsumerOrgID: none},
+		},
+		"resolved instance with no marketplace data returns none placeholders": {
+			ri:       &v1.ResourceInstance{},
+			expected: &models.MarketplaceReference{GUID: none, ConsumerOrgID: none},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, GetMarketplaceDetails(tt.ri))
 		})
 	}
 }

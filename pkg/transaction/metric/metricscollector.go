@@ -572,8 +572,8 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 	accessRequest := transutil.GetAccessRequest(cacheManager, managedApp, detail.APIDetails.ID, detail.APIDetails.Stage, detail.APIDetails.Version)
 	if accessRequest == nil {
 		c.logger.
-			Debug("could not get access request, return empty API metrics")
-		return nil, nil
+			Debug("could not get access request, return managed application only")
+		return nil, managedApp
 	}
 	c.logger.
 		WithField("managedAppName", managedApp.Name).
@@ -587,12 +587,12 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 
 func (c *collector) createSubscriptionDetail(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	subRef := accessRequest.GetReferenceByGVK(catalog.SubscriptionGVK())
 	if subRef.ID == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	return &models.ResourceReference{
@@ -602,25 +602,29 @@ func (c *collector) createSubscriptionDetail(accessRequest *management.AccessReq
 
 func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.ApplicationResourceReference {
 	if appRI == nil {
-		return nil
+		return &models.ApplicationResourceReference{
+			ResourceReference: models.ResourceReference{ID: unknown},
+			ConsumerOrgID:     none,
+			Owner:             &models.Owner{Type: none},
+		}
 	}
 
 	app := &management.ManagedApplication{}
 	app.FromInstance(appRI)
 
-	orgID := ""
-	if app.Marketplace.Resource.Owner != nil {
+	orgID := none
+	if app.Marketplace.Resource.Owner != nil && app.Marketplace.Resource.Owner.Organization.ID != "" {
 		orgID = app.Marketplace.Resource.Owner.Organization.ID
 	}
 
-	appRef := app.GetReferenceByGVK(catalog.ApplicationGVK())
-	if appRef.ID == "" {
-		return nil
+	appID := unknown
+	if appRef := app.GetReferenceByGVK(catalog.ApplicationGVK()); appRef.ID != "" {
+		appID = appRef.ID
 	}
 
 	return &models.ApplicationResourceReference{
 		ResourceReference: models.ResourceReference{
-			ID: appRef.ID,
+			ID: appID,
 		},
 		ConsumerOrgID: orgID,
 		Owner:         transutil.ResolveAppOwnerFromManagedApp(appRI),
@@ -636,6 +640,7 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	}
 	cacheManager := agent.GetCacheManager()
 	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	ref.APIServiceID = unknown
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}
@@ -647,12 +652,12 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 // revision identifier. AccessRequests do not carry a direct APIServiceRevision reference.
 func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	ref := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK())
 	if ref.ID == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	return &models.ResourceReference{ID: ref.ID}
@@ -660,12 +665,12 @@ func (c *collector) getAPIServiceRevision(accessRequest *management.AccessReques
 
 func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	assetResourceRef := accessRequest.GetReferenceByGVK(catalog.AssetResourceGVK())
 	if assetResourceRef.ID == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	return &models.ResourceReference{
@@ -675,33 +680,39 @@ func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *m
 
 func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.ProductResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ProductResourceReference{
+			ResourceReference: models.ResourceReference{ID: unknown},
+			VersionID:         unknown,
+		}
 	}
 
 	productRef := accessRequest.GetReferenceByGVK(catalog.ProductGVK())
 	releaseRef := accessRequest.GetReferenceByGVK(catalog.ProductReleaseGVK())
 
-	if productRef.ID == "" || releaseRef.ID == "" {
-		return nil
+	ref := &models.ProductResourceReference{
+		ResourceReference: models.ResourceReference{ID: unknown},
+		VersionID:         unknown,
+	}
+	if productRef.ID != "" {
+		ref.ID = productRef.ID
+		// owner only applies once the product itself is resolved
+		ref.Owner = transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK()))
+	}
+	if releaseRef.ID != "" {
+		ref.VersionID = releaseRef.ID
 	}
 
-	return &models.ProductResourceReference{
-		ResourceReference: models.ResourceReference{
-			ID: productRef.ID,
-		},
-		VersionID: releaseRef.ID,
-		Owner:     transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK())),
-	}
+	return ref
 }
 
 func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	productPlanRef := accessRequest.GetReferenceByGVK(catalog.ProductPlanGVK())
 	if productPlanRef.ID == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	return &models.ResourceReference{
@@ -711,7 +722,7 @@ func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *mod
 
 func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName string) *models.ResourceReference {
 	if accessRequest == nil {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 	if unitName == "" {
 		unitName = defaultUnit
@@ -733,12 +744,12 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName s
 	}
 
 	if quotaName == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	quotaRef := accessRequest.GetReferenceByNameAndGVK(quotaName, catalog.QuotaGVK())
 	if quotaRef.ID == "" {
-		return nil
+		return &models.ResourceReference{ID: unknown}
 	}
 
 	return &models.ResourceReference{

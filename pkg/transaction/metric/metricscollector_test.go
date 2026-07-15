@@ -18,6 +18,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -25,6 +26,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -1317,6 +1319,168 @@ func TestGetOrgGUID(t *testing.T) {
 			cfg := createCentralCfg(srv.URL, "test-env")
 			agent.Initialize(cfg)
 			assert.Equal(t, tc.wantGUID, GetOrgGUID())
+		})
+	}
+}
+
+// TestUnresolvedContextPlaceholders verifies that when an API has no resolvable
+// resource, the fields aren't dropped by omitempty. Filled by "none" or "unknown"
+func TestUnresolvedContextPlaceholders(t *testing.T) {
+	agent.InitializeForTest(nil)
+	c := &collector{}
+
+	tests := map[string]struct {
+		run  func() interface{}
+		want interface{}
+	}{
+		"createSubscriptionDetail with nil accessRequest": {
+			run:  func() interface{} { return c.createSubscriptionDetail(nil) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"createAppDetail with nil managedApp": {
+			run: func() interface{} { return c.createAppDetail(nil) },
+			want: &models.ApplicationResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				ConsumerOrgID:     none,
+				Owner:             &models.Owner{Type: none},
+			},
+		},
+		"getProduct with nil accessRequest": {
+			run: func() interface{} { return c.getProduct(nil) },
+			want: &models.ProductResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				VersionID:         unknown,
+			},
+		},
+		"getAPIServiceRevision with nil accessRequest": {
+			run:  func() interface{} { return c.getAPIServiceRevision(nil) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getAssetResource with nil accessRequest": {
+			run:  func() interface{} { return c.getAssetResource(nil) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getProductPlan with nil accessRequest": {
+			run:  func() interface{} { return c.getProductPlan(nil) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getQuota with nil accessRequest": {
+			run:  func() interface{} { return c.getQuota(nil, "") },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"createAPIDetail with API not found in cache": {
+			run: func() interface{} {
+				return c.createAPIDetail(models.APIDetails{ID: "remoteApiId_undiscovered", Name: "undiscovered"})
+			},
+			want: &models.APIResourceReference{
+				ResourceReference: models.ResourceReference{ID: "remoteApiId_undiscovered"},
+				Name:              "undiscovered",
+				APIServiceID:      unknown,
+				Owner:             &models.Owner{Type: unknown},
+			},
+		},
+		"createSubscriptionDetail with resolved accessRequest but no subscription reference": {
+			run:  func() interface{} { return c.createSubscriptionDetail(&management.AccessRequest{}) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"createAppDetail with resolved managedApp but no application reference": {
+			run: func() interface{} {
+				return c.createAppDetail(createManagedApplication("app-inner", "App Inner", ""))
+			},
+			want: &models.ApplicationResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				ConsumerOrgID:     none,
+				Owner:             &models.Owner{Type: none},
+			},
+		},
+		"getProduct with resolved accessRequest but no product references": {
+			run: func() interface{} { return c.getProduct(&management.AccessRequest{}) },
+			want: &models.ProductResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				VersionID:         unknown,
+			},
+		},
+		"getProduct with resolved product reference includes owner": {
+			run: func() interface{} {
+				ar := &management.AccessRequest{
+					ResourceMeta: apiv1.ResourceMeta{
+						Metadata: apiv1.Metadata{
+							References: []apiv1.Reference{
+								{Group: catalog.ProductGVK().Group, Kind: catalog.ProductGVK().Kind, ID: "prod-1"},
+								{Group: catalog.ProductReleaseGVK().Group, Kind: catalog.ProductReleaseGVK().Kind, ID: "rel-1"},
+							},
+						},
+					},
+				}
+				return c.getProduct(ar)
+			},
+			want: &models.ProductResourceReference{
+				ResourceReference: models.ResourceReference{ID: "prod-1"},
+				VersionID:         "rel-1",
+				Owner:             &models.Owner{Type: none},
+			},
+		},
+		"getAPIServiceRevision with resolved accessRequest but no instance reference": {
+			run:  func() interface{} { return c.getAPIServiceRevision(&management.AccessRequest{}) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getAssetResource with resolved accessRequest but no asset resource reference": {
+			run:  func() interface{} { return c.getAssetResource(&management.AccessRequest{}) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getProductPlan with resolved accessRequest but no product plan reference": {
+			run:  func() interface{} { return c.getProductPlan(&management.AccessRequest{}) },
+			want: &models.ResourceReference{ID: unknown},
+		},
+		"getQuota with resolved accessRequest but no quota reference": {
+			run:  func() interface{} { return c.getQuota(&management.AccessRequest{}, "") },
+			want: &models.ResourceReference{ID: unknown},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.run())
+		})
+	}
+}
+
+func TestGetAccessRequestAndManagedApp(t *testing.T) {
+	agent.InitializeForTest(nil)
+	cm := agent.GetCacheManager()
+	cm.AddManagedApplication(createManagedApplication("app-found", "found-app", ""))
+
+	c := &collector{logger: log.NewFieldLogger()}
+
+	tests := map[string]struct {
+		detail            transactionContext
+		wantAccessRequest bool
+		wantManagedApp    bool
+	}{
+		"no app info at all resolves neither": {
+			detail:            transactionContext{},
+			wantAccessRequest: false,
+			wantManagedApp:    false,
+		},
+		"app info present but managed app not in cache resolves neither": {
+			detail:            transactionContext{AppDetails: models.AppDetails{ID: "nope", Name: "nope-app"}},
+			wantAccessRequest: false,
+			wantManagedApp:    false,
+		},
+		"managed app found but no access request still resolves the managed app": {
+			detail:            transactionContext{AppDetails: models.AppDetails{ID: "irrelevant-id", Name: "found-app"}},
+			wantAccessRequest: false,
+			wantManagedApp:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			accessRequest, managedApp := c.getAccessRequestAndManagedApp(cm, tc.detail)
+			assert.Equal(t, tc.wantAccessRequest, accessRequest != nil)
+			assert.Equal(t, tc.wantManagedApp, managedApp != nil)
 		})
 	}
 }

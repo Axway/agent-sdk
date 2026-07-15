@@ -23,6 +23,7 @@ const (
 	transactionCountMetric  = "transaction.count"
 	transactionVolumeMetric = "transaction.volume"
 	unknown                 = "unknown"
+	none                    = "none"
 	metricDataVersion       = "3"
 	runtimeTypeManaged      = "managed"
 	runtimeTypeUnmanaged    = "unmanaged"

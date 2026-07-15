@@ -15,6 +15,7 @@ import (
 
 const (
 	unknown = "unknown"
+	none    = "none"
 	// SummaryEventProxyIDPrefix - Prefix for proxyID in summary event
 	SummaryEventProxyIDPrefix = "remoteApiId_"
 
@@ -53,23 +54,26 @@ func GetSubscriptionID(subscription *v1.ResourceInstance) string {
 // GetMarketplaceDetails -
 func GetMarketplaceDetails(ri *v1.ResourceInstance) *models.MarketplaceReference {
 	if ri == nil {
-		return nil
+		return &models.MarketplaceReference{GUID: none, ConsumerOrgID: none}
 	}
 
 	// Get Application Marketplace details
 	app := &management.ManagedApplication{}
 	err := app.FromInstance(ri)
 	if err != nil {
-		return nil
+		return &models.MarketplaceReference{GUID: none, ConsumerOrgID: none}
 	}
 
-	mr := &models.MarketplaceReference{
-		GUID: app.Marketplace.Name,
+	mr := &models.MarketplaceReference{GUID: none, ConsumerOrgID: none}
+	if app.Marketplace.Name != "" {
+		mr.GUID = app.Marketplace.Name
 	}
 
 	if app.Marketplace.Resource.Owner != nil {
 		mr.ConsumerTeamID = app.Marketplace.Resource.Owner.ID
-		mr.ConsumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
+		if app.Marketplace.Resource.Owner.Organization.ID != "" {
+			mr.ConsumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
+		}
 	}
 
 	return mr
