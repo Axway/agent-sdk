@@ -128,7 +128,9 @@ func (cv *cacheValidator) sequenceInSync() bool {
 	}
 
 	cachedSeq := cv.sequence.GetSequence()
-	if serverSeq != cachedSeq {
+	// At start-up or agent restart, because of the status change event, the serverSeq will always be higher with 1 than the cachedSeq.
+	// This avoids unnecessary rebuilding at start-up.
+	if serverSeq != cachedSeq+1 && serverSeq != cachedSeq {
 		cv.logger.
 			WithField("cachedSeq", cachedSeq).
 			WithField("serverSeq", serverSeq).

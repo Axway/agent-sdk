@@ -51,6 +51,11 @@ func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bo
 	return true
 }
 
+// HandleCache adds the API Service to the cache during discoveryCache's bulk rebuild.
+func (h *apiSvcHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	return h.agentCacheManager.AddAPIService(resource)
+}
+
 func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 

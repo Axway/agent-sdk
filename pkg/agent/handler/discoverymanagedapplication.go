@@ -30,6 +30,12 @@ func (h *discoveryManagedApplication) ShouldHandle(ctx context.Context, event *p
 	return true
 }
 
+// HandleCache builds the ManagedApplication cache during discoveryCache's bulk rebuild.
+func (h *discoveryManagedApplication) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.cache.AddManagedApplication(resource)
+	return nil
+}
+
 // Handle processes events triggered for ManagedApplications during discovery cache building
 func (h *discoveryManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

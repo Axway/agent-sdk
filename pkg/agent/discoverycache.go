@@ -290,8 +290,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 			}
 		}
 
-		action := getAction(ri.Metadata.State)
-		if err := dc.handleResource(ri, action); err != nil {
+		if err := dc.handleResource(ri); err != nil {
 			logger.
 				WithError(err).
 				Error("failed to handle resource")
@@ -301,15 +300,13 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 	return nil
 }
 
-func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action proto.Event_Type) error {
-	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
-	event := handler.NewEventFromResource(action, nil, ri)
+func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
 	for _, h := range dc.handlersByKind[ri.Kind] {
-		if !h.ShouldHandle(ctx, event) {
+		ch, ok := h.(handler.CacheHandler)
+		if !ok {
 			continue
 		}
-		err := h.Handle(ctx, nil, ri)
-		if err != nil {
+		if err := ch.HandleCache(ri); err != nil {
 			return err
 		}
 	}

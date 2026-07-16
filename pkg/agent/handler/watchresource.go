@@ -79,6 +79,12 @@ func (h *watchResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	return true
 }
 
+// HandleCache adds the watch resource to the cache during discoveryCache's bulk rebuild.
+func (h *watchResourceHandler) HandleCache(resource *v1.ResourceInstance) error {
+	h.agentCacheManager.AddWatchResource(resource)
+	return nil
+}
+
 func (h *watchResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 

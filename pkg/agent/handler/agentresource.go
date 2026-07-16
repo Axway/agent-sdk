@@ -100,6 +100,13 @@ func (h *agentResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	return true
 }
 
+// HandleCache stores the agent resource fetched during discoveryCache's bulk rebuild - equivalent
+// to what a live Event_UPDATED does for all three agent types.
+func (h *agentResourceHandler) HandleCache(resource *v1.ResourceInstance) error {
+	h.agentResourceManager.SetAgentResource(resource)
+	return nil
+}
+
 func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	subres := ""
 	if meta != nil {

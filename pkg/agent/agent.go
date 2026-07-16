@@ -823,16 +823,6 @@ func newHandlers() map[string][]handler.Handler {
 		}
 	}
 
-	agentResHandler := handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager, agent.apicClient)
-	handlers[management.APIServiceGVK().Kind] = append(handlers[management.APIServiceGVK().Kind], handler.NewAPISvcHandler(agent.cacheManager, envName))
-	handlers[management.APIServiceInstanceGVK().Kind] = append(handlers[management.APIServiceInstanceGVK().Kind], handler.NewInstanceHandler(agent.cacheManager, envName))
-	handlers[management.DiscoveryAgentGVK().Kind] = append(handlers[management.DiscoveryAgentGVK().Kind], agentResHandler)
-	handlers[management.TraceabilityAgentGVK().Kind] = append(handlers[management.TraceabilityAgentGVK().Kind], agentResHandler)
-	handlers[management.ComplianceAgentGVK().Kind] = append(handlers[management.ComplianceAgentGVK().Kind], agentResHandler)
-	for kind, proxyHandler := range agent.proxyResourceHandler.GetHandlers() {
-		handlers[kind] = append(handlers[kind], proxyHandler)
-	}
-
 	switch agent.cfg.GetAgentType() {
 	case config.DiscoveryAgent:
 		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)))
@@ -861,6 +851,17 @@ func newHandlers() map[string][]handler.Handler {
 			),
 		))
 		handlers[management.ComplianceRuntimeResultGVK().Kind] = append(handlers[management.ComplianceRuntimeResultGVK().Kind], handler.NewCRRHandler(agent.cacheManager))
+	}
+
+	handlers[management.APIServiceGVK().Kind] = append(handlers[management.APIServiceGVK().Kind], handler.NewAPISvcHandler(agent.cacheManager, envName))
+	handlers[management.APIServiceInstanceGVK().Kind] = append(handlers[management.APIServiceInstanceGVK().Kind], handler.NewInstanceHandler(agent.cacheManager, envName))
+
+	agentResHandler := handler.NewAgentResourceHandler(agent.agentResourceManager, sampling.GetGlobalSampling(), agent.cacheManager, agent.apicClient)
+	handlers[management.DiscoveryAgentGVK().Kind] = append(handlers[management.DiscoveryAgentGVK().Kind], agentResHandler)
+	handlers[management.TraceabilityAgentGVK().Kind] = append(handlers[management.TraceabilityAgentGVK().Kind], agentResHandler)
+	handlers[management.ComplianceAgentGVK().Kind] = append(handlers[management.ComplianceAgentGVK().Kind], agentResHandler)
+	for kind, proxyHandler := range agent.proxyResourceHandler.GetHandlers() {
+		handlers[kind] = append(handlers[kind], proxyHandler)
 	}
 
 	return handlers

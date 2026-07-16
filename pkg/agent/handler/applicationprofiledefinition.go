@@ -23,6 +23,12 @@ func (h *apdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool 
 	return true
 }
 
+// HandleCache adds the ApplicationProfileDefinition to the cache during discoveryCache's bulk rebuild.
+func (h *apdHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.agentCacheManager.AddApplicationProfileDefinition(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for Application Profile Definitions
 func (h *apdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

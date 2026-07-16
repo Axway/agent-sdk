@@ -23,6 +23,12 @@ func (h *ardHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool 
 	return true
 }
 
+// HandleCache adds the AccessRequestDefinition to the cache during discoveryCache's bulk rebuild.
+func (h *ardHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.agentCacheManager.AddAccessRequestDefinition(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for AccessRequests
 func (h *ardHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
