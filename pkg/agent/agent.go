@@ -268,10 +268,6 @@ func handleInitialization() error {
 	}
 
 	if util.IsNotTest() && agent.agentFeaturesCfg.ConnectionToCentralEnabled() {
-		// if credentials can expire and need to be deprovisioned then start the credential checker
-
-		registerCredentialChecker()
-
 		startTeamACLCache()
 	}
 
