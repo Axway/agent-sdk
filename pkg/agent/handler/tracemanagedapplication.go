@@ -30,6 +30,12 @@ func (h *traceManagedApplication) ShouldHandle(ctx context.Context, event *proto
 	return true
 }
 
+// HandleCache builds the ManagedApplication cache during discoveryCache's bulk rebuild.
+func (h *traceManagedApplication) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.cache.AddManagedApplication(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for ManagedApplications for trace agent
 func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

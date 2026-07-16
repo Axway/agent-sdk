@@ -153,6 +153,14 @@ func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
 	return true
 }
 
+func (m *mockHandler) HandleCache(ri *apiv1.ResourceInstance) error {
+	if m.kind != "" && ri.Kind != m.kind {
+		return nil
+	}
+	m.count = m.count + 1
+	return m.err
+}
+
 func newAPIServices(scope string) []*apiv1.ResourceInstance {
 	svc1, _ := management.NewAPIService("svc1", scope).AsInstance()
 	svc2, _ := management.NewAPIService("svc2", scope).AsInstance()

@@ -37,6 +37,13 @@ func (h *traceAccessRequestHandler) ShouldHandle(ctx context.Context, event *pro
 	return true
 }
 
+// HandleCache builds the AccessRequest cache during discoveryCache's bulk rebuild. The resource
+// is already fetched with embed=metadata.references, so no extra enrichment call is needed here.
+func (h *traceAccessRequestHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.cache.AddAccessRequest(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for AccessRequests for trace agent
 func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

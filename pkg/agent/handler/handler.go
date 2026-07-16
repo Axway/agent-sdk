@@ -20,6 +20,14 @@ type Handler interface {
 	ShouldHandle(context.Context, *proto.Event) bool
 }
 
+// CacheHandler is implemented by Handlers that participate in discoveryCache's bulk rebuild path -
+// there's no proto.Event/EventMeta to build during a rebuild, and the resource is always freshly
+// fetched (never a delete or subresource update), so it's a separate method rather than reusing
+// ShouldHandle/Handle. Handlers that don't implement it are simply skipped during a rebuild.
+type CacheHandler interface {
+	HandleCache(resource *v1.ResourceInstance) error
+}
+
 // This type is used for values added to context
 type ctxKey int
 

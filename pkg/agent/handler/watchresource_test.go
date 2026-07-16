@@ -60,6 +60,7 @@ func TestWatchResourceHandler(t *testing.T) {
 		if !handler.ShouldHandle(ctx, event) {
 			return nil
 		}
+
 		return handler.Handle(ctx, nil, res)
 	}
 

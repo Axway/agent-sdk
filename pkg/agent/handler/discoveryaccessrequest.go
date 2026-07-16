@@ -30,6 +30,12 @@ func (h *discoveryAccessRequest) ShouldHandle(ctx context.Context, event *proto.
 	return true
 }
 
+// HandleCache builds the AccessRequest cache during discoveryCache's bulk rebuild.
+func (h *discoveryAccessRequest) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.cache.AddAccessRequest(resource)
+	return nil
+}
+
 // Handle processes events triggered for AccessRequests during discovery cache building
 func (h *discoveryAccessRequest) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

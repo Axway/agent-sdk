@@ -27,6 +27,12 @@ func (c *idpHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool 
 	return true
 }
 
+// HandleCache adds the IdentityProviderMetadata to the cache during discoveryCache's bulk rebuild.
+func (c *idpHandler) HandleCache(resource *v1.ResourceInstance) error {
+	c.updateIDPMetadata(resource)
+	return nil
+}
+
 func (c *idpHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_DELETED {
