@@ -1323,6 +1323,20 @@ func TestGetOrgGUID(t *testing.T) {
 	}
 }
 
+// accessRequestWithReference builds an AccessRequest carrying a single resolvable
+// reference of the given kind, for testing the "reference resolves to a real value" path.
+func accessRequestWithReference(gvk apiv1.GroupVersionKind, id string) *management.AccessRequest {
+	return &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
+				References: []apiv1.Reference{
+					{Group: gvk.Group, Kind: gvk.Kind, ID: id},
+				},
+			},
+		},
+	}
+}
+
 // TestUnresolvedContextPlaceholders verifies that when an API has no resolvable
 // resource, the fields aren't dropped by omitempty. Filled by "none" or "unknown"
 func TestUnresolvedContextPlaceholders(t *testing.T) {
@@ -1383,6 +1397,12 @@ func TestUnresolvedContextPlaceholders(t *testing.T) {
 			run:  func() interface{} { return c.createSubscriptionDetail(&management.AccessRequest{}) },
 			want: &models.ResourceReference{ID: unknown},
 		},
+		"createSubscriptionDetail with resolved subscription reference returns real id": {
+			run: func() interface{} {
+				return c.createSubscriptionDetail(accessRequestWithReference(catalog.SubscriptionGVK(), "sub-1"))
+			},
+			want: &models.ResourceReference{ID: "sub-1"},
+		},
 		"createAppDetail with resolved managedApp but no application reference": {
 			run: func() interface{} {
 				return c.createAppDetail(createManagedApplication("app-inner", "App Inner", ""))
@@ -1391,6 +1411,20 @@ func TestUnresolvedContextPlaceholders(t *testing.T) {
 				ResourceReference: models.ResourceReference{ID: unknown},
 				ConsumerOrgID:     none,
 				Owner:             &models.Owner{Type: none},
+			},
+		},
+		"createAppDetail with resolved application reference and consumer org returns real values": {
+			run: func() interface{} {
+				appRI := createManagedApplication("app-resolved", "App Resolved", "org-resolved")
+				appRI.Metadata.References = []apiv1.Reference{
+					{Group: catalog.ApplicationGVK().Group, Kind: catalog.ApplicationGVK().Kind, ID: "app-cat-1"},
+				}
+				return c.createAppDetail(appRI)
+			},
+			want: &models.ApplicationResourceReference{
+				ResourceReference: models.ResourceReference{ID: "app-cat-1"},
+				ConsumerOrgID:     "org-resolved",
+				Owner:             &models.Owner{Type: unknown},
 			},
 		},
 		"getProduct with resolved accessRequest but no product references": {
@@ -1424,17 +1458,57 @@ func TestUnresolvedContextPlaceholders(t *testing.T) {
 			run:  func() interface{} { return c.getAPIServiceRevision(&management.AccessRequest{}) },
 			want: &models.ResourceReference{ID: unknown},
 		},
+		"getAPIServiceRevision with resolved instance reference returns real id": {
+			run: func() interface{} {
+				return c.getAPIServiceRevision(accessRequestWithReference(management.APIServiceInstanceGVK(), testInstName))
+			},
+			want: &models.ResourceReference{ID: testInstName},
+		},
 		"getAssetResource with resolved accessRequest but no asset resource reference": {
 			run:  func() interface{} { return c.getAssetResource(&management.AccessRequest{}) },
 			want: &models.ResourceReference{ID: unknown},
+		},
+		"getAssetResource with resolved asset resource reference returns real id": {
+			run: func() interface{} {
+				return c.getAssetResource(accessRequestWithReference(catalog.AssetResourceGVK(), "asset-1"))
+			},
+			want: &models.ResourceReference{ID: "asset-1"},
 		},
 		"getProductPlan with resolved accessRequest but no product plan reference": {
 			run:  func() interface{} { return c.getProductPlan(&management.AccessRequest{}) },
 			want: &models.ResourceReference{ID: unknown},
 		},
+		"getProductPlan with resolved product plan reference returns real id": {
+			run: func() interface{} {
+				return c.getProductPlan(accessRequestWithReference(catalog.ProductPlanGVK(), "plan-1"))
+			},
+			want: &models.ResourceReference{ID: "plan-1"},
+		},
 		"getQuota with resolved accessRequest but no quota reference": {
 			run:  func() interface{} { return c.getQuota(&management.AccessRequest{}, "") },
 			want: &models.ResourceReference{ID: unknown},
+		},
+		"getQuota with resolved quota reference returns real id": {
+			run: func() interface{} {
+				ar := &management.AccessRequest{
+					ResourceMeta: apiv1.ResourceMeta{
+						Metadata: apiv1.Metadata{
+							References: []apiv1.Reference{
+								{Group: catalog.QuotaGVK().Group, Kind: catalog.QuotaGVK().Kind, ID: "quota-1", Name: "myquota"},
+							},
+						},
+					},
+					References: []interface{}{
+						map[string]interface{}{
+							"kind": catalog.QuotaGVK().Kind,
+							"unit": defaultUnit,
+							"name": "catalog/AccessRequest/myquota",
+						},
+					},
+				}
+				return c.getQuota(ar, "")
+			},
+			want: &models.ResourceReference{ID: "quota-1"},
 		},
 	}
 

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,6 +129,11 @@ func TestResolveIDWithPrefix(t *testing.T) {
 }
 
 func TestGetMarketplaceDetails(t *testing.T) {
+	// "marketplace" as a string instead of an object triggers a real parse failure.
+	malformedInstance := &v1.ResourceInstance{}
+	err := json.Unmarshal([]byte(`{"marketplace":"not-an-object"}`), malformedInstance)
+	assert.NoError(t, err)
+
 	tests := map[string]struct {
 		ri       *v1.ResourceInstance
 		expected *models.MarketplaceReference
@@ -139,6 +145,10 @@ func TestGetMarketplaceDetails(t *testing.T) {
 		"resolved instance with no marketplace data returns none placeholders": {
 			ri:       &v1.ResourceInstance{},
 			expected: &models.MarketplaceReference{GUID: none, ConsumerOrgID: none},
+		},
+		"malformed instance returns unknown guid since marketplace context could not be determined": {
+			ri:       malformedInstance,
+			expected: &models.MarketplaceReference{GUID: unknown, ConsumerOrgID: none},
 		},
 	}
 

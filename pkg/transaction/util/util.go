@@ -61,7 +61,9 @@ func GetMarketplaceDetails(ri *v1.ResourceInstance) *models.MarketplaceReference
 	app := &management.ManagedApplication{}
 	err := app.FromInstance(ri)
 	if err != nil {
-		return &models.MarketplaceReference{GUID: none, ConsumerOrgID: none}
+		// a resource was found but couldn't be parsed. The marketplace context
+		// could not be determined.
+		return &models.MarketplaceReference{GUID: unknown, ConsumerOrgID: none}
 	}
 
 	mr := &models.MarketplaceReference{GUID: none, ConsumerOrgID: none}
