@@ -425,14 +425,20 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	// Go get the access request and managed app
 	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
 
+	apicDeployment, _, runtimeType := centralConfigFields()
+
 	me := &centralMetric{
-		Marketplace:   transutil.GetMarketplaceDetails(managedApp),
-		Subscription:  c.createSubscriptionDetail(accessRequest),
-		App:           c.createAppDetail(managedApp),
-		Product:       c.getProduct(accessRequest),
-		API:           c.createAPIDetail(detail.APIDetails),
-		AssetResource: c.getAssetResource(accessRequest),
-		ProductPlan:   c.getProductPlan(accessRequest),
+		Version:            metricDataVersion,
+		APICDeployment:     apicDeployment,
+		Environment:        &EnvironmentInfo{RuntimeType: runtimeType},
+		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
+		Subscription:       c.createSubscriptionDetail(accessRequest),
+		App:                c.createAppDetail(managedApp),
+		Product:            c.getProduct(accessRequest),
+		API:                c.createAPIDetail(detail.APIDetails),
+		AssetResource:      c.getAssetResource(accessRequest),
+		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
+		ProductPlan:        c.getProductPlan(accessRequest),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
@@ -617,6 +623,7 @@ func (c *collector) createAppDetail(appRI *v1.ResourceInstance) *models.Applicat
 			ID: appRef.ID,
 		},
 		ConsumerOrgID: orgID,
+		Owner:         transutil.ResolveAppOwnerFromManagedApp(appRI),
 	}
 }
 
@@ -625,14 +632,30 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		ResourceReference: models.ResourceReference{
 			ID: api.ID,
 		},
-		Name:       api.Name,
-		APIOwnerID: api.TeamID,
+		Name: api.Name,
 	}
-	svc := agent.GetCacheManager().GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	cacheManager := agent.GetCacheManager()
+	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}
+	ref.Owner = transutil.ResolveAPIOwnerFromInstance(svc)
 	return ref
+}
+
+// getAPIServiceRevision uses the APIServiceInstance reference on the AccessRequest as the
+// revision identifier. AccessRequests do not carry a direct APIServiceRevision reference.
+func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
+	if accessRequest == nil {
+		return nil
+	}
+
+	ref := accessRequest.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	if ref.ID == "" {
+		return nil
+	}
+
+	return &models.ResourceReference{ID: ref.ID}
 }
 
 func (c *collector) getAssetResource(accessRequest *management.AccessRequest) *models.ResourceReference {
@@ -667,6 +690,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 			ID: productRef.ID,
 		},
 		VersionID: releaseRef.ID,
+		Owner:     transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK())),
 	}
 }
 
@@ -727,6 +751,12 @@ func (c *collector) cleanup() {
 }
 
 func (c *collector) getOrgGUID() string {
+	return GetOrgGUID()
+}
+
+// GetOrgGUID parses the provider org GUID from the central auth token JWT.
+// Returns empty string if the token is unavailable or the claim is absent.
+func GetOrgGUID() string {
 	authToken, _ := agent.GetCentralAuthToken()
 	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	claims := jwt.MapClaims{}
@@ -734,9 +764,7 @@ func (c *collector) getOrgGUID() string {
 	if err != nil {
 		return ""
 	}
-
-	claim, ok := claims["org_guid"]
-	if ok {
+	if claim, ok := claims["org_guid"]; ok {
 		return claim.(string)
 	}
 	return ""
@@ -940,9 +968,10 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 	}
 }
 
-func (c *collector) setMetricsFromHistogram(metrics *centralMetric, histogram metrics.Histogram) {
-	metrics.Units.Transactions.Count = histogram.Count()
-	metrics.Units.Transactions.Response = &ResponseMetrics{
+func (c *collector) setMetricsFromHistogram(m *centralMetric, histogram metrics.Histogram) {
+	m.Units.Transactions.Count = histogram.Count()
+	m.Units.Transactions.Duration = int64(histogram.Mean() * float64(histogram.Count()))
+	m.Units.Transactions.Response = &ResponseMetrics{
 		Max: histogram.Max(),
 		Min: histogram.Min(),
 		Avg: histogram.Mean(),
@@ -975,11 +1004,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 		ID:        v4data.GetEventID(),
 		Timestamp: startTime,
 		Event:     metricEvent,
-		App:       c.orgGUID,
+		Org:       c.orgGUID,
 		Version:   "4",
 		Distribution: &V4EventDistribution{
 			Environment: agent.GetCentralConfig().GetEnvironmentID(),
-			Version:     "1",
 		},
 		Data: v4data,
 	}
@@ -1081,41 +1109,49 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters map[string]metrics.Counter, metric *centralMetric) {
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
-	subID, appID, apiID, group := metric.getKeyParts()
-	if consumerAppMap, ok := c.metricMap[subID]; ok {
-		if apiMap, ok := consumerAppMap[appID]; ok {
-			if apiStatusMap, ok := apiMap[apiID]; ok {
-				if _, ok := apiStatusMap[group]; ok {
-					c.storage.removeMetric(apiStatusMap[group])
-					delete(c.metricMap[subID][appID][apiID], group)
-					histogram.Clear()
-				}
 
-				// clean any counters, if needed
-				for k := range counters {
-					if apiStatusMap[k] != nil {
-						c.storage.removeMetric(apiStatusMap[k])
-					}
-					delete(c.metricMap[subID][appID][apiID], k)
-					delete(counters, k)
-				}
-			}
-			if len(c.metricMap[subID][appID][apiID]) == 0 {
-				delete(c.metricMap[subID][appID], apiID)
-			}
-		}
-		if len(c.metricMap[subID][appID]) == 0 {
-			delete(c.metricMap[subID], appID)
-		}
-	}
-	if len(c.metricMap[subID]) == 0 {
-		delete(c.metricMap, subID)
-	}
+	subID, appID, apiID, group := metric.getKeyParts()
+	c.removeMetricEntries(subID, appID, apiID, group, histogram, counters)
+	c.removeEmptyKeys(subID, appID, apiID)
+
 	c.logger.
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField("apiName", metric.API.Name).
 		Info("Published metrics report for API")
+}
+
+func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histogram metrics.Histogram, counters map[string]metrics.Counter) {
+	apiStatusMap, ok := c.metricMap[subID][appID][apiID]
+	if !ok {
+		return
+	}
+
+	if _, ok := apiStatusMap[group]; ok {
+		c.storage.removeMetric(apiStatusMap[group])
+		delete(c.metricMap[subID][appID][apiID], group)
+		histogram.Clear()
+	}
+
+	for k := range counters {
+		if apiStatusMap[k] != nil {
+			c.storage.removeMetric(apiStatusMap[k])
+		}
+		delete(c.metricMap[subID][appID][apiID], k)
+		delete(counters, k)
+	}
+}
+
+func (c *collector) removeEmptyKeys(subID, appID, apiID string) {
+	if len(c.metricMap[subID][appID][apiID]) == 0 {
+		delete(c.metricMap[subID][appID], apiID)
+	}
+	if len(c.metricMap[subID][appID]) == 0 {
+		delete(c.metricMap[subID], appID)
+	}
+	if len(c.metricMap[subID]) == 0 {
+		delete(c.metricMap, subID)
+	}
 }
 
 func GetStatusText(statusCode string) string {

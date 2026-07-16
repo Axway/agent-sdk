@@ -29,7 +29,8 @@ const (
 	OauthTLSAuthSANURI       = "tlsClientAuthSanURI"
 	OauthRegistrationToken   = "registration"
 
-	IDPTokenURL = "idpTokenURL"
+	IDPTokenURL         = "idpTokenURL"
+	AgentDetailTeamName = "teamName"
 
 	APIKey = "apiKey"
 

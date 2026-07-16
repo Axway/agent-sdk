@@ -36,7 +36,7 @@ type Provider interface {
 	GetSupportedTokenAuthMethods() []string
 	GetSupportedResponseMethod() []string
 	RegisterClient(clientMetadata ClientMetadata) (ClientMetadata, error)
-	UnregisterClient(clientID, accessToken, registrationClientURI string) error
+	UnregisterClient(clientID, accessToken, registrationClientURI string, scopes []string, grantType string) error
 	Validate() error
 	GetConfig() corecfg.IDPConfig
 	GetMetadata() *AuthorizationServerMetadata
@@ -62,7 +62,7 @@ type typedIDP interface {
 	preProcessClientRequest(clientRequest *clientMetadata)
 	validateExtraProperties(extraProps map[string]interface{}) error
 	postProcessClientRegistration(clientRes ClientMetadata, idp corecfg.IDPConfig, apiClient coreapi.Client) error
-	postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client) error
+	postProcessClientUnregister(clientID string, idp corecfg.IDPConfig, apiClient coreapi.Client, scopes []string, grantType string) error
 }
 
 type providerOptions struct {
@@ -96,7 +96,9 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 	var idpType typedIDP
 	switch idp.GetIDPType() {
 	case TypeOkta:
-		idpType = &okta{}
+		idpType = &okta{
+			logger: log.NewFieldLogger().WithComponent("oktaProvider").WithPackage("sdk.agent.authz.oauth"),
+		}
 	default: // keycloak, generic
 		idpType = &genericIDP{}
 	}
@@ -130,13 +132,6 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		p.authServerMetadata = metadata
 	}
 
-	// Fail-fast Okta validation: if Okta group/policy is configured, verify the resources exist.
-	if idp.GetIDPType() == TypeOkta {
-		if err := validateOktaConfiguredResources(idp, apiClient); err != nil {
-			return nil, fmt.Errorf("failed to validate Okta configuration for provider %q: %w", p.cfg.GetIDPName(), err)
-		}
-	}
-
 	// No OAuth client is needed to request token for access token based authentication to IdP
 	if p.cfg.GetAuthConfig() != nil && p.cfg.GetAuthConfig().GetType() != corecfg.AccessToken {
 		authClient, err := p.createAuthClient()
@@ -151,7 +146,52 @@ func NewProvider(idp corecfg.IDPConfig, tlsCfg corecfg.TLSConfig, proxyURL strin
 		return nil, fmt.Errorf("invalid extra properties for %s provider: %w", idp.GetIDPType(), err)
 	}
 
+	if idp.GetIDPType() == TypeOkta {
+		if err := validateOktaTemplates(idp); err != nil {
+			return nil, err
+		}
+		if err := validateOktaGroupExists(idp, apiClient); err != nil {
+			return nil, err
+		}
+	}
+
 	return p, nil
+}
+
+func validateOktaTemplates(idp corecfg.IDPConfig) error {
+	appTmplCfg, ok := idp.(interface{ GetAppNameTemplate() string })
+	if !ok {
+		return nil
+	}
+	appTmpl := appTmplCfg.GetAppNameTemplate()
+	test := strings.NewReplacer(
+		corecfg.OktaPlaceholderMPApplicationName, "x",
+		corecfg.OktaPlaceholderOwningTeam, "x",
+		corecfg.OktaPlaceholderCredentialName, "x",
+	).Replace(appTmpl)
+	if strings.Contains(test, "%") {
+		return fmt.Errorf("%s contains unrecognized placeholder: %q", corecfg.OktaAppNameTemplateKey, appTmpl)
+	}
+
+	polTmplCfg, ok := idp.(interface{ GetPolicyNameTemplate() string })
+	if !ok {
+		return nil
+	}
+	polTmpl := polTmplCfg.GetPolicyNameTemplate()
+	if !strings.Contains(polTmpl, corecfg.OktaPlaceholderScope) {
+		return fmt.Errorf("%s missing required placeholder %s: %q", corecfg.OktaPolicyNameTemplateKey, corecfg.OktaPlaceholderScope, polTmpl)
+	}
+	if !strings.Contains(polTmpl, corecfg.OktaPlaceholderOAuthFlow) {
+		return fmt.Errorf("%s missing required placeholder %s: %q", corecfg.OktaPolicyNameTemplateKey, corecfg.OktaPlaceholderOAuthFlow, polTmpl)
+	}
+	test = strings.NewReplacer(
+		corecfg.OktaPlaceholderScope, "x",
+		corecfg.OktaPlaceholderOAuthFlow, "x",
+	).Replace(polTmpl)
+	if strings.Contains(test, "%") {
+		return fmt.Errorf("%s contains unrecognized placeholder: %q", corecfg.OktaPolicyNameTemplateKey, polTmpl)
+	}
+	return nil
 }
 
 func FetchMetadata(apiClient coreapi.Client, metadataURL string) (*AuthorizationServerMetadata, error) {
@@ -320,12 +360,44 @@ func (p *provider) GetAuthorizationEndpoint() string {
 	return ""
 }
 
-// GetSupportedScopes - returns the global scopes supported by provider
+// GetSupportedScopes - returns the scopes supported by the provider, with any
+// configured exclude list removed. Non-Okta providers receive the raw scope list
+// unchanged.
 func (p *provider) GetSupportedScopes() []string {
-	if p.authServerMetadata != nil {
-		return p.authServerMetadata.ScopesSupported
+	if p.authServerMetadata == nil {
+		return []string{""}
 	}
-	return []string{""}
+	scopes := p.authServerMetadata.ScopesSupported
+	if p.cfg.GetIDPType() != TypeOkta {
+		return scopes
+	}
+	ex, ok := p.cfg.(interface{ GetScopeExclude() string })
+	if !ok || ex.GetScopeExclude() == "" {
+		return scopes
+	}
+	return filterScopeExclude(scopes, ex.GetScopeExclude())
+}
+
+// filterScopeExclude removes any scope that appears in the comma-separated
+// exclude string. Order of the remaining scopes is preserved.
+func filterScopeExclude(scopes []string, exclude string) []string {
+	if len(scopes) == 0 {
+		return scopes
+	}
+	denied := make(map[string]struct{})
+	for _, s := range strings.Split(exclude, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			denied[s] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(scopes))
+	for _, s := range scopes {
+		if _, blocked := denied[s]; !blocked {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // GetSupportedGrantTypes - returns the grant type supported by provider
@@ -408,6 +480,15 @@ func (p *provider) RegisterClient(clientReq ClientMetadata) (ClientMetadata, err
 		err = json.Unmarshal(response.Body, clientRes)
 		if !p.cfg.GetAuthConfig().UseRegistrationAccessToken() {
 			clientRes.RegistrationAccessToken = ""
+		}
+		// Some IdPs (notably Okta for client_credentials) omit scope/grant_types
+		// from the registration response. Carry them from the request so the
+		// post-hook (per-scope policy assignment) has the data it needs.
+		if len(clientRes.Scope) == 0 {
+			clientRes.Scope = Scopes(clientReq.GetScopes())
+		}
+		if len(clientRes.GrantTypes) == 0 {
+			clientRes.GrantTypes = clientReq.GetGrantTypes()
 		}
 
 		if err := p.runPostRegistrationHook(clientRes, authPrefix, token); err != nil {
@@ -547,7 +628,7 @@ func addResponseType(clientRequest *clientMetadata, responseType string) {
 }
 
 // UnregisterClient - removes the OAuth client from IDP
-func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string) error {
+func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI string, scopes []string, grantType string) error {
 	logger := p.logger.
 		WithField(logProvider, p.cfg.GetIDPName()).
 		WithField(logClientID, clientID)
@@ -563,38 +644,30 @@ func (p *provider) UnregisterClient(clientID, accessToken, registrationClientURI
 		accessToken = token
 	}
 
-	// Run provider-specific cleanup first (for example, Okta group/policy unassignment), but always continue to OAuth client deletion so transient cleanup failures do not
-	// leave active clients behind. Return whichever error(s) occurred after both steps.
-	cleanupErr := p.runPostUnregisterHook(clientID)
-	unregisterErr := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken)
-
-	if unregisterErr == nil {
-		logger.Info("unregistered client")
-	}
-
-	switch {
-	case cleanupErr != nil && unregisterErr != nil:
-		return fmt.Errorf("failed to fully remove the Okta client. Provider cleanup failed and OAuth client deletion failed. cleanup error: %v; delete error: %w", cleanupErr, unregisterErr)
-	case unregisterErr != nil:
-		return fmt.Errorf("failed to delete the OAuth client from the identity provider: %w", unregisterErr)
-	case cleanupErr != nil:
-		return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
-	default:
+	// Continue to OAuth client deletion even on cleanup error; leave no active clients behind.
+	if p.cfg.GetIDPType() == TypeOkta {
+		cleanupErr := p.runPostUnregisterHook(clientID, scopes, grantType)
+		if cleanupErr != nil {
+			return fmt.Errorf("failed to complete provider cleanup after client unregistration. Manual cleanup in Okta may be required: %w", cleanupErr)
+		}
 		return nil
 	}
+
+	// if not Okta, attempt to unregister everything depending on the provided values
+	unregisterErr := p.attemptUnregisterAll(logger, clientID, registrationClientURI, authPrefix, accessToken)
+	if unregisterErr != nil {
+		return fmt.Errorf("failed to delete the OAuth client from the identity provider: %w", unregisterErr)
+	}
+	logger.Info("successfully unregistered client")
+	return nil
 }
 
-// runPostUnregisterHook calls provider-specific unregister hook when applicable.
-func (p *provider) runPostUnregisterHook(clientID string) error {
-	if p.cfg.GetIDPType() != TypeOkta {
-		return nil
-	}
-	return p.idpType.postProcessClientUnregister(clientID, p.cfg, p.apiClient)
+func (p *provider) runPostUnregisterHook(clientID string, scopes []string, grantType string) error {
+	return p.idpType.postProcessClientUnregister(clientID, p.cfg, p.apiClient, scopes, grantType)
 }
 
 // attemptUnregisterAll tries unregistering with the registration URI, the standard
 // registration endpoint (base + /clientID) and finally as a query-parameter.
-
 func (p *provider) attemptUnregisterAll(logger log.FieldLogger, clientID, registrationClientURI, authPrefix, accessToken string) error {
 	var err error
 
@@ -649,7 +722,7 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		for k, v := range p.queryParameters {
 			queryParams[k] = v
 		}
-		queryParams["client_id"] = clientID
+		queryParams[metaClientID] = clientID
 	} else {
 		queryParams = p.queryParameters
 	}
@@ -666,7 +739,7 @@ func (p *provider) tryUnregister(unregisterURL, clientID, authPrefix, accessToke
 		return err
 	}
 
-	if response.Code == http.StatusNoContent {
+	if response.Code >= 200 && response.Code < 400 {
 		return nil
 	}
 

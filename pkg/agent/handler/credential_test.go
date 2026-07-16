@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+
 func TestCredentialHandler(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
@@ -196,7 +197,7 @@ func TestCredentialHandler(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_deleting(t *testing.T) {
+func TestCredentialHandlerDeleting(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
@@ -311,7 +312,7 @@ func TestCredentialHandler_deleting(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_update(t *testing.T) {
+func TestCredentialHandlerUpdate(t *testing.T) {
 	crdRI, _ := crd.AsInstance()
 
 	tests := []struct {
@@ -412,7 +413,7 @@ func TestCredentialHandler_update(t *testing.T) {
 	}
 }
 
-func TestCredentialHandler_wrong_kind(t *testing.T) {
+func TestCredentialHandlerWrongKind(t *testing.T) {
 	c := &mockClient{}
 	p := &mockCredProv{}
 	handler := NewCredentialHandler(p, c, nil)
@@ -425,7 +426,7 @@ func TestCredentialHandler_wrong_kind(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_creds(t *testing.T) {
+func TestCreds(t *testing.T) {
 	c := provCreds{
 		managedApp: "app-name",
 		credType:   "api-key",
@@ -728,7 +729,7 @@ type mockCredProv struct {
 func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.expectedProvType = provision
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
@@ -738,7 +739,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status prov.RequestStatus) {
 	m.expectedProvType = deprovision
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
@@ -748,11 +749,18 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.RequestStatus, credentails prov.Credential) {
 	m.expectedProvType = update
 	v := cr.(*provCreds)
-	assert.Equal(m.t, m.expectedAppDetails, v.appDetails)
+	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
 	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus, &mockProvCredential{}
+}
+
+func assertMapContains(t *testing.T, actual, expected map[string]interface{}) {
+	t.Helper()
+	for k, v := range expected {
+		assert.Equal(t, v, actual[k], "expected map to contain key %q", k)
+	}
 }
 
 func (m *mockCredProv) GetIgnoredCredentialTypes() []string {
@@ -792,7 +800,7 @@ func decrypt(pk string, alg, hash string, data map[string]interface{}) map[strin
 	return data
 }
 
-func Test_encrypt(t *testing.T) {
+func TestEncrypt(t *testing.T) {
 	var crdSchema = `{
     "type": "object",
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -843,7 +851,7 @@ func Test_encrypt(t *testing.T) {
 		},
 		{
 			name:       "should encrypt when the algorithm is RSA-OAEP",
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  pub,
 			privateKey: priv,
@@ -859,7 +867,7 @@ func Test_encrypt(t *testing.T) {
 		{
 			name:       "should return an error when the hash is unknown",
 			hasErr:     true,
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "fake",
 			publicKey:  pub,
 			privateKey: priv,
@@ -867,7 +875,7 @@ func Test_encrypt(t *testing.T) {
 		{
 			name:       "should return an error when the public key cannot be parsed",
 			hasErr:     true,
-			alg:        "RSA-OAEP",
+			alg:        util.RsaOaep,
 			hash:       "SHA256",
 			publicKey:  "fake",
 			privateKey: priv,
@@ -1069,9 +1077,9 @@ func TestExternalCredentialOnPending(t *testing.T) {
 			}
 
 			p := &mockExternalCredProv{
-				t:             t,
+				t:              t,
 				expectedStatus: expectedStatus,
-				provisionErr:  tc.provisionErr,
+				provisionErr:   tc.provisionErr,
 			}
 
 			c := &credClient{

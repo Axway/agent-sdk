@@ -1,11 +1,31 @@
 package agent
 
 import (
+	"github.com/Axway/agent-sdk/pkg/apic"
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+type idpClientAdapter struct{ client apic.Client }
+
+func (a *idpClientAdapter) GetAPIV1ResourceInstances(query map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
+	return a.client.GetAPIV1ResourceInstances(query, url)
+}
+
+func (a *idpClientAdapter) CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	return a.client.CreateOrUpdateResource(ri)
+}
+
+func (a *idpClientAdapter) CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
+	return a.client.CreateSubResource(rm, subs)
+}
+
+func (a *idpClientAdapter) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	return a.client.GetResource(url)
+}
 
 func manageIDPResource(idpLogger log.FieldLogger, idp config.IDPConfig) string {
 	if !ManageIDPResourcesEnabled() {
@@ -63,7 +83,7 @@ func manageIDPResourceFromMetadata(idpLogger log.FieldLogger, idpCfg config.IDPC
 		idpType = idpCfg.GetIDPType()
 	}
 
-	idpLifecycle := oauth.NewIDPEngageLifecycle(agent.apicClient, agent.cacheManager)
+	idpLifecycle := oauth.NewIDPEngageLifecycle(&idpClientAdapter{agent.apicClient}, agent.cacheManager)
 	name, err := idpLifecycle.CreateEngageResourcesFromMetadata(idpLogger, idpCfg, idpType, idpName, metadata, agent.cfg.GetAPIServerVersionURL(), getEnvCredentialPolicies(idpLogger))
 	if err != nil {
 		idpLogger.WithError(err).Warn("unable to create or find IdentityProvider resource in Engage")

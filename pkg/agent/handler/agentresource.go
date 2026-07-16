@@ -88,16 +88,16 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 	agentRes := h.agentResourceManager.GetAgentResource()
-	if agentRes == nil || agentRes.GetSelfLink() != resource.GetSelfLink() {
-		h.logger.WithField("selfLink", resource.GetSelfLink()).Trace("skipping handling agent resource")
+	if agentRes == nil || agentRes.Metadata.ID != resource.Metadata.ID {
+		h.logger.WithField("id", resource.Metadata.ID).
+			WithField("selfLink", resource.GetSelfLink()).Trace("skipping handling agent resource")
 		return nil
 	}
 	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
 		h.handleUpdateTrigger(resource)
 	}
-	handlerFunc(action, subres, resource)
 
-	return nil
+	return handlerFunc(action, subres, resource)
 }
 
 func (h *agentResourceHandler) handleUpdateTrigger(resource *v1.ResourceInstance) {

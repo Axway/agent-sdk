@@ -52,10 +52,14 @@ func (h *traceAccessRequestHandler) Handle(ctx context.Context, meta *proto.Even
 		return nil
 	}
 
-	if h.shouldProcessForTrace(ar.Status, ar.Metadata.State) {
+	if h.shouldProcessForAgent(ar.Status, ar.Metadata.State) {
 		cachedAccessReq := h.cache.GetAccessRequest(resource.Metadata.ID)
-		if cachedAccessReq == nil {
-			h.cache.AddAccessRequest(resource)
+		if cachedAccessReq == nil || len(cachedAccessReq.Metadata.References) == 0 {
+			enriched, err := h.client.GetResource(resource.GetSelfLink() + "?embed=metadata.references")
+			if err != nil || enriched == nil {
+				enriched = resource
+			}
+			h.cache.AddAccessRequest(enriched)
 		}
 	}
 	return nil

@@ -43,7 +43,7 @@ func (h *traceManagedApplication) Handle(ctx context.Context, _ *proto.EventMeta
 		return nil
 	}
 
-	if h.shouldProcessForTrace(app.Status, app.Metadata.State) {
+	if h.shouldProcessForAgent(app.Status, app.Metadata.State) {
 		cachedApp := h.cache.GetManagedApplication(resource.Metadata.ID)
 		if cachedApp == nil {
 			h.cache.AddManagedApplication(resource)

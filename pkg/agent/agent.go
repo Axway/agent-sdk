@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -77,9 +78,10 @@ type agentData struct {
 	streamer             *stream.StreamerClient
 	authProviderRegistry oauth.ProviderRegistry
 
-	finalizeAgentInit func() error
-	publishingLock    *sync.Mutex
-	ardLock           sync.Mutex
+	finalizeAgentInit      func() error
+	publishingLock         *sync.Mutex
+	publishingLockAcquired atomic.Bool
+	ardLock                sync.Mutex
 
 	status                       string
 	applicationProfileDefinition string
@@ -818,6 +820,8 @@ func newHandlers() []handler.Handler {
 			handler.NewARDHandler(agent.cacheManager),
 			handler.NewAPDHandler(agent.cacheManager),
 			handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName),
+			handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager),
+			handler.NewDiscoveryAccessRequestHandler(agent.cacheManager),
 			handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()),
 		)
 	case config.TraceabilityAgent:

@@ -18,6 +18,7 @@ type mockIDPClient struct {
 	getInstances   func(map[string]string, string) ([]*apiv1.ResourceInstance, error)
 	createOrUpdate func(apiv1.Interface) (*apiv1.ResourceInstance, error)
 	createSubRes   func(apiv1.ResourceMeta, map[string]interface{}) error
+	getResource    func(string) (*apiv1.ResourceInstance, error)
 }
 
 func (m *mockIDPClient) GetAPIV1ResourceInstances(q map[string]string, url string) ([]*apiv1.ResourceInstance, error) {
@@ -28,6 +29,12 @@ func (m *mockIDPClient) CreateOrUpdateResource(ri apiv1.Interface) (*apiv1.Resou
 }
 func (m *mockIDPClient) CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error {
 	return m.createSubRes(rm, subs)
+}
+func (m *mockIDPClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
+	if m.getResource == nil {
+		return nil, nil
+	}
+	return m.getResource(url)
 }
 
 // mockIdpCache satisfies idpCache for lifecycle tests.
@@ -167,6 +174,9 @@ func TestCreateEngageResourcesIDPCreateError(t *testing.T) {
 				getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
 				},
+				getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+					return nil, nil
+				},
 				createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					created++
 					return nil, errors.New("create error")
@@ -200,6 +210,9 @@ func TestCreateEngageResourcesPolicyError(t *testing.T) {
 			client := &mockIDPClient{
 				getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
+				},
+				getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+					return nil, nil
 				},
 				createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					created++
@@ -240,6 +253,9 @@ func TestCreateEngageResourcesMetadataWriteError(t *testing.T) {
 			client := &mockIDPClient{
 				getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
+				},
+				getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+					return nil, nil
 				},
 				createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					created++
@@ -287,6 +303,9 @@ func TestCreateEngageResourcesSuccess(t *testing.T) {
 				getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
 				},
+				getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+					return nil, nil
+				},
 				createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
 					created++
 					inst, _ := ri.AsInstance()
@@ -313,6 +332,55 @@ func TestCreateEngageResourcesSuccess(t *testing.T) {
 			assert.Equal(t, tc.wantSubRes, subResCalled)
 		})
 	}
+}
+
+func TestCreateEngageResourcesGetResourceError(t *testing.T) {
+	created := 0
+	client := &mockIDPClient{
+		getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+			return []*apiv1.ResourceInstance{}, nil
+		},
+		getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+			return nil, errors.New("get resource error")
+		},
+		createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+			created++
+			inst, _ := ri.AsInstance()
+			return inst, nil
+		},
+		createSubRes: noOpCreateSubRes,
+	}
+
+	metadata, idpCfg := makeTestMetadata(t)
+	_, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+	assert.Nil(t, err)
+	assert.Equal(t, 2, created)
+}
+
+func TestCreateEngageResourcesIDPFoundViaGetResource(t *testing.T) {
+	// When GetResource finds an existing IDP, creation is skipped but metadata is still created.
+	created := 0
+	existingIDP := idpRI("existing-idp")
+	client := &mockIDPClient{
+		getInstances: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+			return []*apiv1.ResourceInstance{}, nil
+		},
+		getResource: func(_ string) (*apiv1.ResourceInstance, error) {
+			return existingIDP, nil
+		},
+		createOrUpdate: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+			created++
+			inst, _ := ri.AsInstance()
+			return inst, nil
+		},
+		createSubRes: noOpCreateSubRes,
+	}
+
+	metadata, idpCfg := makeTestMetadata(t)
+	resultName, err := NewIDPEngageLifecycle(client, newMockIdpCache()).CreateEngageResourcesFromMetadata(newTestLogger(), idpCfg, idpCfg.GetIDPType(), idpCfg.GetIDPName(), metadata, "/env", management.EnvironmentPoliciesCredentials{})
+	assert.NoError(t, err)
+	assert.Equal(t, existingIDP.GetName(), resultName)
+	assert.Equal(t, 1, created, "only metadata should be created when IDP already exists")
 }
 
 func newTestLogger() log.FieldLogger {

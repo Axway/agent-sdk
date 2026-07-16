@@ -94,12 +94,21 @@ func (c *watchClient) recv() error {
 
 	select {
 	case c.cfg.events <- event:
+		c.logEventReceipt(event)
 		return nil
 	case <-c.cfg.ctx.Done():
 		return c.cfg.ctx.Err()
 	case <-c.stream.Context().Done():
 		return c.stream.Context().Err()
 	}
+}
+
+func (c *watchClient) logEventReceipt(event *proto.Event) {
+	if event == nil || event.GetPayload() == nil || event.GetPayload().GetKind() == "" || event.GetPayload().GetName() == "" {
+		return
+	}
+
+	c.logger.WithField("kind", event.GetPayload().GetKind()).WithField("name", event.GetPayload().GetName()).Trace("received event from Engage")
 }
 
 func (c *watchClient) sendPingResponse(id string) {

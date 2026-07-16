@@ -3,11 +3,35 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	testIDPName     = "test"
+	testMetaURL     = "test"
+	testAccessTok   = "accessToken"
+	testIDPTypeOkta = "okta"
+
+	envKeyIDPName                   = "AGENTFEATURES_IDP_NAME_1"
+	envKeyIDPType                   = "AGENTFEATURES_IDP_TYPE_1"
+	envKeyIDPMetadataURL            = "AGENTFEATURES_IDP_METADATAURL_1"
+	envKeyIDPRequestHeaders         = "AGENTFEATURES_IDP_REQUESTHEADERS_1"
+	envKeyIDPQueryParams            = "AGENTFEATURES_IDP_QUERYPARAMS_1"
+	envKeyIDPAuthType               = "AGENTFEATURES_IDP_AUTH_TYPE_1"
+	envKeyIDPAuthAccessToken        = "AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1"
+	envKeyIDPAuthClientID           = "AGENTFEATURES_IDP_AUTH_CLIENTID_1"
+	envKeyIDPAuthClientSecret       = "AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1"
+	envKeyIDPAuthRequestHeaders     = "AGENTFEATURES_IDP_AUTH_REQUESTHEADERS_1"
+	envKeyIDPAuthQueryParams        = "AGENTFEATURES_IDP_AUTH_QUERYPARAMS_1"
+	envKeyIDPOktaAppNameTemplate    = "AGENTFEATURES_IDP_OKTA_APPNAME_TEMPLATE_1"
+	envKeyIDPOktaPolicyNameTemplate = "AGENTFEATURES_IDP_OKTA_POLICYNAME_TEMPLATE_1"
+	envKeyIDPOktaScopeSources       = "AGENTFEATURES_IDP_OKTA_SCOPE_SOURCES_1"
+	envKeyIDPOktaScopeExclude       = "AGENTFEATURES_IDP_OKTA_SCOPE_EXCLUDE_1"
 )
 
 func setEnvVars(t *testing.T, env map[string]string) {
@@ -32,7 +56,7 @@ func parseExternalIDP(t *testing.T) ExternalIDPConfig {
 	return agentFeatures.ExternalIDPConfig
 }
 
-func assertIDPRoundTrip(t *testing.T, idp IDPConfig, expectedOktaGroup string, expectedOktaPolicy string) {
+func assertIDPRoundTrip(t *testing.T, idp IDPConfig) {
 	t.Helper()
 	buf, err := json.Marshal(idp)
 	assert.NoError(t, err)
@@ -52,23 +76,11 @@ func assertIDPRoundTrip(t *testing.T, idp IDPConfig, expectedOktaGroup string, e
 	assert.Equal(t, idp.GetAuthConfig().GetClientSecret(), parsedIDP.GetAuthConfig().GetClientSecret())
 	assert.Equal(t, len(idp.GetAuthConfig().GetRequestHeaders()), len(parsedIDP.GetAuthConfig().GetRequestHeaders()))
 	assert.Equal(t, len(idp.GetAuthConfig().GetQueryParams()), len(parsedIDP.GetAuthConfig().GetQueryParams()))
-
-	if expectedOktaGroup != "" {
-		assert.Equal(t, expectedOktaGroup, idp.GetOktaGroup())
-		assert.Equal(t, expectedOktaGroup, parsedIDP.GetOktaGroup())
-	}
-	if expectedOktaPolicy != "" {
-		assert.Equal(t, expectedOktaPolicy, idp.GetOktaPolicy())
-		assert.Equal(t, expectedOktaPolicy, parsedIDP.GetOktaPolicy())
-	}
 }
 
 type externalIDPTestCase struct {
-	name       string
-	envNames   map[string]string
-	oktaGroup  string
-	oktaPolicy string
-	hasError   bool
+	envNames map[string]string
+	hasError bool
 }
 
 func runExternalIDPTestCase(t *testing.T, tc externalIDPTestCase) {
@@ -83,132 +95,173 @@ func runExternalIDPTestCase(t *testing.T, tc externalIDPTestCase) {
 	}
 	assert.NoError(t, err)
 	for _, idp := range idpCfgs.GetIDPList() {
-		assertIDPRoundTrip(t, idp, tc.oktaGroup, tc.oktaPolicy)
+		assertIDPRoundTrip(t, idp)
 	}
 }
 
+func mergeEnv(base, extra map[string]string) map[string]string {
+	out := make(map[string]string, len(base)+len(extra))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	return out
+}
+
 func TestExternalIDPConfig(t *testing.T) {
-	testCases := []externalIDPTestCase{
-		{
-			name:     "no external IDP config",
-			envNames: map[string]string{},
-			hasError: false,
+	baseOkta := map[string]string{
+		envKeyIDPName:            testIDPName,
+		envKeyIDPType:            testIDPTypeOkta,
+		envKeyIDPMetadataURL:     testMetaURL,
+		envKeyIDPAuthType:        AccessToken,
+		envKeyIDPAuthAccessToken: testAccessTok,
+	}
+
+	cases := map[string]externalIDPTestCase{
+		"no external IDP config": {envNames: map[string]string{}},
+		"no name in IDP config": {
+			envNames: map[string]string{envKeyIDPMetadataURL: testMetaURL},
+			hasError: true,
 		},
-		{
-			name: "no name in IDP config",
+		"no metadata URL in IDP config": {
+			envNames: map[string]string{envKeyIDPName: testIDPName},
+			hasError: true,
+		},
+		"no auth config in IDP config": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_METADATAURL_1": "test",
+				envKeyIDPName:        testIDPName,
+				envKeyIDPMetadataURL: testMetaURL,
 			},
 			hasError: true,
 		},
-		{
-			name: "no metadata URL in IDP config",
+		"invalid IDP auth type config": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1": "test",
+				envKeyIDPName:        testIDPName,
+				envKeyIDPMetadataURL: testMetaURL,
+				envKeyIDPAuthType:    "invalid",
 			},
 			hasError: true,
 		},
-		{
-			name: "no auth config in IDP config",
+		"accessToken auth config with no token": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":        "test",
-				"AGENTFEATURES_IDP_METADATAURL_1": "test",
+				envKeyIDPName:        testIDPName,
+				envKeyIDPMetadataURL: testMetaURL,
+				envKeyIDPAuthType:    AccessToken,
 			},
 			hasError: true,
 		},
-		{
-			name: "invalid IDP auth type config in IDP config",
+		"accessToken auth config with valid token": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":        "test",
-				"AGENTFEATURES_IDP_METADATAURL_1": "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":   "invalid",
+				envKeyIDPName:            testIDPName,
+				envKeyIDPMetadataURL:     testMetaURL,
+				envKeyIDPAuthType:        AccessToken,
+				envKeyIDPAuthAccessToken: testAccessTok,
+			},
+		},
+		"okta appname template config via env var": {
+			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaAppNameTemplate: OktaPlaceholderMPApplicationName}),
+		},
+		"okta policy name template config via env var": {
+			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaPolicyNameTemplate: OktaPlaceholderScope}),
+		},
+		"okta scope sources config via env var": {
+			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeSources: "swagger,okta"}),
+		},
+		"okta scope exclude config via env var": {
+			envNames: mergeEnv(baseOkta, map[string]string{envKeyIDPOktaScopeExclude: "openid,profile"}),
+		},
+		"client auth config with no clientid/secret": {
+			envNames: map[string]string{
+				envKeyIDPName:        testIDPName,
+				envKeyIDPMetadataURL: testMetaURL,
+				envKeyIDPAuthType:    Client,
 			},
 			hasError: true,
 		},
-		{
-			name: "accessToken auth config with no token in IDP config",
+		"client auth config with no client secret": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":        "test",
-				"AGENTFEATURES_IDP_METADATAURL_1": "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":   "accessToken",
+				envKeyIDPName:         testIDPName,
+				envKeyIDPMetadataURL:  testMetaURL,
+				envKeyIDPAuthType:     Client,
+				envKeyIDPAuthClientID: "client-id",
 			},
 			hasError: true,
 		},
-		{
-			name: "accessToken auth config with valid token in IDP config",
+		"client auth config with valid client config": {
 			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":             "test",
-				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
-				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
+				envKeyIDPName:               testIDPName,
+				envKeyIDPMetadataURL:        testMetaURL,
+				envKeyIDPRequestHeaders:     `{"hdr":"value"}`,
+				envKeyIDPQueryParams:        `{"param":"value"}`,
+				envKeyIDPAuthType:           Client,
+				envKeyIDPAuthClientID:       "client-id",
+				envKeyIDPAuthClientSecret:   "client-secret",
+				envKeyIDPAuthRequestHeaders: `{"authhdr":"value"}`,
+				envKeyIDPAuthQueryParams:    `{"authparam":"value"}`,
 			},
-			hasError: false,
-		},
-		{
-			name: "okta group config via env var",
-			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":             "test",
-				"AGENTFEATURES_IDP_TYPE_1":             "okta",
-				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
-				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
-				"AGENTFEATURES_IDP_OKTA_GROUP_1":       "MyAppUsers",
-			},
-			oktaGroup: "MyAppUsers",
-			hasError:  false,
-		},
-		{
-			name: "okta policy config via env var",
-			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":             "test",
-				"AGENTFEATURES_IDP_TYPE_1":             "okta",
-				"AGENTFEATURES_IDP_METADATAURL_1":      "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":        "accessToken",
-				"AGENTFEATURES_IDP_AUTH_ACCESSTOKEN_1": "accessToken",
-				"AGENTFEATURES_IDP_OKTA_POLICY_1":      "marketplacePolicy",
-			},
-			oktaPolicy: "marketplacePolicy",
-			hasError:   false,
-		},
-		{
-			name: "client auth config with no clientid/secret in IDP config",
-			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":        "test",
-				"AGENTFEATURES_IDP_METADATAURL_1": "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":   "client",
-			},
-			hasError: true,
-		},
-		{
-			name: "client auth config with no client secret in IDP config",
-			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":          "test",
-				"AGENTFEATURES_IDP_METADATAURL_1":   "test",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":     "client",
-				"AGENTFEATURES_IDP_AUTH_CLIENTID_1": "client-id",
-			},
-			hasError: true,
-		},
-		{
-			name: "client auth config with valid client config in IDP config",
-			envNames: map[string]string{
-				"AGENTFEATURES_IDP_NAME_1":                "test",
-				"AGENTFEATURES_IDP_METADATAURL_1":         "test",
-				"AGENTFEATURES_IDP_REQUESTHEADERS_1":      "{\"hdr\":\"value\"}",
-				"AGENTFEATURES_IDP_QUERYPARAMS_1":         "{\"param\":\"value\"}",
-				"AGENTFEATURES_IDP_AUTH_TYPE_1":           "client",
-				"AGENTFEATURES_IDP_AUTH_CLIENTID_1":       "client-id",
-				"AGENTFEATURES_IDP_AUTH_CLIENTSECRET_1":   "client-secret",
-				"AGENTFEATURES_IDP_AUTH_REQUESTHEADERS_1": "{\"authhdr\":\"value\"}",
-				"AGENTFEATURES_IDP_AUTH_QUERYPARAMS_1":    "{\"authparam\":\"value\"}",
-			},
-			hasError: false,
 		},
 	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
 			runExternalIDPTestCase(t, tc)
+		})
+	}
+}
+
+func TestOktaIDPConfigGetters(t *testing.T) {
+	cases := map[string]struct {
+		cfg                *IDPConfiguration
+		wantAppTemplate    string
+		wantPolicyTemplate string
+		wantScopeSources   string
+		wantScopeExclude string
+		wantGroup          string
+	}{
+		"nil okta config returns all defaults": {
+			cfg:                &IDPConfiguration{},
+			wantAppTemplate:    defaultOktaAppNameTemplate,
+			wantPolicyTemplate: defaultOktaPolicyNameTemplate,
+			wantScopeSources:   defaultOktaScopeSources,
+			wantScopeExclude: defaultOktaScopeExclude,
+			wantGroup:          "",
+		},
+		"configured values are returned": {
+			cfg: &IDPConfiguration{Okta: &OktaIDPConfiguration{
+				Group:              "Marketplace",
+				AppNameTemplate:    "my-" + OktaPlaceholderCredentialName,
+				PolicyNameTemplate: OktaPlaceholderScope,
+				ScopeSources:       "swagger",
+				ScopeExclude:     "openid",
+			}},
+			wantAppTemplate:    "my-" + OktaPlaceholderCredentialName,
+			wantPolicyTemplate: OktaPlaceholderScope,
+			wantScopeSources:   "swagger",
+			wantScopeExclude: "openid",
+			wantGroup:          "Marketplace",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.wantAppTemplate, tc.cfg.GetAppNameTemplate())
+			assert.Equal(t, tc.wantPolicyTemplate, tc.cfg.GetPolicyNameTemplate())
+			assert.Equal(t, tc.wantScopeSources, tc.cfg.GetScopeSources())
+			assert.Equal(t, tc.wantScopeExclude, tc.cfg.GetScopeExclude())
+			assert.Equal(t, tc.wantGroup, tc.cfg.GetOktaGroup())
+		})
+	}
+}
+
+func TestRemovedSymbols(t *testing.T) {
+	typ := reflect.TypeFor[OktaIDPConfiguration]()
+	cases := map[string]struct{}{
+		"Policy": {},
+	}
+	for field := range cases {
+		t.Run(field, func(t *testing.T) {
+			_, found := typ.FieldByName(field)
+			assert.False(t, found, "field %q must not exist on OktaIDPConfiguration", field)
 		})
 	}
 }

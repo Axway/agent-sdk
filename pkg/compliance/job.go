@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -65,7 +66,7 @@ func (j *runtimeComplianceJob) publishResources(results *runtimeResults) {
 			WithField("riskScore", result.RiskScore)
 
 		logger.Debug("creating/updating compliance runtime result")
-		_, err = agent.GetCentralClient().CreateOrUpdateResource(crr)
+		_, err = agent.GetCentralClient().CreateOrUpdateResource(crr, apic.WithSkipSetSpecHash(true))
 		if err != nil {
 			logger.WithError(err).Error("failed to create/update runtime compliance result")
 			continue

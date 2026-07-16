@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 
@@ -21,13 +22,11 @@ const defaultCacheStoragePath = "./data/cache"
 const (
 	apiServicesKey         = "apiServices"
 	apiServiceInstancesKey = "apiServiceInstances"
-	instanceCountKey       = "instanceCount"
 	credReqDefKey          = "credReqDef"
 	accReqDefKey           = "accReqDef"
 	appProfDefKey          = "appProfDef"
 	teamsKey               = "teams"
 	managedAppKey          = "managedApp"
-	subscriptionsKey       = "subscriptions"
 	accReqKey              = "accReq"
 	idpMetadataKey         = "idpMetadata"
 	watchSequenceKey       = "watchSequence"
@@ -42,6 +41,7 @@ type Manager interface {
 	HasLoadedPersistedCache() bool
 	SaveCache()
 	Flush()
+	FlushKind(kind string)
 
 	// API Service cache related methods
 	AddAPIService(resource *v1.ResourceInstance) error
@@ -136,6 +136,8 @@ type Manager interface {
 	GetWatchResourceByName(group, kind, name string) *v1.ResourceInstance
 	DeleteWatchResource(group, kind, id string) error
 
+	GetCachedResourcesByKind(group, kind, scopeName string) map[string]time.Time
+
 	ApplyResourceReadLock()
 	ReleaseResourceReadLock()
 }
@@ -150,15 +152,13 @@ type cacheManager struct {
 	jobs.Job
 	logger                  log.FieldLogger
 	apiMap                  cache.Cache
-	instanceCountMap        cache.Cache
 	instanceMap             cache.Cache
 	managedApplicationMap   cache.Cache
 	accessRequestMap        cache.Cache
 	watchResourceMap        cache.Cache
 	idpMetadataMap          cache.Cache
-	subscriptionMap         cache.Cache
 	sequenceCache           cache.Cache
-	resourceCacheReadLock   sync.Mutex
+	resourceCacheReadLock   sync.RWMutex
 	cacheLock               sync.Mutex
 	persistedCache          cache.Cache
 	teams                   cache.Cache
@@ -205,10 +205,8 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 		createResourceLoader(c.setLoadedCache, accReqDefKey),
 		createResourceLoader(c.setLoadedCache, appProfDefKey),
 		createResourceLoader(c.setLoadedCache, managedAppKey),
-		createResourceLoader(c.setLoadedCache, subscriptionsKey),
 		createResourceLoader(c.setLoadedCache, accReqKey),
 		createResourceLoader(c.setLoadedCache, watchResourceKey),
-		createInstanceCountLoader(c.setLoadedCache, instanceCountKey),
 		createTeamLoader(c.setLoadedCache, teamsKey),
 		createSequenceLoader(c.setLoadedCache, watchSequenceKey),
 		createResourceLoader(c.setLoadedCache, complianceRuntimeKey),
@@ -250,8 +248,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.apiMap = lc
 	case apiServiceInstancesKey:
 		c.instanceMap = lc
-	case instanceCountKey:
-		c.instanceCountMap = lc
 	case credReqDefKey:
 		c.crdMap = lc
 	case accReqDefKey:
@@ -262,8 +258,6 @@ func (c *cacheManager) setLoadedCache(lc cache.Cache, key string) {
 		c.teams = lc
 	case managedAppKey:
 		c.managedApplicationMap = lc
-	case subscriptionsKey:
-		c.subscriptionMap = lc
 	case accReqKey:
 		c.accessRequestMap = lc
 	case watchResourceKey:
@@ -408,17 +402,17 @@ func (c *cacheManager) GetSequence(watchTopicName string) int64 {
 }
 
 func (c *cacheManager) ApplyResourceReadLock() {
-	c.resourceCacheReadLock.Lock()
+	c.resourceCacheReadLock.RLock()
 }
 
 func (c *cacheManager) ReleaseResourceReadLock() {
-	c.resourceCacheReadLock.Unlock()
+	c.resourceCacheReadLock.RUnlock()
 }
 
 // Flush empties the persistent cache and all internal caches
 func (c *cacheManager) Flush() {
-	c.ApplyResourceReadLock()
-	defer c.ReleaseResourceReadLock()
+	c.resourceCacheReadLock.Lock()
+	defer c.resourceCacheReadLock.Unlock()
 	c.logger.Debug("resetting the persistent cache")
 
 	c.accessRequestMap.Flush()
@@ -430,7 +424,6 @@ func (c *cacheManager) Flush() {
 	c.instanceMap.Flush()
 	c.managedApplicationMap.Flush()
 	c.sequenceCache.Flush()
-	c.subscriptionMap.Flush()
 	c.watchResourceMap.Flush()
 	c.idpMetadataMap.Flush()
 	c.SaveCache()

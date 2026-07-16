@@ -218,43 +218,52 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 
 	status := h.prov.CredentialDeprovision(provCreds)
 
-	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred)
+	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred, app)
 }
 
-func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger, ctx context.Context, cred *management.Credential) {
-	if status.GetStatus() == prov.Success {
-		if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
-			err := provCreds.idpProvisioner.UnregisterClient()
-			if err != nil {
-				logger.
-					WithError(err).
-					WithField("client_id", provCreds.idpProvisioner.GetIDPCredentialData().GetClientID()).
-					WithField("provider", provCreds.GetIDPProvider().GetName()).
-					Warn("error deprovisioning credential request from IDP, please ask administrator to remove the client from IdP")
-			}
-		}
-
-		ri, _ := cred.AsInstance()
-		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
-
-		// update sub resources when expire
-		if cred.Metadata.State != v1.ResourceDeleting {
-			cred.State.Name = v1.Inactive
-			cred.Status.Level = prov.Success.String()
-			cred.Status.Reasons = []v1.ResourceStatusReason{}
-			h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
-				"state": cred.State,
-			})
-			h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
-				"status": cred.Status,
-			})
-		}
-	} else {
+func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger,
+	ctx context.Context, cred *management.Credential, app *management.ManagedApplication) {
+	if status.GetStatus() != prov.Success {
 		err := errors.New(status.GetMessage())
 		logger.WithError(err).Error("request status was not Success, skipping")
 		h.onError(ctx, cred, err)
 		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+		return
 	}
+
+	if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
+		clientID := provCreds.idpProvisioner.GetIDPCredentialData().GetClientID()
+		tokenURL := provCreds.GetIDPProvider().GetTokenEndpoint()
+		providerName := provCreds.GetIDPProvider().GetName()
+		logger = logger.WithField("client_id", clientID).WithField("provider", providerName).WithField("tokenURL", tokenURL)
+
+		unregisterErr := provCreds.idpProvisioner.UnregisterClient()
+		if unregisterErr != nil {
+			logger.WithError(unregisterErr).Warn("error deprovisioning credential request from IDP, please ask administrator to remove the client from IdP")
+		} else {
+			if err := removeClientIDFromManagedApp(logger, h.client, app, clientID, tokenURL); err != nil {
+				logger.WithError(err).Warn("error removing clientID from Managed App clientIDs array")
+			}
+		}
+	}
+
+	ri, _ := cred.AsInstance()
+	h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+
+	// update sub resources when expire
+	if cred.Metadata.State == v1.ResourceDeleting {
+		return
+	}
+
+	cred.State.Name = v1.Inactive
+	cred.Status.Level = prov.Success.String()
+	cred.Status.Reasons = []v1.ResourceStatusReason{}
+	h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
+		"state": cred.State,
+	})
+	h.client.CreateSubResource(cred.ResourceMeta, map[string]interface{}{
+		"status": cred.Status,
+	})
 }
 
 func (h *credentials) onPending(ctx context.Context, cred *management.Credential) *management.Credential {
@@ -272,12 +281,10 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	if provCreds.IsIDPCredential() && !isExternalCredential(cred) {
-		if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
-			logger.WithError(err).Error("error provisioning credential request with IDP")
-			h.onError(ctx, cred, err)
-			return cred
-		}
+	if err := h.registerIDPClient(cred, provCreds, app, logger); err != nil {
+		logger.WithError(err).Error("error registering IDP client")
+		h.onError(ctx, cred, err)
+		return cred
 	}
 
 	status, credentialData := h.provision(provCreds)
@@ -400,10 +407,21 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 
 	cred.SubResources = map[string]interface{}{
 		defs.XAgentDetails: util.GetAgentDetails(cred),
-		"data":             cred.Data,
 		"policies":         cred.Policies,
 		"state":            cred.State,
 	}
+	if !isSuspendOrEnableAction(provCreds) {
+		cred.SubResources["data"] = cred.Data
+	}
+}
+
+func isSuspendOrEnableAction(provCreds *provCreds) bool {
+	if provCreds == nil {
+		return false
+	}
+
+	action := provCreds.GetCredentialAction()
+	return action == prov.Suspend || action == prov.Enable
 }
 
 func (h *credentials) processCredentialLevelSuccess(provCreds *provCreds, cred *management.Credential) {
@@ -442,10 +460,9 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 			return cred
 		}
 
-		// if IDP and rotate the agent will register a new client
-		if action == prov.Rotate && provCreds.IsIDPCredential() && !isExternalCredential(cred) {
-			if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
-				logger.WithError(err).Error("error provisioning credential request with IDP")
+		if action == prov.Rotate {
+			if err := h.registerIDPClient(cred, provCreds, app, logger); err != nil {
+				logger.WithError(err).Error("error registering IDP client")
 				h.onError(ctx, cred, err)
 				return cred
 			}
@@ -585,6 +602,24 @@ func (h *credentials) newProvCreds(cr *management.Credential, app *management.Ma
 	}
 	provCred.idpProvisioner = idpProvisioner
 	return provCred, nil
+}
+
+// registerIDPClient registers a new IDP client and (for Okta) persists the reference
+// on the managed app. It is a no-op when not an IDP credential or is external.
+func (h *credentials) registerIDPClient(cred *management.Credential, provCreds *provCreds, app *management.ManagedApplication, logger log.FieldLogger) error {
+	if !provCreds.IsIDPCredential() || isExternalCredential(cred) {
+		return nil
+	}
+	if err := provCreds.idpProvisioner.RegisterClient(); err != nil {
+		return fmt.Errorf("error provisioning credential request with IDP: %w", err)
+	}
+	if provCreds.GetIDPProvider().GetConfig().GetIDPType() != oauth.TypeOkta {
+		return nil
+	}
+	return persistIDPClientOnManagedApplication(logger, h.client, app,
+		provCreds.GetIDPCredentialData().GetClientID(),
+		provCreds.GetIDPProvider().GetTokenEndpoint(),
+	)
 }
 
 // GetApplicationName gets the name of the managed application

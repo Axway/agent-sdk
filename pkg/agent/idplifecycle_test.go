@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
@@ -19,8 +20,8 @@ import (
 )
 
 const (
-	testEnvName = "test-env"
-	testIDPName = "test-idp"
+	testEnvName     = "test-env"
+	testIDPName     = "test-idp"
 	existingIDPName = "existing-idp"
 )
 
@@ -104,7 +105,7 @@ func TestManageIDPResourceFlagDisabled(t *testing.T) {
 					queryCallCount++
 					return nil, nil
 				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					inst, _ := ri.AsInstance()
 					return inst, nil
 				},
@@ -152,7 +153,7 @@ func TestManageIDPResourceExistingFound(t *testing.T) {
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{existingRI}, nil
 				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCalled = true
 					inst, _ := ri.AsInstance()
 					return inst, nil
@@ -245,7 +246,7 @@ func TestManageIDPResourceCreatedSuccessfully(t *testing.T) {
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
 				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCount++
 					inst, _ := ri.AsInstance()
 					return inst, nil
@@ -298,7 +299,7 @@ func TestManageIDPResourceCreateIDPError(t *testing.T) {
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
 				},
-				CreateOrUpdateResourceMock: func(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(_ apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCount++
 					return nil, errors.New("server error")
 				},
@@ -342,7 +343,7 @@ func TestManageIDPResourceProviderNotFound(t *testing.T) {
 			// Bare agent with an empty registry — no RegisterProvider call.
 			resetResources()
 			agent.apicClient = &mock.Client{
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCount++
 					inst, _ := ri.AsInstance()
 					return inst, nil
@@ -380,7 +381,7 @@ func TestManageIDPResourceMetadataWriteError(t *testing.T) {
 				GetAPIV1ResourceInstancesMock: func(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
 					return []*apiv1.ResourceInstance{}, nil
 				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCount++
 					if createCount == 1 {
 						inst, _ := ri.AsInstance()
@@ -508,7 +509,7 @@ func TestManageIDPResource(t *testing.T) {
 					queryCount++
 					return []*apiv1.ResourceInstance{}, nil
 				},
-				CreateOrUpdateResourceMock: func(ri apiv1.Interface) (*apiv1.ResourceInstance, error) {
+				CreateOrUpdateResourceMock: func(ri apiv1.Interface, _ ...apic.UpdateOption) (*apiv1.ResourceInstance, error) {
 					createCalled = true
 					if tc.createErr != nil {
 						return nil, tc.createErr

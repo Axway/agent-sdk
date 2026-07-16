@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -46,7 +47,7 @@ type client interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
 	UpdateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
-	CreateOrUpdateResource(data apiv1.Interface) (*apiv1.ResourceInstance, error)
+	CreateOrUpdateResource(data apiv1.Interface, opts ...apic.UpdateOption) (*apiv1.ResourceInstance, error)
 	CreateSubResource(rm apiv1.ResourceMeta, subs map[string]interface{}) error
 	DeleteResourceInstance(ri apiv1.Interface) error
 	GetResource(url string) (*apiv1.ResourceInstance, error)
