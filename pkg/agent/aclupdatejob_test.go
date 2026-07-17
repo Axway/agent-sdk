@@ -117,13 +117,14 @@ func TestACLUpdateHandlerJob(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			acl, _ := management.NewAccessControlList("", management.EnvironmentGVK().Kind, test.envName)
 			// initialize the http responses
 			s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				if strings.Contains(req.RequestURI, "/auth") {
 					token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 					resp.Write([]byte(token))
 				}
-				if strings.Contains(req.RequestURI, "/apis/management/v1/environments/"+test.envName+"/accesscontrollists") {
+				if strings.Contains(req.RequestURI, acl.GetKindLink()) {
 					aclReturn, _ := io.ReadAll(req.Body)
 					resp.WriteHeader(http.StatusCreated)
 					resp.Write(aclReturn)
