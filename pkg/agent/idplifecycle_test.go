@@ -13,7 +13,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -37,7 +37,7 @@ func setupIDPLifecycleAgent(t *testing.T, apicClient *mock.Client, flagEnabled b
 			resp.Write([]byte(`{"access_token":"tok","expires_in":9999}`))
 			return
 		}
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/"+testEnvName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/"+testEnvName) {
 			env := management.NewEnvironment(testEnvName)
 			buf, _ := json.Marshal(env)
 			resp.Write(buf)

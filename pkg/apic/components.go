@@ -3,7 +3,7 @@ package apic
 import (
 	"errors"
 
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 )
 
 var typeToComponent = map[string]map[string]string{

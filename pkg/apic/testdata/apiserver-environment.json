@@ -1,6 +1,6 @@
 {
   "group": "management",
-  "apiVersion": "v1alpha1",
+  "apiVersion": "v1",
   "kind": "Environment",
   "name": "apiserverenv",
   "title": "apiserverenv",

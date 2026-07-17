@@ -9,7 +9,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -149,7 +149,7 @@ func (cv *cacheValidator) validateKind(filter management.WatchTopicSpecFilters) 
 					Group: filter.Group,
 					Kind:  filter.Kind,
 				},
-				APIVersion: "v1alpha1",
+				APIVersion: "v1",
 			},
 		},
 	}

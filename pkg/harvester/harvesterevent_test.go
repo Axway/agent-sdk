@@ -27,7 +27,7 @@ func TestHarvesterEventConversion(t *testing.T) {
 			},
 			Metadata: &harvesterResourceMetadata{
 				ID:       "12345",
-				SelfLink: "/management/v1alpha1/environments/sample/apiserviceinstances/test",
+				SelfLink: "/management/v1/environments/sample/apiserviceinstances/test",
 				References: []*harvesterResourceReference{
 					{
 						ID:        "8ac9934a7d6f94aa017d70b6bc2204dd",
@@ -35,7 +35,7 @@ func TestHarvesterEventConversion(t *testing.T) {
 						Name:      "test",
 						ScopeKind: "Environment",
 						ScopeName: "sample",
-						SelfLink:  "/management/v1alpha1/environments/sample/apiservicerevisions/test",
+						SelfLink:  "/management/v1/environments/sample/apiservicerevisions/test",
 						Type:      "HARD",
 					},
 				},
@@ -43,13 +43,13 @@ func TestHarvesterEventConversion(t *testing.T) {
 					Id:       "123456",
 					Kind:     "Environment",
 					Name:     "sample",
-					SelfLink: "/management/v1alpha1/environments/sample",
+					SelfLink: "/management/v1/environments/sample",
 				},
 			},
 		},
 		Metadata: &proto.EventMeta{
 			WatchTopicID:       "1234",
-			WatchTopicSelfLink: "/management/v1alpha1/watchtopics/agent-watch",
+			WatchTopicSelfLink: "/management/v1/watchtopics/agent-watch",
 			SequenceID:         100,
 		},
 	}

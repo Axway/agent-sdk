@@ -11,8 +11,10 @@ package catalog
 
 // DocumentTemplateSpecUsage  (catalog.v1.DocumentTemplate)
 type DocumentTemplateSpecUsage struct {
+	// Defines if this template is for products or APIs. Defaults to products if not set.
+	Kind string `json:"kind,omitempty"`
 	// Defines if the DocumentTemplate should be used as the default one.
 	UseAsDefault bool `json:"useAsDefault,omitempty"`
-	// Defines if users should not be allowed to create free style documents.
+	// Defines if users should not be allowed to create free style documents. Only supported by Product templates.
 	Enforced bool `json:"enforced,omitempty"`
 }
