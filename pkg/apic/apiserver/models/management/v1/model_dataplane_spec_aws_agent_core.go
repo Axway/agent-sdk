@@ -15,4 +15,8 @@ type DataplaneSpecAwsAgentCore struct {
 	LogGroupPrefix string `json:"logGroupPrefix,omitempty"`
 	// If true, IAM authentication is enabled for agentcore-gateway requests.
 	IamAuthEnabled bool `json:"iamAuthEnabled,omitempty"`
+	// If true, CloudTrail-based consumer attribution is enabled for agentcore-gateway Cognito gateways.
+	CloudTrailEnabled bool `json:"cloudTrailEnabled,omitempty"`
+	// The S3 bucket holding the CloudTrail data-event logs for agentcore-gateway.
+	CloudTrailBucket string `json:"cloudTrailBucket,omitempty"`
 }
