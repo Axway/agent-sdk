@@ -88,16 +88,19 @@ func (h *agentResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	// Handle only ever reacts to a full resource update, a subresource update of x-agent-details
 	// (all kinds), or a subresource update of the traceability agent's agentstate (traceability
 	// only) - every other action/subresource combination would be a no-op.
-	if event.Type == proto.Event_SUBRESOURCEUPDATED &&
-		event.Metadata.Subresource != definitions.XAgentDetails &&
-		!(event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Metadata.Subresource == management.TraceabilityAgentAgentstateSubResourceName) {
-		return false
-	}
-	if event.Type != proto.Event_UPDATED && event.Type != proto.Event_SUBRESOURCEUPDATED {
+	if event.Type == proto.Event_CREATED || event.Type == proto.Event_DELETED {
 		return false
 	}
 
-	return true
+	if event.Type == proto.Event_UPDATED || event.Metadata.Subresource == definitions.XAgentDetails {
+		return true
+	}
+
+	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Type == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == management.TraceabilityAgentAgentstateSubResourceName {
+		return true
+	}
+
+	return false
 }
 
 // HandleCache stores the agent resource fetched during discoveryCache's bulk rebuild - equivalent
@@ -118,6 +121,10 @@ func (h *agentResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta
 
 	if action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails {
 		h.handleUpdateTrigger(resource)
+	}
+	if action == proto.Event_UPDATED {
+		h.agentResourceManager.SetAgentResource(resource)
+		return nil
 	}
 
 	return handlerFunc(action, subres, resource)
@@ -151,16 +158,11 @@ func (h *agentResourceHandler) handleUpdateTrigger(resource *v1.ResourceInstance
 }
 
 func (h *agentResourceHandler) handleDiscovery(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error {
-	if action == proto.Event_UPDATED {
-		h.agentResourceManager.SetAgentResource(resource)
-	}
 	return nil
 }
 
 func (h *agentResourceHandler) handleTraceability(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error {
 	switch {
-	case action == proto.Event_UPDATED:
-		h.agentResourceManager.SetAgentResource(resource)
 	case action == proto.Event_SUBRESOURCEUPDATED && subres == management.TraceabilityAgentAgentstateSubResourceName:
 		return h.handleTraceabilitySampling(resource)
 	}
@@ -196,8 +198,6 @@ func (h *agentResourceHandler) handleTraceabilitySampling(resource *v1.ResourceI
 
 func (h *agentResourceHandler) handleCompliance(action proto.Event_Type, subres string, resource *v1.ResourceInstance) error {
 	switch {
-	case action == proto.Event_UPDATED:
-		h.agentResourceManager.SetAgentResource(resource)
 	case action == proto.Event_SUBRESOURCEUPDATED && subres == definitions.XAgentDetails:
 		return h.handleComplianceProcessing(resource)
 	}

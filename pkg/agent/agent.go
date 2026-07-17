@@ -830,15 +830,15 @@ func newHandlers() map[string][]handler.Handler {
 		handlers[management.AccessRequestDefinitionGVK().Kind] = append(handlers[management.AccessRequestDefinitionGVK().Kind], handler.NewARDHandler(agent.cacheManager))
 		handlers[management.ApplicationProfileDefinitionGVK().Kind] = append(handlers[management.ApplicationProfileDefinitionGVK().Kind], handler.NewAPDHandler(agent.cacheManager))
 		handlers[management.EnvironmentGVK().Kind] = append(handlers[management.EnvironmentGVK().Kind], handler.NewEnvironmentHandler(agent.cacheManager, agent.cfg.GetCredentialConfig(), envName))
-		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewDiscoveryManagedApplicationHandler(agent.cacheManager))
-		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewDiscoveryAccessRequestHandler(agent.cacheManager))
+		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewManagedApplicationCacheHandler(agent.cacheManager))
+		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewAccessRequestCacheHandler(config.DiscoveryAgent, agent.cacheManager, nil))
 		handlers[management.IdentityProviderMetadataGVK().Kind] = append(handlers[management.IdentityProviderMetadataGVK().Kind], handler.NewIDPHandler(agent.cacheManager, agent.cfg.GetCredentialConfig()))
 	case config.TraceabilityAgent:
 		// Register managed application and access handler for traceability agent
 		// For discovery agent, the handlers gets registered while setting up provisioner
 		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager, handler.WithWatchTopicFeatures(agent.cfg)))
-		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewTraceAccessRequestHandler(agent.cacheManager, agent.apicClient))
-		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewTraceManagedApplicationHandler(agent.cacheManager))
+		handlers[management.AccessRequestGVK().Kind] = append(handlers[management.AccessRequestGVK().Kind], handler.NewAccessRequestCacheHandler(config.TraceabilityAgent, agent.cacheManager, agent.apicClient))
+		handlers[management.ManagedApplicationGVK().Kind] = append(handlers[management.ManagedApplicationGVK().Kind], handler.NewManagedApplicationCacheHandler(agent.cacheManager))
 	case config.ComplianceAgent:
 		addByKindsProvider(handler.NewWatchResourceHandler(agent.cacheManager,
 			handler.WithWatchTopicFeatures(agent.cfg),
