@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/Axway/agent-sdk/pkg/apic"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/mock"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 

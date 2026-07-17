@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODEL_PATH="${OUTDIR}/models/management/v1alpha1"
+MODEL_PATH="${OUTDIR}/models/management/v1"
 COMMENT="// GENERATE: The following code has been modified after code generation"
 
 # for each file that needs changing, you can re-use the following 2 vars if you wish
@@ -369,7 +369,7 @@ $SED -i "/EnvironmentTraceable\s/a ${REPLACE}" ${MODEL_PATH}/Environment.go
 go fmt ${MODEL_PATH}/Environment.go
 
 ######################
-# For management/v1alpha1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
+# For management/v1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
 # "Provision *CredentialSpecProvision"
 ######################
 SEARCH="\s*Provision\s*CredentialSpecProvision.*"
@@ -384,10 +384,10 @@ $SED -i "/CredentialSpecProvision/a ${REPLACE}" ${MODEL_PATH}/model_credential_s
 go fmt ${MODEL_PATH}/model_credential_spec.go
 
 ######################
-# For catalog/v1alpha1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
+# For catalog/v1/model_credential_spec.go, we want to turn "Provision CredentialSpecProvision" into
 # "Provision *CredentialSpecProvision"
 ######################
-CATALOG_MODEL_PATH="${OUTDIR}/models/catalog/v1alpha1"
+CATALOG_MODEL_PATH="${OUTDIR}/models/catalog/v1"
 SEARCH="\s*Provision\s*CredentialSpecProvision.*"
 REPLACE="Provision *CredentialSpecProvision \`json:\"provision,omitempty\"\`"
 # add a comment to the code
@@ -520,15 +520,15 @@ ONEOF_SEARCH="OneOf.*\s"
 ONEOF_REPLACE="interface{} "
 
 ######################
-# Remove the ManagementV1alpha1 prefix from the resources generated
+# Remove the ManagementV1 prefix from the resources generated
 ######################
-MV1_SEARCH="ManagementV1alpha1"
+MV1_SEARCH="ManagementV1"
 MV1_REPLACE=""
 
 ######################
-# Remove the CatalogV1alpha1 prefix from the resources generated
+# Remove the CatalogV1 prefix from the resources generated
 ######################
-CV1_SEARCH="CatalogV1alpha1"
+CV1_SEARCH="CatalogV1"
 CV1_REPLACE=""
 
 ######################

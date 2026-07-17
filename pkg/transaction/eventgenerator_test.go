@@ -14,8 +14,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
@@ -36,7 +36,7 @@ func createMapperTestConfig(authURL, tenantID, apicDeployment, envName, envID st
 			TenantID:                  tenantID,
 			APICDeployment:            apicDeployment,
 			Environment:               envName,
-			APIServerVersion:          "v1alpha1",
+			APIServerVersion:          "v1",
 			UsageReporting:            corecfg.NewUsageReporting("https://platform.xxx.com"),
 			MetricReporting:           corecfg.NewMetricReporting(),
 			ReportActivityFrequency:   2 * time.Minute,

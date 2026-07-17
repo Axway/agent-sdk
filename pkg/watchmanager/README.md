@@ -15,7 +15,7 @@ Amplify Central provides a gRPC based watch service that provides the ability to
 #### WatchTopic Example
 ```yaml
 group: management
-apiVersion: v1alpha1
+apiVersion: v1
 kind: WatchTopic
 name: sample-watch-topic
 title: sample-watch-topic
