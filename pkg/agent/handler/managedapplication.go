@@ -46,7 +46,6 @@ func WithManagedAppIDPRegistry(registry oauth.IdPRegistry) func(c *managedApplic
 	}
 }
 
-// NewManagedApplicationHandler creates a Handler for Credentials
 func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client, opts ...func(c *managedApplication)) Handler {
 	ma := &managedApplication{
 		prov:   prov,
