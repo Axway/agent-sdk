@@ -1337,55 +1337,293 @@ func accessRequestWithReference(gvk apiv1.GroupVersionKind, id string) *manageme
 	}
 }
 
-// TestUnresolvedContextPlaceholders verifies that when an API has no resolvable
-// resource, the fields aren't dropped by omitempty. Filled by "none" or "unknown"
-func TestUnresolvedContextPlaceholders(t *testing.T) {
-	agent.InitializeForTest(nil)
+// TestCreateSubscriptionDetail verifies subscription.id falls back to "unknown"
+// instead of being dropped when the reference isn't resolvable.
+func TestCreateSubscriptionDetail(t *testing.T) {
 	c := &collector{}
 
 	tests := map[string]struct {
-		run  func() interface{}
-		want interface{}
+		accessRequest *management.AccessRequest
+		want          *models.ResourceReference
 	}{
-		"createSubscriptionDetail with nil accessRequest": {
-			run:  func() interface{} { return c.createSubscriptionDetail(nil) },
-			want: &models.ResourceReference{ID: unknown},
+		"nil accessRequest returns unknown subscription id placeholder": {
+			accessRequest: nil,
+			want:          &models.ResourceReference{ID: unknown},
 		},
-		"createAppDetail with nil managedApp": {
-			run: func() interface{} { return c.createAppDetail(nil) },
+		"resolved accessRequest but no subscription reference returns unknown placeholder": {
+			accessRequest: &management.AccessRequest{},
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved subscription reference returns real id": {
+			accessRequest: accessRequestWithReference(catalog.SubscriptionGVK(), "sub-1"),
+			want:          &models.ResourceReference{ID: "sub-1"},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.createSubscriptionDetail(tc.accessRequest))
+		})
+	}
+}
+
+// TestCreateAppDetail verifies application.id/consumerOrgId/owner fall back to
+// "unknown"/"none" instead of being dropped when the managed app or its
+// application reference isn't resolvable.
+func TestCreateAppDetail(t *testing.T) {
+	c := &collector{}
+
+	appWithApplicationRef := createManagedApplication("app-resolved", "App Resolved", "org-resolved")
+	appWithApplicationRef.Metadata.References = []apiv1.Reference{
+		{Group: catalog.ApplicationGVK().Group, Kind: catalog.ApplicationGVK().Kind, ID: "app-cat-1"},
+	}
+
+	tests := map[string]struct {
+		appRI *apiv1.ResourceInstance
+		want  *models.ApplicationResourceReference
+	}{
+		"nil managedApp returns unknown and none placeholders": {
+			appRI: nil,
 			want: &models.ApplicationResourceReference{
 				ResourceReference: models.ResourceReference{ID: unknown},
 				ConsumerOrgID:     none,
 				Owner:             &models.Owner{Type: none},
 			},
 		},
-		"getProduct with nil accessRequest": {
-			run: func() interface{} { return c.getProduct(nil) },
+		"resolved managedApp but no application reference returns unknown and none placeholders": {
+			appRI: createManagedApplication("app-inner", "App Inner", ""),
+			want: &models.ApplicationResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				ConsumerOrgID:     none,
+				Owner:             &models.Owner{Type: none},
+			},
+		},
+		"resolved application reference and consumer org returns real values": {
+			appRI: appWithApplicationRef,
+			want: &models.ApplicationResourceReference{
+				ResourceReference: models.ResourceReference{ID: "app-cat-1"},
+				ConsumerOrgID:     "org-resolved",
+				Owner:             &models.Owner{Type: unknown},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.createAppDetail(tc.appRI))
+		})
+	}
+}
+
+// TestGetProduct verifies product.id/versionId fall back to "unknown" instead of
+// being dropped when unresolvable, and that owner is only populated once the
+// product itself resolves.
+func TestGetProduct(t *testing.T) {
+	c := &collector{}
+
+	resolvedProductRef := &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
+				References: []apiv1.Reference{
+					{Group: catalog.ProductGVK().Group, Kind: catalog.ProductGVK().Kind, ID: "prod-1"},
+					{Group: catalog.ProductReleaseGVK().Group, Kind: catalog.ProductReleaseGVK().Kind, ID: "rel-1"},
+				},
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		want          *models.ProductResourceReference
+	}{
+		"nil accessRequest returns unknown placeholders": {
+			accessRequest: nil,
 			want: &models.ProductResourceReference{
 				ResourceReference: models.ResourceReference{ID: unknown},
 				VersionID:         unknown,
 			},
 		},
-		"getAPIServiceRevision with nil accessRequest": {
-			run:  func() interface{} { return c.getAPIServiceRevision(nil) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getAssetResource with nil accessRequest": {
-			run:  func() interface{} { return c.getAssetResource(nil) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getProductPlan with nil accessRequest": {
-			run:  func() interface{} { return c.getProductPlan(nil) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getQuota with nil accessRequest": {
-			run:  func() interface{} { return c.getQuota(nil, "") },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"createAPIDetail with API not found in cache": {
-			run: func() interface{} {
-				return c.createAPIDetail(models.APIDetails{ID: "remoteApiId_undiscovered", Name: "undiscovered"})
+		"resolved accessRequest but no product references returns unknown placeholders": {
+			accessRequest: &management.AccessRequest{},
+			want: &models.ProductResourceReference{
+				ResourceReference: models.ResourceReference{ID: unknown},
+				VersionID:         unknown,
 			},
+		},
+		"resolved product reference includes owner": {
+			accessRequest: resolvedProductRef,
+			want: &models.ProductResourceReference{
+				ResourceReference: models.ResourceReference{ID: "prod-1"},
+				VersionID:         "rel-1",
+				Owner:             &models.Owner{Type: none},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.getProduct(tc.accessRequest))
+		})
+	}
+}
+
+// TestGetAPIServiceRevision verifies apiServiceRevision.id falls back to "unknown"
+// instead of being dropped when the reference isn't resolvable.
+func TestGetAPIServiceRevision(t *testing.T) {
+	c := &collector{}
+
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		want          *models.ResourceReference
+	}{
+		"nil accessRequest returns unknown apiServiceRevision id placeholder": {
+			accessRequest: nil,
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved accessRequest but no instance reference returns unknown placeholder": {
+			accessRequest: &management.AccessRequest{},
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved instance reference returns real id": {
+			accessRequest: accessRequestWithReference(management.APIServiceInstanceGVK(), testInstName),
+			want:          &models.ResourceReference{ID: testInstName},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.getAPIServiceRevision(tc.accessRequest))
+		})
+	}
+}
+
+// TestGetAssetResource verifies assetResource.id falls back to "unknown" instead
+// of being dropped when the reference isn't resolvable.
+func TestGetAssetResource(t *testing.T) {
+	c := &collector{}
+
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		want          *models.ResourceReference
+	}{
+		"nil accessRequest returns unknown assetResource id placeholder": {
+			accessRequest: nil,
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved accessRequest but no asset resource reference returns unknown placeholder": {
+			accessRequest: &management.AccessRequest{},
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved asset resource reference returns real id": {
+			accessRequest: accessRequestWithReference(catalog.AssetResourceGVK(), "asset-1"),
+			want:          &models.ResourceReference{ID: "asset-1"},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.getAssetResource(tc.accessRequest))
+		})
+	}
+}
+
+// TestGetProductPlan verifies productPlan.id falls back to "unknown" instead of
+// being dropped when the reference isn't resolvable.
+func TestGetProductPlan(t *testing.T) {
+	c := &collector{}
+
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		want          *models.ResourceReference
+	}{
+		"nil accessRequest returns unknown productPlan id placeholder": {
+			accessRequest: nil,
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved accessRequest but no product plan reference returns unknown placeholder": {
+			accessRequest: &management.AccessRequest{},
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved product plan reference returns real id": {
+			accessRequest: accessRequestWithReference(catalog.ProductPlanGVK(), "plan-1"),
+			want:          &models.ResourceReference{ID: "plan-1"},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.getProductPlan(tc.accessRequest))
+		})
+	}
+}
+
+// TestGetQuota verifies units.<unit>.quota.id falls back to "unknown" instead of
+// being dropped when the quota reference isn't resolvable.
+func TestGetQuota(t *testing.T) {
+	c := &collector{}
+
+	resolvedQuotaRef := &management.AccessRequest{
+		ResourceMeta: apiv1.ResourceMeta{
+			Metadata: apiv1.Metadata{
+				References: []apiv1.Reference{
+					{Group: catalog.QuotaGVK().Group, Kind: catalog.QuotaGVK().Kind, ID: "quota-1", Name: "myquota"},
+				},
+			},
+		},
+		References: []interface{}{
+			map[string]interface{}{
+				"kind": catalog.QuotaGVK().Kind,
+				"unit": defaultUnit,
+				"name": "catalog/AccessRequest/myquota",
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		accessRequest *management.AccessRequest
+		unitName      string
+		want          *models.ResourceReference
+	}{
+		"nil accessRequest returns unknown quota id placeholder": {
+			accessRequest: nil,
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved accessRequest but no quota reference returns unknown placeholder": {
+			accessRequest: &management.AccessRequest{},
+			want:          &models.ResourceReference{ID: unknown},
+		},
+		"resolved quota reference returns real id": {
+			accessRequest: resolvedQuotaRef,
+			want:          &models.ResourceReference{ID: "quota-1"},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, c.getQuota(tc.accessRequest, tc.unitName))
+		})
+	}
+}
+
+// TestCreateAPIDetail verifies api.apiServiceId/owner fall back to "unknown"
+// instead of being dropped when the API service isn't found in cache.
+func TestCreateAPIDetail(t *testing.T) {
+	agent.InitializeForTest(nil)
+	c := &collector{}
+
+	tests := map[string]struct {
+		api  models.APIDetails
+		want *models.APIResourceReference
+	}{
+		"API not found in cache returns unknown apiServiceId and owner": {
+			api: models.APIDetails{ID: "remoteApiId_undiscovered", Name: "undiscovered"},
 			want: &models.APIResourceReference{
 				ResourceReference: models.ResourceReference{ID: "remoteApiId_undiscovered"},
 				Name:              "undiscovered",
@@ -1393,129 +1631,12 @@ func TestUnresolvedContextPlaceholders(t *testing.T) {
 				Owner:             &models.Owner{Type: unknown},
 			},
 		},
-		"createSubscriptionDetail with resolved accessRequest but no subscription reference": {
-			run:  func() interface{} { return c.createSubscriptionDetail(&management.AccessRequest{}) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"createSubscriptionDetail with resolved subscription reference returns real id": {
-			run: func() interface{} {
-				return c.createSubscriptionDetail(accessRequestWithReference(catalog.SubscriptionGVK(), "sub-1"))
-			},
-			want: &models.ResourceReference{ID: "sub-1"},
-		},
-		"createAppDetail with resolved managedApp but no application reference": {
-			run: func() interface{} {
-				return c.createAppDetail(createManagedApplication("app-inner", "App Inner", ""))
-			},
-			want: &models.ApplicationResourceReference{
-				ResourceReference: models.ResourceReference{ID: unknown},
-				ConsumerOrgID:     none,
-				Owner:             &models.Owner{Type: none},
-			},
-		},
-		"createAppDetail with resolved application reference and consumer org returns real values": {
-			run: func() interface{} {
-				appRI := createManagedApplication("app-resolved", "App Resolved", "org-resolved")
-				appRI.Metadata.References = []apiv1.Reference{
-					{Group: catalog.ApplicationGVK().Group, Kind: catalog.ApplicationGVK().Kind, ID: "app-cat-1"},
-				}
-				return c.createAppDetail(appRI)
-			},
-			want: &models.ApplicationResourceReference{
-				ResourceReference: models.ResourceReference{ID: "app-cat-1"},
-				ConsumerOrgID:     "org-resolved",
-				Owner:             &models.Owner{Type: unknown},
-			},
-		},
-		"getProduct with resolved accessRequest but no product references": {
-			run: func() interface{} { return c.getProduct(&management.AccessRequest{}) },
-			want: &models.ProductResourceReference{
-				ResourceReference: models.ResourceReference{ID: unknown},
-				VersionID:         unknown,
-			},
-		},
-		"getProduct with resolved product reference includes owner": {
-			run: func() interface{} {
-				ar := &management.AccessRequest{
-					ResourceMeta: apiv1.ResourceMeta{
-						Metadata: apiv1.Metadata{
-							References: []apiv1.Reference{
-								{Group: catalog.ProductGVK().Group, Kind: catalog.ProductGVK().Kind, ID: "prod-1"},
-								{Group: catalog.ProductReleaseGVK().Group, Kind: catalog.ProductReleaseGVK().Kind, ID: "rel-1"},
-							},
-						},
-					},
-				}
-				return c.getProduct(ar)
-			},
-			want: &models.ProductResourceReference{
-				ResourceReference: models.ResourceReference{ID: "prod-1"},
-				VersionID:         "rel-1",
-				Owner:             &models.Owner{Type: none},
-			},
-		},
-		"getAPIServiceRevision with resolved accessRequest but no instance reference": {
-			run:  func() interface{} { return c.getAPIServiceRevision(&management.AccessRequest{}) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getAPIServiceRevision with resolved instance reference returns real id": {
-			run: func() interface{} {
-				return c.getAPIServiceRevision(accessRequestWithReference(management.APIServiceInstanceGVK(), testInstName))
-			},
-			want: &models.ResourceReference{ID: testInstName},
-		},
-		"getAssetResource with resolved accessRequest but no asset resource reference": {
-			run:  func() interface{} { return c.getAssetResource(&management.AccessRequest{}) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getAssetResource with resolved asset resource reference returns real id": {
-			run: func() interface{} {
-				return c.getAssetResource(accessRequestWithReference(catalog.AssetResourceGVK(), "asset-1"))
-			},
-			want: &models.ResourceReference{ID: "asset-1"},
-		},
-		"getProductPlan with resolved accessRequest but no product plan reference": {
-			run:  func() interface{} { return c.getProductPlan(&management.AccessRequest{}) },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getProductPlan with resolved product plan reference returns real id": {
-			run: func() interface{} {
-				return c.getProductPlan(accessRequestWithReference(catalog.ProductPlanGVK(), "plan-1"))
-			},
-			want: &models.ResourceReference{ID: "plan-1"},
-		},
-		"getQuota with resolved accessRequest but no quota reference": {
-			run:  func() interface{} { return c.getQuota(&management.AccessRequest{}, "") },
-			want: &models.ResourceReference{ID: unknown},
-		},
-		"getQuota with resolved quota reference returns real id": {
-			run: func() interface{} {
-				ar := &management.AccessRequest{
-					ResourceMeta: apiv1.ResourceMeta{
-						Metadata: apiv1.Metadata{
-							References: []apiv1.Reference{
-								{Group: catalog.QuotaGVK().Group, Kind: catalog.QuotaGVK().Kind, ID: "quota-1", Name: "myquota"},
-							},
-						},
-					},
-					References: []interface{}{
-						map[string]interface{}{
-							"kind": catalog.QuotaGVK().Kind,
-							"unit": defaultUnit,
-							"name": "catalog/AccessRequest/myquota",
-						},
-					},
-				}
-				return c.getQuota(ar, "")
-			},
-			want: &models.ResourceReference{ID: "quota-1"},
-		},
 	}
 
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tc.want, tc.run())
+			assert.Equal(t, tc.want, c.createAPIDetail(tc.api))
 		})
 	}
 }
