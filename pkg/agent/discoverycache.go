@@ -7,7 +7,6 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/migrate"
-	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
@@ -311,13 +310,6 @@ func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
 		}
 	}
 	return nil
-}
-
-func getAction(state string) proto.Event_Type {
-	if state == apiv1.ResourceDeleting {
-		return proto.Event_UPDATED
-	}
-	return proto.Event_CREATED
 }
 
 func isMPResource(kind string) bool {
