@@ -13,7 +13,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -150,28 +150,28 @@ func TestAgentInitialize(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
 			buf, err := json.Marshal(discoveryAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/traceabilityagents/"+taName) {
 			buf, err := json.Marshal(traceabilityAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/complianceagents/"+caName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/complianceagents/"+caName) {
 			buf, err := json.Marshal(complianceAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
@@ -284,14 +284,14 @@ func TestAgentEntitlements(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
 			buf, err := json.Marshal(discoveryAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
@@ -351,7 +351,7 @@ func TestInitEnvironment(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
 			if req.Method == "GET" {
 				buf, _ := json.Marshal(environmentRes)
 				resp.Write(buf)
@@ -425,19 +425,19 @@ func TestAgentConfigOverride(t *testing.T) {
 			resp.Write([]byte(token))
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
 			buf, _ := json.Marshal(discoveryAgentRes)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7/traceabilityagents/"+taName) {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/traceabilityagents/"+taName) {
 			buf, _ := json.Marshal(traceabilityAgentRes)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/v7") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return

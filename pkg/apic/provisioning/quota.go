@@ -1,8 +1,8 @@
 package provisioning
 
 import (
-	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1alpha1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 )
 
 // Quota - interface for accessing an access requests quota

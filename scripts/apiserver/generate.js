@@ -90,7 +90,7 @@ fetch()
 
 // sub resources are grouped together into their corresponding group & version. For each version found in each group the openapi-generator will be used
 // to create the resources. This allows us to split resources up into their logical groups and give them their own package.
-// If there are two groups, such as "management" and "definitions", and each have one version, "v1alpha1", then the generator will
+// If there are two groups, such as "management" and "definitions", and each have one version, "v1", then the generator will
 // run twice to create the resource in the appropriate package based on its group and version.
 const writeSubResources = (subResources) => {
 	for (let groupKey in subResources) {

@@ -65,11 +65,11 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	assert.NotNil(t, err)
 	// assert.Equal(t, "[Error Code 1401] - error with config central.apiServerVersion, please set and/or check its value", err.Error())
 
-	centralConfig.APIServerVersion = "v1alpha1"
+	centralConfig.APIServerVersion = "v1"
 
-	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/eee/apiservices", cfg.GetServicesURL())
-	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1", cfg.GetAPIServerVersionURL())
-	assert.Equal(t, centralConfig.URL+"/apis/management/v1alpha1/environments/", cfg.GetAPIServerURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1/environments/eee/apiservices", cfg.GetServicesURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1", cfg.GetAPIServerVersionURL())
+	assert.Equal(t, centralConfig.URL+"/apis/management/v1/environments/", cfg.GetAPIServerURL())
 
 	centralConfig.PollInterval = 0
 	err = cfgValidator.ValidateCfg()

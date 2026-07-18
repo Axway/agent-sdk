@@ -9,7 +9,7 @@ import (
 	"time"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
@@ -298,7 +298,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		AgentType:                 agentType,
 		Region:                    US,
 		TeamName:                  "",
-		APIServerVersion:          "v1alpha1",
+		APIServerVersion:          "v1",
 		Auth:                      newAuthConfig(),
 		TLS:                       NewTLSConfig(),
 		PollInterval:              60 * time.Second,
@@ -927,7 +927,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response", properties.WithLowerLimit(15*time.Second), properties.WithUpperLimit(120*time.Second))
 	props.AddIntProperty(pathPageSize, 100, "The max page size the agent will use while retrieving API Server resources", properties.WithLowerLimitInt(10), properties.WithUpperLimitInt(100))
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
-	props.AddStringProperty(pathAPIServerVersion, "v1alpha1", "Version of the API Server")
+	props.AddStringProperty(pathAPIServerVersion, "v1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
 	// Watch stream config
 	props.AddBoolProperty(pathGRPCEnabled, true, "Controls whether an agent uses a gRPC connection")

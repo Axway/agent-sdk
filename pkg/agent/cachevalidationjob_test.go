@@ -10,7 +10,7 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 	"github.com/stretchr/testify/assert"
@@ -111,7 +111,7 @@ func makeServerResource(kind, scopeKind, scopeName, name string, modTime time.Ti
 					Group: "management",
 					Kind:  kind,
 				},
-				APIVersion: "v1alpha1",
+				APIVersion: "v1",
 			},
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
@@ -377,7 +377,7 @@ func TestCacheValidator_Execute(t *testing.T) {
 					ResourceMeta: apiv1.ResourceMeta{
 						GroupVersionKind: apiv1.GroupVersionKind{
 							GroupKind:  apiv1.GroupKind{Group: svcGVK.Group, Kind: svcGVK.Kind},
-							APIVersion: "v1alpha1",
+							APIVersion: "v1",
 						},
 						Metadata: apiv1.Metadata{
 							Scope: apiv1.MetadataScope{Kind: "Environment", Name: scopeName},

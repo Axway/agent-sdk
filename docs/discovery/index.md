@@ -206,9 +206,9 @@ For e.g.
 ```
 // ApplyResources - Applies the agent and dataplane resource to config
 func (a *AgentConfig) ApplyResources(agentResource *v1.ResourceInstance) error {
- var da *v1alpha1.DiscoveryAgent
+ var da *v1.DiscoveryAgent
  if agentResource.ResourceMeta.GroupKind.Kind == "DiscoveryAgent" {
-  da = &v1alpha1.DiscoveryAgent{}
+  da = &v1.DiscoveryAgent{}
   err := da.FromInstance(agentResource)
   if err != nil {
    return err
@@ -507,7 +507,7 @@ The *PublishAPI* method while creating/updating the API server resources set the
 ```
 ---
 group: management
-apiVersion: v1alpha1
+apiVersion: v1
 kind: APIService
 name: 37260bb8-203b-11eb-bac3-3af9d38d3457
 title: musicalinstrumentsapi-azure (Azure)
@@ -524,7 +524,7 @@ spec:
 ---
 
 group: management
-apiVersion: v1alpha1
+apiVersion: v1
 kind: APIServiceRevision
 name: 37260bb8-203b-11eb-bac3-3af9d38d3457.1
 title: musicalinstrumentsapi-azure (Azure)
@@ -544,7 +544,7 @@ spec:
 ---
 
 group: management
-apiVersion: v1alpha1
+apiVersion: v1
 kind: APIServiceInstance
 name: 37260bb8-203b-11eb-bac3-3af9d38d3457.1
 title: musicalinstrumentsapi-azure (Azure)
@@ -626,7 +626,7 @@ type ResourceClient struct {
 }
 
 func (r *ResourceClient) Handle(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
-  if resource.Kind == v1alpha1.AccessRequestGVK().Kind {
+  if resource.Kind == v1.AccessRequestGVK().Kind {
     fmt.Printf("Event Type : %s\n", action.String())
     ...
     ...

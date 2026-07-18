@@ -12,7 +12,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 )
@@ -23,7 +23,7 @@ const uaHeader = "fake-agent"
 
 const mockJSONEnv = `{
   "group": "management",
-  "apiVersion": "v1alpha1",
+  "apiVersion": "v1",
   "kind": "Environment",
   "name": "test-env-1",
   "title": "test-env-1",
@@ -49,7 +49,7 @@ const mockJSONEnv = `{
 
 const mockJSONApiSvc = `{
 	"group": "management",
-	"apiVersion": "v1alpha1",
+	"apiVersion": "v1",
 	"kind": "APIService",
 	"name": "test-api-svc",
 	"title": "test-api-svc",
@@ -123,28 +123,28 @@ func TestUnscoped(t *testing.T) {
 	defer gock.Off()
 	// Create env
 	gock.New("http://localhost:8080/apis").
-		Post("/management/v1alpha1/environments").
+		Post("/management/v1/environments").
 		MatchHeader("User-Agent", "fake-agent").
 		Reply(201).
 		JSON(mockEnv)
 
 	gock.New("http://localhost:8080/apis").
-		Put("/management/v1alpha1/environments/test-env-1").
+		Put("/management/v1/environments/test-env-1").
 		Reply(200).
 		JSON(mockEnvUpdated)
 
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments/test-env-1").
+		Get("/management/v1/environments/test-env-1").
 		Reply(200).
 		JSON(mockEnv)
 
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(200).
 		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
-		Delete("/management/v1alpha1/environments/test-env-1").
+		Delete("/management/v1/environments/test-env-1").
 		Reply(204)
 
 	created, err := createEnv(client)
@@ -200,26 +200,26 @@ func TestScoped(t *testing.T) {
 	defer gock.Off()
 	// Create env
 	gock.New("http://localhost:8080/apis").
-		Post("/management/v1alpha1/environments").
+		Post("/management/v1/environments").
 		Reply(201).
 		JSON(mockEnv)
 
 	gock.New("http://localhost:8080/apis").
-		Post("/management/v1alpha1/environments/test-env-1/apiservices").
+		Post("/management/v1/environments/test-env-1/apiservices").
 		Reply(201).
 		JSON(mockAPISvc)
 
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments/test-env-1/apiservices").
+		Get("/management/v1/environments/test-env-1/apiservices").
 		Reply(200).
 		JSON([]*v1.ResourceInstance{mockAPISvc})
 
 	gock.New("http://localhost:8080/apis").
-		Delete("/management/v1alpha1/environments/test-env-1/apiservices/test-api-svc").
+		Delete("/management/v1/environments/test-env-1/apiservices/test-api-svc").
 		Reply(204)
 
 	gock.New("http://localhost:8080/apis").
-		Delete("/management/v1alpha1/environments/test-env-1").
+		Delete("/management/v1/environments/test-env-1").
 		Reply(204)
 
 	env, err := createEnv(client)
@@ -277,7 +277,7 @@ func TestListWithQuery(t *testing.T) {
 	defer gock.Off()
 	// List envs
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		MatchHeader("User-Agent", uaHeader).
 		MatchParam("query", `(tags=="test";attributes.attr==("val"))`).Reply(200).
 		JSON([]*v1.ResourceInstance{mockEnv, mockEnv})
@@ -292,15 +292,15 @@ func Test_listAll(t *testing.T) {
 	// Follow the link headers
 	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(200).
-		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		AddHeader("Link", "</apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
 		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(200).
-		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		AddHeader("Link", "</apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
 		JSON([]*v1.ResourceInstance{mockEnv})
 
 	items, err := client.List(WithQuery(TagsIn("test")))
@@ -311,7 +311,7 @@ func Test_listAll(t *testing.T) {
 
 	// handle an error from the client
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(500).
 		SetError(&url.Error{})
 
@@ -320,7 +320,7 @@ func Test_listAll(t *testing.T) {
 
 	// handle a successful response, but a 500 error
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(500)
 
 	_, err = client.List()
@@ -328,15 +328,15 @@ func Test_listAll(t *testing.T) {
 
 	// handle a successful request, then a failed request
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(200).
-		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		AddHeader("Link", "</apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=2>; rel=\"next\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
 		JSON([]*v1.ResourceInstance{mockEnv})
 
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(500).
-		AddHeader("Link", "</apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1alpha1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
+		AddHeader("Link", "</apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"self\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=1>; rel=\"first\", </apis/management/v1/environments?pageSize=20&query=tags%3D%3D%22test%22&page=4>; rel=\"last\"").
 		JSON([]*v1.ResourceInstance{})
 
 	items, err = client.List()
@@ -405,7 +405,7 @@ func TestResponseErrors(t *testing.T) {
 		t.Run(fmt.Sprintf("%d error", tc.status), func(t *testing.T) {
 			defer gock.Off()
 			gock.New("http://localhost:8080/apis").
-				Get("/management/v1alpha1/environments").
+				Get("/management/v1/environments").
 				Reply(tc.status).
 				JSON(mockEnv)
 
@@ -456,7 +456,7 @@ func TestResponseErrors(t *testing.T) {
 func TestGetError(t *testing.T) {
 	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
-		Get("/management/v1alpha1/environments").
+		Get("/management/v1/environments").
 		Reply(500).
 		JSON(mockEnv)
 
@@ -470,7 +470,7 @@ func TestGetError(t *testing.T) {
 func TestDeleteError(t *testing.T) {
 	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
-		Delete("/management/v1alpha1/environments").
+		Delete("/management/v1/environments").
 		Reply(500).
 		JSON(mockEnv)
 
@@ -493,7 +493,7 @@ func TestDeleteError(t *testing.T) {
 func TestCreateError(t *testing.T) {
 	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
-		Post("/management/v1alpha1/environments").
+		Post("/management/v1/environments").
 		Reply(500).
 		JSON(mockEnv)
 
@@ -507,7 +507,7 @@ func TestCreateError(t *testing.T) {
 func TestUpdateError(t *testing.T) {
 	defer gock.Off()
 	gock.New("http://localhost:8080/apis").
-		Put("/management/v1alpha1/environments").
+		Put("/management/v1/environments").
 		Reply(500).
 		JSON(mockEnv)
 
@@ -571,7 +571,7 @@ func TestUpdateMerge(t *testing.T) {
 					Group: "management",
 					Kind:  "APIService",
 				},
-				APIVersion: "v1alpha1",
+				APIVersion: "v1",
 			},
 			Name: "name",
 			Metadata: v1.Metadata{
@@ -698,7 +698,7 @@ func TestUpdateMerge(t *testing.T) {
 			gock.Observe(gock.DumpRequest)
 
 			gock.New("http://localhost:8080/apis").
-				Get("/management/v1alpha1/environments/myenv/apiservices/name").
+				Get("/management/v1/environments/myenv/apiservices/name").
 				Reply(tc.getStatus).
 				JSON(tc.getResponse)
 
@@ -706,13 +706,13 @@ func TestUpdateMerge(t *testing.T) {
 			case tc.expectedErr == mergeError:
 			case tc.getStatus == 404:
 				gock.New("http://localhost:8080/apis").
-					Post("/management/v1alpha1/environments/myenv/apiservices").
+					Post("/management/v1/environments/myenv/apiservices").
 					JSON(tc.expectedResource).
 					Reply(tc.otherStatus).
 					JSON(tc.expectedResource)
 			case tc.getStatus == 200:
 				gock.New("http://localhost:8080/apis").
-					Put("/management/v1alpha1/environments/myenv/apiservices/name").
+					Put("/management/v1/environments/myenv/apiservices/name").
 					JSON(tc.expectedResource).
 					Reply(tc.otherStatus).
 					JSON(tc.expectedResource)

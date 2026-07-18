@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
@@ -720,13 +720,13 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/secrets/agentSecret") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/test/secrets/agentSecret") {
 			buf, _ := json.Marshal(secret)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/test") {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
@@ -945,7 +945,7 @@ func newTestServer() *httptest.Server {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/secrets/agentSecret") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/test/secrets/agentSecret") {
 			buf, _ := json.Marshal(secret)
 			resp.Write(buf)
 		}
@@ -956,12 +956,12 @@ func newTestServer() *httptest.Server {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/test/apiservices") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/test/apiservices") {
 			resp.Write([]byte("response"))
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1alpha1/environments/environment") {
+		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/environment") {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return

@@ -9,7 +9,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent/events"
 	"github.com/Axway/agent-sdk/pkg/agent/poller"
 	"github.com/Axway/agent-sdk/pkg/agent/stream"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1alpha1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/harvester"
 	"github.com/Axway/agent-sdk/pkg/jobs"
