@@ -165,10 +165,23 @@ func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
 	return ref
 }
 
+// splitMetricKey splits a centralMetric key into its group key (everything but the last segment) and
+// its unique/status key (the last segment).
 func splitMetricKey(key string) (string, string) {
 	const delimiter = "."
 
-	groupKey := strings.Join(strings.Split(key, delimiter)[:4], delimiter)
-	metricKey := strings.Split(key, delimiter)[4]
+	parts := strings.Split(key, delimiter)
+	groupKey := strings.Join(parts[:len(parts)-1], delimiter)
+	metricKey := parts[len(parts)-1]
 	return groupKey, metricKey
+}
+
+// sanitizeKeySegment/desanitizeKeySegment guard against a raw identifier (app ID/name, API ID)
+// containing the "." key delimiter, which would otherwise change the number of segments in the key.
+func sanitizeKeySegment(s string) string {
+	return strings.ReplaceAll(s, ".", "#")
+}
+
+func desanitizeKeySegment(s string) string {
+	return strings.ReplaceAll(s, "#", ".")
 }
