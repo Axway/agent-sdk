@@ -137,7 +137,8 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
 				emptyRevisionListResponse,                                    // GET revisions
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision information subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision x-agent-details subresource
 				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST instance
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
@@ -152,9 +153,8 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
 				emptyRevisionListResponse,                                    // GET revisions
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision information subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision x-agent-details subresource
 			},
 		},
 		"existing service: full publish updates service, revision, and instance": {
@@ -165,16 +165,19 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // service status source subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // service x-agent-details subresource
 				{
-					RespData: `[{"name": "daleapi","tags": ["tags1"]}]`,
+					RespData: `[{"name": "daleapi","tags": ["tags1"], "metadata": {"scope": {"name": "v7envandcat"}}}]`,
 					RespCode: http.StatusOK,
 					RespHeaders: map[string][]string{
 						"X-Axway-Total-Count": {"1"},
 					},
 				}, // GET revision list (updateAPI path)
 				{FileName: testRevisionFile, RespCode: http.StatusOK},      // PUT revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision information subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
+				{FileName: testInstanceFile, RespCode: http.StatusOK},      // GET instance
 				{FileName: testInstanceFile, RespCode: http.StatusCreated}, // POST instance
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // instance x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // instance source subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
 			},
 		},
@@ -183,13 +186,14 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
 			responses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": ["tags1"]}]`,
+					RespData: `[{"name": "daleapi","tags": ["tags1"],"metadata": {"scope": {"name": "v7envandcat"}}}]`,
 					RespCode: http.StatusOK,
 					RespHeaders: map[string][]string{
 						"X-Axway-Total-Count": {"1"},
 					},
 				}, // GET revision list (updateAPI path)
-				{FileName: testRevisionFile, RespCode: http.StatusCreated}, // POST revision (addAPI path, no list fetch)
+				{FileName: testRevisionFile, RespCode: http.StatusCreated}, // PUT revision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision information subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // spec hashes update
 			},
@@ -307,6 +311,10 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
+			FileName: testRevisionFile, // for call to update the serviceRevision information subresource
+			RespCode: http.StatusOK,
+		},
+		{
 			FileName: testRevisionFile, // for call to update the serviceRevision x-agent-details subresource
 			RespCode: http.StatusOK,
 		},
@@ -343,6 +351,10 @@ func TestUpdateService(t *testing.T) {
 		},
 		{
 			FileName: testRevisionFile, // for call to update the serviceRevision
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testRevisionFile, // for call to update the serviceRevision information subresource
 			RespCode: http.StatusOK,
 		},
 		{
@@ -724,6 +736,11 @@ func createAPIService(name, id string, refSvc string, dpType string, isDesign bo
 					"specHashes": map[string]string{
 						"10422419514905716117": "revision1",
 					},
+				},
+			},
+			Metadata: apiv1.Metadata{
+				Scope: apiv1.MetadataScope{
+					Name: "v7envandcat",
 				},
 			},
 		},
