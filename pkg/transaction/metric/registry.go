@@ -3,8 +3,6 @@ package metric
 import (
 	"fmt"
 	"sync"
-
-	"github.com/rcrowley/go-metrics"
 )
 
 type registry interface {
@@ -13,7 +11,7 @@ type registry interface {
 	Register(string, interface{}) error
 }
 
-// The metric registry which can store counters, histogram, or grouped metrics
+// The metric registry which can store counters, api counters, or grouped metrics
 type metricRegistry struct {
 	metrics map[string]interface{}
 	mutex   sync.RWMutex
@@ -48,7 +46,7 @@ func (r *metricRegistry) register(name string, i interface{}) error {
 		return fmt.Errorf("duplicate metric: %s", name)
 	}
 	switch i.(type) {
-	case *counter, metrics.Histogram, groupedMetrics:
+	case *counter, *apiCounter, groupedMetrics:
 		r.metrics[name] = i
 	}
 	return nil

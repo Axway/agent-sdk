@@ -76,7 +76,12 @@ type cachedMetric struct {
 	Unit          *models.Unit                         `json:"unit,omitempty"`
 	StatusCode    string                               `json:"statusCode,omitempty"`
 	Count         int64                                `json:"count"`
-	Values        []int64                              `json:"values,omitempty"`
+	Min           int64                                `json:"min,omitempty"`
+	Max           int64                                `json:"max,omitempty"`
+	Avg           float64                              `json:"avg,omitempty"`
+	// Values is no longer written, but is kept so caches written by older agents
+	// (which stored raw duration samples instead of Min/Max/Avg) can still be read on upgrade.
+	Values []int64 `json:"values,omitempty"`
 }
 
 // V4EventDistribution - represents V4 distribution

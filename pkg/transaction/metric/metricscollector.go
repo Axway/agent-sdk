@@ -3,7 +3,6 @@ package metric
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"sync"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/rcrowley/go-metrics"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
@@ -274,7 +272,7 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
 	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
-	c.createOrUpdateHistogram(metricDetail)
+	c.createOrUpdateAPICounter(metricDetail)
 }
 
 // AddAPIMetricDetail - add metric details for several response codes and transactions
@@ -283,42 +281,18 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 		return
 	}
 
-	for _, duration := range buildDurations(detail.Count, detail.Response) {
-		c.AddMetricDetail(Detail{
-			APIDetails: detail.APIDetails,
-			AppDetails: detail.AppDetails,
-			StatusCode: detail.StatusCode,
-			Duration:   duration,
-		})
-	}
-}
+	c.lock.Lock()
+	c.batchLock.Lock()
+	c.updateStartTime()
+	c.updateUsage(detail.Count)
+	c.batchLock.Unlock()
+	c.lock.Unlock()
 
-// buildDurations creates synthetic histogram samples that preserve the original Min, Max, and Avg.
-// Since we insert one Min sample and one Max sample, the remaining (Count-2) middle
-// samples must compensate so that the overall histogram mean equals the original Avg.
-// Solving: (Min + Max + (Count-2)*avg) / Count = Avg  →  avg = (Count*Avg - Min - Max) / (Count-2)
-func buildDurations(count int64, response ResponseMetrics) []int64 {
-	if count <= 0 {
-		return nil
-	}
-	if count == 1 {
-		return []int64{int64(response.Avg)}
-	}
-
-	durations := make([]int64, count)
-	durations[0] = response.Min
-	durations[count-1] = response.Max
-
-	if count > 2 {
-		avg := int64(math.Round(
-			(float64(count)*response.Avg - float64(response.Min) - float64(response.Max)) / float64(count-2),
-		))
-		for i := int64(1); i < count-1; i++ {
-			durations[i] = avg
-		}
-	}
-
-	return durations
+	c.createOrUpdateAPICounterStats(Detail{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		StatusCode: detail.StatusCode,
+	}, detail.Count, detail.Response.Min, detail.Response.Max, detail.Response.Avg)
 }
 
 // AddCustomMetricDetail - add custom unit metric details for an api/app combo
@@ -468,9 +442,32 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	return me
 }
 
-func (c *collector) createOrUpdateHistogram(detail Detail) *centralMetric {
+func (c *collector) createOrUpdateAPICounter(detail Detail) *centralMetric {
+	metric, apiCounter := c.setupAPICounter(detail)
+	if metric == nil {
+		return nil
+	}
+
+	apiCounter.Update(detail.Duration)
+
+	return c.updateMetricWithCachedMetric(metric, apiCounter)
+}
+
+// createOrUpdateAPICounterStats - add a batch of transactions known by count, min, max, and average response time
+func (c *collector) createOrUpdateAPICounterStats(detail Detail, count, min, max int64, avg float64) *centralMetric {
+	metric, apiCounter := c.setupAPICounter(detail)
+	if metric == nil {
+		return nil
+	}
+
+	apiCounter.UpdateWithStats(count, min, max, avg)
+
+	return c.updateMetricWithCachedMetric(metric, apiCounter)
+}
+
+func (c *collector) setupAPICounter(detail Detail) (*centralMetric, *apiCounter) {
 	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
-		return nil // no need to update metrics with publish off
+		return nil, nil // no need to update metrics with publish off
 	}
 
 	// Update the detail with the resolved API ID
@@ -485,10 +482,9 @@ func (c *collector) createOrUpdateHistogram(detail Detail) *centralMetric {
 
 	metric := c.createMetric(transactionCtx)
 
-	histogram := c.getOrRegisterGroupedHistogram(metric.getKey())
-	histogram.Update(detail.Duration)
+	apiCounter := c.getOrRegisterGroupedAPICounter(metric.getKey())
 
-	return c.updateMetricWithCachedMetric(metric, newCustomHistogram(histogram))
+	return metric, apiCounter
 }
 
 func (c *collector) getExistingMetric(metric *centralMetric) *centralMetric {
@@ -916,22 +912,22 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 	}
 
 	countersAdded := false
-	// handle each histogram, on the first one add the counter information
-	for k, histo := range groupedMetric.histograms {
+	// handle each api counter, on the first one add the counter information
+	for k, apiCtr := range groupedMetric.apiCounters {
 		logger := logger.WithField("status", k)
 		metric, ok := groupMap[k]
 		if !ok {
 			logger.Debug("no metrics in map for status")
 			continue
 		}
-		c.setMetricsFromHistogram(metric, histo)
+		c.setMetricsFromAPICounter(metric, apiCtr)
 		var counters map[string]*counter
 		if !countersAdded {
 			c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
 			counters = groupedMetric.counters
 			countersAdded = true
 		}
-		c.generateMetricEvent(histo, counters, metric)
+		c.generateMetricEvent(apiCtr, counters, metric)
 	}
 
 	// create metric with just custom units
@@ -947,7 +943,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 			return
 		}
 		c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
-		c.generateMetricEvent(metrics.NilHistogram{}, groupedMetric.counters, metric)
+		c.generateMetricEvent(newAPICounter(), groupedMetric.counters, metric)
 	}
 }
 
@@ -979,17 +975,17 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 	}
 }
 
-func (c *collector) setMetricsFromHistogram(m *centralMetric, histogram metrics.Histogram) {
-	m.Units.Transactions.Count = histogram.Count()
-	m.Units.Transactions.Duration = int64(histogram.Mean() * float64(histogram.Count()))
+func (c *collector) setMetricsFromAPICounter(m *centralMetric, apiCtr *apiCounter) {
+	m.Units.Transactions.Count = apiCtr.Count()
+	m.Units.Transactions.Duration = int64(apiCtr.Mean() * float64(apiCtr.Count()))
 	m.Units.Transactions.Response = &ResponseMetrics{
-		Max: histogram.Max(),
-		Min: histogram.Min(),
-		Avg: histogram.Mean(),
+		Max: apiCtr.Max(),
+		Min: apiCtr.Min(),
+		Avg: apiCtr.Mean(),
 	}
 }
 
-func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters map[string]*counter, metric *centralMetric) {
+func (c *collector) generateMetricEvent(apiCtr *apiCounter, counters map[string]*counter, metric *centralMetric) {
 	if metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Count == 0 {
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
@@ -1007,7 +1003,7 @@ func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters ma
 	}
 
 	// Generate app subscription metric
-	c.generateV4Event(histogram, counters, metric)
+	c.generateV4Event(apiCtr, counters, metric)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -1024,10 +1020,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(histogram metrics.Histogram, counters map[string]*counter, v4data V4Data) {
+func (c *collector) generateV4Event(apiCtr *apiCounter, counters map[string]*counter, v4data V4Data) {
 	generatedEvent := c.createV4Event(c.metricStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
-	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, histogram, counters)
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, apiCtr, counters)
 }
 
 func (c *collector) getOrRegisterCounter(name string) *counter {
@@ -1055,11 +1051,11 @@ func (c *collector) getOrRegisterGroupedCounter(name string) *counter {
 	return groupedMetric.getOrCreateCounter(countKey)
 }
 
-func (c *collector) getOrRegisterGroupedHistogram(name string) metrics.Histogram {
-	groupKey, histoKey := splitMetricKey(name)
+func (c *collector) getOrRegisterGroupedAPICounter(name string) *apiCounter {
+	groupKey, counterKey := splitMetricKey(name)
 	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
 
-	return groupedMetric.getOrCreateHistogram(histoKey)
+	return groupedMetric.getOrCreateAPICounter(counterKey)
 }
 
 func (c *collector) publishEvents() {
@@ -1117,12 +1113,12 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
-func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters map[string]*counter, metric *centralMetric) {
+func (c *collector) cleanupMetricCounters(apiCtr *apiCounter, counters map[string]*counter, metric *centralMetric) {
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
 
 	subID, appID, apiID, group := metric.getKeyParts()
-	c.removeMetricEntries(subID, appID, apiID, group, histogram, counters)
+	c.removeMetricEntries(subID, appID, apiID, group, apiCtr, counters)
 	c.removeEmptyKeys(subID, appID, apiID)
 
 	c.logger.
@@ -1132,7 +1128,7 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 		Info("Published metrics report for API")
 }
 
-func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histogram metrics.Histogram, counters map[string]*counter) {
+func (c *collector) removeMetricEntries(subID, appID, apiID, group string, apiCtr *apiCounter, counters map[string]*counter) {
 	apiStatusMap, ok := c.metricMap[subID][appID][apiID]
 	if !ok {
 		return
@@ -1141,7 +1137,7 @@ func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histo
 	if _, ok := apiStatusMap[group]; ok {
 		c.storage.removeMetric(apiStatusMap[group])
 		delete(c.metricMap[subID][appID][apiID], group)
-		histogram.Clear()
+		apiCtr.Clear()
 	}
 
 	for k := range counters {

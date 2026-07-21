@@ -18,11 +18,11 @@ methodology as `BENCHMARKS-Start.md` — compare tables directly.
 ### BenchmarkAddMetric
 
 | N    | ns/op | B/op | allocs/op | Δns/op vs baseline |
-| ---- | ----: | ---: | --------: | ------------------: |
-| 10   |  4679 | 1571 |        35 |               -4.3% |
-| 100  |  3633 | 1531 |        36 |               +2.4% |
-| 1000 |  3842 | 1550 |        37 |               +8.0% |
-| 5000 |  3550 | 1540 |        37 |               -0.1% |
+| ---- | ----: | ---: | --------: | -----------------: |
+| 10   |  4679 | 1571 |        35 |              -4.3% |
+| 100  |  3633 | 1531 |        36 |              +2.4% |
+| 1000 |  3842 | 1550 |        37 |              +8.0% |
+| 5000 |  3550 | 1540 |        37 |              -0.1% |
 
 Still flat across load, as expected for a plain counter increment. Differences
 are within run-to-run noise (single `-count=1` sample) — no measurable win or
@@ -31,11 +31,11 @@ regression from the atomic-int swap on this path.
 ### BenchmarkAddMetricDetail
 
 | N    |  ns/op |   B/op | allocs/op | Δns/op vs baseline |
-| ---- | -----: | -----: | --------: | ------------------: |
-| 10   | 195900 | 120064 |      2211 |               +7.9% |
-| 100  | 205793 | 122615 |      2307 |               +1.1% |
-| 1000 | 249474 | 156261 |      3212 |               +3.7% |
-| 5000 | 357062 | 250575 |      5472 |               +0.7% |
+| ---- | -----: | -----: | --------: | -----------------: |
+| 10   | 195900 | 120064 |      2211 |              +7.9% |
+| 100  | 205793 | 122615 |      2307 |              +1.1% |
+| 1000 | 249474 | 156261 |      3212 |              +3.7% |
+| 5000 | 357062 | 250575 |      5472 |              +0.7% |
 
 Same non-flat growth-with-N shape as baseline — confirms the growth there is
 driven by the histogram/cache-update path, not the counter, since the counter
@@ -44,22 +44,22 @@ change didn't flatten it.
 ### BenchmarkAddAPIMetricDetail
 
 | N    |   ns/op |    B/op | allocs/op | ns/transaction | Δns/op vs baseline |
-| ---- | ------: | ------: | --------: | --------------: | ------------------: |
-| 10   | 4205233 | 2533538 |     48047 |           210262 |               +0.4% |
-| 100  | 6050230 | 4047554 |     83278 |           302512 |               -0.3% |
-| 1000 | 8677752 | 5645678 |    120329 |           433888 |               +3.6% |
-| 5000 | 8769396 | 5778147 |    123156 |           438470 |               +5.1% |
+| ---- | ------: | ------: | --------: | -------------: | -----------------: |
+| 10   | 4205233 | 2533538 |     48047 |         210262 |              +0.4% |
+| 100  | 6050230 | 4047554 |     83278 |         302512 |              -0.3% |
+| 1000 | 8677752 | 5645678 |    120329 |         433888 |              +3.6% |
+| 5000 | 8769396 | 5778147 |    123156 |         438470 |              +5.1% |
 
 Within noise of baseline; no regression introduced.
 
 ### BenchmarkAddCustomMetricDetail
 
 | N    |  ns/op |   B/op | allocs/op | Δns/op vs baseline |
-| ---- | -----: | -----: | --------: | ------------------: |
-| 10   | 200500 | 119781 |      2190 |               +8.4% |
-| 100  | 194418 | 119112 |      2187 |               +0.5% |
-| 1000 | 223294 | 119118 |      2187 |              +15.8% |
-| 5000 | 202037 | 119139 |      2187 |               +6.6% |
+| ---- | -----: | -----: | --------: | -----------------: |
+| 10   | 200500 | 119781 |      2190 |              +8.4% |
+| 100  | 194418 | 119112 |      2187 |              +0.5% |
+| 1000 | 223294 | 119118 |      2187 |             +15.8% |
+| 5000 | 202037 | 119139 |      2187 |              +6.6% |
 
 Still flat allocs/op (unchanged from baseline: 2187 at steady state), so the
 allocation profile of the counter path itself is unaffected. The ns/op moves
@@ -69,11 +69,11 @@ path never touches the histogram code that dominates `AddMetricDetail`.
 ### BenchmarkAddAPIMetric
 
 | N    | ns/op |  B/op | allocs/op | Δns/op vs baseline |
-| ---- | ----: | ----: | --------: | ------------------: |
-| 10   | 16846 | 10707 |       126 |               -4.8% |
-| 100  | 10944 |  7829 |        75 |               -1.1% |
-| 1000 | 12440 |  7694 |        70 |               +8.0% |
-| 5000 | 11548 |  7769 |        70 |               +3.1% |
+| ---- | ----: | ----: | --------: | -----------------: |
+| 10   | 16846 | 10707 |       126 |              -4.8% |
+| 100  | 10944 |  7829 |        75 |              -1.1% |
+| 1000 | 12440 |  7694 |        70 |              +8.0% |
+| 5000 | 11548 |  7769 |        70 |              +3.1% |
 
 Flat, within noise, consistent with baseline (no aggregation path touched by
 the counter change).

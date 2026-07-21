@@ -10,7 +10,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 // CondorMetricEvent - the condor event format to send metric data
@@ -22,7 +21,7 @@ type CondorMetricEvent struct {
 }
 
 // AddCondorMetricEventToBatch - creates the condor metric event and adds to the batch
-func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogram metrics.Histogram, counters map[string]*counter) error {
+func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, apiCtr *apiCounter, counters map[string]*counter) error {
 	metricData, _ := json.Marshal(metricEvent)
 
 	cme := &CondorMetricEvent{
@@ -35,7 +34,7 @@ func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogr
 	if err != nil {
 		return err
 	}
-	batch.AddEvent(event, histogram, counters)
+	batch.AddEvent(event, apiCtr, counters)
 	return nil
 }
 
