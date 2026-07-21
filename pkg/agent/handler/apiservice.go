@@ -8,7 +8,6 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -29,10 +28,15 @@ func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bo
 	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
 		return false
 	}
-
-	if action := GetActionFromContext(ctx); action != proto.Event_DELETED {
+	action := GetActionFromContext(ctx)
+	if action != proto.Event_DELETED {
 		return true
 	}
+	log := getLoggerFromContext(ctx).
+		WithComponent("apiServiceHandler").
+		WithField("action", action).
+		WithField("resource", event.Payload.Name).
+		WithField("resourceID", event.Payload.Metadata.Id)
 
 	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(event.Payload.Name)
 	if existing == nil {
