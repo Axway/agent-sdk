@@ -15,7 +15,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util"
-	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -173,11 +172,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
 			}
 
-			if len(cm.Values) == 0 {
-				if cm.Unit == nil {
-					continue
-				}
-
+			if cm.Unit != nil {
 				c.collector.AddCustomMetricDetail(models.CustomMetricDetail{
 					APIDetails: apiDetails,
 					AppDetails: appDetails,
@@ -189,14 +184,28 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				continue
 			}
 
+			if cm.Count == 0 && len(cm.Values) == 0 {
+				continue
+			}
+
 			var metric *centralMetric
-			for _, duration := range cm.Values {
-				metric = c.collector.createOrUpdateHistogram(Detail{
+			if len(cm.Values) > 0 {
+				// legacy cache written before the Min/Max/Avg counter, replay each
+				// raw duration sample into the new counter one at a time
+				for _, duration := range cm.Values {
+					metric = c.collector.createOrUpdateAPICounter(Detail{
+						APIDetails: apiDetails,
+						AppDetails: appDetails,
+						StatusCode: cm.StatusCode,
+						Duration:   duration,
+					})
+				}
+			} else {
+				metric = c.collector.createOrUpdateAPICounterStats(Detail{
 					APIDetails: apiDetails,
 					AppDetails: appDetails,
 					StatusCode: cm.StatusCode,
-					Duration:   duration,
-				})
+				}, cm.Count, cm.Min, cm.Max, cm.Avg)
 			}
 
 			newKey := metric.getKey()
@@ -278,7 +287,9 @@ func parseTimeFromCache(storage cache.Cache, key string) (time.Time, error) {
 
 type cachedMetricInterface interface {
 	Count() int64
-	Values() []int64
+	Min() int64
+	Max() int64
+	Mean() float64
 }
 
 type customCounter struct {
@@ -293,22 +304,14 @@ func (c customCounter) Count() int64 {
 	return c.c.Count()
 }
 
-func (c customCounter) Values() []int64 {
-	return nil
+func (c customCounter) Min() int64 {
+	return 0
 }
 
-type customHistogram struct {
-	h metrics.Histogram
+func (c customCounter) Max() int64 {
+	return 0
 }
 
-func newCustomHistogram(h metrics.Histogram) *customHistogram {
-	return &customHistogram{h: h}
-}
-
-func (c customHistogram) Count() int64 {
-	return c.h.Count()
-}
-
-func (c customHistogram) Values() []int64 {
-	return c.h.Sample().Values()
+func (c customCounter) Mean() float64 {
+	return 0
 }

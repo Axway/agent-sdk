@@ -7,14 +7,13 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
-	"github.com/rcrowley/go-metrics"
 )
 
 const cancelMsg = "event cancelled, counts added at next publish"
 
 type eventMetric struct {
-	histogram metrics.Histogram
-	counters  map[string]*counter
+	apiCounter *apiCounter
+	counters   map[string]*counter
 }
 
 // EventBatch - creates a batch of MetricEvents to send to Condor
@@ -27,12 +26,12 @@ type EventBatch struct {
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]*counter) {
+func (b *EventBatch) AddEvent(event beatPub.Event, apiCtr *apiCounter, counters map[string]*counter) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
 	b.batchMetrics[eventID] = eventMetric{
-		histogram: histogram,
-		counters:  counters,
+		apiCounter: apiCtr,
+		counters:   counters,
 	}
 }
 
@@ -148,7 +147,7 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 		b.collector.logMetric("published", metric)
 
 		if eventMetric, ok := b.batchMetrics[metric.EventID]; ok {
-			b.collector.cleanupMetricCounters(eventMetric.histogram, eventMetric.counters, metric)
+			b.collector.cleanupMetricCounters(eventMetric.apiCounter, eventMetric.counters, metric)
 		} else {
 			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
 		}

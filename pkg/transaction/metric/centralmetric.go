@@ -7,33 +7,31 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
-	"github.com/rcrowley/go-metrics"
 	"github.com/sirupsen/logrus"
 )
 
 type groupedMetrics struct {
-	lock       *sync.Mutex
-	counters   map[string]*counter
-	histograms map[string]metrics.Histogram
+	lock        *sync.Mutex
+	counters    map[string]*counter
+	apiCounters map[string]*apiCounter
 }
 
 func newGroupedMetric() groupedMetrics {
 	return groupedMetrics{
-		lock:       &sync.Mutex{},
-		counters:   make(map[string]*counter),
-		histograms: make(map[string]metrics.Histogram),
+		lock:        &sync.Mutex{},
+		counters:    make(map[string]*counter),
+		apiCounters: make(map[string]*apiCounter),
 	}
 }
 
-func (g groupedMetrics) getOrCreateHistogram(key string) metrics.Histogram {
+func (g groupedMetrics) getOrCreateAPICounter(key string) *apiCounter {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	if _, ok := g.histograms[key]; !ok {
-		sampler := metrics.NewUniformSample(2048)
-		g.histograms[key] = metrics.NewHistogram(sampler)
+	if _, ok := g.apiCounters[key]; !ok {
+		g.apiCounters[key] = newAPICounter()
 	}
-	return g.histograms[key]
+	return g.apiCounters[key]
 }
 
 func (g groupedMetrics) getOrCreateCounter(key string) *counter {
@@ -318,7 +316,9 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		AssetResource: a.AssetResource,
 		ProductPlan:   a.ProductPlan,
 		Count:         cached.Count(),
-		Values:        cached.Values(),
+		Min:           cached.Min(),
+		Max:           cached.Max(),
+		Avg:           cached.Mean(),
 	}
 
 	if a.Units.Transactions != nil {
