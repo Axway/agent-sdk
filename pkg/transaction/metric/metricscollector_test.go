@@ -1120,7 +1120,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 		appID          string
 		apiID          string
 		group          string
-		counters       map[string]metrics.Counter
+		counters       map[string]*counter
 		wantRemoved    int
 		wantGroupGone  bool
 		wantCounterKey string
@@ -1130,7 +1130,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 				"sub1": {"app1": {"api1": {"Success": metric1}}},
 			},
 			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:      map[string]metrics.Counter{},
+			counters:      map[string]*counter{},
 			wantRemoved:   1,
 			wantGroupGone: true,
 		},
@@ -1139,7 +1139,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 				"sub1": {"app1": {"api1": {"Success": metric1, "ctr": counter1}}},
 			},
 			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
+			counters:       map[string]*counter{"ctr": newCounter()},
 			wantRemoved:    2,
 			wantGroupGone:  true,
 			wantCounterKey: "ctr",
@@ -1149,7 +1149,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 				"sub1": {"app1": {}},
 			},
 			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]metrics.Counter{},
+			counters:    map[string]*counter{},
 			wantRemoved: 0,
 		},
 		"group key absent leaves counters still cleaned": {
@@ -1157,7 +1157,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 				"sub1": {"app1": {"api1": {"ctr": counter1}}},
 			},
 			subID: "sub1", appID: "app1", apiID: "api1", group: "Missing",
-			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
+			counters:       map[string]*counter{"ctr": newCounter()},
 			wantRemoved:    1,
 			wantGroupGone:  false,
 			wantCounterKey: "ctr",
@@ -1167,7 +1167,7 @@ func TestRemoveMetricEntries(t *testing.T) {
 				"sub1": {"app1": {"api1": {"Success": metric2}}},
 			},
 			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]metrics.Counter{"ghost": metrics.NewCounter()},
+			counters:    map[string]*counter{"ghost": newCounter()},
 			wantRemoved: 1,
 		},
 	}

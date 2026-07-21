@@ -14,7 +14,7 @@ const cancelMsg = "event cancelled, counts added at next publish"
 
 type eventMetric struct {
 	histogram metrics.Histogram
-	counters  map[string]metrics.Counter
+	counters  map[string]*counter
 }
 
 // EventBatch - creates a batch of MetricEvents to send to Condor
@@ -27,7 +27,7 @@ type EventBatch struct {
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]metrics.Counter) {
+func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]*counter) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
 	b.batchMetrics[eventID] = eventMetric{

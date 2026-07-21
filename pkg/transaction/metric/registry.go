@@ -48,7 +48,7 @@ func (r *metricRegistry) register(name string, i interface{}) error {
 		return fmt.Errorf("duplicate metric: %s", name)
 	}
 	switch i.(type) {
-	case metrics.Counter, metrics.Histogram, groupedMetrics:
+	case *counter, metrics.Histogram, groupedMetrics:
 		r.metrics[name] = i
 	}
 	return nil
