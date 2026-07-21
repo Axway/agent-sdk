@@ -1,9 +1,13 @@
 package util
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
 func TestGetTransactionEventStatus(t *testing.T) {
@@ -120,6 +124,37 @@ func TestResolveIDWithPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ResolveIDWithPrefix(tt.id, tt.inputName)
 			assert.Equal(t, tt.expected, result, tt.description)
+		})
+	}
+}
+
+func TestGetMarketplaceDetails(t *testing.T) {
+	// "marketplace" as a string instead of an object triggers a real parse failure.
+	malformedInstance := &v1.ResourceInstance{}
+	err := json.Unmarshal([]byte(`{"marketplace":"not-an-object"}`), malformedInstance)
+	assert.NoError(t, err)
+
+	tests := map[string]struct {
+		ri       *v1.ResourceInstance
+		expected *models.MarketplaceReference
+	}{
+		"nil managed application returns none placeholders": {
+			ri:       nil,
+			expected: &models.MarketplaceReference{GUID: none, ConsumerOrgID: none},
+		},
+		"resolved instance with no marketplace data returns none placeholders": {
+			ri:       &v1.ResourceInstance{},
+			expected: &models.MarketplaceReference{GUID: none, ConsumerOrgID: none},
+		},
+		"malformed instance returns unknown guid since marketplace context could not be determined": {
+			ri:       malformedInstance,
+			expected: &models.MarketplaceReference{GUID: unknown, ConsumerOrgID: none},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, GetMarketplaceDetails(tt.ri))
 		})
 	}
 }
