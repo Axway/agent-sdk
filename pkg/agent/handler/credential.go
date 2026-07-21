@@ -107,10 +107,10 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 
 	var credential *management.Credential
 	if ok := h.shouldProcessPending(cr); ok {
-		log.Trace("processing resource in pending status")
+		logger.Trace("processing resource in pending status")
 		credential = h.onPending(ctx, cr)
 	} else if actions := h.shouldProcessUpdating(cr); len(actions) != 0 {
-		log.Trace("processing resource in updating status")
+		logger.Trace("processing resource in updating status")
 		credential = h.onUpdates(ctx, cr, actions)
 	}
 
