@@ -13,14 +13,14 @@ import (
 
 type groupedMetrics struct {
 	lock       *sync.Mutex
-	counters   map[string]metrics.Counter
+	counters   map[string]*counter
 	histograms map[string]metrics.Histogram
 }
 
 func newGroupedMetric() groupedMetrics {
 	return groupedMetrics{
 		lock:       &sync.Mutex{},
-		counters:   make(map[string]metrics.Counter),
+		counters:   make(map[string]*counter),
 		histograms: make(map[string]metrics.Histogram),
 	}
 }
@@ -36,12 +36,12 @@ func (g groupedMetrics) getOrCreateHistogram(key string) metrics.Histogram {
 	return g.histograms[key]
 }
 
-func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
+func (g groupedMetrics) getOrCreateCounter(key string) *counter {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
 	if _, ok := g.counters[key]; !ok {
-		g.counters[key] = metrics.NewCounter()
+		g.counters[key] = newCounter()
 	}
 	return g.counters[key]
 }

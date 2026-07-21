@@ -98,8 +98,8 @@ type usageEventPublishItem interface {
 
 type usageEventQueueItem struct {
 	event        UsageEvent
-	usageMetric  metrics.Counter
-	volumeMetric metrics.Counter
+	usageMetric  *counter
+	volumeMetric *counter
 }
 
 func init() {
@@ -925,7 +925,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 			continue
 		}
 		c.setMetricsFromHistogram(metric, histo)
-		var counters map[string]metrics.Counter
+		var counters map[string]*counter
 		if !countersAdded {
 			c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
 			counters = groupedMetric.counters
@@ -951,12 +951,12 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 	}
 }
 
-func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
+func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]*counter, groupMap map[string]*centralMetric) {
 	if metricData.Units.CustomUnits == nil {
 		metricData.Units.CustomUnits = map[string]*UnitCount{}
 	}
 
-	for k, counter := range counters {
+	for k, cnt := range counters {
 		logger := logger.WithField("unit", k)
 		metric, ok := groupMap[k]
 		if !ok {
@@ -973,7 +973,7 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 		}
 
 		metricData.Units.CustomUnits[k] = &UnitCount{
-			Count: counter.Count(),
+			Count: cnt.Count(),
 			Quota: quota,
 		}
 	}
@@ -989,7 +989,7 @@ func (c *collector) setMetricsFromHistogram(m *centralMetric, histogram metrics.
 	}
 }
 
-func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters map[string]metrics.Counter, metric *centralMetric) {
+func (c *collector) generateMetricEvent(histogram metrics.Histogram, counters map[string]*counter, metric *centralMetric) {
 	if metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Count == 0 {
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
@@ -1024,19 +1024,19 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(histogram metrics.Histogram, counters map[string]metrics.Counter, v4data V4Data) {
+func (c *collector) generateV4Event(histogram metrics.Histogram, counters map[string]*counter, v4data V4Data) {
 	generatedEvent := c.createV4Event(c.metricStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
 	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, histogram, counters)
 }
 
-func (c *collector) getOrRegisterCounter(name string) metrics.Counter {
-	counter := c.registry.Get(name)
-	if counter == nil {
-		counter = metrics.NewCounter()
-		c.registry.Register(name, counter)
+func (c *collector) getOrRegisterCounter(name string) *counter {
+	cnt := c.registry.Get(name)
+	if cnt == nil {
+		cnt = newCounter()
+		c.registry.Register(name, cnt)
 	}
-	return counter.(metrics.Counter)
+	return cnt.(*counter)
 }
 
 func (c *collector) getOrRegisterGroupedMetrics(name string) groupedMetrics {
@@ -1048,7 +1048,7 @@ func (c *collector) getOrRegisterGroupedMetrics(name string) groupedMetrics {
 	return group.(groupedMetrics)
 }
 
-func (c *collector) getOrRegisterGroupedCounter(name string) metrics.Counter {
+func (c *collector) getOrRegisterGroupedCounter(name string) *counter {
 	groupKey, countKey := splitMetricKey(name)
 	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
 
@@ -1095,11 +1095,11 @@ func (c *collector) cleanupCounters(eventQueueItem publishQueueItem) {
 
 func (c *collector) cleanupUsageCounter(usageEventItem usageEventPublishItem) {
 	itemUsageMetric := usageEventItem.GetUsageMetric()
-	if usage, ok := itemUsageMetric.(metrics.Counter); ok {
+	if usage, ok := itemUsageMetric.(*counter); ok {
 		// Clean up the usage counter and reset the start time to current endTime
 		usage.Clear()
 		itemVolumeMetric := usageEventItem.GetVolumeMetric()
-		if volume, ok := itemVolumeMetric.(metrics.Counter); ok {
+		if volume, ok := itemVolumeMetric.(*counter); ok {
 			volume.Clear()
 		}
 		c.storage.updateUsage(0)
@@ -1117,7 +1117,7 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
-func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters map[string]metrics.Counter, metric *centralMetric) {
+func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters map[string]*counter, metric *centralMetric) {
 	c.metricMapLock.Lock()
 	defer c.metricMapLock.Unlock()
 
@@ -1132,7 +1132,7 @@ func (c *collector) cleanupMetricCounters(histogram metrics.Histogram, counters 
 		Info("Published metrics report for API")
 }
 
-func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histogram metrics.Histogram, counters map[string]metrics.Counter) {
+func (c *collector) removeMetricEntries(subID, appID, apiID, group string, histogram metrics.Histogram, counters map[string]*counter) {
 	apiStatusMap, ok := c.metricMap[subID][appID][apiID]
 	if !ok {
 		return

@@ -282,10 +282,10 @@ type cachedMetricInterface interface {
 }
 
 type customCounter struct {
-	c metrics.Counter
+	c *counter
 }
 
-func newCustomCounter(c metrics.Counter) *customCounter {
+func newCustomCounter(c *counter) *customCounter {
 	return &customCounter{c: c}
 }
 
