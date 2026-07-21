@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -506,7 +507,7 @@ func TestMetricCollector(t *testing.T) {
 				traceStatus = test.hcStatus
 			}
 			runTestHealthcheck()
-			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
+			metricCollector.registry = newRegistry()
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)
 
@@ -948,12 +949,18 @@ func TestCustomMetrics(t *testing.T) {
 			if tc.skip {
 				return
 			}
-			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetric{}
+			metricCollector.registry = newRegistry()
 			metricCollector.AddCustomMetricDetail(tc.metricEvent1)
 			if tc.metricEvent2.Count > 0 {
 				metricCollector.AddCustomMetricDetail(tc.metricEvent2)
 			}
-			assert.Equal(t, tc.expectedMetrics, len(metricCollector.metricMap))
+			metricsCount := 0
+			metricCollector.registry.Each(func(_ string, v interface{}) {
+				if gm, ok := v.(groupedMetrics); ok {
+					metricsCount += len(gm.metrics)
+				}
+			})
+			assert.Equal(t, tc.expectedMetrics, metricsCount)
 		})
 	}
 }
@@ -1013,174 +1020,85 @@ func (s *noopStorage) updateMetric(_ cachedMetricInterface, _ *centralMetric) { 
 func (s *noopStorage) save()                                                  { /* no-op */ }
 func (s *noopStorage) removeMetric(m *centralMetric)                          { s.removed = append(s.removed, m) }
 
-func newCleanupCollector(metricMap map[string]map[string]map[string]map[string]*centralMetric) (*collector, *noopStorage) {
+func newCleanupCollector() (*collector, *noopStorage) {
 	st := &noopStorage{}
 	c := &collector{
-		metricMap:     metricMap,
-		metricMapLock: &sync.Mutex{},
-		storage:       st,
+		storage: st,
+		logger:  log.NewFieldLogger(),
 	}
 	return c, st
 }
 
-func TestRemoveMetricEntries(t *testing.T) {
-	metric1 := &centralMetric{EventID: "m1"}
-	metric2 := &centralMetric{EventID: "m2"}
-	counter1 := &centralMetric{EventID: "c1"}
-
-	tests := map[string]struct {
-		metricMap      map[string]map[string]map[string]map[string]*centralMetric
-		subID          string
-		appID          string
-		apiID          string
-		group          string
-		counters       map[string]*counter
-		wantRemoved    int
-		wantGroupGone  bool
-		wantCounterKey string
-	}{
-		"removes group entry and clears histogram": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:      map[string]*counter{},
-			wantRemoved:   1,
-			wantGroupGone: true,
-		},
-		"removes counter entries alongside group": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric1, "ctr": counter1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:       map[string]*counter{"ctr": newCounter()},
-			wantRemoved:    2,
-			wantGroupGone:  true,
-			wantCounterKey: "ctr",
-		},
-		"missing apiID is a no-op": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]*counter{},
-			wantRemoved: 0,
-		},
-		"group key absent leaves counters still cleaned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"ctr": counter1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Missing",
-			counters:       map[string]*counter{"ctr": newCounter()},
-			wantRemoved:    1,
-			wantGroupGone:  false,
-			wantCounterKey: "ctr",
-		},
-		"counter key absent from apiStatusMap does not panic": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric2}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]*counter{"ghost": newCounter()},
-			wantRemoved: 1,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			c, st := newCleanupCollector(tc.metricMap)
-			apiCtr := newAPICounter()
-			apiCtr.Update(42)
-
-			c.removeMetricEntries(tc.subID, tc.appID, tc.apiID, tc.group, apiCtr, tc.counters)
-
-			assert.Len(t, st.removed, tc.wantRemoved)
-			if tc.wantGroupGone {
-				apiMap, ok := tc.metricMap[tc.subID][tc.appID][tc.apiID]
-				if ok {
-					_, present := apiMap[tc.group]
-					assert.False(t, present, "group key should have been deleted")
-				}
-			}
-			if tc.wantCounterKey != "" {
-				_, present := tc.counters[tc.wantCounterKey]
-				assert.False(t, present, "counter key should have been deleted from counters map")
-			}
-		})
+func newStatusMetric(status string) *centralMetric {
+	return &centralMetric{
+		Subscription: &models.ResourceReference{ID: "sub1"},
+		App:          &models.ApplicationResourceReference{ResourceReference: models.ResourceReference{ID: "app1"}},
+		API:          &models.APIResourceReference{ResourceReference: models.ResourceReference{ID: "api1"}, Name: "api1"},
+		Units:        &Units{Transactions: &Transactions{Status: status}},
 	}
 }
 
-func TestPruneEmptyMapLevels(t *testing.T) {
+func TestCleanupMetricCounters(t *testing.T) {
+	const registryKey = "metric.sub1.app1.api1.123"
+
+	metric1 := newStatusMetric("Success")
+	unitMetric := newStatusMetric("unit-name")
+
 	tests := map[string]struct {
-		metricMap      map[string]map[string]map[string]map[string]*centralMetric
-		subID          string
-		appID          string
-		apiID          string
-		wantAPIGone    bool
-		wantAppGone    bool
-		wantSubGone    bool
-		preservedAppID string // when set, asserts this appID is still present after the call
+		metrics          map[string]*centralMetric
+		apiCounters      map[string]*apiCounter
+		counters         map[string]*counter
+		wantRemoved      []*centralMetric
+		wantDeregistered bool
 	}{
-		"non-empty apiID level is not pruned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: false, wantAppGone: false, wantSubGone: false,
+		"removes the acked metric and deregisters a now-empty group": {
+			metrics:          map[string]*centralMetric{"Success": metric1},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: true,
 		},
-		"empty apiID level is pruned, non-empty app level kept": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {}, "api2": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: false, wantSubGone: false,
+		"removes the acked metric and any custom unit metrics bundled with it": {
+			metrics:          map[string]*centralMetric{"Success": metric1, "unit-name": unitMetric},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{"unit-name": newCounter()},
+			wantRemoved:      []*centralMetric{metric1, unitMetric},
+			wantDeregistered: true,
 		},
-		"empty apiID and app levels pruned, non-empty sub level kept": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {
-					"app1": {"api1": {}},
-					"app2": {"api2": {"Success": &centralMetric{}}},
-				},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
+		"leaves the group registered while a sibling status is still unacked": {
+			metrics:          map[string]*centralMetric{"Success": metric1, "Failure": newStatusMetric("Failure")},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter(), "Failure": newAPICounter()},
+			counters:         map[string]*counter{},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: false,
 		},
-		"all levels empty are fully pruned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
-		},
-		"absent appID within existing subID is a no-op for subID": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "missing-app", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
-			preservedAppID: "app1",
+		"counter key missing from the group's metrics does not panic": {
+			metrics:          map[string]*centralMetric{"Success": metric1},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{"ghost": newCounter()},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			c, _ := newCleanupCollector(tc.metricMap)
+			c, st := newCleanupCollector()
+			c.registry = newRegistry()
 
-			c.removeEmptyKeys(tc.subID, tc.appID, tc.apiID)
-
-			_, apiPresent := tc.metricMap[tc.subID][tc.appID][tc.apiID]
-			assert.Equal(t, tc.wantAPIGone, !apiPresent, "apiID level presence mismatch")
-
-			_, appPresent := tc.metricMap[tc.subID][tc.appID]
-			assert.Equal(t, tc.wantAppGone, !appPresent, "appID level presence mismatch")
-
-			_, subPresent := tc.metricMap[tc.subID]
-			assert.Equal(t, tc.wantSubGone, !subPresent, "subID level presence mismatch")
-
-			if tc.preservedAppID != "" {
-				_, preserved := tc.metricMap[tc.subID][tc.preservedAppID]
-				assert.True(t, preserved, "app %q should still be present after no-op call", tc.preservedAppID)
+			group := newGroupedMetric()
+			for k, m := range tc.metrics {
+				group.metrics[k] = m
 			}
+			for k, ac := range tc.apiCounters {
+				group.apiCounters[k] = ac
+			}
+			assert.NoError(t, c.registry.Register(registryKey, group))
+
+			c.cleanupMetricCounters(registryKey, tc.counters, group, metric1)
+
+			assert.ElementsMatch(t, tc.wantRemoved, st.removed)
+			assert.Equal(t, !tc.wantDeregistered, c.registry.Get(registryKey) != nil)
 		})
 	}
 }

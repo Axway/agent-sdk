@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -71,8 +72,6 @@ type collector struct {
 	batchLock        *sync.Mutex
 	registry         registry
 	metricBatch      *EventBatch
-	metricMap        map[string]map[string]map[string]map[string]*centralMetric
-	metricMapLock    *sync.Mutex
 	publishItemQueue []publishQueueItem
 	jobID            string
 	usagePublisher   *usagePublisher
@@ -163,9 +162,7 @@ func createMetricCollector() Collector {
 		metricStartTime:  now().Truncate(time.Minute), // round down to closest minute
 		lock:             &sync.Mutex{},
 		batchLock:        &sync.Mutex{},
-		metricMapLock:    &sync.Mutex{},
 		registry:         newRegistry(),
-		metricMap:        make(map[string]map[string]map[string]map[string]*centralMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
 		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
@@ -342,10 +339,10 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	// add the count
 	metric.Units.CustomUnits[detail.UnitDetails.Name].Count += detail.Count
 
+	c.updateStartTime()
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
 
-	c.updateStartTime()
 	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
@@ -488,49 +485,22 @@ func (c *collector) setupAPICounter(detail Detail) (*centralMetric, *apiCounter)
 }
 
 func (c *collector) getExistingMetric(metric *centralMetric) *centralMetric {
-	keyParts := strings.Split(metric.getKey(), ".")
+	groupKey, uniqueKey := splitMetricKey(metric.getKey())
+	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
-	c.metricMapLock.Lock()
-	defer c.metricMapLock.Unlock()
-
-	if _, ok := c.metricMap[keyParts[1]]; !ok {
-		return nil
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
-		return nil
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
-		return nil
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
-		return nil
-	}
-	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
+	existing, _ := groupedMetric.getMetric(uniqueKey)
+	return existing
 }
 
 func (c *collector) updateMetricWithCachedMetric(metric *centralMetric, cached cachedMetricInterface) *centralMetric {
-	keyParts := strings.Split(metric.getKey(), ".")
+	groupKey, uniqueKey := splitMetricKey(metric.getKey())
+	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
-	c.metricMapLock.Lock()
-	defer c.metricMapLock.Unlock()
+	// first api metric for sub+app+api+statuscode wins and becomes the template used for reporting
+	metric = groupedMetric.getOrSetMetric(uniqueKey, metric)
 
-	if _, ok := c.metricMap[keyParts[1]]; !ok {
-		c.metricMap[keyParts[1]] = make(map[string]map[string]map[string]*centralMetric)
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]]; !ok {
-		c.metricMap[keyParts[1]][keyParts[2]] = make(map[string]map[string]*centralMetric)
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]]; !ok {
-		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]] = make(map[string]*centralMetric)
-	}
-	if _, ok := c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]; !ok {
-		// First api metric for sub+app+api+statuscode,
-		// setup the start time to be used for reporting metric event
-		c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]] = metric
-	}
-
-	c.storage.updateMetric(cached, c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]])
-	return c.metricMap[keyParts[1]][keyParts[2]][keyParts[3]][keyParts[4]]
+	c.storage.updateMetric(cached, metric)
+	return metric
 }
 
 // getAccessRequest -
@@ -783,12 +753,19 @@ func (c *collector) generateEvents() {
 		return
 	}
 
+	// snapshot the start time in effect for this publish cycle, then reset the attribute so that any
+	// metrics recorded from here on start a new generation instead of being folded into this batch
+	publishStartTime := c.metricStartTime
+	c.metricStartTime = time.Time{}
+
 	c.metricBatch = NewEventBatch(c)
-	c.registry.Each(c.processRegistry)
+	c.registry.Each(func(name string, metric interface{}) {
+		c.processRegistry(name, metric, publishStartTime)
+	})
 
 	if len(c.metricBatch.events) == 0 && !c.usageConfig.IsOfflineMode() {
 		c.logger.
-			WithField(startTimestampStr, util.ConvertTimeToMillis(c.metricStartTime)).
+			WithField(startTimestampStr, util.ConvertTimeToMillis(publishStartTime)).
 			WithField(endTimestampStr, util.ConvertTimeToMillis(c.metricEndTime)).
 			WithField(eventTypeStr, metricStr).
 			Info("no metric events generated as no transactions recorded")
@@ -802,7 +779,7 @@ func (c *collector) generateEvents() {
 	}
 }
 
-func (c *collector) processRegistry(name string, metric interface{}) {
+func (c *collector) processRegistry(name string, metric interface{}, publishStartTime time.Time) {
 	switch {
 	case name == transactionCountMetric:
 		if c.usageConfig.CanPublish() {
@@ -815,7 +792,7 @@ func (c *collector) processRegistry(name string, metric interface{}) {
 	case name == transactionVolumeMetric:
 		return // skip volume metric as it is handled with Count metric
 	default:
-		c.processMetric(name, metric)
+		c.processMetric(name, metric, publishStartTime)
 	}
 }
 
@@ -885,37 +862,37 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 	c.publishItemQueue = append(c.publishItemQueue, queueItem)
 }
 
-func (c *collector) processMetric(metricName string, groupedMetric interface{}) {
-	c.metricMapLock.Lock()
-	defer c.metricMapLock.Unlock()
+func (c *collector) processMetric(metricName string, groupedMetricInterface interface{}, publishStartTime time.Time) {
 	elements := strings.Split(metricName, ".")
-	if len(elements) == 4 {
-		subscriptionID := elements[1]
-		appID := elements[2]
-		apiID := strings.ReplaceAll(elements[3], "#", ".")
-		if appMap, ok := c.metricMap[subscriptionID]; ok {
-			if apiMap, ok := appMap[appID]; ok {
-				if groupMap, ok := apiMap[apiID]; ok {
-					logger := c.logger.WithField("subscriptionID", subscriptionID).WithField("applicationID", appID).WithField("apiID", apiID)
-					c.handleGroupedMetric(logger, groupedMetric, groupMap)
-				}
-			}
-		}
-	}
-}
-
-func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInterface interface{}, groupMap map[string]*centralMetric) {
-	groupedMetric, ok := groupedMetricInterface.(groupedMetrics)
-	if !ok {
-		logger.Error("metric data to process was not the expected type")
+	if len(elements) != 5 {
 		return
 	}
 
+	groupStartTime, err := strconv.ParseInt(elements[4], 10, 64)
+	if err != nil || groupStartTime > util.ConvertTimeToMillis(publishStartTime) {
+		// this generation of metrics started after this publish cycle began, handle it on a later cycle
+		return
+	}
+
+	groupedMetric, ok := groupedMetricInterface.(groupedMetrics)
+	if !ok {
+		c.logger.Error("metric data to process was not the expected type")
+		return
+	}
+
+	logger := c.logger.
+		WithField("subscriptionID", elements[1]).
+		WithField("applicationID", elements[2]).
+		WithField("apiID", strings.ReplaceAll(elements[3], "#", "."))
+	c.handleGroupedMetric(logger, groupedMetric, publishStartTime, metricName)
+}
+
+func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric groupedMetrics, publishStartTime time.Time, registryKey string) {
 	countersAdded := false
 	// handle each api counter, on the first one add the counter information
 	for k, apiCtr := range groupedMetric.apiCounters {
 		logger := logger.WithField("status", k)
-		metric, ok := groupMap[k]
+		metric, ok := groupedMetric.getMetric(k)
 		if !ok {
 			logger.Debug("no metrics in map for status")
 			continue
@@ -923,11 +900,11 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 		c.setMetricsFromAPICounter(metric, apiCtr)
 		var counters map[string]*counter
 		if !countersAdded {
-			c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
+			c.setMetricCounters(logger, metric, groupedMetric)
 			counters = groupedMetric.counters
 			countersAdded = true
 		}
-		c.generateMetricEvent(apiCtr, counters, metric)
+		c.generateMetricEvent(counters, metric, publishStartTime, registryKey, groupedMetric)
 	}
 
 	// create metric with just custom units
@@ -937,24 +914,24 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 			key = k
 			break
 		}
-		metric, ok := groupMap[key]
+		metric, ok := groupedMetric.getMetric(key)
 		if !ok {
 			logger.WithField("counterKey", key).Error("could not get metric for counter")
 			return
 		}
-		c.setMetricCounters(logger, metric, groupedMetric.counters, groupMap)
-		c.generateMetricEvent(newAPICounter(), groupedMetric.counters, metric)
+		c.setMetricCounters(logger, metric, groupedMetric)
+		c.generateMetricEvent(groupedMetric.counters, metric, publishStartTime, registryKey, groupedMetric)
 	}
 }
 
-func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]*counter, groupMap map[string]*centralMetric) {
+func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, groupedMetric groupedMetrics) {
 	if metricData.Units.CustomUnits == nil {
 		metricData.Units.CustomUnits = map[string]*UnitCount{}
 	}
 
-	for k, cnt := range counters {
+	for k, cnt := range groupedMetric.counters {
 		logger := logger.WithField("unit", k)
-		metric, ok := groupMap[k]
+		metric, ok := groupedMetric.getMetric(k)
 		if !ok {
 			logger.Error("no counter in map for unit")
 			continue
@@ -985,13 +962,13 @@ func (c *collector) setMetricsFromAPICounter(m *centralMetric, apiCtr *apiCounte
 	}
 }
 
-func (c *collector) generateMetricEvent(apiCtr *apiCounter, counters map[string]*counter, metric *centralMetric) {
+func (c *collector) generateMetricEvent(counters map[string]*counter, metric *centralMetric, publishStartTime time.Time, registryKey string, group groupedMetrics) {
 	if metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Count == 0 {
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
 	metric.Observation = &models.ObservationDetails{
-		Start: util.ConvertTimeToMillis(c.metricStartTime),
+		Start: util.ConvertTimeToMillis(publishStartTime),
 		End:   util.ConvertTimeToMillis(c.metricEndTime),
 	}
 	metric.Reporter = &Reporter{
@@ -1003,7 +980,7 @@ func (c *collector) generateMetricEvent(apiCtr *apiCounter, counters map[string]
 	}
 
 	// Generate app subscription metric
-	c.generateV4Event(apiCtr, counters, metric)
+	c.generateV4Event(counters, metric, publishStartTime, registryKey, group)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -1020,10 +997,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(apiCtr *apiCounter, counters map[string]*counter, v4data V4Data) {
-	generatedEvent := c.createV4Event(c.metricStartTime.UnixMilli(), v4data)
+func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey string, group groupedMetrics) {
+	generatedEvent := c.createV4Event(publishStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
-	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, apiCtr, counters)
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, counters, group)
 }
 
 func (c *collector) getOrRegisterCounter(name string) *counter {
@@ -1046,16 +1023,22 @@ func (c *collector) getOrRegisterGroupedMetrics(name string) groupedMetrics {
 
 func (c *collector) getOrRegisterGroupedCounter(name string) *counter {
 	groupKey, countKey := splitMetricKey(name)
-	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
+	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
 	return groupedMetric.getOrCreateCounter(countKey)
 }
 
 func (c *collector) getOrRegisterGroupedAPICounter(name string) *apiCounter {
 	groupKey, counterKey := splitMetricKey(name)
-	groupedMetric := c.getOrRegisterGroupedMetrics(groupKey)
+	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
 	return groupedMetric.getOrCreateAPICounter(counterKey)
+}
+
+// groupKeyWithStartTime - appends the current metric generation's start time to the group key so that
+// metrics accumulated under different start times are kept in separate registry entries
+func (c *collector) groupKeyWithStartTime(groupKey string) string {
+	return fmt.Sprintf("%s.%d", groupKey, c.metricStartTime.UnixMilli())
 }
 
 func (c *collector) publishEvents() {
@@ -1113,52 +1096,34 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
-func (c *collector) cleanupMetricCounters(apiCtr *apiCounter, counters map[string]*counter, metric *centralMetric) {
-	c.metricMapLock.Lock()
-	defer c.metricMapLock.Unlock()
+// cleanupMetricCounters - called once a metric event has been acked, to remove the persisted cache
+// entry for the published metric (and any custom unit metrics acked alongside it), and to remove that
+// status/unit's entry from the group. A status/unit whose event was never acked (publish failed, was
+// retried, or cancelled) is left in the group so it is picked up again on the next publish cycle instead
+// of being lost. Once every entry in the group has been acked, the group itself is removed from the
+// registry.
+func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
+	c.storage.removeMetric(metric)
 
-	subID, appID, apiID, group := metric.getKeyParts()
-	c.removeMetricEntries(subID, appID, apiID, group, apiCtr, counters)
-	c.removeEmptyKeys(subID, appID, apiID)
+	_, statusKey := splitMetricKey(metric.getKey())
+	empty := group.removeAndCheckEmpty(statusKey)
+
+	for k := range counters {
+		if m, ok := group.getMetric(k); ok {
+			c.storage.removeMetric(m)
+		}
+		empty = group.removeAndCheckEmpty(k)
+	}
+
+	if empty {
+		c.registry.Deregister(registryKey)
+	}
 
 	c.logger.
 		WithField(startTimestampStr, util.ConvertTimeToMillis(c.usageStartTime)).
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField("apiName", metric.API.Name).
 		Info("Published metrics report for API")
-}
-
-func (c *collector) removeMetricEntries(subID, appID, apiID, group string, apiCtr *apiCounter, counters map[string]*counter) {
-	apiStatusMap, ok := c.metricMap[subID][appID][apiID]
-	if !ok {
-		return
-	}
-
-	if _, ok := apiStatusMap[group]; ok {
-		c.storage.removeMetric(apiStatusMap[group])
-		delete(c.metricMap[subID][appID][apiID], group)
-		apiCtr.Clear()
-	}
-
-	for k := range counters {
-		if apiStatusMap[k] != nil {
-			c.storage.removeMetric(apiStatusMap[k])
-		}
-		delete(c.metricMap[subID][appID][apiID], k)
-		delete(counters, k)
-	}
-}
-
-func (c *collector) removeEmptyKeys(subID, appID, apiID string) {
-	if len(c.metricMap[subID][appID][apiID]) == 0 {
-		delete(c.metricMap[subID][appID], apiID)
-	}
-	if len(c.metricMap[subID][appID]) == 0 {
-		delete(c.metricMap[subID], appID)
-	}
-	if len(c.metricMap[subID]) == 0 {
-		delete(c.metricMap, subID)
-	}
 }
 
 func GetStatusText(statusCode string) string {

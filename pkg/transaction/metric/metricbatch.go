@@ -3,7 +3,6 @@ package metric
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
@@ -12,8 +11,9 @@ import (
 const cancelMsg = "event cancelled, counts added at next publish"
 
 type eventMetric struct {
-	apiCounter *apiCounter
-	counters   map[string]*counter
+	registryKey string
+	counters    map[string]*counter
+	group       groupedMetrics
 }
 
 // EventBatch - creates a batch of MetricEvents to send to Condor
@@ -26,12 +26,13 @@ type EventBatch struct {
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, apiCtr *apiCounter, counters map[string]*counter) {
+func (b *EventBatch) AddEvent(event beatPub.Event, registryKey string, counters map[string]*counter, group groupedMetrics) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
 	b.batchMetrics[eventID] = eventMetric{
-		apiCounter: apiCtr,
-		counters:   counters,
+		registryKey: registryKey,
+		counters:    counters,
+		group:       group,
 	}
 }
 
@@ -92,7 +93,6 @@ func (b *EventBatch) Events() []beatPub.Event {
 // ACK - all events have been acknowledgeded, cleanup the counters
 func (b *EventBatch) ACK() {
 	b.ackEvents(b.events)
-	b.collector.metricStartTime = time.Time{}
 	b.batchUnlock()
 }
 
@@ -147,7 +147,7 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 		b.collector.logMetric("published", metric)
 
 		if eventMetric, ok := b.batchMetrics[metric.EventID]; ok {
-			b.collector.cleanupMetricCounters(eventMetric.apiCounter, eventMetric.counters, metric)
+			b.collector.cleanupMetricCounters(eventMetric.registryKey, eventMetric.counters, eventMetric.group, metric)
 		} else {
 			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
 		}

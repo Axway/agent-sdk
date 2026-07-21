@@ -5,13 +5,14 @@ import (
 	"sync"
 )
 
+// The metric registry which can store counters or grouped metrics
 type registry interface {
 	Each(func(string, interface{}))
 	Get(string) interface{}
 	Register(string, interface{}) error
+	Deregister(string)
 }
 
-// The metric registry which can store counters, api counters, or grouped metrics
 type metricRegistry struct {
 	metrics map[string]interface{}
 	mutex   sync.RWMutex
@@ -46,10 +47,16 @@ func (r *metricRegistry) register(name string, i interface{}) error {
 		return fmt.Errorf("duplicate metric: %s", name)
 	}
 	switch i.(type) {
-	case *counter, *apiCounter, groupedMetrics:
+	case *counter, groupedMetrics:
 		r.metrics[name] = i
 	}
 	return nil
+}
+
+func (r *metricRegistry) Deregister(name string) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	delete(r.metrics, name)
 }
 
 type metricKV struct {
