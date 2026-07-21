@@ -75,10 +75,10 @@ func centralConfigFields() (apicDeployment, agentName, runtimeType string) {
 	if cfg == nil {
 		return
 	}
-	if cfg.IsAxwayManaged() {
-		runtimeType = runtimeTypeManaged
-	} else {
+	if cfg.IsUnmanagedEnvironment() {
 		runtimeType = runtimeTypeUnmanaged
+	} else {
+		runtimeType = runtimeTypeManaged
 	}
 	apicDeployment = cfg.GetAPICDeployment()
 	agentName = cfg.GetAgentName()

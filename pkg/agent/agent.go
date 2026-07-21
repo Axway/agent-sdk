@@ -426,6 +426,7 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	}
 
 	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
+	cfg.SetUnmanagedEnvironment(len(env.References.ManagedEnvironments) > 0)
 	if cfg.GetEnvironmentID() == "" {
 		// need to save this ID for the traceability agent for later
 		cfg.SetEnvironmentID(env.Metadata.ID)
