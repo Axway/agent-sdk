@@ -472,14 +472,14 @@ func TestCentralConfigFields(t *testing.T) {
 			wantRuntime:            runtimeTypeUnmanaged,
 			wantAgentName:          "agent-clone",
 		},
-		"axway-managed hosting has no bearing on runtime type when environment has references": {
+		"axway-managed hosting with references still returns unmanaged": {
 			isUnmanagedEnvironment: true,
 			axwayManaged:           true,
 			agentName:              "agent-managed-hosting-unmanaged-env",
 			wantRuntime:            runtimeTypeUnmanaged,
 			wantAgentName:          "agent-managed-hosting-unmanaged-env",
 		},
-		"axway-managed hosting has no bearing on runtime type when environment has no references": {
+		"axway-managed hosting with no references still returns managed": {
 			isUnmanagedEnvironment: false,
 			axwayManaged:           true,
 			agentName:              "agent-managed-hosting-managed-env",

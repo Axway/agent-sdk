@@ -426,7 +426,11 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	}
 
 	cfg.SetAxwayManaged(env.Spec.AxwayManaged)
+
+	// a non-empty ManagedEnvironments list means this environment references other
+	// (managed) environments, making this one a clone, i.e. unmanaged
 	cfg.SetUnmanagedEnvironment(len(env.References.ManagedEnvironments) > 0)
+
 	if cfg.GetEnvironmentID() == "" {
 		// need to save this ID for the traceability agent for later
 		cfg.SetEnvironmentID(env.Metadata.ID)
