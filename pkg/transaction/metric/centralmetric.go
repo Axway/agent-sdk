@@ -215,6 +215,10 @@ type centralMetric struct {
 	Reporter           *Reporter                            `json:"reporter,omitempty"`
 	Observation        *models.ObservationDetails           `json:"-"`
 	EventID            string                               `json:"-"`
+
+	// ctx is the metric context reported when the agent added the data to the collector
+	ctx      transactionContext
+	resolved bool
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -311,17 +315,15 @@ func (a *centralMetric) addTransactionFields(fields logrus.Fields) logrus.Fields
 
 // getKey - returns the cache key for the metric
 func (a *centralMetric) getKey() string {
-	subID := unknown
-	if a.Subscription != nil {
-		subID = a.Subscription.ID
-	}
-	appID := unknown
-	if a.App != nil {
-		appID = a.App.ID
+	appKey := unknown
+	if a.ctx.AppDetails.ID != "" {
+		appKey = sanitizeKeySegment(a.ctx.AppDetails.ID)
+	} else if a.ctx.AppDetails.Name != "" {
+		appKey = sanitizeKeySegment(a.ctx.AppDetails.Name)
 	}
 	apiID := unknown
-	if a.API != nil {
-		apiID = a.API.ID
+	if a.API != nil && a.API.ID != "" {
+		apiID = sanitizeKeySegment(a.API.ID)
 	}
 	uniqueKey := unknown
 	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Status != "" {
@@ -334,7 +336,7 @@ func (a *centralMetric) getKey() string {
 		}
 	}
 
-	return strings.Join([]string{metricKeyPrefix, subID, appID, apiID, uniqueKey}, ".")
+	return strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
 }
 
 func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedMetric {

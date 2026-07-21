@@ -392,51 +392,78 @@ func (c *collector) updateUsage(count int64) {
 	c.storage.updateUsage(int(transactionCount.Count()))
 }
 
+// creates a centralMetric with detail available now, resolution of full central context will happen later
 func (c *collector) createMetric(detail transactionContext) *centralMetric {
-	// Go get the access request and managed app
-	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), detail)
-
 	apicDeployment, _, runtimeType := centralConfigFields()
 
 	me := &centralMetric{
-		Version:            metricDataVersion,
-		APICDeployment:     apicDeployment,
-		Environment:        &EnvironmentInfo{RuntimeType: runtimeType},
-		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
-		Subscription:       c.createSubscriptionDetail(accessRequest),
-		App:                c.createAppDetail(managedApp),
-		Product:            c.getProduct(accessRequest),
-		API:                c.createAPIDetail(detail.APIDetails),
-		AssetResource:      c.getAssetResource(accessRequest),
-		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
-		ProductPlan:        c.getProductPlan(accessRequest),
+		Version:        metricDataVersion,
+		APICDeployment: apicDeployment,
+		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
+		API:            c.createAPIDetail(detail.APIDetails),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),
+		ctx:     detail,
 	}
 
 	// transactions
 	if detail.Status != "" {
 		me.Units = &Units{
 			Transactions: &Transactions{
-				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, defaultUnit),
-				},
 				Status: GetStatusText(detail.Status),
 			},
 		}
 	} else if detail.UnitName != "" {
 		me.Units = &Units{
 			CustomUnits: map[string]*UnitCount{
-				detail.UnitName: {
-					Quota: c.getQuota(accessRequest, detail.UnitName),
-				},
+				detail.UnitName: {},
 			},
 		}
 	}
 
 	return me
+}
+
+// resolveMetricContext resolves the access request/managed application for metric
+func (c *collector) resolveMetricContext(metric *centralMetric) {
+	if metric.resolved {
+		return
+	}
+
+	accessRequest, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), metric.ctx)
+
+	metric.Marketplace = transutil.GetMarketplaceDetails(managedApp)
+	metric.Subscription = c.createSubscriptionDetail(accessRequest)
+	metric.App = c.createAppDetail(managedApp)
+	metric.Product = c.getProduct(accessRequest)
+	metric.AssetResource = c.getAssetResource(accessRequest)
+	metric.APIServiceRevision = c.getAPIServiceRevision(accessRequest)
+	metric.ProductPlan = c.getProductPlan(accessRequest)
+
+	if metric.Units != nil {
+		if metric.Units.Transactions != nil {
+			metric.Units.Transactions.Quota = c.getQuota(accessRequest, defaultUnit)
+		}
+		for name, unitCount := range metric.Units.CustomUnits {
+			unitCount.Quota = c.getQuota(accessRequest, name)
+		}
+	}
+
+	// one-shot: whether or not managedApp resolved, don't keep retrying on subsequent cycles
+	metric.resolved = true
+}
+
+// getResolvedMetric fetches the metric template cached under key in group, resolving its access
+// request/managed application context (if not already resolved) before returning it.
+func (c *collector) getResolvedMetric(group groupedMetrics, key string) (*centralMetric, bool) {
+	metric, ok := group.getMetric(key)
+	if !ok {
+		return nil, false
+	}
+	c.resolveMetricContext(metric)
+	return metric, true
 }
 
 func (c *collector) createOrUpdateAPICounter(detail Detail) *centralMetric {
@@ -864,11 +891,11 @@ func (c *collector) generateUsageEvent(orgGUID string) {
 
 func (c *collector) processMetric(metricName string, groupedMetricInterface interface{}, publishStartTime time.Time) {
 	elements := strings.Split(metricName, ".")
-	if len(elements) != 5 {
+	if len(elements) != 4 {
 		return
 	}
 
-	groupStartTime, err := strconv.ParseInt(elements[4], 10, 64)
+	groupStartTime, err := strconv.ParseInt(elements[3], 10, 64)
 	if err != nil || groupStartTime > util.ConvertTimeToMillis(publishStartTime) {
 		// this generation of metrics started after this publish cycle began, handle it on a later cycle
 		return
@@ -881,9 +908,8 @@ func (c *collector) processMetric(metricName string, groupedMetricInterface inte
 	}
 
 	logger := c.logger.
-		WithField("subscriptionID", elements[1]).
-		WithField("applicationID", elements[2]).
-		WithField("apiID", strings.ReplaceAll(elements[3], "#", "."))
+		WithField("applicationID", desanitizeKeySegment(elements[1])).
+		WithField("apiID", desanitizeKeySegment(elements[2]))
 	c.handleGroupedMetric(logger, groupedMetric, publishStartTime, metricName)
 }
 
@@ -892,7 +918,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric gr
 	// handle each api counter, on the first one add the counter information
 	for k, apiCtr := range groupedMetric.apiCounters {
 		logger := logger.WithField("status", k)
-		metric, ok := groupedMetric.getMetric(k)
+		metric, ok := c.getResolvedMetric(groupedMetric, k)
 		if !ok {
 			logger.Debug("no metrics in map for status")
 			continue
@@ -914,7 +940,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric gr
 			key = k
 			break
 		}
-		metric, ok := groupedMetric.getMetric(key)
+		metric, ok := c.getResolvedMetric(groupedMetric, key)
 		if !ok {
 			logger.WithField("counterKey", key).Error("could not get metric for counter")
 			return
@@ -931,7 +957,7 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 
 	for k, cnt := range groupedMetric.counters {
 		logger := logger.WithField("unit", k)
-		metric, ok := groupedMetric.getMetric(k)
+		metric, ok := c.getResolvedMetric(groupedMetric, k)
 		if !ok {
 			logger.Error("no counter in map for unit")
 			continue
