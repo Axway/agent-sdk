@@ -99,7 +99,13 @@ func TestDiscoveryCacheExecute(t *testing.T) {
 			}
 
 			dc := newDiscoveryCache(cfg, c,
-				[]handler.Handler{svcHandler, managedAppHandler, managedAppProfHandler, accessReqHandler, credHandler},
+				map[string][]handler.Handler{
+					management.APIServiceGVK().Kind:               {svcHandler},
+					management.ManagedApplicationGVK().Kind:        {managedAppHandler},
+					management.ManagedApplicationProfileGVK().Kind: {managedAppProfHandler},
+					management.AccessRequestGVK().Kind:             {accessReqHandler},
+					management.CredentialGVK().Kind:                {credHandler},
+				},
 				tc.wt,
 				opts...,
 			)
@@ -136,6 +142,18 @@ type mockHandler struct {
 }
 
 func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.ResourceInstance) error {
+	if m.kind != "" && ri.Kind != m.kind {
+		return nil
+	}
+	m.count = m.count + 1
+	return m.err
+}
+
+func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+func (m *mockHandler) HandleCache(ri *apiv1.ResourceInstance) error {
 	if m.kind != "" && ri.Kind != m.kind {
 		return nil
 	}

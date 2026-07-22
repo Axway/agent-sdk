@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -20,13 +19,19 @@ func NewCRDHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
+func (h *crdHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	return true
+}
+
+// HandleCache adds the CredentialRequestDefinition to the cache during discoveryCache's bulk rebuild.
+func (h *crdHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.agentCacheManager.AddCredentialRequestDefinition(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for Credentials
 func (h *crdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.CredentialRequestDefinitionGVK().Kind {
-		return nil
-	}
-
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddCredentialRequestDefinition(resource)
 		return nil

@@ -32,19 +32,31 @@ func (h *StreamWatchProxyHandler) RegisterTargetHandler(name string, resourceHan
 	h.targetResourceHandlerMap[name] = resourceHandler
 }
 
+func (h *StreamWatchProxyHandler) GetHandlers() map[string]Handler {
+	return h.targetResourceHandlerMap
+}
+
 // UnregisterTargetHandler removes the specified handler
 func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
+func (h *StreamWatchProxyHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if handler, ok := h.targetResourceHandlerMap[event.Payload.Kind]; ok {
+		if handler.ShouldHandle(ctx, event) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Handle receives the type of the event (add, update, delete), event metadata and updated API Server resource
 func (h *StreamWatchProxyHandler) Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error {
-	if h.targetResourceHandlerMap != nil {
-		for _, handler := range h.targetResourceHandlerMap {
-			err := handler.Handle(ctx, eventMetadata, resource)
-			if err != nil {
-				return err
-			}
+	if handler, ok := h.targetResourceHandlerMap[resource.Kind]; ok {
+		err := handler.Handle(ctx, eventMetadata, resource)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

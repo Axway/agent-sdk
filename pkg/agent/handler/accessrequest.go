@@ -58,13 +58,20 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 	return arh
 }
 
+func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+		return true
+	}
+	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+		return false
+	}
+	return true
+}
+
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.AccessRequestGVK().Kind {
-		return nil
-	}
-
 	if action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
 		// update the cache with the new x-agent-details subresource
 		h.cache.AddAccessRequest(resource)

@@ -17,6 +17,15 @@ func init() {
 type Handler interface {
 	// Handle receives the type of the event context, event metadata and the API Server resource, if it exists.
 	Handle(ctx context.Context, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) error
+	ShouldHandle(context.Context, *proto.Event) bool
+}
+
+// CacheHandler is implemented by Handlers that participate in discoveryCache's bulk rebuild path -
+// there's no proto.Event/EventMeta to build during a rebuild, and the resource is always freshly
+// fetched (never a delete or subresource update), so it's a separate method rather than reusing
+// ShouldHandle/Handle. Handlers that don't implement it are simply skipped during a rebuild.
+type CacheHandler interface {
+	HandleCache(resource *v1.ResourceInstance) error
 }
 
 // This type is used for values added to context
@@ -53,6 +62,34 @@ func isStatusFound(rs *v1.ResourceStatus) bool {
 		return false
 	}
 	return true
+}
+
+// NewEventFromResource builds a synthetic *proto.Event from an already-fetched resource, for
+// callers (e.g. StreamWatchProxyHandler, discoveryCache) that only have a *v1.ResourceInstance
+// and need to invoke Handler.ShouldHandle before Handle.
+func NewEventFromResource(action proto.Event_Type, eventMetadata *proto.EventMeta, resource *v1.ResourceInstance) *proto.Event {
+	payload := &proto.ResourceInstance{
+		Metadata: &proto.Metadata{},
+	}
+	if resource != nil {
+		payload.Group = resource.Group
+		payload.Kind = resource.Kind
+		payload.Name = resource.Name
+		payload.Attributes = resource.Attributes
+		payload.Metadata.Id = resource.Metadata.ID
+		payload.Metadata.SelfLink = resource.Metadata.SelfLink
+		payload.Metadata.Scope = &proto.Metadata_ScopeKind{
+			Id:       resource.Metadata.Scope.ID,
+			Kind:     resource.Metadata.Scope.Kind,
+			Name:     resource.Metadata.Scope.Name,
+			SelfLink: resource.Metadata.Scope.SelfLink,
+		}
+	}
+	return &proto.Event{
+		Type:     action,
+		Metadata: eventMetadata,
+		Payload:  payload,
+	}
 }
 
 // NewEventContext - create a context for the new event

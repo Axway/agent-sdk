@@ -54,16 +54,26 @@ func TestWatchResourceHandler(t *testing.T) {
 	cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	handler := NewWatchResourceHandler(cm, WithWatchTopicFeatures(features))
 
+	handle := func(action proto.Event_Type, res *v1.ResourceInstance) error {
+		ctx := NewEventContext(action, nil, res.Kind, res.Name)
+		event := NewEventFromResource(action, nil, res)
+		if !handler.ShouldHandle(ctx, event) {
+			return nil
+		}
+
+		return handler.Handle(ctx, nil, res)
+	}
+
 	res := createWatchResource(mv1.SecretGVK().Group, mv1.SecretGVK().Kind, "secret-id-1", "secret-name-1")
 	// not cached resource
-	err := handler.Handle(NewEventContext(proto.Event_CREATED, nil, res.Kind, res.Name), nil, res)
+	err := handle(proto.Event_CREATED, res)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, cm.GetWatchResourceCacheKeys(mv1.SecretGVK().Group, mv1.SecretGVK().Kind))
 	cachedRes := cm.GetWatchResourceByID(mv1.SecretGVK().Group, mv1.SecretGVK().Kind, "credential-id-1")
 	assert.Empty(t, cachedRes)
 
 	res = createWatchResource(mv1.CredentialGVK().Group, mv1.CredentialGVK().Kind, "credential-id-1", "credential-name-1")
-	err = handler.Handle(NewEventContext(proto.Event_CREATED, nil, res.Kind, res.Name), nil, res)
+	err = handle(proto.Event_CREATED, res)
 	assert.Nil(t, err)
 	cachedGroupKindKeys := cm.GetWatchResourceCacheKeys(mv1.CredentialGVK().Group, mv1.CredentialGVK().Kind)
 	assert.NotEqual(t, []string{}, cachedGroupKindKeys)
@@ -73,7 +83,7 @@ func TestWatchResourceHandler(t *testing.T) {
 	cachedRes = cm.GetWatchResourceByName(mv1.CredentialGVK().Group, mv1.CredentialGVK().Kind, "credential-name-1")
 	assert.NotNil(t, cachedRes)
 
-	err = handler.Handle(NewEventContext(proto.Event_DELETED, nil, res.Kind, res.Name), nil, res)
+	err = handle(proto.Event_DELETED, res)
 	assert.Nil(t, err)
 
 	cachedRes = cm.GetWatchResourceByKey(cachedGroupKindKeys[0])
