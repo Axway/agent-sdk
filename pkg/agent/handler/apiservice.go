@@ -28,30 +28,6 @@ func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bo
 	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
 		return false
 	}
-	action := GetActionFromContext(ctx)
-	if action != proto.Event_DELETED {
-		return true
-	}
-	log := getLoggerFromContext(ctx).
-		WithComponent("apiServiceHandler").
-		WithField("action", action).
-		WithField("resource", event.Payload.Name).
-		WithField("resourceID", event.Payload.Metadata.Id)
-
-	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(event.Payload.Name)
-	if existing == nil {
-		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(event.Payload.Name)
-	}
-	existingSvc, ok := existing.(*apiv1.ResourceInstance)
-	if !ok {
-		log.Trace("invalid resource type in cache, skipping delete")
-		return false
-	}
-
-	if existingSvc.Metadata.ID != event.Payload.Metadata.Id {
-		log.Trace("resource id mismatch, skipping delete")
-		return false
-	}
 	return true
 }
 
@@ -60,7 +36,22 @@ func (h *apiSvcHandler) HandleCache(resource *apiv1.ResourceInstance) error {
 	return h.agentCacheManager.AddAPIService(resource)
 }
 
-func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached (looked up by name - the
+// APIService cache is keyed by external API ID/name from x-agent-details, not metadata.id), so
+// Handle can merge the updated subresource onto it; otherwise the full resource is needed to
+// populate the cache from scratch, so no restriction is returned.
+func (h *apiSvcHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	if event.Metadata.Subresource == "" {
+		return nil
+	}
+	if existing := h.agentCacheManager.GetAPIServiceWithName(event.Payload.Name); existing == nil {
+		return nil
+	}
+	return []string{"name", "metadata.id", event.Metadata.Subresource}
+}
+
+func (h *apiSvcHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 
 	log := getLoggerFromContext(ctx).
@@ -69,6 +60,30 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 		WithField("resource", resource.Name).
 		WithField("resourceID", resource.Metadata.ID)
 
+	if action == proto.Event_DELETED {
+		// remove the service from the cache by name
+		return h.agentCacheManager.DeleteAPIService(resource.Name)
+	}
+
+	if meta != nil && meta.Subresource != "" {
+		existing := h.agentCacheManager.GetAPIServiceWithName(resource.Name)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			if err := h.agentCacheManager.AddAPIService(resource); err != nil {
+				log.WithError(err).Error("could not handle api service event")
+			}
+			return nil
+		}
+		if v := resource.GetSubResource(meta.Subresource); v != nil {
+			existing.SetSubResource(meta.Subresource, v)
+		}
+		if err := h.agentCacheManager.AddAPIService(existing); err != nil {
+			log.WithError(err).Error("could not handle api service subresource update")
+		}
+		return nil
+	}
+
 	id, err := util.GetAgentDetailsValue(resource, definitions.AttrExternalAPIID)
 	if err != nil {
 		log.WithError(err).Error("could not find the external API ID on the API Service")
@@ -76,11 +91,6 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 	log = log.WithField("apiID", id)
 
 	defer log.Trace("finished processing request")
-
-	if action == proto.Event_DELETED {
-		// remove the service from the cache by name
-		return h.agentCacheManager.DeleteAPIService(resource.Name)
-	}
 
 	log.Debug("adding or updating api service in cache")
 	err = h.agentCacheManager.AddAPIService(resource)

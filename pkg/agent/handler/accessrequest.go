@@ -69,12 +69,37 @@ func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	return true
 }
 
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached, so Handle can merge the
+// updated subresource onto it; otherwise the full resource is needed to populate the cache from
+// scratch, so no restriction is returned.
+func (h *accessRequestHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
+			return nil
+		}
+		return []string{"name", "metadata.id", event.Metadata.Subresource}
+	}
+	return nil
+}
+
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
 		// update the cache with the new x-agent-details subresource
-		h.cache.AddAccessRequest(resource)
+		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			h.cache.AddAccessRequest(resource)
+			return nil
+		}
+		if newDetails := util.GetAgentDetails(resource); newDetails != nil {
+			util.SetAgentDetails(existing, newDetails)
+		}
+		h.cache.AddAccessRequest(existing)
 		return nil
 	}
 

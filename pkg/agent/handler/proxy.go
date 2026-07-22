@@ -41,6 +41,17 @@ func (h *StreamWatchProxyHandler) UnregisterTargetHandler(name string) {
 	delete(h.targetResourceHandlerMap, name)
 }
 
+// GetAPIServerFields delegates to the target handler registered for the event's kind, if it
+// implements RequiredFieldsHandler. Returns nil (no restriction) otherwise.
+func (h *StreamWatchProxyHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	if handler, ok := h.targetResourceHandlerMap[event.Payload.Kind]; ok {
+		if rfh, ok := handler.(RequiredFieldsHandler); ok {
+			return rfh.GetAPIServerFields(ctx, event)
+		}
+	}
+	return nil
+}
+
 func (h *StreamWatchProxyHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	if handler, ok := h.targetResourceHandlerMap[event.Payload.Kind]; ok {
 		if handler.ShouldHandle(ctx, event) {

@@ -29,13 +29,42 @@ func (h *apdHandler) HandleCache(resource *apiv1.ResourceInstance) error {
 	return nil
 }
 
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached, so Handle can merge the
+// updated subresource onto it; otherwise the full resource is needed to populate the cache from
+// scratch, so no restriction is returned.
+func (h *apdHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	if event.Metadata.Subresource == "" {
+		return nil
+	}
+	if existing, _ := h.agentCacheManager.GetApplicationProfileDefinitionByID(event.Payload.Metadata.Id); existing == nil {
+		return nil
+	}
+	return []string{"name", "metadata.id", event.Metadata.Subresource}
+}
+
 // Handle processes grpc events triggered for Application Profile Definitions
-func (h *apdHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+func (h *apdHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if action != proto.Event_DELETED {
-		h.agentCacheManager.AddApplicationProfileDefinition(resource)
+	if action == proto.Event_DELETED {
+		return h.agentCacheManager.DeleteApplicationProfileDefinition(resource.Metadata.ID)
+	}
+
+	if meta != nil && meta.Subresource != "" {
+		existing, _ := h.agentCacheManager.GetApplicationProfileDefinitionByID(resource.Metadata.ID)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			h.agentCacheManager.AddApplicationProfileDefinition(resource)
+			return nil
+		}
+		if v := resource.GetSubResource(meta.Subresource); v != nil {
+			existing.SetSubResource(meta.Subresource, v)
+		}
+		h.agentCacheManager.AddApplicationProfileDefinition(existing)
 		return nil
 	}
 
-	return h.agentCacheManager.DeleteApplicationProfileDefinition(resource.Metadata.ID)
+	h.agentCacheManager.AddApplicationProfileDefinition(resource)
+	return nil
 }
