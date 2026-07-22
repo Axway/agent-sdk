@@ -17,6 +17,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -282,6 +283,12 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 						Kind:  management.APIServiceInstanceGVK().Kind,
 						ID:    instanceID,
 						Name:  instanceName,
+					},
+					{
+						Group: catalog.SubscriptionGVK().Group,
+						Kind:  catalog.SubscriptionGVK().Kind,
+						ID:    subscriptionName,
+						Name:  "catalog/" + subscriptionName,
 					},
 				},
 			},
@@ -754,6 +761,201 @@ func TestMetricCollectorCache(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMetricCollectorPublishesAllSubscriptionsAndCleansRegistry(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, cfg := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	const (
+		testManagedApp3   = "managed-app-3"
+		testAccessReq3    = "access-req-3"
+		testSubscription3 = "subscription-3"
+	)
+	cm := agent.GetCacheManager()
+	cm.AddManagedApplication(createManagedApplication("app-3", testManagedApp3, testConsumerOrg))
+	cm.AddAccessRequest(createAccessRequest("ac-3", testAccessReq3, testManagedApp3, testInstID, testInstName, testSubscription3))
+
+	metricCollector.registry = newRegistry()
+	cfg.SetAxwayManaged(false)
+	testClient := setupMockClient(0)
+
+	subscriptions := []struct {
+		appID        string
+		appName      string
+		subscription string
+	}{
+		{"app-1", testManagedApp1, testSubscription1},
+		{"app-2", testManagedApp2, testSubscription2},
+		{"app-3", testManagedApp3, testSubscription3},
+	}
+
+	for _, sub := range subscriptions {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: "200",
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: sub.appID, Name: sub.appName},
+		})
+	}
+
+	// each subscription's transactions should be tracked under its own registry group
+	registeredMetricGroups := 0
+	metricCollector.registry.Each(func(name string, _ interface{}) {
+		if strings.HasPrefix(name, metricKeyPrefix+".") {
+			registeredMetricGroups++
+		}
+	})
+	assert.Equal(t, len(subscriptions), registeredMetricGroups)
+
+	assert.NoError(t, metricCollector.Execute())
+	metricCollector.usagePublisher.Execute()
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, len(subscriptions), mock.eventsAcked)
+	assert.Len(t, mock.capturedEvents, len(subscriptions))
+
+	publishedSubscriptions := map[string]bool{}
+	for _, event := range mock.capturedEvents {
+		metric := getMetricFromEvent(event)
+		if assert.NotNil(t, metric) && assert.NotNil(t, metric.Subscription) {
+			publishedSubscriptions[metric.Subscription.ID] = true
+		}
+	}
+	for _, sub := range subscriptions {
+		assert.True(t, publishedSubscriptions[sub.subscription], "expected subscription %s to be published", sub.subscription)
+	}
+
+	// once every group's event has been acked, the registry should be free of metric groups
+	remainingMetricGroups := 0
+	metricCollector.registry.Each(func(name string, _ interface{}) {
+		if strings.HasPrefix(name, metricKeyPrefix+".") {
+			remainingMetricGroups++
+		}
+	})
+	assert.Equal(t, 0, remainingMetricGroups)
+
+	s.resetConfig()
+}
+
+func setupAPIMetricCollectorTest(t *testing.T, s *testHTTPServer) *collector {
+	t.Helper()
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
+	cfg.SetEnvironmentID(testEnvID)
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	return createMetricCollector().(*collector)
+}
+
+func TestAddAPIMetricAggregatesTransactionCounter(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector := setupAPIMetricCollectorTest(t, s)
+	testClient := setupMockClient(0)
+
+	newAPIMetric := func(count, min, max int64, avg float64) *APIMetric {
+		return &APIMetric{
+			Subscription: models.Subscription{ID: "sub-1"},
+			App:          models.AppDetails{ID: "app-1"},
+			API:          models.APIDetails{ID: "api-1", Name: "api-1"},
+			StatusCode:   "200",
+			Count:        count,
+			Response:     ResponseMetrics{Min: min, Max: max, Avg: avg},
+			Observation:  models.ObservationDetails{Start: 10, End: 20},
+		}
+	}
+
+	// two calls for the same subscription/app/api/status should merge into a single cached metric
+	metricCollector.AddAPIMetric(newAPIMetric(5, 10, 50, 20))
+	metricCollector.AddAPIMetric(newAPIMetric(3, 5, 80, 40))
+
+	assert.NoError(t, metricCollector.Execute())
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, 1, mock.eventsAcked)
+	if !assert.Len(t, mock.capturedEvents, 1) {
+		return
+	}
+
+	metric := getMetricFromEvent(mock.capturedEvents[0])
+	if !assert.NotNil(t, metric) {
+		return
+	}
+	assert.Equal(t, "sub-1", metric.Subscription.ID)
+	assert.Equal(t, int64(8), metric.Units.Transactions.Count)
+	assert.Equal(t, int64(5), metric.Units.Transactions.Response.Min)
+	assert.Equal(t, int64(80), metric.Units.Transactions.Response.Max)
+	assert.Equal(t, 27.5, metric.Units.Transactions.Response.Avg)
+
+	s.resetConfig()
+}
+
+func TestAddAPIMetricAggregatesCustomUnitCounter(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector := setupAPIMetricCollectorTest(t, s)
+	testClient := setupMockClient(0)
+
+	newCustomAPIMetric := func(count int64) *APIMetric {
+		return &APIMetric{
+			Subscription: models.Subscription{ID: "sub-2"},
+			App:          models.AppDetails{ID: "app-2"},
+			API:          models.APIDetails{ID: "api-2", Name: "api-2"},
+			Unit:         &models.Unit{Name: "widgets"},
+			Count:        count,
+			Observation:  models.ObservationDetails{Start: 10, End: 20},
+		}
+	}
+
+	// two calls for the same subscription/app/api/unit should merge into a single cached metric
+	metricCollector.AddAPIMetric(newCustomAPIMetric(4))
+	metricCollector.AddAPIMetric(newCustomAPIMetric(6))
+
+	assert.NoError(t, metricCollector.Execute())
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, 1, mock.eventsAcked)
+	if !assert.Len(t, mock.capturedEvents, 1) {
+		return
+	}
+
+	data := getRawEventData(mock.capturedEvents[0])
+	if !assert.NotNil(t, data) {
+		return
+	}
+	units, ok := data["units"].(map[string]interface{})
+	if !assert.True(t, ok, "expected units in published event data") {
+		return
+	}
+	unitData, ok := units["widgets"].(map[string]interface{})
+	if !assert.True(t, ok, "expected widgets unit in published event data") {
+		return
+	}
+	assert.Equal(t, float64(10), unitData["count"])
+
+	s.resetConfig()
 }
 
 type offlineMetricTestCase struct {

@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -346,30 +345,54 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
-// AddAPIMetric - add api metric for API transaction
-func (c *collector) AddAPIMetric(metric *APIMetric) {
-	c.updateStartTime()
-	c.addMetric(centralMetricFromAPIMetric(metric))
-}
+// AddAPIMetric - add api metric for API transaction, merging its counts and response stats into
+// any metric already cached for the same subscription/application/api/status
+func (c *collector) AddAPIMetric(apiMetric *APIMetric) {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
+		return
+	}
 
-// addMetric - add central metric event
-func (c *collector) addMetric(metric *centralMetric) {
+	metric := centralMetricFromAPIMetric(apiMetric)
+	if metric == nil {
+		return
+	}
 	if metric.EventID == "" {
 		metric.EventID = uuid.NewString()
 	}
 
-	v4Event := c.createV4Event(metric.Observation.Start, metric)
-	metricData, _ := json.Marshal(v4Event)
-	pubEvent, err := (&CondorMetricEvent{
-		Message:   string(metricData),
-		Fields:    make(map[string]interface{}),
-		Timestamp: v4Event.Data.GetStartTime(),
-		ID:        v4Event.ID,
-	}).CreateEvent()
-	if err != nil {
+	// the incoming metric already carries fully resolved subscription/app/product context,
+	// so mark it resolved to keep resolveMetricContext from overwriting it from the cache later
+	metric.ctx = transactionContext{AppDetails: apiMetric.App}
+	metric.resolved = true
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
+	c.updateStartTime()
+
+	if apiMetric.Unit != nil {
+		c.updateCachedCustomUnitMetric(apiMetric, metric)
 		return
 	}
-	c.metricBatch.AddEventWithoutHistogram(pubEvent)
+
+	apiCtr := c.getOrRegisterGroupedAPICounter(metric.getKey())
+	apiCtr.UpdateWithStats(apiMetric.Count, apiMetric.Response.Min, apiMetric.Response.Max, apiMetric.Response.Avg)
+	c.updateMetricWithCachedMetric(metric, apiCtr)
+}
+
+// updateCachedCustomUnitMetric merges a custom-unit APIMetric into any cached metric already tracked for its key
+func (c *collector) updateCachedCustomUnitMetric(apiMetric *APIMetric, metric *centralMetric) {
+	if m := c.getExistingMetric(metric); m != nil {
+		metric = m
+	}
+	metric.Units.CustomUnits[apiMetric.Unit.Name].Count += apiMetric.Count
+
+	counter := c.getOrRegisterGroupedCounter(metric.getKey())
+	counter.Inc(apiMetric.Count)
+
+	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
 func (c *collector) ShutdownPublish() {
