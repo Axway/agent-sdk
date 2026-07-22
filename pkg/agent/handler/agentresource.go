@@ -103,6 +103,27 @@ func (h *agentResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	return false
 }
 
+// GetAPIServerFields returns the fields needed to process the given event. A full resource
+// update needs everything, so no restriction is returned. The x-agent-details subresource update
+// is passed straight to apicClient.CreateSubResource, which needs the resource's self link, so
+// "metadata" (not just "metadata.id") is required in addition to the subresource itself. The
+// traceability agent's agentstate subresource update only reads that subresource.
+func (h *agentResourceHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	if event.Type != proto.Event_SUBRESOURCEUPDATED {
+		return nil
+	}
+
+	if event.Metadata.Subresource == definitions.XAgentDetails {
+		return []string{"name", "metadata", event.Metadata.Subresource}
+	}
+
+	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Metadata.Subresource == management.TraceabilityAgentAgentstateSubResourceName {
+		return []string{"name", "metadata.id", event.Metadata.Subresource}
+	}
+
+	return nil
+}
+
 // HandleCache stores the agent resource fetched during discoveryCache's bulk rebuild - equivalent
 // to what a live Event_UPDATED does for all three agent types.
 func (h *agentResourceHandler) HandleCache(resource *v1.ResourceInstance) error {

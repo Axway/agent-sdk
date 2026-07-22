@@ -2,7 +2,10 @@ package events
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -19,6 +22,7 @@ type Listener interface {
 
 // APIClient -
 type APIClient interface {
+	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
@@ -30,6 +34,7 @@ type EventListener struct {
 	ctx             context.Context
 	cancel          context.CancelCauseFunc
 	client          APIClient
+	baseURL         string
 	handlersByKind  map[string][]handler.Handler
 	logger          log.FieldLogger
 	sequenceManager SequenceProvider
@@ -37,11 +42,11 @@ type EventListener struct {
 }
 
 // NewListenerFunc type for creating a new listener
-type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener
+type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers,
 // indexed by the resource Kind they should be dispatched for.
-func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener {
+func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
@@ -50,6 +55,7 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		ctx:             ctx,
 		cancel:          cancel,
 		client:          client,
+		baseURL:         baseURL,
 		handlersByKind:  handlersByKind,
 		logger:          logger,
 		sequenceManager: sequenceManager,
@@ -118,12 +124,14 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	var ri *apiv1.ResourceInstance
 	var err error
+	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
 	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
+
 		if ri == nil {
-			ri, err = em.getEventResource(event)
+			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
 				return err
 			}
@@ -137,11 +145,55 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	return nil
 }
 
-func (em *EventListener) getEventResource(event *proto.Event) (*apiv1.ResourceInstance, error) {
+// requiredAPIServerFields returns the union of the fields declared as required by the given
+// handlers, preserving first-seen order. If any handler does not restrict itself to specific
+// fields - either by not implementing RequiredFieldsHandler, or by declaring none - the full
+// resource is required, so an empty slice is returned to signal "no restriction".
+func requiredAPIServerFields(ctx context.Context, event *proto.Event, handlers []handler.Handler) []string {
+	seen := map[string]struct{}{}
+	fields := []string{}
+	for _, h := range handlers {
+		rfh, ok := h.(handler.RequiredFieldsHandler)
+		if !ok {
+			return nil
+		}
+
+		hFields := rfh.GetAPIServerFields(ctx, event)
+		if len(hFields) == 0 {
+			return nil
+		}
+
+		for _, f := range hFields {
+			if _, ok := seen[f]; !ok {
+				seen[f] = struct{}{}
+				fields = append(fields, f)
+			}
+		}
+	}
+	return fields
+}
+
+func (em *EventListener) getEventResource(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error) {
 	if event.Type == proto.Event_DELETED {
 		return em.convertEventPayload(event), nil
 	}
-	return em.client.GetResource(event.Payload.Metadata.SelfLink)
+
+	queryParams := map[string]string{}
+	if len(apiServerFields) > 0 {
+		queryParams["fields"] = strings.Join(apiServerFields, ",")
+	}
+
+	url := fmt.Sprintf("%s/apis%s", em.baseURL, event.Payload.Metadata.SelfLink)
+	resp, err := em.client.ExecuteAPI(http.MethodGet, url, queryParams, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ri := &apiv1.ResourceInstance{}
+	if err := json.Unmarshal(resp, ri); err != nil {
+		return nil, err
+	}
+	return ri, nil
 }
 
 func (em *EventListener) convertEventPayload(event *proto.Event) *apiv1.ResourceInstance {

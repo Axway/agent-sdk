@@ -38,6 +38,16 @@ func (c *environmentHandler) ShouldHandle(ctx context.Context, event *proto.Even
 	return true
 }
 
+// GetAPIServerFields returns the fields needed to process the given event. This handler only ever
+// reacts to a subresource update of the environment's policies, so that's all it needs.
+func (c *environmentHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	action := GetActionFromContext(ctx)
+	if action != proto.Event_SUBRESOURCEUPDATED || event.Metadata.Subresource != management.EnvironmentPoliciesSubResourceName {
+		return nil
+	}
+	return []string{"name", "metadata.id", event.Metadata.Subresource}
+}
+
 func (c *environmentHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	log := getLoggerFromContext(ctx).WithComponent("environmentHandler")
 	env := &management.Environment{}

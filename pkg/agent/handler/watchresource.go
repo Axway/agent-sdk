@@ -85,13 +85,42 @@ func (h *watchResourceHandler) HandleCache(resource *v1.ResourceInstance) error 
 	return nil
 }
 
-func (h *watchResourceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *v1.ResourceInstance) error {
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached, so Handle can merge the
+// updated subresource onto it; otherwise the full resource is needed to populate the cache from
+// scratch, so no restriction is returned.
+func (h *watchResourceHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	if event.Metadata.Subresource == "" {
+		return nil
+	}
+	if existing := h.agentCacheManager.GetWatchResourceByID(event.Payload.Group, event.Payload.Kind, event.Payload.Metadata.Id); existing == nil {
+		return nil
+	}
+	return []string{"name", "metadata.id", event.Metadata.Subresource}
+}
+
+func (h *watchResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 
-	if action != proto.Event_DELETED {
-		h.agentCacheManager.AddWatchResource(resource)
+	if action == proto.Event_DELETED {
+		return h.agentCacheManager.DeleteWatchResource(resource.Group, resource.Kind, resource.Metadata.ID)
+	}
+
+	if meta != nil && meta.Subresource != "" {
+		existing := h.agentCacheManager.GetWatchResourceByID(resource.Group, resource.Kind, resource.Metadata.ID)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			h.agentCacheManager.AddWatchResource(resource)
+			return nil
+		}
+		if v := resource.GetSubResource(meta.Subresource); v != nil {
+			existing.SetSubResource(meta.Subresource, v)
+		}
+		h.agentCacheManager.AddWatchResource(existing)
 		return nil
 	}
 
-	return h.agentCacheManager.DeleteWatchResource(resource.Group, resource.Kind, resource.Metadata.ID)
+	h.agentCacheManager.AddWatchResource(resource)
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -54,6 +55,21 @@ func (h *accessRequestCacheHandler) ShouldHandle(ctx context.Context, event *pro
 	return true
 }
 
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached, so Handle can merge the
+// updated subresource onto it; otherwise the full resource is needed to populate the cache from
+// scratch, so no restriction is returned.
+func (h *accessRequestCacheHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	action := GetActionFromContext(ctx)
+	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
+			return nil
+		}
+		return []string{"name", "metadata.id", event.Metadata.Subresource}
+	}
+	return nil
+}
+
 // HandleCache builds the AccessRequest cache during discoveryCache's bulk rebuild. For the
 // traceability agent, the resource is already fetched with embed=metadata.references, so no extra
 // enrichment call is needed here.
@@ -66,8 +82,18 @@ func (h *accessRequestCacheHandler) HandleCache(resource *apiv1.ResourceInstance
 func (h *accessRequestCacheHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
 	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
+		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			h.cache.AddAccessRequest(resource)
+			return nil
+		}
+		if newDetails := util.GetAgentDetails(resource); newDetails != nil {
+			util.SetAgentDetails(existing, newDetails)
+		}
 		// update the cache with the new x-agent-details subresource
-		h.cache.AddAccessRequest(resource)
+		h.cache.AddAccessRequest(existing)
 		return nil
 	}
 
