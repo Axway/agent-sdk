@@ -729,7 +729,7 @@ func (m *mockCredProv) CredentialProvision(cr prov.CredentialRequest) (status pr
 	m.expectedProvType = provision
 	v := cr.(*provCreds)
 	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
-	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
+	assertMapContains(m.t, v.credDetails, m.expectedCredDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus, &mockProvCredential{}
@@ -739,7 +739,7 @@ func (m *mockCredProv) CredentialDeprovision(cr prov.CredentialRequest) (status 
 	m.expectedProvType = deprovision
 	v := cr.(*provCreds)
 	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
-	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
+	assertMapContains(m.t, v.credDetails, m.expectedCredDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus
@@ -749,7 +749,7 @@ func (m *mockCredProv) CredentialUpdate(cr prov.CredentialRequest) (status prov.
 	m.expectedProvType = update
 	v := cr.(*provCreds)
 	assertMapContains(m.t, v.appDetails, m.expectedAppDetails)
-	assert.Equal(m.t, m.expectedCredDetails, v.credDetails)
+	assertMapContains(m.t, v.credDetails, m.expectedCredDetails)
 	assert.Equal(m.t, m.expectedManagedApp, v.managedApp)
 	assert.Equal(m.t, m.expectedCredType, v.credType)
 	return m.expectedStatus, &mockProvCredential{}

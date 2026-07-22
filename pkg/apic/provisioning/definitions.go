@@ -65,6 +65,8 @@ const (
 	RequestTypeRenew
 )
 
+const HandleCredentialExpiry = "handleExpiry"
+
 // String returns the string value of the RequestType enum
 func (c RequestType) String() string {
 	return map[RequestType]string{

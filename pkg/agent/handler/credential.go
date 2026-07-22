@@ -396,6 +396,8 @@ func (h *credentials) provisionPostProcess(status prov.RequestStatus, credential
 	}
 
 	details := util.MergeMapStringString(util.GetAgentDetailStrings(cred), status.GetProperties(), idpAgentDetails)
+	// Adding this flag to perform the credential expiry for on-prem agents in agents-controller through status subresoruce event.
+	details[prov.HandleCredentialExpiry] = "true"
 	util.SetAgentDetails(cred, util.MapStringStringToMapStringInterface(details))
 
 	h.processCredentialLevelSuccess(provCreds, cred)
