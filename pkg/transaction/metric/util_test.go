@@ -61,7 +61,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-1",
 				Observation: &models.ObservationDetails{
 					Start: 10,
@@ -137,7 +137,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-1",
 				Reporter: &Reporter{
 					AgentVersion:     cmd.BuildVersion,
@@ -205,7 +205,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-no-owner",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -244,7 +244,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-with-owner",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -278,7 +278,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-no-revision",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -308,7 +308,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "id-with-revision",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -344,7 +344,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "evt-api-demotion",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -384,7 +384,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 			},
 			expectedOutput: &centralMetric{
 				Version:     "3",
-				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeUnmanaged},
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
 				EventID:     "evt-app-demotion",
 				Observation: &models.ObservationDetails{Start: 1, End: 2},
 				Reporter: &Reporter{
@@ -454,28 +454,44 @@ func TestIsKnownID(t *testing.T) {
 
 func TestCentralConfigFields(t *testing.T) {
 	cases := map[string]struct {
-		axwayManaged  bool
-		agentName     string
-		wantRuntime   string
-		wantAgentName string
+		isUnmanagedEnvironment bool
+		axwayManaged           bool
+		agentName              string
+		wantRuntime            string
+		wantAgentName          string
 	}{
-		"non-managed config returns unmanaged": {
-			axwayManaged:  false,
-			agentName:     "agent-connected",
-			wantRuntime:   runtimeTypeUnmanaged,
-			wantAgentName: "agent-connected",
+		"environment with no environment references returns managed": {
+			isUnmanagedEnvironment: false,
+			agentName:              "agent-connected",
+			wantRuntime:            runtimeTypeManaged,
+			wantAgentName:          "agent-connected",
 		},
-		"axway-managed config returns managed": {
-			axwayManaged:  true,
-			agentName:     "agent-managed",
-			wantRuntime:   runtimeTypeManaged,
-			wantAgentName: "agent-managed",
+		"environment referencing other environments returns unmanaged": {
+			isUnmanagedEnvironment: true,
+			agentName:              "agent-clone",
+			wantRuntime:            runtimeTypeUnmanaged,
+			wantAgentName:          "agent-clone",
+		},
+		"axway-managed hosting with references still returns unmanaged": {
+			isUnmanagedEnvironment: true,
+			axwayManaged:           true,
+			agentName:              "agent-managed-hosting-unmanaged-env",
+			wantRuntime:            runtimeTypeUnmanaged,
+			wantAgentName:          "agent-managed-hosting-unmanaged-env",
+		},
+		"axway-managed hosting with no references still returns managed": {
+			isUnmanagedEnvironment: false,
+			axwayManaged:           true,
+			agentName:              "agent-managed-hosting-managed-env",
+			wantRuntime:            runtimeTypeManaged,
+			wantAgentName:          "agent-managed-hosting-managed-env",
 		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			cfg := &config.CentralConfiguration{AgentName: tc.agentName}
 			cfg.SetAxwayManaged(tc.axwayManaged)
+			cfg.SetUnmanagedEnvironment(tc.isUnmanagedEnvironment)
 			agent.InitializeForTest(nil, agent.TestWithCentralConfig(cfg))
 
 			_, agentName, runtimeType := centralConfigFields()

@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorhill/cronexpr"
+
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	mv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/exception"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/gorhill/cronexpr"
 )
 
 const (
@@ -177,6 +178,8 @@ type CentralConfig interface {
 	SetEnvironmentID(environmentID string)
 	IsAxwayManaged() bool
 	SetAxwayManaged(isAxwayManaged bool)
+	IsUnmanagedEnvironment() bool
+	SetUnmanagedEnvironment(isUnmanaged bool)
 	GetEnvironmentName() string
 	GetAgentName() string
 	GetTeamName() string
@@ -278,6 +281,7 @@ type CentralConfiguration struct {
 	isSingleURLSet            bool
 	isRegionSet               bool
 	isAxwayManaged            bool
+	isUnmanagedEnvironment    bool
 	WatchResourceFilters      []ResourceFilter
 
 	qaVars bool
@@ -379,14 +383,25 @@ func (c *CentralConfiguration) SetEnvironmentID(environmentID string) {
 	c.environmentID = environmentID
 }
 
-// IsAxwayManaged - Returns the environment ID
+// IsAxwayManaged - Returns true if the environment is hosted in the Axway Managed Cloud
 func (c *CentralConfiguration) IsAxwayManaged() bool {
 	return c.isAxwayManaged
 }
 
-// SetAxwayManaged - Sets the environment ID
+// SetAxwayManaged - Sets whether the environment is hosted in the Axway Managed Cloud
 func (c *CentralConfiguration) SetAxwayManaged(isManaged bool) {
 	c.isAxwayManaged = isManaged
+}
+
+// IsUnmanagedEnvironment - Returns true if the environment references other environments,
+// meaning its API data is a derived clone rather than gateway-discovered
+func (c *CentralConfiguration) IsUnmanagedEnvironment() bool {
+	return c.isUnmanagedEnvironment
+}
+
+// SetUnmanagedEnvironment - Sets whether the environment references other environments
+func (c *CentralConfiguration) SetUnmanagedEnvironment(isUnmanaged bool) {
+	c.isUnmanagedEnvironment = isUnmanaged
 }
 
 // GetEnvironmentName - Returns the environment name
