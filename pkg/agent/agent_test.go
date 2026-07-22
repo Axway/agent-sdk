@@ -7,15 +7,22 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Axway/agent-sdk/pkg/apic"
-	"github.com/Axway/agent-sdk/pkg/apic/definitions"
-
-	"github.com/Axway/agent-sdk/pkg/util/log"
-
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
+	"github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/stretchr/testify/assert"
+	"github.com/Axway/agent-sdk/pkg/util/log"
+)
+
+const (
+	testDataplaneV7          = "v7-dataplane"
+	testAuthTokenResponse    = `{"access_token":"somevalue","expires_in": 12235677}`
+	testEnvironmentsV7URL    = "/apis/management/v1/environments/v7"
+	testDiscoveryAgentsV7URL = testEnvironmentsV7URL + "/discoveryagents/"
+	testPlatformTeamsURL     = "/api/v1/platformTeams"
 )
 
 func resetResources() {
@@ -139,18 +146,18 @@ func TestAgentInitialize(t *testing.T) {
 			Title:    "v7",
 		},
 	}
-	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, testDataplaneV7, "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, testDataplaneV7, false)
 	complianceAgentRes := createComplianceAgentRes("111", caName, "ca-dataplane")
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthTokenResponse
 			resp.Write([]byte(token))
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, testDiscoveryAgentsV7URL+daName) {
 			buf, err := json.Marshal(discoveryAgentRes)
 			log.Error(err)
 			resp.Write(buf)
@@ -171,13 +178,13 @@ func TestAgentInitialize(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
+		if strings.Contains(req.RequestURI, testEnvironmentsV7URL) {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
 			buf, _ := json.Marshal(teams)
 			resp.Write(buf)
 			return
@@ -238,7 +245,7 @@ func TestAgentInitialize(t *testing.T) {
 	assert.True(t, agentCfg.resourceChanged)
 
 	// Test for resource change
-	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, "v7-dataplane", true)
+	traceabilityAgentRes = createTraceabilityAgentRes("111", taName, testDataplaneV7, true)
 	resetResources()
 
 	agentResChangeHandlerCall := 0
@@ -275,29 +282,29 @@ func TestAgentEntitlements(t *testing.T) {
 			Title:    "v7",
 		},
 	}
-	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, testDataplaneV7, "")
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthTokenResponse
 			resp.Write([]byte(token))
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, testDiscoveryAgentsV7URL+daName) {
 			buf, err := json.Marshal(discoveryAgentRes)
 			log.Error(err)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
+		if strings.Contains(req.RequestURI, testEnvironmentsV7URL) {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
 			buf, _ := json.Marshal(teams)
 			resp.Write(buf)
 			return
@@ -346,12 +353,12 @@ func TestInitEnvironment(t *testing.T) {
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthTokenResponse
 			resp.Write([]byte(token))
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
+		if strings.Contains(req.RequestURI, testEnvironmentsV7URL) {
 			if req.Method == "GET" {
 				buf, _ := json.Marshal(environmentRes)
 				resp.Write(buf)
@@ -363,7 +370,7 @@ func TestInitEnvironment(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
 			buf, _ := json.Marshal(teams)
 			resp.Write(buf)
 			return
@@ -396,6 +403,80 @@ func TestInitEnvironment(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// TestInitEnvResourcesUnmanagedEnvironment verifies that initEnvResources derives the
+// unmanaged-environment flag from the Environment resource's References.ManagedEnvironments,
+// independent of AxwayManaged (which reflects hosting location, not clone/reference status).
+func TestInitEnvResourcesUnmanagedEnvironment(t *testing.T) {
+	cases := map[string]struct {
+		managedEnvironments []string
+		axwayManaged        bool
+		wantUnmanaged       bool
+	}{
+		"no environment references reports managed": {
+			managedEnvironments: nil,
+			wantUnmanaged:       false,
+		},
+		"environment referencing another environment reports unmanaged": {
+			managedEnvironments: []string{"real-env"},
+			wantUnmanaged:       true,
+		},
+		"multiple environment references reports unmanaged": {
+			managedEnvironments: []string{"real-env-1", "real-env-2"},
+			wantUnmanaged:       true,
+		},
+		"axway-managed hosting with environment references still reports unmanaged": {
+			managedEnvironments: []string{"real-env"},
+			axwayManaged:        true,
+			wantUnmanaged:       true,
+		},
+		"axway-managed hosting with no environment references reports managed": {
+			managedEnvironments: nil,
+			axwayManaged:        true,
+			wantUnmanaged:       false,
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			environmentRes := management.NewEnvironment("v7")
+			environmentRes.Title = "v7"
+			environmentRes.Metadata.ID = "123"
+			environmentRes.Spec.AxwayManaged = tc.axwayManaged
+			environmentRes.References.ManagedEnvironments = tc.managedEnvironments
+
+			s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+				if strings.Contains(req.RequestURI, "/auth") {
+					resp.Write([]byte(testAuthTokenResponse))
+					return
+				}
+				if strings.Contains(req.RequestURI, testEnvironmentsV7URL) {
+					buf, _ := json.Marshal(environmentRes)
+					resp.Write(buf)
+					return
+				}
+				if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
+					resp.Write([]byte("[]"))
+					return
+				}
+			}))
+			defer s.Close()
+
+			cfg := createCentralCfg(s.URL, "v7")
+			cfg.AgentType = config.TraceabilityAgent
+			cfg.SetTeamID("existing-team-id") // skip the team lookup call, not under test here
+			agent.cfg = cfg
+			initializeTokenRequester(agent.cfg)
+			apiClient := apic.New(agent.cfg, agent.tokenRequester, agent.cacheManager)
+
+			defer resetResources()
+			err := initEnvResources(agent.cfg, apiClient)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.wantUnmanaged, cfg.IsUnmanagedEnvironment())
+		})
+	}
+}
+
 func TestAgentConfigOverride(t *testing.T) {
 	const (
 		daName = "discovery"
@@ -416,16 +497,16 @@ func TestAgentConfigOverride(t *testing.T) {
 			Title:    "v7",
 		},
 	}
-	discoveryAgentRes := createDiscoveryAgentRes("111", daName, "v7-dataplane", "")
-	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, "v7-dataplane", false)
+	discoveryAgentRes := createDiscoveryAgentRes("111", daName, testDataplaneV7, "")
+	traceabilityAgentRes := createTraceabilityAgentRes("111", taName, testDataplaneV7, false)
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthTokenResponse
 			resp.Write([]byte(token))
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7/discoveryagents/"+daName) {
+		if strings.Contains(req.RequestURI, testDiscoveryAgentsV7URL+daName) {
 			buf, _ := json.Marshal(discoveryAgentRes)
 			resp.Write(buf)
 			return
@@ -437,13 +518,13 @@ func TestAgentConfigOverride(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/apis/management/v1/environments/v7") {
+		if strings.Contains(req.RequestURI, testEnvironmentsV7URL) {
 			buf, _ := json.Marshal(environmentRes)
 			resp.Write(buf)
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
+		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
 			buf, _ := json.Marshal(teams)
 			resp.Write(buf)
 			return
