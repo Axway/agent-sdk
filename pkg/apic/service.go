@@ -77,9 +77,10 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 	}
 
 	logger.Trace("adding spec hashes to service")
-	serviceBody.specHashes[serviceBody.specHash] = serviceBody.serviceContext.revisionName
 	details := util.GetAgentDetails(apiSvc)
-	details[specHashes] = serviceBody.specHashes
+	if len(serviceBody.specHashes) > 0 {
+		details[specHashes] = serviceBody.specHashes
+	}
 	util.SetAgentDetails(apiSvc, details)
 	if err := c.CreateSubResource(apiSvc.ResourceMeta, map[string]interface{}{defs.XAgentDetails: details}); err != nil {
 		logger.Error("error adding spec hashes in x-agent-details, retrying")
