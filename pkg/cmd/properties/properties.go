@@ -67,7 +67,6 @@ type Properties interface {
 	// Log Properties
 	MaskValues(name string)
 	DebugLogProperties()
-	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
 type durationOpts struct {
@@ -122,8 +121,6 @@ func WithUpperLimitInt(upper int) IntOpt {
 	}
 }
 
-var aliasKeyPrefix string
-
 type properties struct {
 	Properties
 	rootCmd                  *cobra.Command
@@ -162,24 +159,9 @@ func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver Secr
 	return cmdprops
 }
 
-// SetAliasKeyPrefix -
-func SetAliasKeyPrefix(keyPrefix string) {
-	aliasKeyPrefix = keyPrefix
-}
-
-// GetAliasKeyPrefix -
-func GetAliasKeyPrefix() string {
-	return aliasKeyPrefix
-}
-
 func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
 	if err := viper.BindPFlag(key, flg); err != nil {
 		panic(err)
-	}
-	if aliasKeyPrefix != "" {
-		if err := viper.BindPFlag(aliasKeyPrefix+"."+key, flg); err != nil {
-			panic(err)
-		}
 	}
 }
 
@@ -465,18 +447,6 @@ func (p *properties) parseSlice(s string, expSlice [][]byte) string {
 	return rtnS
 }
 
-func (p *properties) parseStringValue(key string) string {
-	var s string
-	if aliasKeyPrefix != "" {
-		s = p.parseStringValueForKey(aliasKeyPrefix + "." + key)
-	}
-	// If no alias or no value parsed for alias key
-	if s == "" {
-		s = p.parseStringValueForKey(key)
-	}
-	return s
-}
-
 func (p *properties) resolveSecretReference(cfgName, cfgValue string) string {
 	if p.secretResolver != nil {
 		secretValue, err := p.secretResolver.ResolveSecret(cfgValue)
@@ -494,7 +464,7 @@ func (p *properties) resolveSecretReference(cfgName, cfgValue string) string {
 }
 
 func (p *properties) StringPropertyValue(name string) string {
-	s := p.parseStringValue(name)
+	s := p.parseStringValueForKey(name)
 	s = p.resolveSecretReference(name, s)
 	p.addPropertyToFlatMap(name, s)
 	return s
@@ -512,7 +482,7 @@ func (p *properties) StringFlagValue(name string) (bool, string) {
 }
 
 func (p *properties) DurationPropertyValue(name string) time.Duration {
-	s := p.parseStringValue(name)
+	s := p.parseStringValueForKey(name)
 	d, _ := time.ParseDuration(s)
 
 	// check if the duration has a qa equivalent that should be used
@@ -545,7 +515,7 @@ func (p *properties) DurationPropertyValue(name string) time.Duration {
 func (p *properties) getQADuration(name string) time.Duration {
 	qaName := fmt.Sprintf(qaVarNameFormat, name)
 	qaVal := -1 * time.Second
-	if s := p.parseStringValue(qaName); s != "" {
+	if s := p.parseStringValueForKey(qaName); s != "" {
 		qaVal, _ = time.ParseDuration(s)
 	}
 
@@ -570,7 +540,7 @@ func (p *properties) getDurationLimits(flagName string) (time.Duration, time.Dur
 }
 
 func (p *properties) IntPropertyValue(name string) int {
-	s := p.parseStringValue(name)
+	s := p.parseStringValueForKey(name)
 	i, _ := strconv.Atoi(s)
 
 	flagName := p.nameToFlagName(name)
@@ -619,7 +589,7 @@ func (p *properties) BoolPropertyValueOrTrue(name string) bool {
 }
 
 func (p *properties) boolPropertyValue(name string, defVal bool) bool {
-	s := p.parseStringValue(name)
+	s := p.parseStringValueForKey(name)
 	if s == "" {
 		return defVal
 	}

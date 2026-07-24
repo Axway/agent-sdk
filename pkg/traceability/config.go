@@ -1,29 +1,32 @@
 package traceability
 
 import (
+	"net"
 	"net/url"
+	"strings"
 	"time"
+
+	ucfg "github.com/elastic/go-ucfg"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
-	"github.com/elastic/beats/v7/libbeat/common/transport/tlscommon"
 )
 
-// Config -
-type HostConfig struct {
-	Protocol string   `config:"protocol"`
-	Hosts    []string `config:"hosts"`
+// legacy lumberjack/ingestion hostname prefixes no longer supported now that
+// single-entry routes HTTPS via phoenix.* hostnames (AOPS-4119)
+var removedIngestionHostPrefixes = []string{"ingestion.", "ingestion-http.", "ingestion-lumberjack."}
+
+// configOpts replaces libbeat's common.Config default options.
+var configOpts = []ucfg.Option{
+	ucfg.PathSep("."),
+	ucfg.ResolveEnv,
+	ucfg.VarExp,
 }
 
 // Config -
 type Config struct {
-	Index             string            `config:"index"`
 	LoadBalance       bool              `config:"loadbalance"`
 	BulkMaxSize       int               `config:"bulk_max_size"`
 	SlowStart         bool              `config:"slow_start"`
@@ -32,7 +35,7 @@ type Config struct {
 	Pipelining        int               `config:"pipelining"        validate:"min=0"`
 	CompressionLevel  int               `config:"compression_level" validate:"min=0, max=9"`
 	MaxRetries        int               `config:"max_retries"       validate:"min=-1"`
-	TLS               *tlscommon.Config `config:"ssl"`
+	TLS               TLSConfig         `config:"ssl"`
 	Proxy             ProxyConfig       `config:",inline"`
 	Backoff           Backoff           `config:"backoff"`
 	EscapeHTML        bool              `config:"escape_html"`
@@ -84,25 +87,26 @@ func DefaultConfig() *Config {
 	}
 }
 
-func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
+// ParseConfig replaces libbeat's common.Config.Unpack (readConfig).
+func ParseConfig(raw interface{}) (*Config, error) {
 	outputConfig = DefaultConfig()
 
-	err := cfgwarn.CheckRemoved6xSettings(cfg, "port")
+	cfg, err := ucfg.NewFrom(raw, configOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cfg.Unpack(outputConfig); err != nil {
+	if has, _ := cfg.Has("port", -1, configOpts...); has {
+		log.Warn("output.traceability.port is no longer supported; use output.traceability.hosts")
+	}
+
+	if err := cfg.Unpack(outputConfig, configOpts...); err != nil {
 		return nil, err
 	}
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
 		outputConfig.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
 		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
-	}
-
-	if outputConfig.Index == "" {
-		outputConfig.Index = info.IndexPrefix
 	}
 
 	// Setup the redaction regular expressions
@@ -138,9 +142,9 @@ func readConfig(cfg *common.Config, info beat.Info) (*Config, error) {
 	}
 
 	// set up the api exceptions list for logging events
-	exception, err := setUpAPIExceptionList(outputConfig.APIExceptionsList)
+	exceptionValue, err := setUpAPIExceptionList(outputConfig.APIExceptionsList)
 	if err != nil {
-		err = ErrInvalidRegex.FormatError("apiExceptionValue", exception, err)
+		err = ErrInvalidRegex.FormatError("apiExceptionValue", exceptionValue, err)
 		log.Error(err)
 	}
 
@@ -155,18 +159,39 @@ func IsHTTPTransport() bool {
 	return (outputConfig.Protocol == "https" || outputConfig.Protocol == "http")
 }
 
-// IsTCPTransport - Returns true if the protocol is set to tcp
-func IsTCPTransport() bool {
-	if outputConfig == nil {
-		return false
-	}
-	return outputConfig.Protocol == "tcp"
-}
-
 // GetMaxRetries - Returns the max retries configured for transport
 func GetMaxRetries() int {
 	if outputConfig == nil {
 		return 3
 	}
 	return outputConfig.MaxRetries
+}
+
+// ValidateCfg - validates the config does not use the removed tcp/lumberjack transport
+func (c *Config) ValidateCfg() error {
+	if c.Protocol == "tcp" {
+		return ErrTCPProtocolRemoved
+	}
+	for _, host := range c.Hosts {
+		if err := validateHost(host); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateHost(host string) error {
+	h, p, err := net.SplitHostPort(host)
+	if err != nil {
+		return nil
+	}
+	if p == tcpPort {
+		return ErrPort5044Removed.FormatError(host)
+	}
+	for _, prefix := range removedIngestionHostPrefixes {
+		if strings.HasPrefix(h, prefix) {
+			return ErrIngestionHostRemoved.FormatError(host)
+		}
+	}
+	return nil
 }

@@ -8,9 +8,9 @@ import (
 
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
 const apiAppKey = "apiAppKey"
@@ -239,15 +239,15 @@ func (s *sample) ShouldSampleTransaction(details TransactionDetails) bool {
 }
 
 // FilterEvents - returns an array of events that are part of the sample
-func (s *sample) FilterEvents(events []publisher.Event) []publisher.Event {
+func (s *sample) FilterEvents(events []event.Event) []event.Event {
 	if s.config.Percentage == countMax {
 		return events // all events are sampled by default
 	}
 
-	sampledEvents := make([]publisher.Event, 0)
-	for _, event := range events {
-		if _, sampled := event.Content.Meta[SampleKey]; sampled {
-			sampledEvents = append(sampledEvents, event)
+	sampledEvents := make([]event.Event, 0)
+	for _, evt := range events {
+		if _, sampled := evt.Meta[SampleKey]; sampled {
+			sampledEvents = append(sampledEvents, evt)
 		}
 	}
 

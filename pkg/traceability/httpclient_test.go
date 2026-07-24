@@ -5,20 +5,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const metricFlowValue = "api-central-metric"
 
-func makeFlowEvent(flow string) publisher.Event {
-	fields := common.MapStr{
+func makeFlowEvent(flow string) event.Event {
+	fields := event.MapStr{
 		"message": `{"event":"test"}`,
 	}
 	if flow != "" {
@@ -26,11 +24,9 @@ func makeFlowEvent(flow string) publisher.Event {
 			FlowHeader: flow,
 		}
 	}
-	return publisher.Event{
-		Content: beat.Event{
-			Timestamp: time.Now(),
-			Fields:    fields,
-		},
+	return event.Event{
+		Timestamp: time.Now(),
+		Fields:    fields,
 	}
 }
 
@@ -39,20 +35,20 @@ func makeFlowEvent(flow string) publisher.Event {
 func TestPublishEventsFlowHeader(t *testing.T) {
 	cases := map[string]struct {
 		preSeedHeaders map[string]string // simulate headers left by a prior batch
-		events         []publisher.Event
+		events         []event.Event
 		wantFlowHeader string // "" means key must be absent from client.headers
 	}{
 		"metric event sets flow header": {
-			events:         []publisher.Event{makeFlowEvent(metricFlowValue)},
+			events:         []event.Event{makeFlowEvent(metricFlowValue)},
 			wantFlowHeader: metricFlowValue,
 		},
 		"transaction event does not add flow header": {
-			events:         []publisher.Event{makeFlowEvent("")},
+			events:         []event.Event{makeFlowEvent("")},
 			wantFlowHeader: "",
 		},
 		"stale metric flow header cleared by subsequent transaction batch": {
 			preSeedHeaders: map[string]string{FlowHeader: metricFlowValue},
-			events:         []publisher.Event{makeFlowEvent("")},
+			events:         []event.Event{makeFlowEvent("")},
 			wantFlowHeader: "",
 		},
 	}

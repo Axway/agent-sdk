@@ -12,9 +12,7 @@ import (
 	v1Time "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/publisher"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -402,22 +400,22 @@ func TestShouldSample(t *testing.T) {
 	}
 }
 
-func createEvents(numberOfEvents int, samplePercent float64) []publisher.Event {
-	events := []publisher.Event{}
+func createEvents(numberOfEvents int, samplePercent float64) []event.Event {
+	events := []event.Event{}
 
 	count := 0
 	sampled := 0
 	countMax := 100 * int(math.Pow(10, float64(numberOfDecimals(samplePercent))))
 	limit := int(float64(countMax) * samplePercent / 100)
 	for i := 0; i < numberOfEvents; i++ {
-		var event publisher.Event
+		var evt event.Event
 		if count < limit {
 			sampled++
-			event = createEvent(true)
+			evt = createEvent(true)
 		} else {
-			event = createEvent(false)
+			evt = createEvent(false)
 		}
-		events = append(events, event)
+		events = append(events, evt)
 		count++
 		if count == countMax {
 			count = 0
@@ -427,21 +425,19 @@ func createEvents(numberOfEvents int, samplePercent float64) []publisher.Event {
 	return events
 }
 
-func createEvent(sampled bool) publisher.Event {
-	fieldsData := common.MapStr{
+func createEvent(sampled bool) event.Event {
+	fieldsData := event.MapStr{
 		"message": "message value",
 	}
-	meta := common.MapStr{}
+	meta := event.MapStr{}
 	if sampled {
-		meta.Put(SampleKey, true)
+		meta[SampleKey] = true
 	}
-	return publisher.Event{
-		Content: beat.Event{
-			Timestamp: time.Now(),
-			Meta:      meta,
-			Private:   nil,
-			Fields:    fieldsData,
-		},
+	return event.Event{
+		Timestamp: time.Now(),
+		Meta:      meta,
+		Private:   nil,
+		Fields:    fieldsData,
 	}
 }
 

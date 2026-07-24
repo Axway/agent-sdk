@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/traceability"
-	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -19,26 +19,25 @@ type eventMetric struct {
 
 // EventBatch - creates a batch of MetricEvents to send to Condor
 type EventBatch struct {
-	beatPub.Batch
-	events        []beatPub.Event
+	events        []event.Event
 	batchMetrics  map[string]eventMetric
 	collector     *collector
 	haveBatchLock bool
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, histogram metrics.Histogram, counters map[string]metrics.Counter) {
-	b.events = append(b.events, event)
-	eventID := event.Content.Meta[metricKey].(string)
+func (b *EventBatch) AddEvent(evt event.Event, histogram metrics.Histogram, counters map[string]metrics.Counter) {
+	b.events = append(b.events, evt)
+	eventID := evt.Meta[metricKey].(string)
 	b.batchMetrics[eventID] = eventMetric{
 		histogram: histogram,
 		counters:  counters,
 	}
 }
 
-// AddEvent - adds an event to the batch
-func (b *EventBatch) AddEventWithoutHistogram(event beatPub.Event) {
-	b.events = append(b.events, event)
+// AddEventWithoutHistogram - adds an event to the batch
+func (b *EventBatch) AddEventWithoutHistogram(evt event.Event) {
+	b.events = append(b.events, evt)
 }
 
 // Publish - connects to the traceability clients and sends this batch of events
@@ -86,8 +85,13 @@ func (b *EventBatch) batchUnlock() {
 }
 
 // Events - return the events in the batch
-func (b *EventBatch) Events() []beatPub.Event {
+func (b *EventBatch) Events() []event.Event {
 	return b.events
+}
+
+// SetEvents - replaces the events in the batch
+func (b *EventBatch) SetEvents(events []event.Event) {
+	b.events = events
 }
 
 // ACK - all events have been acknowledgeded, cleanup the counters
@@ -97,7 +101,7 @@ func (b *EventBatch) ACK() {
 	b.batchUnlock()
 }
 
-func (b *EventBatch) eventsNotAcked(events []beatPub.Event) {
+func (b *EventBatch) eventsNotAcked(events []event.Event) {
 	go b.logEvents(cancelMsg, events)
 	b.batchUnlock()
 }
@@ -118,30 +122,30 @@ func (b *EventBatch) Cancelled() {
 }
 
 // RetryEvents - certain events sent to retry
-func (b *EventBatch) RetryEvents(events []beatPub.Event) {
+func (b *EventBatch) RetryEvents(events []event.Event) {
 	b.ackEvents(getEventsToAck(events, b.events))
 	b.eventsNotAcked(events)
 }
 
 // CancelledEvents - events have been cancelled
-func (b *EventBatch) CancelledEvents(events []beatPub.Event) {
+func (b *EventBatch) CancelledEvents(events []event.Event) {
 	b.ackEvents(getEventsToAck(events, b.events))
 	b.eventsNotAcked(events)
 }
 
-// Events - return the events in the batch
-func (b *EventBatch) logEvents(status string, events []beatPub.Event) {
-	for _, event := range events {
-		metric := getMetricFromEvent(event)
+// logEvents - logs the status of the given events
+func (b *EventBatch) logEvents(status string, events []event.Event) {
+	for _, evt := range events {
+		metric := getMetricFromEvent(evt)
 		if metric != nil {
 			b.collector.logMetric(status, metric)
 		}
 	}
 }
 
-func (b *EventBatch) ackEvents(events []beatPub.Event) {
-	for _, event := range events {
-		metric := getMetricFromEvent(event)
+func (b *EventBatch) ackEvents(events []event.Event) {
+	for _, evt := range events {
+		metric := getMetricFromEvent(evt)
 		if metric == nil {
 			continue
 		}
@@ -164,8 +168,8 @@ func NewEventBatch(c *collector) *EventBatch {
 	}
 }
 
-func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatPub.Event {
-	ackEvents := make([]beatPub.Event, 0)
+func getEventsToAck(retryEvents []event.Event, events []event.Event) []event.Event {
+	ackEvents := make([]event.Event, 0)
 	for _, e := range events {
 		eID := ""
 		if m := getMetricFromEvent(e); m != nil {
@@ -192,8 +196,8 @@ func getEventsToAck(retryEvents []beatPub.Event, events []beatPub.Event) []beatP
 	return ackEvents
 }
 
-func getMetricFromEvent(event beatPub.Event) *centralMetric {
-	if data, found := event.Content.Fields[messageKey]; found {
+func getMetricFromEvent(evt event.Event) *centralMetric {
+	if data, found := evt.Fields[messageKey]; found {
 		v4Bytes := data.(string)
 		v4Event := make(map[string]interface{})
 		err := json.Unmarshal([]byte(v4Bytes), &v4Event)

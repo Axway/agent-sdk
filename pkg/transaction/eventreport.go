@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
-	"github.com/elastic/beats/v7/libbeat/common"
 )
 
 type EventReport interface {
@@ -16,8 +16,8 @@ type EventReport interface {
 	GetDetailEvents() []LogEvent
 	GetMetricsBatch() []interface{}
 	GetEventTime() time.Time
-	GetMetadata() common.MapStr
-	GetFields() common.MapStr
+	GetMetadata() event.MapStr
+	GetFields() event.MapStr
 	GetPrivateData() interface{}
 	ShouldForceSample() bool
 	ShouldHandleSampling() bool
@@ -34,8 +34,8 @@ type eventReport struct {
 	metricsBatch     []interface{}
 	metricsBatchLock sync.Mutex
 	eventTime        time.Time
-	metadata         common.MapStr
-	fields           common.MapStr
+	metadata         event.MapStr
+	fields           event.MapStr
 	privateData      interface{}
 	skipSampling     bool
 	forceSample      bool
@@ -78,16 +78,16 @@ func (e *eventReport) GetEventTime() time.Time {
 	return e.eventTime
 }
 
-func (e *eventReport) GetMetadata() common.MapStr {
+func (e *eventReport) GetMetadata() event.MapStr {
 	if e.metadata == nil {
-		e.metadata = common.MapStr{}
+		e.metadata = event.MapStr{}
 	}
 	return e.metadata
 }
 
-func (e *eventReport) GetFields() common.MapStr {
+func (e *eventReport) GetFields() event.MapStr {
 	if e.metadata == nil {
-		e.metadata = common.MapStr{}
+		e.metadata = event.MapStr{}
 	}
 	return e.fields
 }
@@ -116,8 +116,8 @@ type EventReportBuilder interface {
 	SetSummaryEvent(summaryEvent LogEvent) EventReportBuilder
 	SetDetailEvents(detailEvents []LogEvent) EventReportBuilder
 	SetEventTime(eventTime time.Time) EventReportBuilder
-	SetMetadata(metadata common.MapStr) EventReportBuilder
-	SetFields(fields common.MapStr) EventReportBuilder
+	SetMetadata(metadata event.MapStr) EventReportBuilder
+	SetFields(fields event.MapStr) EventReportBuilder
 	SetPrivateData(privateData interface{}) EventReportBuilder
 	SetSkipSampleHandling() EventReportBuilder
 	SetForceSample() EventReportBuilder
@@ -132,8 +132,8 @@ func NewEventReportBuilder() EventReportBuilder {
 		metricsBatch:     make([]interface{}, 0),
 		metricsBatchLock: sync.Mutex{},
 		eventTime:        time.Now(),
-		metadata:         common.MapStr{},
-		fields:           common.MapStr{},
+		metadata:         event.MapStr{},
+		fields:           event.MapStr{},
 		privateData:      nil,
 	}
 }
@@ -185,12 +185,12 @@ func (e *eventReport) SetEventTime(eventTime time.Time) EventReportBuilder {
 	return e
 }
 
-func (e *eventReport) SetMetadata(metadata common.MapStr) EventReportBuilder {
+func (e *eventReport) SetMetadata(metadata event.MapStr) EventReportBuilder {
 	e.metadata = metadata
 	return e
 }
 
-func (e *eventReport) SetFields(fields common.MapStr) EventReportBuilder {
+func (e *eventReport) SetFields(fields event.MapStr) EventReportBuilder {
 	e.fields = fields
 	return e
 }

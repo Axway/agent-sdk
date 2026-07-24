@@ -15,12 +15,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/outputs"
-	"github.com/elastic/beats/v7/libbeat/outputs/outil"
-	"github.com/elastic/beats/v7/libbeat/outputs/transport"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 )
 
 const (
@@ -33,26 +29,21 @@ const (
 // HTTPClient struct
 type HTTPClient struct {
 	Connection
-	tlsConfig        *transport.TLSConfig
+	tlsConfig        config.TLSConfig
 	compressionLevel int
 	proxyURL         *url.URL
 	headers          map[string]string
-	beatInfo         beat.Info
 	logger           log.FieldLogger
 	timeout          time.Duration
 }
 
 // HTTPClientSettings struct
 type HTTPClientSettings struct {
-	BeatInfo         beat.Info
 	URL              string
 	Proxy            *url.URL
-	TLS              *transport.TLSConfig
-	Index            outil.Selector
-	Pipeline         *outil.Selector
+	TLS              config.TLSConfig
 	Timeout          time.Duration
 	CompressionLevel int
-	Observer         outputs.Observer
 	Headers          map[string]string
 	UserAgent        string
 	IsSingleEntry    bool
@@ -91,20 +82,17 @@ func NewHTTPClient(s HTTPClientSettings) (*HTTPClient, error) {
 		opts = append(opts, api.WithSingleURL())
 	}
 
-	tlsCfg := config.NewTLSConfig().(*config.TLSConfiguration)
-	tlsCfg.LoadFrom(s.TLS.ToConfig())
-
 	client := &HTTPClient{
 		Connection: Connection{
 			URL:       s.URL,
-			api:       api.NewClient(tlsCfg, s.Proxy.String(), opts...),
+			api:       api.NewClient(s.TLS, s.Proxy.String(), opts...),
 			encoder:   encoder,
 			userAgent: s.UserAgent,
 		},
+		tlsConfig:        s.TLS,
 		compressionLevel: compression,
 		proxyURL:         s.Proxy,
 		headers:          s.Headers,
-		beatInfo:         s.BeatInfo,
 		logger:           logger,
 		timeout:          s.Timeout,
 	}
@@ -125,7 +113,7 @@ func (client *HTTPClient) Close() error {
 }
 
 // Publish sends events to the clients sink.
-func (client *HTTPClient) Publish(_ context.Context, batch publisher.Batch) error {
+func (client *HTTPClient) Publish(_ context.Context, batch event.Batch) error {
 	events := batch.Events()
 	err := client.publishEvents(events)
 	if err == nil {
@@ -144,7 +132,6 @@ func (client *HTTPClient) String() string {
 func (client *HTTPClient) Clone() *HTTPClient {
 	c, _ := NewHTTPClient(
 		HTTPClientSettings{
-			BeatInfo:         client.beatInfo,
 			URL:              client.URL,
 			Proxy:            client.proxyURL,
 			TLS:              client.tlsConfig,
@@ -157,7 +144,7 @@ func (client *HTTPClient) Clone() *HTTPClient {
 }
 
 // publishEvents - posts all events to the http endpoint.
-func (client *HTTPClient) publishEvents(data []publisher.Event) error {
+func (client *HTTPClient) publishEvents(data []event.Event) error {
 	if len(data) == 0 {
 		return nil
 	}
@@ -172,12 +159,12 @@ func (client *HTTPClient) publishEvents(data []publisher.Event) error {
 
 	var events = make([]json.RawMessage, len(data))
 	timeStamp := time.Now()
-	for i, event := range data {
-		events[i] = client.makeHTTPEvent(&event.Content)
+	for i, evt := range data {
+		events[i] = client.makeHTTPEvent(&evt)
 		if i == 0 {
-			timeStamp = event.Content.Timestamp
-			allFields, err := event.Content.Fields.GetValue("fields")
-			if err != nil {
+			timeStamp = evt.Timestamp
+			allFields, ok := evt.Fields["fields"]
+			if !ok {
 				delete(client.headers, FlowHeader)
 				continue
 			}
@@ -274,7 +261,7 @@ func (conn *Connection) execHTTPRequest(req api.Request) (int, []byte, error) {
 	return resp.Code, resp.Body, nil
 }
 
-func (client *HTTPClient) makeHTTPEvent(v *beat.Event) json.RawMessage {
+func (client *HTTPClient) makeHTTPEvent(v *event.Event) json.RawMessage {
 	var eventData json.RawMessage
 	msg := v.Fields["message"].(string)
 	json.Unmarshal([]byte(msg), &eventData)

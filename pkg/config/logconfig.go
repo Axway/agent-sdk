@@ -1,14 +1,11 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/cfgfile"
-	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/sirupsen/logrus"
 )
 
@@ -184,125 +181,106 @@ const (
 	logFilePermissionsPath = "logging.files.permissions"
 )
 
+// ConditionalOverride replaces libbeat's cfgfile.ConditionalOverride.
+type ConditionalOverride struct {
+	Check  func(cfg *LogConfiguration) bool
+	Config map[string]interface{}
+}
+
 // LogConfigOverrides - override the filebeat config options
-func LogConfigOverrides() []cfgfile.ConditionalOverride {
-	overrides := make([]cfgfile.ConditionalOverride, 0)
+func LogConfigOverrides() []ConditionalOverride {
+	overrides := make([]ConditionalOverride, 0)
 	overrides = setLogLevel(overrides)
 	return overrideLogLevel(overrides)
 }
 
-func setLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.ConditionalOverride {
+func setLogLevel(overrides []ConditionalOverride) []ConditionalOverride {
 	// Set level to info
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
-			level, err := logrus.ParseLevel(output)
-			if err == nil && level == logrus.InfoLevel {
-				return true
-			}
-			return false
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			level, err := logrus.ParseLevel(cfg.Level)
+			return err == nil && level == logrus.InfoLevel
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logLevelYAMLPath: "info",
-		}),
+		},
 	})
 
 	// Set level to warn
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
-			level, err := logrus.ParseLevel(output)
-			if err == nil && level == logrus.WarnLevel {
-				return true
-			}
-			return false
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			level, err := logrus.ParseLevel(cfg.Level)
+			return err == nil && level == logrus.WarnLevel
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logLevelYAMLPath: "warn",
-		}),
+		},
 	})
 
 	// Set level to error
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
-			level, err := logrus.ParseLevel(output)
-			if err == nil && level == logrus.ErrorLevel {
-				return true
-			}
-			return false
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			level, err := logrus.ParseLevel(cfg.Level)
+			return err == nil && level == logrus.ErrorLevel
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logLevelYAMLPath: "error",
-		}),
+		},
 	})
 
 	return overrides
 }
 
-func overrideLogLevel(overrides []cfgfile.ConditionalOverride) []cfgfile.ConditionalOverride {
+func overrideLogLevel(overrides []ConditionalOverride) []ConditionalOverride {
 	// Override the level to debug, if trace or debug
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogLevel), 0)
-			level, err := logrus.ParseLevel(output)
-			if err == nil && (level == logrus.TraceLevel || level == logrus.DebugLevel) {
-				return true
-			}
-			return false
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			level, err := logrus.ParseLevel(cfg.Level)
+			return err == nil && (level == logrus.TraceLevel || level == logrus.DebugLevel)
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logLevelYAMLPath: "debug",
-		}),
+		},
 	})
 
 	// Override the log output format
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogFormat), 0)
-			return strings.ToLower(output) == "json"
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			return strings.ToLower(cfg.Format) == "json"
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logJSONYAMLPath: true,
-		}),
+		},
 	})
 
 	// Override the log output stream
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
-			return strings.ToLower(output) == "stdout"
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			return strings.ToLower(cfg.Output) == "stdout"
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logSTDERRYAMLPath: true,
 			logFileYAMLPath:   false,
-		}),
+		},
 	})
 
 	// Override the log output to file
-	overrides = append(overrides, cfgfile.ConditionalOverride{
-		Check: func(cfg *common.Config) bool {
-			aliasKeyPrefix := properties.GetAliasKeyPrefix()
-			output, _ := cfg.String(fmt.Sprintf("%s.%s", aliasKeyPrefix, pathLogOutput), 0)
-			if strings.ToLower(output) == "file" || strings.ToLower(output) == "both" {
-				if strings.ToLower(output) == "both" {
+	overrides = append(overrides, ConditionalOverride{
+		Check: func(cfg *LogConfiguration) bool {
+			output := strings.ToLower(cfg.Output)
+			if output == "file" || output == "both" {
+				if output == "both" {
 					log.Warn("Traceability agent can only log to one output type, setting to file output")
 				}
 				return true
 			}
 			return false
 		},
-		Config: common.MustNewConfigFrom(map[string]interface{}{
+		Config: map[string]interface{}{
 			logFileYAMLPath:        true,
 			logSTDERRYAMLPath:      false,
 			logFilePermissionsPath: "0600",
-		}),
+		},
 	})
 
 	return overrides
