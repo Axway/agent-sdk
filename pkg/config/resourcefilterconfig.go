@@ -25,4 +25,5 @@ type ResourceFilter struct {
 	Scope            *ResourceScope      `json:"scope"`
 	IsCachedResource bool                `json:"isCachedResource"`
 	IsUnscoped       bool                `json:"isUnscoped"`
+	SubResources     []string            `json:"-" yaml:"-" mapstructure:"-"`
 }
