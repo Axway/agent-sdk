@@ -35,7 +35,7 @@ func NewAccessRequestCacheHandler(agentKind config.AgentType, cache agentcache.M
 
 func (h *accessRequestCacheHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		return true
 	}
 	if action == proto.Event_DELETED {
@@ -61,7 +61,7 @@ func (h *accessRequestCacheHandler) ShouldHandle(ctx context.Context, event *pro
 // scratch, so no restriction is returned.
 func (h *accessRequestCacheHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
 			return nil
 		}
@@ -70,9 +70,6 @@ func (h *accessRequestCacheHandler) GetAPIServerFields(ctx context.Context, even
 	return nil
 }
 
-// HandleCache builds the AccessRequest cache during discoveryCache's bulk rebuild. For the
-// traceability agent, the resource is already fetched with embed=metadata.references, so no extra
-// enrichment call is needed here.
 func (h *accessRequestCacheHandler) HandleCache(resource *apiv1.ResourceInstance) error {
 	h.cache.AddAccessRequest(resource)
 	return nil
@@ -81,7 +78,7 @@ func (h *accessRequestCacheHandler) HandleCache(resource *apiv1.ResourceInstance
 // Handle processes events triggered for AccessRequests during discovery/trace agent cache building
 func (h *accessRequestCacheHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XAgentDetails {
 		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if existing == nil {
 			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
