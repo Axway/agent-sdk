@@ -35,7 +35,7 @@ func NewAccessRequestCacheHandler(agentKind config.AgentType, cache agentcache.M
 
 func (h *accessRequestCacheHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		return true
 	}
 	if action == proto.Event_DELETED {
@@ -61,11 +61,11 @@ func (h *accessRequestCacheHandler) ShouldHandle(ctx context.Context, event *pro
 // scratch, so no restriction is returned.
 func (h *accessRequestCacheHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
 			return nil
 		}
-		return []string{"name", "metadata.id", event.Metadata.Subresource}
+		return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (h *accessRequestCacheHandler) HandleCache(resource *apiv1.ResourceInstance
 // Handle processes events triggered for AccessRequests during discovery/trace agent cache building
 func (h *accessRequestCacheHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
+	if h.agentKind == config.TraceabilityAgent && action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XAgentDetails {
 		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if existing == nil {
 			// GetAPIServerFields didn't restrict fields in this case, so resource is already the

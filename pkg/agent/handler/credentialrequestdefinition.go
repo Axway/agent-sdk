@@ -34,13 +34,13 @@ func (h *crdHandler) HandleCache(resource *apiv1.ResourceInstance) error {
 // updated subresource onto it; otherwise the full resource is needed to populate the cache from
 // scratch, so no restriction is returned.
 func (h *crdHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
-	if event.Metadata.Subresource == "" {
+	if event.Metadata.GetSubresource() == "" {
 		return nil
 	}
 	if existing, _ := h.agentCacheManager.GetCredentialRequestDefinitionByID(event.Payload.Metadata.Id); existing == nil {
 		return nil
 	}
-	return []string{"name", "metadata.id", event.Metadata.Subresource}
+	return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
 }
 
 // Handle processes grpc events triggered for Credentials

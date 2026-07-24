@@ -42,13 +42,13 @@ func (h *apiSvcHandler) HandleCache(resource *apiv1.ResourceInstance) error {
 // Handle can merge the updated subresource onto it; otherwise the full resource is needed to
 // populate the cache from scratch, so no restriction is returned.
 func (h *apiSvcHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
-	if event.Metadata.Subresource == "" {
+	if event.Metadata.GetSubresource() == "" {
 		return nil
 	}
 	if existing := h.agentCacheManager.GetAPIServiceWithName(event.Payload.Name); existing == nil {
 		return nil
 	}
-	return []string{"name", "metadata.id", event.Metadata.Subresource}
+	return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
 }
 
 func (h *apiSvcHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {

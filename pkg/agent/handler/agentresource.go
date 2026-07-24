@@ -92,11 +92,11 @@ func (h *agentResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 		return false
 	}
 
-	if event.Type == proto.Event_UPDATED || event.Metadata.Subresource == definitions.XAgentDetails {
+	if event.Type == proto.Event_UPDATED || event.Metadata.GetSubresource() == definitions.XAgentDetails {
 		return true
 	}
 
-	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Type == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == management.TraceabilityAgentAgentstateSubResourceName {
+	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Type == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == management.TraceabilityAgentAgentstateSubResourceName {
 		return true
 	}
 
@@ -113,12 +113,12 @@ func (h *agentResourceHandler) GetAPIServerFields(ctx context.Context, event *pr
 		return nil
 	}
 
-	if event.Metadata.Subresource == definitions.XAgentDetails {
-		return []string{"name", "metadata", event.Metadata.Subresource}
+	if event.Metadata.GetSubresource() == definitions.XAgentDetails {
+		return []string{"name", "metadata.id", "kind", event.Metadata.GetSubresource()}
 	}
 
-	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Metadata.Subresource == management.TraceabilityAgentAgentstateSubResourceName {
-		return []string{"name", "metadata.id", event.Metadata.Subresource}
+	if event.Payload.Kind == management.TraceabilityAgentGVK().Kind && event.Metadata.GetSubresource() == management.TraceabilityAgentAgentstateSubResourceName {
+		return []string{"name", "metadata.id", "kind", event.Metadata.GetSubresource()}
 	}
 
 	return nil

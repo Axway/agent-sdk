@@ -60,7 +60,7 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 
 func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
-	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		return true
 	}
 	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
@@ -75,11 +75,11 @@ func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 // scratch, so no restriction is returned.
 func (h *accessRequestHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
 	action := GetActionFromContext(ctx)
-	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.Subresource == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
 			return nil
 		}
-		return []string{"name", "metadata.id", event.Metadata.Subresource}
+		return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
 	}
 	return nil
 }
@@ -87,7 +87,7 @@ func (h *accessRequestHandler) GetAPIServerFields(ctx context.Context, event *pr
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XAgentDetails {
 		// update the cache with the new x-agent-details subresource
 		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
 		if existing == nil {

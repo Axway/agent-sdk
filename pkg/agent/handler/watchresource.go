@@ -14,6 +14,9 @@ type watchResourceHandler struct {
 	agentCacheManager agentcache.Manager
 	watchGroupKindMap map[string]bool
 	kinds             map[string]bool
+	// subResourceInterests maps a group:kind key to the subresource names it should react to. A
+	// group:kind absent from this map has no restriction - it reacts to every subresource.
+	subResourceInterests map[string][]string
 }
 
 type watchTopicFeatures interface {
@@ -33,6 +36,9 @@ func WithWatchTopicFeatures(feature watchTopicFeatures) watchTopicOptions {
 			key := getWatchResourceKey(filter.Group, filter.Kind)
 			w.watchGroupKindMap[key] = filter.IsCachedResource
 			w.kinds[filter.Kind] = true
+			if len(filter.SubResources) > 0 {
+				w.subResourceInterests[key] = append(w.subResourceInterests[key], filter.SubResources...)
+			}
 		}
 	}
 }
@@ -50,9 +56,10 @@ func WithWatchTopicGroupKind(groupKinds []v1.GroupKind) watchTopicOptions {
 // NewWatchResourceHandler creates a Handler for custom watch resources to store resource in agent cache
 func NewWatchResourceHandler(agentCacheManager agentcache.Manager, opts ...watchTopicOptions) Handler {
 	w := &watchResourceHandler{
-		agentCacheManager: agentCacheManager,
-		watchGroupKindMap: map[string]bool{},
-		kinds:             map[string]bool{},
+		agentCacheManager:    agentCacheManager,
+		watchGroupKindMap:    map[string]bool{},
+		kinds:                map[string]bool{},
+		subResourceInterests: map[string][]string{},
 	}
 
 	for _, o := range opts {
@@ -60,6 +67,22 @@ func NewWatchResourceHandler(agentCacheManager agentcache.Manager, opts ...watch
 	}
 
 	return w
+}
+
+// isInterestedInSubResource reports whether the handler should react to a subresource update for
+// the given group:kind key. Returns true if no interest set was registered for that group/kind
+// (react to everything, the default) or if the subresource is in the registered set.
+func (h *watchResourceHandler) isInterestedInSubResource(key, subResource string) bool {
+	interests, registered := h.subResourceInterests[key]
+	if !registered {
+		return true
+	}
+	for _, sr := range interests {
+		if sr == subResource {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *watchResourceHandler) Kinds() []string {
@@ -76,6 +99,10 @@ func (h *watchResourceHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 		return false
 	}
 
+	if event.Metadata.GetSubresource() != "" && !h.isInterestedInSubResource(key, event.Metadata.GetSubresource()) {
+		return false
+	}
+
 	return true
 }
 
@@ -86,17 +113,22 @@ func (h *watchResourceHandler) HandleCache(resource *v1.ResourceInstance) error 
 }
 
 // GetAPIServerFields returns the fields needed to process the given event. A subresource update
-// only needs a restricted fetch if the resource is already cached, so Handle can merge the
-// updated subresource onto it; otherwise the full resource is needed to populate the cache from
-// scratch, so no restriction is returned.
+// this handler isn't interested in needs nothing, since ShouldHandle will skip it entirely. An
+// update it is interested in only needs a restricted fetch if the resource is already cached, so
+// Handle can merge the updated subresource onto it; otherwise the full resource is needed to
+// populate the cache from scratch, so no restriction is returned.
 func (h *watchResourceHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
-	if event.Metadata.Subresource == "" {
+	if event.Metadata.GetSubresource() == "" {
+		return nil
+	}
+	key := getWatchResourceKey(event.Payload.Group, event.Payload.Kind)
+	if !h.isInterestedInSubResource(key, event.Metadata.GetSubresource()) {
 		return nil
 	}
 	if existing := h.agentCacheManager.GetWatchResourceByID(event.Payload.Group, event.Payload.Kind, event.Payload.Metadata.Id); existing == nil {
 		return nil
 	}
-	return []string{"name", "metadata.id", event.Metadata.Subresource}
+	return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
 }
 
 func (h *watchResourceHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *v1.ResourceInstance) error {
