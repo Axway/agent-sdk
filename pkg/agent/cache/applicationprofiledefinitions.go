@@ -27,8 +27,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByName(name string) (*v1.R
 	item, err := c.apdMap.GetBySecondaryKey(name)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
-			ard.CreateHashes()
-			return ard, nil
+			return withComputedHashes(ard), nil
 		}
 	}
 	return nil, err
@@ -42,8 +41,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByID(id string) (*v1.Resou
 	item, err := c.apdMap.Get(id)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
-			ard.CreateHashes()
-			return ard, nil
+			return withComputedHashes(ard), nil
 		}
 	}
 	return nil, err

@@ -3,6 +3,7 @@ package cache
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -369,4 +370,52 @@ func TestCredentialRequestDefinitionCache(t *testing.T) {
 	cachedCRD, err = m.GetCredentialRequestDefinitionByName("id1")
 	assert.NotNil(t, err)
 	assert.Nil(t, cachedCRD)
+}
+
+// TestConcurrentGetsDoNotRace: every Get method here used to call CreateHashes() on the
+// resource pointer stored in the cache while holding only a read lock, so concurrent Get calls
+// (as happen when an agent processes resources via parallel goroutines) could race on the shared
+// SubResourceHashes map. withComputedHashes now returns a defensive copy instead, so this should
+// pass cleanly under `go test -race`.
+func TestConcurrentGetsDoNotRace(t *testing.T) {
+	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+	ri := &v1.ResourceInstance{
+		ResourceMeta: v1.ResourceMeta{
+			Name:     "svc-instance",
+			Metadata: v1.Metadata{ID: "id-1"},
+			SubResources: map[string]interface{}{
+				"status":           map[string]interface{}{"level": "Success"},
+				defs.XAgentDetails: map[string]interface{}{"key": "value"},
+			},
+		},
+	}
+	cm.AddAPIServiceInstance(ri)
+
+	const iterations = 20000
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			_, _ = cm.GetAPIServiceInstanceByID("id-1")
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			cm.ListAPIServiceInstances()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			_, _ = cm.GetAPIServiceInstanceByName("svc-instance")
+		}
+	}()
+
+	wg.Wait()
 }
