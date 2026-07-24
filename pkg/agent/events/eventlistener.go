@@ -114,22 +114,26 @@ func (em *EventListener) start() (done bool, err error) {
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
 func (em *EventListener) handleEvent(event *proto.Event) error {
 	ctx := handler.NewEventContext(event.Type, event.Metadata, event.Payload.Kind, event.Payload.Name)
-	em.logger.
+	logger := em.logger.
 		WithField("sequence", event.Metadata.SequenceID).
 		WithField("kind", event.Payload.Kind).
 		WithField("name", event.Payload.Name).
 		WithField("type", event.Type.String()).
-		WithField("subResource", event.Metadata.Subresource).
-		Debug("processing watch event")
+		WithField("subResource", event.Metadata.Subresource)
+
+	logger.Debug("processing watch event")
 
 	var ri *apiv1.ResourceInstance
 	var err error
+	msg := "skipped handling event"
+	defer func() { logger.Trace(msg) }()
+
 	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
 	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-
+		msg = "passed event to handlers"
 		if ri == nil {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
