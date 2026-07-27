@@ -25,8 +25,7 @@ func (c *cacheManager) GetComplianceRuntimeResultByID(id string) (*v1.ResourceIn
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			instance.CreateHashes()
-			return instance, nil
+			return withComputedHashes(instance), nil
 		}
 	}
 	return nil, err
@@ -39,8 +38,7 @@ func (c *cacheManager) GetComplianceRuntimeResultByName(name string) (*v1.Resour
 	item, err := c.crrMap.GetBySecondaryKey(name)
 	if item != nil {
 		if crr, ok := item.(*v1.ResourceInstance); ok {
-			crr.CreateHashes()
-			return crr, nil
+			return withComputedHashes(crr), nil
 		}
 	}
 	return nil, err
