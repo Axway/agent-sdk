@@ -137,11 +137,12 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		if ri == nil {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
+				logger.WithError(err).Error("failed to get event resource")
 				return err
 			}
 		}
 		if err := h.Handle(ctx, event.Metadata, ri); err != nil {
-			em.logger.Error(err)
+			logger.WithError(err).Error("failed to handle event resource")
 		}
 	}
 
