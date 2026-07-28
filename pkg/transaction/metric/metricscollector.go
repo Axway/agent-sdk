@@ -1155,13 +1155,7 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 // retried, or cancelled) is left in the group so it is picked up again on the next publish cycle instead
 // of being lost. Once every entry in the group has been acked, the group itself is removed from the
 // registry.
-//
-// This runs on the traceability publisher's ack goroutine, independent of the Execute job's goroutine, so
-// it takes c.lock to prevent racing with Execute/generateEvents reading the same group's maps concurrently.
 func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	c.storage.removeMetric(metric)
 
 	_, statusKey := splitMetricKey(metric.getKey())
