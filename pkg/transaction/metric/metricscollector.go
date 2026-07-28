@@ -43,6 +43,7 @@ const (
 
 var exitMetricInit = false
 var exitMutex = &sync.RWMutex{}
+var getCreateLock = &sync.Mutex{}
 
 func ExitMetricInit() {
 	exitMutex.Lock()
@@ -144,6 +145,9 @@ func GetMetricCollector() Collector {
 		// if this is the case, check central config and if not instantiated, return nil
 		return nil
 	}
+
+	getCreateLock.Lock()
+	defer getCreateLock.Unlock()
 
 	if globalMetricCollector == nil && util.IsNotTest() {
 		globalMetricCollector = createMetricCollector()
