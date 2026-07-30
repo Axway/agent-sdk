@@ -18,6 +18,8 @@ type DataplaneSpecApigee struct {
 	DeveloperEmail string `json:"developerEmail"`
 	// The discovery mode that the Apigee agents should use
 	Mode string `json:"mode,omitempty"`
+	// The Google Gemini API base URL. Applicable when mode is GoogleGemini.
+	BaseUrl string `json:"baseUrl,omitempty"`
 	// The environment for which the metrics are gathered
 	Environment   string                           `json:"environment,omitempty"`
 	MetricsFilter DataplaneSpecApigeeMetricsFilter `json:"metricsFilter,omitempty"`
