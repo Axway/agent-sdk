@@ -26,6 +26,8 @@ type DataplaneSpecAzure struct {
 	EventHubNamespace string `json:"eventHubNamespace,omitempty"`
 	// Consumer groups enable consuming applications to each have a separate view of the event stream. They read the stream independently at their own pace and with their own offsets.
 	EventHubConsumerGroup string `json:"eventHubConsumerGroup,omitempty"`
-	// Dictates the operation mode for the discovery agent. Possible options are APIM (default, when there is no mode property or mode is empty) and EventHub.
+	// Dictates the operation mode for the discovery agent. Possible options are APIM (default, when there is no mode property or mode is empty), EventHub, AzureOpenAI, and MicrosoftFoundry.
 	Mode string `json:"mode,omitempty"`
+	// The Azure OpenAI resource name when mode is AzureOpenAI, or the Microsoft Foundry resource name when mode is MicrosoftFoundry.
+	AiServiceResourceName string `json:"aiServiceResourceName,omitempty"`
 }
