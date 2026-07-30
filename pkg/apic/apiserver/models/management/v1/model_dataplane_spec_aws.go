@@ -19,8 +19,10 @@ type DataplaneSpecAws struct {
 	// The name of tag on AWS API Gateway Stage that holds mapped stage on Amplify Engage.
 	StageTagName string `json:"stageTagName,omitempty"`
 	// The gateway mode the AWS agent operates in.
-	GatewayMode string                    `json:"gatewayMode,omitempty"`
-	AgentCore   DataplaneSpecAwsAgentCore `json:"agentCore,omitempty"`
+	GatewayMode string `json:"gatewayMode,omitempty"`
+	// The AWS region for Bedrock. Applicable when gatewayMode is bedrock.
+	Region    string                    `json:"region,omitempty"`
+	AgentCore DataplaneSpecAwsAgentCore `json:"agentCore,omitempty"`
 	// List of AWS Cognito user pools used for authentication in agentcore-gateway mode.
 	Cognito []DataplaneSpecAwsCognito `json:"cognito,omitempty"`
 }
