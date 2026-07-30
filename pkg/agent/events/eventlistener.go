@@ -11,22 +11,32 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-// Listener starts the EventListener
+const (
+	lowQueue     = "lowPriorityQueue"
+	regularQueue = "regularQueue"
+)
+
 type Listener interface {
 	Listen()
 	Stop()
 }
 
-// APIClient -
 type APIClient interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetResource(url string) (*apiv1.ResourceInstance, error)
 	CreateResourceInstance(ri apiv1.Interface) (*apiv1.ResourceInstance, error)
 	DeleteResourceInstance(ri apiv1.Interface) error
 	GetAPIV1ResourceInstances(map[string]string, string) ([]*apiv1.ResourceInstance, error)
+}
+
+var lowPriorityHandlers map[string]bool = map[string]bool{
+	management.ManagedApplicationGVK().Kind: true,
+	management.AccessRequestGVK().Kind:      true,
+	management.CredentialGVK().Kind:         true,
 }
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
@@ -39,41 +49,82 @@ type EventListener struct {
 	logger          log.FieldLogger
 	sequenceManager SequenceProvider
 	source          chan *proto.Event
+	kindJobs        map[string]chan handlerData // one worker per kind
+	lowPriorityJobs chan handlerData            // exactly one dedicated worker
+	seenManagedApps map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
 }
 
-// NewListenerFunc type for creating a new listener
-type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener
+type handlerData struct {
+	event   *proto.Event
+	ctx     context.Context
+	ri      *apiv1.ResourceInstance
+	handler handler.Handler
+	logger  log.FieldLogger
+}
+
+type ListenerOpts func(el *EventListener)
+
+type NewListenerFunc func(source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener
+
+func WithContextAndCancel(ctx context.Context, cancel context.CancelCauseFunc) ListenerOpts {
+	return func(el *EventListener) {
+		el.ctx = ctx
+		el.cancel = cancel
+	}
+}
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers,
 // indexed by the resource Kind they should be dispatched for.
-func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener {
+func NewEventListener(source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
 
-	return &EventListener{
-		ctx:             ctx,
-		cancel:          cancel,
+	el := &EventListener{
+		ctx:             context.Background(),
 		client:          client,
 		baseURL:         baseURL,
 		handlersByKind:  handlersByKind,
 		logger:          logger,
 		sequenceManager: sequenceManager,
 		source:          source,
+		kindJobs:        make(map[string]chan handlerData, len(handlersByKind)-len(lowPriorityHandlers)),
+		lowPriorityJobs: make(chan handlerData, len(lowPriorityHandlers)),
+		seenManagedApps: make(map[string]struct{}),
+	}
+	for _, o := range opts {
+		o(el)
+	}
+	return el
+}
+
+func (em *EventListener) Stop() {
+	if em != nil && em.cancel != nil {
+		em.cancel(nil)
 	}
 }
 
-// Stop stops the listener
-func (em *EventListener) Stop() {
-	if em != nil {
-		em.cancel(nil)
+func (em *EventListener) closeJobs() {
+	close(em.lowPriorityJobs)
+	for _, ch := range em.kindJobs {
+		close(ch)
 	}
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() {
+	go worker(em.lowPriorityJobs) // exactly one goroutine, shared by already-known managed apps
+
+	em.kindJobs = make(map[string]chan handlerData)
+	for kind := range em.handlersByKind {
+		ch := make(chan handlerData)
+		em.kindJobs[kind] = ch
+		go worker(ch) // exactly one worker, order preserved for this kind
+	}
+
 	go func() {
 		defer em.Stop()
+		defer em.closeJobs()
 		for {
 			done, err := em.start()
 			if done && err == nil {
@@ -97,7 +148,6 @@ func (em *EventListener) start() (done bool, err error) {
 			err = fmt.Errorf("stream event source has been closed")
 			break
 		}
-
 		if handleErr := em.handleEvent(event); handleErr != nil {
 			em.logger.WithError(handleErr).Error("stream event listener error handling event")
 		}
@@ -109,6 +159,14 @@ func (em *EventListener) start() (done bool, err error) {
 	}
 
 	return done, err
+}
+
+func worker(jobs <-chan handlerData) {
+	for handlerData := range jobs {
+		if err := handlerData.handler.Handle(handlerData.ctx, handlerData.event.GetMetadata(), handlerData.ri); err != nil {
+			handlerData.logger.WithError(err).Error("failed to handle event data")
+		}
+	}
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
@@ -125,10 +183,15 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	var ri *apiv1.ResourceInstance
 	var err error
+	var jobs chan handlerData
+	queueType := ""
 	msg := "skipped handling event"
-	defer func() { logger.Trace(msg) }()
-
 	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
+
+	defer func() {
+		logger.WithField("apiServerFields", apiServerFields).WithField("queueType", queueType).Trace(msg)
+	}()
+
 	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
@@ -141,13 +204,75 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 				return err
 			}
 		}
-		if err := h.Handle(ctx, event.Metadata, ri); err != nil {
-			logger.WithError(err).Error("failed to handle event resource")
+		if jobs == nil {
+			jobs, queueType = em.dispatchLane(event, ri)
+		}
+		jobs <- handlerData{
+			event:   event,
+			ctx:     ctx,
+			ri:      ri,
+			handler: h,
+			logger:  logger,
 		}
 	}
 
-	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
+	if event.Payload.Kind == management.ManagedApplicationGVK().Kind && event.Type == proto.Event_DELETED {
+		delete(em.seenManagedApps, event.Payload.Name)
+	}
+
+	if event.Metadata.SequenceID > em.sequenceManager.GetSequence() {
+		em.sequenceManager.SetSequence(event.Metadata.SequenceID)
+	}
 	return nil
+}
+
+// dispatchLane picks which worker channel an event's handlerData should be sent to. Kinds
+// outside the managed-app provisioning chain always use their own kind lane. For
+// ManagedApplication/AccessRequest/Credential, the first event seen for a given ManagedApplication
+// name uses that kind's lane; every later event tied to the same name goes to the shared
+// low-priority lane, until the ManagedApplication is deleted (see handleEvent).
+func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
+	kind := event.Payload.Kind
+	if !lowPriorityHandlers[kind] {
+		return em.kindJobs[kind], regularQueue
+	}
+
+	key, ok := managedApplicationKey(event, ri)
+	if !ok {
+		// can't determine which ManagedApplication this belongs to - e.g. a delete for an
+		// AccessRequest/Credential, whose spec is no longer available - so assume it's for an
+		// already-known app rather than risk promoting it to the fast lane
+		return em.lowPriorityJobs, lowQueue
+	}
+
+	// We add the keys, but we don't put the ManagedApplication in the low priority queue.
+	if _, seen := em.seenManagedApps[key]; seen && kind != management.ManagedApplicationGVK().Kind {
+		return em.lowPriorityJobs, lowQueue
+	}
+	em.seenManagedApps[key] = struct{}{}
+	return em.kindJobs[kind], regularQueue
+}
+
+// managedApplicationKey returns the ManagedApplication name an event relates to, for the three
+// kinds that participate in managed-app provisioning. ok is false for any other kind, or when
+// the reference can't be determined from ri (e.g. AccessRequest/Credential delete events, whose
+// spec is empty).
+func managedApplicationKey(event *proto.Event, ri *apiv1.ResourceInstance) (key string, ok bool) {
+	switch event.Payload.Kind {
+	case management.ManagedApplicationGVK().Kind:
+		return event.Payload.Name, true
+	case management.AccessRequestGVK().Kind, management.CredentialGVK().Kind:
+		if ri == nil || ri.Spec == nil {
+			return "", false
+		}
+		key, ok = ri.Spec["managedApplication"].(string)
+		if !ok || key == "" {
+			return "", false
+		}
+		return key, true
+	default:
+		return "", false
+	}
 }
 
 // requiredAPIServerFields returns the union of the fields declared as required by the given

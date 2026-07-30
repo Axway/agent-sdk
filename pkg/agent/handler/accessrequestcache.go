@@ -65,7 +65,7 @@ func (h *accessRequestCacheHandler) GetAPIServerFields(ctx context.Context, even
 		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
 			return nil
 		}
-		return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
+		return []string{"name", "metadata.id", "spec.managedApplication", event.Metadata.GetSubresource()}
 	}
 	return nil
 }
