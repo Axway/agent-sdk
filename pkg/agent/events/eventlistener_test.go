@@ -33,13 +33,13 @@ func newTestListener(t *testing.T, knownKind string) *EventListener {
 		"https://apicentral.example.com",
 		sequenceManager,
 		map[string][]handler.Handler{
-			knownKind: {&mockHandler{}},
+			knownKind:                               {&mockHandler{}},
 			management.ManagedApplicationGVK().Kind: {&mockHandler{}},
 		},
 		WithContextAndCancel(ctx, cancel),
 	)
 	em.kindJobs = map[string]chan handlerData{
-		knownKind: make(chan handlerData, 1),
+		knownKind:                               make(chan handlerData, 1),
 		management.ManagedApplicationGVK().Kind: make(chan handlerData, 1),
 	}
 	em.lowPriorityJobs = make(chan handlerData, 1)
@@ -71,10 +71,10 @@ func TestEventListener_start(t *testing.T) {
 			wantLane: "kind",
 		},
 		{
-			name:        "dispatches a later event for an already-seen managed app to the shared low priority lane",
+			name:        "a later ManagedApplication event for an already-seen app still uses its own kind lane",
 			kind:        lowKind,
 			alreadySeen: true,
-			wantLane:    "lowPriority",
+			wantLane:    "kind",
 		},
 		{
 			name: "drops an event for a kind with no registered lane instead of blocking",
@@ -305,23 +305,27 @@ func TestEventListener_dispatchLane(t *testing.T) {
 
 	event := newTestEvent(1)
 	event.Payload.Kind = knownKind
-	assert.True(t, em.kindJobs[knownKind] == em.dispatchLane(event, nil))
+	kindJob, _ := em.dispatchLane(event, nil)
+	assert.True(t, em.kindJobs[knownKind] == kindJob)
 
 	maEvent := newTestEvent(2)
 	maEvent.Payload.Kind = management.ManagedApplicationGVK().Kind
 	maEvent.Payload.Name = "app-1"
-	assert.True(t, em.kindJobs[maEvent.Payload.Kind] == em.dispatchLane(maEvent, nil))
+	kindJob, _ = em.dispatchLane(maEvent, nil)
+	assert.True(t, em.kindJobs[maEvent.Payload.Kind] == kindJob)
 	if _, seen := em.seenManagedApps["app-1"]; !seen {
 		t.Fatal("expected the first event for app-1 to mark it as seen")
 	}
 
 	arEvent := newTestEvent(3)
 	arEvent.Payload.Kind = management.AccessRequestGVK().Kind
-	assert.True(t, em.lowPriorityJobs == em.dispatchLane(arEvent, appRI))
+	kindJob, _ = em.dispatchLane(arEvent, appRI)
+	assert.True(t, em.lowPriorityJobs == kindJob)
 
 	credEvent := newTestEvent(4)
 	credEvent.Payload.Kind = management.CredentialGVK().Kind
-	assert.True(t, em.lowPriorityJobs == em.dispatchLane(credEvent, &apiv1.ResourceInstance{}))
+	kindJob, _ = em.dispatchLane(credEvent, &apiv1.ResourceInstance{})
+	assert.True(t, em.lowPriorityJobs == kindJob)
 }
 
 // TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
@@ -380,9 +384,9 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	deleteEvent.Type = proto.Event_DELETED
 	assert.NoError(t, listener.handleEvent(deleteEvent))
 	select {
-	case <-listener.lowPriorityJobs:
+	case <-listener.kindJobs[maKind]:
 	default:
-		t.Fatal("expected the delete itself to still use the low priority lane (app was already seen before this call)")
+		t.Fatal("expected the ManagedApplication delete to still use its own kind lane - only AccessRequest/Credential get demoted")
 	}
 	if _, stillSeen := listener.seenManagedApps["app-1"]; stillSeen {
 		t.Fatal("expected the delete to clear the seen entry")
