@@ -88,7 +88,8 @@ func (p *PollClient) Start() error {
 
 	p.mutex.Lock()
 
-	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.baseURL, p.harvesterConfig.sequence, p.handlers)
+	p.listener = p.newListener(eventCh, p.apiClient, p.baseURL, p.harvesterConfig.sequence, p.handlers,
+		events.WithContextAndCancel(ctx, cancel))
 
 	p.poller = p.newPollManager(p.interval, withOnStop(p.onClientStop), withHarvester(p.harvesterConfig), WithContext(ctx, cancel))
 	p.mutex.Unlock()

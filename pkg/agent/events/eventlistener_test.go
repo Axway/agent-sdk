@@ -12,89 +12,133 @@ import (
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
+// newTestListener builds an EventListener with a single known kind lane already wired up, as
+// Listen would do, without spawning the worker goroutines - start's dispatch logic can then be
+// exercised and asserted on directly by reading from the lane channels. The source channel is
+// buffered so a test can queue an event before calling start() without needing a goroutine.
+func newTestListener(t *testing.T, knownKind string) *EventListener {
+	t.Helper()
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+	ctx, cancel := context.WithCancelCause(context.Background())
+	em := NewEventListener(
+		make(chan *proto.Event, 1),
+		&mockAPIClient{},
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{
+			knownKind: {&mockHandler{}},
+			management.ManagedApplicationGVK().Kind: {&mockHandler{}},
+		},
+		WithContextAndCancel(ctx, cancel),
+	)
+	em.kindJobs = map[string]chan handlerData{
+		knownKind: make(chan handlerData, 1),
+		management.ManagedApplicationGVK().Kind: make(chan handlerData, 1),
+	}
+	em.lowPriorityJobs = make(chan handlerData, 1)
+	return em
+}
+
 func TestEventListener_start(t *testing.T) {
+	const knownKind = "TestKind"
+	lowKind := management.ManagedApplicationGVK().Kind
+
 	tests := []struct {
-		name      string
-		hasError  bool
-		events    chan *proto.Event
-		client    APIClient
-		handler   handler.Handler
-		writeStop bool
+		name        string
+		kind        string
+		alreadySeen bool // pre-seed seenManagedApps for the managed app before dispatching
+		closeSource bool
+		cancelCtx   bool
+		wantDone    bool
+		wantErr     bool
+		wantLane    string // "kind", "lowPriority", or "" for no dispatch at all
 	}{
 		{
-			name:     "should start without an error",
-			hasError: false,
-			events:   make(chan *proto.Event),
-			client:   &mockAPIClient{},
-			handler:  &mockHandler{},
+			name:     "dispatches a known kind to its own kind lane",
+			kind:     knownKind,
+			wantLane: "kind",
 		},
 		{
-			name:     "should return an error when the event channel is closed",
-			hasError: true,
-			events:   make(chan *proto.Event),
-			client:   &mockAPIClient{},
-			handler:  &mockHandler{},
-		},
-
-		{
-			name:     "should return an error, when the request for a ResourceClient fails",
-			hasError: true,
-			events:   make(chan *proto.Event),
-			client:   &mockAPIClient{getErr: fmt.Errorf("failed")},
-			handler:  &mockHandler{},
+			name:     "dispatches the first event for a managed app to its own kind lane",
+			kind:     lowKind,
+			wantLane: "kind",
 		},
 		{
-			name:     "should not return an error, even if a handler fails to process an event",
-			hasError: false,
-			events:   make(chan *proto.Event),
-			client:   &mockAPIClient{},
-			handler:  &mockHandler{err: fmt.Errorf("failed")},
+			name:        "dispatches a later event for an already-seen managed app to the shared low priority lane",
+			kind:        lowKind,
+			alreadySeen: true,
+			wantLane:    "lowPriority",
+		},
+		{
+			name: "drops an event for a kind with no registered lane instead of blocking",
+			kind: "UnknownKind",
+		},
+		{
+			name:        "returns an error when the event source is closed",
+			closeSource: true,
+			wantDone:    true,
+			wantErr:     true,
+		},
+		{
+			name:      "stops gracefully when the context is cancelled",
+			cancelCtx: true,
+			wantDone:  true,
 		},
 	}
 
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancelCause(context.Background())
-			listener := NewEventListener(ctx, cancel, tc.events, tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
+			em := newTestListener(t, knownKind)
 
-			errCh := make(chan error)
-			go func() {
-				_, err := listener.start()
-				errCh <- err
-			}()
-
-			if tc.hasError == false {
-				tc.events <- &proto.Event{
-					Type: proto.Event_CREATED,
-					Payload: &proto.ResourceInstance{
-						Metadata: &proto.Metadata{
-							SelfLink: "/management/v1/watchtopics/mock-watch-topic",
-						},
-					},
-					Metadata: &proto.EventMeta{
-						SequenceID: 1,
-					},
+			var event *proto.Event
+			switch {
+			case tc.closeSource:
+				close(em.source)
+			case tc.cancelCtx:
+				em.cancel(nil)
+			default:
+				event = newTestEvent(1)
+				event.Payload.Kind = tc.kind
+				event.Payload.Name = "app-1"
+				if tc.alreadySeen {
+					em.seenManagedApps["app-1"] = struct{}{}
 				}
-			} else {
-				close(tc.events)
+				em.source <- event
 			}
 
-			err := <-errCh
-			if tc.hasError == true {
-				assert.NotNil(t, err)
+			done, err := em.start()
+			assert.Equal(t, tc.wantDone, done)
+			if tc.wantErr {
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
+			}
+
+			var lane chan handlerData
+			switch tc.wantLane {
+			case "kind":
+				lane = em.kindJobs[tc.kind]
+			case "lowPriority":
+				lane = em.lowPriorityJobs
+			}
+			if lane == nil {
+				return
+			}
+			select {
+			case got := <-lane:
+				assert.Same(t, event, got.event)
+			default:
+				t.Fatal("event was not dispatched to the expected lane")
 			}
 		})
 	}
-
 }
 
 // Should call Listen and handle a graceful stop, and an error
@@ -103,14 +147,14 @@ func TestEventListener_Listen(t *testing.T) {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
 	ctx, cancel := context.WithCancelCause(context.Background())
-	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
+	listener := NewEventListener(events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}}, WithContextAndCancel(ctx, cancel))
 	listener.Listen()
 	listener.Stop()
 	err := ctx.Err()
 	assert.NotNil(t, err)
 
 	ctx, cancel = context.WithCancelCause(context.Background())
-	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
+	listener = NewEventListener(events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}}, WithContextAndCancel(ctx, cancel))
 	listener.Listen()
 	close(events)
 	err = ctx.Err()
@@ -176,7 +220,8 @@ func TestEventListener_handleEvent(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancelCause(context.Background())
-			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
+			listener := NewEventListener(make(chan *proto.Event), tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}}, WithContextAndCancel(ctx, cancel))
+			listener.kindJobs[""] = make(chan handlerData, 1)
 
 			err := listener.handleEvent(event)
 
@@ -186,6 +231,170 @@ func TestEventListener_handleEvent(t *testing.T) {
 				assert.NotNil(t, err)
 			}
 		})
+	}
+}
+
+func Test_managedApplicationKey(t *testing.T) {
+	tests := []struct {
+		name    string
+		kind    string
+		appName string
+		spec    map[string]interface{}
+		wantKey string
+		wantOK  bool
+	}{
+		{
+			name:    "managed application uses its own name",
+			kind:    management.ManagedApplicationGVK().Kind,
+			appName: "app-1",
+			wantKey: "app-1",
+			wantOK:  true,
+		},
+		{
+			name:    "access request reads managedApplication from spec",
+			kind:    management.AccessRequestGVK().Kind,
+			spec:    map[string]interface{}{"managedApplication": "app-2"},
+			wantKey: "app-2",
+			wantOK:  true,
+		},
+		{
+			name:    "credential reads managedApplication from spec",
+			kind:    management.CredentialGVK().Kind,
+			spec:    map[string]interface{}{"managedApplication": "app-3"},
+			wantKey: "app-3",
+			wantOK:  true,
+		},
+		{
+			name: "access request with no spec (e.g. a delete) is undeterminable",
+			kind: management.AccessRequestGVK().Kind,
+		},
+		{
+			name: "credential with an empty managedApplication is undeterminable",
+			kind: management.CredentialGVK().Kind,
+			spec: map[string]interface{}{"managedApplication": ""},
+		},
+		{
+			name: "unrelated kind is not applicable",
+			kind: "SomeOtherKind",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := newTestEvent(1)
+			event.Payload.Kind = tc.kind
+			event.Payload.Name = tc.appName
+
+			var ri *apiv1.ResourceInstance
+			if tc.spec != nil {
+				ri = &apiv1.ResourceInstance{Spec: tc.spec}
+			}
+
+			key, ok := managedApplicationKey(event, ri)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantKey, key)
+		})
+	}
+}
+
+func TestEventListener_dispatchLane(t *testing.T) {
+	const knownKind = "TestKind"
+	em := newTestListener(t, knownKind)
+
+	appRI := &apiv1.ResourceInstance{Spec: map[string]interface{}{"managedApplication": "app-1"}}
+
+	event := newTestEvent(1)
+	event.Payload.Kind = knownKind
+	assert.True(t, em.kindJobs[knownKind] == em.dispatchLane(event, nil))
+
+	maEvent := newTestEvent(2)
+	maEvent.Payload.Kind = management.ManagedApplicationGVK().Kind
+	maEvent.Payload.Name = "app-1"
+	assert.True(t, em.kindJobs[maEvent.Payload.Kind] == em.dispatchLane(maEvent, nil))
+	if _, seen := em.seenManagedApps["app-1"]; !seen {
+		t.Fatal("expected the first event for app-1 to mark it as seen")
+	}
+
+	arEvent := newTestEvent(3)
+	arEvent.Payload.Kind = management.AccessRequestGVK().Kind
+	assert.True(t, em.lowPriorityJobs == em.dispatchLane(arEvent, appRI))
+
+	credEvent := newTestEvent(4)
+	credEvent.Payload.Kind = management.CredentialGVK().Kind
+	assert.True(t, em.lowPriorityJobs == em.dispatchLane(credEvent, &apiv1.ResourceInstance{}))
+}
+
+// TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
+// lifecycle through handleEvent: the first event for an app uses its kind lane, later events
+// for the same app are demoted to the low priority lane, and deleting the ManagedApplication
+// resets it so the next related event is treated as first-seen again.
+func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+
+	maKind := management.ManagedApplicationGVK().Kind
+	arKind := management.AccessRequestGVK().Kind
+
+	client := &mockAPIClient{ri: &apiv1.ResourceInstance{
+		Spec: map[string]interface{}{"managedApplication": "app-1"},
+	}}
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	listener := NewEventListener(
+		make(chan *proto.Event),
+		client,
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{
+			maKind: {&mockHandler{}},
+			arKind: {&mockHandler{}},
+		},
+		WithContextAndCancel(ctx, cancel),
+	)
+	listener.kindJobs[maKind] = make(chan handlerData, 1)
+	listener.kindJobs[arKind] = make(chan handlerData, 1)
+	listener.lowPriorityJobs = make(chan handlerData, 1)
+
+	maEvent := newTestEvent(1)
+	maEvent.Payload.Kind = maKind
+	maEvent.Payload.Name = "app-1"
+	assert.NoError(t, listener.handleEvent(maEvent))
+	select {
+	case <-listener.kindJobs[maKind]:
+	default:
+		t.Fatal("expected the first ManagedApplication event to use its kind lane")
+	}
+
+	arEvent := newTestEvent(2)
+	arEvent.Payload.Kind = arKind
+	assert.NoError(t, listener.handleEvent(arEvent))
+	select {
+	case <-listener.lowPriorityJobs:
+	default:
+		t.Fatal("expected the AccessRequest for an already-seen app to use the low priority lane")
+	}
+
+	deleteEvent := newTestEvent(3)
+	deleteEvent.Payload.Kind = maKind
+	deleteEvent.Payload.Name = "app-1"
+	deleteEvent.Type = proto.Event_DELETED
+	assert.NoError(t, listener.handleEvent(deleteEvent))
+	select {
+	case <-listener.lowPriorityJobs:
+	default:
+		t.Fatal("expected the delete itself to still use the low priority lane (app was already seen before this call)")
+	}
+	if _, stillSeen := listener.seenManagedApps["app-1"]; stillSeen {
+		t.Fatal("expected the delete to clear the seen entry")
+	}
+
+	arEvent2 := newTestEvent(4)
+	arEvent2.Payload.Kind = arKind
+	assert.NoError(t, listener.handleEvent(arEvent2))
+	select {
+	case <-listener.kindJobs[arKind]:
+	default:
+		t.Fatal("expected the AccessRequest after the app was deleted to use the kind lane again")
 	}
 }
 
