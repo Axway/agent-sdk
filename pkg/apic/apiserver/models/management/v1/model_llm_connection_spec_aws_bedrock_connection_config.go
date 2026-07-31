@@ -18,7 +18,7 @@ type LlmConnectionSpecAwsBedrockConnectionConfig struct {
 	// GENERATE: The following code has been modified after code generation
 	Auth interface{} `json:"auth"`
 	// List of Bedrock model IDs users are allowed to use (e.g. anthropic.claude-3-5-sonnet-20241022-v2:0, amazon.titan-text-express-v1).
-	AllowedModels []LlmConnectionSpecAwsBedrockConnectionConfigAllowedModels `json:"allowedModels"`
+	AllowedModels []LlmProviderSpecAwsBedrockModels `json:"allowedModels"`
 	// GENERATE: The following code has been modified after code generation
 	Temperature float64 `json:"temperature,omitempty"`
 	// GENERATE: The following code has been modified after code generation

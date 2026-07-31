@@ -21,6 +21,7 @@ type Set struct {
 	DataplaneSecretManagementV1              *management_v1.UnscopedDataplaneSecretClient
 	TraceabilityAgentManagementV1            *management_v1.UnscopedTraceabilityAgentClient
 	ComplianceAgentManagementV1              *management_v1.UnscopedComplianceAgentClient
+	LLMProviderManagementV1                  *management_v1.UnscopedLLMProviderClient
 	EnvironmentManagementV1                  *management_v1.EnvironmentClient
 	APIServiceManagementV1                   *management_v1.UnscopedAPIServiceClient
 	APIServiceRevisionManagementV1           *management_v1.UnscopedAPIServiceRevisionClient
@@ -133,6 +134,10 @@ func New(b cAPIV1.Base) *Set {
 	s.ComplianceAgentManagementV1, err = management_v1.NewComplianceAgentClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.ComplianceAgent: %s", err))
+	}
+	s.LLMProviderManagementV1, err = management_v1.NewLLMProviderClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.LLMProvider: %s", err))
 	}
 	s.EnvironmentManagementV1, err = management_v1.NewEnvironmentClient(b)
 	if err != nil {

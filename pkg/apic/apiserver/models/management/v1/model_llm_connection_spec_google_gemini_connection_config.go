@@ -14,7 +14,7 @@ type LlmConnectionSpecGoogleGeminiConnectionConfig struct {
 	ProviderType string                                              `json:"providerType"`
 	ApiKey       LlmConnectionSpecGoogleGeminiConnectionConfigApiKey `json:"apiKey"`
 	// List of Google Gemini models users are allowed to use with this connection (e.g. gemini-1.5-pro, gemini-2.0-flash).
-	AllowedModels []LlmConnectionSpecGoogleGeminiConnectionConfigAllowedModels `json:"allowedModels"`
+	AllowedModels []LlmProviderSpecGoogleGeminiModels `json:"allowedModels"`
 	// Base URL (defaults to https://generativelanguage.googleapis.com/v1beta if omitted).
 	BaseUrl string `json:"baseUrl,omitempty"`
 	// GENERATE: The following code has been modified after code generation

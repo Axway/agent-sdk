@@ -9,8 +9,8 @@
 
 package management
 
-// LlmConnectionSpecOpenAiConnectionConfigAllowedModels struct for LlmConnectionSpecOpenAiConnectionConfigAllowedModels
-type LlmConnectionSpecOpenAiConnectionConfigAllowedModels struct {
-	// OpenAI model name (e.g. gpt-4o, gpt-4o-mini).
+// LlmProviderSpecAzureOpenAiDeployments struct for LlmProviderSpecAzureOpenAiDeployments
+type LlmProviderSpecAzureOpenAiDeployments struct {
+	// Azure OpenAI deployment name.
 	Name string `json:"name"`
 }
