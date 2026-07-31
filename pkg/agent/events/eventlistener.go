@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -57,14 +58,74 @@ type EventListener struct {
 	kindJobs        map[string]chan handlerData // one worker per kind
 	lowPriorityJobs chan handlerData            // exactly one dedicated worker
 	seenManagedApps map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
+	seqTracker      *sequenceTracker
 }
 
 type handlerData struct {
-	event   *proto.Event
-	ctx     context.Context
-	ri      *apiv1.ResourceInstance
-	handler handler.Handler
-	logger  log.FieldLogger
+	event      *proto.Event
+	ctx        context.Context
+	ri         *apiv1.ResourceInstance
+	handler    handler.Handler
+	logger     log.FieldLogger
+	onComplete func()
+}
+
+// sequenceTracker tracks, per dispatched event, how many handlerData items are still outstanding,
+// so the persisted watch sequence only advances past events whose handlers have actually finished
+// running - not merely been handed off to a lane. Events are registered in the strictly increasing
+// order they're read from the source, but different lanes complete them at different speeds, so
+// completions only move the watermark once they form a contiguous prefix from the front of order.
+type sequenceTracker struct {
+	mu        sync.Mutex
+	remaining map[int64]int
+	order     []int64
+}
+
+func newSequenceTracker() *sequenceTracker {
+	return &sequenceTracker{remaining: make(map[int64]int)}
+}
+
+// register records that count handlerData items were dispatched for sequenceID. count may be zero
+// for an event that matched no handler - it still holds its place in order so later sequences
+// don't get persisted ahead of it. Returns the new watermark and true if registering it let the
+// front of order advance immediately (only possible when count is zero).
+func (t *sequenceTracker) register(sequenceID int64, count int) (int64, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if count > 0 {
+		t.remaining[sequenceID] = count
+	}
+	t.order = append(t.order, sequenceID)
+	return t.advanceLocked()
+}
+
+// complete marks one handlerData item for sequenceID as done. Returns the new watermark and true
+// if this completion let the front of order advance; otherwise (0, false).
+func (t *sequenceTracker) complete(sequenceID int64) (int64, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.remaining[sequenceID] > 0 {
+		t.remaining[sequenceID]--
+	}
+	if t.remaining[sequenceID] <= 0 {
+		delete(t.remaining, sequenceID)
+	}
+	return t.advanceLocked()
+}
+
+// advanceLocked pops sequences off the front of order for as long as they have no outstanding
+// handlerData items left, returning the highest one popped, if any. Callers must hold t.mu.
+func (t *sequenceTracker) advanceLocked() (int64, bool) {
+	watermark, advanced := int64(0), false
+	for len(t.order) > 0 {
+		if _, pending := t.remaining[t.order[0]]; pending {
+			break
+		}
+		watermark = t.order[0]
+		advanced = true
+		t.order = t.order[1:]
+	}
+	return watermark, advanced
 }
 
 type ListenerOpts func(el *EventListener)
@@ -96,6 +157,7 @@ func NewEventListener(source chan *proto.Event, client APIClient, baseURL string
 		kindJobs:        make(map[string]chan handlerData, len(handlersByKind)-len(lowPriorityHandlers)),
 		lowPriorityJobs: make(chan handlerData, laneBufferSize),
 		seenManagedApps: make(map[string]struct{}),
+		seqTracker:      newSequenceTracker(),
 	}
 	for _, o := range opts {
 		o(el)
@@ -170,6 +232,9 @@ func worker(jobs <-chan handlerData) {
 		if err := handlerData.handler.Handle(handlerData.ctx, handlerData.event.GetMetadata(), handlerData.ri); err != nil {
 			handlerData.logger.WithError(err).Error("failed to handle event data")
 		}
+		if handlerData.onComplete != nil {
+			handlerData.onComplete()
+		}
 	}
 }
 
@@ -187,7 +252,6 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	var ri *apiv1.ResourceInstance
 	var err error
-	var jobs chan handlerData
 	queueType := ""
 	msg := "skipped handling event"
 	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
@@ -196,11 +260,11 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		logger.WithField("apiServerFields", apiServerFields).WithField("queueType", queueType).Trace(msg)
 	}()
 
+	var toDispatch []handler.Handler
 	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-		msg = "passed event to handlers"
 		if ri == nil {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
@@ -208,9 +272,25 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 				return err
 			}
 		}
-		if jobs == nil {
-			jobs, queueType = em.dispatchLane(event, ri)
-		}
+		toDispatch = append(toDispatch, h)
+	}
+
+	var jobs chan handlerData
+	if len(toDispatch) > 0 {
+		msg = "passed event to handlers"
+		jobs, queueType = em.dispatchLane(event, ri)
+	}
+
+	// Register this event's handler count before dispatching, even if it's zero, so the
+	// sequence tracker knows to hold its place: the persisted sequence must never advance
+	// past an event whose handlers haven't finished running yet, even if a later event on a
+	// faster lane already has.
+	seq := event.Metadata.SequenceID
+	if watermark, advanced := em.seqTracker.register(seq, len(toDispatch)); advanced {
+		em.advanceSequence(watermark)
+	}
+
+	for _, h := range toDispatch {
 		select {
 		case jobs <- handlerData{
 			event:   event,
@@ -218,11 +298,18 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 			ri:      ri,
 			handler: h,
 			logger:  logger,
+			onComplete: func() {
+				if watermark, advanced := em.seqTracker.complete(seq); advanced {
+					em.advanceSequence(watermark)
+				}
+			},
 		}:
 		case <-em.ctx.Done():
 			// a lane's worker is stuck or the process is shutting down - stop dispatching this
-			// event rather than block forever, and skip the sequence update below so the event
-			// gets redelivered and retried in full after a restart
+			// event rather than block forever. The handlers that never got sent are still
+			// counted as outstanding in the sequence tracker, so it will never mark this event
+			// complete, and the persisted sequence won't advance past it - a fresh watch resume
+			// will redeliver and retry it in full
 			msg = "stopped dispatching event: listener is shutting down"
 			return nil
 		}
@@ -232,10 +319,13 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		delete(em.seenManagedApps, event.Payload.Name)
 	}
 
-	if event.Metadata.SequenceID > em.sequenceManager.GetSequence() {
-		em.sequenceManager.SetSequence(event.Metadata.SequenceID)
-	}
 	return nil
+}
+
+func (em *EventListener) advanceSequence(sequenceID int64) {
+	if sequenceID > em.sequenceManager.GetSequence() {
+		em.sequenceManager.SetSequence(sequenceID)
+	}
 }
 
 // dispatchLane picks which worker channel an event's handlerData should be sent to.
