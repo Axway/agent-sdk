@@ -28,6 +28,7 @@ const (
 	Mcp           = "mcp"
 	A2a           = "a2a"
 	Raml          = "RAML"
+	LLM           = "llm"
 
 	SubscriptionSchemaNameSuffix      = ".authsubscription"
 	DefaultSubscriptionWebhookName    = "subscriptionwebhook"
@@ -39,6 +40,16 @@ const (
 	CreateTimestampQueryKey = "metadata.audit.createTimestamp"
 
 	DefaultTeamKey = "DefaultTeam"
+)
+
+const (
+	LLMProviderOpenAI           = "openai"
+	LLMProviderAnthropic        = "anthropic"
+	LLMProviderAzureOpenAI      = "azure-openai"
+	LLMProviderMicrosoftFoundry = "microsoft-foundry"
+	LLMProviderGoogleGemini     = "google-gemini"
+	LLMProviderAWSBedrock       = "bedrock"
+	LLMProviderAWSBedrockMantle = "bedrock-mantle"
 )
 
 // consts for dataplane type

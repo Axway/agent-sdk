@@ -18,7 +18,7 @@ type LlmConnectionSpecOpenAiConnectionConfig struct {
 	// OpenAI organization ID (optional).
 	OrganizationId string `json:"organizationId,omitempty"`
 	// List of OpenAI models users are allowed to use with this connection (e.g. gpt-4o, gpt-4o-mini).
-	AllowedModels []LlmConnectionSpecOpenAiConnectionConfigAllowedModels `json:"allowedModels"`
+	AllowedModels []LlmProviderSpecOpenAiModels `json:"allowedModels"`
 	// GENERATE: The following code has been modified after code generation
 	Temperature float64 `json:"temperature,omitempty"`
 	// GENERATE: The following code has been modified after code generation

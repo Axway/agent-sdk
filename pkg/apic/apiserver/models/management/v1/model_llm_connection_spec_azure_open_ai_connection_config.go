@@ -16,7 +16,7 @@ type LlmConnectionSpecAzureOpenAiConnectionConfig struct {
 	Endpoint string                                             `json:"endpoint"`
 	ApiKey   LlmConnectionSpecAzureOpenAiConnectionConfigApiKey `json:"apiKey"`
 	// List of deployment names users are allowed to use with this connection.
-	AllowedDeployments []LlmConnectionSpecAzureOpenAiConnectionConfigAllowedDeployments `json:"allowedDeployments"`
+	AllowedDeployments []LlmProviderSpecAzureOpenAiDeployments `json:"allowedDeployments"`
 	// GENERATE: The following code has been modified after code generation
 	Temperature float64 `json:"temperature,omitempty"`
 	// GENERATE: The following code has been modified after code generation
