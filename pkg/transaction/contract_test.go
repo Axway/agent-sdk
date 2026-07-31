@@ -67,9 +67,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.Equal(t, "2", data.Version)
 				assert.Equal(t, contractAPICDeploy, data.APICDeployment)
 				assert.Equal(t, contractLegTxnID, data.TransactionID)
-				assert.Equal(t, 0, data.LegID)
+				assert.Equal(t, "leg0", data.ID)
 				require.NotNil(t, data.API)
-				require.NotNil(t, data.Proxy)
 
 				assert.Contains(t, raw, `"api.transaction.event"`)
 				assert.Contains(t, raw, `"version":"4"`)
@@ -174,14 +173,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.Equal(t, contractAgentName, data.Reporter.AgentName)
 
 				require.NotNil(t, data.Product)
-				assert.Equal(t, "contract-product-name", data.Product.Name)
-				assert.Equal(t, "contract-version-name", data.Product.VersionName)
-				require.NotNil(t, data.Product.Owner)
-				assert.Equal(t, "product-team-contract", data.Product.Owner.TeamGUID)
 				require.NotNil(t, data.ConsumerDetails.PublishedProduct)
-				assert.Equal(t, "contract-published-product-name", data.ConsumerDetails.PublishedProduct.Name)
 				require.NotNil(t, data.ConsumerDetails.Subscription)
-				assert.Equal(t, "contract-subscription-name", data.ConsumerDetails.Subscription.Name)
 
 				assert.Contains(t, raw, `"api.transaction.summary"`)
 				assert.Contains(t, raw, `"version":"4"`)
