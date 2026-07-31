@@ -46,6 +46,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 					Status:    "Pass",
 					Duration:  340,
 					Direction: "Inbound",
+					ProxyID:   "contract-proxy-id",
+					ProxyName: "contract-proxy-name",
 				},
 			},
 			orgID: contractOrg,
@@ -66,6 +68,8 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.Equal(t, contractAPICDeploy, data.APICDeployment)
 				assert.Equal(t, contractLegTxnID, data.TransactionID)
 				assert.Equal(t, 0, data.LegID)
+				require.NotNil(t, data.API)
+				require.NotNil(t, data.Proxy)
 
 				assert.Contains(t, raw, `"api.transaction.event"`)
 				assert.Contains(t, raw, `"version":"4"`)
@@ -77,6 +81,10 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.NotContains(t, raw, `"entryPoint"`)
 				assert.NotContains(t, raw, `"assetResource"`)
 				assert.NotContains(t, raw, `"apiServiceRevision"`)
+				assert.NotContains(t, raw, `"transactionId"`)
+				assert.NotContains(t, raw, `"legId"`)
+				assert.NotContains(t, raw, `"api":`)
+				assert.NotContains(t, raw, `"proxy":`)
 			},
 		},
 		"summary event v2 has correct envelope and data shape": {
@@ -94,10 +102,28 @@ func TestContractTransactionV2Data(t *testing.T) {
 						Path:   "/pets/123",
 						Host:   "api.example.com",
 					},
+					Product: &models.Product{
+						ID:          "product-contract",
+						Name:        "contract-product-name",
+						VersionName: "contract-version-name",
+						Owner:       &models.Owner{Type: "team", TeamGUID: "product-team-contract"},
+					},
 					ConsumerDetails: &models.ConsumerDetails{
 						Marketplace: &models.MarketplaceReference{
 							GUID:          "mp-guid-contract",
 							ConsumerOrgID: "consumer-org-contract",
+						},
+						Application: &models.AppDetails{
+							ID:   "app-contract",
+							Name: "contract-app-name",
+						},
+						PublishedProduct: &models.Product{
+							ID:   "published-product-contract",
+							Name: "contract-published-product-name",
+						},
+						Subscription: &models.Subscription{
+							ID:   "subscription-contract",
+							Name: "contract-subscription-name",
 						},
 					},
 					AppOwnerInfo: &models.Owner{Type: "team", TeamGUID: "app-team-contract"},
@@ -147,6 +173,16 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.Equal(t, contractSDKVersion, data.Reporter.AgentSDKVersion)
 				assert.Equal(t, contractAgentName, data.Reporter.AgentName)
 
+				require.NotNil(t, data.Product)
+				assert.Equal(t, "contract-product-name", data.Product.Name)
+				assert.Equal(t, "contract-version-name", data.Product.VersionName)
+				require.NotNil(t, data.Product.Owner)
+				assert.Equal(t, "product-team-contract", data.Product.Owner.TeamGUID)
+				require.NotNil(t, data.ConsumerDetails.PublishedProduct)
+				assert.Equal(t, "contract-published-product-name", data.ConsumerDetails.PublishedProduct.Name)
+				require.NotNil(t, data.ConsumerDetails.Subscription)
+				assert.Equal(t, "contract-subscription-name", data.ConsumerDetails.Subscription.Name)
+
 				assert.Contains(t, raw, `"api.transaction.summary"`)
 				assert.Contains(t, raw, `"version":"4"`)
 				assert.Contains(t, raw, `"version":"2"`)
@@ -159,6 +195,12 @@ func TestContractTransactionV2Data(t *testing.T) {
 				assert.NotContains(t, raw, `"api.teamId"`)
 				assert.NotContains(t, raw, `"proxy.apiServiceInstance"`)
 				assert.NotContains(t, raw, `"proxy.revision"`)
+				assert.NotContains(t, raw, `"contract-product-name"`)
+				assert.NotContains(t, raw, `"versionName"`)
+				assert.NotContains(t, raw, `"contract-app-name"`)
+				assert.NotContains(t, raw, `"contract-published-product-name"`)
+				assert.NotContains(t, raw, `"contract-subscription-name"`)
+				assert.NotContains(t, raw, `"product-team-contract"`)
 			},
 		},
 		"deprecated proxy fields present when proxy is set": {

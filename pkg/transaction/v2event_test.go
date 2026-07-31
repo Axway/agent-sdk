@@ -678,7 +678,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 
 				b, err := json.Marshal(data)
 				require.NoError(t, err)
-				assert.Contains(t, string(b), `"proxy":`)
+				assert.NotContains(t, string(b), `"proxy":`)
 			},
 		},
 		// direction is lowercased regardless of what the agent passes

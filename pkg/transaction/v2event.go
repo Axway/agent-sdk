@@ -43,7 +43,7 @@ type insightsAPIDetail struct {
 // insightsConsumerAppDetail is the application sub-object within consumerDetails.
 type insightsConsumerAppDetail struct {
 	ID            string        `json:"id,omitempty"`
-	Name          string        `json:"name,omitempty"`
+	Name          string        `json:"-"`
 	ConsumerOrgID string        `json:"consumerOrgId,omitempty"`
 	Owner         *models.Owner `json:"owner,omitempty"`
 }
@@ -51,13 +51,13 @@ type insightsConsumerAppDetail struct {
 // insightsPublishedProduct is the publishedProduct sub-object within consumerDetails.
 type insightsPublishedProduct struct {
 	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Name string `json:"-"`
 }
 
 // insightsSubscription is the subscription sub-object within consumerDetails.
 type insightsSubscription struct {
 	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Name string `json:"-"`
 }
 
 // insightsConsumerDetails is the consumerDetails sub-object for leg and summary v2.
@@ -76,10 +76,10 @@ type insightsMarketplace struct {
 // insightsSummaryProduct is the product sub-object for summary v2.
 type insightsSummaryProduct struct {
 	ID          string        `json:"id,omitempty"`
-	Name        string        `json:"name,omitempty"`
+	Name        string        `json:"-"`
 	VersionID   string        `json:"versionId,omitempty"`
-	VersionName string        `json:"versionName,omitempty"`
-	Owner       *models.Owner `json:"owner,omitempty"`
+	VersionName string        `json:"-"`
+	Owner       *models.Owner `json:"-"`
 }
 
 // insightsReporter is the reporter sub-object.
@@ -109,9 +109,9 @@ type insightsProxy struct {
 type TransactionLegData struct {
 	Version        string             `json:"version"`
 	APICDeployment string             `json:"apicDeployment,omitempty"`
-	TransactionID  string             `json:"transactionId,omitempty"`
+	TransactionID  string             `json:"-"`
 	ID             string             `json:"id,omitempty"`
-	LegID          int                `json:"legId"`
+	LegID          int                `json:"-"`
 	ParentID       string             `json:"parentId,omitempty"`
 	Source         string             `json:"source,omitempty"`
 	Destination    string             `json:"destination,omitempty"`
@@ -119,9 +119,9 @@ type TransactionLegData struct {
 	Duration       int                `json:"duration"`
 	Direction      string             `json:"direction,omitempty"`
 	Protocol       *legProtocol       `json:"protocol,omitempty"`
-	API            *insightsAPIDetail `json:"api,omitempty"`
+	API            *insightsAPIDetail `json:"-"`
 	Reporter       *insightsReporter  `json:"reporter,omitempty"`
-	Proxy          *insightsProxy     `json:"proxy,omitempty"`
+	Proxy          *insightsProxy     `json:"-"`
 }
 
 // GetStartTime implements metric.V4Data.
