@@ -269,7 +269,7 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
 				logger.WithError(err).Error("failed to get event resource")
-				return err
+				break
 			}
 		}
 		toDispatch = append(toDispatch, h)
