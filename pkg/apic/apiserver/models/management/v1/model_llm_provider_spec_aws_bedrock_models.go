@@ -9,8 +9,8 @@
 
 package management
 
-// LlmConnectionSpecAzureOpenAiConnectionConfigAllowedDeployments struct for LlmConnectionSpecAzureOpenAiConnectionConfigAllowedDeployments
-type LlmConnectionSpecAzureOpenAiConnectionConfigAllowedDeployments struct {
-	// Azure OpenAI deployment name.
+// LlmProviderSpecAwsBedrockModels struct for LlmProviderSpecAwsBedrockModels
+type LlmProviderSpecAwsBedrockModels struct {
+	// AWS Bedrock model ID (e.g. anthropic.claude-3-5-sonnet-20241022-v2:0, amazon.titan-text-express-v1).
 	Name string `json:"name"`
 }

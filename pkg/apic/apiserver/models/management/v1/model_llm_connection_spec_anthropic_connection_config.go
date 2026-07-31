@@ -16,7 +16,7 @@ type LlmConnectionSpecAnthropicConnectionConfig struct {
 	BaseUrl string                                           `json:"baseUrl,omitempty"`
 	ApiKey  LlmConnectionSpecAnthropicConnectionConfigApiKey `json:"apiKey"`
 	// List of Anthropic models users are allowed to use with this connection (e.g. claude-sonnet-4-5, claude-3-5-sonnet).
-	AllowedModels []LlmConnectionSpecAnthropicConnectionConfigAllowedModels `json:"allowedModels"`
+	AllowedModels []LlmProviderSpecAnthropicModels `json:"allowedModels"`
 	// GENERATE: The following code has been modified after code generation
 	Temperature float64 `json:"temperature,omitempty"`
 	// GENERATE: The following code has been modified after code generation

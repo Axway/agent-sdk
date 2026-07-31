@@ -9,8 +9,8 @@
 
 package management
 
-// LlmConnectionSpecGoogleGeminiConnectionConfigAllowedModels struct for LlmConnectionSpecGoogleGeminiConnectionConfigAllowedModels
-type LlmConnectionSpecGoogleGeminiConnectionConfigAllowedModels struct {
-	// Google Gemini model name (e.g. gemini-1.5-pro, gemini-2.0-flash).
+// LlmProviderSpecAnthropicModels struct for LlmProviderSpecAnthropicModels
+type LlmProviderSpecAnthropicModels struct {
+	// Anthropic model name (e.g. claude-sonnet-4-5, claude-3-5-sonnet).
 	Name string `json:"name"`
 }

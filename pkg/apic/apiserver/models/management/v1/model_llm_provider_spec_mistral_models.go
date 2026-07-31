@@ -9,8 +9,8 @@
 
 package management
 
-// LlmConnectionSpecAnthropicConnectionConfigAllowedModels struct for LlmConnectionSpecAnthropicConnectionConfigAllowedModels
-type LlmConnectionSpecAnthropicConnectionConfigAllowedModels struct {
-	// Anthropic model name (e.g. claude-sonnet-4-5, claude-3-5-sonnet).
+// LlmProviderSpecMistralModels struct for LlmProviderSpecMistralModels
+type LlmProviderSpecMistralModels struct {
+	// Mistral model name (e.g. mistral-large-latest, mistral-small-latest).
 	Name string `json:"name"`
 }

@@ -16,7 +16,7 @@ type LlmConnectionSpecMistralConnectionConfig struct {
 	BaseUrl string                                         `json:"baseUrl,omitempty"`
 	ApiKey  LlmConnectionSpecMistralConnectionConfigApiKey `json:"apiKey"`
 	// List of Mistral models users are allowed to use with this connection (e.g. mistral-large-latest, mistral-small-latest).
-	AllowedModels []LlmConnectionSpecMistralConnectionConfigAllowedModels `json:"allowedModels"`
+	AllowedModels []LlmProviderSpecMistralModels `json:"allowedModels"`
 	// GENERATE: The following code has been modified after code generation
 	Temperature float64 `json:"temperature,omitempty"`
 	// GENERATE: The following code has been modified after code generation

@@ -9,8 +9,8 @@
 
 package management
 
-// LlmConnectionSpecMistralConnectionConfigAllowedModels struct for LlmConnectionSpecMistralConnectionConfigAllowedModels
-type LlmConnectionSpecMistralConnectionConfigAllowedModels struct {
-	// Mistral model name (e.g. mistral-large-latest, mistral-small-latest).
+// LlmProviderSpecOpenAiModels struct for LlmProviderSpecOpenAiModels
+type LlmProviderSpecOpenAiModels struct {
+	// OpenAI model name (e.g. gpt-4o, gpt-4o-mini).
 	Name string `json:"name"`
 }
