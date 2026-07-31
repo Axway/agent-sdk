@@ -281,6 +281,114 @@ func TestEventListener_handleEvent_ctxCancelUnblocksStuckSend(t *testing.T) {
 	}
 }
 
+func Test_sequenceTracker(t *testing.T) {
+	tr := newSequenceTracker()
+
+	if _, advanced := tr.register(1, 1); advanced {
+		t.Fatal("should not advance yet - nothing has completed")
+	}
+	if _, advanced := tr.register(2, 1); advanced {
+		t.Fatal("should not advance yet - nothing has completed")
+	}
+	if _, advanced := tr.register(3, 1); advanced {
+		t.Fatal("should not advance yet - nothing has completed")
+	}
+
+	if _, advanced := tr.complete(2); advanced {
+		t.Fatal("completing 2 must not advance the watermark while 1 is still outstanding")
+	}
+
+	watermark, advanced := tr.complete(1)
+	if !advanced || watermark != 2 {
+		t.Fatalf("expected completing 1 to advance to 2 (already-done 2 pops along with it), got %d (advanced=%v)", watermark, advanced)
+	}
+
+	watermark, advanced = tr.complete(3)
+	if !advanced || watermark != 3 {
+		t.Fatalf("expected watermark 3, got %d (advanced=%v)", watermark, advanced)
+	}
+}
+
+func Test_sequenceTracker_zeroCountEventHoldsItsPlace(t *testing.T) {
+	tr := newSequenceTracker()
+
+	if _, advanced := tr.register(1, 1); advanced {
+		t.Fatal("should not advance yet")
+	}
+	// event 2 matched no handler, so it registers with count 0
+	if _, advanced := tr.register(2, 0); advanced {
+		t.Fatal("should not advance yet - 1 is still outstanding, even though 2 has nothing to wait for")
+	}
+
+	watermark, advanced := tr.complete(1)
+	if !advanced || watermark != 2 {
+		t.Fatalf("expected watermark 2 once 1 completes, carrying 2's vacuous completion with it, got %d (advanced=%v)", watermark, advanced)
+	}
+}
+
+type blockingHandler struct {
+	release chan struct{}
+}
+
+func (h *blockingHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.ResourceInstance) error {
+	<-h.release
+	return nil
+}
+
+func (h *blockingHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+// TestEventListener_handleEvent_sequenceWaitsForHandleCompletion proves the fix for the
+// crash-safety gap: the persisted sequence must not advance just because an event's handlerData
+// was handed off to a worker - only once the handler has actually finished running.
+func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T) {
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+	const kind = "BlockingKind"
+
+	release := make(chan struct{})
+	blocking := &blockingHandler{release: release}
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	listener := NewEventListener(
+		make(chan *proto.Event),
+		&mockAPIClient{},
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {blocking}},
+		WithContextAndCancel(ctx, cancel),
+	)
+	ch := make(chan handlerData, 1)
+	listener.kindJobs[kind] = ch
+	go worker(ch)
+
+	event := newTestEvent(5)
+	event.Payload.Kind = kind
+
+	done := make(chan error, 1)
+	go func() {
+		done <- listener.handleEvent(event)
+	}()
+
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("handleEvent should return once the handlerData is handed off, without waiting for Handle to finish")
+	}
+
+	// give the worker a moment to pick up the handlerData and start blocking inside Handle
+	time.Sleep(50 * time.Millisecond)
+	assert.Equal(t, int64(0), sequenceManager.GetSequence(), "sequence must not advance before Handle has completed")
+
+	close(release)
+
+	assert.Eventually(t, func() bool {
+		return sequenceManager.GetSequence() == 5
+	}, time.Second, 10*time.Millisecond, "sequence should advance once Handle completes")
+}
+
 func Test_managedApplicationKey(t *testing.T) {
 	tests := []struct {
 		name    string
