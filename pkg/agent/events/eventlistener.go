@@ -18,6 +18,11 @@ import (
 const (
 	lowQueue     = "lowPriorityQueue"
 	regularQueue = "regularQueue"
+
+	// laneBufferSize lets a lane's dispatch send get a few events ahead of its worker, so a
+	// short burst of slow handling on one lane doesn't immediately stall dispatch for every
+	// other lane - there's only one dispatch goroutine feeding all of them.
+	laneBufferSize = 5
 )
 
 type Listener interface {
@@ -89,7 +94,7 @@ func NewEventListener(source chan *proto.Event, client APIClient, baseURL string
 		sequenceManager: sequenceManager,
 		source:          source,
 		kindJobs:        make(map[string]chan handlerData, len(handlersByKind)-len(lowPriorityHandlers)),
-		lowPriorityJobs: make(chan handlerData, len(lowPriorityHandlers)),
+		lowPriorityJobs: make(chan handlerData, laneBufferSize),
 		seenManagedApps: make(map[string]struct{}),
 	}
 	for _, o := range opts {
@@ -115,9 +120,8 @@ func (em *EventListener) closeJobs() {
 func (em *EventListener) Listen() {
 	go worker(em.lowPriorityJobs) // exactly one goroutine, shared by already-known managed apps
 
-	em.kindJobs = make(map[string]chan handlerData)
 	for kind := range em.handlersByKind {
-		ch := make(chan handlerData)
+		ch := make(chan handlerData, laneBufferSize)
 		em.kindJobs[kind] = ch
 		go worker(ch) // exactly one worker, order preserved for this kind
 	}
@@ -207,12 +211,20 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		if jobs == nil {
 			jobs, queueType = em.dispatchLane(event, ri)
 		}
-		jobs <- handlerData{
+		select {
+		case jobs <- handlerData{
 			event:   event,
 			ctx:     ctx,
 			ri:      ri,
 			handler: h,
 			logger:  logger,
+		}:
+		case <-em.ctx.Done():
+			// a lane's worker is stuck or the process is shutting down - stop dispatching this
+			// event rather than block forever, and skip the sequence update below so the event
+			// gets redelivered and retried in full after a restart
+			msg = "stopped dispatching event: listener is shutting down"
+			return nil
 		}
 	}
 
@@ -226,11 +238,10 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	return nil
 }
 
-// dispatchLane picks which worker channel an event's handlerData should be sent to. Kinds
-// outside the managed-app provisioning chain always use their own kind lane. For
-// ManagedApplication/AccessRequest/Credential, the first event seen for a given ManagedApplication
-// name uses that kind's lane; every later event tied to the same name goes to the shared
-// low-priority lane, until the ManagedApplication is deleted (see handleEvent).
+// dispatchLane picks which worker channel an event's handlerData should be sent to.
+// Kinds outside the managed-app provisioning chain always use their own kind lane.
+// For AccessRequest/Credential, the first event seen for a given ManagedApplication name uses that kind's lane;
+// every later event tied to the same name goes to the shared low-priority lane, until the ManagedApplication is deleted (see handleEvent).
 func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
 	kind := event.Payload.Kind
 	if !lowPriorityHandlers[kind] {

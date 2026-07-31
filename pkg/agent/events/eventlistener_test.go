@@ -234,6 +234,53 @@ func TestEventListener_handleEvent(t *testing.T) {
 	}
 }
 
+// TestEventListener_handleEvent_ctxCancelUnblocksStuckSend proves that handleEvent's dispatch
+// send doesn't block forever when a lane has no worker draining it (e.g. one wedged on a hung
+// handler call) - cancelling the context must unblock it instead of stalling the whole listener.
+func TestEventListener_handleEvent_ctxCancelUnblocksStuckSend(t *testing.T) {
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+	const kind = "StuckKind"
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	listener := NewEventListener(
+		make(chan *proto.Event),
+		&mockAPIClient{},
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {&mockHandler{}}},
+		WithContextAndCancel(ctx, cancel),
+	)
+	// an unbuffered lane with no worker draining it - a send to it blocks until either
+	// something reads from it, or the context is cancelled
+	listener.kindJobs[kind] = make(chan handlerData)
+
+	event := newTestEvent(1)
+	event.Payload.Kind = kind
+
+	done := make(chan error, 1)
+	go func() {
+		done <- listener.handleEvent(event)
+	}()
+
+	// give handleEvent time to actually block trying to send to the undrained lane
+	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-done:
+		t.Fatal("handleEvent returned before the context was cancelled - the lane isn't actually blocking as expected")
+	default:
+	}
+
+	cancel(nil)
+
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("handleEvent did not return after the context was cancelled - the dispatch send is not cancellation-aware")
+	}
+}
+
 func Test_managedApplicationKey(t *testing.T) {
 	tests := []struct {
 		name    string
