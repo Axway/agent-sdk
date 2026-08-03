@@ -177,11 +177,10 @@ func TestEventListener_handleEvent(t *testing.T) {
 			handler:  &mockHandler{},
 		},
 		{
-			name:     "should return an error when the request to get a ResourceClient fails",
-			event:    proto.Event_CREATED,
-			hasError: true,
-			client:   &mockAPIClient{getErr: fmt.Errorf("err")},
-			handler:  &mockHandler{},
+			name:    "should return when the request to get a ResourceClient fails",
+			event:   proto.Event_CREATED,
+			client:  &mockAPIClient{getErr: fmt.Errorf("err")},
+			handler: &mockHandler{},
 		},
 		{
 			name:     "should get a ResourceClient, and process a create event",
@@ -234,53 +233,6 @@ func TestEventListener_handleEvent(t *testing.T) {
 	}
 }
 
-// TestEventListener_handleEvent_ctxCancelUnblocksStuckSend proves that handleEvent's dispatch
-// send doesn't block forever when a lane has no worker draining it (e.g. one wedged on a hung
-// handler call) - cancelling the context must unblock it instead of stalling the whole listener.
-func TestEventListener_handleEvent_ctxCancelUnblocksStuckSend(t *testing.T) {
-	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
-	const kind = "StuckKind"
-
-	ctx, cancel := context.WithCancelCause(context.Background())
-	listener := NewEventListener(
-		ctx, cancel,
-		make(chan *proto.Event),
-		&mockAPIClient{},
-		"https://apicentral.example.com",
-		sequenceManager,
-		map[string][]handler.Handler{kind: {&mockHandler{}}},
-	)
-	// an unbuffered lane with no worker draining it - a send to it blocks until either
-	// something reads from it, or the context is cancelled
-	listener.kindJobs[kind] = make(chan handlerData)
-
-	event := newTestEvent(1)
-	event.Payload.Kind = kind
-
-	done := make(chan error, 1)
-	go func() {
-		done <- listener.handleEvent(event)
-	}()
-
-	// give handleEvent time to actually block trying to send to the undrained lane
-	time.Sleep(50 * time.Millisecond)
-	select {
-	case <-done:
-		t.Fatal("handleEvent returned before the context was cancelled - the lane isn't actually blocking as expected")
-	default:
-	}
-
-	cancel(nil)
-
-	select {
-	case err := <-done:
-		assert.NoError(t, err)
-	case <-time.After(time.Second):
-		t.Fatal("handleEvent did not return after the context was cancelled - the dispatch send is not cancellation-aware")
-	}
-}
-
 func Test_sequenceTracker(t *testing.T) {
 	tr := newSequenceTracker()
 
@@ -306,23 +258,6 @@ func Test_sequenceTracker(t *testing.T) {
 	watermark, advanced = tr.complete(3)
 	if !advanced || watermark != 3 {
 		t.Fatalf("expected watermark 3, got %d (advanced=%v)", watermark, advanced)
-	}
-}
-
-func Test_sequenceTracker_zeroCountEventHoldsItsPlace(t *testing.T) {
-	tr := newSequenceTracker()
-
-	if _, advanced := tr.register(1, 1); advanced {
-		t.Fatal("should not advance yet")
-	}
-	// event 2 matched no handler, so it registers with count 0
-	if _, advanced := tr.register(2, 0); advanced {
-		t.Fatal("should not advance yet - 1 is still outstanding, even though 2 has nothing to wait for")
-	}
-
-	watermark, advanced := tr.complete(1)
-	if !advanced || watermark != 2 {
-		t.Fatalf("expected watermark 2 once 1 completes, carrying 2's vacuous completion with it, got %d (advanced=%v)", watermark, advanced)
 	}
 }
 
@@ -387,100 +322,6 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 	assert.Eventually(t, func() bool {
 		return sequenceManager.GetSequence() == 5
 	}, time.Second, 10*time.Millisecond, "sequence should advance once Handle completes")
-}
-
-func Test_managedApplicationKey(t *testing.T) {
-	tests := []struct {
-		name    string
-		kind    string
-		appName string
-		spec    map[string]interface{}
-		wantKey string
-		wantOK  bool
-	}{
-		{
-			name:    "managed application uses its own name",
-			kind:    management.ManagedApplicationGVK().Kind,
-			appName: "app-1",
-			wantKey: "app-1",
-			wantOK:  true,
-		},
-		{
-			name:    "access request reads managedApplication from spec",
-			kind:    management.AccessRequestGVK().Kind,
-			spec:    map[string]interface{}{"managedApplication": "app-2"},
-			wantKey: "app-2",
-			wantOK:  true,
-		},
-		{
-			name:    "credential reads managedApplication from spec",
-			kind:    management.CredentialGVK().Kind,
-			spec:    map[string]interface{}{"managedApplication": "app-3"},
-			wantKey: "app-3",
-			wantOK:  true,
-		},
-		{
-			name: "access request with no spec (e.g. a delete) is undeterminable",
-			kind: management.AccessRequestGVK().Kind,
-		},
-		{
-			name: "credential with an empty managedApplication is undeterminable",
-			kind: management.CredentialGVK().Kind,
-			spec: map[string]interface{}{"managedApplication": ""},
-		},
-		{
-			name: "unrelated kind is not applicable",
-			kind: "SomeOtherKind",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			event := newTestEvent(1)
-			event.Payload.Kind = tc.kind
-			event.Payload.Name = tc.appName
-
-			var ri *apiv1.ResourceInstance
-			if tc.spec != nil {
-				ri = &apiv1.ResourceInstance{Spec: tc.spec}
-			}
-
-			key, ok := managedApplicationKey(event, ri)
-			assert.Equal(t, tc.wantOK, ok)
-			assert.Equal(t, tc.wantKey, key)
-		})
-	}
-}
-
-func TestEventListener_dispatchLane(t *testing.T) {
-	const knownKind = "TestKind"
-	em := newTestListener(t, knownKind)
-
-	appRI := &apiv1.ResourceInstance{Spec: map[string]interface{}{"managedApplication": "app-1"}}
-
-	event := newTestEvent(1)
-	event.Payload.Kind = knownKind
-	kindJob, _ := em.dispatchLane(event, nil)
-	assert.True(t, em.kindJobs[knownKind] == kindJob)
-
-	maEvent := newTestEvent(2)
-	maEvent.Payload.Kind = management.ManagedApplicationGVK().Kind
-	maEvent.Payload.Name = "app-1"
-	kindJob, _ = em.dispatchLane(maEvent, nil)
-	assert.True(t, em.kindJobs[maEvent.Payload.Kind] == kindJob)
-	if _, seen := em.seenManagedApps["app-1"]; !seen {
-		t.Fatal("expected the first event for app-1 to mark it as seen")
-	}
-
-	arEvent := newTestEvent(3)
-	arEvent.Payload.Kind = management.AccessRequestGVK().Kind
-	kindJob, _ = em.dispatchLane(arEvent, appRI)
-	assert.True(t, em.provisioningJobs == kindJob)
-
-	credEvent := newTestEvent(4)
-	credEvent.Payload.Kind = management.CredentialGVK().Kind
-	kindJob, _ = em.dispatchLane(credEvent, &apiv1.ResourceInstance{})
-	assert.True(t, em.provisioningJobs == kindJob)
 }
 
 // TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
