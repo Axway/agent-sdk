@@ -24,7 +24,7 @@ func newTestEventBatch() (*EventBatch, event.Event) {
 func TestEventBatchAddAndSetEvents(t *testing.T) {
 	batch, evt := newTestEventBatch()
 
-	batch.AddEvent(evt, nil, nil)
+	batch.AddEvent(evt, "", nil, groupedMetrics{})
 	assert.Equal(t, []event.Event{evt}, batch.Events())
 
 	batch.SetEvents([]event.Event{})
@@ -48,7 +48,7 @@ func TestEventBatchUnlocksAfterTerminalMethods(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			batch, evt := newTestEventBatch()
-			batch.AddEvent(evt, nil, nil)
+			batch.AddEvent(evt, "", nil, groupedMetrics{})
 
 			batch.batchLock()
 			tc.call(batch)

@@ -9,7 +9,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 // CondorMetricEvent - the condor event format to send metric data
@@ -21,7 +20,7 @@ type CondorMetricEvent struct {
 }
 
 // AddCondorMetricEventToBatch - creates the condor metric event and adds to the batch
-func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogram metrics.Histogram, counters map[string]metrics.Counter) error {
+func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, registryKey string, counters map[string]*counter, group groupedMetrics) error {
 	metricData, _ := json.Marshal(metricEvent)
 
 	cme := &CondorMetricEvent{
@@ -34,7 +33,7 @@ func AddCondorMetricEventToBatch(metricEvent V4Event, batch *EventBatch, histogr
 	if err != nil {
 		return err
 	}
-	batch.AddEvent(evt, histogram, counters)
+	batch.AddEvent(evt, registryKey, counters, group)
 	return nil
 }
 

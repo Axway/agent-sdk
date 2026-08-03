@@ -14,7 +14,6 @@ require (
 	github.com/invopop/yaml v0.3.1
 	github.com/lestrrat-go/jwx/v2 v2.0.21
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/snowzach/rotatefilehook v0.0.0-20220211133110-53752135082d
