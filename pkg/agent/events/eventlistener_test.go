@@ -28,6 +28,7 @@ func newTestListener(t *testing.T, knownKind string) *EventListener {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	ctx, cancel := context.WithCancelCause(context.Background())
 	em := NewEventListener(
+		ctx, cancel,
 		make(chan *proto.Event, 1),
 		&mockAPIClient{},
 		"https://apicentral.example.com",
@@ -36,13 +37,12 @@ func newTestListener(t *testing.T, knownKind string) *EventListener {
 			knownKind:                               {&mockHandler{}},
 			management.ManagedApplicationGVK().Kind: {&mockHandler{}},
 		},
-		WithContextAndCancel(ctx, cancel),
 	)
 	em.kindJobs = map[string]chan handlerData{
 		knownKind:                               make(chan handlerData, 1),
 		management.ManagedApplicationGVK().Kind: make(chan handlerData, 1),
 	}
-	em.lowPriorityJobs = make(chan handlerData, 1)
+	em.provisioningJobs = make(chan handlerData, 1)
 	return em
 }
 
@@ -58,7 +58,7 @@ func TestEventListener_start(t *testing.T) {
 		cancelCtx   bool
 		wantDone    bool
 		wantErr     bool
-		wantLane    string // "kind", "lowPriority", or "" for no dispatch at all
+		wantLane    string // "kind", "provisioning", or "" for no dispatch at all
 	}{
 		{
 			name:     "dispatches a known kind to its own kind lane",
@@ -125,8 +125,8 @@ func TestEventListener_start(t *testing.T) {
 			switch tc.wantLane {
 			case "kind":
 				lane = em.kindJobs[tc.kind]
-			case "lowPriority":
-				lane = em.lowPriorityJobs
+			case "provisioning":
+				lane = em.provisioningJobs
 			}
 			if lane == nil {
 				return
@@ -147,14 +147,14 @@ func TestEventListener_Listen(t *testing.T) {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
 	ctx, cancel := context.WithCancelCause(context.Background())
-	listener := NewEventListener(events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}}, WithContextAndCancel(ctx, cancel))
+	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
 	listener.Listen()
 	listener.Stop()
 	err := ctx.Err()
 	assert.NotNil(t, err)
 
 	ctx, cancel = context.WithCancelCause(context.Background())
-	listener = NewEventListener(events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}}, WithContextAndCancel(ctx, cancel))
+	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
 	listener.Listen()
 	close(events)
 	err = ctx.Err()
@@ -220,7 +220,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancelCause(context.Background())
-			listener := NewEventListener(make(chan *proto.Event), tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}}, WithContextAndCancel(ctx, cancel))
+			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
 			listener.kindJobs[""] = make(chan handlerData, 1)
 
 			err := listener.handleEvent(event)
@@ -244,12 +244,12 @@ func TestEventListener_handleEvent_ctxCancelUnblocksStuckSend(t *testing.T) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(
+		ctx, cancel,
 		make(chan *proto.Event),
 		&mockAPIClient{},
 		"https://apicentral.example.com",
 		sequenceManager,
 		map[string][]handler.Handler{kind: {&mockHandler{}}},
-		WithContextAndCancel(ctx, cancel),
 	)
 	// an unbuffered lane with no worker draining it - a send to it blocks until either
 	// something reads from it, or the context is cancelled
@@ -352,12 +352,12 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(
+		ctx, cancel,
 		make(chan *proto.Event),
 		&mockAPIClient{},
 		"https://apicentral.example.com",
 		sequenceManager,
 		map[string][]handler.Handler{kind: {blocking}},
-		WithContextAndCancel(ctx, cancel),
 	)
 	ch := make(chan handlerData, 1)
 	listener.kindJobs[kind] = ch
@@ -475,12 +475,12 @@ func TestEventListener_dispatchLane(t *testing.T) {
 	arEvent := newTestEvent(3)
 	arEvent.Payload.Kind = management.AccessRequestGVK().Kind
 	kindJob, _ = em.dispatchLane(arEvent, appRI)
-	assert.True(t, em.lowPriorityJobs == kindJob)
+	assert.True(t, em.provisioningJobs == kindJob)
 
 	credEvent := newTestEvent(4)
 	credEvent.Payload.Kind = management.CredentialGVK().Kind
 	kindJob, _ = em.dispatchLane(credEvent, &apiv1.ResourceInstance{})
-	assert.True(t, em.lowPriorityJobs == kindJob)
+	assert.True(t, em.provisioningJobs == kindJob)
 }
 
 // TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
@@ -500,6 +500,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(
+		ctx, cancel,
 		make(chan *proto.Event),
 		client,
 		"https://apicentral.example.com",
@@ -508,11 +509,10 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 			maKind: {&mockHandler{}},
 			arKind: {&mockHandler{}},
 		},
-		WithContextAndCancel(ctx, cancel),
 	)
 	listener.kindJobs[maKind] = make(chan handlerData, 1)
 	listener.kindJobs[arKind] = make(chan handlerData, 1)
-	listener.lowPriorityJobs = make(chan handlerData, 1)
+	listener.provisioningJobs = make(chan handlerData, 1)
 
 	maEvent := newTestEvent(1)
 	maEvent.Payload.Kind = maKind
@@ -528,7 +528,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	arEvent.Payload.Kind = arKind
 	assert.NoError(t, listener.handleEvent(arEvent))
 	select {
-	case <-listener.lowPriorityJobs:
+	case <-listener.provisioningJobs:
 	default:
 		t.Fatal("expected the AccessRequest for an already-seen app to use the low priority lane")
 	}
