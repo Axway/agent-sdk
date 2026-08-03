@@ -302,12 +302,13 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 
 func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
 	action := getAction(ri.Metadata.State)
-	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
+	ctx := handler.NewEventContext(action, nil, ri.Kind, ri.Name)
 	logger := log.NewLoggerFromContext(ctx)
 	for _, h := range dc.handlersByKind[ri.Kind] {
-		ch, ok := h.(handler.CacheHandler)
-		if ok {
-			ch.HandleCache(ri)
+		if ch, ok := h.(handler.CacheHandler); ok {
+			if err := ch.HandleCache(ri); err != nil {
+				logger.WithError(err).Error("failed to handle discovery cache resource")
+			}
 		}
 		if err := h.Handle(ctx, nil, ri); err != nil {
 			logger.WithError(err).Error("failed to handle discovery cache resource")
