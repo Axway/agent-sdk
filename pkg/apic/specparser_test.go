@@ -510,3 +510,16 @@ func isInList[T comparable](actual T, validValues []T) bool {
 	}
 	return false
 }
+
+// TestA2ASpecParser verifies that an explicit a2a resource type is preserved
+// (agent-card spec passed through, type not downgraded to unstructured).
+func TestA2ASpecParser(t *testing.T) {
+	agentCard := []byte(`{"name":"agent","url":"https://example.com/mcp","version":"1.0.0","skills":[{"name":"search"}]}`)
+
+	parser := NewSpecResourceParser(agentCard, A2a)
+	assert.Nil(t, parser.Parse())
+
+	p := parser.GetSpecProcessor()
+	assert.Equal(t, A2a, p.GetResourceType())
+	assert.Equal(t, agentCard, p.GetSpecBytes())
+}
