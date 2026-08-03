@@ -341,11 +341,6 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 		return
 	}
 
-	if detail.AppDetails.ID == "" {
-		logger.Error("custom units require App information")
-		return
-	}
-
 	if detail.UnitDetails.Name == "" {
 		logger.Error("custom units require Unit information")
 		return

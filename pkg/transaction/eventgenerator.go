@@ -175,6 +175,12 @@ func (e *Generator) AddMetricDetailsFromEventReport(eventReport EventReport) err
 					collector.AddAPIMetricDetail(metric)
 					logger.Trace("api metric detail added")
 				}
+			case models.CustomMetricDetail:
+				logger = logger.WithField("apiName", metric.APIDetails.Name).WithField("appName", metric.AppDetails.Name).WithField("unitName", metric.UnitDetails.Name)
+				if collector != nil {
+					collector.AddCustomMetricDetail(metric)
+					logger.Trace("custom metric detail added")
+				}
 			default:
 				logger.Debug("unknown metric type")
 			}
