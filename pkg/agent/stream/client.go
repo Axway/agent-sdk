@@ -173,8 +173,7 @@ func (s *StreamerClient) Start() error {
 	}
 
 	eventCh, requestCh := make(chan *proto.Event, 100), make(chan *proto.Request, 1)
-	l := s.newListener(eventCh, s.apiClient, s.baseURL, s.sequence, s.handlers,
-		events.WithContextAndCancel(ctx, cancel))
+	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.baseURL, s.sequence, s.handlers)
 	s.listener.Store(l)
 	defer l.Stop()
 
