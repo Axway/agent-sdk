@@ -123,6 +123,8 @@ type Manager interface {
 	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
+	IsAccessRequestCacheEnabled() bool
+	SetAccessRequestCacheEnabled(enabled bool)
 
 	// IdentityProviderMetadata cache related methods
 	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *v1.ResourceInstance
@@ -150,27 +152,28 @@ type cacheLoader interface {
 
 type cacheManager struct {
 	jobs.Job
-	logger                  log.FieldLogger
-	apiMap                  cache.Cache
-	instanceMap             cache.Cache
-	managedApplicationMap   cache.Cache
-	accessRequestMap        cache.Cache
-	watchResourceMap        cache.Cache
-	idpMetadataMap          cache.Cache
-	sequenceCache           cache.Cache
-	resourceCacheReadLock   sync.RWMutex
-	cacheLock               sync.Mutex
-	persistedCache          cache.Cache
-	teams                   cache.Cache
-	ardMap                  cache.Cache
-	apdMap                  cache.Cache
-	crdMap                  cache.Cache
-	crrMap                  cache.Cache
-	cacheFilename           string
-	isPersistedCacheLoaded  bool
-	isCacheUpdated          bool
-	isPersistedCacheEnabled bool
-	migrators               []cacheMigrate
+	logger                      log.FieldLogger
+	apiMap                      cache.Cache
+	instanceMap                 cache.Cache
+	managedApplicationMap       cache.Cache
+	accessRequestMap            cache.Cache
+	watchResourceMap            cache.Cache
+	idpMetadataMap              cache.Cache
+	sequenceCache               cache.Cache
+	resourceCacheReadLock       sync.RWMutex
+	cacheLock                   sync.Mutex
+	persistedCache              cache.Cache
+	teams                       cache.Cache
+	ardMap                      cache.Cache
+	apdMap                      cache.Cache
+	crdMap                      cache.Cache
+	crrMap                      cache.Cache
+	cacheFilename               string
+	isPersistedCacheLoaded      bool
+	isCacheUpdated              bool
+	isPersistedCacheEnabled     bool
+	isAccessRequestCacheEnabled bool
+	migrators                   []cacheMigrate
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
@@ -182,7 +185,12 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
-		migrators:               []cacheMigrate{},
+		// Traceability agents always need the AccessRequest cache to correlate traffic/metric
+		// events with consumer context. Discovery agents don't need it by default - only agents
+		// that use it (e.g. v7, to regrant access when a proxy is republished) opt in via
+		// agent.EnableAccessRequestCache().
+		isAccessRequestCacheEnabled: cfg == nil || cfg.GetAgentType() != config.DiscoveryAgent,
+		migrators:                   []cacheMigrate{},
 	}
 
 	// add migrators here if needed
