@@ -100,7 +100,9 @@ func GetDataDirPath() string {
 	return dataDirPath
 }
 
-// SetDataDirPath - Sets the path of the data directory
+// SetDataDirPath - Sets the path of the data directory. Must be called during
+// agent init, before GetCacheDirPath/GetReportsDirPath are used, or those will
+// create their directories under an empty/relative path.
 func SetDataDirPath(path string) {
 	pathDataMutex.Lock()
 	defer pathDataMutex.Unlock()
@@ -111,9 +113,13 @@ func SetDataDirPath(path string) {
 func createDirIfNotExist(dirPath string) {
 	_, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
-		// Create the directory with the same permissions as the data dir
-		dataInfo, _ := os.Stat(GetDataDirPath())
-		os.MkdirAll(dirPath, dataInfo.Mode().Perm())
+		// Create the directory with the same permissions as the data dir, falling
+		// back to a sane default if the data dir doesn't exist yet either.
+		perm := os.FileMode(0755)
+		if dataInfo, err := os.Stat(GetDataDirPath()); err == nil {
+			perm = dataInfo.Mode().Perm()
+		}
+		os.MkdirAll(dirPath, perm)
 	}
 }
 
