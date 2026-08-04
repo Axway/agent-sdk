@@ -176,6 +176,8 @@ func (s *SpecResourceParser) createProcessorWithResourceType() error {
 		s.specProcessor, err = s.parseGraphQLSpec()
 	case Mcp:
 		s.specProcessor, err = s.parseMcpSpec()
+	case A2a:
+		s.specProcessor, err = s.parseA2aSpec()
 	case Raml:
 		s.specProcessor, err = s.parseRamlSpec()
 	}
@@ -312,6 +314,11 @@ func (s *SpecResourceParser) parseProtobufSpec() (SpecProcessor, error) {
 func (s *SpecResourceParser) parseMcpSpec() (SpecProcessor, error) {
 	s.resourceContentType = mimeApplicationJSON
 	return newMCPSpecProcessor(s.resourceSpec), nil
+}
+
+func (s *SpecResourceParser) parseA2aSpec() (SpecProcessor, error) {
+	s.resourceContentType = mimeApplicationJSON
+	return newA2ASpecProcessor(s.resourceSpec), nil
 }
 
 func (s *SpecResourceParser) parseRamlSpec() (SpecProcessor, error) {
