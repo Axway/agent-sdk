@@ -46,6 +46,7 @@ const (
 	LLMProviderAnthropic        = "anthropic"
 	LLMProviderAzureOpenAI      = "azure-openai"
 	LLMProviderMicrosoftFoundry = "microsoft-foundry"
+	LLMProviderMistral          = "mistral"
 	LLMProviderGoogleGemini     = "google-gemini"
 	LLMProviderAWSBedrock       = "bedrock"
 	LLMProviderAWSBedrockMantle = "bedrock-mantle"
@@ -74,6 +75,11 @@ const (
 	SAPAPIPortal DataplaneType = "SAPAPIPortal"
 	WSO2         DataplaneType = "WSO2"
 	Sensedia     DataplaneType = "Sensedia"
+
+	// LLM providers
+	OpenAI    DataplaneType = "OpenAI"
+	Anthropic DataplaneType = "Anthropic"
+	Mistral   DataplaneType = "Mistral"
 
 	// AgentSDK Metrics
 	Kong     DataplaneType = "Kong"

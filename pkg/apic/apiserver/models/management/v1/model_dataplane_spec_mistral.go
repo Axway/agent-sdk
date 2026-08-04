@@ -14,4 +14,8 @@ type DataplaneSpecMistral struct {
 	Type string `json:"type,omitempty"`
 	// The Mistral API base URL. Defaults to the standard Mistral API endpoint when not set.
 	BaseUrl string `json:"baseUrl,omitempty"`
+	// The Mistral workspace ID to scope API usage to.
+	WorkspaceId string `json:"workspaceId,omitempty"`
+	// The Mistral regional inference zone to report usage for. Defaults to global when not set.
+	ApiZone string `json:"apiZone,omitempty"`
 }
