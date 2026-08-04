@@ -185,10 +185,7 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
-		// Traceability agents always need the AccessRequest cache to correlate traffic/metric
-		// events with consumer context. Discovery agents don't need it by default - only agents
-		// that use it (e.g. v7, to regrant access when a proxy is republished) opt in via
-		// agent.EnableAccessRequestCache().
+		// Traceability agents always need the AccessRequest cache . Discovery agents can opt in via agent.EnableAccessRequestCache().
 		isAccessRequestCacheEnabled: cfg == nil || cfg.GetAgentType() != config.DiscoveryAgent,
 		migrators:                   []cacheMigrate{},
 	}
