@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/cmd"
@@ -25,6 +25,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
 const (
@@ -283,6 +284,12 @@ func createAccessRequest(id, name, appName, instanceID, instanceName, subscripti
 						ID:    instanceID,
 						Name:  instanceName,
 					},
+					{
+						Group: catalog.SubscriptionGVK().Group,
+						Kind:  catalog.SubscriptionGVK().Kind,
+						ID:    subscriptionName,
+						Name:  "catalog/" + subscriptionName,
+					},
 				},
 			},
 			Name: name,
@@ -507,7 +514,7 @@ func TestMetricCollector(t *testing.T) {
 				traceStatus = test.hcStatus
 			}
 			runTestHealthcheck()
-			metricCollector.metricMap = make(map[string]map[string]map[string]map[string]*centralMetric)
+			metricCollector.registry = newRegistry()
 			cfg.SetAxwayManaged(test.trackVolume)
 			testClient := setupMockClient(test.retryBatchCount)
 
@@ -756,6 +763,201 @@ func TestMetricCollectorCache(t *testing.T) {
 	}
 }
 
+func TestMetricCollectorPublishesAllSubscriptionsAndCleansRegistry(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, cfg := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	const (
+		testManagedApp3   = "managed-app-3"
+		testAccessReq3    = "access-req-3"
+		testSubscription3 = "subscription-3"
+	)
+	cm := agent.GetCacheManager()
+	cm.AddManagedApplication(createManagedApplication("app-3", testManagedApp3, testConsumerOrg))
+	cm.AddAccessRequest(createAccessRequest("ac-3", testAccessReq3, testManagedApp3, testInstID, testInstName, testSubscription3))
+
+	metricCollector.registry = newRegistry()
+	cfg.SetAxwayManaged(false)
+	testClient := setupMockClient(0)
+
+	subscriptions := []struct {
+		appID        string
+		appName      string
+		subscription string
+	}{
+		{"app-1", testManagedApp1, testSubscription1},
+		{"app-2", testManagedApp2, testSubscription2},
+		{"app-3", testManagedApp3, testSubscription3},
+	}
+
+	for _, sub := range subscriptions {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: "200",
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: sub.appID, Name: sub.appName},
+		})
+	}
+
+	// each subscription's transactions should be tracked under its own registry group
+	registeredMetricGroups := 0
+	metricCollector.registry.Each(func(name string, _ interface{}) {
+		if strings.HasPrefix(name, metricKeyPrefix+".") {
+			registeredMetricGroups++
+		}
+	})
+	assert.Equal(t, len(subscriptions), registeredMetricGroups)
+
+	assert.NoError(t, metricCollector.Execute())
+	metricCollector.usagePublisher.Execute()
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, len(subscriptions), mock.eventsAcked)
+	assert.Len(t, mock.capturedEvents, len(subscriptions))
+
+	publishedSubscriptions := map[string]bool{}
+	for _, event := range mock.capturedEvents {
+		metric := getMetricFromEvent(event)
+		if assert.NotNil(t, metric) && assert.NotNil(t, metric.Subscription) {
+			publishedSubscriptions[metric.Subscription.ID] = true
+		}
+	}
+	for _, sub := range subscriptions {
+		assert.True(t, publishedSubscriptions[sub.subscription], "expected subscription %s to be published", sub.subscription)
+	}
+
+	// once every group's event has been acked, the registry should be free of metric groups
+	remainingMetricGroups := 0
+	metricCollector.registry.Each(func(name string, _ interface{}) {
+		if strings.HasPrefix(name, metricKeyPrefix+".") {
+			remainingMetricGroups++
+		}
+	})
+	assert.Equal(t, 0, remainingMetricGroups)
+
+	s.resetConfig()
+}
+
+func setupAPIMetricCollectorTest(t *testing.T, s *testHTTPServer) *collector {
+	t.Helper()
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + testLighthouse
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
+	cfg.SetEnvironmentID(testEnvID)
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	return createMetricCollector().(*collector)
+}
+
+func TestAddAPIMetricAggregatesTransactionCounter(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector := setupAPIMetricCollectorTest(t, s)
+	testClient := setupMockClient(0)
+
+	newAPIMetric := func(count, min, max int64, avg float64) *APIMetric {
+		return &APIMetric{
+			Subscription: models.Subscription{ID: "sub-1"},
+			App:          models.AppDetails{ID: "app-1"},
+			API:          models.APIDetails{ID: "api-1", Name: "api-1"},
+			StatusCode:   "200",
+			Count:        count,
+			Response:     ResponseMetrics{Min: min, Max: max, Avg: avg},
+			Observation:  models.ObservationDetails{Start: 10, End: 20},
+		}
+	}
+
+	// two calls for the same subscription/app/api/status should merge into a single cached metric
+	metricCollector.AddAPIMetric(newAPIMetric(5, 10, 50, 20))
+	metricCollector.AddAPIMetric(newAPIMetric(3, 5, 80, 40))
+
+	assert.NoError(t, metricCollector.Execute())
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, 1, mock.eventsAcked)
+	if !assert.Len(t, mock.capturedEvents, 1) {
+		return
+	}
+
+	metric := getMetricFromEvent(mock.capturedEvents[0])
+	if !assert.NotNil(t, metric) {
+		return
+	}
+	assert.Equal(t, "sub-1", metric.Subscription.ID)
+	assert.Equal(t, int64(8), metric.Units.Transactions.Count)
+	assert.Equal(t, int64(5), metric.Units.Transactions.Response.Min)
+	assert.Equal(t, int64(80), metric.Units.Transactions.Response.Max)
+	assert.Equal(t, 27.5, metric.Units.Transactions.Response.Avg)
+
+	s.resetConfig()
+}
+
+func TestAddAPIMetricAggregatesCustomUnitCounter(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector := setupAPIMetricCollectorTest(t, s)
+	testClient := setupMockClient(0)
+
+	newCustomAPIMetric := func(count int64) *APIMetric {
+		return &APIMetric{
+			Subscription: models.Subscription{ID: "sub-2"},
+			App:          models.AppDetails{ID: "app-2"},
+			API:          models.APIDetails{ID: "api-2", Name: "api-2"},
+			Unit:         &models.Unit{Name: "widgets"},
+			Count:        count,
+			Observation:  models.ObservationDetails{Start: 10, End: 20},
+		}
+	}
+
+	// two calls for the same subscription/app/api/unit should merge into a single cached metric
+	metricCollector.AddAPIMetric(newCustomAPIMetric(4))
+	metricCollector.AddAPIMetric(newCustomAPIMetric(6))
+
+	assert.NoError(t, metricCollector.Execute())
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, 1, mock.eventsAcked)
+	if !assert.Len(t, mock.capturedEvents, 1) {
+		return
+	}
+
+	data := getRawEventData(mock.capturedEvents[0])
+	if !assert.NotNil(t, data) {
+		return
+	}
+	units, ok := data["units"].(map[string]interface{})
+	if !assert.True(t, ok, "expected units in published event data") {
+		return
+	}
+	unitData, ok := units["widgets"].(map[string]interface{})
+	if !assert.True(t, ok, "expected widgets unit in published event data") {
+		return
+	}
+	assert.Equal(t, float64(10), unitData["count"])
+
+	s.resetConfig()
+}
+
 type offlineMetricTestCase struct {
 	name                string
 	loopCount           int
@@ -949,12 +1151,18 @@ func TestCustomMetrics(t *testing.T) {
 			if tc.skip {
 				return
 			}
-			metricCollector.metricMap = map[string]map[string]map[string]map[string]*centralMetric{}
+			metricCollector.registry = newRegistry()
 			metricCollector.AddCustomMetricDetail(tc.metricEvent1)
 			if tc.metricEvent2.Count > 0 {
 				metricCollector.AddCustomMetricDetail(tc.metricEvent2)
 			}
-			assert.Equal(t, tc.expectedMetrics, len(metricCollector.metricMap))
+			metricsCount := 0
+			metricCollector.registry.Each(func(_ string, v interface{}) {
+				if gm, ok := v.(groupedMetrics); ok {
+					metricsCount += len(gm.metrics)
+				}
+			})
+			assert.Equal(t, tc.expectedMetrics, metricsCount)
 		})
 	}
 }
@@ -1000,91 +1208,6 @@ func TestCollectorCreateOrUpdateHistogramIDResolution(t *testing.T) {
 	}
 }
 
-func TestBuildDurations(t *testing.T) {
-	tests := map[string]struct {
-		count    int64
-		response ResponseMetrics
-		expected []int64
-	}{
-		// --- Guard/boundary cases ---
-		"zero count returns nil": {
-			count:    0,
-			response: ResponseMetrics{Min: 83, Max: 312, Avg: 197},
-			expected: nil,
-		},
-		"negative count returns nil": {
-			count:    -1,
-			response: ResponseMetrics{Min: 83, Max: 312, Avg: 197},
-			expected: nil,
-		},
-		// --- Count = 1: single sample, returns avg ---
-		"count 1 returns avg": {
-			count:    1,
-			response: ResponseMetrics{Min: 83, Max: 312, Avg: 217},
-			expected: []int64{217},
-		},
-		"count 1 with zero avg": {
-			count:    1,
-			response: ResponseMetrics{Min: 0, Max: 0, Avg: 0},
-			expected: []int64{0},
-		},
-		// --- Count = 2: only min and max, no middle computation ---
-		"count 2 returns min and max": {
-			count:    2,
-			response: ResponseMetrics{Min: 37, Max: 891, Avg: 463},
-			expected: []int64{37, 891},
-		},
-		"count 2 with equal min and max": {
-			count:    2,
-			response: ResponseMetrics{Min: 73, Max: 73, Avg: 73},
-			expected: []int64{73, 73},
-		},
-		// --- Count > 2, consistent aggregates (avg within valid range for samples in [min, max]) ---
-		// middleAvg = (3*112 - 43 - 187) / 1 = 106
-		"count 3 consistent avg skewed low": {
-			count:    3,
-			response: ResponseMetrics{Min: 43, Max: 187, Avg: 112},
-			expected: []int64{43, 106, 187},
-		},
-		// middleAvg = (3*537 - 201 - 834) / 1 = 576
-		"count 3 consistent avg skewed high": {
-			count:    3,
-			response: ResponseMetrics{Min: 201, Max: 834, Avg: 537},
-			expected: []int64{201, 576, 834},
-		},
-		"real log values count=4 min=106 max=147 avg=128": {
-			count:    4,
-			response: ResponseMetrics{Min: 106, Max: 147, Avg: 128},
-			expected: []int64{106, 130, 130, 147},
-		},
-		// middleAvg = round((4*164 - 31 - 290) / 2) = round(335/2) = round(167.5) = 168
-		"count 4 fractional middle rounds up": {
-			count:    4,
-			response: ResponseMetrics{Min: 31, Max: 290, Avg: 164},
-			expected: []int64{31, 168, 168, 290},
-		},
-		// middleAvg = (5*218 - 57 - 394) / 3 = 639/3 = 213
-		"count 5 skewed avg": {
-			count:    5,
-			response: ResponseMetrics{Min: 57, Max: 394, Avg: 218},
-			expected: []int64{57, 213, 213, 213, 394},
-		},
-		// middleAvg = round((10*247 - 89 - 431) / 8) = round(1950/8) = round(243.75) = 244
-		"count 10 wide range": {
-			count:    10,
-			response: ResponseMetrics{Min: 89, Max: 431, Avg: 247},
-			expected: []int64{89, 244, 244, 244, 244, 244, 244, 244, 244, 431},
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			result := buildDurations(tt.count, tt.response)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 // noopStorage satisfies the storageCache interface with no-ops for all methods except
 // removeMetric, which records calls for assertion in cleanup tests.
 type noopStorage struct {
@@ -1099,174 +1222,85 @@ func (s *noopStorage) updateMetric(_ cachedMetricInterface, _ *centralMetric) { 
 func (s *noopStorage) save()                                                  { /* no-op */ }
 func (s *noopStorage) removeMetric(m *centralMetric)                          { s.removed = append(s.removed, m) }
 
-func newCleanupCollector(metricMap map[string]map[string]map[string]map[string]*centralMetric) (*collector, *noopStorage) {
+func newCleanupCollector() (*collector, *noopStorage) {
 	st := &noopStorage{}
 	c := &collector{
-		metricMap:     metricMap,
-		metricMapLock: &sync.Mutex{},
-		storage:       st,
+		storage: st,
+		logger:  log.NewFieldLogger(),
 	}
 	return c, st
 }
 
-func TestRemoveMetricEntries(t *testing.T) {
-	metric1 := &centralMetric{EventID: "m1"}
-	metric2 := &centralMetric{EventID: "m2"}
-	counter1 := &centralMetric{EventID: "c1"}
-
-	tests := map[string]struct {
-		metricMap      map[string]map[string]map[string]map[string]*centralMetric
-		subID          string
-		appID          string
-		apiID          string
-		group          string
-		counters       map[string]metrics.Counter
-		wantRemoved    int
-		wantGroupGone  bool
-		wantCounterKey string
-	}{
-		"removes group entry and clears histogram": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:      map[string]metrics.Counter{},
-			wantRemoved:   1,
-			wantGroupGone: true,
-		},
-		"removes counter entries alongside group": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric1, "ctr": counter1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
-			wantRemoved:    2,
-			wantGroupGone:  true,
-			wantCounterKey: "ctr",
-		},
-		"missing apiID is a no-op": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]metrics.Counter{},
-			wantRemoved: 0,
-		},
-		"group key absent leaves counters still cleaned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"ctr": counter1}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Missing",
-			counters:       map[string]metrics.Counter{"ctr": metrics.NewCounter()},
-			wantRemoved:    1,
-			wantGroupGone:  false,
-			wantCounterKey: "ctr",
-		},
-		"counter key absent from apiStatusMap does not panic": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": metric2}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1", group: "Success",
-			counters:    map[string]metrics.Counter{"ghost": metrics.NewCounter()},
-			wantRemoved: 1,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			c, st := newCleanupCollector(tc.metricMap)
-			hist := metrics.NewHistogram(metrics.NewUniformSample(8))
-			hist.Update(42)
-
-			c.removeMetricEntries(tc.subID, tc.appID, tc.apiID, tc.group, hist, tc.counters)
-
-			assert.Len(t, st.removed, tc.wantRemoved)
-			if tc.wantGroupGone {
-				apiMap, ok := tc.metricMap[tc.subID][tc.appID][tc.apiID]
-				if ok {
-					_, present := apiMap[tc.group]
-					assert.False(t, present, "group key should have been deleted")
-				}
-			}
-			if tc.wantCounterKey != "" {
-				_, present := tc.counters[tc.wantCounterKey]
-				assert.False(t, present, "counter key should have been deleted from counters map")
-			}
-		})
+func newStatusMetric(status string) *centralMetric {
+	return &centralMetric{
+		Subscription: &models.ResourceReference{ID: "sub1"},
+		App:          &models.ApplicationResourceReference{ResourceReference: models.ResourceReference{ID: "app1"}},
+		API:          &models.APIResourceReference{ResourceReference: models.ResourceReference{ID: "api1"}, Name: "api1"},
+		Units:        &Units{Transactions: &Transactions{Status: status}},
 	}
 }
 
-func TestPruneEmptyMapLevels(t *testing.T) {
+func TestCleanupMetricCounters(t *testing.T) {
+	const registryKey = "metric.sub1.app1.api1.123"
+
+	metric1 := newStatusMetric("Success")
+	unitMetric := newStatusMetric("unit-name")
+
 	tests := map[string]struct {
-		metricMap      map[string]map[string]map[string]map[string]*centralMetric
-		subID          string
-		appID          string
-		apiID          string
-		wantAPIGone    bool
-		wantAppGone    bool
-		wantSubGone    bool
-		preservedAppID string // when set, asserts this appID is still present after the call
+		metrics          map[string]*centralMetric
+		apiCounters      map[string]*apiCounter
+		counters         map[string]*counter
+		wantRemoved      []*centralMetric
+		wantDeregistered bool
 	}{
-		"non-empty apiID level is not pruned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: false, wantAppGone: false, wantSubGone: false,
+		"removes the acked metric and deregisters a now-empty group": {
+			metrics:          map[string]*centralMetric{"Success": metric1},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: true,
 		},
-		"empty apiID level is pruned, non-empty app level kept": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {}, "api2": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: false, wantSubGone: false,
+		"removes the acked metric and any custom unit metrics bundled with it": {
+			metrics:          map[string]*centralMetric{"Success": metric1, "unit-name": unitMetric},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{"unit-name": newCounter()},
+			wantRemoved:      []*centralMetric{metric1, unitMetric},
+			wantDeregistered: true,
 		},
-		"empty apiID and app levels pruned, non-empty sub level kept": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {
-					"app1": {"api1": {}},
-					"app2": {"api2": {"Success": &centralMetric{}}},
-				},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
+		"leaves the group registered while a sibling status is still unacked": {
+			metrics:          map[string]*centralMetric{"Success": metric1, "Failure": newStatusMetric("Failure")},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter(), "Failure": newAPICounter()},
+			counters:         map[string]*counter{},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: false,
 		},
-		"all levels empty are fully pruned": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {}}},
-			},
-			subID: "sub1", appID: "app1", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: true,
-		},
-		"absent appID within existing subID is a no-op for subID": {
-			metricMap: map[string]map[string]map[string]map[string]*centralMetric{
-				"sub1": {"app1": {"api1": {"Success": &centralMetric{}}}},
-			},
-			subID: "sub1", appID: "missing-app", apiID: "api1",
-			wantAPIGone: true, wantAppGone: true, wantSubGone: false,
-			preservedAppID: "app1",
+		"counter key missing from the group's metrics does not panic": {
+			metrics:          map[string]*centralMetric{"Success": metric1},
+			apiCounters:      map[string]*apiCounter{"Success": newAPICounter()},
+			counters:         map[string]*counter{"ghost": newCounter()},
+			wantRemoved:      []*centralMetric{metric1},
+			wantDeregistered: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			c, _ := newCleanupCollector(tc.metricMap)
+			c, st := newCleanupCollector()
+			c.registry = newRegistry()
 
-			c.removeEmptyKeys(tc.subID, tc.appID, tc.apiID)
-
-			_, apiPresent := tc.metricMap[tc.subID][tc.appID][tc.apiID]
-			assert.Equal(t, tc.wantAPIGone, !apiPresent, "apiID level presence mismatch")
-
-			_, appPresent := tc.metricMap[tc.subID][tc.appID]
-			assert.Equal(t, tc.wantAppGone, !appPresent, "appID level presence mismatch")
-
-			_, subPresent := tc.metricMap[tc.subID]
-			assert.Equal(t, tc.wantSubGone, !subPresent, "subID level presence mismatch")
-
-			if tc.preservedAppID != "" {
-				_, preserved := tc.metricMap[tc.subID][tc.preservedAppID]
-				assert.True(t, preserved, "app %q should still be present after no-op call", tc.preservedAppID)
+			group := newGroupedMetric()
+			for k, m := range tc.metrics {
+				group.metrics[k] = m
 			}
+			for k, ac := range tc.apiCounters {
+				group.apiCounters[k] = ac
+			}
+			assert.NoError(t, c.registry.Register(registryKey, group))
+
+			c.cleanupMetricCounters(registryKey, tc.counters, group, metric1)
+
+			assert.ElementsMatch(t, tc.wantRemoved, st.removed)
+			assert.Equal(t, !tc.wantDeregistered, c.registry.Get(registryKey) != nil)
 		})
 	}
 }

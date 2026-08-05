@@ -10,9 +10,10 @@ import (
 )
 
 type MockClient struct {
-	retry       int
-	pubCount    int
-	eventsAcked int
+	retry          int
+	pubCount       int
+	eventsAcked    int
+	capturedEvents []event.Event
 }
 
 func (m *MockClient) Close() error   { return nil }
@@ -26,6 +27,7 @@ func (m *MockClient) Publish(_ context.Context, batch event.Batch) error {
 		return fmt.Errorf("")
 	default:
 		m.eventsAcked = len(batch.Events())
+		m.capturedEvents = append(m.capturedEvents, batch.Events()...)
 		batch.ACK()
 	}
 	return nil
