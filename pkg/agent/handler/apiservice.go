@@ -24,15 +24,44 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Hand
 	}
 }
 
-func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
+		return false
+	}
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.APIServiceGVK().Kind {
-		return nil
+	if action != proto.Event_DELETED {
+		return true
+	}
+	log := getLoggerFromContext(ctx).
+		WithComponent("apiServiceHandler").
+		WithField("action", action).
+		WithField("resource", event.Payload.Name).
+		WithField("resourceID", event.Payload.Metadata.Id)
+
+	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(event.Payload.Name)
+	if existing == nil {
+		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(event.Payload.Name)
+	}
+	existingSvc, ok := existing.(*apiv1.ResourceInstance)
+	if !ok {
+		log.Trace("invalid resource type in cache, skipping delete")
+		return false
 	}
 
-	if resource.Metadata.Scope.Name != h.envName {
-		return nil
+	if existingSvc.Metadata.ID != event.Payload.Metadata.Id {
+		log.Trace("resource id mismatch, skipping delete")
+		return false
 	}
+	return true
+}
+
+// HandleCache adds the API Service to the cache during discoveryCache's bulk rebuild.
+func (h *apiSvcHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	return h.agentCacheManager.AddAPIService(resource)
+}
+
+func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+	action := GetActionFromContext(ctx)
 
 	log := getLoggerFromContext(ctx).
 		WithComponent("apiServiceHandler").
@@ -48,30 +77,16 @@ func (h *apiSvcHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource
 
 	defer log.Trace("finished processing request")
 
-	if action != proto.Event_DELETED {
-		log.Debug("adding or updating api service in cache")
-		err := h.agentCacheManager.AddAPIService(resource)
-		if err != nil {
-			log.WithError(err).Error("could not handle api service event")
-		}
-		return err
+	if action == proto.Event_DELETED {
+		// remove the service from the cache by name
+		return h.agentCacheManager.DeleteAPIService(resource.Name)
 	}
 
-	existing, _ := h.agentCacheManager.GetAPIServiceCache().Get(resource.Name)
-	if existing == nil {
-		existing, _ = h.agentCacheManager.GetAPIServiceCache().GetBySecondaryKey(resource.Name)
+	log.Debug("adding or updating api service in cache")
+	err = h.agentCacheManager.AddAPIService(resource)
+	if err != nil {
+		log.WithError(err).Error("could not handle api service event")
 	}
-	existingSvc, ok := existing.(*apiv1.ResourceInstance)
-	if !ok {
-		log.Debug("invalid resource type in cache, skipping delete")
-		return nil
-	}
+	return err
 
-	if existingSvc.Metadata.ID != resource.Metadata.ID {
-		log.Debug("resource id mismatch, skipping delete")
-		return nil
-	}
-
-	// remove the service from the cache by name
-	return h.agentCacheManager.DeleteAPIService(resource.Name)
 }

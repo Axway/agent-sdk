@@ -5,7 +5,6 @@ import (
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
-	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -22,15 +21,22 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager, envName string) Ha
 	}
 }
 
-func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
-	action := GetActionFromContext(ctx)
-	if resource.Kind != management.APIServiceInstanceGVK().Kind {
-		return nil
+func (h *instanceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	if event.Payload.Metadata.Scope.Name != h.envName {
+		return false
 	}
 
-	if resource.Metadata.Scope.Name != h.envName {
-		return nil
-	}
+	return true
+}
+
+// HandleCache adds the API Service Instance to the cache during discoveryCache's bulk rebuild.
+func (h *instanceHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.agentCacheManager.AddAPIServiceInstance(resource)
+	return nil
+}
+
+func (h *instanceHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
+	action := GetActionFromContext(ctx)
 
 	if action != proto.Event_DELETED {
 		h.agentCacheManager.AddAPIServiceInstance(resource)

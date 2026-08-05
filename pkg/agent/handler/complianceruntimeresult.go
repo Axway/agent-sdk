@@ -20,6 +20,16 @@ func NewCRRHandler(agentCacheManager agentcache.Manager) Handler {
 	}
 }
 
+func (h *crrHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	return true
+}
+
+// HandleCache adds the ComplianceRuntimeResult to the cache during discoveryCache's bulk rebuild.
+func (h *crrHandler) HandleCache(resource *apiv1.ResourceInstance) error {
+	h.agentCacheManager.AddComplianceRuntimeResult(resource)
+	return nil
+}
+
 // Handle processes grpc events triggered for Compliance Runtime Results
 func (h *crrHandler) Handle(ctx context.Context, _ *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)

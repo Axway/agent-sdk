@@ -62,7 +62,7 @@ func TestEventListener_start(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancelCause(context.Background())
-			listener := NewEventListener(ctx, cancel, tc.events, tc.client, sequenceManager, tc.handler)
+			listener := NewEventListener(ctx, cancel, tc.events, tc.client, sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
 
 			errCh := make(chan error)
 			go func() {
@@ -103,14 +103,14 @@ func TestEventListener_Listen(t *testing.T) {
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
 	events := make(chan *proto.Event)
 	ctx, cancel := context.WithCancelCause(context.Background())
-	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
+	listener := NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
 	listener.Listen()
 	listener.Stop()
 	err := ctx.Err()
 	assert.NotNil(t, err)
 
 	ctx, cancel = context.WithCancelCause(context.Background())
-	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, &mockHandler{})
+	listener = NewEventListener(ctx, cancel, events, &mockAPIClient{}, sequenceManager, map[string][]handler.Handler{"": {&mockHandler{}}})
 	listener.Listen()
 	close(events)
 	err = ctx.Err()
@@ -176,7 +176,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancelCause(context.Background())
-			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, sequenceManager, tc.handler)
+			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
 
 			err := listener.handleEvent(event)
 
@@ -197,6 +197,10 @@ func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.Res
 	return m.err
 }
 
+func (m *mockHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
 // slowHandler blocks for the given duration each time Handle is called,
 // and atomically increments callCount.
 type slowHandler struct {
@@ -208,6 +212,10 @@ func (h *slowHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *apiv1.Res
 	time.Sleep(h.delay)
 	h.callCount.Add(1)
 	return nil
+}
+
+func (h *slowHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
 }
 
 func newTestEvent(seqID int64) *proto.Event {
