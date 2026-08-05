@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
@@ -281,4 +282,20 @@ func TestCleanApplicationProfileDefinition(t *testing.T) {
 			assert.Equal(t, tc.name, deleteAPD.Name)
 		})
 	}
+}
+
+func TestEnableAccessRequestCache(t *testing.T) {
+	prevCfg := agent.cfg
+	prevCacheManager := agent.cacheManager
+	defer func() {
+		agent.cfg = prevCfg
+		agent.cacheManager = prevCacheManager
+	}()
+
+	agent.cfg = config.NewTestCentralConfig(config.DiscoveryAgent)
+	agent.cacheManager = agentcache.NewAgentCacheManager(agent.cfg, false)
+	assert.False(t, agent.cacheManager.IsAccessRequestCacheEnabled())
+
+	EnableAccessRequestCache()
+	assert.True(t, agent.cacheManager.IsAccessRequestCacheEnabled())
 }

@@ -24,8 +24,19 @@ func (c *cacheManager) GetAccessRequestCacheKeys() []string {
 	return c.accessRequestMap.GetKeys()
 }
 
+// IsAccessRequestCacheEnabled returns true if AccessRequests are being cached.
+func (c *cacheManager) IsAccessRequestCacheEnabled() bool {
+	return c.isAccessRequestCacheEnabled
+}
+
+// SetAccessRequestCacheEnabled allows the agent using the SDK to turn AccessRequest caching on or
+// off. Traceability agents have it enabled by default; discovery agents must opt in, if they need it.
+func (c *cacheManager) SetAccessRequestCacheEnabled(enabled bool) {
+	c.isAccessRequestCacheEnabled = enabled
+}
+
 func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
-	if ri == nil {
+	if !c.isAccessRequestCacheEnabled || ri == nil {
 		return
 	}
 
