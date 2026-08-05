@@ -26,7 +26,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 	cfg := &corecfg.CentralConfiguration{
 		TeamName:     "testteam",
 		TenantID:     "112456",
-		Environment:  "v7envandcat",
+		Environment:  "testenvironment",
 		PollInterval: 1 * time.Second,
 		PageSize:     100,
 		Auth: &corecfg.AuthConfiguration{

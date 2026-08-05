@@ -662,3 +662,11 @@ func RegisterProvisioner(provisioner interface{}) {
 	registerApplicationProfileProvisioner(provisioner)
 	registerCredentialProvisioner(provisioner)
 }
+
+// EnableAccessRequestCache - allow a discovery agent to opt in to caching AccessRequests. Traceability agents cache AccessRequests by default, and do not need to call this.
+func EnableAccessRequestCache() {
+	if agent.cacheManager == nil {
+		return
+	}
+	agent.cacheManager.SetAccessRequestCacheEnabled(true)
+}
