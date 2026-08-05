@@ -606,7 +606,7 @@ func registerApplicationProvisioner(provisioner interface{}) {
 	if appProv, ok := provisioner.(provisioning.ApplicationProvisioner); ok {
 		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
-			"managedappHandler",
+			management.ManagedApplicationGVK().Kind,
 			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient,
 				handler.WithManagedAppRetryCount(agent.cfg.GetProvisioningRetryCount()),
 				handler.WithManagedAppIDPRegistry(registry)),
@@ -618,7 +618,7 @@ func registerApplicationProvisioner(provisioner interface{}) {
 func registerApplicationProfileProvisioner(provisioner interface{}) {
 	if appProfileProv, ok := provisioner.(provisioning.ApplicationProfileProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
-			"managedApplicationProfileHandler",
+			management.ApplicationProfileDefinitionGVK().Kind,
 			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient),
 		)
 	}
@@ -628,7 +628,7 @@ func registerApplicationProfileProvisioner(provisioner interface{}) {
 func registerAccessProvisioner(provisioner interface{}) {
 	if arProv, ok := provisioner.(provisioning.AccessProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
-			"accessrequestHandler",
+			management.AccessRequestGVK().Kind,
 			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler,
 				handler.WithAccessRequestRetryCount(agent.cfg.GetProvisioningRetryCount())),
 		)
@@ -640,7 +640,7 @@ func registerCredentialProvisioner(provisioner interface{}) {
 	if credProv, ok := provisioner.(provisioning.CredentialProvisioner); ok {
 		registry := oauth.NewIdpRegistry(oauth.WithProviderRegistry(GetAuthProviderRegistry()))
 		agent.proxyResourceHandler.RegisterTargetHandler(
-			"credentialHandler",
+			management.CredentialGVK().Kind,
 			handler.NewCredentialHandler(credProv, agent.apicClient, registry,
 				handler.WithCredentialRetryCount(agent.cfg.GetProvisioningRetryCount())),
 		)

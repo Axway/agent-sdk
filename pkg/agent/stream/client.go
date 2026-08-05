@@ -35,7 +35,7 @@ import (
 // StreamerClient client for starting a watch controller stream and handling the events
 type StreamerClient struct {
 	apiClient          events.APIClient
-	handlers           []handler.Handler
+	handlers           map[string][]handler.Handler
 	listener           atomic.Pointer[events.EventListener]
 	manager            wm.Manager
 	newListener        events.NewListenerFunc
@@ -69,7 +69,7 @@ func NewStreamerClient(
 	apiClient events.APIClient,
 	cfg config.CentralConfig,
 	getToken auth.TokenGetter,
-	handlers []handler.Handler,
+	handlers map[string][]handler.Handler,
 	options ...StreamerOpt,
 ) (*StreamerClient, error) {
 	logger := log.NewFieldLogger().
@@ -171,7 +171,7 @@ func (s *StreamerClient) Start() error {
 	}
 
 	eventCh, requestCh := make(chan *proto.Event, 100), make(chan *proto.Request, 1)
-	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers...)
+	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.sequence, s.handlers)
 	s.listener.Store(l)
 	defer l.Stop()
 

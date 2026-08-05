@@ -18,7 +18,7 @@ import (
 // PollClient is a client for polling harvester
 type PollClient struct {
 	apiClient          events.APIClient
-	handlers           []handler.Handler
+	handlers           map[string][]handler.Handler
 	interval           time.Duration
 	listener           events.Listener
 	newListener        events.NewListenerFunc
@@ -48,7 +48,7 @@ type onClientStopCb func()
 func NewPollClient(
 	apiClient events.APIClient,
 	cfg config.CentralConfig,
-	handlers []handler.Handler,
+	handlers map[string][]handler.Handler,
 	options ...ClientOpt,
 ) (*PollClient, error) {
 	pc := &PollClient{
@@ -86,7 +86,7 @@ func (p *PollClient) Start() error {
 
 	p.mutex.Lock()
 
-	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.harvesterConfig.sequence, p.handlers...)
+	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.harvesterConfig.sequence, p.handlers)
 
 	p.poller = p.newPollManager(p.interval, withOnStop(p.onClientStop), withHarvester(p.harvesterConfig), WithContext(ctx, cancel))
 	p.mutex.Unlock()
