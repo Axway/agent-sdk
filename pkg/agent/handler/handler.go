@@ -28,6 +28,13 @@ type CacheHandler interface {
 	HandleCache(resource *v1.ResourceInstance) error
 }
 
+// RequiredFieldsHandler is implemented by Handlers that only need specific fields of the API
+// Server resource fetched for a given event, instead of the full resource. The required fields
+// can vary by event - e.g. a subresource update only needs that subresource fetched.
+type RequiredFieldsHandler interface {
+	GetAPIServerFields(ctx context.Context, event *proto.Event) []string
+}
+
 // This type is used for values added to context
 type ctxKey int
 
