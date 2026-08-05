@@ -6,21 +6,31 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
-// Listener starts the EventListener
+const (
+	provisioningQueue = "provisioningQueue"
+	regularQueue      = "regularQueue"
+
+	// laneBufferSize lets a lane's dispatch send get a few events ahead of its worker, so a
+	// short burst of slow handling on one lane doesn't immediately stall dispatch for every
+	// other lane - there's only one dispatch goroutine feeding all of them.
+	laneBufferSize = 5
+)
+
 type Listener interface {
 	Listen()
 	Stop()
 }
 
-// APIClient -
 type APIClient interface {
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	GetResource(url string) (*apiv1.ResourceInstance, error)
@@ -29,51 +39,152 @@ type APIClient interface {
 	GetAPIV1ResourceInstances(map[string]string, string) ([]*apiv1.ResourceInstance, error)
 }
 
-// EventListener holds the various caches to save events into as they get written to the source channel.
-type EventListener struct {
-	ctx             context.Context
-	cancel          context.CancelCauseFunc
-	client          APIClient
-	baseURL         string
-	handlersByKind  map[string][]handler.Handler
-	logger          log.FieldLogger
-	sequenceManager SequenceProvider
-	source          chan *proto.Event
+var provisioningHandlers map[string]bool = map[string]bool{
+	management.ManagedApplicationGVK().Kind: true,
+	management.AccessRequestGVK().Kind:      true,
+	management.CredentialGVK().Kind:         true,
 }
 
-// NewListenerFunc type for creating a new listener
-type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener
+// EventListener holds the various caches to save events into as they get written to the source channel.
+type EventListener struct {
+	ctx              context.Context
+	cancel           context.CancelCauseFunc
+	client           APIClient
+	baseURL          string
+	handlersByKind   map[string][]handler.Handler
+	logger           log.FieldLogger
+	sequenceManager  SequenceProvider
+	source           chan *proto.Event
+	kindJobs         map[string]chan handlerData // one worker per kind
+	provisioningJobs chan handlerData            // exactly one dedicated worker
+	seenManagedApps  map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
+	seqTracker       *sequenceTracker
+}
+
+type handlerData struct {
+	event      *proto.Event
+	ctx        context.Context
+	ri         *apiv1.ResourceInstance
+	handler    handler.Handler
+	logger     log.FieldLogger
+	onComplete func()
+}
+
+// sequenceTracker tracks, per dispatched event, how many handlerData items are still outstanding,
+// so the persisted watch sequence only advances past events whose handlers have actually finished
+// running - not merely been handed off to a lane. Events are registered in the strictly increasing
+// order they're read from the source, but different lanes complete them at different speeds, so
+// completions only move the watermark once they form a contiguous prefix from the front of order.
+type sequenceTracker struct {
+	mu        sync.Mutex
+	remaining map[int64]int
+	order     []int64
+}
+
+func newSequenceTracker() *sequenceTracker {
+	return &sequenceTracker{remaining: make(map[int64]int)}
+}
+
+// register records that count handlerData items were dispatched for sequenceID. count may be zero
+// for an event that matched no handler - it still holds its place in order so later sequences
+// don't get persisted ahead of it. Returns the new watermark and true if registering it let the
+// front of order advance immediately (only possible when count is zero).
+func (t *sequenceTracker) register(sequenceID int64, count int) (int64, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if count > 0 {
+		t.remaining[sequenceID] = count
+	}
+	t.order = append(t.order, sequenceID)
+	return t.advanceLocked()
+}
+
+// complete marks one handlerData item for sequenceID as done. Returns the new watermark and true
+// if this completion let the front of order advance; otherwise (0, false).
+func (t *sequenceTracker) complete(sequenceID int64) (int64, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.remaining[sequenceID] > 0 {
+		t.remaining[sequenceID]--
+	}
+	if t.remaining[sequenceID] <= 0 {
+		delete(t.remaining, sequenceID)
+	}
+	return t.advanceLocked()
+}
+
+// advanceLocked pops sequences off the front of order for as long as they have no outstanding
+// handlerData items left, returning the highest one popped, if any. Callers must hold t.mu.
+func (t *sequenceTracker) advanceLocked() (int64, bool) {
+	watermark, advanced := int64(0), false
+	for len(t.order) > 0 {
+		if _, pending := t.remaining[t.order[0]]; pending {
+			break
+		}
+		watermark = t.order[0]
+		advanced = true
+		t.order = t.order[1:]
+	}
+	return watermark, advanced
+}
+
+type ListenerOpts func(el *EventListener)
+
+type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener
 
 // NewEventListener creates a new EventListener to process events based on the provided Handlers,
 // indexed by the resource Kind they should be dispatched for.
-func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler) *EventListener {
+func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener {
 	logger := log.NewFieldLogger().
 		WithComponent("EventListener").
 		WithPackage("sdk.agent.events")
 
-	return &EventListener{
-		ctx:             ctx,
-		cancel:          cancel,
-		client:          client,
-		baseURL:         baseURL,
-		handlersByKind:  handlersByKind,
-		logger:          logger,
-		sequenceManager: sequenceManager,
-		source:          source,
+	el := &EventListener{
+		ctx:              ctx,
+		cancel:           cancel,
+		client:           client,
+		baseURL:          baseURL,
+		handlersByKind:   handlersByKind,
+		logger:           logger,
+		sequenceManager:  sequenceManager,
+		source:           source,
+		kindJobs:         make(map[string]chan handlerData, len(handlersByKind)-len(provisioningHandlers)),
+		provisioningJobs: make(chan handlerData, laneBufferSize),
+		seenManagedApps:  make(map[string]struct{}),
+		seqTracker:       newSequenceTracker(),
+	}
+	for _, o := range opts {
+		o(el)
+	}
+	return el
+}
+
+func (em *EventListener) Stop() {
+	if em != nil && em.cancel != nil {
+		em.cancel(nil)
 	}
 }
 
-// Stop stops the listener
-func (em *EventListener) Stop() {
-	if em != nil {
-		em.cancel(nil)
+func (em *EventListener) closeJobs() {
+	close(em.provisioningJobs)
+	for _, ch := range em.kindJobs {
+		close(ch)
 	}
 }
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() {
+	go worker(em.provisioningJobs) // exactly one goroutine, shared by already-known managed apps
+
+	for kind := range em.handlersByKind {
+		ch := make(chan handlerData, laneBufferSize)
+		em.kindJobs[kind] = ch
+		go worker(ch) // exactly one worker, order preserved for this kind
+	}
+
 	go func() {
 		defer em.Stop()
+		defer em.closeJobs()
 		for {
 			done, err := em.start()
 			if done && err == nil {
@@ -97,7 +208,6 @@ func (em *EventListener) start() (done bool, err error) {
 			err = fmt.Errorf("stream event source has been closed")
 			break
 		}
-
 		if handleErr := em.handleEvent(event); handleErr != nil {
 			em.logger.WithError(handleErr).Error("stream event listener error handling event")
 		}
@@ -109,6 +219,17 @@ func (em *EventListener) start() (done bool, err error) {
 	}
 
 	return done, err
+}
+
+func worker(jobs <-chan handlerData) {
+	for handlerData := range jobs {
+		if err := handlerData.handler.Handle(handlerData.ctx, handlerData.event.GetMetadata(), handlerData.ri); err != nil {
+			handlerData.logger.WithError(err).Error("failed to handle event data")
+		}
+		if handlerData.onComplete != nil {
+			handlerData.onComplete()
+		}
+	}
 }
 
 // handleEvent fetches the api server ResourceClient based on the event self link, and then tries to save it to the cache.
@@ -125,35 +246,116 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	var ri *apiv1.ResourceInstance
 	var err error
+	queueType := ""
 	msg := "skipped handling event"
-	defer func() { logger.Trace(msg) }()
-
 	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
+
+	defer func() {
+		logger.WithField("apiServerFields", apiServerFields).WithField("queueType", queueType).Trace(msg)
+	}()
+
+	var toDispatch []handler.Handler
 	for _, h := range em.handlersByKind[event.Payload.Kind] {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-		msg = "passed event to handlers"
 		if ri == nil {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
 				logger.WithError(err).Error("failed to get event resource")
-				return err
+				break
 			}
 		}
-		if err := h.Handle(ctx, event.Metadata, ri); err != nil {
-			logger.WithError(err).Error("failed to handle event resource")
+		toDispatch = append(toDispatch, h)
+	}
+
+	var jobs chan handlerData
+	if len(toDispatch) > 0 {
+		msg = "passed event to handlers"
+		jobs, queueType = em.dispatchLane(event, ri)
+	}
+
+	seq := event.Metadata.SequenceID
+	if watermark, advanced := em.seqTracker.register(seq, len(toDispatch)); advanced {
+		em.advanceSequence(watermark)
+	}
+
+	for _, h := range toDispatch {
+		select {
+		case jobs <- handlerData{
+			event:   event,
+			ctx:     ctx,
+			ri:      ri,
+			handler: h,
+			logger:  logger,
+			onComplete: func() {
+				if watermark, advanced := em.seqTracker.complete(seq); advanced {
+					em.advanceSequence(watermark)
+				}
+			},
+		}:
+		case <-em.ctx.Done():
+			msg = "stopped dispatching event: listener is shutting down"
+			return nil
 		}
 	}
 
-	em.sequenceManager.SetSequence(event.Metadata.SequenceID)
+	if event.Payload.Kind == management.ManagedApplicationGVK().Kind && event.Type == proto.Event_DELETED {
+		delete(em.seenManagedApps, event.Payload.Name)
+	}
+
 	return nil
 }
 
-// requiredAPIServerFields returns the union of the fields declared as required by the given
-// handlers, preserving first-seen order. If any handler does not restrict itself to specific
-// fields - either by not implementing RequiredFieldsHandler, or by declaring none - the full
-// resource is required, so an empty slice is returned to signal "no restriction".
+func (em *EventListener) advanceSequence(sequenceID int64) {
+	if sequenceID > em.sequenceManager.GetSequence() {
+		em.sequenceManager.SetSequence(sequenceID)
+	}
+}
+
+// dispatchLane picks which worker channel an event's handlerData should be sent to.
+// Kinds outside the managed-app provisioning chain always use their own kind lane.
+// For AccessRequest/Credential, the first event seen for a given ManagedApplication name uses that kind's lane;
+// every later event tied to the same name goes to the shared low-priority lane, until the ManagedApplication is deleted (see handleEvent).
+func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
+	kind := event.Payload.Kind
+	if !provisioningHandlers[kind] {
+		return em.kindJobs[kind], regularQueue
+	}
+
+	key, ok := managedApplicationKey(event, ri)
+	if !ok {
+		return em.provisioningJobs, provisioningQueue
+	}
+
+	// We add the keys, but we don't put the ManagedApplication in the low priority queue.
+	if _, seen := em.seenManagedApps[key]; seen && kind != management.ManagedApplicationGVK().Kind {
+		return em.provisioningJobs, provisioningQueue
+	}
+	em.seenManagedApps[key] = struct{}{}
+	return em.kindJobs[kind], regularQueue
+}
+
+func managedApplicationKey(event *proto.Event, ri *apiv1.ResourceInstance) (key string, ok bool) {
+	switch event.Payload.Kind {
+	case management.ManagedApplicationGVK().Kind:
+		return event.Payload.Name, true
+	case management.AccessRequestGVK().Kind, management.CredentialGVK().Kind:
+		if ri == nil || ri.Spec == nil {
+			return "", false
+		}
+		key, ok = ri.Spec["managedApplication"].(string)
+		if !ok || key == "" {
+			return "", false
+		}
+		return key, true
+	default:
+		return "", false
+	}
+}
+
+// Joins the APIServerFields if multiple handlers implement the interface. In case either does not
+// implement it, an empty slice is returned to signal "no restriction".
 func requiredAPIServerFields(ctx context.Context, event *proto.Event, handlers []handler.Handler) []string {
 	seen := map[string]struct{}{}
 	fields := []string{}

@@ -186,7 +186,8 @@ func TestEventSync(t *testing.T) {
 
 				err := es.initCache(tc.failedFilters...)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.expectedCount, svcHandler.count)
+				assert.Equal(t, tc.expectedCount, svcHandler.cacheCount)
+				assert.Equal(t, tc.expectedCount, svcHandler.handleCount)
 
 				if tc.verify != nil {
 					tc.verify(t)

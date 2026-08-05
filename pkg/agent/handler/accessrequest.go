@@ -63,7 +63,7 @@ func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
 		return true
 	}
-	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, event.Metadata) {
+	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
 	}
 	return true
@@ -79,7 +79,7 @@ func (h *accessRequestHandler) GetAPIServerFields(ctx context.Context, event *pr
 		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
 			return nil
 		}
-		return []string{"name", "metadata.id", event.Metadata.GetSubresource()}
+		return []string{"name", "metadata.id", "spec.managedApplication", event.Metadata.GetSubresource()}
 	}
 	return nil
 }
@@ -100,10 +100,6 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 			util.SetAgentDetails(existing, newDetails)
 		}
 		h.cache.AddAccessRequest(existing)
-		return nil
-	}
-
-	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
 		return nil
 	}
 
