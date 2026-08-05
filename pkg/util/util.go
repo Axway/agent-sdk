@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"hash/fnv"
-	"io"
 	"io/fs"
 	"net"
 	"net/http"
@@ -24,7 +23,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
@@ -41,37 +39,30 @@ const (
 	AgentWarningTag = "Agent Sync Warning"
 )
 
-var hashBufPool = sync.Pool{New: func() interface{} { return new(bytes.Buffer) }}
-
-type noNewlineWriter struct{ io.Writer }
-
-// removes the new line character added by Encode
-func (w noNewlineWriter) Write(p []byte) (int, error) {
-	if len(p) > 0 && p[len(p)-1] == '\n' {
-		_, err := w.Writer.Write(p[:len(p)-1])
-		return len(p), err
+// Remarshal - remarshal the bytes to remove any extra spaces and consistent key order
+func Remarshal(data []byte) ([]byte, error) {
+	var temp interface{}
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return nil, err
 	}
-	return w.Writer.Write(p)
+	return json.Marshal(temp)
 }
 
+// ComputeHash - get the hash of the byte array sent in
 func ComputeHash(data interface{}) (uint64, error) {
-	buf := hashBufPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer hashBufPool.Put(buf)
-
-	if err := json.NewEncoder(buf).Encode(data); err != nil {
+	// marshall the data in and out
+	dataB, err := json.Marshal(data)
+	if err != nil {
 		return 0, err
 	}
-
-	var temp interface{}
-	if err := json.Unmarshal(buf.Bytes(), &temp); err != nil {
+	dataB, err = Remarshal(dataB)
+	if err != nil {
 		return 0, err
 	}
 
 	h := fnv.New64a()
-	if err := json.NewEncoder(noNewlineWriter{h}).Encode(temp); err != nil {
-		return 0, err
-	}
+	h.Write(dataB)
 	return h.Sum64(), nil
 }
 

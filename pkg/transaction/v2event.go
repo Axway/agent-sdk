@@ -43,18 +43,21 @@ type insightsAPIDetail struct {
 // insightsConsumerAppDetail is the application sub-object within consumerDetails.
 type insightsConsumerAppDetail struct {
 	ID            string        `json:"id,omitempty"`
+	Name          string        `json:"name,omitempty"`
 	ConsumerOrgID string        `json:"consumerOrgId,omitempty"`
 	Owner         *models.Owner `json:"owner,omitempty"`
 }
 
 // insightsPublishedProduct is the publishedProduct sub-object within consumerDetails.
 type insightsPublishedProduct struct {
-	ID string `json:"id,omitempty"`
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // insightsSubscription is the subscription sub-object within consumerDetails.
 type insightsSubscription struct {
-	ID string `json:"id,omitempty"`
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // insightsConsumerDetails is the consumerDetails sub-object for leg and summary v2.
@@ -72,8 +75,11 @@ type insightsMarketplace struct {
 
 // insightsSummaryProduct is the product sub-object for summary v2.
 type insightsSummaryProduct struct {
-	ID        string `json:"id,omitempty"`
-	VersionID string `json:"versionId,omitempty"`
+	ID          string        `json:"id,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	VersionID   string        `json:"versionId,omitempty"`
+	VersionName string        `json:"versionName,omitempty"`
+	Owner       *models.Owner `json:"owner,omitempty"`
 }
 
 // insightsReporter is the reporter sub-object.
@@ -93,7 +99,7 @@ type legProtocol struct {
 	Status int    `json:"status"`
 }
 
-// insightsProxy is the nested proxy sub-object for summary v2 data.
+// insightsProxy is the nested proxy sub-object for leg and summary v2 data.
 type insightsProxy struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
@@ -103,8 +109,9 @@ type insightsProxy struct {
 type TransactionLegData struct {
 	Version        string             `json:"version"`
 	APICDeployment string             `json:"apicDeployment,omitempty"`
-	TransactionID  string             `json:"-"`
+	TransactionID  string             `json:"transactionId,omitempty"`
 	ID             string             `json:"id,omitempty"`
+	LegID          int                `json:"legId"`
 	ParentID       string             `json:"parentId,omitempty"`
 	Source         string             `json:"source,omitempty"`
 	Destination    string             `json:"destination,omitempty"`
@@ -112,8 +119,9 @@ type TransactionLegData struct {
 	Duration       int                `json:"duration"`
 	Direction      string             `json:"direction,omitempty"`
 	Protocol       *legProtocol       `json:"protocol,omitempty"`
-	API            *insightsAPIDetail `json:"-"`
+	API            *insightsAPIDetail `json:"api,omitempty"`
 	Reporter       *insightsReporter  `json:"reporter,omitempty"`
+	Proxy          *insightsProxy     `json:"proxy,omitempty"`
 }
 
 // GetStartTime implements metric.V4Data.
@@ -127,7 +135,7 @@ func (d *TransactionLegData) GetEventID() string { return d.TransactionID }
 
 // GetLogFields implements metric.V4Data.
 func (d *TransactionLegData) GetLogFields() logrus.Fields {
-	f := logrus.Fields{"transactionId": d.TransactionID}
+	f := logrus.Fields{"transactionId": d.TransactionID, "legId": d.LegID}
 	if d.API != nil {
 		f["apiId"] = d.API.ID
 	}
@@ -277,21 +285,33 @@ func buildLegV2Data(logEvent LogEvent, summaryProxy *Proxy, cacheManager cache.M
 	}
 
 	apiID := txEvent.ProxyID
+	proxyName := txEvent.ProxyName
 
 	if apiID == "" && summaryProxy != nil {
 		apiID = summaryProxy.ID
+		if proxyName == "" {
+			proxyName = summaryProxy.Name
+		}
 	}
 	if apiID == "" && txEvent.Source != "" {
 		apiID = transutil.ResolveIDWithPrefix(txEvent.Source, "")
 	}
 
 	apiDetail := resolveAPIDetailFromCache(apiID, cacheManager)
+	if proxyName == "" && apiDetail != nil {
+		proxyName = apiDetail.Name
+	}
+	var legProxy *insightsProxy
+	if apiID != "" || proxyName != "" {
+		legProxy = &insightsProxy{ID: apiID, Name: proxyName}
+	}
 
 	data := &TransactionLegData{
 		Version:        legDataVersion,
 		APICDeployment: logEvent.APICDeployment,
 		TransactionID:  logEvent.TransactionID,
 		ID:             fmt.Sprintf("leg%d", legID), // legID already normalized via parseLegID
+		LegID:          legID,
 		ParentID:       formatLegID(txEvent.ParentID),
 		Source:         txEvent.Source,
 		Destination:    txEvent.Destination,
@@ -300,6 +320,7 @@ func buildLegV2Data(logEvent LogEvent, summaryProxy *Proxy, cacheManager cache.M
 		Direction:      strings.ToLower(txEvent.Direction),
 		Protocol:       proto,
 		API:            apiDetail,
+		Proxy:          legProxy,
 		Reporter: &insightsReporter{
 			Version:         reporter.AgentVersion,
 			Type:            reporter.AgentType,
@@ -345,8 +366,11 @@ func buildSummaryV2Data(logger log.FieldLogger, logEvent LogEvent, cacheManager 
 
 	if summary.Product != nil && summary.Product.ID != "" {
 		data.Product = &insightsSummaryProduct{
-			ID:        summary.Product.ID,
-			VersionID: summary.Product.VersionID,
+			ID:          summary.Product.ID,
+			Name:        summary.Product.Name,
+			VersionID:   summary.Product.VersionID,
+			VersionName: summary.Product.VersionName,
+			Owner:       summary.Product.Owner,
 		}
 	}
 	if summary.ProductPlan != nil && summary.ProductPlan.ID != "" {
@@ -445,6 +469,7 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.Owner) *i
 	appDetail := &insightsConsumerAppDetail{}
 	if cd.Application != nil {
 		appDetail.ID = cd.Application.ID
+		appDetail.Name = cd.Application.Name
 		appDetail.ConsumerOrgID = cd.Application.ConsumerOrgID
 	}
 	if appOwner != nil {
@@ -453,13 +478,29 @@ func buildConsumerDetails(cd *models.ConsumerDetails, appOwner *models.Owner) *i
 	out.Application = appDetail
 
 	if cd.PublishedProduct != nil && cd.PublishedProduct.ID != "" {
-		out.PublishedProduct = &insightsPublishedProduct{ID: cd.PublishedProduct.ID}
+		out.PublishedProduct = &insightsPublishedProduct{
+			ID:   cd.PublishedProduct.ID,
+			Name: cd.PublishedProduct.Name,
+		}
 	}
 	if cd.Subscription != nil && cd.Subscription.ID != "" {
-		out.Subscription = &insightsSubscription{ID: cd.Subscription.ID}
+		out.Subscription = &insightsSubscription{
+			ID:   cd.Subscription.ID,
+			Name: cd.Subscription.Name,
+		}
 	}
 
 	return out
+}
+
+// SetLegProxy sets the proxy block on a TransactionLegData after it has been built.
+// Used by the agents-controller to populate proxy from enriched API details post-build,
+// since insightsProxy is unexported and cannot be constructed externally.
+func SetLegProxy(leg *TransactionLegData, proxyID, proxyName string) {
+	if leg == nil || (proxyID == "" && proxyName == "") {
+		return
+	}
+	leg.Proxy = &insightsProxy{ID: proxyID, Name: proxyName}
 }
 
 // parseLegID accepts "N" or "legN" and returns N; returns 0 on any other input.

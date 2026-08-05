@@ -159,6 +159,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, legDataVersion, data.Version)
 				assert.Equal(t, "prod", data.APICDeployment)
+				assert.Equal(t, 1, data.LegID)
 				assert.Equal(t, "leg1", data.ID)
 			},
 		},
@@ -173,6 +174,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 			check: func(t *testing.T, ie *InsightsEvent) {
 				data, ok := ie.Data.(*TransactionLegData)
 				require.True(t, ok)
+				assert.Equal(t, 0, data.LegID)
 				assert.Equal(t, "leg0", data.ID)
 			},
 		},
@@ -506,7 +508,11 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.True(t, ok)
 				require.NotNil(t, data.Product)
 				assert.Equal(t, "prod-id-1", data.Product.ID)
+				assert.Equal(t, "my-product", data.Product.Name)
 				assert.Equal(t, "ver-id-1", data.Product.VersionID)
+				assert.Equal(t, "1.0.0", data.Product.VersionName)
+				require.NotNil(t, data.Product.Owner)
+				assert.Equal(t, testTeamGUID, data.Product.Owner.TeamGUID)
 			},
 		},
 		"summary with productPlan and quota populates those fields": {
@@ -570,6 +576,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.Application)
 				assert.Equal(t, "app-id-1", data.ConsumerDetails.Application.ID)
+				assert.Equal(t, "my-app", data.ConsumerDetails.Application.Name)
 				assert.Equal(t, testConsumerOrgID, data.ConsumerDetails.Application.ConsumerOrgID)
 			},
 		},
@@ -593,8 +600,10 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.NotNil(t, data.ConsumerDetails)
 				require.NotNil(t, data.ConsumerDetails.PublishedProduct)
 				assert.Equal(t, "pp-id-1", data.ConsumerDetails.PublishedProduct.ID)
+				assert.Equal(t, "published-product", data.ConsumerDetails.PublishedProduct.Name)
 				require.NotNil(t, data.ConsumerDetails.Subscription)
 				assert.Equal(t, "sub-id-1", data.ConsumerDetails.Subscription.ID)
+				assert.Equal(t, "my-sub", data.ConsumerDetails.Subscription.Name)
 			},
 		},
 		// proxy path picks up apiServiceRevision from summary.API when both are set
@@ -660,6 +669,32 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				assert.Equal(t, "remoteApiId_abc123", data.API.ID)
+			},
+		},
+		// leg proxy is populated from SetProxy call
+		"leg proxy populated from SetProxy": {
+			logEvent: LogEvent{
+				Type:          TypeTransactionEvent,
+				TransactionID: "txn-leg-proxy",
+				TransactionEvent: &Event{
+					ID:        "0",
+					Status:    "Pass",
+					Source:    "remoteApiId_abc123",
+					ProxyName: testAPIName,
+				},
+			},
+			orgID:         testOrgID,
+			environmentID: testEnvID,
+			check: func(t *testing.T, ie *InsightsEvent) {
+				data, ok := ie.Data.(*TransactionLegData)
+				require.True(t, ok)
+				require.NotNil(t, data.Proxy)
+				assert.Equal(t, "remoteApiId_abc123", data.Proxy.ID)
+				assert.Equal(t, testAPIName, data.Proxy.Name)
+
+				b, err := json.Marshal(data)
+				require.NoError(t, err)
+				assert.Contains(t, string(b), `"proxy":`)
 			},
 		},
 		// direction is lowercased regardless of what the agent passes
@@ -1184,9 +1219,64 @@ func TestBuildTransactionV2DataLegIDs(t *testing.T) {
 	}
 }
 
+func TestSetLegProxy(t *testing.T) {
+	cases := map[string]struct {
+		leg           *TransactionLegData
+		proxyID       string
+		proxyName     string
+		wantNilProxy  bool
+		wantProxyID   string
+		wantProxyName string
+	}{
+		"nil leg is a no-op": {
+			leg:          nil,
+			proxyID:      "id-1",
+			proxyName:    "name-1",
+			wantNilProxy: true,
+		},
+		"both IDs empty is a no-op": {
+			leg:          &TransactionLegData{},
+			wantNilProxy: true,
+		},
+		"both IDs set populates proxy": {
+			leg:           &TransactionLegData{},
+			proxyID:       "remoteApiId_ext-1",
+			proxyName:     testAPIName,
+			wantProxyID:   "remoteApiId_ext-1",
+			wantProxyName: testAPIName,
+		},
+		"only proxyID set populates proxy": {
+			leg:         &TransactionLegData{},
+			proxyID:     "remoteApiId_ext-2",
+			wantProxyID: "remoteApiId_ext-2",
+		},
+		"only proxyName set populates proxy": {
+			leg:           &TransactionLegData{},
+			proxyName:     "my-api-2",
+			wantProxyName: "my-api-2",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			SetLegProxy(tc.leg, tc.proxyID, tc.proxyName)
+			if tc.leg == nil {
+				return
+			}
+			if tc.wantNilProxy {
+				assert.Nil(t, tc.leg.Proxy)
+				return
+			}
+			assert.NotNil(t, tc.leg.Proxy)
+			assert.Equal(t, tc.wantProxyID, tc.leg.Proxy.ID)
+			assert.Equal(t, tc.wantProxyName, tc.leg.Proxy.Name)
+		})
+	}
+}
+
 func TestV4DataInterfaceMethods(t *testing.T) {
 	t.Run("TransactionLegData interface methods", func(t *testing.T) {
-		d := &TransactionLegData{TransactionID: testTxnIfaceLeg}
+		d := &TransactionLegData{TransactionID: testTxnIfaceLeg, LegID: 0}
 		assert.Equal(t, TypeTransactionEvent, d.GetType())
 		assert.Equal(t, testTxnIfaceLeg, d.GetEventID())
 		assert.Equal(t, (time.Time{}), d.GetStartTime())
