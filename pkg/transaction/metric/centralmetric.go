@@ -7,43 +7,78 @@ import (
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
-	"github.com/rcrowley/go-metrics"
 	"github.com/sirupsen/logrus"
 )
 
+// groupedMetrics - holds all data collected for a single sub/app/api/generation grouping
 type groupedMetrics struct {
-	lock       *sync.Mutex
-	counters   map[string]metrics.Counter
-	histograms map[string]metrics.Histogram
+	lock        *sync.Mutex
+	counters    map[string]*counter
+	apiCounters map[string]*apiCounter
+	metrics     map[string]*centralMetric
 }
 
 func newGroupedMetric() groupedMetrics {
 	return groupedMetrics{
-		lock:       &sync.Mutex{},
-		counters:   make(map[string]metrics.Counter),
-		histograms: make(map[string]metrics.Histogram),
+		lock:        &sync.Mutex{},
+		counters:    make(map[string]*counter),
+		apiCounters: make(map[string]*apiCounter),
+		metrics:     make(map[string]*centralMetric),
 	}
 }
 
-func (g groupedMetrics) getOrCreateHistogram(key string) metrics.Histogram {
+func (g groupedMetrics) getOrCreateAPICounter(key string) *apiCounter {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	if _, ok := g.histograms[key]; !ok {
-		sampler := metrics.NewUniformSample(2048)
-		g.histograms[key] = metrics.NewHistogram(sampler)
+	if _, ok := g.apiCounters[key]; !ok {
+		g.apiCounters[key] = newAPICounter()
 	}
-	return g.histograms[key]
+	return g.apiCounters[key]
 }
 
-func (g groupedMetrics) getOrCreateCounter(key string) metrics.Counter {
+func (g groupedMetrics) getOrCreateCounter(key string) *counter {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
 	if _, ok := g.counters[key]; !ok {
-		g.counters[key] = metrics.NewCounter()
+		g.counters[key] = newCounter()
 	}
 	return g.counters[key]
+}
+
+// getMetric - returns the cached centralMetric template for the given status/unit key, if present
+func (g groupedMetrics) getMetric(key string) (*centralMetric, bool) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	metric, ok := g.metrics[key]
+	return metric, ok
+}
+
+// getOrSetMetric - caches metric as the template for key on first use, returning whichever template
+// (new or previously cached) is on record for it
+func (g groupedMetrics) getOrSetMetric(key string, metric *centralMetric) *centralMetric {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	if _, ok := g.metrics[key]; !ok {
+		g.metrics[key] = metric
+	}
+	return g.metrics[key]
+}
+
+// removeAndCheckEmpty removes the counter, api counter, and metric template tracked under key once that
+// key's event has been acked, and reports whether the group has no further entries awaiting publish.
+func (g groupedMetrics) removeAndCheckEmpty(key string) bool {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	delete(g.apiCounters, key)
+	delete(g.counters, key)
+	delete(g.metrics, key)
+
+	return len(g.apiCounters) == 0 && len(g.counters) == 0
 }
 
 type CentralMetricBuilder struct {
@@ -180,6 +215,10 @@ type centralMetric struct {
 	Reporter           *Reporter                            `json:"reporter,omitempty"`
 	Observation        *models.ObservationDetails           `json:"-"`
 	EventID            string                               `json:"-"`
+
+	// ctx is the metric context reported when the agent added the data to the collector
+	ctx      transactionContext
+	resolved bool
 }
 
 // GetStartTime - Returns the start time for subscription metric
@@ -276,17 +315,15 @@ func (a *centralMetric) addTransactionFields(fields logrus.Fields) logrus.Fields
 
 // getKey - returns the cache key for the metric
 func (a *centralMetric) getKey() string {
-	subID := unknown
-	if a.Subscription != nil {
-		subID = a.Subscription.ID
-	}
-	appID := unknown
-	if a.App != nil {
-		appID = a.App.ID
+	appKey := unknown
+	if a.ctx.AppDetails.ID != "" {
+		appKey = sanitizeKeySegment(a.ctx.AppDetails.ID)
+	} else if a.ctx.AppDetails.Name != "" {
+		appKey = sanitizeKeySegment(a.ctx.AppDetails.Name)
 	}
 	apiID := unknown
-	if a.API != nil {
-		apiID = a.API.ID
+	if a.API != nil && a.API.ID != "" {
+		apiID = sanitizeKeySegment(a.API.ID)
 	}
 	uniqueKey := unknown
 	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Status != "" {
@@ -299,14 +336,7 @@ func (a *centralMetric) getKey() string {
 		}
 	}
 
-	return strings.Join([]string{metricKeyPrefix, subID, appID, apiID, uniqueKey}, ".")
-}
-
-// getKey - returns the cache key for the metric
-func (a *centralMetric) getKeyParts() (string, string, string, string) {
-	key := a.getKey()
-	parts := strings.Split(key, ".")
-	return parts[1], parts[2], parts[3], parts[4]
+	return strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
 }
 
 func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedMetric {
@@ -318,7 +348,9 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		AssetResource: a.AssetResource,
 		ProductPlan:   a.ProductPlan,
 		Count:         cached.Count(),
-		Values:        cached.Values(),
+		Min:           cached.Min(),
+		Max:           cached.Max(),
+		Avg:           cached.Mean(),
 	}
 
 	if a.Units.Transactions != nil {
