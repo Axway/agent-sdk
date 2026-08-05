@@ -409,6 +409,22 @@ func (c *cacheManager) ReleaseResourceReadLock() {
 	c.resourceCacheReadLock.RUnlock()
 }
 
+// withComputedHashes returns a shallow copy of ri with freshly computed SubResourceHashes,
+// leaving ri's own hashes untouched. CreateHashes has no synchronization of its own - it mutates
+// SubResourceHashes in place - so cache Get methods must not call it directly on the resource
+// pointer stored in the cache, since concurrent Get calls (or a Get racing a read of the same
+// resource elsewhere, e.g. a model's FromInstance) would then race on that shared map. See
+// pkg/apic/apiserver/models/api/v1.TestCreateHashesConcurrentAccess for a reproduction.
+func withComputedHashes(ri *v1.ResourceInstance) *v1.ResourceInstance {
+	if ri == nil {
+		return nil
+	}
+	cp := *ri
+	cp.SubResourceHashes = nil
+	cp.CreateHashes()
+	return &cp
+}
+
 // Flush empties the persistent cache and all internal caches
 func (c *cacheManager) Flush() {
 	c.resourceCacheReadLock.Lock()
