@@ -322,7 +322,7 @@ func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
 }
 
 func getAction(state, kind string) proto.Event_Type {
-	// MPResource Handlers(non-cache ones) don't react anymore to to a Event_CREATED.
+	// MPResource Handlers(non-cache ones) don't react anymore to a Event_CREATED.
 	if state == apiv1.ResourceDeleting || isMPResource(kind) {
 		return proto.Event_UPDATED
 	}
