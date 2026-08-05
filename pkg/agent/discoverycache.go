@@ -7,6 +7,7 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
 	"github.com/Axway/agent-sdk/pkg/migrate"
+	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
@@ -300,16 +301,32 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 }
 
 func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
+	action := getAction(ri.Metadata.State, ri.Kind)
+	ctx := handler.NewEventContext(action, nil, ri.Kind, ri.Name)
+	event := handler.NewEventFromResource(action, nil, ri)
+	logger := log.NewLoggerFromContext(ctx)
 	for _, h := range dc.handlersByKind[ri.Kind] {
-		ch, ok := h.(handler.CacheHandler)
-		if !ok {
+		if ch, ok := h.(handler.CacheHandler); ok {
+			if err := ch.HandleCache(ri); err != nil {
+				logger.WithError(err).Error("failed to handle discovery cache resource")
+			}
+		}
+		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-		if err := ch.HandleCache(ri); err != nil {
-			return err
+		if err := h.Handle(ctx, nil, ri); err != nil {
+			logger.WithError(err).Error("failed to handle discovery cache resource")
 		}
 	}
 	return nil
+}
+
+func getAction(state, kind string) proto.Event_Type {
+	// MPResource Handlers(non-cache ones) don't react anymore to a Event_CREATED.
+	if state == apiv1.ResourceDeleting || isMPResource(kind) {
+		return proto.Event_UPDATED
+	}
+	return proto.Event_CREATED
 }
 
 func isMPResource(kind string) bool {

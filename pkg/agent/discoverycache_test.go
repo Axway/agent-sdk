@@ -112,10 +112,14 @@ func TestDiscoveryCacheExecute(t *testing.T) {
 
 			err := dc.execute(tc.filters...)
 			assert.Nil(t, err)
-			assert.Equal(t, tc.svcCount, svcHandler.count)
-			assert.Equal(t, tc.managedAppCount, managedAppHandler.count)
-			assert.Equal(t, tc.accessReqCount, accessReqHandler.count)
-			assert.Equal(t, tc.credCount, credHandler.count)
+			assert.Equal(t, tc.svcCount, svcHandler.cacheCount)
+			assert.Equal(t, tc.svcCount, svcHandler.handleCount)
+			assert.Equal(t, tc.managedAppCount, managedAppHandler.cacheCount)
+			assert.Equal(t, tc.managedAppCount, managedAppHandler.handleCount)
+			assert.Equal(t, tc.accessReqCount, accessReqHandler.cacheCount)
+			assert.Equal(t, tc.accessReqCount, accessReqHandler.handleCount)
+			assert.Equal(t, tc.credCount, credHandler.cacheCount)
+			assert.Equal(t, tc.credCount, credHandler.handleCount)
 			if tc.withMigration {
 				assert.True(t, migration.called)
 			} else {
@@ -136,16 +140,17 @@ func TestDiscoveryCacheExecute(t *testing.T) {
 }
 
 type mockHandler struct {
-	count int
-	err   error
-	kind  string
+	handleCount int
+	cacheCount  int
+	err         error
+	kind        string
 }
 
 func (m *mockHandler) Handle(_ context.Context, _ *proto.EventMeta, ri *apiv1.ResourceInstance) error {
 	if m.kind != "" && ri.Kind != m.kind {
 		return nil
 	}
-	m.count = m.count + 1
+	m.handleCount = m.handleCount + 1
 	return m.err
 }
 
@@ -157,7 +162,7 @@ func (m *mockHandler) HandleCache(ri *apiv1.ResourceInstance) error {
 	if m.kind != "" && ri.Kind != m.kind {
 		return nil
 	}
-	m.count = m.count + 1
+	m.cacheCount = m.cacheCount + 1
 	return m.err
 }
 
