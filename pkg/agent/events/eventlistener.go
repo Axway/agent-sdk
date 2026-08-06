@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -17,13 +18,13 @@ import (
 )
 
 const (
-	provisioningQueue = "provisioningQueue"
-	regularQueue      = "regularQueue"
-
-	// laneBufferSize lets a lane's dispatch send get a few events ahead of its worker, so a
-	// short burst of slow handling on one lane doesn't immediately stall dispatch for every
-	// other lane - there's only one dispatch goroutine feeding all of them.
-	laneBufferSize = 5
+	regularQueue     = "regularQueue"
+	workerBufferSize = 5
+	// amount of workers outside of the provisioning lane
+	workerCount = 3
+	// provisioningLaneCount spreads demoted AccessRequest/Credential events across multiple worker
+	// shards, keyed by managed application, instead of a single shared worker
+	provisioningWorkerCount = 8
 )
 
 type Listener interface {
@@ -47,18 +48,22 @@ var provisioningHandlers map[string]bool = map[string]bool{
 
 // EventListener holds the various caches to save events into as they get written to the source channel.
 type EventListener struct {
-	ctx              context.Context
-	cancel           context.CancelCauseFunc
-	client           APIClient
-	baseURL          string
-	handlersByKind   map[string][]handler.Handler
-	logger           log.FieldLogger
-	sequenceManager  SequenceProvider
-	source           chan *proto.Event
-	kindJobs         map[string]chan handlerData // one worker per kind
-	provisioningJobs chan handlerData            // exactly one dedicated worker
-	seenManagedApps  map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
-	seqTracker       *sequenceTracker
+	ctx                        context.Context
+	cancel                     context.CancelCauseFunc
+	client                     APIClient
+	baseURL                    string
+	handlersByKind             map[string][]handler.Handler
+	logger                     log.FieldLogger
+	sequenceManager            SequenceProvider
+	source                     chan *proto.Event
+	kindJobs                   map[string]chan handlerData // one worker per kind
+	provisioningJobs           []chan handlerData          // provisioningLaneCount shards, one worker each, sharded by managed application key
+	provisioningLaneAssignment map[string]int              // managed application key -> shard index in provisioningJobs, assigned on first demotion
+	seenManagedApps            map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
+	regularWorkerCount         int
+	provisioningWorkerCount    int
+	workerBuffer               int
+	seqTracker                 *sequenceTracker
 }
 
 type handlerData struct {
@@ -132,6 +137,24 @@ type ListenerOpts func(el *EventListener)
 
 type NewListenerFunc func(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener
 
+func WithRegularWorkerCount(rwc int) ListenerOpts {
+	return func(el *EventListener) {
+		el.regularWorkerCount = rwc
+	}
+}
+
+func WithProvisioningWorkerCount(plc int) ListenerOpts {
+	return func(el *EventListener) {
+		el.provisioningWorkerCount = plc
+	}
+}
+
+func WithWorkerBuffer(wb int) ListenerOpts {
+	return func(el *EventListener) {
+		el.workerBuffer = wb
+	}
+}
+
 // NewEventListener creates a new EventListener to process events based on the provided Handlers,
 // indexed by the resource Kind they should be dispatched for.
 func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, source chan *proto.Event, client APIClient, baseURL string, sequenceManager SequenceProvider, handlersByKind map[string][]handler.Handler, opts ...ListenerOpts) *EventListener {
@@ -140,22 +163,30 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		WithPackage("sdk.agent.events")
 
 	el := &EventListener{
-		ctx:              ctx,
-		cancel:           cancel,
-		client:           client,
-		baseURL:          baseURL,
-		handlersByKind:   handlersByKind,
-		logger:           logger,
-		sequenceManager:  sequenceManager,
-		source:           source,
-		kindJobs:         make(map[string]chan handlerData, len(handlersByKind)-len(provisioningHandlers)),
-		provisioningJobs: make(chan handlerData, laneBufferSize),
-		seenManagedApps:  make(map[string]struct{}),
-		seqTracker:       newSequenceTracker(),
+		ctx:                        ctx,
+		cancel:                     cancel,
+		client:                     client,
+		baseURL:                    baseURL,
+		handlersByKind:             handlersByKind,
+		logger:                     logger,
+		sequenceManager:            sequenceManager,
+		source:                     source,
+		kindJobs:                   make(map[string]chan handlerData),
+		provisioningLaneAssignment: make(map[string]int),
+		seenManagedApps:            make(map[string]struct{}),
+		seqTracker:                 newSequenceTracker(),
+		regularWorkerCount:         workerCount,
+		provisioningWorkerCount:    provisioningWorkerCount,
+		workerBuffer:               workerBufferSize,
 	}
 	for _, o := range opts {
 		o(el)
 	}
+	el.provisioningJobs = make([]chan handlerData, el.provisioningWorkerCount)
+	for i := range el.provisioningJobs {
+		el.provisioningJobs[i] = make(chan handlerData, el.workerBuffer)
+	}
+
 	return el
 }
 
@@ -166,7 +197,9 @@ func (em *EventListener) Stop() {
 }
 
 func (em *EventListener) closeJobs() {
-	close(em.provisioningJobs)
+	for _, ch := range em.provisioningJobs {
+		close(ch)
+	}
 	for _, ch := range em.kindJobs {
 		close(ch)
 	}
@@ -174,12 +207,16 @@ func (em *EventListener) closeJobs() {
 
 // Listen starts a loop that will process events as they are sent on the channel
 func (em *EventListener) Listen() {
-	go worker(em.provisioningJobs) // exactly one goroutine, shared by already-known managed apps
+	for _, ch := range em.provisioningJobs {
+		go worker(ch) // exactly one worker per shard, order preserved within a shard (i.e. within a managed app)
+	}
 
 	for kind := range em.handlersByKind {
-		ch := make(chan handlerData, laneBufferSize)
+		ch := make(chan handlerData, em.workerBuffer)
 		em.kindJobs[kind] = ch
-		go worker(ch) // exactly one worker, order preserved for this kind
+		for range em.regularWorkerCount {
+			go worker(ch)
+		}
 	}
 
 	go func() {
@@ -300,8 +337,12 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		}
 	}
 
+	// TODO: right now, we have no delete events because the WatchTopic is not configured to listen for delete calls
+	// for ManagedApp/AccessRequest/Credential. maybe simplest way to fix this is to have a separate goroutine that
+	// checks in the cache(every 10 mins, let's say) for the existing managedAppNames and removes them if not found
 	if event.Payload.Kind == management.ManagedApplicationGVK().Kind && event.Type == proto.Event_DELETED {
 		delete(em.seenManagedApps, event.Payload.Name)
+		delete(em.provisioningLaneAssignment, event.Payload.Name)
 	}
 
 	return nil
@@ -313,10 +354,8 @@ func (em *EventListener) advanceSequence(sequenceID int64) {
 	}
 }
 
-// dispatchLane picks which worker channel an event's handlerData should be sent to.
-// Kinds outside the managed-app provisioning chain always use their own kind lane.
 // For AccessRequest/Credential, the first event seen for a given ManagedApplication name uses that kind's lane;
-// every later event tied to the same name goes to the shared low-priority lane, until the ManagedApplication is deleted (see handleEvent).
+// every later event tied to the same name goes to that managed app's demoted shard (see provisioningLane).
 func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
 	kind := event.Payload.Kind
 	if !provisioningHandlers[kind] {
@@ -325,15 +364,26 @@ func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInst
 
 	key, ok := managedApplicationKey(event, ri)
 	if !ok {
-		return em.provisioningJobs, provisioningQueue
+		return em.provisioningLane(key)
 	}
 
-	// We add the keys, but we don't put the ManagedApplication in the low priority queue.
+	// We add the keys, but we don't put the ManagedApplication in the demoted lane.
 	if _, seen := em.seenManagedApps[key]; seen && kind != management.ManagedApplicationGVK().Kind {
-		return em.provisioningJobs, provisioningQueue
+		return em.provisioningLane(key)
 	}
 	em.seenManagedApps[key] = struct{}{}
 	return em.kindJobs[kind], regularQueue
+}
+
+// uses the same jobIndex for a previously seem managedApp so provisioning jobs tied to a previously seen
+// managedApp use the same lane
+func (em *EventListener) provisioningLane(key string) (chan handlerData, string) {
+	idx, ok := em.provisioningLaneAssignment[key]
+	if !ok {
+		idx = rand.Intn(len(em.provisioningJobs))
+		em.provisioningLaneAssignment[key] = idx
+	}
+	return em.provisioningJobs[idx], fmt.Sprintf("provisioningQueue-%d", idx)
 }
 
 func managedApplicationKey(event *proto.Event, ri *apiv1.ResourceInstance) (key string, ok bool) {

@@ -34,35 +34,38 @@ import (
 
 // StreamerClient client for starting a watch controller stream and handling the events
 type StreamerClient struct {
-	apiClient          events.APIClient
-	baseURL            string
-	handlers           map[string][]handler.Handler
-	listener           atomic.Pointer[events.EventListener]
-	manager            wm.Manager
-	newListener        events.NewListenerFunc
-	newManager         wm.NewManagerFunc
-	requestQueue       events.RequestQueue
-	newRequestQueue    events.NewRequestQueueFunc
-	onStreamConnection func()
-	onReconnect        func() error
-	sequence           events.SequenceProvider
-	topicSelfLink      string
-	watchCfg           *wm.Config
-	watchOpts          []wm.Option
-	cacheManager       agentcache.Manager
-	logger             log.FieldLogger
-	environmentURL     string
-	wt                 *management.WatchTopic
-	harvester          harvester.Harvest
-	onEventSyncError   func()
-	isInitialized      atomic.Bool
-	isRunning          atomic.Bool
-	firstStart         bool
-	cancelMu           sync.Mutex
-	cancel             context.CancelCauseFunc
-	connectedCh        chan struct{} // closed when the first connection is live in Start()
-	connectedOnce      sync.Once     // ensures connectedCh is closed at most once across reconnects
-	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
+	apiClient                    events.APIClient
+	baseURL                      string
+	handlers                     map[string][]handler.Handler
+	listener                     atomic.Pointer[events.EventListener]
+	manager                      wm.Manager
+	newListener                  events.NewListenerFunc
+	newManager                   wm.NewManagerFunc
+	requestQueue                 events.RequestQueue
+	newRequestQueue              events.NewRequestQueueFunc
+	onStreamConnection           func()
+	onReconnect                  func() error
+	sequence                     events.SequenceProvider
+	topicSelfLink                string
+	watchCfg                     *wm.Config
+	watchOpts                    []wm.Option
+	cacheManager                 agentcache.Manager
+	logger                       log.FieldLogger
+	environmentURL               string
+	wt                           *management.WatchTopic
+	harvester                    harvester.Harvest
+	onEventSyncError             func()
+	isInitialized                atomic.Bool
+	isRunning                    atomic.Bool
+	firstStart                   bool
+	cancelMu                     sync.Mutex
+	cancel                       context.CancelCauseFunc
+	connectedCh                  chan struct{} // closed when the first connection is live in Start()
+	connectedOnce                sync.Once     // ensures connectedCh is closed at most once across reconnects
+	startErrCh                   chan error    // buffered(1): receives error if Start() fails before connecting
+	regularEventWorkerCount      int
+	provisioningEventWorkerCount int
+	eventWorkerBuffer            int
 }
 
 // NewStreamerClient creates a StreamerClient
@@ -88,18 +91,21 @@ func NewStreamerClient(
 	}
 
 	s := &StreamerClient{
-		handlers:        handlers,
-		apiClient:       apiClient,
-		baseURL:         cfg.GetURL(),
-		watchCfg:        watchCfg,
-		newManager:      wm.New,
-		newListener:     events.NewEventListener,
-		newRequestQueue: events.NewRequestQueue,
-		logger:          logger,
-		environmentURL:  cfg.GetEnvironmentURL(),
-		firstStart:      true,
-		connectedCh:     make(chan struct{}),
-		startErrCh:      make(chan error, 1),
+		handlers:                     handlers,
+		apiClient:                    apiClient,
+		baseURL:                      cfg.GetURL(),
+		watchCfg:                     watchCfg,
+		newManager:                   wm.New,
+		newListener:                  events.NewEventListener,
+		newRequestQueue:              events.NewRequestQueue,
+		logger:                       logger,
+		environmentURL:               cfg.GetEnvironmentURL(),
+		firstStart:                   true,
+		connectedCh:                  make(chan struct{}),
+		startErrCh:                   make(chan error, 1),
+		regularEventWorkerCount:      cfg.GetRegularEventWorkerCount(),
+		provisioningEventWorkerCount: cfg.GetProvisioningEventWorkerCount(),
+		eventWorkerBuffer:            cfg.GetEventWorkerBuffer(),
 	}
 	s.isInitialized.Store(false)
 
@@ -173,7 +179,10 @@ func (s *StreamerClient) Start() error {
 	}
 
 	eventCh, requestCh := make(chan *proto.Event, 100), make(chan *proto.Request, 1)
-	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.baseURL, s.sequence, s.handlers)
+	l := s.newListener(ctx, cancel, eventCh, s.apiClient, s.baseURL, s.sequence, s.handlers,
+		events.WithRegularWorkerCount(s.regularEventWorkerCount),
+		events.WithProvisioningWorkerCount(s.provisioningEventWorkerCount),
+		events.WithWorkerBuffer(s.eventWorkerBuffer))
 	s.listener.Store(l)
 	defer l.Stop()
 

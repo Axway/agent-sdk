@@ -233,6 +233,9 @@ type CentralConfig interface {
 	GetProvisioningRetryCount() int
 	IsInstanceValidationEnabled() bool
 	GetRootTagsToStrip() []string
+	GetRegularEventWorkerCount() int
+	GetProvisioningEventWorkerCount() int
+	GetEventWorkerBuffer() int
 }
 
 // CentralConfiguration - Structure to hold the central config
@@ -275,14 +278,19 @@ type CentralConfiguration struct {
 	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
 	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
 	RootTagsToStrip           []string              `config:"rootTagsToStrip"`
-	managedEnvironments       []string
-	environmentID             string
-	teamID                    string
-	isSingleURLSet            bool
-	isRegionSet               bool
-	isAxwayManaged            bool
-	isUnmanagedEnvironment    bool
-	WatchResourceFilters      []ResourceFilter
+
+	RegularEventWorkerCount      int `config:"regularEventWorkerCount"`
+	ProvisioningEventWorkerCount int `config:"provisioningEventWorkerCount"`
+	EventWorkerBuffer            int `config:"eventWorkerBuffer"`
+
+	managedEnvironments    []string
+	environmentID          string
+	teamID                 string
+	isSingleURLSet         bool
+	isRegionSet            bool
+	isAxwayManaged         bool
+	isUnmanagedEnvironment bool
+	WatchResourceFilters   []ResourceFilter
 
 	qaVars bool
 }
@@ -722,52 +730,67 @@ func (c *CentralConfiguration) GetRootTagsToStrip() []string {
 	return c.RootTagsToStrip
 }
 
+func (c *CentralConfiguration) GetRegularEventWorkerCount() int {
+	return c.RegularEventWorkerCount
+}
+
+func (c *CentralConfiguration) GetProvisioningEventWorkerCount() int {
+	return c.ProvisioningEventWorkerCount
+}
+
+func (c *CentralConfiguration) GetEventWorkerBuffer() int {
+	return c.EventWorkerBuffer
+}
+
 const (
-	pathRegion                    = "central.region"
-	pathTenantID                  = "central.organizationID"
-	pathURL                       = "central.url"
-	pathPlatformURL               = "central.platformURL"
-	pathAuthPrivateKey            = "central.auth.privateKey"
-	pathAuthPublicKey             = "central.auth.publicKey"
-	pathAuthKeyPassword           = "central.auth.keyPassword"
-	pathAuthURL                   = "central.auth.url"
-	pathSingleURL                 = "central.singleURL"
-	pathAuthRealm                 = "central.auth.realm"
-	pathAuthClientID              = "central.auth.clientId"
-	pathAuthTimeout               = "central.auth.timeout"
-	pathSSLNextProtos             = "central.ssl.nextProtos"
-	pathSSLInsecureSkipVerify     = "central.ssl.insecureSkipVerify"
-	pathSSLCipherSuites           = "central.ssl.cipherSuites"
-	pathSSLMinVersion             = "central.ssl.minVersion"
-	pathSSLMaxVersion             = "central.ssl.maxVersion"
-	pathEnvironment               = "central.environment"
-	pathEnvironmentID             = "central.environmentID"
-	pathAgentName                 = "central.agentName"
-	pathDeployment                = "central.deployment"
-	pathMode                      = "central.mode"
-	pathTeam                      = "central.team"
-	pathPollInterval              = "central.pollInterval"
-	pathReportActivityFrequency   = "central.reportActivityFrequency"
-	pathClientTimeout             = "central.clientTimeout"
-	pathPageSize                  = "central.pageSize"
-	pathAPIServiceRevisionPattern = "central.apiServiceRevisionPattern"
-	pathProxyURL                  = "central.proxyUrl"
-	pathAPIServerVersion          = "central.apiServerVersion"
-	pathAdditionalTags            = "central.additionalTags"
-	pathAppendEnvironmentToTitle  = "central.appendEnvironmentToTitle"
-	pathAPIValidationCronSchedule = "central.apiValidationCronSchedule"
-	pathJobTimeout                = "central.jobTimeout"
-	pathGRPCEnabled               = "central.grpc.enabled"
-	pathGRPCHost                  = "central.grpc.host"
-	pathGRPCPort                  = "central.grpc.port"
-	pathGRPCInsecure              = "central.grpc.insecure"
-	pathCacheStoragePath          = "central.cacheStoragePath"
-	pathCacheStorageInterval      = "central.cacheStorageInterval"
-	pathCredentialsOAuthMethods   = "central.credentials.oauthMethods"
-	pathProvisioningRetryCount    = "central.provisioningRetryCount"
-	pathErrorSamplingEnabled      = "central.errorSamplingEnabled"
-	pathInstanceValidatorEnabled  = "central.instanceValidatorEnabled"
-	pathRootTagsToStrip           = "central.rootTagsToStrip"
+	pathRegion                       = "central.region"
+	pathTenantID                     = "central.organizationID"
+	pathURL                          = "central.url"
+	pathPlatformURL                  = "central.platformURL"
+	pathAuthPrivateKey               = "central.auth.privateKey"
+	pathAuthPublicKey                = "central.auth.publicKey"
+	pathAuthKeyPassword              = "central.auth.keyPassword"
+	pathAuthURL                      = "central.auth.url"
+	pathSingleURL                    = "central.singleURL"
+	pathAuthRealm                    = "central.auth.realm"
+	pathAuthClientID                 = "central.auth.clientId"
+	pathAuthTimeout                  = "central.auth.timeout"
+	pathSSLNextProtos                = "central.ssl.nextProtos"
+	pathSSLInsecureSkipVerify        = "central.ssl.insecureSkipVerify"
+	pathSSLCipherSuites              = "central.ssl.cipherSuites"
+	pathSSLMinVersion                = "central.ssl.minVersion"
+	pathSSLMaxVersion                = "central.ssl.maxVersion"
+	pathEnvironment                  = "central.environment"
+	pathEnvironmentID                = "central.environmentID"
+	pathAgentName                    = "central.agentName"
+	pathDeployment                   = "central.deployment"
+	pathMode                         = "central.mode"
+	pathTeam                         = "central.team"
+	pathPollInterval                 = "central.pollInterval"
+	pathReportActivityFrequency      = "central.reportActivityFrequency"
+	pathClientTimeout                = "central.clientTimeout"
+	pathPageSize                     = "central.pageSize"
+	pathAPIServiceRevisionPattern    = "central.apiServiceRevisionPattern"
+	pathProxyURL                     = "central.proxyUrl"
+	pathAPIServerVersion             = "central.apiServerVersion"
+	pathAdditionalTags               = "central.additionalTags"
+	pathAppendEnvironmentToTitle     = "central.appendEnvironmentToTitle"
+	pathAPIValidationCronSchedule    = "central.apiValidationCronSchedule"
+	pathJobTimeout                   = "central.jobTimeout"
+	pathGRPCEnabled                  = "central.grpc.enabled"
+	pathGRPCHost                     = "central.grpc.host"
+	pathGRPCPort                     = "central.grpc.port"
+	pathGRPCInsecure                 = "central.grpc.insecure"
+	pathCacheStoragePath             = "central.cacheStoragePath"
+	pathCacheStorageInterval         = "central.cacheStorageInterval"
+	pathCredentialsOAuthMethods      = "central.credentials.oauthMethods"
+	pathProvisioningRetryCount       = "central.provisioningRetryCount"
+	pathErrorSamplingEnabled         = "central.errorSamplingEnabled"
+	pathInstanceValidatorEnabled     = "central.instanceValidatorEnabled"
+	pathRootTagsToStrip              = "central.rootTagsToStrip"
+	pathRegularEventWorkerCount      = "central.regularEventWorkerCount"
+	pathProvisioningEventWorkerCount = "central.provisioningEventWorkerCount"
+	pathEventWorkerBuffer            = "central.eventWorkerBuffer"
 )
 
 // ValidateCfg - Validates the config, implementing IConfigInterface
@@ -953,6 +976,10 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddDurationProperty(pathCacheStorageInterval, 10*time.Second, "The interval to persist agent caches to file", properties.WithLowerLimit(10*time.Second))
 	props.AddStringSliceProperty(pathCredentialsOAuthMethods, []string{}, "Allowed OAuth credential types")
 	props.AddBoolProperty(pathInstanceValidatorEnabled, true, "Controls whether an agent has instance validation enabled")
+	// eventListener worker pool values
+	props.AddIntProperty(pathRegularEventWorkerCount, 3, "Controls the amount of workers per event kind created for event handling", properties.WithLowerLimitInt(1))
+	props.AddIntProperty(pathProvisioningEventWorkerCount, 8, "Controls the amount of provisioning workers created for event handling", properties.WithLowerLimitInt(1))
+	props.AddIntProperty(pathEventWorkerBuffer, 5, "Controls the channel buffer for the event workers", properties.WithLowerLimitInt(1))
 
 	if supportsTraceability(agentType) {
 		props.AddStringProperty(pathEnvironmentID, "", "Offline Usage Reporting Only. The Environment ID the usage is associated with on Amplify Central")
@@ -1026,8 +1053,11 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 			Port:     props.IntPropertyValue(pathGRPCPort),
 			Insecure: props.BoolPropertyValue(pathGRPCInsecure),
 		},
-		CacheStoragePath:     props.StringPropertyValue(pathCacheStoragePath),
-		CacheStorageInterval: props.DurationPropertyValue(pathCacheStorageInterval),
+		CacheStoragePath:             props.StringPropertyValue(pathCacheStoragePath),
+		CacheStorageInterval:         props.DurationPropertyValue(pathCacheStorageInterval),
+		RegularEventWorkerCount:      props.IntPropertyValue(pathRegularEventWorkerCount),
+		ProvisioningEventWorkerCount: props.IntPropertyValue(pathProvisioningEventWorkerCount),
+		EventWorkerBuffer:            props.IntPropertyValue(pathEventWorkerBuffer),
 	}
 	cfg.URL = strings.TrimRight(props.StringPropertyValue(pathURL), urlCutSet)
 	cfg.SingleURL = strings.TrimRight(props.StringPropertyValue(pathSingleURL), urlCutSet)

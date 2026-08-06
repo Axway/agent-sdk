@@ -14,6 +14,7 @@ import (
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -42,7 +43,7 @@ func newTestListener(t *testing.T, knownKind string) *EventListener {
 		knownKind:                               make(chan handlerData, 1),
 		management.ManagedApplicationGVK().Kind: make(chan handlerData, 1),
 	}
-	em.provisioningJobs = make(chan handlerData, 1)
+	em.provisioningJobs = []chan handlerData{make(chan handlerData, 1)}
 	return em
 }
 
@@ -58,7 +59,7 @@ func TestEventListener_start(t *testing.T) {
 		cancelCtx   bool
 		wantDone    bool
 		wantErr     bool
-		wantLane    string // "kind", "provisioning", or "" for no dispatch at all
+		wantLane    string // "kind", "demoted", or "" for no dispatch at all
 	}{
 		{
 			name:     "dispatches a known kind to its own kind lane",
@@ -125,8 +126,8 @@ func TestEventListener_start(t *testing.T) {
 			switch tc.wantLane {
 			case "kind":
 				lane = em.kindJobs[tc.kind]
-			case "provisioning":
-				lane = em.provisioningJobs
+			case "demoted":
+				lane = em.provisioningJobs[0]
 			}
 			if lane == nil {
 				return
@@ -326,7 +327,7 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 
 // TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
 // lifecycle through handleEvent: the first event for an app uses its kind lane, later events
-// for the same app are demoted to the low priority lane, and deleting the ManagedApplication
+// for the same app are demoted to that app's assigned shard, and deleting the ManagedApplication
 // resets it so the next related event is treated as first-seen again.
 func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
@@ -353,7 +354,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	)
 	listener.kindJobs[maKind] = make(chan handlerData, 1)
 	listener.kindJobs[arKind] = make(chan handlerData, 1)
-	listener.provisioningJobs = make(chan handlerData, 1)
+	listener.provisioningJobs = []chan handlerData{make(chan handlerData, 1)}
 
 	maEvent := newTestEvent(1)
 	maEvent.Payload.Kind = maKind
@@ -369,9 +370,9 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	arEvent.Payload.Kind = arKind
 	assert.NoError(t, listener.handleEvent(arEvent))
 	select {
-	case <-listener.provisioningJobs:
+	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the AccessRequest for an already-seen app to use the low priority lane")
+		t.Fatal("expected the AccessRequest for an already-seen app to use its demoted shard")
 	}
 
 	deleteEvent := newTestEvent(3)
@@ -387,6 +388,9 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	if _, stillSeen := listener.seenManagedApps["app-1"]; stillSeen {
 		t.Fatal("expected the delete to clear the seen entry")
 	}
+	if _, stillAssigned := listener.provisioningLaneAssignment["app-1"]; stillAssigned {
+		t.Fatal("expected the delete to clear the shard assignment")
+	}
 
 	arEvent2 := newTestEvent(4)
 	arEvent2.Payload.Kind = arKind
@@ -396,6 +400,63 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	default:
 		t.Fatal("expected the AccessRequest after the app was deleted to use the kind lane again")
 	}
+}
+
+// TestEventListener_provisioningLane proves the two properties the shard-by-key design depends on:
+// the same managed app key always lands on the same shard (so its AccessRequest/Credential
+// events stay ordered relative to each other, same as when they shared one worker), and
+// different keys spread across more than one shard (so different managed apps stop contending
+// for the same worker).
+func TestEventListener_provisioningLane(t *testing.T) {
+	em := &EventListener{
+		provisioningJobs:           make([]chan handlerData, 8),
+		provisioningLaneAssignment: make(map[string]int),
+	}
+	for i := range em.provisioningJobs {
+		em.provisioningJobs[i] = make(chan handlerData, 1)
+	}
+
+	ch, label := em.provisioningLane("app-1")
+	for i := 0; i < 5; i++ {
+		gotCh, gotLabel := em.provisioningLane("app-1")
+		assert.True(t, ch == gotCh, "the same key must always land on the same shard")
+		assert.Equal(t, label, gotLabel)
+	}
+
+	seen := map[string]bool{}
+	for i := 0; i < 50; i++ {
+		_, label := em.provisioningLane(fmt.Sprintf("app-%d", i+2))
+		seen[label] = true
+	}
+	assert.Greater(t, len(seen), 1, "expected demoted keys to spread across more than one shard")
+}
+
+// TestEventListener_provisioningShards_runConcurrently proves that once two managed apps are demoted
+// to different shards, a slow handler for one app does not delay the other - the reason
+// AccessRequest/Credential events were sharded instead of sharing a single worker.
+func TestEventListener_provisioningShards_runConcurrently(t *testing.T) {
+	slow := &slowHandler{delay: 200 * time.Millisecond}
+
+	shardA := make(chan handlerData, 1)
+	shardB := make(chan handlerData, 1)
+	go worker(shardA)
+	go worker(shardB)
+
+	start := time.Now()
+	for _, ch := range []chan handlerData{shardA, shardB} {
+		ch <- handlerData{
+			event:   newTestEvent(1),
+			ctx:     context.Background(),
+			handler: slow,
+			logger:  log.NewFieldLogger(),
+		}
+	}
+
+	assert.Eventually(t, func() bool {
+		return slow.callCount.Load() == 2
+	}, time.Second, 10*time.Millisecond, "both shards should have run their handler")
+	assert.Less(t, time.Since(start), 350*time.Millisecond,
+		"both shards' handlers should run concurrently, not serialize behind one worker")
 }
 
 type mockHandler struct {
