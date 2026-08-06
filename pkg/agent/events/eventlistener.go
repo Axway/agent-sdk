@@ -259,7 +259,6 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-		msg = "passed event to handlers"
 		if ri == nil {
 			ri, err = em.getEventResource(event, apiServerFields)
 			if err != nil {
