@@ -426,6 +426,41 @@ func requiredAPIServerFields(ctx context.Context, event *proto.Event, handlers [
 				fields = append(fields, f)
 			}
 		}
+
+		hFields := rfh.GetAPIServerFields(ctx, event)
+		if len(hFields) == 0 {
+			return nil
+		}
+
+		for _, f := range hFields {
+			if _, ok := seen[f]; !ok {
+				seen[f] = struct{}{}
+				fields = append(fields, f)
+			}
+		}
+	}
+	return fields
+}
+
+func (em *EventListener) getEventResource(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error) {
+	if event.Type == proto.Event_DELETED {
+		return em.convertEventPayload(event), nil
+	}
+
+	queryParams := map[string]string{}
+	if len(apiServerFields) > 0 {
+		queryParams["fields"] = strings.Join(apiServerFields, ",")
+	}
+
+	url := fmt.Sprintf("%s/apis%s", em.baseURL, event.Payload.Metadata.SelfLink)
+	resp, err := em.client.ExecuteAPI(http.MethodGet, url, queryParams, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ri := &apiv1.ResourceInstance{}
+	if err := json.Unmarshal(resp, ri); err != nil {
+		return nil, err
 	}
 	return fields
 }
