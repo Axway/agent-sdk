@@ -33,7 +33,9 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	}
 
 	// Lookup Access Request
+	// apiID may carry either prefix depending on whether ResolveIDWithPrefix resolved a real ID or fell back to the name. The cache key needs the bare value either way.
 	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
+	apiID = strings.TrimPrefix(apiID, SummaryEventAPINamePrefix)
 	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
 	if ri == nil {
