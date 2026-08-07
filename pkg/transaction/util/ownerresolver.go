@@ -1,8 +1,6 @@
 package util
 
 import (
-	"strings"
-
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
@@ -19,7 +17,7 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 		return &models.Owner{Type: "unknown"}
 	}
 
-	apiID := strings.TrimPrefix(apiExternalID, SummaryEventProxyIDPrefix)
+	apiID := StripSummaryEventPrefix(apiExternalID)
 	ri := cacheManager.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
 		logger.WithField("apiID", apiID).Trace("api service not found in cache, owner is unknown")

@@ -84,6 +84,11 @@ func TestResolveAPIOwner(t *testing.T) {
 			cache:    newCacheWithAPIService("api-5", &v1.Owner{Type: v1.TeamOwner, ID: "team-5"}),
 			expected: &models.Owner{Type: "team", TeamGUID: "team-5"},
 		},
+		"name-fallback prefix stripped before lookup": {
+			apiID:    SummaryEventAPINamePrefix + "api-7",
+			cache:    newCacheWithAPIService("api-7", &v1.Owner{Type: v1.TeamOwner, ID: "team-7"}),
+			expected: &models.Owner{Type: "team", TeamGUID: "team-7"},
+		},
 		"api service x-private owner": {
 			apiID:    "api-6",
 			cache:    newCacheWithAPIService("api-6", &v1.Owner{Type: v1.TeamOwner, ID: "team-guid-6", User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
