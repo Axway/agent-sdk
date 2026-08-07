@@ -406,9 +406,10 @@ func TestPublishServiceWithDependentResources(t *testing.T) {
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
 				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST serviceInstance
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
-				llmProviderResponse,                                          // POST dependent resource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // dependent resource subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
+				llmProviderResponse,                                          // POST dependent resource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // dependent resource x-agent-details subresource
 			},
 		},
 		"failed dependent resource POST fails the publish": {
