@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -72,6 +73,9 @@ type ServiceBuilder interface {
 	SetReferenceInstanceName(instanceName, envName string) ServiceBuilder
 	SetInstanceLifecycle(stage, releaseState, message string) ServiceBuilder
 	SetRevisionOnly() ServiceBuilder
+
+	SetDependentResources(resources []apiv1.Interface) ServiceBuilder
+	AddDependentResource(resource apiv1.Interface) ServiceBuilder
 
 	Build() (ServiceBody, error)
 }
@@ -495,5 +499,18 @@ func (b *serviceBodyBuilder) SetInstanceLifecycle(stage, releaseState, message s
 
 func (b *serviceBodyBuilder) SetRevisionOnly() ServiceBuilder {
 	b.serviceBody.revisionOnly = true
+	return b
+}
+
+func (b *serviceBodyBuilder) SetDependentResources(resources []apiv1.Interface) ServiceBuilder {
+	b.serviceBody.dependentResources = resources
+	return b
+}
+
+func (b *serviceBodyBuilder) AddDependentResource(resource apiv1.Interface) ServiceBuilder {
+	if resource == nil {
+		return b
+	}
+	b.serviceBody.dependentResources = append(b.serviceBody.dependentResources, resource)
 	return b
 }

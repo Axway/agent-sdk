@@ -95,7 +95,30 @@ func (c *ServiceClient) PublishService(serviceBody *ServiceBody) (*management.AP
 		logger.WithError(err).Error("adding service to cache")
 	}
 
+	if err := c.processDependentResources(serviceBody); err != nil {
+		logger.WithError(err).Error("processing dependent resources")
+		return nil, err
+	}
 	return apiSvc, nil
+}
+
+func (c *ServiceClient) processDependentResources(serviceBody *ServiceBody) error {
+	for _, res := range serviceBody.GetDependentResources() {
+		if res == nil {
+			continue
+		}
+
+		logger := c.logger.
+			WithField("kind", res.GetGroupVersionKind().Kind).
+			WithField("name", res.GetName())
+
+		if _, err := c.CreateOrUpdateResource(res); err != nil {
+			logger.WithError(err).Error("could not process dependent resource")
+			return err
+		}
+		logger.Debug("processed dependent resource")
+	}
+	return nil
 }
 
 // DeleteServiceByName -
