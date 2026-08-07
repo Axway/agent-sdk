@@ -26,6 +26,14 @@ const (
 	SummaryEventApplicationIDPrefix = "remoteAppId_"
 )
 
+// StripSummaryEventPrefix removes whichever proxy-ID prefix ResolveIDWithPrefix produced.
+// Meaning the real-ID prefix or the name-fallback prefix, leaving the bare value used as a cache lookup key.
+func StripSummaryEventPrefix(apiID string) string {
+	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
+	apiID = strings.TrimPrefix(apiID, SummaryEventAPINamePrefix)
+	return apiID
+}
+
 // GetAccessRequest -
 func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage, version string) *management.AccessRequest {
 	if managedApp == nil {
@@ -33,9 +41,7 @@ func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstanc
 	}
 
 	// Lookup Access Request
-	// apiID may carry either prefix depending on whether ResolveIDWithPrefix resolved a real ID or fell back to the name. The cache key needs the bare value either way.
-	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
-	apiID = strings.TrimPrefix(apiID, SummaryEventAPINamePrefix)
+	apiID = StripSummaryEventPrefix(apiID)
 	accessReq := &management.AccessRequest{}
 	ri := cacheManager.GetAccessRequestByAppAndAPIStageVersion(managedApp.Name, apiID, stage, version)
 	if ri == nil {

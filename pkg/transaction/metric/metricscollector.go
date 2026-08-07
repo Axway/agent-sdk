@@ -659,7 +659,7 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		Name: api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
-	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	svc := cacheManager.GetAPIServiceWithAPIID(transutil.StripSummaryEventPrefix(api.ID))
 	ref.APIServiceID = unknown
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
