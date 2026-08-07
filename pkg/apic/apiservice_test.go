@@ -385,6 +385,99 @@ func TestUpdateService(t *testing.T) {
 	assert.NotNil(t, apiSvc)
 }
 
+func TestPublishServiceWithDependentResources(t *testing.T) {
+	oas2Bytes, err := os.ReadFile(testPetstoreSpec)
+	assert.Nil(t, err)
+
+	llmProviderResponse := api.MockResponse{
+		RespData: `{"group":"management","apiVersion":"v1alpha1","kind":"LLMProvider","name":"provider","metadata":{"id":"1","scope":{"kind":"Environment","name":"v7envandcat"}}}`,
+		RespCode: http.StatusCreated,
+	}
+
+	tests := map[string]struct {
+		responses   []api.MockResponse
+		expectError bool
+	}{
+		"dependent resource created after the instance": {
+			responses: []api.MockResponse{
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
+				emptyRevisionListResponse,                                    // GET serviceRevisions
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST serviceRevision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST serviceInstance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
+				llmProviderResponse,                                          // POST dependent resource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // dependent resource subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
+			},
+		},
+		"failed dependent resource POST fails the publish": {
+			responses: []api.MockResponse{
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
+				emptyRevisionListResponse,                                    // GET serviceRevisions
+				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST serviceRevision
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST serviceInstance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
+				{RespCode: http.StatusRequestTimeout},                        // POST dependent resource
+			},
+			expectError: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			client, httpClient := GetTestServiceClient()
+			httpClient.SetResponses(tc.responses)
+
+			llmProvider := management.NewLLMProvider("provider", "")
+			llmProvider.Spec = management.LlmProviderSpec{ApiServiceInstance: "daleapi"}
+
+			body := serviceBody
+			body.AuthPolicy = "pass-through"
+			body.SpecDefinition = oas2Bytes
+			body.dependentResources = []apiv1.Interface{llmProvider}
+			assert.Len(t, body.GetDependentResources(), 1)
+
+			apiSvc, err := client.PublishService(&body)
+			if tc.expectError {
+				assert.NotNil(t, err)
+				assert.Nil(t, apiSvc)
+				return
+			}
+			assert.Nil(t, err)
+			assert.NotNil(t, apiSvc)
+		})
+	}
+}
+
+func TestServiceBodyBuilderDependentResources(t *testing.T) {
+	oas2Bytes, err := os.ReadFile(testPetstoreSpec)
+	assert.Nil(t, err)
+
+	// nil resources are ignored
+	body, err := NewServiceBodyBuilder().
+		SetAPIName("daleapi").
+		SetAPISpec(oas2Bytes).
+		SetResourceType(Oas2).
+		AddDependentResource(nil).
+		Build()
+	assert.Nil(t, err)
+	assert.Empty(t, body.GetDependentResources())
+
+	// SetDependentResources replaces the whole set
+	body, err = NewServiceBodyBuilder().
+		SetAPIName("daleapi").
+		SetAPISpec(oas2Bytes).
+		SetResourceType(Oas2).
+		AddDependentResource(management.NewLLMProvider("provider1", "env")).
+		SetDependentResources([]apiv1.Interface{management.NewLLMProvider("provider2", "env")}).
+		Build()
+	assert.Nil(t, err)
+	assert.Len(t, body.GetDependentResources(), 1)
+	assert.Equal(t, "provider2", body.GetDependentResources()[0].GetName())
+}
+
 func TestPublishServiceError(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
 

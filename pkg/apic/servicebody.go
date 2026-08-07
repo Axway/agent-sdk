@@ -1,6 +1,7 @@
 package apic
 
 import (
+	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -70,6 +71,7 @@ type ServiceBody struct {
 	logger                       log.FieldLogger
 	instanceLifecycle            *management.ApiServiceInstanceLifecycle
 	originalSpecHash             string
+	dependentResources           []apiv1.Interface
 }
 
 // SetAccessRequestDefinitionName - set the name of the access request definition for this service body
@@ -178,4 +180,8 @@ func (s *ServiceBody) GetReferenceInstanceName() string {
 
 func (s *ServiceBody) GetInstanceLifeCycle() *management.ApiServiceInstanceLifecycle {
 	return s.instanceLifecycle
+}
+
+func (s *ServiceBody) GetDependentResources() []apiv1.Interface {
+	return s.dependentResources
 }
