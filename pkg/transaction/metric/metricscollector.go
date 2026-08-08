@@ -1151,6 +1151,12 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
+// cleanupMetricCounters - called once a metric event has been acked, to remove the persisted cache
+// entry for the published metric (and any custom unit metrics acked alongside it), and to remove that
+// status/unit's entry from the group. A status/unit whose event was never acked (publish failed, was
+// retried, or cancelled) is left in the group so it is picked up again on the next publish cycle instead
+// of being lost. Once every entry in the group has been acked, the group itself is removed from the
+// registry.
 func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
 	c.storage.removeMetric(metric)
 
