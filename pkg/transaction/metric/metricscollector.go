@@ -550,9 +550,9 @@ func (c *collector) updateMetricWithCachedMetric(metric *centralMetric, cached c
 	groupKey, uniqueKey := splitMetricKey(metric.getKey())
 	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
+	metric.groupStartTime = c.metricStartTime.UnixMilli()
 	// first api metric for sub+app+api+statuscode wins and becomes the template used for reporting
 	metric = groupedMetric.getOrSetMetric(uniqueKey, metric)
-	metric.groupStartTime = c.metricStartTime.UnixMilli()
 
 	c.storage.updateMetric(cached, metric)
 	return metric
