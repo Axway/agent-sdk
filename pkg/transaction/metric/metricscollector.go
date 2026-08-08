@@ -305,6 +305,10 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
 
+	c.updateCustomMetric(detail)
+}
+
+func (c *collector) updateCustomMetric(detail models.CustomMetricDetail) *centralMetric {
 	logger := c.logger.WithField("handler", "customMetric").
 		WithField("apiID", detail.APIDetails.ID).
 		WithField("appID", detail.AppDetails.ID).
@@ -312,17 +316,17 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 
 	if detail.APIDetails.ID == "" {
 		logger.Error("custom units require API information")
-		return
+		return nil
 	}
 
 	if detail.AppDetails.ID == "" {
 		logger.Error("custom units require App information")
-		return
+		return nil
 	}
 
 	if detail.UnitDetails.Name == "" {
 		logger.Error("custom units require Unit information")
-		return
+		return nil
 	}
 	logger.WithField("count", detail.Count).Debug("received custom unit report")
 
@@ -346,7 +350,7 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
 
-	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
+	return c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
 // AddAPIMetric - add api metric for API transaction, merging its counts and response stats into

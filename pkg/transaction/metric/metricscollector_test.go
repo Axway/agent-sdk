@@ -1030,6 +1030,69 @@ func TestMetricStorageKeysAreIsolatedByGenerationStartTime(t *testing.T) {
 	s.resetConfig()
 }
 
+// TestMetricCacheRoundTripRekeysAndCleansUpWithoutOrphaning saves transaction metrics from two different
+// generations, reloads them into a fresh collector, and verifies each entry is re-keyed to the current
+// run's storage key (the key is recomputed from the reloaded context, not restored from a persisted
+// cachedMetric.Key) and is fully removed from both the registry and storage on publish - i.e. no stale,
+// orphaned cache entry survives the round trip.
+func TestMetricCacheRoundTripRekeysAndCleansUpWithoutOrphaning(t *testing.T) {
+	cleanUpCachedMetricFile()
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	collector1, _ := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	// generation 1: a success transaction, keyed with start time 60000
+	collector1.metricStartTime = time.UnixMilli(60000)
+	collector1.AddMetricDetail(Detail{
+		APIDetails: apiDetails1,
+		StatusCode: "200",
+		Duration:   10,
+		Bytes:      10,
+		AppDetails: models.AppDetails{ID: "app-1", Name: testManagedApp1},
+	})
+
+	// generation 2: a failure transaction, keyed with start time 120000 - this later value is what gets
+	// persisted as the metric start time and loaded by the next collector
+	collector1.metricStartTime = time.UnixMilli(120000)
+	collector1.AddMetricDetail(Detail{
+		APIDetails: apiDetails1,
+		StatusCode: "400",
+		Duration:   10,
+		Bytes:      10,
+		AppDetails: models.AppDetails{ID: "app-1", Name: testManagedApp1},
+	})
+
+	assert.Len(t, metricStorageKeys(collector1), 2)
+	collector1.storage.save()
+
+	// reload into a fresh collector
+	collector2 := createMetricCollector().(*collector)
+
+	// both metrics are restored and re-keyed to this run's start time (120000); the stale generation-1
+	// key (60000) must not survive
+	reloadedKeys := metricStorageKeys(collector2)
+	assert.Len(t, reloadedKeys, 2)
+	for _, k := range reloadedKeys {
+		assert.Falsef(t, strings.HasSuffix(k, ".60000"), "stale generation-1 key should be re-keyed, got %s", k)
+	}
+
+	// publish and confirm the registry and storage are fully cleaned - nothing is orphaned
+	testClient := setupMockClient(0)
+	assert.NoError(t, collector2.Execute())
+
+	assert.Equal(t, 2, testClient.(*MockClient).eventsAcked)
+	assert.Empty(t, metricRegistryGroups(collector2), "registry should be cleaned after publish")
+	assert.Empty(t, metricStorageKeys(collector2), "storage should be cleaned after publish (no orphans)")
+
+	s.resetConfig()
+}
+
 func setupAPIMetricCollectorTest(t *testing.T, s *testHTTPServer) *collector {
 	t.Helper()
 	cfg := createCentralCfg(s.server.URL, "demo")
