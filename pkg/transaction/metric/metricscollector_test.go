@@ -1093,6 +1093,69 @@ func TestMetricCacheRoundTripRekeysAndCleansUpWithoutOrphaning(t *testing.T) {
 	s.resetConfig()
 }
 
+// TestMetricEventsReportedWithOwnGenerationStartTime verifies that when the registry holds metric groups
+// from more than one generation, each published event is stamped with its own generation's start time
+// rather than all sharing the current publish cycle's start time.
+func TestMetricEventsReportedWithOwnGenerationStartTime(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, _ := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	metricCollector.registry = newRegistry()
+	freshStorage := newStorageCache(metricCollector).(*cacheStorage)
+	freshStorage.isInitialized = true
+	metricCollector.storage = freshStorage
+
+	addSuccess := func() {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: "200",
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: "app-1", Name: testManagedApp1},
+		})
+	}
+
+	// two generations for the same app/api/status coexist in the registry (e.g. an earlier generation
+	// that was not yet acked), each under its own start time
+	metricCollector.metricStartTime = time.UnixMilli(60000)
+	addSuccess()
+	metricCollector.metricStartTime = time.UnixMilli(120000)
+	addSuccess()
+
+	// publish; the current start time (120000) is >= both generations, so both are reported this cycle
+	testClient := setupMockClient(0)
+	assert.NoError(t, metricCollector.Execute())
+
+	mock := testClient.(*MockClient)
+	assert.Equal(t, 2, mock.eventsAcked)
+
+	// each event carries its own generation's start time, not a single shared publish-cycle start time
+	starts := map[int64]bool{}
+	for _, event := range mock.capturedEvents {
+		raw, ok := event.Content.Fields[messageKey].(string)
+		if !ok {
+			continue
+		}
+		var v4 map[string]any
+		if err := json.Unmarshal([]byte(raw), &v4); err != nil {
+			continue
+		}
+		if ts, ok := v4["timestamp"].(float64); ok {
+			starts[int64(ts)] = true
+		}
+	}
+	assert.Equal(t, map[int64]bool{60000: true, 120000: true}, starts)
+
+	s.resetConfig()
+}
+
 func setupAPIMetricCollectorTest(t *testing.T, s *testHTTPServer) *collector {
 	t.Helper()
 	cfg := createCentralCfg(s.server.URL, "demo")
