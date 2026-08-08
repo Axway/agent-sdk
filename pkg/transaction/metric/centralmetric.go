@@ -364,7 +364,6 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		Min:           cached.Min(),
 		Max:           cached.Max(),
 		Avg:           cached.Mean(),
-		Key:           a.getKey(),
 	}
 
 	if a.Units.Transactions != nil {

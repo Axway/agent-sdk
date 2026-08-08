@@ -208,9 +208,6 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				}, cm.Count, cm.Min, cm.Max, cm.Avg)
 			}
 
-			// load the key from the cached key
-			metric.key = cm.Key
-
 			// re-key on load to utilize metric start time
 			newKey := metric.storageKey()
 			if newKey != cacheKey {
