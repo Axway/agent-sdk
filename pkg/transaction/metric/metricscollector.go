@@ -1032,8 +1032,10 @@ func (c *collector) generateMetricEvent(counters map[string]*counter, metric *ce
 		ObservationDelta: metric.Observation.End - metric.Observation.Start,
 	}
 
+	metricCacheKey := metric.getKey()
+
 	// Generate app subscription metric
-	c.generateV4Event(counters, metric, publishStartTime, registryKey, group)
+	c.generateV4Event(counters, metric, publishStartTime, registryKey, metricCacheKey, group)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -1050,10 +1052,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey string, group groupedMetrics) {
+func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey, metricCacheKey string, group groupedMetrics) {
 	generatedEvent := c.createV4Event(publishStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
-	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, counters, group)
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, metricCacheKey, counters, group)
 }
 
 func (c *collector) getOrRegisterCounter(name string) *counter {
@@ -1149,12 +1151,6 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 	c.metricLogger.WithField("id", metric.EventID).Info(msg)
 }
 
-// cleanupMetricCounters - called once a metric event has been acked, to remove the persisted cache
-// entry for the published metric (and any custom unit metrics acked alongside it), and to remove that
-// status/unit's entry from the group. A status/unit whose event was never acked (publish failed, was
-// retried, or cancelled) is left in the group so it is picked up again on the next publish cycle instead
-// of being lost. Once every entry in the group has been acked, the group itself is removed from the
-// registry.
 func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
 	c.storage.removeMetric(metric)
 

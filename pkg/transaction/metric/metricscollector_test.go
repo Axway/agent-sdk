@@ -1297,7 +1297,7 @@ func TestCleanupMetricCounters(t *testing.T) {
 			}
 			assert.NoError(t, c.registry.Register(registryKey, group))
 
-			c.cleanupMetricCounters(registryKey, tc.counters, group, metric1)
+			c.cleanupMetricCounters(registryKey, "metric.app1.api1.Success", tc.counters, group, metric1)
 
 			assert.ElementsMatch(t, tc.wantRemoved, st.removed)
 			assert.Equal(t, !tc.wantDeregistered, c.registry.Get(registryKey) != nil)

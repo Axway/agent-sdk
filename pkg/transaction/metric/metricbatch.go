@@ -12,6 +12,7 @@ const cancelMsg = "event cancelled, counts added at next publish"
 
 type eventMetric struct {
 	registryKey string
+	metricKey   string
 	counters    map[string]*counter
 	group       groupedMetrics
 }
@@ -26,11 +27,12 @@ type EventBatch struct {
 }
 
 // AddEvent - adds an event to the batch
-func (b *EventBatch) AddEvent(event beatPub.Event, registryKey string, counters map[string]*counter, group groupedMetrics) {
+func (b *EventBatch) AddEvent(event beatPub.Event, registryKey, metricCacheKey string, counters map[string]*counter, group groupedMetrics) {
 	b.events = append(b.events, event)
 	eventID := event.Content.Meta[metricKey].(string)
 	b.batchMetrics[eventID] = eventMetric{
 		registryKey: registryKey,
+		metricKey:   metricCacheKey,
 		counters:    counters,
 		group:       group,
 	}
@@ -147,6 +149,7 @@ func (b *EventBatch) ackEvents(events []beatPub.Event) {
 		b.collector.logMetric("published", metric)
 
 		if eventMetric, ok := b.batchMetrics[metric.EventID]; ok {
+			metric.key = eventMetric.metricKey
 			b.collector.cleanupMetricCounters(eventMetric.registryKey, eventMetric.counters, eventMetric.group, metric)
 		} else {
 			b.collector.metricLogger.WithField("eventID", metric.EventID).Warn("could not clean cached metric")
