@@ -75,6 +75,7 @@ type cachedMetric struct {
 	Quota         *models.ResourceReference            `json:"quota,omitempty"`
 	Unit          *models.Unit                         `json:"unit,omitempty"`
 	StatusCode    string                               `json:"statusCode,omitempty"`
+	Key           string                               `json:"key,omitempty"`
 	Count         int64                                `json:"count"`
 	Min           int64                                `json:"min,omitempty"`
 	Max           int64                                `json:"max,omitempty"`
