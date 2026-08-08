@@ -846,6 +846,190 @@ func TestMetricCollectorPublishesAllSubscriptionsAndCleansRegistry(t *testing.T)
 	s.resetConfig()
 }
 
+func metricStorageKeys(c *collector) []string {
+	cs := c.storage.(*cacheStorage)
+	var keys []string
+	for _, k := range cs.storage.GetKeys() {
+		if strings.HasPrefix(k, metricKeyPrefix+".") {
+			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+func metricRegistryGroups(c *collector) []string {
+	var names []string
+	c.registry.Each(func(name string, _ interface{}) {
+		if strings.HasPrefix(name, metricKeyPrefix+".") {
+			names = append(names, name)
+		}
+	})
+	return names
+}
+
+// TestMetricCollectorPublishesAllStatusesAndUnitsAndCleansStorage loads several HTTP status metrics and
+// custom unit metrics, publishes them, and verifies every status/unit is present on the published events
+// and that both the registry and the persisted cache storage are fully cleaned once the events are acked.
+func TestMetricCollectorPublishesAllStatusesAndUnitsAndCleansStorage(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, _ := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	// start from a clean registry and an empty in-memory storage so the assertions below observe only
+	// the metrics recorded by this test
+	metricCollector.registry = newRegistry()
+	freshStorage := newStorageCache(metricCollector).(*cacheStorage)
+	freshStorage.isInitialized = true
+	metricCollector.storage = freshStorage
+
+	testClient := setupMockClient(0)
+
+	// several HTTP statuses for one app/api - each distinct status text (Success/Failure/Exception) is
+	// tracked as its own metric entry within the app/api's registry group
+	for _, status := range []string{"200", "400", "500"} {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: status,
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: "app-1", Name: testManagedApp1},
+		})
+	}
+
+	// custom units for a second app/api - these land in a separate registry group and publish together
+	// on a single custom-unit event
+	for _, unit := range []string{"widgets", "gadgets"} {
+		metricCollector.AddCustomMetricDetail(models.CustomMetricDetail{
+			APIDetails:  models.APIDetails{ID: "111", Name: "111"},
+			AppDetails:  models.AppDetails{ID: "app-2", Name: testManagedApp2},
+			UnitDetails: models.Unit{Name: unit},
+			Count:       3,
+		})
+	}
+
+	// before publishing: 3 status + 2 unit entries are cached, spread across 2 registry groups
+	assert.Len(t, metricStorageKeys(metricCollector), 5)
+	assert.Len(t, metricRegistryGroups(metricCollector), 2)
+
+	assert.NoError(t, metricCollector.Execute())
+	metricCollector.usagePublisher.Execute()
+
+	mock := testClient.(*MockClient)
+
+	// the batch should carry one event per status plus one custom-unit event
+	assert.Equal(t, 4, mock.eventsAcked)
+	assert.Len(t, mock.capturedEvents, 4)
+
+	publishedStatuses := map[string]bool{}
+	publishedUnits := map[string]bool{}
+	for _, event := range mock.capturedEvents {
+		if metric := getMetricFromEvent(event); assert.NotNil(t, metric) &&
+			metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Status != "" {
+			publishedStatuses[metric.Units.Transactions.Status] = true
+		}
+		// custom units are dropped when reconstructing from the event (json:"-"), so read them from the
+		// raw published data instead
+		if data := getRawEventData(event); data != nil {
+			if units, ok := data["units"].(map[string]interface{}); ok {
+				for name, v := range units {
+					if name != "transactions" && v != nil {
+						publishedUnits[name] = true
+					}
+				}
+			}
+		}
+	}
+
+	assert.Equal(t, map[string]bool{"Success": true, "Failure": true, "Exception": true}, publishedStatuses)
+	assert.Equal(t, map[string]bool{"widgets": true, "gadgets": true}, publishedUnits)
+
+	// once every event is acked, the registry and the persisted cache storage should both be free of
+	// metric entries
+	assert.Empty(t, metricRegistryGroups(metricCollector), "registry should be cleaned of all metric groups")
+	assert.Empty(t, metricStorageKeys(metricCollector), "cache storage should be cleaned of all metric entries")
+
+	s.resetConfig()
+}
+
+// TestMetricStorageKeysAreIsolatedByGenerationStartTime verifies that metrics for the same
+// app/api/status collected in different generations are stored under distinct, start-time-qualified
+// keys, so cleaning up a generation whose event was published does not remove a later generation's
+// metric that was collected while the first was still in flight.
+func TestMetricStorageKeysAreIsolatedByGenerationStartTime(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	metricCollector, _ := setupMetricCollectorTest(t, s)
+	traceStatus = healthcheck.OK
+	runTestHealthcheck()
+
+	metricCollector.registry = newRegistry()
+	freshStorage := newStorageCache(metricCollector).(*cacheStorage)
+	freshStorage.isInitialized = true
+	metricCollector.storage = freshStorage
+
+	addDetail := func() {
+		metricCollector.AddMetricDetail(Detail{
+			APIDetails: apiDetails1,
+			StatusCode: "200",
+			Duration:   10,
+			Bytes:      10,
+			AppDetails: models.AppDetails{ID: "app-1", Name: testManagedApp1},
+		})
+	}
+
+	// generation 1
+	metricCollector.metricStartTime = time.UnixMilli(60000)
+	addDetail()
+
+	// generation 2 for the same app/api/status, as if collected while generation 1 is publishing
+	metricCollector.metricStartTime = time.UnixMilli(120000)
+	addDetail()
+
+	// each generation is stored under its own start-time-qualified key and its own registry group
+	assert.Len(t, metricStorageKeys(metricCollector), 2)
+	assert.Len(t, metricRegistryGroups(metricCollector), 2)
+
+	// find generation 1's registry group and clean it up, as happens when its published event is acked
+	var gen1Name string
+	var gen1Group groupedMetrics
+	metricCollector.registry.Each(func(name string, v interface{}) {
+		if strings.HasSuffix(name, ".60000") {
+			gen1Name = name
+			gen1Group, _ = v.(groupedMetrics)
+		}
+	})
+	if !assert.NotEmpty(t, gen1Name) {
+		return
+	}
+	gen1Metric, ok := gen1Group.getMetric("Success")
+	if !assert.True(t, ok) {
+		return
+	}
+	metricCollector.cleanupMetricCounters(gen1Name, gen1Group.counters, gen1Group, gen1Metric)
+
+	// generation 1 is gone from both registry and storage; generation 2 is untouched
+	if remaining := metricStorageKeys(metricCollector); assert.Len(t, remaining, 1) {
+		assert.True(t, strings.HasSuffix(remaining[0], ".120000"),
+			"generation 2 metric should remain in storage, got %s", remaining[0])
+	}
+	if groups := metricRegistryGroups(metricCollector); assert.Len(t, groups, 1) {
+		assert.True(t, strings.HasSuffix(groups[0], ".120000"),
+			"generation 2 group should remain in registry, got %s", groups[0])
+	}
+
+	s.resetConfig()
+}
+
 func setupAPIMetricCollectorTest(t *testing.T, s *testHTTPServer) *collector {
 	t.Helper()
 	cfg := createCentralCfg(s.server.URL, "demo")

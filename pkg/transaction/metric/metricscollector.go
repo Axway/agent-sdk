@@ -552,6 +552,7 @@ func (c *collector) updateMetricWithCachedMetric(metric *centralMetric, cached c
 
 	// first api metric for sub+app+api+statuscode wins and becomes the template used for reporting
 	metric = groupedMetric.getOrSetMetric(uniqueKey, metric)
+	metric.groupStartTime = c.metricStartTime.UnixMilli()
 
 	c.storage.updateMetric(cached, metric)
 	return metric
@@ -1032,10 +1033,8 @@ func (c *collector) generateMetricEvent(counters map[string]*counter, metric *ce
 		ObservationDelta: metric.Observation.End - metric.Observation.Start,
 	}
 
-	metricCacheKey := metric.getKey()
-
 	// Generate app subscription metric
-	c.generateV4Event(counters, metric, publishStartTime, registryKey, metricCacheKey, group)
+	c.generateV4Event(counters, metric, publishStartTime, registryKey, group)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -1052,10 +1051,10 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey, metricCacheKey string, group groupedMetrics) {
+func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey string, group groupedMetrics) {
 	generatedEvent := c.createV4Event(publishStartTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
-	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, metricCacheKey, counters, group)
+	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, counters, group)
 }
 
 func (c *collector) getOrRegisterCounter(name string) *counter {
@@ -1158,15 +1157,13 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 // of being lost. Once every entry in the group has been acked, the group itself is removed from the
 // registry.
 func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
-	c.storage.removeMetric(metric)
-
+	// clean all counters and metrics
 	_, statusKey := splitMetricKey(metric.getKey())
+	c.removeStoredMetric(group, statusKey)
 	empty := group.removeAndCheckEmpty(statusKey)
 
 	for k := range counters {
-		if m, ok := group.getMetric(k); ok {
-			c.storage.removeMetric(m)
-		}
+		c.removeStoredMetric(group, k)
 		empty = group.removeAndCheckEmpty(k)
 	}
 
@@ -1179,6 +1176,12 @@ func (c *collector) cleanupMetricCounters(registryKey string, counters map[strin
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField("apiName", metric.API.Name).
 		Info("Published metrics report for API")
+}
+
+func (c *collector) removeStoredMetric(group groupedMetrics, key string) {
+	if m, ok := group.getMetric(key); ok {
+		c.storage.removeMetric(m)
+	}
 }
 
 func GetStatusText(statusCode string) string {

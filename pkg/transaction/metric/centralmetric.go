@@ -217,6 +217,9 @@ type centralMetric struct {
 	EventID            string                               `json:"-"`
 	key                string                               `json:"-"`
 
+	// used as part of the key to separate current from new metrics
+	groupStartTime int64
+
 	// ctx is the metric context reported when the agent added the data to the collector
 	ctx      transactionContext
 	resolved bool
@@ -343,6 +346,10 @@ func (a *centralMetric) getKey() string {
 
 	a.key = strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
 	return a.key
+}
+
+func (a *centralMetric) storageKey() string {
+	return fmt.Sprintf("%s.%d", a.getKey(), a.groupStartTime)
 }
 
 func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedMetric {

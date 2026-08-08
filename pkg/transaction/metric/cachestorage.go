@@ -211,7 +211,8 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 			// load the key from the cached key
 			metric.key = cm.Key
 
-			newKey := metric.getKey()
+			// re-key on load to utilize metric start time
+			newKey := metric.storageKey()
 			if newKey != cacheKey {
 				c.storageLock.Lock()
 				storageCache.Delete(cacheKey)
@@ -230,7 +231,7 @@ func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centra
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Set(metric.getKey(), metric.createCachedMetric(cached))
+	c.storage.Set(metric.storageKey(), metric.createCachedMetric(cached))
 }
 
 func (c *cacheStorage) removeMetric(metric *centralMetric) {
@@ -241,7 +242,7 @@ func (c *cacheStorage) removeMetric(metric *centralMetric) {
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Delete(metric.getKey())
+	c.storage.Delete(metric.storageKey())
 }
 
 func (c *cacheStorage) save() {
