@@ -402,7 +402,7 @@ func buildSummaryAPIDetail(logger log.FieldLogger, apiID, apiName, apiServiceID 
 
 	detail := &insightsAPIDetail{ID: apiID, Name: apiName, Owner: apiOwner, APIServiceID: apiServiceID}
 	if apiServiceID == "" && cacheManager != nil {
-		stripped := strings.TrimPrefix(apiID, transutil.SummaryEventProxyIDPrefix)
+		stripped := transutil.StripSummaryEventPrefix(apiID)
 		if svc := cacheManager.GetAPIServiceWithAPIID(stripped); svc != nil {
 			detail.APIServiceID = svc.Metadata.ID
 		}

@@ -128,6 +128,36 @@ func TestResolveIDWithPrefix(t *testing.T) {
 	}
 }
 
+func TestStripSummaryEventPrefix(t *testing.T) {
+	tests := map[string]struct {
+		apiID    string
+		expected string
+	}{
+		"real ID prefix stripped": {
+			apiID:    SummaryEventProxyIDPrefix + "dwight",
+			expected: "dwight",
+		},
+		"name-fallback prefix stripped": {
+			apiID:    SummaryEventAPINamePrefix + "schrute",
+			expected: "schrute",
+		},
+		"no prefix, returned as-is": {
+			apiID:    "dwight",
+			expected: "dwight",
+		},
+		"empty string": {
+			apiID:    "",
+			expected: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, StripSummaryEventPrefix(tc.apiID))
+		})
+	}
+}
+
 func TestGetMarketplaceDetails(t *testing.T) {
 	// "marketplace" as a string instead of an object triggers a real parse failure.
 	malformedInstance := &v1.ResourceInstance{}

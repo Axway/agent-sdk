@@ -24,6 +24,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
@@ -1204,6 +1205,65 @@ func TestCollectorCreateOrUpdateHistogramIDResolution(t *testing.T) {
 			// This would require proper mock setup for the collector
 			// The test would verify that detail.APIDetails.ID gets resolved correctly
 			// before being used in the metric generation
+		})
+	}
+}
+
+func TestCreateAPIDetail(t *testing.T) {
+	cases := map[string]struct {
+		apiServiceRI *apiv1.ResourceInstance
+		apiID        string
+		apiName      string
+		wantOwnType  string
+		wantOwnGUID  string
+		wantSvcID    string
+	}{
+		"real ID prefix resolves owner and apiServiceId from cache": {
+			apiServiceRI: withMetaID(makeAPIServiceRI("api-1", &apiv1.Owner{Type: apiv1.TeamOwner, ID: testTeamGUID1}), "svc-meta-api-1"),
+			apiID:        transutil.SummaryEventProxyIDPrefix + "api-1",
+			apiName:      "api-one",
+			wantOwnType:  "team",
+			wantOwnGUID:  testTeamGUID1,
+			wantSvcID:    "svc-meta-api-1",
+		},
+		"name-fallback prefix resolves owner and apiServiceId from cache": {
+			apiServiceRI: withMetaID(makeAPIServiceRI("api-2", &apiv1.Owner{Type: apiv1.TeamOwner, ID: testTeamGUID1}), "svc-meta-api-2"),
+			apiID:        transutil.SummaryEventAPINamePrefix + "api-2",
+			apiName:      "api-two",
+			wantOwnType:  "team",
+			wantOwnGUID:  testTeamGUID1,
+			wantSvcID:    "svc-meta-api-2",
+		},
+		"api not found in cache returns unknown owner and apiServiceId": {
+			apiServiceRI: nil,
+			apiID:        transutil.SummaryEventProxyIDPrefix + "missing-api",
+			apiName:      "missing",
+			wantOwnType:  "unknown",
+			wantSvcID:    unknown,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			agent.InitializeForTest(nil, agent.TestWithCentralConfig(newUtilCacheConfig()))
+			if tc.apiServiceRI != nil {
+				agent.GetCacheManager().AddAPIService(tc.apiServiceRI)
+			}
+
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.createAPIDetail(models.APIDetails{ID: tc.apiID, Name: tc.apiName})
+			if ref == nil {
+				t.Fatal("expected non-nil API resource reference")
+			}
+			assert.Equal(t, tc.apiID, ref.ID)
+			assert.Equal(t, tc.apiName, ref.Name)
+			assert.Equal(t, tc.wantSvcID, ref.APIServiceID)
+			if ref.Owner == nil {
+				t.Fatal("expected non-nil owner")
+			}
+			assert.Equal(t, tc.wantOwnType, ref.Owner.Type)
+			if tc.wantOwnGUID != "" {
+				assert.Equal(t, tc.wantOwnGUID, ref.Owner.TeamGUID)
+			}
 		})
 	}
 }
