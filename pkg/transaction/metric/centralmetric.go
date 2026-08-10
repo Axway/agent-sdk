@@ -215,6 +215,10 @@ type centralMetric struct {
 	Reporter           *Reporter                            `json:"reporter,omitempty"`
 	Observation        *models.ObservationDetails           `json:"-"`
 	EventID            string                               `json:"-"`
+	key                string                               `json:"-"`
+
+	// used as part of the key to separate current from new metrics
+	groupStartTime int64
 
 	// ctx is the metric context reported when the agent added the data to the collector
 	ctx      transactionContext
@@ -315,6 +319,10 @@ func (a *centralMetric) addTransactionFields(fields logrus.Fields) logrus.Fields
 
 // getKey - returns the cache key for the metric
 func (a *centralMetric) getKey() string {
+	if a.key != "" {
+		return a.key
+	}
+
 	appKey := unknown
 	if a.ctx.AppDetails.ID != "" {
 		appKey = sanitizeKeySegment(a.ctx.AppDetails.ID)
@@ -336,7 +344,12 @@ func (a *centralMetric) getKey() string {
 		}
 	}
 
-	return strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
+	a.key = strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
+	return a.key
+}
+
+func (a *centralMetric) storageKey() string {
+	return fmt.Sprintf("%s.%d", a.getKey(), a.groupStartTime)
 }
 
 func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedMetric {
