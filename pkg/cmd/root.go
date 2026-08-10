@@ -15,6 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -239,6 +240,10 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		c.props.SetStringFlagValue(beatsPathConfigFlag, agentConfigFilePath)
 		_, beatsConfigFilePath = c.props.StringFlagValue(beatsPathConfigFlag)
 	}
+
+	// Cache/report storage previously defaulted to libbeat's own --path.data, set automatically by its
+	// CLI bootstrap. With libbeat removed, colocate it with the agent's config directory instead.
+	traceability.SetDataDirPath(agentConfigFilePath)
 
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions

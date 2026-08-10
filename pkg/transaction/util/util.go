@@ -26,8 +26,8 @@ const (
 	SummaryEventApplicationIDPrefix = "remoteAppId_"
 )
 
-// StripSummaryEventPrefix removes whichever proxy-ID prefix ResolveIDWithPrefix produced -
-// the real-ID prefix or the name-fallback prefix - leaving the bare value used as a cache lookup key.
+// StripSummaryEventPrefix removes whichever proxy-ID prefix ResolveIDWithPrefix produced.
+// Meaning the real-ID prefix or the name-fallback prefix, leaving the bare value used as a cache lookup key.
 func StripSummaryEventPrefix(apiID string) string {
 	apiID = strings.TrimPrefix(apiID, SummaryEventProxyIDPrefix)
 	apiID = strings.TrimPrefix(apiID, SummaryEventAPINamePrefix)

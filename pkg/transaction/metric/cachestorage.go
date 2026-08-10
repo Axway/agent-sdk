@@ -172,8 +172,9 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				appDetails.ConsumerOrgID = cm.App.ConsumerOrgID
 			}
 
+			var metric *centralMetric
 			if cm.Unit != nil {
-				c.collector.AddCustomMetricDetail(models.CustomMetricDetail{
+				metric = c.collector.updateCustomMetric(models.CustomMetricDetail{
 					APIDetails: apiDetails,
 					AppDetails: appDetails,
 					UnitDetails: models.Unit{
@@ -181,6 +182,7 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 					},
 					Count: cm.Count,
 				})
+				c.rekeyLoadedMetric(storageCache, metric, cacheKey, cm)
 				continue
 			}
 
@@ -188,7 +190,6 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				continue
 			}
 
-			var metric *centralMetric
 			if len(cm.Values) > 0 {
 				// legacy cache written before the Min/Max/Avg counter, replay each
 				// raw duration sample into the new counter one at a time
@@ -208,15 +209,23 @@ func (c *cacheStorage) loadMetrics(storageCache cache.Cache) {
 				}, cm.Count, cm.Min, cm.Max, cm.Avg)
 			}
 
-			newKey := metric.getKey()
-			if newKey != cacheKey {
-				c.storageLock.Lock()
-				storageCache.Delete(cacheKey)
-				c.storageLock.Unlock()
-			}
-			storageCache.Set(newKey, cm)
+			c.rekeyLoadedMetric(storageCache, metric, cacheKey, cm)
 		}
 	}
+}
+
+// rekeyLoadedMetric update the metric key, not serialized, on load from cache
+func (c *cacheStorage) rekeyLoadedMetric(storageCache cache.Cache, metric *centralMetric, cacheKey string, cm cachedMetric) {
+	if metric == nil {
+		return
+	}
+	newKey := metric.storageKey()
+	if newKey != cacheKey {
+		c.storageLock.Lock()
+		storageCache.Delete(cacheKey)
+		c.storageLock.Unlock()
+	}
+	storageCache.Set(newKey, cm)
 }
 
 func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centralMetric) {
@@ -227,7 +236,7 @@ func (c *cacheStorage) updateMetric(cached cachedMetricInterface, metric *centra
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Set(metric.getKey(), metric.createCachedMetric(cached))
+	c.storage.Set(metric.storageKey(), metric.createCachedMetric(cached))
 }
 
 func (c *cacheStorage) removeMetric(metric *centralMetric) {
@@ -238,7 +247,7 @@ func (c *cacheStorage) removeMetric(metric *centralMetric) {
 	c.storageLock.Lock()
 	defer c.storageLock.Unlock()
 
-	c.storage.Delete(metric.getKey())
+	c.storage.Delete(metric.storageKey())
 }
 
 func (c *cacheStorage) save() {

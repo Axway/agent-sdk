@@ -12,6 +12,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
 
 const (
@@ -27,6 +28,13 @@ func makeAPIServiceRI(apiID string, owner *v1.Owner) *v1.ResourceInstance {
 	}
 	svc.Owner = owner
 	ri, _ := svc.AsInstance()
+	return ri
+}
+
+// withMetaID sets the resource's metadata ID, letting a test case declare the
+// cached resource's identity inline instead of mutating it in the test runner.
+func withMetaID(ri *v1.ResourceInstance, id string) *v1.ResourceInstance {
+	ri.Metadata.ID = id
 	return ri
 }
 
@@ -542,6 +550,60 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 			assert.Equal(t, tc.wantType, owner.Type)
 			if tc.wantGUID != "" {
 				assert.Equal(t, tc.wantGUID, owner.TeamGUID)
+			}
+		})
+	}
+}
+
+func TestBuildAPIRef(t *testing.T) {
+	cases := map[string]struct {
+		apiServiceRI *v1.ResourceInstance
+		apiID        string
+		apiName      string
+		wantOwnType  string
+		wantOwnGUID  string
+		wantSvcID    string
+	}{
+		"real ID prefix resolves owner and apiServiceId from cache": {
+			apiServiceRI: withMetaID(makeAPIServiceRI("api-1", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}), "svc-meta-api-1"),
+			apiID:        transutil.SummaryEventProxyIDPrefix + "api-1",
+			apiName:      "api-one",
+			wantOwnType:  "team",
+			wantOwnGUID:  testTeamGUID1,
+			wantSvcID:    "svc-meta-api-1",
+		},
+		"name-fallback prefix resolves owner and apiServiceId from cache": {
+			apiServiceRI: withMetaID(makeAPIServiceRI("api-2", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}), "svc-meta-api-2"),
+			apiID:        transutil.SummaryEventAPINamePrefix + "api-2",
+			apiName:      "api-two",
+			wantOwnType:  "team",
+			wantOwnGUID:  testTeamGUID1,
+			wantSvcID:    "svc-meta-api-2",
+		},
+		"api not found in cache returns unknown owner and empty apiServiceId": {
+			apiServiceRI: nil,
+			apiID:        transutil.SummaryEventProxyIDPrefix + "missing-api",
+			apiName:      "missing",
+			wantOwnType:  "unknown",
+			wantSvcID:    "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			agent.InitializeForTest(nil, agent.TestWithCentralConfig(newUtilCacheConfig()))
+			if tc.apiServiceRI != nil {
+				agent.GetCacheManager().AddAPIService(tc.apiServiceRI)
+			}
+
+			ref := buildAPIRef(models.APIDetails{ID: tc.apiID, Name: tc.apiName})
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.apiID, ref.ID)
+			assert.Equal(t, tc.apiName, ref.Name)
+			assert.Equal(t, tc.wantSvcID, ref.APIServiceID)
+			require.NotNil(t, ref.Owner)
+			assert.Equal(t, tc.wantOwnType, ref.Owner.Type)
+			if tc.wantOwnGUID != "" {
+				assert.Equal(t, tc.wantOwnGUID, ref.Owner.TeamGUID)
 			}
 		})
 	}
