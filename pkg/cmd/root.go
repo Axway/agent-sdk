@@ -241,9 +241,13 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		_, beatsConfigFilePath = c.props.StringFlagValue(beatsPathConfigFlag)
 	}
 
-	// Cache/report storage previously defaulted to libbeat's own --path.data, set automatically by its
-	// CLI bootstrap. With libbeat removed, colocate it with the agent's config directory instead.
-	traceability.SetDataDirPath(agentConfigFilePath)
+	// Most agents never set --pathConfig (it defaults to "."), so fall back to "./data"
+	// Instead of dumping files in the working directory, default pkg/agent/cache already uses.
+	dataDirPath := agentConfigFilePath
+	if dataDirPath == "" || dataDirPath == "." {
+		dataDirPath = "./data"
+	}
+	traceability.SetDataDirPath(dataDirPath)
 
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
