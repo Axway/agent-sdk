@@ -159,3 +159,37 @@ func TestAccessRequestCacheEnabledToggle(t *testing.T) {
 	assert.Nil(t, m.GetAccessRequest("ac2"))
 	assert.NotNil(t, m.GetAccessRequest("ac1"))
 }
+
+func TestGetAccessRequestsByAPI(t *testing.T) {
+	m := NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+	instance1 := createAPIServiceInstance("inst-1", "testAPI", "")
+	instance2 := createAPIServiceInstanceWithVersion("inst-2", "testAPI", "testStage", "testVersion")
+	instance3 := createAPIServiceInstance("inst-3", "otherAPI", "")
+	m.AddAPIServiceInstance(instance1)
+	m.AddAPIServiceInstance(instance2)
+	m.AddAPIServiceInstance(instance3)
+
+	accReq1 := createAccessRequest("ac1", "access-request-1", "app1", "inst-1", "inst-1")
+	ar1ri, _ := accReq1.AsInstance()
+	accReq2 := createAccessRequest("ac2", "access-request-2", "app2", "inst-2", "inst-2")
+	ar2ri, _ := accReq2.AsInstance()
+	accReq3 := createAccessRequest("ac3", "access-request-3", "app3", "inst-3", "inst-3")
+	ar3ri, _ := accReq3.AsInstance()
+
+	m.AddAccessRequest(ar1ri)
+	m.AddAccessRequest(ar2ri)
+	m.AddAccessRequest(ar3ri)
+
+	// ac1 and ac2 reference instances backed by "testAPI", across different apps/stages/versions
+	results := m.GetAccessRequestsByAPI("testAPI")
+	assert.ElementsMatch(t, []*v1.ResourceInstance{ar1ri, ar2ri}, results)
+
+	// ac3 references a different API entirely
+	results = m.GetAccessRequestsByAPI("otherAPI")
+	assert.ElementsMatch(t, []*v1.ResourceInstance{ar3ri}, results)
+
+	// no access requests reference this API
+	results = m.GetAccessRequestsByAPI("unknownAPI")
+	assert.Empty(t, results)
+}
