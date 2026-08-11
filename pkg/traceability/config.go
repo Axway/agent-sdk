@@ -163,51 +163,60 @@ func AddConfigProperties(props properties.Properties) {
 
 // ParseConfig reads traceability config from env vars. AddConfigProperties must be called first.
 func ParseConfig(props properties.Properties) (*Config, error) {
-	outputConfig = DefaultConfig()
+	cfg := DefaultConfig()
 
 	if props.StringPropertyValue(pathPort) != "" {
 		log.Warn("output.traceability.port is no longer supported; use output.traceability.hosts")
 	}
 
-	outputConfig.Hosts = props.StringSlicePropertyValue(pathHost)
-	outputConfig.Protocol = props.StringPropertyValue(pathProtocol)
-	outputConfig.LoadBalance = props.BoolPropertyValue(pathLoadBalance)
-	outputConfig.SlowStart = props.BoolPropertyValue(pathSlowStart)
-	outputConfig.BulkMaxSize = props.IntPropertyValue(pathBulkMaxSize)
-	outputConfig.Timeout = props.DurationPropertyValue(pathClientTimeout)
-	outputConfig.TTL = props.DurationPropertyValue(pathTTL)
-	outputConfig.Pipelining = props.IntPropertyValue(pathPipelining)
-	outputConfig.CompressionLevel = props.IntPropertyValue(pathCompressionLevel)
-	outputConfig.MaxRetries = props.IntPropertyValue(pathMaxRetries)
-	outputConfig.EscapeHTML = props.BoolPropertyValue(pathEscapeHTML)
-	outputConfig.APIExceptionsList = props.StringSlicePropertyValue(pathExceptionList)
+	cfg.Hosts = props.StringSlicePropertyValue(pathHost)
+	cfg.Protocol = props.StringPropertyValue(pathProtocol)
+	cfg.LoadBalance = props.BoolPropertyValue(pathLoadBalance)
+	cfg.SlowStart = props.BoolPropertyValue(pathSlowStart)
+	cfg.BulkMaxSize = props.IntPropertyValue(pathBulkMaxSize)
+	cfg.Timeout = props.DurationPropertyValue(pathClientTimeout)
+	cfg.TTL = props.DurationPropertyValue(pathTTL)
+	cfg.Pipelining = props.IntPropertyValue(pathPipelining)
+	cfg.CompressionLevel = props.IntPropertyValue(pathCompressionLevel)
+	cfg.MaxRetries = props.IntPropertyValue(pathMaxRetries)
+	cfg.EscapeHTML = props.BoolPropertyValue(pathEscapeHTML)
+	cfg.APIExceptionsList = props.StringSlicePropertyValue(pathExceptionList)
 
-	outputConfig.TLS.VerificationMode = props.StringPropertyValue(pathSSLVerification)
-	outputConfig.TLS.CipherSuites = props.StringSlicePropertyValue(pathSSLCipherSuites)
+	cfg.TLS.VerificationMode = props.StringPropertyValue(pathSSLVerification)
+	cfg.TLS.CipherSuites = props.StringSlicePropertyValue(pathSSLCipherSuites)
 
-	outputConfig.Proxy.URL = props.StringPropertyValue(pathProxyURL)
-	outputConfig.Proxy.LocalResolve = props.BoolPropertyValue(pathProxyLocalResolve)
+	cfg.Proxy.URL = props.StringPropertyValue(pathProxyURL)
+	cfg.Proxy.LocalResolve = props.BoolPropertyValue(pathProxyLocalResolve)
 
-	outputConfig.Backoff.Init = props.DurationPropertyValue(pathBackoffInit)
-	outputConfig.Backoff.Max = props.DurationPropertyValue(pathBackoffMax)
+	cfg.Backoff.Init = props.DurationPropertyValue(pathBackoffInit)
+	cfg.Backoff.Max = props.DurationPropertyValue(pathBackoffMax)
 
-	outputConfig.Redaction.MaskingCharacters = props.StringPropertyValue(pathRedactionMasking)
-	outputConfig.Redaction.Path.Allowed = parseShowList(envRedactionPathShow)
-	outputConfig.Redaction.Args.Allowed = parseShowList(envRedactionQueryArgShow)
-	outputConfig.Redaction.Args.Sanitize = parseSanitizeList(envRedactionQueryArgSanitize)
-	outputConfig.Redaction.RequestHeaders.Allowed = parseShowList(envRedactionRequestHeaderShow)
-	outputConfig.Redaction.RequestHeaders.Sanitize = parseSanitizeList(envRedactionRequestHeaderSanitize)
-	outputConfig.Redaction.ResponseHeaders.Allowed = parseShowList(envRedactionResponseHeaderShow)
-	outputConfig.Redaction.ResponseHeaders.Sanitize = parseSanitizeList(envRedactionResponseHeaderSanitize)
-	outputConfig.Redaction.JMSProperties.Allowed = parseShowList(envRedactionJMSPropertiesShow)
-	outputConfig.Redaction.JMSProperties.Sanitize = parseSanitizeList(envRedactionJMSPropertiesSanitize)
+	cfg.Redaction.MaskingCharacters = props.StringPropertyValue(pathRedactionMasking)
+	cfg.Redaction.Path.Allowed = parseShowList(envRedactionPathShow)
+	cfg.Redaction.Args.Allowed = parseShowList(envRedactionQueryArgShow)
+	cfg.Redaction.Args.Sanitize = parseSanitizeList(envRedactionQueryArgSanitize)
+	cfg.Redaction.RequestHeaders.Allowed = parseShowList(envRedactionRequestHeaderShow)
+	cfg.Redaction.RequestHeaders.Sanitize = parseSanitizeList(envRedactionRequestHeaderSanitize)
+	cfg.Redaction.ResponseHeaders.Allowed = parseShowList(envRedactionResponseHeaderShow)
+	cfg.Redaction.ResponseHeaders.Sanitize = parseSanitizeList(envRedactionResponseHeaderSanitize)
+	cfg.Redaction.JMSProperties.Allowed = parseShowList(envRedactionJMSPropertiesShow)
+	cfg.Redaction.JMSProperties.Sanitize = parseSanitizeList(envRedactionJMSPropertiesSanitize)
 
 	if percentage, err := strconv.ParseFloat(props.StringPropertyValue(pathSamplingPercent), 64); err == nil {
-		outputConfig.Sampling.Percentage = percentage
+		cfg.Sampling.Percentage = percentage
 	}
-	outputConfig.Sampling.PerAPI = props.BoolPropertyValue(pathSamplingPerAPI)
-	outputConfig.Sampling.PerSub = props.BoolPropertyValue(pathSamplingPerSub)
-	outputConfig.Sampling.OnlyErrors = props.BoolPropertyValue(pathSamplingOnlyErr)
+	cfg.Sampling.PerAPI = props.BoolPropertyValue(pathSamplingPerAPI)
+	cfg.Sampling.PerSub = props.BoolPropertyValue(pathSamplingPerSub)
+	cfg.Sampling.OnlyErrors = props.BoolPropertyValue(pathSamplingOnlyErr)
+
+	return FinishConfig(cfg)
+}
+
+// FinishConfig runs the setup shared by every Config, regardless of source - host/protocol
+// fallback, redaction, sampling, proxy check, exception list. So v7_traceability_agent (still
+// on YAML/go-ucfg) can reuse it instead of duplicating it.
+func FinishConfig(cfg *Config) (*Config, error) {
+	outputConfig = cfg
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
 		outputConfig.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
