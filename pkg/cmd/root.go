@@ -261,9 +261,9 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	viper.AutomaticEnv()
 	err = viper.ReadInConfig()
 	if err != nil {
-		if envFile == "" {
-			return err
-		} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// Config can be read entirely from env vars.
+		// Any other error (e.g. malformed YAML) still fails startup.
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		}
 	}

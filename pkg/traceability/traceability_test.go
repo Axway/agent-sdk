@@ -8,14 +8,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/event"
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	"github.com/stretchr/testify/assert"
 )
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
@@ -138,13 +144,13 @@ type MockBatch struct {
 	events []event.Event
 }
 
-func (b *MockBatch) Events() []event.Event            { return b.events }
-func (b *MockBatch) SetEvents(events []event.Event)   { b.events = events }
-func (b *MockBatch) ACK()                             { b.acked = true }
-func (b *MockBatch) Drop()                            {}
-func (b *MockBatch) Retry()                           {}
-func (b *MockBatch) Cancelled()                       {}
-func (b *MockBatch) RetryEvents(events []event.Event) { b.retryCount++ }
+func (b *MockBatch) Events() []event.Event                { return b.events }
+func (b *MockBatch) SetEvents(events []event.Event)       { b.events = events }
+func (b *MockBatch) ACK()                                 { b.acked = true }
+func (b *MockBatch) Drop()                                {}
+func (b *MockBatch) Retry()                               {}
+func (b *MockBatch) Cancelled()                           {}
+func (b *MockBatch) RetryEvents(events []event.Event)     { b.retryCount++ }
 func (b *MockBatch) CancelledEvents(events []event.Event) {}
 
 type testEventProcessor struct {
@@ -156,30 +162,64 @@ func (t *testEventProcessor) Process(events []event.Event) []event.Event {
 }
 
 func TestParseConfig(t *testing.T) {
+	const testHost = "phoenix.datasearch.axway.com:443"
+
+	// properties.Properties reads env var overrides through viper's AutomaticEnv, which pkg/cmd/root.go
+	// normally connects once at agent startup. Replicate that here since this test bypasses root.go.
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
 	agent.Initialize(createCentralCfg("http://localhost:8888", "v7"))
 
 	tests := map[string]struct {
-		raw     map[string]interface{}
-		wantErr string
+		envVars map[string]string
+		assert  func(t *testing.T, cfg *Config)
 	}{
-		"compression level out of bounds": {
-			raw: map[string]interface{}{
-				"compression_level": 20,
+		"defaults with no env vars set": {
+			envVars: map[string]string{},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, 3, cfg.CompressionLevel)
+				assert.Equal(t, 512, cfg.BulkMaxSize)
+				assert.Equal(t, "https", cfg.Protocol)
+				assert.Empty(t, cfg.Hosts)
 			},
-			wantErr: "requires value <= 9 accessing 'compression_level'",
+		},
+		"compression level out of bounds falls back to the default": {
+			envVars: map[string]string{
+				"TRACEABILITY_COMPRESSIONLEVEL": "20",
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, 3, cfg.CompressionLevel)
+			},
 		},
 		"valid full config round trip": {
-			raw: map[string]interface{}{
-				"hosts":             []string{"phoenix.datasearch.axway.com:443"},
-				"protocol":          "https",
-				"compression_level": 3,
-				"bulk_max_size":     256,
-				"max_retries":       5,
-				"loadbalance":       true,
-				"ssl": map[string]interface{}{
-					"verification_mode": "full",
-					"cipher_suites":     []string{"ECDHE-RSA-AES-128-GCM-SHA256"},
-				},
+			envVars: map[string]string{
+				"TRACEABILITY_HOST":                 testHost,
+				"TRACEABILITY_PROTOCOL":             "https",
+				"TRACEABILITY_COMPRESSIONLEVEL":     "5",
+				"TRACEABILITY_BULKMAXSIZE":          "256",
+				"TRACEABILITY_MAXRETRIES":           "5",
+				"TRACEABILITY_LOADBALANCE":          "true",
+				"TRACEABILITY_SSL_VERIFICATIONMODE": "full",
+				"TRACEABILITY_SSL_CIPHERSUITES":     "ECDHE-RSA-AES-128-GCM-SHA256",
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, []string{testHost}, cfg.Hosts)
+				assert.Equal(t, "https", cfg.Protocol)
+				assert.Equal(t, 5, cfg.CompressionLevel)
+				assert.Equal(t, 256, cfg.BulkMaxSize)
+				assert.Equal(t, 5, cfg.MaxRetries)
+				assert.True(t, cfg.LoadBalance)
+				assert.Equal(t, "full", cfg.TLS.VerificationMode)
+				assert.Equal(t, []string{"ECDHE-RSA-AES-128-GCM-SHA256"}, cfg.TLS.CipherSuites)
+			},
+		},
+		"redaction show list matches mulesoft-agents' no-space-after-colon format": {
+			envVars: map[string]string{
+				"TRACEABILITY_REDACTION_PATH_SHOW": `[{keyMatch:".*"}]`,
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, []redaction.Show{{KeyMatch: ".*"}}, cfg.Redaction.Path.Allowed)
 			},
 		},
 	}
@@ -187,14 +227,17 @@ func TestParseConfig(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			cfg, err := ParseConfig(tc.raw)
-			if tc.wantErr != "" {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), tc.wantErr)
-				return
+			for k, v := range tc.envVars {
+				t.Setenv(k, v)
 			}
-			assert.Nil(t, err)
+
+			props := properties.NewProperties(&cobra.Command{})
+			AddConfigProperties(props)
+
+			cfg, err := ParseConfig(props)
+			assert.NoError(t, err)
 			assert.NotNil(t, cfg)
+			tc.assert(t, cfg)
 		})
 	}
 }

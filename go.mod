@@ -3,7 +3,6 @@ module github.com/Axway/agent-sdk
 go 1.25.0
 
 require (
-	github.com/elastic/go-ucfg v0.8.8
 	github.com/emicklei/proto v1.9.2
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/getkin/kin-openapi v0.144.0

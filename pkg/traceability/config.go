@@ -3,12 +3,16 @@ package traceability
 import (
 	"net"
 	"net/url"
+	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	ucfg "github.com/elastic/go-ucfg"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/util/log"
@@ -18,32 +22,67 @@ import (
 // single-entry routes HTTPS via phoenix.* hostnames (AOPS-4119)
 var removedIngestionHostPrefixes = []string{"ingestion.", "ingestion-http.", "ingestion-lumberjack."}
 
-// configOpts replaces libbeat's common.Config default options.
-var configOpts = []ucfg.Option{
-	ucfg.PathSep("."),
-	ucfg.ResolveEnv,
-	ucfg.VarExp,
-}
+// using the same env vars agents already use, e.g. pathHost -> TRACEABILITY_HOST.
+const (
+	pathHost              = "traceability.host"
+	pathProtocol          = "traceability.protocol"
+	pathPort              = "traceability.port" // deprecated, presence-only check
+	pathLoadBalance       = "traceability.loadbalance"
+	pathSlowStart         = "traceability.slowstart"
+	pathBulkMaxSize       = "traceability.bulkmaxsize"
+	pathClientTimeout     = "traceability.clienttimeout"
+	pathTTL               = "traceability.ttl"
+	pathPipelining        = "traceability.pipelining"
+	pathCompressionLevel  = "traceability.compressionlevel"
+	pathMaxRetries        = "traceability.maxretries"
+	pathSSLVerification   = "traceability.ssl.verificationmode"
+	pathSSLCipherSuites   = "traceability.ssl.ciphersuites"
+	pathProxyURL          = "traceability.proxyurl"
+	pathProxyLocalResolve = "traceability.proxyuselocalresolver"
+	pathBackoffInit       = "traceability.backoff.init"
+	pathBackoffMax        = "traceability.backoff.max"
+	pathEscapeHTML        = "traceability.escapehtml"
+	pathExceptionList     = "traceability.exception.list"
+	pathRedactionMasking  = "traceability.redaction.masking.characters"
+	pathSamplingPercent   = "traceability.sampling.percentage"
+	pathSamplingPerAPI    = "traceability.sampling.per.api"
+	pathSamplingPerSub    = "traceability.sampling.per.subscription"
+	pathSamplingOnlyErr   = "traceability.sampling.onlyerrors"
+)
+
+// redaction lists still come from one env var each, holding a blob like [{"keyMatch":".*"}]. Same
+// as before. Reason : mulesoft-agents relies on this exact format, so it's kept as-is.
+const (
+	envRedactionPathShow               = "TRACEABILITY_REDACTION_PATH_SHOW"
+	envRedactionQueryArgShow           = "TRACEABILITY_REDACTION_QUERYARGUMENT_SHOW"
+	envRedactionQueryArgSanitize       = "TRACEABILITY_REDACTION_QUERYARGUMENT_SANITIZE"
+	envRedactionRequestHeaderShow      = "TRACEABILITY_REDACTION_REQUESTHEADER_SHOW"
+	envRedactionRequestHeaderSanitize  = "TRACEABILITY_REDACTION_REQUESTHEADER_SANITIZE"
+	envRedactionResponseHeaderShow     = "TRACEABILITY_REDACTION_RESPONSEHEADER_SHOW"
+	envRedactionResponseHeaderSanitize = "TRACEABILITY_REDACTION_RESPONSEHEADER_SANITIZE"
+	envRedactionJMSPropertiesShow      = "TRACEABILITY_REDACTION_JMSPROPERTIES_SHOW"
+	envRedactionJMSPropertiesSanitize  = "TRACEABILITY_REDACTION_JMSPROPERTIES_SANITIZE"
+)
 
 // Config -
 type Config struct {
-	LoadBalance       bool              `config:"loadbalance"`
-	BulkMaxSize       int               `config:"bulk_max_size"`
-	SlowStart         bool              `config:"slow_start"`
-	Timeout           time.Duration     `config:"client_timeout"    validate:"min=0"`
-	TTL               time.Duration     `config:"ttl"               validate:"min=0"`
-	Pipelining        int               `config:"pipelining"        validate:"min=0"`
-	CompressionLevel  int               `config:"compression_level" validate:"min=0, max=9"`
-	MaxRetries        int               `config:"max_retries"       validate:"min=-1"`
-	TLS               TLSConfig         `config:"ssl"`
-	Proxy             ProxyConfig       `config:",inline"`
-	Backoff           Backoff           `config:"backoff"`
-	EscapeHTML        bool              `config:"escape_html"`
-	Protocol          string            `config:"protocol"`
-	Hosts             []string          `config:"hosts"`
-	Redaction         redaction.Config  `config:"redaction" yaml:"redaction"`
-	Sampling          sampling.Sampling `config:"sampling" yaml:"sampling"`
-	APIExceptionsList []string          `config:"apiExceptionsList"`
+	LoadBalance       bool
+	BulkMaxSize       int
+	SlowStart         bool
+	Timeout           time.Duration
+	TTL               time.Duration
+	Pipelining        int
+	CompressionLevel  int
+	MaxRetries        int
+	TLS               TLSConfig
+	Proxy             ProxyConfig
+	Backoff           Backoff
+	EscapeHTML        bool
+	Protocol          string
+	Hosts             []string
+	Redaction         redaction.Config
+	Sampling          sampling.Sampling
+	APIExceptionsList []string
 }
 
 // ProxyConfig holds the configuration information required to proxy
@@ -51,10 +90,10 @@ type Config struct {
 type ProxyConfig struct {
 	// URL of the SOCKS proxy. Scheme must be socks5. Username and password can be
 	// embedded in the URL.
-	URL string `config:"proxy_url"`
+	URL string
 
 	// Resolve names locally instead of on the SOCKS server.
-	LocalResolve bool `config:"proxy_use_local_resolver"`
+	LocalResolve bool
 }
 
 // Backoff -
@@ -87,22 +126,88 @@ func DefaultConfig() *Config {
 	}
 }
 
-// ParseConfig replaces libbeat's common.Config.Unpack (readConfig).
-func ParseConfig(raw interface{}) (*Config, error) {
+// AddConfigProperties sets up all the traceability env vars. Call this once before ParseConfig. It's not automatic, since discovery-only agents don't need it.
+func AddConfigProperties(props properties.Properties) {
+	def := DefaultConfig()
+
+	props.AddStringSliceProperty(pathHost, def.Hosts, "Comma separated list of traceability hosts to publish to")
+	props.AddStringProperty(pathProtocol, def.Protocol, "Protocol used to publish traceability events")
+	props.AddStringProperty(pathPort, "", "Deprecated, use "+pathHost)
+	props.AddBoolProperty(pathLoadBalance, def.LoadBalance, "Enables round robin load balancing across traceability hosts")
+	props.AddBoolProperty(pathSlowStart, def.SlowStart, "Enables slow start for the traceability client")
+	props.AddIntProperty(pathBulkMaxSize, def.BulkMaxSize, "Maximum number of events published in a single traceability request")
+	props.AddDurationProperty(pathClientTimeout, def.Timeout, "Traceability client timeout")
+	props.AddDurationProperty(pathTTL, def.TTL, "Traceability client connection TTL", properties.WithLowerLimit(0))
+	props.AddIntProperty(pathPipelining, def.Pipelining, "Traceability client pipelining", properties.WithLowerLimitInt(0))
+	props.AddIntProperty(pathCompressionLevel, def.CompressionLevel, "Traceability client compression level",
+		properties.WithLowerLimitInt(0), properties.WithUpperLimitInt(9))
+	props.AddIntProperty(pathMaxRetries, def.MaxRetries, "Maximum number of retries for a failed traceability request",
+		properties.WithLowerLimitInt(-1))
+	props.AddStringProperty(pathSSLVerification, "", "TLS verification mode for the traceability client")
+	props.AddStringSliceProperty(pathSSLCipherSuites, []string{}, "Cipher suites allowed for the traceability client")
+	props.AddStringProperty(pathProxyURL, def.Proxy.URL, "SOCKS5 proxy URL for the traceability client")
+	props.AddBoolProperty(pathProxyLocalResolve, def.Proxy.LocalResolve, "Resolve names locally instead of on the SOCKS proxy server")
+	props.AddDurationProperty(pathBackoffInit, def.Backoff.Init, "Initial backoff duration for a failed traceability request", properties.WithLowerLimit(0))
+	props.AddDurationProperty(pathBackoffMax, def.Backoff.Max, "Maximum backoff duration for a failed traceability request")
+	props.AddBoolProperty(pathEscapeHTML, def.EscapeHTML, "Escapes HTML characters in traceability events")
+	props.AddStringSliceProperty(pathExceptionList, def.APIExceptionsList, "APIs excluded from traceability logging")
+
+	props.AddStringProperty(pathRedactionMasking, def.Redaction.MaskingCharacters, "Characters used to mask sanitized values")
+
+	props.AddStringProperty(pathSamplingPercent, strconv.FormatFloat(def.Sampling.Percentage, 'f', -1, 64),
+		"Percentage of transactions to sample")
+	props.AddBoolProperty(pathSamplingPerAPI, def.Sampling.PerAPI, "Applies sampling per API")
+	props.AddBoolProperty(pathSamplingPerSub, def.Sampling.PerSub, "Applies sampling per subscription")
+	props.AddBoolProperty(pathSamplingOnlyErr, def.Sampling.OnlyErrors, "Only samples transactions that resulted in an error")
+}
+
+// ParseConfig reads traceability config from env vars. AddConfigProperties must be called first.
+func ParseConfig(props properties.Properties) (*Config, error) {
 	outputConfig = DefaultConfig()
 
-	cfg, err := ucfg.NewFrom(raw, configOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	if has, _ := cfg.Has("port", -1, configOpts...); has {
+	if props.StringPropertyValue(pathPort) != "" {
 		log.Warn("output.traceability.port is no longer supported; use output.traceability.hosts")
 	}
 
-	if err := cfg.Unpack(outputConfig, configOpts...); err != nil {
-		return nil, err
+	outputConfig.Hosts = props.StringSlicePropertyValue(pathHost)
+	outputConfig.Protocol = props.StringPropertyValue(pathProtocol)
+	outputConfig.LoadBalance = props.BoolPropertyValue(pathLoadBalance)
+	outputConfig.SlowStart = props.BoolPropertyValue(pathSlowStart)
+	outputConfig.BulkMaxSize = props.IntPropertyValue(pathBulkMaxSize)
+	outputConfig.Timeout = props.DurationPropertyValue(pathClientTimeout)
+	outputConfig.TTL = props.DurationPropertyValue(pathTTL)
+	outputConfig.Pipelining = props.IntPropertyValue(pathPipelining)
+	outputConfig.CompressionLevel = props.IntPropertyValue(pathCompressionLevel)
+	outputConfig.MaxRetries = props.IntPropertyValue(pathMaxRetries)
+	outputConfig.EscapeHTML = props.BoolPropertyValue(pathEscapeHTML)
+	outputConfig.APIExceptionsList = props.StringSlicePropertyValue(pathExceptionList)
+
+	outputConfig.TLS.VerificationMode = props.StringPropertyValue(pathSSLVerification)
+	outputConfig.TLS.CipherSuites = props.StringSlicePropertyValue(pathSSLCipherSuites)
+
+	outputConfig.Proxy.URL = props.StringPropertyValue(pathProxyURL)
+	outputConfig.Proxy.LocalResolve = props.BoolPropertyValue(pathProxyLocalResolve)
+
+	outputConfig.Backoff.Init = props.DurationPropertyValue(pathBackoffInit)
+	outputConfig.Backoff.Max = props.DurationPropertyValue(pathBackoffMax)
+
+	outputConfig.Redaction.MaskingCharacters = props.StringPropertyValue(pathRedactionMasking)
+	outputConfig.Redaction.Path.Allowed = parseShowList(envRedactionPathShow)
+	outputConfig.Redaction.Args.Allowed = parseShowList(envRedactionQueryArgShow)
+	outputConfig.Redaction.Args.Sanitize = parseSanitizeList(envRedactionQueryArgSanitize)
+	outputConfig.Redaction.RequestHeaders.Allowed = parseShowList(envRedactionRequestHeaderShow)
+	outputConfig.Redaction.RequestHeaders.Sanitize = parseSanitizeList(envRedactionRequestHeaderSanitize)
+	outputConfig.Redaction.ResponseHeaders.Allowed = parseShowList(envRedactionResponseHeaderShow)
+	outputConfig.Redaction.ResponseHeaders.Sanitize = parseSanitizeList(envRedactionResponseHeaderSanitize)
+	outputConfig.Redaction.JMSProperties.Allowed = parseShowList(envRedactionJMSPropertiesShow)
+	outputConfig.Redaction.JMSProperties.Sanitize = parseSanitizeList(envRedactionJMSPropertiesSanitize)
+
+	if percentage, err := strconv.ParseFloat(props.StringPropertyValue(pathSamplingPercent), 64); err == nil {
+		outputConfig.Sampling.Percentage = percentage
 	}
+	outputConfig.Sampling.PerAPI = props.BoolPropertyValue(pathSamplingPerAPI)
+	outputConfig.Sampling.PerSub = props.BoolPropertyValue(pathSamplingPerSub)
+	outputConfig.Sampling.OnlyErrors = props.BoolPropertyValue(pathSamplingOnlyErr)
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
 		outputConfig.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
@@ -118,6 +223,7 @@ func ParseConfig(raw interface{}) (*Config, error) {
 	}
 
 	// Setup the sampling config, if central config can not be found assume online mode
+	var err error
 	if agent.GetCentralConfig() != nil && agent.GetCentralConfig().GetUsageReportingConfig() != nil {
 		err = sampling.SetupSampling(outputConfig.Sampling, agent.GetCentralConfig().GetUsageReportingConfig().IsOfflineMode(), agent.GetCentralConfig().GetAPICDeployment(), sampling.WithCacheAccess(agent.GetCacheManager()))
 	} else {
@@ -149,6 +255,39 @@ func ParseConfig(raw interface{}) (*Config, error) {
 	}
 
 	return outputConfig, nil
+}
+
+// for Mulesoft after removing go ucfg
+var redactionListSpacing = regexp.MustCompile(`(keyMatch|valueMatch):(\S)`)
+
+func normalizeRedactionListValue(val string) string {
+	return redactionListSpacing.ReplaceAllString(val, "$1: $2")
+}
+
+func parseShowList(envVar string) []redaction.Show {
+	shows := []redaction.Show{}
+	val := strings.TrimSpace(os.Getenv(envVar))
+	if val == "" {
+		return shows
+	}
+	if err := yaml.Unmarshal([]byte(normalizeRedactionListValue(val)), &shows); err != nil {
+		log.Warnf("could not parse %s, ignoring: %s", envVar, err.Error())
+		return []redaction.Show{}
+	}
+	return shows
+}
+
+func parseSanitizeList(envVar string) []redaction.Sanitize {
+	sanitize := []redaction.Sanitize{}
+	val := strings.TrimSpace(os.Getenv(envVar))
+	if val == "" {
+		return sanitize
+	}
+	if err := yaml.Unmarshal([]byte(normalizeRedactionListValue(val)), &sanitize); err != nil {
+		log.Warnf("could not parse %s, ignoring: %s", envVar, err.Error())
+		return []redaction.Sanitize{}
+	}
+	return sanitize
 }
 
 // IsHTTPTransport - Returns true if the protocol is set to http/https
