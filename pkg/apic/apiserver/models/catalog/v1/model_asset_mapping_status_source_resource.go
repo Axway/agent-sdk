@@ -11,8 +11,7 @@ package catalog
 
 // AssetMappingStatusSourceResource The resource that triggered the Asset Mapping. (catalog.v1.AssetMapping)
 type AssetMappingStatusSourceResource struct {
-	ApiService           AssetMappingStatusSourceResourceApiService           `json:"apiService,omitempty"`
-	ApiServiceRevision   AssetMappingStatusSourceResourceApiServiceRevision   `json:"apiServiceRevision,omitempty"`
-	ApiServiceInstance   AssetMappingStatusSourceResourceApiServiceInstance   `json:"apiServiceInstance,omitempty"`
-	AssetMappingTemplate AssetMappingStatusSourceResourceAssetMappingTemplate `json:"assetMappingTemplate,omitempty"`
+	ApiService         AssetMappingStatusSourceResourceApiService         `json:"apiService,omitempty"`
+	ApiServiceRevision AssetMappingStatusSourceResourceApiServiceRevision `json:"apiServiceRevision,omitempty"`
+	ApiServiceInstance AssetMappingStatusSourceResourceApiServiceInstance `json:"apiServiceInstance,omitempty"`
 }
