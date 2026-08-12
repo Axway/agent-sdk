@@ -135,6 +135,9 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
+	if agentType == config.TraceabilityAgent || agentType == config.ComplianceAgent {
+		properties.SetAliasKeyPrefix(c.agentName)
+	}
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	config.AddMetricLogConfigProperties(c.props, agentType)
@@ -178,6 +181,9 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.rootCmd.PreRunE = c.initialize
 
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
+	if agentType == config.TraceabilityAgent || agentType == config.ComplianceAgent {
+		properties.SetAliasKeyPrefix(c.agentName)
+	}
 
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
