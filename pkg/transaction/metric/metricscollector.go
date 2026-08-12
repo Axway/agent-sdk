@@ -86,6 +86,7 @@ type collector struct {
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
 	metricLogger     log.FieldLogger
+	llmProviders     *llmProviderResolver
 }
 
 type publishQueueItem interface {
@@ -177,6 +178,7 @@ func createMetricCollector() Collector {
 		agentName:        agent.GetCentralConfig().GetAgentName(),
 		logger:           logger,
 		metricLogger:     log.NewMetricFieldLogger(),
+		llmProviders:     newLLMProviderResolver(logger),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -531,7 +533,11 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 			},
 		}
 	} else if detail.LLMModel != "" {
-		me.LLM = &models.LLMReference{Model: detail.LLMModel}
+		providerID := c.llmProviders.getProviderID(detail.APIDetails.ID)
+		me.LLM = &models.LLMReference{
+			ResourceReference: models.ResourceReference{ID: providerID},
+			Model:             detail.LLMModel,
+		}
 		customUnits := make(map[string]*UnitCount, len(detail.Units))
 		for unit, count := range detail.Units {
 			unitName := unit.String()
