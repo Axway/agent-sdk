@@ -3,7 +3,7 @@
 ############################################################
 include:
   - project: "apigov/agents/beano_cicd"
-    ref: API*GOV-33492
+    ref: APIGOV-33492
     # this one MUST be after the security jobs in order for overrides to work correctly!
     file:
       - "/gitlabci/repos/agent-sdk.yml"
