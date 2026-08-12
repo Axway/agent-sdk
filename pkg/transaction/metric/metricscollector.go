@@ -38,7 +38,6 @@ const (
 	metricStr         = "metric"
 	volumeStr         = "volume"
 	countStr          = "count"
-	defaultUnit       = "transactions"
 )
 
 var exitMetricInit = false
@@ -57,6 +56,7 @@ type Collector interface {
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
+	AddLLMMetric(detail LLMMetricDetail)
 	ShutdownPublish()
 }
 
@@ -76,6 +76,8 @@ type collector struct {
 	metricMap        map[string]map[string]map[string]map[string]*centralMetric
 	metricMapLock    *sync.Mutex
 	publishItemQueue []publishQueueItem
+	metricsQueue     []*centralMetric
+	metricsQueueLock *sync.Mutex
 	jobID            string
 	usagePublisher   *usagePublisher
 	storage          storageCache
@@ -169,6 +171,7 @@ func createMetricCollector() Collector {
 		registry:         newRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*centralMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
+		metricsQueueLock: &sync.Mutex{},
 		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		agentName:        agent.GetCentralConfig().GetAgentName(),
@@ -376,6 +379,75 @@ func (c *collector) AddAPIMetric(metric *APIMetric) {
 	c.addMetric(centralMetricFromAPIMetric(metric))
 }
 
+// AddLLMMetric - add an llm usage metric for an api/app/model combo
+func (c *collector) AddLLMMetric(detail LLMMetricDetail) {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
+		return
+	}
+
+	logger := c.logger.WithField("handler", "llmMetric").
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("appID", detail.AppDetails.ID).
+		WithField("model", detail.Model)
+
+	if detail.APIDetails.ID == "" {
+		logger.Error("llm metrics require API information")
+		return
+	}
+	if detail.Model == "" {
+		logger.Error("llm metrics require model information")
+		return
+	}
+	if len(detail.Units) == 0 {
+		logger.Error("llm metrics require at least one unit amount")
+		return
+	}
+	logger.WithField("units", len(detail.Units)).Debug("received llm metric report")
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	metric := c.createMetric(transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		LLMModel:   detail.Model,
+		Units:      detail.Units,
+	})
+	metric.Observation = &models.ObservationDetails{
+		Start: detail.Observation.Start,
+		End:   detail.Observation.End,
+	}
+	metric.Reporter = &Reporter{
+		AgentVersion:     cmd.BuildVersion,
+		AgentType:        cmd.BuildAgentName,
+		AgentSDKVersion:  cmd.SDKBuildVersion,
+		AgentName:        c.agentName,
+		ObservationDelta: detail.Observation.End - detail.Observation.Start,
+	}
+
+	c.updateStartTime()
+	c.addMetricToQueue(metric)
+}
+
+// addMetricToQueue - adds a fully detailed metric to batch for next publish cycle
+func (c *collector) addMetricToQueue(metric *centralMetric) {
+	c.metricsQueueLock.Lock()
+	defer c.metricsQueueLock.Unlock()
+	c.metricsQueue = append(c.metricsQueue, metric)
+}
+
+// flushMetricsQueue - adds all metrics to the batch
+func (c *collector) flushMetricsQueue() {
+	c.metricsQueueLock.Lock()
+	queued := c.metricsQueue
+	c.metricsQueue = nil
+	c.metricsQueueLock.Unlock()
+
+	for _, metric := range queued {
+		c.addMetric(metric)
+	}
+}
+
 // addMetric - add central metric event
 func (c *collector) addMetric(metric *centralMetric) {
 	if metric.EventID == "" {
@@ -445,7 +517,7 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		me.Units = &Units{
 			Transactions: &Transactions{
 				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, defaultUnit),
+					Quota: c.getQuota(accessRequest, TransactionUnit.String()),
 				},
 				Status: GetStatusText(detail.Status),
 			},
@@ -458,6 +530,17 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 				},
 			},
 		}
+	} else if detail.LLMModel != "" {
+		me.LLM = &models.LLMReference{Model: detail.LLMModel}
+		customUnits := make(map[string]*UnitCount, len(detail.Units))
+		for unit, count := range detail.Units {
+			unitName := unit.String()
+			customUnits[unitName] = &UnitCount{
+				Count: count,
+				Quota: c.getQuota(accessRequest, unitName),
+			}
+		}
+		me.Units = &Units{CustomUnits: customUnits}
 	}
 
 	return me
@@ -720,7 +803,7 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName s
 		return &models.ResourceReference{ID: unknown}
 	}
 	if unitName == "" {
-		unitName = defaultUnit
+		unitName = TransactionUnit.String()
 	}
 
 	quotaName := ""
@@ -784,6 +867,7 @@ func (c *collector) generateEvents() {
 
 	c.metricBatch = NewEventBatch(c)
 	c.registry.Each(c.processRegistry)
+	c.flushMetricsQueue()
 
 	if len(c.metricBatch.events) == 0 && !c.usageConfig.IsOfflineMode() {
 		c.logger.
