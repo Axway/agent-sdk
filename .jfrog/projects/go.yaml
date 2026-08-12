@@ -1,0 +1,8 @@
+version: 1
+type: go
+resolver:
+    repo: axway-rd-engage-go-prod-aws
+    serverId: SDKArtifacory
+deployer:
+    repo: axway-rd-engage-go-prod-aws
+    serverId: SDKArtifactory
