@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -170,7 +171,7 @@ type cacheManager struct {
 	crrMap                      cache.Cache
 	cacheFilename               string
 	isPersistedCacheLoaded      bool
-	isCacheUpdated              bool
+	isCacheUpdated              atomic.Bool
 	isPersistedCacheEnabled     bool
 	isAccessRequestCacheEnabled bool
 	migrators                   []cacheMigrate
@@ -182,7 +183,6 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
-		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
 		// Traceability agents always need the AccessRequest cache . Discovery agents can opt in via agent.EnableAccessRequestCache().
@@ -219,7 +219,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 	}
 
 	c.isPersistedCacheLoaded = true
-	c.isCacheUpdated = false
+	c.isCacheUpdated.Store(false)
 	for _, loader := range cacheLoaders {
 		loadedMap, loadNew := c.loadPersistedResourceInstanceCache(cacheMap, loader)
 		if loadNew {
@@ -342,7 +342,7 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 }
 
 func (c *cacheManager) setCacheUpdated(updated bool) {
-	c.isCacheUpdated = updated
+	c.isCacheUpdated.Store(updated)
 }
 
 // Cache persistence job
@@ -359,7 +359,7 @@ func (c *cacheManager) Status() error {
 
 // Execute - persists the cache to file
 func (c *cacheManager) Execute() error {
-	if util.IsNotTest() && c.isCacheUpdated {
+	if util.IsNotTest() && c.isCacheUpdated.Load() {
 		c.logger.Trace("executing cache persistence job")
 		c.SaveCache()
 	}
