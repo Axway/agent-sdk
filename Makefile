@@ -52,3 +52,8 @@ PROTOTARGETS := $(PROTOFILES:.proto=.pb.go)
 
 # generate protobufs
 protoc: $(PROTOTARGETS)
+
+# publish the SDK to jfrog. It is assumed that the user has already authenticated and that .jfrog/go.yaml exists
+publish-sdk:
+    @jfrog go-publish $(tag) --build-name=agent-sdk --build-number=$(tag) --module=axway.com/engage/agent-sdk --exclusions "build*;docs*;samples*;scripts*;.git*;.security-profile.json;CODEOWNERS;*.md;Makefile;sonar-project.properties;.jfrog*;proto*"
+
