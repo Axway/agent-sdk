@@ -157,7 +157,7 @@ func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
 		Name:              api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
-	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	svc := cacheManager.GetAPIServiceWithAPIID(transutil.StripSummaryEventPrefix(api.ID))
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}

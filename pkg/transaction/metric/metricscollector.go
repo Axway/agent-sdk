@@ -305,6 +305,10 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
 
+	c.updateCustomMetric(detail)
+}
+
+func (c *collector) updateCustomMetric(detail models.CustomMetricDetail) *centralMetric {
 	logger := c.logger.WithField("handler", "customMetric").
 		WithField("apiID", detail.APIDetails.ID).
 		WithField("appID", detail.AppDetails.ID).
@@ -312,17 +316,17 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 
 	if detail.APIDetails.ID == "" {
 		logger.Error("custom units require API information")
-		return
+		return nil
 	}
 
 	if detail.AppDetails.ID == "" {
 		logger.Error("custom units require App information")
-		return
+		return nil
 	}
 
 	if detail.UnitDetails.Name == "" {
 		logger.Error("custom units require Unit information")
-		return
+		return nil
 	}
 	logger.WithField("count", detail.Count).Debug("received custom unit report")
 
@@ -346,7 +350,7 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
 
-	c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
+	return c.updateMetricWithCachedMetric(metric, newCustomCounter(counter))
 }
 
 // AddAPIMetric - add api metric for API transaction, merging its counts and response stats into
@@ -550,6 +554,7 @@ func (c *collector) updateMetricWithCachedMetric(metric *centralMetric, cached c
 	groupKey, uniqueKey := splitMetricKey(metric.getKey())
 	groupedMetric := c.getOrRegisterGroupedMetrics(c.groupKeyWithStartTime(groupKey))
 
+	metric.groupStartTime = c.metricStartTime.UnixMilli()
 	// first api metric for sub+app+api+statuscode wins and becomes the template used for reporting
 	metric = groupedMetric.getOrSetMetric(uniqueKey, metric)
 
@@ -659,7 +664,7 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 		Name: api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
-	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transutil.SummaryEventProxyIDPrefix))
+	svc := cacheManager.GetAPIServiceWithAPIID(transutil.StripSummaryEventPrefix(api.ID))
 	ref.APIServiceID = unknown
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
@@ -937,10 +942,12 @@ func (c *collector) processMetric(metricName string, groupedMetricInterface inte
 	logger := c.logger.
 		WithField("applicationID", desanitizeKeySegment(elements[1])).
 		WithField("apiID", desanitizeKeySegment(elements[2]))
-	c.handleGroupedMetric(logger, groupedMetric, publishStartTime, metricName)
+
+	// use the start time in the group
+	c.handleGroupedMetric(logger, groupedMetric, time.UnixMilli(groupStartTime), metricName)
 }
 
-func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric groupedMetrics, publishStartTime time.Time, registryKey string) {
+func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric groupedMetrics, startTime time.Time, registryKey string) {
 	countersAdded := false
 	// handle each api counter, on the first one add the counter information
 	for k, apiCtr := range groupedMetric.apiCounters {
@@ -957,7 +964,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric gr
 			counters = groupedMetric.counters
 			countersAdded = true
 		}
-		c.generateMetricEvent(counters, metric, publishStartTime, registryKey, groupedMetric)
+		c.generateMetricEvent(counters, metric, startTime, registryKey, groupedMetric)
 	}
 
 	// create metric with just custom units
@@ -973,7 +980,7 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetric gr
 			return
 		}
 		c.setMetricCounters(logger, metric, groupedMetric)
-		c.generateMetricEvent(groupedMetric.counters, metric, publishStartTime, registryKey, groupedMetric)
+		c.generateMetricEvent(groupedMetric.counters, metric, startTime, registryKey, groupedMetric)
 	}
 }
 
@@ -1015,13 +1022,13 @@ func (c *collector) setMetricsFromAPICounter(m *centralMetric, apiCtr *apiCounte
 	}
 }
 
-func (c *collector) generateMetricEvent(counters map[string]*counter, metric *centralMetric, publishStartTime time.Time, registryKey string, group groupedMetrics) {
+func (c *collector) generateMetricEvent(counters map[string]*counter, metric *centralMetric, startTime time.Time, registryKey string, group groupedMetrics) {
 	if metric.Units != nil && metric.Units.Transactions != nil && metric.Units.Transactions.Count == 0 {
 		c.logger.Trace("skipping registry entry with no reported quantity")
 		return
 	}
 	metric.Observation = &models.ObservationDetails{
-		Start: util.ConvertTimeToMillis(publishStartTime),
+		Start: util.ConvertTimeToMillis(startTime),
 		End:   util.ConvertTimeToMillis(c.metricEndTime),
 	}
 	metric.Reporter = &Reporter{
@@ -1033,7 +1040,7 @@ func (c *collector) generateMetricEvent(counters map[string]*counter, metric *ce
 	}
 
 	// Generate app subscription metric
-	c.generateV4Event(counters, metric, publishStartTime, registryKey, group)
+	c.generateV4Event(counters, metric, startTime, registryKey, group)
 }
 
 func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
@@ -1050,8 +1057,8 @@ func (c *collector) createV4Event(startTime int64, v4data V4Data) V4Event {
 	}
 }
 
-func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, publishStartTime time.Time, registryKey string, group groupedMetrics) {
-	generatedEvent := c.createV4Event(publishStartTime.UnixMilli(), v4data)
+func (c *collector) generateV4Event(counters map[string]*counter, v4data V4Data, startTime time.Time, registryKey string, group groupedMetrics) {
+	generatedEvent := c.createV4Event(startTime.UnixMilli(), v4data)
 	c.metricLogger.WithFields(generatedEvent.getLogFields()).Info("generated")
 	AddCondorMetricEventToBatch(generatedEvent, c.metricBatch, registryKey, counters, group)
 }
@@ -1156,15 +1163,13 @@ func (c *collector) logMetric(msg string, metric *centralMetric) {
 // of being lost. Once every entry in the group has been acked, the group itself is removed from the
 // registry.
 func (c *collector) cleanupMetricCounters(registryKey string, counters map[string]*counter, group groupedMetrics, metric *centralMetric) {
-	c.storage.removeMetric(metric)
-
+	// clean all counters and metrics
 	_, statusKey := splitMetricKey(metric.getKey())
+	c.removeStoredMetric(group, statusKey)
 	empty := group.removeAndCheckEmpty(statusKey)
 
 	for k := range counters {
-		if m, ok := group.getMetric(k); ok {
-			c.storage.removeMetric(m)
-		}
+		c.removeStoredMetric(group, k)
 		empty = group.removeAndCheckEmpty(k)
 	}
 
@@ -1177,6 +1182,12 @@ func (c *collector) cleanupMetricCounters(registryKey string, counters map[strin
 		WithField(endTimestampStr, util.ConvertTimeToMillis(c.usageEndTime)).
 		WithField("apiName", metric.API.Name).
 		Info("Published metrics report for API")
+}
+
+func (c *collector) removeStoredMetric(group groupedMetrics, key string) {
+	if m, ok := group.getMetric(key); ok {
+		c.storage.removeMetric(m)
+	}
 }
 
 func GetStatusText(statusCode string) string {

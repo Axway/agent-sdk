@@ -8,11 +8,27 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
+	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
+
+func newAPIServiceRIForTest(apiID, metaID string, owner *v1.Owner) *v1.ResourceInstance {
+	svc := management.NewAPIService("svc-"+apiID, "env1")
+	svc.SubResources = map[string]interface{}{
+		"x-agent-details": map[string]interface{}{"externalAPIID": apiID},
+	}
+	svc.Owner = owner
+	ri, _ := svc.AsInstance()
+	ri.Metadata.ID = metaID
+	return ri
+}
 
 // compile-time assertions. Both data types must satisfy the V4Data interface.
 var _ metric.V4Data = (*TransactionLegData)(nil)
@@ -1276,4 +1292,57 @@ func TestV4DataInterfaceMethods(t *testing.T) {
 		fields := d.GetLogFields()
 		assert.Equal(t, "Success", fields["status"])
 	})
+}
+
+func TestBuildSummaryAPIDetailAPIServiceIDFallback(t *testing.T) {
+	const (
+		testAPIServiceGUID  = "team-guid-svc"
+		testFallbackAPIName = "api-name"
+	)
+
+	cases := map[string]struct {
+		apiServiceRI     *v1.ResourceInstance
+		apiID            string
+		apiServiceIDArg  string
+		wantAPIServiceID string
+	}{
+		"apiServiceId already populated skips cache lookup": {
+			// meta ID deliberately differs from apiServiceIDArg to prove the cache is never consulted.
+			apiServiceRI:     newAPIServiceRIForTest("api-pre", "unused-cached-id", &v1.Owner{Type: v1.TeamOwner, ID: testAPIServiceGUID}),
+			apiID:            transutil.SummaryEventProxyIDPrefix + "api-pre",
+			apiServiceIDArg:  "already-known-id",
+			wantAPIServiceID: "already-known-id",
+		},
+		"real ID prefix resolves apiServiceId via cache fallback": {
+			apiServiceRI:     newAPIServiceRIForTest("api-real", "svc-meta-api-real", &v1.Owner{Type: v1.TeamOwner, ID: testAPIServiceGUID}),
+			apiID:            transutil.SummaryEventProxyIDPrefix + "api-real",
+			apiServiceIDArg:  "",
+			wantAPIServiceID: "svc-meta-api-real",
+		},
+		"name-fallback prefix resolves apiServiceId via cache fallback": {
+			apiServiceRI:     newAPIServiceRIForTest(testFallbackAPIName, "svc-meta-api-name", &v1.Owner{Type: v1.TeamOwner, ID: testAPIServiceGUID}),
+			apiID:            transutil.SummaryEventAPINamePrefix + testFallbackAPIName,
+			apiServiceIDArg:  "",
+			wantAPIServiceID: "svc-meta-api-name",
+		},
+		"api not found in cache leaves apiServiceId empty": {
+			apiServiceRI:     nil,
+			apiID:            transutil.SummaryEventProxyIDPrefix + "missing-api",
+			apiServiceIDArg:  "",
+			wantAPIServiceID: "",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			cacheManager := cache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+			if tc.apiServiceRI != nil {
+				cacheManager.AddAPIService(tc.apiServiceRI)
+			}
+
+			detail := buildSummaryAPIDetail(log.NewFieldLogger(), tc.apiID, testFallbackAPIName, tc.apiServiceIDArg, nil, cacheManager)
+			require.NotNil(t, detail)
+			assert.Equal(t, tc.wantAPIServiceID, detail.APIServiceID)
+		})
+	}
 }
