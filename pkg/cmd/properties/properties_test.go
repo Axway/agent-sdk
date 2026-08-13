@@ -9,12 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAliasKeyPrefixResolvesNestedYamlValue guards against the regression where an agent's
-// yaml (nested entirely under its own name, e.g. "traceability_agent:") stopped resolving via
-// the properties framework because the alias-key lookup was removed. Without SetAliasKeyPrefix,
-// a property registered as "status.port" only ever reads the plain "status.port" key, which the
-// nested yaml never populates, so it silently falls back to the flag's own default instead of
-// the yaml's value.
+// TestAliasKeyPrefixResolvesNestedYamlValue guards against a regression where yaml nested under
+// an agent's own name (e.g. "traceability_agent:") silently stopped resolving.
 func TestAliasKeyPrefixResolvesNestedYamlValue(t *testing.T) {
 	yamlContent := []byte(`
 traceability_agent:

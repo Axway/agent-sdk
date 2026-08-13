@@ -123,10 +123,8 @@ func WithUpperLimitInt(upper int) IntOpt {
 	}
 }
 
-// aliasKeyPrefix - when set (via SetAliasKeyPrefix), properties are looked up under
-// "<aliasKeyPrefix>.<key>" first, falling back to the plain "<key>". This lets an agent
-// type whose yaml nests everything under its own name (a libbeat convention some agents'
-// shipped yaml still uses) have its yaml-configured values actually resolve.
+// aliasKeyPrefix - when set, properties are looked up under "<aliasKeyPrefix>.<key>" first,
+// falling back to the plain "<key>".
 var aliasKeyPrefix string
 
 // SetAliasKeyPrefix -
