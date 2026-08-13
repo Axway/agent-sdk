@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -20,7 +21,9 @@ import (
 const (
 	regularQueue     = "regularQueue"
 	workerBufferSize = 5
-	// amount of workers outside of the provisioning lane
+	// amount of shards (each with its own dedicated worker) per kind lane. Events are hashed by
+	// resource ID onto a shard (see kindLane), so a single resource's events always land on the
+	// same worker and stay ordered, while different resources spread across all shards.
 	workerCount = 3
 	// provisioningLaneCount spreads demoted AccessRequest/Credential events across multiple worker
 	// shards, keyed by managed application, instead of a single shared worker
@@ -56,10 +59,10 @@ type EventListener struct {
 	logger                     log.FieldLogger
 	sequenceManager            SequenceProvider
 	source                     chan *proto.Event
-	kindJobs                   map[string]chan handlerData // one worker per kind
-	provisioningJobs           []chan handlerData          // provisioningLaneCount shards, one worker each, sharded by managed application key
-	provisioningLaneAssignment map[string]int              // managed application key -> shard index in provisioningJobs, assigned on first demotion
-	seenManagedApps            map[string]struct{}         // managed application names already dispatched to their kind's lane at least once
+	kindJobs                   map[string][]chan handlerData // regularWorkerCount shards per kind, one worker each, sharded by resource ID - see kindLane
+	provisioningJobs           []chan handlerData            // provisioningLaneCount shards, one worker each, sharded by managed application key
+	provisioningLaneAssignment map[string]int                // managed application key -> shard index in provisioningJobs, assigned on first demotion
+	seenManagedApps            map[string]struct{}           // managed application names already dispatched to their kind's lane at least once
 	regularWorkerCount         int
 	provisioningWorkerCount    int
 	workerBuffer               int
@@ -171,7 +174,7 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		logger:                     logger,
 		sequenceManager:            sequenceManager,
 		source:                     source,
-		kindJobs:                   make(map[string]chan handlerData),
+		kindJobs:                   make(map[string][]chan handlerData),
 		provisioningLaneAssignment: make(map[string]int),
 		seenManagedApps:            make(map[string]struct{}),
 		seqTracker:                 newSequenceTracker(),
@@ -200,8 +203,10 @@ func (em *EventListener) closeJobs() {
 	for _, ch := range em.provisioningJobs {
 		close(ch)
 	}
-	for _, ch := range em.kindJobs {
-		close(ch)
+	for _, lanes := range em.kindJobs {
+		for _, ch := range lanes {
+			close(ch)
+		}
 	}
 }
 
@@ -212,11 +217,12 @@ func (em *EventListener) Listen() {
 	}
 
 	for kind := range em.handlersByKind {
-		ch := make(chan handlerData, em.workerBuffer)
-		em.kindJobs[kind] = ch
-		for range em.regularWorkerCount {
-			go worker(ch)
+		lanes := make([]chan handlerData, em.regularWorkerCount)
+		for i := range lanes {
+			lanes[i] = make(chan handlerData, em.workerBuffer)
+			go worker(lanes[i]) // exactly one worker per shard, order preserved per resource ID - see kindLane
 		}
+		em.kindJobs[kind] = lanes
 	}
 
 	go func() {
@@ -358,8 +364,9 @@ func (em *EventListener) advanceSequence(sequenceID int64) {
 // every later event tied to the same name goes to that managed app's demoted shard (see provisioningLane).
 func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
 	kind := event.Payload.Kind
+	resourceID := event.Payload.Metadata.Id
 	if !provisioningHandlers[kind] {
-		return em.kindJobs[kind], regularQueue
+		return em.kindLane(kind, resourceID), regularQueue
 	}
 
 	key, ok := managedApplicationKey(event, ri)
@@ -372,7 +379,23 @@ func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInst
 		return em.provisioningLane(key)
 	}
 	em.seenManagedApps[key] = struct{}{}
-	return em.kindJobs[kind], regularQueue
+	return em.kindLane(kind, resourceID), regularQueue
+}
+
+// kindLane picks a resource's worker within its kind lane by hashing the resource ID, so every
+// event for that resource always lands on the same worker - a lane behaves as single-threaded per
+// resource, ruling out two events for the same resource ever running concurrently (the race that
+// let a subresource merge handler's SetSubResource call race CreateHashes on the shared
+// SubResources map - see pkg/agent/cache, ResourceMeta.CreateHashes). Different resources still
+// spread across the kind's shards for parallelism.
+func (em *EventListener) kindLane(kind, resourceID string) chan handlerData {
+	lanes := em.kindJobs[kind]
+	if len(lanes) == 0 {
+		return nil
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(resourceID))
+	return lanes[h.Sum32()%uint32(len(lanes))]
 }
 
 // uses the same jobIndex for a previously seem managedApp so provisioning jobs tied to a previously seen

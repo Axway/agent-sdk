@@ -224,17 +224,17 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			revisionOnly: false,
 			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
 			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusOK},    // PUT service
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service status source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
-				{FileName: testRevisionListFile, RespCode: http.StatusOK},  // GET revision list (updateAPI path)
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision count
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // GET revision by name
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // PUT revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
-				{FileName: testInstanceFile, RespCode: http.StatusCreated}, // POST instance
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // instance x-agent-details subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
+				{FileName: testAPIServiceFile, RespCode: http.StatusOK},                         // PUT service
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // service status source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // service x-agent-details subresource
+				{FileName: testRevisionListFile, RespCode: http.StatusOK},                       // GET revision list (updateAPI path)
+				{FileName: testRevisionFile, RespCode: http.StatusOK},                           // POST revision
+				{FileName: testRevisionFile, RespCode: http.StatusOK},                           // PUT revision x-agent-details subresource
+				{FileName: "./testdata/existingserviceinstances.json", RespCode: http.StatusOK}, // GET instance (updateAPI path)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // revision x-agent-details subresource
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},                      // POST instance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // instance x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // service x-agent-details subresource
 			},
 		},
 		"existing service: revision-only skips service update and instance, creates revision only": {
@@ -396,7 +396,7 @@ func TestUpdateService(t *testing.T) {
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testInstanceFile, // for call to get the serviceinstance
+			FileName: "./testdata/existingserviceinstances.json", // for call to get the serviceinstance (expects an array)
 			RespCode: http.StatusOK,
 		},
 		{

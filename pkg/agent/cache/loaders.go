@@ -34,7 +34,7 @@ func (resourceLoader) unmarshaller(data []byte) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	ri.CreateHashes()
+	ri = withComputedHashes(ri)
 	return ri, nil
 }
 

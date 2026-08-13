@@ -40,6 +40,7 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 		return
 	}
 
+	ri = withComputedHashes(ri)
 	ar := &management.AccessRequest{}
 	if ar.FromInstance(ri) != nil {
 		return
@@ -102,7 +103,7 @@ func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAP
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
@@ -118,7 +119,7 @@ func (c *cacheManager) GetAccessRequestsByApp(appName string) []*v1.ResourceInst
 	for _, item := range items {
 		if item != nil {
 			if ri, ok := item.GetObject().(*v1.ResourceInstance); ok {
-				accessRequests = append(accessRequests, withComputedHashes(ri))
+				accessRequests = append(accessRequests, ri)
 			}
 		}
 	}
@@ -133,7 +134,7 @@ func (c *cacheManager) GetAccessRequest(id string) *v1.ResourceInstance {
 	accessRequest, _ := c.accessRequestMap.Get(id)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
@@ -148,7 +149,7 @@ func (c *cacheManager) ListAccessRequests() []*v1.ResourceInstance {
 	for _, key := range c.accessRequestMap.GetKeys() {
 		item, _ := c.accessRequestMap.Get(key)
 		if v, ok := item.(*v1.ResourceInstance); ok && v != nil {
-			list = append(list, withComputedHashes(v))
+			list = append(list, v)
 		}
 	}
 	return list

@@ -9,6 +9,7 @@ import (
 // AddAPIServiceInstance -  add/update APIServiceInstance resource in cache
 func (c *cacheManager) AddAPIServiceInstance(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
+	resource = withComputedHashes(resource)
 	c.logger.
 		WithField("resource", resource.Name).
 		WithField("apiID", resource.Metadata.ID).
@@ -34,7 +35,7 @@ func (c *cacheManager) GetAPIServiceInstanceByID(id string) (*v1.ResourceInstanc
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(instance), nil
+			return instance, nil
 		}
 	}
 	return nil, err
@@ -49,7 +50,7 @@ func (c *cacheManager) GetAPIServiceInstanceByName(name string) (*v1.ResourceIns
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(instance), nil
+			return instance, nil
 		}
 	}
 	return nil, err
@@ -81,7 +82,7 @@ func (c *cacheManager) ListAPIServiceInstances() []*v1.ResourceInstance {
 		if item != nil {
 			instance, ok := item.(*v1.ResourceInstance)
 			if ok {
-				instances = append(instances, withComputedHashes(instance))
+				instances = append(instances, instance)
 			}
 		}
 	}

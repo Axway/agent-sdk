@@ -10,6 +10,7 @@ func (c *cacheManager) AddIdentityProviderMetadata(ri *v1.ResourceInstance) {
 		return
 	}
 
+	ri = withComputedHashes(ri)
 	idpMetadata := &management.IdentityProviderMetadata{}
 	if idpMetadata.FromInstance(ri) != nil {
 		return

@@ -14,6 +14,15 @@ const (
 	separator = "-"
 )
 
+var (
+	sharpSRegex       = regexp.MustCompile(`[ß]`)
+	oSlashRegex       = regexp.MustCompile(`[Øø]`)
+	aeRegex           = regexp.MustCompile(`[Ææ]`)
+	oeRegex           = regexp.MustCompile(`[Œœ]`)
+	invalidCharsRegex = regexp.MustCompile(`[^a-z0-9-]`)
+	repeatedDashRegex = regexp.MustCompile(`[-]{2,}`)
+)
+
 func NormalizeNameForCentral(str string) string {
 	if str == "" {
 		return ""
@@ -23,17 +32,17 @@ func NormalizeNameForCentral(str string) string {
 
 	// replace accented characters with their non-accented English character equivalents.
 	str = removeDiacritics(str)
-	str = regexp.MustCompile(`[ß]`).ReplaceAllString(str, "ss")
-	str = regexp.MustCompile(`[Øø]`).ReplaceAllString(str, "o")
-	str = regexp.MustCompile(`[Ææ]`).ReplaceAllString(str, "ae")
-	str = regexp.MustCompile(`[Œœ]`).ReplaceAllString(str, "oe")
+	str = sharpSRegex.ReplaceAllString(str, "ss")
+	str = oSlashRegex.ReplaceAllString(str, "o")
+	str = aeRegex.ReplaceAllString(str, "ae")
+	str = oeRegex.ReplaceAllString(str, "oe")
 
 	// make string all lowercase
 	str = strings.ToLower(str)
 
 	// replace invalid characters with "-" and reduce to 1 "-" maximum
-	str = regexp.MustCompile(`[^a-z0-9-]`).ReplaceAllString(str, separator)
-	str = regexp.MustCompile(`[-]{2,}`).ReplaceAllString(str, separator)
+	str = invalidCharsRegex.ReplaceAllString(str, separator)
+	str = repeatedDashRegex.ReplaceAllString(str, separator)
 
 	// remove leading and trailing "-"
 	str = strings.Trim(str, separator)

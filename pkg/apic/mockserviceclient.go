@@ -48,6 +48,7 @@ func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 		logger:                             log.NewFieldLogger(),
 		pageSizes:                          map[string]int{},
 		pageSizeMutex:                      &sync.Mutex{},
+		numberOfWorkers:                    5,
 	}
 
 	return svcClient, apiClient

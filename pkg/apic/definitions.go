@@ -161,6 +161,7 @@ type ServiceClient struct {
 	logger                             log.FieldLogger
 	pageSizes                          map[string]int
 	pageSizeMutex                      *sync.Mutex
+	numberOfWorkers                    int
 }
 
 // APIServerInfoProperty -

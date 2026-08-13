@@ -3,6 +3,8 @@ package events
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -39,9 +41,9 @@ func newTestListener(t *testing.T, knownKind string) *EventListener {
 			management.ManagedApplicationGVK().Kind: {&mockHandler{}},
 		},
 	)
-	em.kindJobs = map[string]chan handlerData{
-		knownKind:                               make(chan handlerData, 1),
-		management.ManagedApplicationGVK().Kind: make(chan handlerData, 1),
+	em.kindJobs = map[string][]chan handlerData{
+		knownKind:                               {make(chan handlerData, 1)},
+		management.ManagedApplicationGVK().Kind: {make(chan handlerData, 1)},
 	}
 	em.provisioningJobs = []chan handlerData{make(chan handlerData, 1)}
 	return em
@@ -125,7 +127,7 @@ func TestEventListener_start(t *testing.T) {
 			var lane chan handlerData
 			switch tc.wantLane {
 			case "kind":
-				lane = em.kindJobs[tc.kind]
+				lane = em.kindJobs[tc.kind][0]
 			case "demoted":
 				lane = em.provisioningJobs[0]
 			}
@@ -221,7 +223,7 @@ func TestEventListener_handleEvent(t *testing.T) {
 
 			ctx, cancel := context.WithCancelCause(context.Background())
 			listener := NewEventListener(ctx, cancel, make(chan *proto.Event), tc.client, "https://apicentral.example.com", sequenceManager, map[string][]handler.Handler{"": {tc.handler}})
-			listener.kindJobs[""] = make(chan handlerData, 1)
+			listener.kindJobs[""] = []chan handlerData{make(chan handlerData, 1)}
 
 			err := listener.handleEvent(event)
 
@@ -296,7 +298,7 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 		map[string][]handler.Handler{kind: {blocking}},
 	)
 	ch := make(chan handlerData, 1)
-	listener.kindJobs[kind] = ch
+	listener.kindJobs[kind] = []chan handlerData{ch}
 	go worker(ch)
 
 	event := newTestEvent(5)
@@ -352,8 +354,8 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 			arKind: {&mockHandler{}},
 		},
 	)
-	listener.kindJobs[maKind] = make(chan handlerData, 1)
-	listener.kindJobs[arKind] = make(chan handlerData, 1)
+	listener.kindJobs[maKind] = []chan handlerData{make(chan handlerData, 1)}
+	listener.kindJobs[arKind] = []chan handlerData{make(chan handlerData, 1)}
 	listener.provisioningJobs = []chan handlerData{make(chan handlerData, 1)}
 
 	maEvent := newTestEvent(1)
@@ -361,7 +363,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	maEvent.Payload.Name = "app-1"
 	assert.NoError(t, listener.handleEvent(maEvent))
 	select {
-	case <-listener.kindJobs[maKind]:
+	case <-listener.kindJobs[maKind][0]:
 	default:
 		t.Fatal("expected the first ManagedApplication event to use its kind lane")
 	}
@@ -381,7 +383,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	deleteEvent.Type = proto.Event_DELETED
 	assert.NoError(t, listener.handleEvent(deleteEvent))
 	select {
-	case <-listener.kindJobs[maKind]:
+	case <-listener.kindJobs[maKind][0]:
 	default:
 		t.Fatal("expected the ManagedApplication delete to still use its own kind lane - only AccessRequest/Credential get demoted")
 	}
@@ -396,7 +398,7 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	arEvent2.Payload.Kind = arKind
 	assert.NoError(t, listener.handleEvent(arEvent2))
 	select {
-	case <-listener.kindJobs[arKind]:
+	case <-listener.kindJobs[arKind][0]:
 	default:
 		t.Fatal("expected the AccessRequest after the app was deleted to use the kind lane again")
 	}
@@ -457,6 +459,128 @@ func TestEventListener_provisioningShards_runConcurrently(t *testing.T) {
 	}, time.Second, 10*time.Millisecond, "both shards should have run their handler")
 	assert.Less(t, time.Since(start), 350*time.Millisecond,
 		"both shards' handlers should run concurrently, not serialize behind one worker")
+}
+
+// TestKindLane_ShardsByResourceID proves kindLane's routing property: a given resource ID always
+// maps to the same worker channel (so a lane behaves as if single-threaded for that resource), and
+// different resource IDs spread across more than one worker when there's more than one shard.
+func TestKindLane_ShardsByResourceID(t *testing.T) {
+	const kind = "TestKind"
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+
+	em := NewEventListener(
+		ctx, cancel,
+		make(chan *proto.Event),
+		&mockAPIClient{},
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {&mockHandler{}}},
+	)
+	lanes := make([]chan handlerData, 4)
+	for i := range lanes {
+		lanes[i] = make(chan handlerData, 1)
+	}
+	em.kindJobs[kind] = lanes
+
+	lane := em.kindLane(kind, "resource-a")
+	for i := 0; i < 50; i++ {
+		assert.True(t, lane == em.kindLane(kind, "resource-a"), "the same resource ID must always land on the same worker")
+	}
+
+	seen := map[chan handlerData]bool{}
+	for i := 0; i < 50; i++ {
+		seen[em.kindLane(kind, fmt.Sprintf("resource-%d", i))] = true
+	}
+	assert.Greater(t, len(seen), 1, "different resource IDs should spread across more than one worker")
+}
+
+// orderTrackingHandler records the sequence ID handled for each resource ID and fails the test if
+// a later call for the same resource ID reports a sequence that isn't strictly increasing - i.e. if
+// two events for the same resource were ever handled out of order.
+type orderTrackingHandler struct {
+	t       *testing.T
+	wg      *sync.WaitGroup
+	mu      sync.Mutex
+	lastSeq map[string]int64
+}
+
+func (h *orderTrackingHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool { return true }
+
+func (h *orderTrackingHandler) Handle(_ context.Context, meta *proto.EventMeta, ri *apiv1.ResourceInstance) error {
+	defer h.wg.Done()
+	// jitter simulates handlers taking varying amounts of time, e.g. one blocked on a network
+	// call while another for the same resource is dispatched to a different worker - the
+	// scenario that let events for the same resource complete out of order pre-sharding.
+	time.Sleep(time.Duration(rand.Intn(300)) * time.Microsecond)
+
+	id := ri.Metadata.ID
+	seq := meta.SequenceID
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if prev, ok := h.lastSeq[id]; ok && seq <= prev {
+		h.t.Errorf("resource %s: handled sequence %d out of order after %d", id, seq, prev)
+	}
+	h.lastSeq[id] = seq
+	return nil
+}
+
+// TestEventListener_kindLanePreservesPerResourceOrder is the integration-level proof for the
+// sharding fix: with multiple workers per kind lane, events for the same resource ID are still
+// always handled by the same worker and therefore in dispatch order, ruling out both the
+// concurrent-map-write crash and silent out-of-order overwrites for a single resource - while
+// different resources are still free to run in parallel across the other workers.
+func TestEventListener_kindLanePreservesPerResourceOrder(t *testing.T) {
+	const kind = "TestKind"
+	const resourceCount = 8
+	const eventsPerResource = 300
+
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+
+	var wg sync.WaitGroup
+	wg.Add(resourceCount * eventsPerResource)
+	tracker := &orderTrackingHandler{t: t, wg: &wg, lastSeq: map[string]int64{}}
+
+	em := NewEventListener(
+		ctx, cancel,
+		make(chan *proto.Event),
+		&mockAPIClient{},
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {tracker}},
+		WithRegularWorkerCount(4),
+	)
+	em.Listen()
+	defer em.Stop()
+
+	seq := int64(0)
+	for round := 0; round < eventsPerResource; round++ {
+		for r := 0; r < resourceCount; r++ {
+			seq++
+			event := newTestEvent(seq)
+			event.Type = proto.Event_DELETED
+			event.Payload.Kind = kind
+			event.Payload.Metadata.Id = fmt.Sprintf("resource-%d", r)
+			assert.NoError(t, em.handleEvent(event))
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("handlers did not finish in time")
+	}
 }
 
 type mockHandler struct {

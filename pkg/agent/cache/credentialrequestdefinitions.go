@@ -7,7 +7,7 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 // AddCredentialRequestDefinition -  add/update CredentialRequestDefinition resource in cache
 func (c *cacheManager) AddCredentialRequestDefinition(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
-
+	resource = withComputedHashes(resource)
 	c.crdMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
 
@@ -31,7 +31,7 @@ func (c *cacheManager) ListCredentialRequestDefinitions() []*v1.ResourceInstance
 		if item != nil {
 			instance, ok := item.(*v1.ResourceInstance)
 			if ok {
-				instances = append(instances, withComputedHashes(instance))
+				instances = append(instances, instance)
 			}
 		}
 	}
@@ -47,7 +47,7 @@ func (c *cacheManager) GetCredentialRequestDefinitionByName(name string) (*v1.Re
 	item, err := c.crdMap.GetBySecondaryKey(name)
 	if item != nil {
 		if crd, ok := item.(*v1.ResourceInstance); ok {
-			return withComputedHashes(crd), nil
+			return crd, nil
 		}
 	}
 	return nil, err
@@ -61,7 +61,7 @@ func (c *cacheManager) GetCredentialRequestDefinitionByID(id string) (*v1.Resour
 	item, err := c.crdMap.Get(id)
 	if item != nil {
 		if crd, ok := item.(*v1.ResourceInstance); ok {
-			return withComputedHashes(crd), nil
+			return crd, nil
 		}
 	}
 	return nil, err
