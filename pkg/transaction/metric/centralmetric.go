@@ -261,7 +261,7 @@ func (a *centralMetric) addUnitFields(fields logrus.Fields) logrus.Fields {
 	if a.Units.Transactions != nil {
 		fields = a.addTransactionFields(fields)
 	}
-	for k, u := range a.Units.CustomUnits {
+	for k, u := range a.Units.Units {
 		if u.Quota != nil {
 			fields = u.Quota.GetLogFields(fields, fmt.Sprintf("%sQuotaID", k))
 		}
@@ -306,7 +306,7 @@ func (a *centralMetric) getKey() string {
 		uniqueKey = a.Units.Transactions.Status
 	} else if a.Units != nil {
 		// get the first, and should be only, custom unit name
-		for k := range a.Units.CustomUnits {
+		for k := range a.Units.Units {
 			uniqueKey = k
 			break
 		}
@@ -341,7 +341,7 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		cacheM.Quota = a.Units.Transactions.Quota
 		cacheM.StatusCode = a.Units.Transactions.Status
 	} else {
-		for u := range a.Units.CustomUnits {
+		for u := range a.Units.Units {
 			cacheM.Unit = &models.Unit{
 				Name: u,
 			}

@@ -366,7 +366,7 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	}
 
 	// add the count
-	metric.Units.CustomUnits[detail.UnitDetails.Name].Count += detail.Count
+	metric.Units.Units[detail.UnitDetails.Name].Count += detail.Count
 
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
@@ -505,48 +505,15 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		App:                c.createAppDetail(managedApp),
 		Product:            c.getProduct(accessRequest),
 		API:                c.createAPIDetail(detail.APIDetails),
+		LLM:                c.createLLMDetail(detail.LLMModel, detail.APIDetails.ID),
 		AssetResource:      c.getAssetResource(accessRequest),
 		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
 		ProductPlan:        c.getProductPlan(accessRequest),
+		Units:              c.getUnits(detail, accessRequest),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),
-	}
-
-	// transactions
-	if detail.Status != "" {
-		me.Units = &Units{
-			Transactions: &Transactions{
-				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, TransactionUnit.String()),
-				},
-				Status: GetStatusText(detail.Status),
-			},
-		}
-	} else if detail.UnitName != "" {
-		me.Units = &Units{
-			CustomUnits: map[string]*UnitCount{
-				detail.UnitName: {
-					Quota: c.getQuota(accessRequest, detail.UnitName),
-				},
-			},
-		}
-	} else if detail.LLMModel != "" {
-		providerID := c.llmProviders.getProviderID(detail.APIDetails.ID)
-		me.LLM = &models.LLMReference{
-			ResourceReference: models.ResourceReference{ID: providerID},
-			Model:             detail.LLMModel,
-		}
-		customUnits := make(map[string]*UnitCount, len(detail.Units))
-		for unit, count := range detail.Units {
-			unitName := unit.String()
-			customUnits[unitName] = &UnitCount{
-				Count: count,
-				Quota: c.getQuota(accessRequest, unitName),
-			}
-		}
-		me.Units = &Units{CustomUnits: customUnits}
 	}
 
 	return me
@@ -732,6 +699,18 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	return ref
 }
 
+func (c *collector) createLLMDetail(model, apiID string) *models.LLMReference {
+	if model == "" {
+		return &models.LLMReference{ResourceReference: models.ResourceReference{ID: unknown}}
+	}
+
+	providerID := c.llmProviders.getProviderID(apiID)
+	return &models.LLMReference{
+		ResourceReference: models.ResourceReference{ID: providerID},
+		Model:             model,
+	}
+}
+
 // getAPIServiceRevision uses the APIServiceInstance reference on the AccessRequest as the
 // revision identifier. AccessRequests do not carry a direct APIServiceRevision reference.
 func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
@@ -787,6 +766,40 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	}
 
 	return ref
+}
+
+func (c *collector) getUnits(detail transactionContext, accessRequest *management.AccessRequest) *Units {
+	if detail.UnitName != "" {
+		return &Units{
+			Units: map[string]*UnitCount{
+				detail.UnitName: {
+					Quota: c.getQuota(accessRequest, detail.UnitName),
+				},
+			},
+		}
+	}
+
+	if detail.LLMModel != "" {
+		customUnits := make(map[string]*UnitCount, len(detail.Units))
+		for unit, count := range detail.Units {
+			unitName := unit.String()
+			customUnits[unitName] = &UnitCount{
+				Count: count,
+				Quota: c.getQuota(accessRequest, unitName),
+			}
+		}
+		return &Units{Units: customUnits}
+	}
+
+	// transactions
+	return &Units{
+		Transactions: &Transactions{
+			UnitCount: UnitCount{
+				Quota: c.getQuota(accessRequest, TransactionUnit.String()),
+			},
+			Status: GetStatusText(detail.Status),
+		},
+	}
 }
 
 func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *models.ResourceReference {
@@ -1037,8 +1050,8 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 }
 
 func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
-	if metricData.Units.CustomUnits == nil {
-		metricData.Units.CustomUnits = map[string]*UnitCount{}
+	if metricData.Units.Units == nil {
+		metricData.Units.Units = map[string]*UnitCount{}
 	}
 
 	for k, counter := range counters {
@@ -1051,13 +1064,13 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 
 		// create a new quota pointer
 		var quota *models.ResourceReference
-		if metric.Units.CustomUnits[k].Quota != nil {
+		if metric.Units.Units[k].Quota != nil {
 			quota = &models.ResourceReference{
-				ID: metric.Units.CustomUnits[k].Quota.ID,
+				ID: metric.Units.Units[k].Quota.ID,
 			}
 		}
 
-		metricData.Units.CustomUnits[k] = &UnitCount{
+		metricData.Units.Units[k] = &UnitCount{
 			Count: counter.Count(),
 			Quota: quota,
 		}

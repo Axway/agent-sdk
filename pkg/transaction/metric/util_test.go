@@ -151,7 +151,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 					End:   15,
 				},
 				Units: &Units{
-					CustomUnits: map[string]*UnitCount{
+					Units: map[string]*UnitCount{
 						"custom": {
 							Count: 100,
 							Quota: &models.ResourceReference{
@@ -408,6 +408,71 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 			},
 		},
+		"llm reference carries model and provider id when set": {
+			input: &APIMetric{
+				EventID:     "evt-llm",
+				Count:       1,
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				Unit:        &models.Unit{Name: "llm-inputtokens"},
+				LLM: models.LLMReference{
+					ResourceReference: models.ResourceReference{ID: "provider-1"},
+					Model:             "gpt-4",
+				},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
+				EventID:     "evt-llm",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Units: map[string]*UnitCount{
+						"llm-inputtokens": {Count: 1},
+					},
+				},
+				LLM: &models.LLMReference{
+					ResourceReference: models.ResourceReference{ID: "provider-1"},
+					Model:             "gpt-4",
+				},
+			},
+		},
+		"llm reference defaults id to unknown when model set without id": {
+			input: &APIMetric{
+				EventID:     "evt-llm-no-id",
+				Count:       1,
+				Observation: models.ObservationDetails{Start: 1, End: 2},
+				Unit:        &models.Unit{Name: "llm-inputtokens"},
+				LLM:         models.LLMReference{Model: "gpt-4"},
+			},
+			expectedOutput: &centralMetric{
+				Version:     "3",
+				Environment: &EnvironmentInfo{RuntimeType: runtimeTypeManaged},
+				EventID:     "evt-llm-no-id",
+				Observation: &models.ObservationDetails{Start: 1, End: 2},
+				Reporter: &Reporter{
+					AgentVersion:     cmd.BuildVersion,
+					AgentType:        cmd.BuildAgentName,
+					AgentSDKVersion:  cmd.SDKBuildVersion,
+					AgentName:        agent.GetCentralConfig().GetAgentName(),
+					ObservationDelta: 1,
+				},
+				Units: &Units{
+					Units: map[string]*UnitCount{
+						"llm-inputtokens": {Count: 1},
+					},
+				},
+				LLM: &models.LLMReference{
+					ResourceReference: models.ResourceReference{ID: unknown},
+					Model:             "gpt-4",
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -419,6 +484,13 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				tc.setupCache()
 			}
 			output := centralMetricFromAPIMetric(tc.input)
+
+			// every converted metric carries an llm reference; non-llm inputs default the
+			// llm id to unknown, so fill that in for cases that don't set it explicitly
+			if tc.expectedOutput != nil && tc.expectedOutput.LLM == nil {
+				tc.expectedOutput.LLM = &models.LLMReference{ResourceReference: models.ResourceReference{ID: unknown}}
+			}
+
 			assert.Equal(t, tc.expectedOutput, output)
 		})
 	}

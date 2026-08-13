@@ -41,7 +41,7 @@ func TestUnitsMarshalJSON(t *testing.T) {
 				UnitCount: UnitCount{Count: 3},
 				Status:    "Success",
 			},
-			CustomUnits: map[string]*UnitCount{
+			Units: map[string]*UnitCount{
 				"llm-inputtokens": {Count: 120},
 				"cost-usd":        {Count: 10},
 			},
@@ -69,7 +69,7 @@ func TestUnitsMarshalJSON(t *testing.T) {
 
 	t.Run("custom units only still emits a null transactions key", func(t *testing.T) {
 		u := Units{
-			CustomUnits: map[string]*UnitCount{"llm-requests": {Count: 1}},
+			Units: map[string]*UnitCount{"llm-requests": {Count: 1}},
 		}
 
 		b, err := json.Marshal(u)

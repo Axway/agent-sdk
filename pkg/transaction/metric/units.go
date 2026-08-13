@@ -20,7 +20,7 @@ type Transactions struct {
 
 type Units struct {
 	Transactions *Transactions         `json:"transactions,omitempty"`
-	CustomUnits  map[string]*UnitCount `json:"-"`
+	Units        map[string]*UnitCount `json:"-"`
 }
 
 func (u Units) MarshalJSON() ([]byte, error) {
@@ -29,8 +29,8 @@ func (u Units) MarshalJSON() ([]byte, error) {
 		TransactionUnit.String(): u.Transactions,
 	}
 
-	// Add the custom units to the map
-	for k, cu := range u.CustomUnits {
+	// Add the non-transaction units to the map
+	for k, cu := range u.Units {
 		result[k] = cu
 	}
 

@@ -24,14 +24,14 @@ func (f *fakeLLMProviderClient) GetAPIV1ResourceInstances(_ map[string]string, _
 	return f.resources, nil
 }
 
-// fakeLLMProviderCacheManager resolves a fixed apiID -> service name -> instance names chain.
+// fakeLLMProviderCacheManager resolves a fixed primary key -> service name -> instance names chain.
 type fakeLLMProviderCacheManager struct {
-	apiIDToService     map[string]string
-	serviceToInstances map[string][]*v1.ResourceInstance
+	primaryKeyToService map[string]string
+	serviceToInstances  map[string][]*v1.ResourceInstance
 }
 
-func (f *fakeLLMProviderCacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance {
-	name, ok := f.apiIDToService[apiID]
+func (f *fakeLLMProviderCacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.ResourceInstance {
+	name, ok := f.primaryKeyToService[primaryKey]
 	if !ok {
 		return nil
 	}
@@ -42,11 +42,12 @@ func (f *fakeLLMProviderCacheManager) GetAPIServiceInstancesByService(svcName st
 	return f.serviceToInstances[svcName]
 }
 
-// singleInstanceCache builds a fake cache manager where apiID resolves through svcName to a
-// single API service instance named instanceName.
+// singleInstanceCache builds a fake cache manager where apiID (used directly as the primary
+// key, since it carries no SummaryEventProxyIDPrefix in these tests) resolves through svcName
+// to a single API service instance named instanceName.
 func singleInstanceCache(apiID, svcName, instanceName string) *fakeLLMProviderCacheManager {
 	return &fakeLLMProviderCacheManager{
-		apiIDToService: map[string]string{apiID: svcName},
+		primaryKeyToService: map[string]string{apiID: svcName},
 		serviceToInstances: map[string][]*v1.ResourceInstance{
 			svcName: {{ResourceMeta: v1.ResourceMeta{Name: instanceName}}},
 		},
@@ -216,7 +217,7 @@ func TestLLMProviderResolverGetAPIServiceInstanceName(t *testing.T) {
 
 	t.Run("service with no instances resolves to empty", func(t *testing.T) {
 		cacheMgr := &fakeLLMProviderCacheManager{
-			apiIDToService: map[string]string{"api-1": "svc-1"},
+			primaryKeyToService: map[string]string{"api-1": "svc-1"},
 		}
 		r := newTestResolver(&fakeLLMProviderClient{}, cacheMgr)
 

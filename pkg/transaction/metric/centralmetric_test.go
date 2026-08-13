@@ -119,7 +119,7 @@ func TestCentralMetricGetKey(t *testing.T) {
 		"custom unit keys on unit name": {
 			metric: &centralMetric{
 				Subscription: sub, App: app, API: api,
-				Units: &Units{CustomUnits: map[string]*UnitCount{"cost-usd": {}}},
+				Units: &Units{Units: map[string]*UnitCount{"cost-usd": {}}},
 			},
 			want: "metric.sub.app.api.cost-usd",
 		},
@@ -127,7 +127,7 @@ func TestCentralMetricGetKey(t *testing.T) {
 			metric: &centralMetric{
 				Subscription: sub, App: app, API: api,
 				LLM:   &models.LLMReference{Model: "gpt-4"},
-				Units: &Units{CustomUnits: map[string]*UnitCount{"llm-requests": {}}},
+				Units: &Units{Units: map[string]*UnitCount{"llm-requests": {}}},
 			},
 			want: "metric.sub.app.api.gpt-4",
 		},
@@ -207,7 +207,7 @@ func TestCentralMetricCreateCachedMetric(t *testing.T) {
 		m := &centralMetric{
 			Subscription: sub, App: app, API: api,
 			LLM:   &models.LLMReference{Model: "gpt-4"},
-			Units: &Units{CustomUnits: map[string]*UnitCount{"llm-inputtokens": {}}},
+			Units: &Units{Units: map[string]*UnitCount{"llm-inputtokens": {}}},
 		}
 		cached := m.createCachedMetric(fakeCachedMetric{count: 120})
 
