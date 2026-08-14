@@ -233,3 +233,49 @@ func TestReduceAndRetry_SynthesizesErrorWhenGivingUpPreemptively(t *testing.T) {
 	err := <-chErr
 	assert.Error(t, err)
 }
+
+// absRange returns the absolute [start, end) item range p describes: page/pageSize place it on
+// the grid, skipFirstN/skipLastN trim it - mirroring the slicing getAPIV1ResourceInstancesWithPageSize
+// does on the response.
+func absRange(p pageParams) (start, end int) {
+	return p.pageSize*p.page + p.skipFirstN, p.pageSize*(p.page+1) - p.skipLastN
+}
+
+// TestReducePageParams verifies reducePageParams's actual contract directly: the pageParams it
+// returns, each at half the original pageSize, exactly retile the same absolute item range as
+// the input - no gaps, no overlaps - whether pageSize is even or odd or the input is itself an
+// already-trimmed sub-range from a previous reduction. This checks that property rather than
+// hardcoding expected structs, since the exact intermediate page/skipFirstN/skipLastN values are
+// an implementation detail; what has to hold is the absolute range they tile.
+func TestReducePageParams(t *testing.T) {
+	testCases := map[string]struct {
+		input   pageParams
+		wantLen int
+	}{
+		"even pageSize, full page, page 0":        {pageParams{10, 0, 0, 0}, 2},
+		"even pageSize, full page, page 3":        {pageParams{10, 3, 0, 0}, 2},
+		"odd pageSize, full page, page 0":         {pageParams{7, 0, 0, 0}, 3}, // size(7) > 2*(7/2)=6, needs a 3rd sub-page
+		"odd pageSize, full page, page 2":         {pageParams{7, 2, 0, 0}, 3},
+		"odd pageSize, trimmed enough for 2-way":  {pageParams{7, 0, 1, 1}, 2}, // size 5 fits in 2 sub-pages of size 3
+		"already-trimmed range needing 2-way":     {pageParams{10, 0, 2, 1}, 2},
+		"range fits entirely in first half-page":  {pageParams{10, 0, 1, 6}, 1},
+		"range fits entirely in second half-page": {pageParams{10, 0, 6, 1}, 1},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := reducePageParams(tc.input)
+			assert.Len(t, got, tc.wantLen)
+
+			wantStart, wantEnd := absRange(tc.input)
+			cursor := wantStart
+			for i, p := range got {
+				assert.Equal(t, tc.input.pageSize/2, p.pageSize, "sub-range %d should be at half the original pageSize", i)
+				start, end := absRange(p)
+				assert.Equal(t, cursor, start, "sub-range %d should start exactly where the previous one ended", i)
+				cursor = end
+			}
+			assert.Equal(t, wantEnd, cursor, "sub-ranges should exactly reach the original range's end")
+		})
+	}
+}
