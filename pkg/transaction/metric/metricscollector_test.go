@@ -959,6 +959,126 @@ func TestCustomMetrics(t *testing.T) {
 	}
 }
 
+func TestLLMMetrics(t *testing.T) {
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+
+	traceStatus = healthcheck.OK
+	traceability.SetDataDirPath(".")
+	runTestHealthcheck()
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.UsageReporting.(*config.UsageReportingConfiguration).URL = s.server.URL + "/usage"
+	cfg.SetEnvironmentID(testEnvID)
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	cm := agent.GetCacheManager()
+	cm.AddAPIServiceInstance(createAPIServiceInstance(testInstID, testInstName, "111"))
+	cm.AddManagedApplication(createManagedApplication("app-1", testManagedApp1, ""))
+	cm.AddAccessRequest(createAccessRequest("ac-1", testAccessReq1, testManagedApp1, testInstID, testInstName, testSubscription1))
+
+	base := LLMMetricDetail{
+		APIDetails: apiDetails1,
+		AppDetails: appDetails1,
+		Model:      "gpt-4",
+		Units: map[UnitType]int64{
+			LLMRequests:     1,
+			LLMInputTokens:  120,
+			LLMOutputTokens: 45,
+		},
+	}
+
+	testCases := map[string]struct {
+		detail          LLMMetricDetail
+		expectedPending int
+	}{
+		"no metric when api details missing": {
+			detail:          LLMMetricDetail{Model: "gpt-4", Units: map[UnitType]int64{LLMRequests: 1}},
+			expectedPending: 0,
+		},
+		"no metric when model missing": {
+			detail:          LLMMetricDetail{APIDetails: apiDetails1, Units: map[UnitType]int64{LLMRequests: 1}},
+			expectedPending: 0,
+		},
+		"no metric when no units given": {
+			detail:          LLMMetricDetail{APIDetails: apiDetails1, Model: "gpt-4"},
+			expectedPending: 0,
+		},
+		"one pending metric when all data given": {
+			detail:          base,
+			expectedPending: 1,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			myCollector := createMetricCollector()
+			metricCollector := myCollector.(*collector)
+
+			metricCollector.AddLLMMetric(tc.detail)
+
+			assert.Equal(t, tc.expectedPending, len(metricCollector.metricsQueue))
+			if tc.expectedPending == 0 {
+				return
+			}
+
+			m := metricCollector.metricsQueue[0]
+			assert.NotNil(t, m.LLM)
+			assert.Equal(t, tc.detail.Model, m.LLM.Model)
+			assert.NotNil(t, m.Units)
+			assert.Len(t, m.Units.Units, len(tc.detail.Units))
+			for unit, count := range tc.detail.Units {
+				uc, ok := m.Units.Units[unit.String()]
+				assert.True(t, ok, "expected custom unit %s", unit.String())
+				assert.Equal(t, count, uc.Count)
+			}
+		})
+	}
+}
+
+type fakeLLMProviderCache struct {
+	svc       *apiv1.ResourceInstance
+	instances []*apiv1.ResourceInstance
+}
+
+func (f fakeLLMProviderCache) GetAPIServiceWithPrimaryKey(string) *apiv1.ResourceInstance {
+	return f.svc
+}
+
+func (f fakeLLMProviderCache) GetAPIServiceInstancesByService(string) []*apiv1.ResourceInstance {
+	return f.instances
+}
+
+func TestCreateLLMDetail(t *testing.T) {
+	t.Run("non-llm metric defaults llm id to unknown", func(t *testing.T) {
+		c := &collector{}
+		llm := c.createLLMDetail("", "api-1")
+
+		assert.NotNil(t, llm)
+		assert.Equal(t, unknown, llm.ID)
+		assert.Empty(t, llm.Model)
+	})
+
+	t.Run("llm metric carries model and resolved provider id", func(t *testing.T) {
+		resolver := &llmProviderResolver{
+			providers: map[string]string{"inst-1": "provider-1"},
+			getCacheMgr: func() llmProviderCacheManager {
+				return fakeLLMProviderCache{
+					svc:       &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{Name: "svc-1"}},
+					instances: []*apiv1.ResourceInstance{{ResourceMeta: apiv1.ResourceMeta{Name: "inst-1"}}},
+				}
+			},
+		}
+		c := &collector{llmProviders: resolver}
+		llm := c.createLLMDetail("gpt-4", "api-1")
+
+		assert.Equal(t, "provider-1", llm.ID)
+		assert.Equal(t, "gpt-4", llm.Model)
+	})
+}
+
 func TestCollectorCreateOrUpdateHistogramIDResolution(t *testing.T) {
 	// Mock setup would go here - this is a conceptual test
 	tests := []struct {

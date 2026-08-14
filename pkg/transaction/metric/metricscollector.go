@@ -38,7 +38,6 @@ const (
 	metricStr         = "metric"
 	volumeStr         = "volume"
 	countStr          = "count"
-	defaultUnit       = "transactions"
 )
 
 var exitMetricInit = false
@@ -57,6 +56,7 @@ type Collector interface {
 	AddMetricDetail(metricDetail Detail)
 	AddAPIMetricDetail(metric MetricDetail)
 	AddAPIMetric(apiMetric *APIMetric)
+	AddLLMMetric(detail LLMMetricDetail)
 	ShutdownPublish()
 }
 
@@ -76,6 +76,8 @@ type collector struct {
 	metricMap        map[string]map[string]map[string]map[string]*centralMetric
 	metricMapLock    *sync.Mutex
 	publishItemQueue []publishQueueItem
+	metricsQueue     []*centralMetric
+	metricsQueueLock *sync.Mutex
 	jobID            string
 	usagePublisher   *usagePublisher
 	storage          storageCache
@@ -84,6 +86,7 @@ type collector struct {
 	usageConfig      config.UsageReportingConfig
 	logger           log.FieldLogger
 	metricLogger     log.FieldLogger
+	llmProviders     *llmProviderResolver
 }
 
 type publishQueueItem interface {
@@ -169,11 +172,13 @@ func createMetricCollector() Collector {
 		registry:         newRegistry(),
 		metricMap:        make(map[string]map[string]map[string]map[string]*centralMetric),
 		publishItemQueue: make([]publishQueueItem, 0),
+		metricsQueueLock: &sync.Mutex{},
 		metricConfig:     agent.GetCentralConfig().GetMetricReportingConfig(),
 		usageConfig:      agent.GetCentralConfig().GetUsageReportingConfig(),
 		agentName:        agent.GetCentralConfig().GetAgentName(),
 		logger:           logger,
 		metricLogger:     log.NewMetricFieldLogger(),
+		llmProviders:     newLLMProviderResolver(logger),
 	}
 
 	// Create and initialize the storage cache for usage/metric and offline report cache by loading from disk
@@ -361,7 +366,7 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 	}
 
 	// add the count
-	metric.Units.CustomUnits[detail.UnitDetails.Name].Count += detail.Count
+	metric.Units.Units[detail.UnitDetails.Name].Count += detail.Count
 
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(detail.Count)
@@ -374,6 +379,75 @@ func (c *collector) AddCustomMetricDetail(detail models.CustomMetricDetail) {
 func (c *collector) AddAPIMetric(metric *APIMetric) {
 	c.updateStartTime()
 	c.addMetric(centralMetricFromAPIMetric(metric))
+}
+
+// AddLLMMetric - add an llm usage metric for an api/app/model combo
+func (c *collector) AddLLMMetric(detail LLMMetricDetail) {
+	if !c.metricConfig.CanPublish() || c.usageConfig.IsOfflineMode() {
+		return
+	}
+
+	logger := c.logger.WithField("handler", "llmMetric").
+		WithField("apiID", detail.APIDetails.ID).
+		WithField("appID", detail.AppDetails.ID).
+		WithField("model", detail.Model)
+
+	if detail.APIDetails.ID == "" {
+		logger.Error("llm metrics require API information")
+		return
+	}
+	if detail.Model == "" {
+		logger.Error("llm metrics require model information")
+		return
+	}
+	if len(detail.Units) == 0 {
+		logger.Error("llm metrics require at least one unit amount")
+		return
+	}
+	logger.WithField("units", len(detail.Units)).Debug("received llm metric report")
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	metric := c.createMetric(transactionContext{
+		APIDetails: detail.APIDetails,
+		AppDetails: detail.AppDetails,
+		LLMModel:   detail.Model,
+		Units:      detail.Units,
+	})
+	metric.Observation = &models.ObservationDetails{
+		Start: detail.Observation.Start,
+		End:   detail.Observation.End,
+	}
+	metric.Reporter = &Reporter{
+		AgentVersion:     cmd.BuildVersion,
+		AgentType:        cmd.BuildAgentName,
+		AgentSDKVersion:  cmd.SDKBuildVersion,
+		AgentName:        c.agentName,
+		ObservationDelta: detail.Observation.End - detail.Observation.Start,
+	}
+
+	c.updateStartTime()
+	c.addMetricToQueue(metric)
+}
+
+// addMetricToQueue - adds a fully detailed metric to batch for next publish cycle
+func (c *collector) addMetricToQueue(metric *centralMetric) {
+	c.metricsQueueLock.Lock()
+	defer c.metricsQueueLock.Unlock()
+	c.metricsQueue = append(c.metricsQueue, metric)
+}
+
+// flushMetricsQueue - adds all metrics to the batch
+func (c *collector) flushMetricsQueue() {
+	c.metricsQueueLock.Lock()
+	queued := c.metricsQueue
+	c.metricsQueue = nil
+	c.metricsQueueLock.Unlock()
+
+	for _, metric := range queued {
+		c.addMetric(metric)
+	}
 }
 
 // addMetric - add central metric event
@@ -431,33 +505,15 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 		App:                c.createAppDetail(managedApp),
 		Product:            c.getProduct(accessRequest),
 		API:                c.createAPIDetail(detail.APIDetails),
+		LLM:                c.createLLMDetail(detail.LLMModel, detail.APIDetails.ID),
 		AssetResource:      c.getAssetResource(accessRequest),
 		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
 		ProductPlan:        c.getProductPlan(accessRequest),
+		Units:              c.getUnits(detail, accessRequest),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),
-	}
-
-	// transactions
-	if detail.Status != "" {
-		me.Units = &Units{
-			Transactions: &Transactions{
-				UnitCount: UnitCount{
-					Quota: c.getQuota(accessRequest, defaultUnit),
-				},
-				Status: GetStatusText(detail.Status),
-			},
-		}
-	} else if detail.UnitName != "" {
-		me.Units = &Units{
-			CustomUnits: map[string]*UnitCount{
-				detail.UnitName: {
-					Quota: c.getQuota(accessRequest, detail.UnitName),
-				},
-			},
-		}
 	}
 
 	return me
@@ -643,6 +699,18 @@ func (c *collector) createAPIDetail(api models.APIDetails) *models.APIResourceRe
 	return ref
 }
 
+func (c *collector) createLLMDetail(model, apiID string) *models.LLMReference {
+	if model == "" {
+		return &models.LLMReference{ResourceReference: models.ResourceReference{ID: unknown}}
+	}
+
+	providerID := c.llmProviders.getProviderID(apiID)
+	return &models.LLMReference{
+		ResourceReference: models.ResourceReference{ID: providerID},
+		Model:             model,
+	}
+}
+
 // getAPIServiceRevision uses the APIServiceInstance reference on the AccessRequest as the
 // revision identifier. AccessRequests do not carry a direct APIServiceRevision reference.
 func (c *collector) getAPIServiceRevision(accessRequest *management.AccessRequest) *models.ResourceReference {
@@ -700,6 +768,40 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	return ref
 }
 
+func (c *collector) getUnits(detail transactionContext, accessRequest *management.AccessRequest) *Units {
+	if detail.UnitName != "" {
+		return &Units{
+			Units: map[string]*UnitCount{
+				detail.UnitName: {
+					Quota: c.getQuota(accessRequest, detail.UnitName),
+				},
+			},
+		}
+	}
+
+	if detail.LLMModel != "" {
+		customUnits := make(map[string]*UnitCount, len(detail.Units))
+		for unit, count := range detail.Units {
+			unitName := unit.String()
+			customUnits[unitName] = &UnitCount{
+				Count: count,
+				Quota: c.getQuota(accessRequest, unitName),
+			}
+		}
+		return &Units{Units: customUnits}
+	}
+
+	// transactions
+	return &Units{
+		Transactions: &Transactions{
+			UnitCount: UnitCount{
+				Quota: c.getQuota(accessRequest, TransactionUnit.String()),
+			},
+			Status: GetStatusText(detail.Status),
+		},
+	}
+}
+
 func (c *collector) getProductPlan(accessRequest *management.AccessRequest) *models.ResourceReference {
 	if accessRequest == nil {
 		return &models.ResourceReference{ID: unknown}
@@ -720,7 +822,7 @@ func (c *collector) getQuota(accessRequest *management.AccessRequest, unitName s
 		return &models.ResourceReference{ID: unknown}
 	}
 	if unitName == "" {
-		unitName = defaultUnit
+		unitName = TransactionUnit.String()
 	}
 
 	quotaName := ""
@@ -784,6 +886,7 @@ func (c *collector) generateEvents() {
 
 	c.metricBatch = NewEventBatch(c)
 	c.registry.Each(c.processRegistry)
+	c.flushMetricsQueue()
 
 	if len(c.metricBatch.events) == 0 && !c.usageConfig.IsOfflineMode() {
 		c.logger.
@@ -947,8 +1050,8 @@ func (c *collector) handleGroupedMetric(logger log.FieldLogger, groupedMetricInt
 }
 
 func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centralMetric, counters map[string]metrics.Counter, groupMap map[string]*centralMetric) {
-	if metricData.Units.CustomUnits == nil {
-		metricData.Units.CustomUnits = map[string]*UnitCount{}
+	if metricData.Units.Units == nil {
+		metricData.Units.Units = map[string]*UnitCount{}
 	}
 
 	for k, counter := range counters {
@@ -961,13 +1064,13 @@ func (c *collector) setMetricCounters(logger log.FieldLogger, metricData *centra
 
 		// create a new quota pointer
 		var quota *models.ResourceReference
-		if metric.Units.CustomUnits[k].Quota != nil {
+		if metric.Units.Units[k].Quota != nil {
 			quota = &models.ResourceReference{
-				ID: metric.Units.CustomUnits[k].Quota.ID,
+				ID: metric.Units.Units[k].Quota.ID,
 			}
 		}
 
-		metricData.Units.CustomUnits[k] = &UnitCount{
+		metricData.Units.Units[k] = &UnitCount{
 			Count: counter.Count(),
 			Quota: quota,
 		}
