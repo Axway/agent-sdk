@@ -7,6 +7,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
+	transactionUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	transutil "github.com/Axway/agent-sdk/pkg/transaction/util"
 )
 
@@ -33,6 +34,7 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	}
 
 	out.Units = buildUnits(in)
+	out.LLM = buildLLMRef(in.LLM)
 
 	if id := in.Subscription.ID; isKnownID(id) {
 		out.Subscription = &models.ResourceReference{ID: id}
@@ -67,6 +69,24 @@ func centralMetricFromAPIMetric(in *APIMetric) *centralMetric {
 	}
 
 	return out
+}
+
+// buildLLMRef mirrors createLLMDetail for the pre-aggregated APIMetric path: non-llm metrics
+// default the llm reference to an unknown id, while llm metrics carry their model with the
+// reported provider id (defaulting to unknown when the id is not known).
+func buildLLMRef(llm models.LLMReference) *models.LLMReference {
+	if llm.Model == "" {
+		return &models.LLMReference{ResourceReference: models.ResourceReference{ID: unknown}}
+	}
+
+	id := llm.ID
+	if !isKnownID(id) {
+		id = unknown
+	}
+	return &models.LLMReference{
+		ResourceReference: models.ResourceReference{ID: id},
+		Model:             llm.Model,
+	}
 }
 
 func centralConfigFields() (apicDeployment, agentName, runtimeType string) {
@@ -123,7 +143,7 @@ func buildCustomUnits(in *APIMetric) *Units {
 		uc.Quota = &models.ResourceReference{ID: in.Quota.ID}
 	}
 	return &Units{
-		CustomUnits: map[string]*UnitCount{in.Unit.Name: uc},
+		Units: map[string]*UnitCount{in.Unit.Name: uc},
 	}
 }
 
@@ -147,7 +167,7 @@ func resolveAppOwnerFromCache(appID string) *models.Owner {
 		managedApp = cacheManager.GetManagedApplication(appID)
 	}
 	if managedApp != nil {
-		return transutil.ResolveAppOwnerFromManagedApp(managedApp)
+		return transactionUtil.ResolveAppOwnerFromManagedApp(managedApp)
 	}
 	return &models.Owner{Type: none}
 }
@@ -158,11 +178,11 @@ func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
 		Name:              api.Name,
 	}
 	cacheManager := agent.GetCacheManager()
-	svc := cacheManager.GetAPIServiceWithAPIID(transutil.StripSummaryEventPrefix(api.ID))
+	svc := cacheManager.GetAPIServiceWithAPIID(strings.TrimPrefix(api.ID, transactionUtil.SummaryEventProxyIDPrefix))
 	if svc != nil {
 		ref.APIServiceID = svc.Metadata.ID
 	}
-	ref.Owner = transutil.ResolveAPIOwnerFromInstance(svc)
+	ref.Owner = transactionUtil.ResolveAPIOwnerFromInstance(svc)
 	return ref
 }
 

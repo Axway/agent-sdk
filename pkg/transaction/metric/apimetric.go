@@ -13,6 +13,7 @@ type APIMetric struct {
 	App           models.AppDetails         `json:"application,omitempty"`
 	Product       models.Product            `json:"product,omitempty"`
 	API           models.APIDetails         `json:"api"`
+	LLM           models.LLMReference       `json:"llm,omitempty"`
 	AssetResource models.AssetResource      `json:"assetResource,omitempty"`
 	ProductPlan   models.ProductPlan        `json:"productPlan,omitempty"`
 	Quota         models.Quota              `json:"quota,omitempty"`

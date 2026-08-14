@@ -34,6 +34,8 @@ type transactionContext struct {
 	AppDetails models.AppDetails
 	Status     string
 	UnitName   string
+	LLMModel   string
+	Units      map[UnitType]int64
 }
 
 // Detail - holds the details for computing metrics
@@ -56,6 +58,17 @@ type MetricDetail struct {
 	Observation models.ObservationDetails
 }
 
+// LLMMetricDetail - holds the details for reporting LLM usage for an api/app/model combo.
+// A single detail carries the amounts for several unit types (requests, tokens, cost) that
+// were observed for one interaction with the model, and is reported as a single metric event.
+type LLMMetricDetail struct {
+	APIDetails  models.APIDetails
+	AppDetails  models.AppDetails
+	Model       string
+	Units       map[UnitType]int64
+	Observation models.ObservationDetails
+}
+
 // ResponseMetrics - Holds metrics API response
 type ResponseMetrics struct {
 	Max int64   `json:"max"`
@@ -70,6 +83,7 @@ type cachedMetric struct {
 	App           *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product       *models.ProductResourceReference     `json:"product,omitempty"`
 	API           *models.APIResourceReference         `json:"api,omitempty"`
+	LLM           *models.LLMReference                 `json:"llm,omitempty"`
 	AssetResource *models.ResourceReference            `json:"assetResource,omitempty"`
 	ProductPlan   *models.ResourceReference            `json:"productPlan,omitempty"`
 	Quota         *models.ResourceReference            `json:"quota,omitempty"`
