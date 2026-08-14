@@ -80,8 +80,11 @@ func (c *ServiceClient) GetAPIV1ResourceInstances(queryParams map[string]string,
 		// first page was full - there's likely more; find out how much and fetch the rest concurrently
 		return c.getRemainingResourceInstancesConcurrently(queryParams, url, startingSize, 1, first)
 	case strings.Contains(err.Error(), "context deadline exceeded"):
-		// the first page itself timed out - go straight to concurrent fetching from page 0;
-		// the worker pool halves the page size for any range that keeps timing out
+		// the first page itself timed out at startingSize - record that immediately so every
+		// worker in the pool skips straight to the halved size via fetchPageParams's
+		// shared-size check, instead of each independently re-discovering that startingSize is
+		// too large through its own wasted timeout
+		c.setPageSizeIfSmaller(url, startingSize/2)
 		return c.getRemainingResourceInstancesConcurrently(queryParams, url, startingSize, 0, nil)
 	default:
 		return nil, err

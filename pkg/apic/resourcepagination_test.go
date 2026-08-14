@@ -71,11 +71,11 @@ func TestGetAPIV1ResourceInstances_MultiPage(t *testing.T) {
 
 // TestGetAPIV1ResourceInstances_RetryOnTimeout verifies that when the very first fetch times
 // out, GetAPIV1ResourceInstances falls back to a HEAD count call and concurrent fetching from
-// page 0, and that a worker hitting "context deadline exceeded" on its assigned range retries
-// that same range through reducePageParams (instead of dropping it), halving the page size.
-// Page 1 is dispatched at the original size 10, but by the time the (single) worker gets to
-// it, page 0's retry has already discovered that size 5 works - so fetchPageParams's
-// shared-size check skips straight to size 5 for page 1 too, without a doomed attempt at 10.
+// page 0, and that the timeout is recorded immediately - so every worker in the pool skips
+// straight to the halved size via fetchPageParams's shared-size check, rather than each
+// independently re-discovering that the original size is too large through its own wasted
+// timeout. Page 1 is dispatched at the original size 10 too, but by the time the (single)
+// worker gets to it, size 5 is already known - so it also skips straight to size 5.
 func TestGetAPIV1ResourceInstances_RetryOnTimeout(t *testing.T) {
 	const url = "/test"
 	client, httpClient := GetTestServiceClient()
@@ -85,10 +85,9 @@ func TestGetAPIV1ResourceInstances_RetryOnTimeout(t *testing.T) {
 	httpClient.SetResponses([]api.MockResponse{
 		{RespCode: http.StatusRequestTimeout, ErrString: "context deadline exceeded"}, // first fetch, page 0 size 10 - times out
 		countResponse(15),
-		{RespCode: http.StatusRequestTimeout, ErrString: "context deadline exceeded"}, // worker retries page 0 at size 10 - times out again
-		itemsResponse("a0", "a1", "a2", "a3", "a4"),                                   // page 0 reduced sub-range 1, size 5
-		itemsResponse("a5", "a6", "a7", "a8", "a9"),                                   // page 0 reduced sub-range 2, size 5
-		itemsResponse("a10", "a11", "a12", "a13", "a14"),                              // page 1 reduced sub-range 1, size 5 (skipped straight to size 5)
+		itemsResponse("a0", "a1", "a2", "a3", "a4"),      // page 0 reduced sub-range 1, size 5 (skipped straight to size 5)
+		itemsResponse("a5", "a6", "a7", "a8", "a9"),      // page 0 reduced sub-range 2, size 5
+		itemsResponse("a10", "a11", "a12", "a13", "a14"), // page 1 reduced sub-range 1, size 5 (skipped straight to size 5)
 		itemsResponse(), // page 1 reduced sub-range 2, size 5 - no data left
 	})
 
