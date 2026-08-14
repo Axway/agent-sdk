@@ -116,6 +116,11 @@ func (b *CentralMetricBuilder) SetAPI(api *models.APIResourceReference) *Central
 	return b
 }
 
+func (b *CentralMetricBuilder) SetLLM(llm *models.LLMReference) *CentralMetricBuilder {
+	b.LLM = llm
+	return b
+}
+
 func (b *CentralMetricBuilder) SetAssetResource(asset *models.ResourceReference) *CentralMetricBuilder {
 	b.AssetResource = asset
 	return b
@@ -208,6 +213,7 @@ type centralMetric struct {
 	App                *models.ApplicationResourceReference `json:"application,omitempty"`
 	Product            *models.ProductResourceReference     `json:"product,omitempty"`
 	API                *models.APIResourceReference         `json:"api,omitempty"`
+	LLM                *models.LLMReference                 `json:"llm,omitempty"`
 	AssetResource      *models.ResourceReference            `json:"assetResource,omitempty"`
 	APIServiceRevision *models.ResourceReference            `json:"apiServiceRevision,omitempty"`
 	ProductPlan        *models.ResourceReference            `json:"productPlan,omitempty"`
@@ -279,6 +285,9 @@ func (a *centralMetric) addReferenceFields(fields logrus.Fields) logrus.Fields {
 	if a.API != nil {
 		fields = a.API.GetLogFields(fields, "apiID")
 	}
+	if a.LLM != nil {
+		fields = a.LLM.GetLogFields(fields, "llm")
+	}
 	if a.AssetResource != nil {
 		fields = a.AssetResource.GetLogFields(fields, "assetResourceID")
 	}
@@ -295,7 +304,7 @@ func (a *centralMetric) addUnitFields(fields logrus.Fields) logrus.Fields {
 	if a.Units.Transactions != nil {
 		fields = a.addTransactionFields(fields)
 	}
-	for k, u := range a.Units.CustomUnits {
+	for k, u := range a.Units.Units {
 		if u.Quota != nil {
 			fields = u.Quota.GetLogFields(fields, fmt.Sprintf("%sQuotaID", k))
 		}
@@ -333,19 +342,25 @@ func (a *centralMetric) getKey() string {
 	if a.API != nil && a.API.ID != "" {
 		apiID = sanitizeKeySegment(a.API.ID)
 	}
+	llmModel := ""
+	if a.LLM != nil {
+		llmModel = a.LLM.Model
+	}
 	uniqueKey := unknown
 	if a.Units != nil && a.Units.Transactions != nil && a.Units.Transactions.Status != "" {
 		uniqueKey = a.Units.Transactions.Status
-	} else {
+	} else if a.Units != nil {
 		// get the first, and should be only, custom unit name
-		for k := range a.Units.CustomUnits {
+		for k := range a.Units.Units {
 			uniqueKey = k
 			break
 		}
 	}
 
-	a.key = strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
-	return a.key
+	if llmModel == "" {
+		return strings.Join([]string{metricKeyPrefix, appKey, apiID, uniqueKey}, ".")
+	}
+	return strings.Join([]string{metricKeyPrefix, appKey, apiID, llmModel}, ".")
 }
 
 func (a *centralMetric) storageKey() string {
@@ -358,6 +373,7 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		App:           a.App,
 		Product:       a.Product,
 		API:           a.API,
+		LLM:           a.LLM,
 		AssetResource: a.AssetResource,
 		ProductPlan:   a.ProductPlan,
 		Count:         cached.Count(),
@@ -370,7 +386,7 @@ func (a *centralMetric) createCachedMetric(cached cachedMetricInterface) cachedM
 		cacheM.Quota = a.Units.Transactions.Quota
 		cacheM.StatusCode = a.Units.Transactions.Status
 	} else {
-		for u := range a.Units.CustomUnits {
+		for u := range a.Units.Units {
 			cacheM.Unit = &models.Unit{
 				Name: u,
 			}
@@ -403,6 +419,13 @@ func (a *centralMetric) GetProductInfo() (string, string) {
 func (a *centralMetric) GetAPIInfo() (string, string) {
 	if a.API != nil {
 		return a.API.ID, a.API.Name
+	}
+	return "", ""
+}
+
+func (a *centralMetric) GetLLMInfo() (string, string) {
+	if a.LLM != nil {
+		return a.LLM.ID, a.LLM.Model
 	}
 	return "", ""
 }

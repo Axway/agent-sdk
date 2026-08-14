@@ -28,6 +28,19 @@ type APIResourceReference struct {
 	Owner        *Owner `json:"owner,omitempty"`
 }
 
+type LLMReference struct {
+	ResourceReference
+	Model string `json:"model,omitempty"`
+}
+
+func (l LLMReference) GetLogFields(fields logrus.Fields, idFieldName string) logrus.Fields {
+	if l.ID != "" {
+		fields[idFieldName] = l.ID
+		fields["modelName"] = l.Model
+	}
+	return fields
+}
+
 type ApplicationResourceReference struct {
 	ResourceReference
 	ConsumerOrgID string `json:"consumerOrgId,omitempty"`
