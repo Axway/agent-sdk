@@ -67,8 +67,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/Shopify/sarama => github.com/elastic/sarama v1.19.1-0.20210823122811-11c3ef800752
-
 retract ( // errored versions
 	[v1.1.35, v1.1.36]
 	[v1.1.21, v1.1.23]
