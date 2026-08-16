@@ -5,12 +5,6 @@ import (
 	"github.com/Axway/agent-sdk/pkg/util/log"
 )
 
-// unsupportedTLSField pairs a config key with whether it was set.
-type unsupportedTLSField struct {
-	name string
-	set  bool
-}
-
 // TLSConfig replaces libbeat's tlscommon.Config.
 type TLSConfig struct {
 	// Enabled is accepted but not acted on: protocol already determines whether TLS
@@ -45,16 +39,17 @@ func (t TLSConfig) toTLSConfiguration() *config.TLSConfiguration {
 		tlsCfg.CipherSuites = config.NewCipherArray(t.CipherSuites)
 	}
 
-	for _, f := range []unsupportedTLSField{
-		{"supported_protocols", len(t.SupportedProtocols) > 0},
-		{"certificate_authorities", len(t.CertificateAuthorities) > 0},
-		{"curve_types", len(t.CurveTypes) > 0},
-		{"ca_sha256", len(t.CASha256) > 0},
-		{"renegotiation", t.Renegotiation != ""},
-		{"key_passphrase", t.KeyPassphrase != ""},
-	} {
-		if f.set {
-			log.Warnf("output.traceability.ssl.%s is no longer supported and will be ignored", f.name)
+	unsupported := map[string]bool{
+		"supported_protocols":     len(t.SupportedProtocols) > 0,
+		"certificate_authorities": len(t.CertificateAuthorities) > 0,
+		"curve_types":             len(t.CurveTypes) > 0,
+		"ca_sha256":               len(t.CASha256) > 0,
+		"renegotiation":           t.Renegotiation != "",
+		"key_passphrase":          t.KeyPassphrase != "",
+	}
+	for name, set := range unsupported {
+		if set {
+			log.Warnf("output.traceability.ssl.%s is no longer supported and will be ignored", name)
 		}
 	}
 
