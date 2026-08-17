@@ -35,6 +35,25 @@ func (c *cacheManager) SetAccessRequestCacheEnabled(enabled bool) {
 	c.isAccessRequestCacheEnabled = enabled
 }
 
+// resolveAccessRequestAPIAttributes looks up the APIServiceInstance referenced by ar and returns
+// the external API ID, stage, and version reported by the gateway. Empty strings are returned for
+// any attribute that can't be resolved.
+func (c *cacheManager) resolveAccessRequestAPIAttributes(ar *management.AccessRequest) (apiID, apiStage, apiVersion string) {
+	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
+	instance, _ := c.GetAPIServiceInstanceByID(instRef.ID)
+	if instance == nil && ar.Spec.ApiServiceInstance != "" {
+		instance, _ = c.GetAPIServiceInstanceByName(ar.Spec.ApiServiceInstance)
+	}
+	if instance == nil {
+		return "", "", ""
+	}
+
+	apiID, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
+	apiStage, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
+	apiVersion, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIVersion)
+	return apiID, apiStage, apiVersion
+}
+
 func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	if !c.isAccessRequestCacheEnabled || ri == nil {
 		return
@@ -46,23 +65,8 @@ func (c *cacheManager) AddAccessRequest(ri *v1.ResourceInstance) {
 	}
 
 	appName := ar.Spec.ManagedApplication
-	instID := ""
-
-	instRef := ar.GetReferenceByGVK(management.APIServiceInstanceGVK())
-	instID = instRef.ID
-
-	instance, _ := c.GetAPIServiceInstanceByID(instID)
-	if instance == nil && ar.Spec.ApiServiceInstance != "" {
-		instance, _ = c.GetAPIServiceInstanceByName(ar.Spec.ApiServiceInstance)
-	}
-	apiID := ""
-	apiStage := ""
-	apiVersion := ""
-	if instance != nil {
-		apiID, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIID)
-		apiStage, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIStage)
-		apiVersion, _ = util.GetAgentDetailsValue(instance, defs.AttrExternalAPIVersion)
-	}
+	instID := ar.GetReferenceByGVK(management.APIServiceInstanceGVK()).ID
+	apiID, apiStage, apiVersion := c.resolveAccessRequestAPIAttributes(ar)
 
 	secKey := arSecondaryKey(appName, apiID, apiStage, apiVersion)
 	formattedAppForeignKey := formatAppForeignKey(appName)
@@ -120,6 +124,34 @@ func (c *cacheManager) GetAccessRequestsByApp(appName string) []*v1.ResourceInst
 			if ri, ok := item.GetObject().(*v1.ResourceInstance); ok {
 				accessRequests = append(accessRequests, withComputedHashes(ri))
 			}
+		}
+	}
+
+	return accessRequests
+}
+
+// GetAccessRequestsByAPI returns every cached AccessRequest for the given API ID, across
+// all managed applications, stages, and versions.
+func (c *cacheManager) GetAccessRequestsByAPI(apiID string) []*v1.ResourceInstance {
+	c.ApplyResourceReadLock()
+	defer c.ReleaseResourceReadLock()
+
+	accessRequests := []*v1.ResourceInstance{}
+	for _, key := range c.accessRequestMap.GetKeys() {
+		item, _ := c.accessRequestMap.Get(key)
+		ri, ok := item.(*v1.ResourceInstance)
+		if !ok || ri == nil {
+			continue
+		}
+
+		ar := &management.AccessRequest{}
+		if ar.FromInstance(ri) != nil {
+			continue
+		}
+
+		id, _, _ := c.resolveAccessRequestAPIAttributes(ar)
+		if id == apiID {
+			accessRequests = append(accessRequests, withComputedHashes(ri))
 		}
 	}
 

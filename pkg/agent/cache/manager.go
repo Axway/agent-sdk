@@ -121,6 +121,7 @@ type Manager interface {
 	GetAccessRequestByAppAndAPIStageVersion(managedAppName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance
 	GetAccessRequest(id string) *v1.ResourceInstance
 	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
+	GetAccessRequestsByAPI(apiID string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
 	IsAccessRequestCacheEnabled() bool
