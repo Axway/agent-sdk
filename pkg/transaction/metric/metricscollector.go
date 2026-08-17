@@ -264,6 +264,11 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
+	c.addMetric(bytes)
+}
+
+// addMetric - updates start time, usage, and volume. Caller must hold c.lock/c.batchLock.
+func (c *collector) addMetric(bytes int64) {
 	c.updateStartTime()
 	c.updateUsage(1)
 	c.updateVolume(bytes)
@@ -271,7 +276,12 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
-	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
+	c.addMetric(metricDetail.Bytes)
 	c.createOrUpdateAPICounter(metricDetail)
 }
 
@@ -282,11 +292,12 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	}
 
 	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
 	c.updateStartTime()
 	c.updateUsage(detail.Count)
-	c.batchLock.Unlock()
-	c.lock.Unlock()
 
 	c.createOrUpdateAPICounterStats(Detail{
 		APIDetails: detail.APIDetails,
