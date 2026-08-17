@@ -1664,3 +1664,119 @@ func TestGetOrgGUID(t *testing.T) {
 		})
 	}
 }
+
+const raceTestIterations = 20000
+
+// TestGroupStartTimeRace guards against an issue where AddMetricDetail/AddAPIMetricDetail
+// released c.lock/c.batchLock before finishing their update, leaving a window where a concurrent
+// publish cycle's reset of c.metricStartTime (see generateEvents) could be read as the zero value
+// and inserted into a metric's groupStartTime.
+func TestGroupStartTimeRace(t *testing.T) {
+	apiDetails := models.APIDetails{ID: "race-api", Name: "race-api"}
+	appDetails := models.AppDetails{ID: "race-app", Name: "race-app"}
+
+	tests := map[string]struct {
+		addMetric func(c *collector)
+	}{
+		"AddMetricDetail": {
+			addMetric: func(c *collector) {
+				c.AddMetricDetail(Detail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					StatusCode: "200",
+					Duration:   10,
+					Bytes:      10,
+				})
+			},
+		},
+		"AddAPIMetricDetail": {
+			addMetric: func(c *collector) {
+				c.AddAPIMetricDetail(MetricDetail{
+					APIDetails: apiDetails,
+					AppDetails: appDetails,
+					StatusCode: "200",
+					Count:      1,
+				})
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			runGroupStartTimeRaceCase(t, tc.addMetric)
+		})
+	}
+}
+
+// runGroupStartTimeRaceCase builds a fresh collector, races addMetric against a simulated
+// generateEvents() reset of c.metricStartTime, then fails if any metric ends up with a
+// zero-value groupStartTime.
+func runGroupStartTimeRaceCase(t *testing.T, addMetric func(c *collector)) {
+	t.Helper()
+	defer cleanUpCachedMetricFile()
+	s := &testHTTPServer{}
+	defer s.closeServer()
+	s.startServer()
+	traceability.SetDataDirPath(".")
+
+	cfg := createCentralCfg(s.server.URL, "demo")
+	cfg.MetricReporting.(*config.MetricReportingConfiguration).Publish = true
+	cfg.SetEnvironmentID(testEnvID)
+	cmd.BuildDataPlaneType = "Azure"
+	agent.Initialize(cfg)
+
+	c := createMetricCollector().(*collector)
+
+	stop := make(chan struct{})
+	var resetWG sync.WaitGroup
+	resetWG.Go(func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				// exactly what generateEvents() does to c.metricStartTime, under the same lock
+				c.lock.Lock()
+				c.metricStartTime = time.Time{}
+				c.lock.Unlock()
+			}
+		}
+	})
+
+	var addWG sync.WaitGroup
+	for range raceTestIterations {
+		addWG.Go(func() {
+			addMetric(c)
+		})
+	}
+	addWG.Wait()
+	close(stop)
+	resetWG.Wait()
+
+	assertNoZeroGroupStartTime(t, c)
+}
+
+// assertNoZeroGroupStartTime fails the test if any metric in the collector's registry has a
+// groupStartTime matching the Go zero-value time.Time.
+func assertNoZeroGroupStartTime(t *testing.T, c *collector) {
+	t.Helper()
+	zeroMillis := time.Time{}.UnixMilli()
+	found := 0
+	c.registry.Each(func(name string, m any) {
+		group, ok := m.(groupedMetrics)
+		if !ok {
+			return
+		}
+		for key, metric := range group.metrics {
+			if metric.groupStartTime == zeroMillis {
+				found++
+				t.Logf("corrupted metric found: registry=%s key=%s groupStartTime=%d", name, key, metric.groupStartTime)
+			}
+		}
+	})
+
+	if found > 0 {
+		t.Fatalf("found %d metric(s) with a zero-value groupStartTime out of %d add attempts", found, raceTestIterations)
+	}
+}
