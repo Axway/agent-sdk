@@ -66,8 +66,8 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		CentralURL:           "https://apicentral.axway.com",
 		AuthURL:              "https://login.axway.com/auth",
 		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "ingestion.datasearch.axway.com:5044",
-		TraceabilityProtocol: "tcp",
+		TraceabilityHost:     "phoenix.datasearch.axway.com:443",
+		TraceabilityProtocol: "https",
 		Deployment:           "prod",
 	},
 	EU: {
@@ -75,8 +75,8 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		CentralURL:           "https://central.eu-fr.axway.com",
 		AuthURL:              "https://login.axway.com/auth",
 		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "ingestion.visibility.eu-fr.axway.com:5044",
-		TraceabilityProtocol: "tcp",
+		TraceabilityHost:     "phoenix.visibility.eu-fr.axway.com:443",
+		TraceabilityProtocol: "https",
 		Deployment:           "prod-eu",
 	},
 	AP: {
@@ -84,8 +84,8 @@ var regionalSettingsMap = map[Region]regionalSettings{
 		CentralURL:           "https://central.ap-sg.axway.com",
 		AuthURL:              "https://login.axway.com/auth",
 		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "ingestion.visibility.ap-sg.axway.com:5044",
-		TraceabilityProtocol: "tcp",
+		TraceabilityHost:     "phoenix.visibility.ap-sg.axway.com:443",
+		TraceabilityProtocol: "https",
 		Deployment:           "prod-ap",
 	},
 	EU2: {

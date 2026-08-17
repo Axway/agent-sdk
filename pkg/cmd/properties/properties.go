@@ -67,6 +67,7 @@ type Properties interface {
 	// Log Properties
 	MaskValues(name string)
 	DebugLogProperties()
+
 	SetAliasKeyPrefix(aliasKeyPrefix string)
 }
 
@@ -122,7 +123,19 @@ func WithUpperLimitInt(upper int) IntOpt {
 	}
 }
 
+// aliasKeyPrefix - when set, properties are looked up under "<aliasKeyPrefix>.<key>" first,
+// falling back to the plain "<key>".
 var aliasKeyPrefix string
+
+// SetAliasKeyPrefix -
+func SetAliasKeyPrefix(keyPrefix string) {
+	aliasKeyPrefix = keyPrefix
+}
+
+// GetAliasKeyPrefix -
+func GetAliasKeyPrefix() string {
+	return aliasKeyPrefix
+}
 
 type properties struct {
 	Properties
@@ -160,16 +173,6 @@ func NewPropertiesWithSecretResolver(rootCmd *cobra.Command, secretResolver Secr
 	}
 
 	return cmdprops
-}
-
-// SetAliasKeyPrefix -
-func SetAliasKeyPrefix(keyPrefix string) {
-	aliasKeyPrefix = keyPrefix
-}
-
-// GetAliasKeyPrefix -
-func GetAliasKeyPrefix() string {
-	return aliasKeyPrefix
 }
 
 func (p *properties) bindOrPanic(key string, flg *flag.Flag) {
@@ -441,6 +444,18 @@ func (p *properties) parseStringValueForKey(key string) string {
 	return s
 }
 
+func (p *properties) parseStringValue(key string) string {
+	var s string
+	if aliasKeyPrefix != "" {
+		s = p.parseStringValueForKey(aliasKeyPrefix + "." + key)
+	}
+	// If no alias or no value parsed for alias key
+	if s == "" {
+		s = p.parseStringValueForKey(key)
+	}
+	return s
+}
+
 func (p *properties) parseSlice(s string, expSlice [][]byte) string {
 	rtnS := s
 	envVar := string(expSlice[1])
@@ -463,18 +478,6 @@ func (p *properties) parseSlice(s string, expSlice [][]byte) string {
 	}
 
 	return rtnS
-}
-
-func (p *properties) parseStringValue(key string) string {
-	var s string
-	if aliasKeyPrefix != "" {
-		s = p.parseStringValueForKey(aliasKeyPrefix + "." + key)
-	}
-	// If no alias or no value parsed for alias key
-	if s == "" {
-		s = p.parseStringValueForKey(key)
-	}
-	return s
 }
 
 func (p *properties) resolveSecretReference(cfgName, cfgValue string) string {

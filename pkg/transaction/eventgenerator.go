@@ -6,9 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
-
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
@@ -16,6 +13,7 @@ import (
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/cmd"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/metric"
@@ -28,9 +26,9 @@ import (
 
 // EventGenerator - Create the events to be published to Condor
 type EventGenerator interface {
-	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, fields common.MapStr, privateData interface{}) (events []beat.Event, err error)
+	CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData event.MapStr, fields event.MapStr, privateData interface{}) (events []event.Event, err error)
 	SetUseTrafficForAggregation(useTrafficForAggregation bool)
-	CreateFromEventReport(eventReport EventReport) (events []beat.Event, err error)
+	CreateFromEventReport(eventReport EventReport) (events []event.Event, err error)
 	AddMetricDetailsFromEventReport(eventReport EventReport) error
 }
 
@@ -62,7 +60,7 @@ func (e *Generator) SetUseTrafficForAggregation(useTrafficForAggregation bool) {
 }
 
 // CreateEvents - Creates new events to be sent to Amplify Observability
-func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
+func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent, eventTime time.Time, metaData event.MapStr, eventFields event.MapStr, privateData interface{}) ([]event.Event, error) {
 	report, err := NewEventReportBuilder().
 		SetSummaryEvent(summaryEvent).
 		SetDetailEvents(detailEvents).
@@ -72,15 +70,15 @@ func (e *Generator) CreateEvents(summaryEvent LogEvent, detailEvents []LogEvent,
 		SetPrivateData(privateData).
 		Build()
 	if err != nil {
-		return []beat.Event{}, err
+		return []event.Event{}, err
 	}
 
 	return e.CreateFromEventReport(report)
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability, expects sampling is handled by agent
-func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]beat.Event, error) {
-	events := make([]beat.Event, 0)
+func (e *Generator) CreateFromEventReport(eventReport EventReport) ([]event.Event, error) {
+	events := make([]event.Event, 0)
 	logger := e.logger
 
 	// add logging fields from summary event
@@ -221,8 +219,8 @@ func (e *Generator) trackMetrics(summaryEvent LogEvent, bytes int64) {
 }
 
 // CreateEvent - Creates a new event to be sent to Amplify Observability
-func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) (beat.Event, error) {
-	event := beat.Event{}
+func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData event.MapStr, eventFields event.MapStr, privateData interface{}) (event.Event, error) {
+	evt := event.Event{}
 
 	e.logger.
 		WithField("transactionID", logEvent.TransactionID).
@@ -231,7 +229,7 @@ func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTim
 
 	cfg := agent.GetCentralConfig()
 	if cfg == nil {
-		return event, fmt.Errorf("central config unavailable; cannot construct insights event for type %q", logEvent.Type)
+		return evt, fmt.Errorf("central config unavailable; cannot construct insights event for type %q", logEvent.Type)
 	}
 
 	orgID := metric.GetOrgGUID()
@@ -240,10 +238,10 @@ func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTim
 	}
 	envID := cfg.GetEnvironmentID()
 	if orgID == "" {
-		return event, fmt.Errorf("required field \"org\" (tenantID) is empty for insights event type %q", logEvent.Type)
+		return evt, fmt.Errorf("required field \"org\" (tenantID) is empty for insights event type %q", logEvent.Type)
 	}
 	if envID == "" {
-		return event, fmt.Errorf("required field \"distribution.environment\" (environmentID) is empty for insights event type %q", logEvent.Type)
+		return evt, fmt.Errorf("required field \"distribution.environment\" (environmentID) is empty for insights event type %q", logEvent.Type)
 	}
 
 	e.logger.
@@ -261,7 +259,7 @@ func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTim
 
 	insightsEvent, err := BuildTransactionV2Data(e.logger, logEvent, orgID, envID, summaryProxy, agent.GetCacheManager(), reporter)
 	if err != nil {
-		return event, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
+		return evt, fmt.Errorf("failed to build insights event for type %q: %w", logEvent.Type, err)
 	}
 
 	e.logger.
@@ -272,15 +270,15 @@ func (e *Generator) createEvent(logEvent LogEvent, summaryProxy *Proxy, eventTim
 
 	serialized, err := json.Marshal(insightsEvent)
 	if err != nil {
-		return event, err
+		return evt, err
 	}
 
 	eventData, err := e.createEventData(serialized, eventFields)
 	if err != nil {
-		return event, err
+		return evt, err
 	}
 
-	return beat.Event{
+	return event.Event{
 		Timestamp: eventTime,
 		Meta:      metaData,
 		Private:   privateData,
@@ -298,14 +296,14 @@ func (e *Generator) getBytesSent(detailEvents []LogEvent) int {
 	return 0
 }
 
-func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData common.MapStr, eventFields common.MapStr, privateData interface{}) ([]beat.Event, error) {
-	events := make([]beat.Event, 0)
-	for _, event := range detailEvents {
+func (e *Generator) handleTransactionEvents(detailEvents []LogEvent, summaryProxy *Proxy, eventTime time.Time, metaData event.MapStr, eventFields event.MapStr, privateData interface{}) ([]event.Event, error) {
+	events := make([]event.Event, 0)
+	for _, logEvent := range detailEvents {
 		if metaData == nil {
-			metaData = common.MapStr{}
+			metaData = event.MapStr{}
 		}
-		metaData.Put(sampling.SampleKey, true)
-		newEvent, err := e.createEvent(event, summaryProxy, eventTime, metaData, eventFields, privateData)
+		metaData[sampling.SampleKey] = true
+		newEvent, err := e.createEvent(logEvent, summaryProxy, eventTime, metaData, eventFields, privateData)
 		if err != nil {
 			return nil, err
 		}
@@ -480,7 +478,7 @@ func (e *Generator) healthcheck(name string) *hc.Status {
 	return status
 }
 
-func (e *Generator) createEventData(message []byte, eventFields common.MapStr) (eventData map[string]interface{}, err error) {
+func (e *Generator) createEventData(message []byte, eventFields event.MapStr) (eventData map[string]interface{}, err error) {
 	eventData = make(map[string]interface{})
 	// Copy event fields if specified
 	if len(eventFields) > 0 {
@@ -513,11 +511,11 @@ func (e *Generator) createEventFields() (fields map[string]string, err error) {
 	return
 }
 
-func SetSampleInMetadata(metadata common.MapStr) common.MapStr {
+func SetSampleInMetadata(metadata event.MapStr) event.MapStr {
 	if metadata == nil {
-		metadata = common.MapStr{}
+		metadata = event.MapStr{}
 	}
-	metadata.Put(sampling.SampleKey, true)
+	metadata[sampling.SampleKey] = true
 	return metadata
 }
 

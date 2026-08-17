@@ -8,34 +8,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/Axway/agent-sdk/pkg/agent"
-	"github.com/Axway/agent-sdk/pkg/config"
-	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/outputs"
-	"github.com/elastic/beats/v7/libbeat/publisher"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/event"
+	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
+	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 )
-
-var logstashClientCreateCalled = false
-
-func init() {
-	logstashFactory := func(
-		indexManager outputs.IndexManager,
-		beat beat.Info,
-		observer outputs.Observer,
-		cfg *common.Config,
-	) (outputs.Group, error) {
-		logstashClientCreateCalled = true
-		return outputs.SuccessNet(false, 1, 1, nil)
-	}
-	outputs.RegisterType("logstash", logstashFactory)
-}
 
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
@@ -54,15 +41,8 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
-func createTransport(config *Config) (outputs.Group, error) {
-	info := beat.Info{
-		Beat:        "test-beat",
-		IndexPrefix: "",
-		Version:     "1.0",
-	}
-	// defcfg := DefaultConfig()
-	commonCfg, _ := common.NewConfigFrom(config)
-	return makeTraceabilityAgent(nil, info, nil, commonCfg)
+func createTransport(cfg *Config) ([]*Client, error) {
+	return NewClient(cfg)
 }
 
 func createBatch(msgValue string) *MockBatch {
@@ -73,18 +53,16 @@ func createBatch(msgValue string) *MockBatch {
 	}
 }
 
-func createEvent(msgValue string) []publisher.Event {
-	fieldsData := common.MapStr{
+func createEvent(msgValue string) []event.Event {
+	fieldsData := event.MapStr{
 		"message": msgValue,
 	}
-	return []publisher.Event{
+	return []event.Event{
 		{
-			Content: beat.Event{
-				Timestamp: time.Now(),
-				Meta:      common.MapStr{sampling.SampleKey: true},
-				Private:   nil,
-				Fields:    fieldsData,
-			},
+			Timestamp: time.Now(),
+			Meta:      event.MapStr{sampling.SampleKey: true},
+			Private:   nil,
+			Fields:    fieldsData,
 		},
 	}
 }
@@ -163,162 +141,201 @@ type MockBatch struct {
 	acked      bool
 	retryCount int
 
-	events []publisher.Event
+	events []event.Event
 }
 
-func (b *MockBatch) Events() []publisher.Event                { return b.events }
-func (b *MockBatch) ACK()                                     { b.acked = true }
-func (b *MockBatch) Drop()                                    {}
-func (b *MockBatch) Retry()                                   {}
-func (b *MockBatch) Cancelled()                               {}
-func (b *MockBatch) RetryEvents(events []publisher.Event)     { b.retryCount++ }
-func (b *MockBatch) CancelledEvents(events []publisher.Event) {}
+func (b *MockBatch) Events() []event.Event                { return b.events }
+func (b *MockBatch) SetEvents(events []event.Event)       { b.events = events }
+func (b *MockBatch) ACK()                                 { b.acked = true }
+func (b *MockBatch) Drop()                                {}
+func (b *MockBatch) Retry()                               {}
+func (b *MockBatch) Cancelled()                           {}
+func (b *MockBatch) RetryEvents(events []event.Event)     { b.retryCount++ }
+func (b *MockBatch) CancelledEvents(events []event.Event) {}
 
 type testEventProcessor struct {
 	msgValue string
 }
 
-func (t *testEventProcessor) Process(events []publisher.Event) []publisher.Event {
+func (t *testEventProcessor) Process(events []event.Event) []event.Event {
 	return createEvent(t.msgValue)
 }
 
-func TestCreateLogstashClient(t *testing.T) {
-	s := newMockHTTPServer()
-	defer s.Close()
+func TestParseConfig(t *testing.T) {
+	const testHost = "phoenix.datasearch.axway.com:443"
 
-	cfg := createCentralCfg(s.server.URL, "v7")
-	agent.Initialize(cfg)
+	// properties.Properties reads env var overrides through viper's AutomaticEnv, which pkg/cmd/root.go
+	// normally connects once at agent startup. Replicate that here since this test bypasses root.go.
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
-	group, err := createTransport(nil)
+	agent.Initialize(createCentralCfg("http://localhost:8888", "v7"))
 
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "config is nil")
-	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
-	testConfig := DefaultConfig()
-	testConfig.Protocol = "tcp"
-
-	group, err = createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "empty array accessing 'hosts'")
-	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
-
-	testConfig.Hosts = []string{
-		"somehost",
-		"someotherhost",
-	}
-	group, err = createTransport(testConfig)
-	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	assert.NotNil(t, group.Clients)
-	assert.True(t, logstashClientCreateCalled)
-
-	testConfig.Pipelining = 5
-	testConfig.Hosts = []string{
-		"somehost2",
-	}
-	group, err = createTransport(testConfig)
-	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	assert.True(t, logstashClientCreateCalled)
-	traceabilityClient := group.Clients[0].(*Client)
-	assert.NotNil(t, traceabilityClient)
-	assert.False(t, IsHTTPTransport())
-	assert.Equal(t, 3, GetMaxRetries())
-}
-
-func TestCreateLogstashClientWithSingleEntry(t *testing.T) {
-	cfg := createCentralCfg("http://localhost:8888", "v7")
-	cfg.SingleURL = "https://ingestion.platform.axway.com"
-	agent.Initialize(cfg)
-	logstashClientCreateCalled = false
-
-	testConfig := DefaultConfig()
-	testConfig.Protocol = "http"
-	testConfig.Hosts = []string{
-		"somehost",
-	}
-	group, err := createTransport(testConfig)
-	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	assert.NotNil(t, group.Clients)
-	assert.True(t, logstashClientCreateCalled)
-	assert.Equal(t, "tcp", traceCfg.Protocol)
-	transportProxy := os.Getenv("TRACEABILITY_PROXYURL")
-	assert.Equal(t, "sni://"+traceCfg.Hosts[0], transportProxy)
-
-	testConfig.Proxy = ProxyConfig{
-		URL:          "http://localhost:9999",
-		LocalResolve: false,
+	tests := map[string]struct {
+		envVars map[string]string
+		assert  func(t *testing.T, cfg *Config)
+	}{
+		"defaults with no env vars set": {
+			envVars: map[string]string{},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, 3, cfg.CompressionLevel)
+				assert.Equal(t, 512, cfg.BulkMaxSize)
+				assert.Equal(t, "https", cfg.Protocol)
+				assert.Empty(t, cfg.Hosts)
+			},
+		},
+		"compression level out of bounds falls back to the default": {
+			envVars: map[string]string{
+				"TRACEABILITY_COMPRESSIONLEVEL": "20",
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, 3, cfg.CompressionLevel)
+			},
+		},
+		"valid full config round trip": {
+			envVars: map[string]string{
+				"TRACEABILITY_HOST":                 testHost,
+				"TRACEABILITY_PROTOCOL":             "https",
+				"TRACEABILITY_COMPRESSIONLEVEL":     "5",
+				"TRACEABILITY_BULKMAXSIZE":          "256",
+				"TRACEABILITY_MAXRETRIES":           "5",
+				"TRACEABILITY_LOADBALANCE":          "true",
+				"TRACEABILITY_SSL_VERIFICATIONMODE": "full",
+				"TRACEABILITY_SSL_CIPHERSUITES":     "ECDHE-RSA-AES-128-GCM-SHA256",
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, []string{testHost}, cfg.Hosts)
+				assert.Equal(t, "https", cfg.Protocol)
+				assert.Equal(t, 5, cfg.CompressionLevel)
+				assert.Equal(t, 256, cfg.BulkMaxSize)
+				assert.Equal(t, 5, cfg.MaxRetries)
+				assert.True(t, cfg.LoadBalance)
+				assert.Equal(t, "full", cfg.TLS.VerificationMode)
+				assert.Equal(t, []string{"ECDHE-RSA-AES-128-GCM-SHA256"}, cfg.TLS.CipherSuites)
+			},
+		},
+		"redaction show list matches mulesoft-agents' no-space-after-colon format": {
+			envVars: map[string]string{
+				"TRACEABILITY_REDACTION_PATH_SHOW": `[{keyMatch:".*"}]`,
+			},
+			assert: func(t *testing.T, cfg *Config) {
+				assert.Equal(t, []redaction.Show{{KeyMatch: ".*"}}, cfg.Redaction.Path.Allowed)
+			},
+		},
 	}
 
-	testConfig.Hosts = []string{
-		"somehost",
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			for k, v := range tc.envVars {
+				t.Setenv(k, v)
+			}
+
+			props := properties.NewProperties(&cobra.Command{})
+			AddConfigProperties(props)
+
+			cfg, err := ParseConfig(props)
+			assert.NoError(t, err)
+			assert.NotNil(t, cfg)
+			tc.assert(t, cfg)
+		})
 	}
-	group, err = createTransport(testConfig)
-	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	assert.NotNil(t, group.Clients)
-	assert.True(t, logstashClientCreateCalled)
-	assert.Equal(t, "tcp", traceCfg.Protocol)
-	assert.Equal(t, "http://localhost:9999", traceCfg.Proxy.URL)
-	transportProxy = os.Getenv("TRACEABILITY_PROXYURL")
-	assert.Equal(t, "sni://"+traceCfg.Hosts[0], transportProxy)
 }
 
 func TestCreateHTTPClient(t *testing.T) {
-	logstashClientCreateCalled = false
 	cfg := createCentralCfg("http://localhost:8888", "v7")
 	agent.Initialize(cfg)
 
-	testConfig := DefaultConfig()
-
-	testConfig.Hosts = []string{
-		"somehost:invalidport",
+	tests := map[string]struct {
+		hosts       []string
+		proxy       ProxyConfig
+		wantErr     bool
+		wantErrMsg  string
+		wantClients int
+	}{
+		"invalid port": {
+			hosts:      []string{"somehost:invalidport"},
+			wantErr:    true,
+			wantErrMsg: "invalid port",
+		},
+		"bad proxy URL": {
+			hosts:   []string{"somehost"},
+			proxy:   ProxyConfig{URL: "bogus\\:bogus"},
+			wantErr: true,
+		},
+		"valid host and no proxy": {
+			hosts:       []string{"somehost"},
+			wantClients: 1,
+		},
 	}
 
-	group, err := createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "invalid port")
-	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			testConfig := DefaultConfig()
+			testConfig.Hosts = tc.hosts
+			testConfig.Proxy = tc.proxy
 
-	testConfig.Hosts = []string{
-		"somehost",
+			clients, err := createTransport(testConfig)
+			if tc.wantErr {
+				assert.NotNil(t, err)
+				if tc.wantErrMsg != "" {
+					assert.Contains(t, err.Error(), tc.wantErrMsg)
+				}
+				assert.Nil(t, clients)
+				return
+			}
+			assert.Nil(t, err)
+			assert.Equal(t, tc.wantClients, len(clients))
+			assert.NotNil(t, clients[0])
+			assert.True(t, IsHTTPTransport())
+			assert.Equal(t, 3, GetMaxRetries())
+		})
 	}
-	testConfig.Proxy = ProxyConfig{
-		URL: "bogus\\:bogus",
+}
+
+func TestValidateCfgRemovedProtocolPortHost(t *testing.T) {
+	tests := map[string]struct {
+		cfg     *Config
+		wantErr error
+	}{
+		"tcp protocol removed": {
+			cfg:     &Config{Protocol: "tcp"},
+			wantErr: ErrTCPProtocolRemoved,
+		},
+		"lumberjack port 5044 removed": {
+			cfg:     &Config{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:5044"}},
+			wantErr: ErrPort5044Removed.FormatError("phoenix.datasearch.axway.com:5044"),
+		},
+		"ingestion host removed": {
+			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion.datasearch.axway.com:443"}},
+			wantErr: ErrIngestionHostRemoved.FormatError("ingestion.datasearch.axway.com:443"),
+		},
+		"ingestion-http host removed": {
+			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion-http.datasearch.axway.com:443"}},
+			wantErr: ErrIngestionHostRemoved.FormatError("ingestion-http.datasearch.axway.com:443"),
+		},
+		"ingestion-lumberjack host removed": {
+			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion-lumberjack.datasearch.axway.com:443"}},
+			wantErr: ErrIngestionHostRemoved.FormatError("ingestion-lumberjack.datasearch.axway.com:443"),
+		},
+		"valid phoenix https host passes": {
+			cfg: &Config{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:443"}},
+		},
 	}
 
-	group, err = createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
-
-	testConfig.Proxy = ProxyConfig{}
-	testConfig.CompressionLevel = 20
-	group, err = createTransport(testConfig)
-	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "requires value <= 9 accessing 'compression_level'")
-	assert.NotNil(t, group)
-	assert.Nil(t, group.Clients)
-	assert.False(t, logstashClientCreateCalled)
-
-	testConfig.CompressionLevel = 0
-	group, err = createTransport(testConfig)
-	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	assert.Equal(t, 1, len(group.Clients))
-	traceabilityClient := group.Clients[0].(*Client)
-	assert.NotNil(t, traceabilityClient)
-	assert.False(t, logstashClientCreateCalled)
-	assert.True(t, IsHTTPTransport())
-	assert.Equal(t, 3, GetMaxRetries())
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			err := tc.cfg.ValidateCfg()
+			if tc.wantErr == nil {
+				assert.Nil(t, err)
+				return
+			}
+			assert.NotNil(t, err)
+			assert.Equal(t, tc.wantErr.Error(), err.Error())
+		})
+	}
 }
 
 func TestHTTPTransportWithJSONEncoding(t *testing.T) {
@@ -337,10 +354,10 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	testConfig.CompressionLevel = 0
 	testConfig.Hosts = []string{url.Hostname() + ":" + url.Port()}
 
-	group, err := createTransport(testConfig)
+	clients, err := createTransport(testConfig)
 	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	traceabilityClient := group.Clients[0].(*Client)
+	assert.Equal(t, 1, len(clients))
+	traceabilityClient := clients[0]
 	batch := createBatch("{\"f1\":\"test\"}")
 	traceabilityClient.Connect()
 	agent.StartAgentStatusUpdate()
@@ -353,9 +370,9 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	assert.NotEmpty(t, reqUA)
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
-	event := publishedMessages[0]
+	msg := publishedMessages[0]
 	assert.Nil(t, err)
-	assert.Equal(t, "test", event["f1"])
+	assert.Equal(t, "test", msg["f1"])
 	assert.True(t, batch.acked)
 }
 
@@ -376,9 +393,9 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 
 	eventProcessor := &testEventProcessor{msgValue: "{\"f1\":\"test\"}"}
 	SetOutputEventProcessor(eventProcessor)
-	group, err := createTransport(testConfig)
+	clients, err := createTransport(testConfig)
 	assert.Nil(t, err)
-	traceabilityClient := group.Clients[0].(*Client)
+	traceabilityClient := clients[0]
 	batch := createBatch("{\"f0\":\"dummy\"}")
 
 	traceabilityClient.Connect()
@@ -390,9 +407,9 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 	publishedMessages := s.GetMessages()
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
-	event := publishedMessages[0]
-	assert.Equal(t, "test", event["f1"])
-	assert.Nil(t, event["f0"])
+	msg := publishedMessages[0]
+	assert.Equal(t, "test", msg["f1"])
+	assert.Nil(t, msg["f0"])
 	assert.True(t, batch.acked)
 
 	SetOutputEventProcessor(nil)
@@ -413,10 +430,10 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 		url.Hostname() + ":" + url.Port(),
 	}
 
-	group, err := createTransport(testConfig)
+	clients, err := createTransport(testConfig)
 	assert.Nil(t, err)
-	assert.NotNil(t, group)
-	traceabilityClient := group.Clients[0].(*Client)
+	assert.Equal(t, 1, len(clients))
+	traceabilityClient := clients[0]
 	batch := createBatch("{\"f1\":\"test\"}")
 
 	traceabilityClient.Connect()
@@ -428,10 +445,10 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	assert.NotNil(t, publishedMessages)
 	assert.Equal(t, 1, len(publishedMessages))
 
-	event := publishedMessages[0]
+	msg := publishedMessages[0]
 
 	assert.Nil(t, err)
-	assert.Equal(t, "test", event["f1"])
+	assert.Equal(t, "test", msg["f1"])
 	assert.True(t, batch.acked)
 }
 
@@ -450,9 +467,9 @@ func TestHTTPTransportRetries(t *testing.T) {
 		url.Hostname() + ":" + url.Port(),
 	}
 
-	group, err := createTransport(testConfig)
+	clients, err := createTransport(testConfig)
 	assert.Nil(t, err)
-	traceabilityClient := group.Clients[0].(*Client)
+	traceabilityClient := clients[0]
 	batch := createBatch("somemessage")
 
 	s.responseStatus = 404
@@ -465,10 +482,10 @@ func TestHTTPTransportRetries(t *testing.T) {
 
 	s.responseStatus = 500
 	batch = createBatch("somemessage")
-	group, err = createTransport(testConfig)
+	clients, err = createTransport(testConfig)
 	assert.Nil(t, err)
 
-	traceabilityClient = group.Clients[0].(*Client)
+	traceabilityClient = clients[0]
 	traceabilityClient.Connect()
 	err = traceabilityClient.Publish(context.Background(), batch)
 	traceabilityClient.Close()

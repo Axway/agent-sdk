@@ -7,11 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
-
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/cmd"
 	"github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 	"github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -67,8 +66,8 @@ func benchAppDetails() models.AppDetails {
 // into centralMetric (CustomUnits has a `json:"-"` tag), so getMetricFromEvent
 // cannot recover them. This raw decode is needed to verify custom unit data
 // survives the publish round trip.
-func getRawEventData(event beatPub.Event) map[string]any {
-	data, found := event.Content.Fields[messageKey]
+func getRawEventData(evt event.Event) map[string]any {
+	data, found := evt.Fields[messageKey]
 	if !found {
 		return nil
 	}
