@@ -181,6 +181,7 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *management.Man
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()
 		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
+		h.cache.DeleteManagedApplication(app.Metadata.ID)
 	} else {
 		err := errors.New(status.GetMessage())
 		log.WithError(err).Error("request status was not Success, skipping")

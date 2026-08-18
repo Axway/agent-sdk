@@ -375,8 +375,9 @@ func TestCredentialRequestDefinitionCache(t *testing.T) {
 // TestConcurrentGetsDoNotRace: every Get method here used to call CreateHashes() on the
 // resource pointer stored in the cache while holding only a read lock, so concurrent Get calls
 // (as happen when an agent processes resources via parallel goroutines) could race on the shared
-// SubResourceHashes map. withComputedHashes now returns a defensive copy instead, so this should
-// pass cleanly under `go test -race`.
+// SubResourceHashes map. Hashes are now computed once via withComputedHashes when the resource is
+// added to the cache, and Get methods just return the stored pointer, so this should pass cleanly
+// under `go test -race`.
 func TestConcurrentGetsDoNotRace(t *testing.T) {
 	cm := NewAgentCacheManager(&config.CentralConfiguration{}, false)
 

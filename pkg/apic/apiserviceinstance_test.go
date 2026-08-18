@@ -312,8 +312,11 @@ func TestInstanceSourceUpdates(t *testing.T) {
 			instanceName:     "daleapi",
 			managedDataplane: AWS,
 			existingInstance: createAPIServiceInstance("daleapi", "2f5f92f0-f5e4-44fb-bc84-599c27b3497a", "", "", false),
-			// get the instance -> update the instance -> update x-agent-details-subres -> update source subres -> update x-agent-details hashes
-			apiserverResponses: generateResponses("./testdata/serviceinstance.json", http.StatusOK, 5),
+			apiserverResponses: append(
+				generateResponses("./testdata/existingserviceinstances.json", http.StatusOK, 1), // call to get the instance
+				// update the instance -> update x-agent-details-subres -> update source subres -> update x-agent-details hashes
+				generateResponses("./testdata/serviceinstance.json", http.StatusOK, 4)...,
+			),
 		},
 		{
 			name:             "existing instance with different dataplane type",

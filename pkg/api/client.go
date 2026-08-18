@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Axway/agent-sdk/pkg/config"
@@ -29,6 +31,11 @@ const (
 
 	defaultTimeout     = time.Second * 60
 	responseBufferSize = 2048
+
+	// keep-alive connection pool tuning
+	maxIdleConns        = 100
+	maxIdleConnsPerHost = 10
+	idleConnTimeout     = 90 * time.Second
 )
 
 // Request - the request object used when communicating to an API
@@ -188,8 +195,12 @@ func (c *httpClient) createClient(tlsCfg config.TLSConfig) *http.Client {
 
 func (c *httpClient) createHTTPClient() *http.Client {
 	httpClient := &http.Client{
-		Transport: &http.Transport{},
-		Timeout:   c.timeout,
+		Transport: &http.Transport{
+			MaxIdleConns:        maxIdleConns,
+			MaxIdleConnsPerHost: maxIdleConnsPerHost,
+			IdleConnTimeout:     idleConnTimeout,
+		},
+		Timeout: c.timeout,
 	}
 	return httpClient
 }
@@ -197,7 +208,10 @@ func (c *httpClient) createHTTPClient() *http.Client {
 func (c *httpClient) createHTTPSClient(tlsCfg config.TLSConfig) *http.Client {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg.BuildTLSConfig(),
+			TLSClientConfig:     tlsCfg.BuildTLSConfig(),
+			MaxIdleConns:        maxIdleConns,
+			MaxIdleConnsPerHost: maxIdleConnsPerHost,
+			IdleConnTimeout:     idleConnTimeout,
 		},
 		Timeout: c.timeout,
 	}
@@ -294,6 +308,21 @@ func (c *httpClient) prepareAPIResponse(res *http.Response, timer *time.Timer) (
 	return &response, err
 }
 
+// isRetryableConnError reports whether err indicates a pooled keep-alive connection was already
+// dead (closed by the server or an intermediate proxy after an idle timeout) when the client
+// tried to reuse it. That failure happens before any bytes reach the server, so it's safe to
+// retry once on a fresh connection.
+func isRetryableConnError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	return strings.Contains(err.Error(), "server closed idle connection")
+}
+
 // Send - send the http request and returns the API Response
 func (c *httpClient) Send(request Request) (*Response, error) {
 	startTime := time.Now()
@@ -349,13 +378,19 @@ func (c *httpClient) Send(request Request) (*Response, error) {
 		cancel()
 	})
 
-	// Prevent reuse of the tcp connection to the same host
-	req.Close = true
-
 	if log.IsHTTPLogTraceEnabled() {
 		req = log.NewRequestWithTraceContext(reqID, req)
 	}
 	res, err := c.httpClient.Do(req)
+	if isRetryableConnError(err) {
+		if retryReq, buildErr := c.prepareAPIRequest(cancelCtx, request); buildErr == nil {
+			if log.IsHTTPLogTraceEnabled() {
+				retryReq = log.NewRequestWithTraceContext(reqID, retryReq)
+			}
+			req = retryReq
+			res, err = c.httpClient.Do(req)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -19,48 +19,51 @@ func (c *cacheManager) AddAPIService(svc *v1.ResourceInstance) error {
 	if err != nil {
 		return fmt.Errorf("failed to get external API ID from APIService resource: %s", err)
 	}
-	if apiID != "" {
-		defer c.setCacheUpdated(true)
-		apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
-		primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
-		// Verify secondary key and validate if we need to remove it from the apiMap (cache)
-		shouldAdd := true
-		existing, _ := c.apiMap.Get(apiID)
-		if existing == nil {
-			existing, _ = c.apiMap.GetBySecondaryKey(apiID)
-		}
-		if existing != nil {
-			// if cached APIService is created after the incoming one, its likely a duplicate created due to a previous cache sync issue.
-			// Use the original APIService to cache the instance and remove the duplicate from cache to prevent flapping.
-			apiSvc, ok := existing.(*v1.ResourceInstance)
-			if ok && apiSvc != nil && apiSvc.Metadata.ID != svc.Metadata.ID {
-				existingAPITime := time.Time(apiSvc.Metadata.Audit.CreateTimestamp)
-				newAPITime := time.Time(svc.Metadata.Audit.CreateTimestamp)
-				if existingAPITime.After(newAPITime) {
-					if err := c.apiMap.Delete(apiID); err != nil {
-						c.apiMap.DeleteBySecondaryKey(apiID)
-					}
-				} else {
-					shouldAdd = false
+	if apiID == "" {
+		return nil
+	}
+
+	defer c.setCacheUpdated(true)
+	svc = withComputedHashes(svc)
+	apiName, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIName)
+	primaryKey, _ := util.GetAgentDetailsValue(svc, defs.AttrExternalAPIPrimaryKey)
+	// Verify secondary key and validate if we need to remove it from the apiMap (cache)
+	shouldAdd := true
+	existing, _ := c.apiMap.Get(apiID)
+	if existing == nil {
+		existing, _ = c.apiMap.GetBySecondaryKey(apiID)
+	}
+	if existing != nil {
+		// if cached APIService is created after the incoming one, its likely a duplicate created due to a previous cache sync issue.
+		// Use the original APIService to cache the instance and remove the duplicate from cache to prevent flapping.
+		apiSvc, ok := existing.(*v1.ResourceInstance)
+		if ok && apiSvc != nil && apiSvc.Metadata.ID != svc.Metadata.ID {
+			existingAPITime := time.Time(apiSvc.Metadata.Audit.CreateTimestamp)
+			newAPITime := time.Time(svc.Metadata.Audit.CreateTimestamp)
+			if existingAPITime.After(newAPITime) {
+				if err := c.apiMap.Delete(apiID); err != nil {
+					c.apiMap.DeleteBySecondaryKey(apiID)
 				}
-			}
-		}
-
-		if shouldAdd {
-			if primaryKey != "" {
-				c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
-				c.apiMap.SetSecondaryKey(primaryKey, apiName)
-				c.apiMap.SetSecondaryKey(primaryKey, svc.Name)
 			} else {
-				c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
-				c.apiMap.SetSecondaryKey(apiID, svc.Name)
+				shouldAdd = false
 			}
-
-			c.logger.
-				WithField("api-name", apiName).
-				WithField("api-id", apiID).
-				Trace("added api to cache")
 		}
+	}
+
+	if shouldAdd {
+		if primaryKey != "" {
+			c.apiMap.SetWithSecondaryKey(primaryKey, apiID, svc)
+			c.apiMap.SetSecondaryKey(primaryKey, apiName)
+			c.apiMap.SetSecondaryKey(primaryKey, svc.Name)
+		} else {
+			c.apiMap.SetWithSecondaryKey(apiID, apiName, svc)
+			c.apiMap.SetSecondaryKey(apiID, svc.Name)
+		}
+
+		c.logger.
+			WithField("api-name", apiName).
+			WithField("api-id", apiID).
+			Trace("added api to cache")
 	}
 
 	return nil
@@ -92,7 +95,7 @@ func (c *cacheManager) GetAPIServiceWithAPIID(apiID string) *v1.ResourceInstance
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(apiSvc)
+			return apiSvc
 		}
 	}
 	return nil
@@ -107,7 +110,7 @@ func (c *cacheManager) GetAPIServiceWithPrimaryKey(primaryKey string) *v1.Resour
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(apiSvc)
+			return apiSvc
 		}
 	}
 	return nil
@@ -122,7 +125,7 @@ func (c *cacheManager) GetAPIServiceWithName(apiName string) *v1.ResourceInstanc
 	if api != nil {
 		apiSvc, ok := api.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(apiSvc)
+			return apiSvc
 		}
 	}
 	return nil
