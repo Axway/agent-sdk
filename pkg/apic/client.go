@@ -897,6 +897,9 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 	}
 
 	if err == nil && existingRI != nil && existingRI.Metadata.Scope.Name == data.Metadata.Scope.Name {
+		if data.Name == "" {
+			data.Name = existingRI.Name
+		}
 		url = c.createAPIServerURL(data.GetSelfLink())
 		method = coreapi.PUT
 
@@ -935,6 +938,7 @@ func (c *ServiceClient) updateSpecORCreateResourceInstance(data *apiv1.ResourceI
 		existingRI.SubResources = data.SubResources
 		existingRI.Title = data.Title
 		existingRI.Tags = data.GetTags()
+		existingRI.Owner = data.Owner
 		existingRI.Metadata.ResourceVersion = ""
 
 		// set the data and subresources to be pushed

@@ -60,7 +60,7 @@ type ServiceBody struct {
 	specHash                     string
 	specVersion                  string
 	accessRequestDefinition      *management.AccessRequestDefinition
-	specHashes                   map[string]string // map of hash values to revision names
+	specHashes                   map[string]string // Deprecated - map of hash values to revision names. Existing service keep holding previous rev, new rev are not added.
 	requestDefinitionsAllowed    bool              // used to validate if the instance can have request definitions or not. Use case example - v7 unpublished, remove request definitions
 	revisionOnly                 bool
 	dataplaneType                DataplaneType
