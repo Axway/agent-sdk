@@ -212,6 +212,7 @@ type CentralConfig interface {
 	GetJobExecutionTimeout() time.Duration
 	GetClientTimeout() time.Duration
 	GetPageSize() int
+	GetAPIClientWorkers() int
 	GetAPIServiceRevisionPattern() string
 	GetAppendEnvironmentToTitle() bool
 	GetUsageReportingConfig() UsageReportingConfig
@@ -264,6 +265,7 @@ type CentralConfiguration struct {
 	ReportActivityFrequency   time.Duration         `config:"reportActivityFrequency"`
 	ClientTimeout             time.Duration         `config:"clientTimeout"`
 	PageSize                  int                   `config:"pageSize"`
+	APIClientWorkers          int                   `config:"apiClientWorkers"`
 	APIValidationCronSchedule string                `config:"apiValidationCronSchedule"`
 	APIServiceRevisionPattern string                `config:"apiServiceRevisionPattern"`
 	ProxyURL                  string                `config:"proxyUrl"`
@@ -316,6 +318,7 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		PollInterval:              60 * time.Second,
 		ClientTimeout:             60 * time.Second,
 		PageSize:                  100,
+		APIClientWorkers:          3,
 		PlatformURL:               platformURL,
 		SingleURL:                 "",
 		AppendEnvironmentToTitle:  true,
@@ -589,6 +592,11 @@ func (c *CentralConfiguration) GetPageSize() int {
 	return c.PageSize
 }
 
+// GetAPIClientWorkers - Returns the number of concurrent workers used to fetch paginated API Server resources
+func (c *CentralConfiguration) GetAPIClientWorkers() int {
+	return c.APIClientWorkers
+}
+
 // GetAPIServiceRevisionPattern - Returns the naming pattern for APIServiceRevition title
 func (c *CentralConfiguration) GetAPIServiceRevisionPattern() string {
 	return c.APIServiceRevisionPattern
@@ -770,6 +778,7 @@ const (
 	pathReportActivityFrequency      = "central.reportActivityFrequency"
 	pathClientTimeout                = "central.clientTimeout"
 	pathPageSize                     = "central.pageSize"
+	pathAPIClientWorkers             = "central.apiClientWorkers"
 	pathAPIServiceRevisionPattern    = "central.apiServiceRevisionPattern"
 	pathProxyURL                     = "central.proxyUrl"
 	pathAPIServerVersion             = "central.apiServerVersion"
@@ -964,6 +973,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 	props.AddStringProperty(pathAPIValidationCronSchedule, "@daily", "The cron schedule at which the agent validates API Services with the dataplane")
 	props.AddDurationProperty(pathClientTimeout, 60*time.Second, "The time interval at which the http client times out making HTTP requests and processing the response", properties.WithLowerLimit(15*time.Second), properties.WithUpperLimit(120*time.Second))
 	props.AddIntProperty(pathPageSize, 100, "The max page size the agent will use while retrieving API Server resources", properties.WithLowerLimitInt(10), properties.WithUpperLimitInt(100))
+	props.AddIntProperty(pathAPIClientWorkers, 3, "The number of concurrent workers used to fetch paginated API Server resources", properties.WithLowerLimitInt(1), properties.WithUpperLimitInt(10))
 	props.AddStringProperty(pathAPIServiceRevisionPattern, "", "The naming pattern for APIServiceRevision Title")
 	props.AddStringProperty(pathAPIServerVersion, "v1", "Version of the API Server")
 	props.AddDurationProperty(pathJobTimeout, 5*time.Minute, "The max time a job execution can run before being considered as failed")
@@ -1023,6 +1033,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		JobExecutionTimeout:       props.DurationPropertyValue(pathJobTimeout),
 		ClientTimeout:             props.DurationPropertyValue(pathClientTimeout),
 		PageSize:                  props.IntPropertyValue(pathPageSize),
+		APIClientWorkers:          props.IntPropertyValue(pathAPIClientWorkers),
 		APIServiceRevisionPattern: props.StringPropertyValue(pathAPIServiceRevisionPattern),
 		Environment:               props.StringPropertyValue(pathEnvironment),
 		TeamName:                  props.StringPropertyValue(pathTeam),

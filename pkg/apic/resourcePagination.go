@@ -113,10 +113,10 @@ func (c *ServiceClient) getRemainingResourceInstancesConcurrently(queryParams ma
 }
 
 // fetchPagesConcurrently fetches pages [startPage, numPages) of pageSize using a pool of
-// c.numberOfWorkers workers, each retrying its assigned page through reducePageParams on
+// c.apiClientWorkers workers, each retrying its assigned page through reducePageParams on
 // a context deadline rather than dropping it.
 func (c *ServiceClient) fetchPagesConcurrently(queryParams map[string]string, url string, pageSize, startPage, numPages int) ([]*apiv1.ResourceInstance, error) {
-	chans := make([]chan clientParams, c.numberOfWorkers)
+	chans := make([]chan clientParams, c.apiClientWorkers)
 	riChan := make(chan apiv1.ResourceInstance)
 	errChan := make(chan error)
 
@@ -137,7 +137,7 @@ func (c *ServiceClient) fetchPagesConcurrently(queryParams map[string]string, ur
 
 	go func() {
 		for page := startPage; page < numPages; page++ {
-			chans[page%c.numberOfWorkers] <- clientParams{
+			chans[page%c.apiClientWorkers] <- clientParams{
 				queryParams: queryParams,
 				url:         url,
 				pageParams:  pageParams{pageSize, page, 0, 0},

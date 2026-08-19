@@ -44,13 +44,13 @@ func itemsResponse(names ...string) api.MockResponse {
 
 // TestGetAPIV1ResourceInstances_MultiPage exercises the worker-pool dispatch/collector path
 // end to end. The first page comes back full, which triggers a HEAD count call and concurrent
-// fetching of the remaining pages. numberOfWorkers=1 keeps request order deterministic so it
+// fetching of the remaining pages. apiClientWorkers=1 keeps request order deterministic so it
 // lines up with the mock HTTP client's strict FIFO response queue (pkg/api/mockhttpclient.go
 // serves responses by arrival order only, with no per-request matching).
 func TestGetAPIV1ResourceInstances_MultiPage(t *testing.T) {
 	const url = "/test"
 	client, httpClient := GetTestServiceClient()
-	client.numberOfWorkers = 1
+	client.apiClientWorkers = 1
 	client.setPageSizeIfSmaller(url, 5)
 
 	httpClient.SetResponses([]api.MockResponse{
@@ -79,7 +79,7 @@ func TestGetAPIV1ResourceInstances_MultiPage(t *testing.T) {
 func TestGetAPIV1ResourceInstances_RetryOnTimeout(t *testing.T) {
 	const url = "/test"
 	client, httpClient := GetTestServiceClient()
-	client.numberOfWorkers = 1
+	client.apiClientWorkers = 1
 	client.setPageSizeIfSmaller(url, 10)
 
 	httpClient.SetResponses([]api.MockResponse{
@@ -111,7 +111,7 @@ func TestGetAPIV1ResourceInstances_RetryOnTimeout(t *testing.T) {
 func TestGetAPIV1ResourceInstances_ConcurrentSmoke(t *testing.T) {
 	const url = "/test"
 	client, httpClient := GetTestServiceClient()
-	client.numberOfWorkers = 3
+	client.apiClientWorkers = 3
 	client.setPageSizeIfSmaller(url, 5)
 
 	httpClient.SetResponses([]api.MockResponse{
@@ -136,7 +136,7 @@ func TestGetAPIV1ResourceInstances_ConcurrentSmoke(t *testing.T) {
 func TestGetAPIV1ResourceInstances_CountSmallerThanFirstPage(t *testing.T) {
 	const url = "/test"
 	client, httpClient := GetTestServiceClient()
-	client.numberOfWorkers = 1
+	client.apiClientWorkers = 1
 	client.setPageSizeIfSmaller(url, 5)
 
 	httpClient.SetResponses([]api.MockResponse{

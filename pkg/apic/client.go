@@ -116,10 +116,10 @@ type Client interface {
 // New creates a new Client
 func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, caches cache2.Manager) Client {
 	serviceClient := &ServiceClient{
-		caches:          caches,
-		pageSizes:       map[string]int{},
-		pageSizeMutex:   &sync.Mutex{},
-		numberOfWorkers: 5,
+		caches:           caches,
+		pageSizes:        map[string]int{},
+		pageSizeMutex:    &sync.Mutex{},
+		apiClientWorkers: cfg.GetAPIClientWorkers(),
 	}
 	serviceClient.logger = log.NewFieldLogger().
 		WithComponent("serviceClient").
