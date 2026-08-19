@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDiscoveryManagedApplicationHandler(t *testing.T) {
+func TestManagedApplicationCacheHandler(t *testing.T) {
 	type testCase struct {
 		setup           func(agentcache.Manager, Handler) // optional: pre-populate cache
 		resource        func() *apiv1.ResourceInstance
@@ -114,13 +114,19 @@ func TestDiscoveryManagedApplicationHandler(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			cm := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
-			handler := NewDiscoveryManagedApplicationHandler(cm)
+			handler := NewManagedApplicationCacheHandler(cm)
 			if tc.setup != nil {
 				tc.setup(cm, handler)
 			}
 			ri := tc.resource()
 
-			err := handler.Handle(NewEventContext(tc.event, nil, ri.Kind, ri.Name), nil, ri)
+			ctx := NewEventContext(tc.event, nil, ri.Kind, ri.Name)
+			event := NewEventFromResource(tc.event, nil, ri)
+
+			var err error
+			if handler.ShouldHandle(ctx, event) {
+				err = handler.Handle(ctx, nil, ri)
+			}
 			assert.Nil(t, err)
 
 			if tc.expectCached {

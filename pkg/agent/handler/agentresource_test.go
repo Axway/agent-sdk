@@ -619,7 +619,14 @@ func TestAgentResourceHandler(t *testing.T) {
 			b, _ := json.Marshal(tc.resource)
 			json.Unmarshal(b, ri)
 
-			err := handler.Handle(NewEventContext(tc.action, nil, tc.resource.GetGroupVersionKind().Kind, tc.resource.GetName()), &proto.EventMeta{Subresource: tc.subresName}, ri)
+			ctx := NewEventContext(tc.action, nil, tc.resource.GetGroupVersionKind().Kind, tc.resource.GetName())
+			meta := &proto.EventMeta{Subresource: tc.subresName}
+			event := NewEventFromResource(tc.action, meta, ri)
+
+			var err error
+			if handler.ShouldHandle(ctx, event) {
+				err = handler.Handle(ctx, meta, ri)
+			}
 			if tc.hasError {
 				assert.Nil(t, err)
 			}

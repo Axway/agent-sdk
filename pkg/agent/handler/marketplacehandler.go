@@ -12,11 +12,12 @@ func (m *marketplaceHandler) shouldProcessPending(status *v1.ResourceStatus, sta
 	return status.Level == prov.Pending.String() && state != v1.ResourceDeleting
 }
 
-func (m *marketplaceHandler) shouldIgnoreSubResourceUpdate(action proto.Event_Type, meta *proto.EventMeta) bool {
+func (m *marketplaceHandler) shouldIgnore(action proto.Event_Type, meta *proto.EventMeta) bool {
 	if meta == nil {
 		return false
 	}
-	return action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status"
+	return action == proto.Event_CREATED ||
+		(action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource != "status")
 }
 
 // shouldProcessDeleting returns true when the resource is in a deleting state and has finalizers

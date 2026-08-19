@@ -17,23 +17,27 @@ import (
 
 // PollClient is a client for polling harvester
 type PollClient struct {
-	apiClient          events.APIClient
-	handlers           []handler.Handler
-	interval           time.Duration
-	listener           events.Listener
-	newListener        events.NewListenerFunc
-	onClientStop       onClientStopCb
-	onStreamConnection func()
-	onReconnect        func() error
-	poller             *pollExecutor
-	newPollManager     newPollExecutorFunc
-	harvesterConfig    harvesterConfig
-	mutex              sync.RWMutex
-	initialized        bool
-	firstStart         bool
-	connectedCh        chan struct{} // closed when the first connection is live in Start()
-	connectedOnce      sync.Once     // ensures connectedCh is closed at most once across reconnects
-	startErrCh         chan error    // buffered(1): receives error if Start() fails before connecting
+	apiClient                    events.APIClient
+	baseURL                      string
+	handlers                     map[string][]handler.Handler
+	interval                     time.Duration
+	listener                     events.Listener
+	newListener                  events.NewListenerFunc
+	onClientStop                 onClientStopCb
+	onStreamConnection           func()
+	onReconnect                  func() error
+	poller                       *pollExecutor
+	newPollManager               newPollExecutorFunc
+	harvesterConfig              harvesterConfig
+	mutex                        sync.RWMutex
+	initialized                  bool
+	firstStart                   bool
+	connectedCh                  chan struct{} // closed when the first connection is live in Start()
+	connectedOnce                sync.Once     // ensures connectedCh is closed at most once across reconnects
+	startErrCh                   chan error    // buffered(1): receives error if Start() fails before connecting
+	regularEventWorkerCount      int
+	provisioningEventWorkerCount int
+	eventWorkerBuffer            int
 }
 
 type harvesterConfig struct {
@@ -48,20 +52,24 @@ type onClientStopCb func()
 func NewPollClient(
 	apiClient events.APIClient,
 	cfg config.CentralConfig,
-	handlers []handler.Handler,
+	handlers map[string][]handler.Handler,
 	options ...ClientOpt,
 ) (*PollClient, error) {
 	pc := &PollClient{
-		apiClient:      apiClient,
-		handlers:       handlers,
-		interval:       cfg.GetPollInterval(),
-		listener:       nil,
-		newListener:    events.NewEventListener,
-		newPollManager: newPollExecutor,
-		poller:         nil,
-		firstStart:     true,
-		connectedCh:    make(chan struct{}),
-		startErrCh:     make(chan error, 1),
+		apiClient:                    apiClient,
+		baseURL:                      cfg.GetURL(),
+		handlers:                     handlers,
+		interval:                     cfg.GetPollInterval(),
+		listener:                     nil,
+		newListener:                  events.NewEventListener,
+		newPollManager:               newPollExecutor,
+		poller:                       nil,
+		firstStart:                   true,
+		connectedCh:                  make(chan struct{}),
+		startErrCh:                   make(chan error, 1),
+		regularEventWorkerCount:      cfg.GetRegularEventWorkerCount(),
+		provisioningEventWorkerCount: cfg.GetProvisioningEventWorkerCount(),
+		eventWorkerBuffer:            cfg.GetEventWorkerBuffer(),
 	}
 
 	for _, opt := range options {
@@ -86,7 +94,10 @@ func (p *PollClient) Start() error {
 
 	p.mutex.Lock()
 
-	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.harvesterConfig.sequence, p.handlers...)
+	p.listener = p.newListener(ctx, cancel, eventCh, p.apiClient, p.baseURL, p.harvesterConfig.sequence, p.handlers,
+		events.WithRegularWorkerCount(p.regularEventWorkerCount),
+		events.WithProvisioningWorkerCount(p.provisioningEventWorkerCount),
+		events.WithWorkerBuffer(p.eventWorkerBuffer))
 
 	p.poller = p.newPollManager(p.interval, withOnStop(p.onClientStop), withHarvester(p.harvesterConfig), WithContext(ctx, cancel))
 	p.mutex.Unlock()

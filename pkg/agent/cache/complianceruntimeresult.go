@@ -6,7 +6,7 @@ import (
 
 func (c *cacheManager) AddComplianceRuntimeResult(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
-
+	resource = withComputedHashes(resource)
 	c.crrMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
 
@@ -25,7 +25,7 @@ func (c *cacheManager) GetComplianceRuntimeResultByID(id string) (*v1.ResourceIn
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(instance), nil
+			return instance, nil
 		}
 	}
 	return nil, err
@@ -38,7 +38,7 @@ func (c *cacheManager) GetComplianceRuntimeResultByName(name string) (*v1.Resour
 	item, err := c.crrMap.GetBySecondaryKey(name)
 	if item != nil {
 		if crr, ok := item.(*v1.ResourceInstance); ok {
-			return withComputedHashes(crr), nil
+			return crr, nil
 		}
 	}
 	return nil, err

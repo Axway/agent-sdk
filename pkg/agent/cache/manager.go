@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -121,8 +122,11 @@ type Manager interface {
 	GetAccessRequestByAppAndAPIStageVersion(managedAppName, remoteAPIID, remoteAPIStage, remoteAPIVersion string) *v1.ResourceInstance
 	GetAccessRequest(id string) *v1.ResourceInstance
 	GetAccessRequestsByApp(managedAppName string) []*v1.ResourceInstance
+	GetAccessRequestsByAPI(apiID string) []*v1.ResourceInstance
 	DeleteAccessRequest(id string) error
 	ListAccessRequests() []*v1.ResourceInstance
+	IsAccessRequestCacheEnabled() bool
+	SetAccessRequestCacheEnabled(enabled bool)
 
 	// IdentityProviderMetadata cache related methods
 	GetIdentityProviderMetadataByTokenUrl(tokenURL string) *v1.ResourceInstance
@@ -150,27 +154,28 @@ type cacheLoader interface {
 
 type cacheManager struct {
 	jobs.Job
-	logger                  log.FieldLogger
-	apiMap                  cache.Cache
-	instanceMap             cache.Cache
-	managedApplicationMap   cache.Cache
-	accessRequestMap        cache.Cache
-	watchResourceMap        cache.Cache
-	idpMetadataMap          cache.Cache
-	sequenceCache           cache.Cache
-	resourceCacheReadLock   sync.RWMutex
-	cacheLock               sync.Mutex
-	persistedCache          cache.Cache
-	teams                   cache.Cache
-	ardMap                  cache.Cache
-	apdMap                  cache.Cache
-	crdMap                  cache.Cache
-	crrMap                  cache.Cache
-	cacheFilename           string
-	isPersistedCacheLoaded  bool
-	isCacheUpdated          bool
-	isPersistedCacheEnabled bool
-	migrators               []cacheMigrate
+	logger                      log.FieldLogger
+	apiMap                      cache.Cache
+	instanceMap                 cache.Cache
+	managedApplicationMap       cache.Cache
+	accessRequestMap            cache.Cache
+	watchResourceMap            cache.Cache
+	idpMetadataMap              cache.Cache
+	sequenceCache               cache.Cache
+	resourceCacheReadLock       sync.RWMutex
+	cacheLock                   sync.Mutex
+	persistedCache              cache.Cache
+	teams                       cache.Cache
+	ardMap                      cache.Cache
+	apdMap                      cache.Cache
+	crdMap                      cache.Cache
+	crrMap                      cache.Cache
+	cacheFilename               string
+	isPersistedCacheLoaded      bool
+	isCacheUpdated              atomic.Bool
+	isPersistedCacheEnabled     bool
+	isAccessRequestCacheEnabled bool
+	migrators                   []cacheMigrate
 }
 
 // NewAgentCacheManager - Create a new agent cache manager
@@ -179,10 +184,11 @@ func NewAgentCacheManager(cfg config.CentralConfig, persistCacheEnabled bool) Ma
 		WithComponent("cacheManager").
 		WithPackage("sdk.agent.cache")
 	m := &cacheManager{
-		isCacheUpdated:          false,
 		logger:                  logger,
 		isPersistedCacheEnabled: persistCacheEnabled,
-		migrators:               []cacheMigrate{},
+		// Traceability agents always need the AccessRequest cache . Discovery agents can opt in via agent.EnableAccessRequestCache().
+		isAccessRequestCacheEnabled: cfg == nil || cfg.GetAgentType() != config.DiscoveryAgent,
+		migrators:                   []cacheMigrate{},
 	}
 
 	// add migrators here if needed
@@ -214,7 +220,7 @@ func (c *cacheManager) initializeCache(cfg config.CentralConfig) {
 	}
 
 	c.isPersistedCacheLoaded = true
-	c.isCacheUpdated = false
+	c.isCacheUpdated.Store(false)
 	for _, loader := range cacheLoaders {
 		loadedMap, loadNew := c.loadPersistedResourceInstanceCache(cacheMap, loader)
 		if loadNew {
@@ -337,7 +343,7 @@ func (c *cacheManager) loadPersistedResourceInstanceCache(cacheMap cache.Cache, 
 }
 
 func (c *cacheManager) setCacheUpdated(updated bool) {
-	c.isCacheUpdated = updated
+	c.isCacheUpdated.Store(updated)
 }
 
 // Cache persistence job
@@ -354,7 +360,7 @@ func (c *cacheManager) Status() error {
 
 // Execute - persists the cache to file
 func (c *cacheManager) Execute() error {
-	if util.IsNotTest() && c.isCacheUpdated {
+	if util.IsNotTest() && c.isCacheUpdated.Load() {
 		c.logger.Trace("executing cache persistence job")
 		c.SaveCache()
 	}
@@ -411,10 +417,10 @@ func (c *cacheManager) ReleaseResourceReadLock() {
 
 // withComputedHashes returns a shallow copy of ri with freshly computed SubResourceHashes,
 // leaving ri's own hashes untouched. CreateHashes has no synchronization of its own - it mutates
-// SubResourceHashes in place - so cache Get methods must not call it directly on the resource
-// pointer stored in the cache, since concurrent Get calls (or a Get racing a read of the same
-// resource elsewhere, e.g. a model's FromInstance) would then race on that shared map. See
-// pkg/apic/apiserver/models/api/v1.TestCreateHashesConcurrentAccess for a reproduction.
+// SubResourceHashes in place - so it must only be called once, on this copy, before the resource
+// is stored in the cache by an Add/Set method. Get methods then return the stored pointer as-is,
+// with no further hash computation, avoiding any race between concurrent Get calls (or a Get
+// racing a read of the same resource elsewhere, e.g. a model's FromInstance) on a shared map.
 func withComputedHashes(ri *v1.ResourceInstance) *v1.ResourceInstance {
 	if ri == nil {
 		return nil

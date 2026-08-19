@@ -7,7 +7,7 @@ import v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 // AddApplicationProfileDefinition -  add/update ApplicationProfileDefinition resource in cache
 func (c *cacheManager) AddApplicationProfileDefinition(resource *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
-
+	resource = withComputedHashes(resource)
 	c.apdMap.SetWithSecondaryKey(resource.Metadata.ID, resource.Name, resource)
 }
 
@@ -27,7 +27,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByName(name string) (*v1.R
 	item, err := c.apdMap.GetBySecondaryKey(name)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ard), nil
+			return ard, nil
 		}
 	}
 	return nil, err
@@ -41,7 +41,7 @@ func (c *cacheManager) GetApplicationProfileDefinitionByID(id string) (*v1.Resou
 	item, err := c.apdMap.Get(id)
 	if item != nil {
 		if ard, ok := item.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ard), nil
+			return ard, nil
 		}
 	}
 	return nil, err

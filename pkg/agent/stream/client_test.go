@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -320,6 +321,13 @@ type mockAPIClient struct {
 
 func (m mockAPIClient) GetResource(url string) (*apiv1.ResourceInstance, error) {
 	return m.resource, m.getErr
+}
+
+func (m mockAPIClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	return json.Marshal(m.resource)
 }
 
 func (m mockAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {

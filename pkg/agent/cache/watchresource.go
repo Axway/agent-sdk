@@ -32,7 +32,7 @@ func (c *cacheManager) AddWatchResource(ri *v1.ResourceInstance) {
 	}
 	group := ri.Group
 	kind := ri.Kind
-
+	ri = withComputedHashes(ri)
 	c.watchResourceMap.SetWithSecondaryKey(c.getWatchResourceKey(group, kind, ri.Metadata.ID), c.getWatchResourceKey(group, kind, ri.Name), ri)
 }
 
@@ -43,7 +43,7 @@ func (c *cacheManager) GetWatchResourceByKey(key string) *v1.ResourceInstance {
 	resource, _ := c.watchResourceMap.Get(key)
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
@@ -56,7 +56,7 @@ func (c *cacheManager) GetWatchResourceByID(group, kind, id string) *v1.Resource
 	resource, _ := c.watchResourceMap.Get(c.getWatchResourceKey(group, kind, id))
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
@@ -69,7 +69,7 @@ func (c *cacheManager) GetWatchResourceByName(group, kind, name string) *v1.Reso
 	resource, _ := c.watchResourceMap.GetBySecondaryKey(c.getWatchResourceKey(group, kind, name))
 	if resource != nil {
 		if ri, ok := resource.(*v1.ResourceInstance); ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
