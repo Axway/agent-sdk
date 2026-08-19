@@ -160,6 +160,11 @@ func (dc *discoveryCache) buildDiscoveryFuncsForFilters(filters []management.Wat
 
 	for _, filter := range filters {
 		kind := filter.Kind
+		// skip fetching environment for building cache. Environment already fetched during agent initialization
+		// and event handler will be registered to receive any updates on the environment
+		if filter.Kind == management.EnvironmentGVK().Kind {
+			continue
+		}
 		scope := ""
 		if filter.Scope != nil && filter.Scope.Name != "" {
 			scope = filter.Scope.Name
