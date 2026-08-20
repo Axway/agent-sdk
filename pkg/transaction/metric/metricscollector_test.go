@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -1574,6 +1575,352 @@ func TestCreateAPIDetail(t *testing.T) {
 			if tc.wantOwnGUID != "" {
 				assert.Equal(t, tc.wantOwnGUID, ref.Owner.TeamGUID)
 			}
+		})
+	}
+}
+
+func TestGetAccessRequestAndManagedApp(t *testing.T) {
+	const (
+		remoteAppMetaID = "app-remote"
+		plainAppMetaID  = "app-plain"
+		otherAppMetaID  = "app-other"
+	)
+	cases := map[string]struct {
+		managedAppRI *apiv1.ResourceInstance
+		appID        string
+		appName      string
+		wantAppMeta  string
+	}{
+		"remoteAppId_ prefix stripped before lookup": {
+			managedAppRI: createManagedApplication(remoteAppMetaID, testManagedApp1, ""),
+			appID:        transutil.SummaryEventApplicationIDPrefix + remoteAppMetaID,
+			wantAppMeta:  remoteAppMetaID,
+		},
+		"unprefixed appID still resolves": {
+			managedAppRI: createManagedApplication(plainAppMetaID, testManagedApp1, ""),
+			appID:        plainAppMetaID,
+			wantAppMeta:  plainAppMetaID,
+		},
+		"app not found in cache returns nil": {
+			managedAppRI: createManagedApplication(otherAppMetaID, testManagedApp1, ""),
+			appID:        transutil.SummaryEventApplicationIDPrefix + "missing-app",
+			appName:      "no-such-app",
+			wantAppMeta:  "",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			agent.InitializeForTest(nil, agent.TestWithCentralConfig(newUtilCacheConfig()))
+			agent.GetCacheManager().AddManagedApplication(tc.managedAppRI)
+
+			c := &collector{logger: log.NewFieldLogger()}
+			_, managedApp := c.getAccessRequestAndManagedApp(agent.GetCacheManager(), transactionContext{
+				AppDetails: models.AppDetails{ID: tc.appID, Name: tc.appName},
+			})
+
+			if tc.wantAppMeta == "" {
+				assert.Nil(t, managedApp)
+				return
+			}
+			require.NotNil(t, managedApp)
+			assert.Equal(t, tc.wantAppMeta, managedApp.Metadata.ID)
+		})
+	}
+}
+
+func quotaReference(unit, name string) map[string]interface{} {
+	return map[string]interface{}{
+		"kind": catalog.QuotaGVK().Kind,
+		"unit": unit,
+		"name": name,
+	}
+}
+
+func TestGetQuota(t *testing.T) {
+	const (
+		quotaRefPrefix    = "org/catalog/"
+		quotaUnitName     = "widgets"
+		quotaRefName      = "quota-ref-name"
+		quotaGUID         = "quota-guid-1"
+		otherQuotaRefName = "quota-ref-name-2"
+		otherQuotaGUID    = "quota-guid-2"
+	)
+	metaRefFor := func(name, id string) apiv1.Reference {
+		return apiv1.Reference{Group: catalog.QuotaGVK().Group, Kind: catalog.QuotaGVK().Kind, Name: name, ID: id}
+	}
+
+	cases := map[string]struct {
+		accessRequest *management.AccessRequest
+		unitName      string
+		wantID        string
+	}{
+		"nil access request returns unknown": {
+			accessRequest: nil,
+			unitName:      defaultUnit,
+			wantID:        unknown,
+		},
+		"no quota reference for unit returns unknown": {
+			accessRequest: &management.AccessRequest{
+				References: []interface{}{quotaReference(quotaUnitName, quotaRefPrefix+quotaRefName)},
+			},
+			unitName: defaultUnit,
+			wantID:   unknown,
+		},
+		"quota name resolved but no matching metadata reference returns unknown": {
+			accessRequest: &management.AccessRequest{
+				References: []interface{}{quotaReference(defaultUnit, quotaRefPrefix+quotaRefName)},
+			},
+			unitName: defaultUnit,
+			wantID:   unknown,
+		},
+		"quota resolves to id for default unit": {
+			accessRequest: &management.AccessRequest{
+				References: []interface{}{quotaReference(defaultUnit, quotaRefPrefix+quotaRefName)},
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{metaRefFor(quotaRefName, quotaGUID)}},
+				},
+			},
+			unitName: defaultUnit,
+			wantID:   quotaGUID,
+		},
+		"empty unit name falls back to default unit": {
+			accessRequest: &management.AccessRequest{
+				References: []interface{}{quotaReference(defaultUnit, quotaRefPrefix+quotaRefName)},
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{metaRefFor(quotaRefName, quotaGUID)}},
+				},
+			},
+			unitName: "",
+			wantID:   quotaGUID,
+		},
+		"quota resolves to id for a named custom unit, ignoring other units' quotas": {
+			accessRequest: &management.AccessRequest{
+				References: []interface{}{
+					quotaReference(defaultUnit, quotaRefPrefix+quotaRefName),
+					quotaReference(quotaUnitName, quotaRefPrefix+otherQuotaRefName),
+				},
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{
+						metaRefFor(quotaRefName, quotaGUID),
+						metaRefFor(otherQuotaRefName, otherQuotaGUID),
+					}},
+				},
+			},
+			unitName: quotaUnitName,
+			wantID:   otherQuotaGUID,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.getQuota(tc.accessRequest, tc.unitName)
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.wantID, ref.ID)
+		})
+	}
+}
+
+// metaRef builds a Metadata.References entry for gvk, the structured relationship reference
+// read by GetReferenceByGVK (distinct from the raw references[] sub-resource getQuota reads).
+func metaRef(gvk apiv1.GroupVersionKind, id string) apiv1.Reference {
+	return apiv1.Reference{Group: gvk.Group, Kind: gvk.Kind, ID: id}
+}
+
+func TestGetAPIServiceRevision(t *testing.T) {
+	const revisionGUID = "instance-guid-1"
+
+	cases := map[string]struct {
+		accessRequest *management.AccessRequest
+		wantID        string
+	}{
+		"nil access request returns unknown": {
+			accessRequest: nil,
+			wantID:        unknown,
+		},
+		"no APIServiceInstance reference returns unknown": {
+			accessRequest: &management.AccessRequest{},
+			wantID:        unknown,
+		},
+		"APIServiceInstance reference resolves to its id": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{
+						metaRef(management.APIServiceInstanceGVK(), revisionGUID),
+					}},
+				},
+			},
+			wantID: revisionGUID,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.getAPIServiceRevision(tc.accessRequest)
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.wantID, ref.ID)
+		})
+	}
+}
+
+func TestGetAssetResource(t *testing.T) {
+	const assetGUID = "asset-guid-1"
+
+	cases := map[string]struct {
+		accessRequest *management.AccessRequest
+		wantID        string
+	}{
+		"nil access request returns unknown": {
+			accessRequest: nil,
+			wantID:        unknown,
+		},
+		"no AssetResource reference returns unknown": {
+			accessRequest: &management.AccessRequest{},
+			wantID:        unknown,
+		},
+		"AssetResource reference resolves to its id": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{
+						metaRef(catalog.AssetResourceGVK(), assetGUID),
+					}},
+				},
+			},
+			wantID: assetGUID,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.getAssetResource(tc.accessRequest)
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.wantID, ref.ID)
+		})
+	}
+}
+
+func TestGetProductPlan(t *testing.T) {
+	const planGUID = "plan-guid-1"
+
+	cases := map[string]struct {
+		accessRequest *management.AccessRequest
+		wantID        string
+	}{
+		"nil access request returns unknown": {
+			accessRequest: nil,
+			wantID:        unknown,
+		},
+		"no ProductPlan reference returns unknown": {
+			accessRequest: &management.AccessRequest{},
+			wantID:        unknown,
+		},
+		"ProductPlan reference resolves to its id": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{References: []apiv1.Reference{
+						metaRef(catalog.ProductPlanGVK(), planGUID),
+					}},
+				},
+			},
+			wantID: planGUID,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.getProductPlan(tc.accessRequest)
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.wantID, ref.ID)
+		})
+	}
+}
+
+func TestGetProduct(t *testing.T) {
+	const (
+		productGUID    = "product-guid-1"
+		releaseGUID    = "release-guid-1"
+		productOwnerID = "product-team-guid-1"
+	)
+	embeddedOwner := func(owner *apiv1.Owner) map[string]apiv1.EmbeddedReferences {
+		return map[string]apiv1.EmbeddedReferences{
+			"metadata.references": {References: []apiv1.EmbeddedReference{
+				{Group: catalog.PublishedProductGVK().Group, Kind: catalog.PublishedProductGVK().Kind, Owner: owner},
+			}},
+		}
+	}
+
+	cases := map[string]struct {
+		accessRequest *management.AccessRequest
+		wantID        string
+		wantVersionID string
+		wantOwner     *models.Owner
+	}{
+		"nil access request returns unknown id and versionId, no owner": {
+			accessRequest: nil,
+			wantID:        unknown,
+			wantVersionID: unknown,
+			wantOwner:     nil,
+		},
+		"no product or release reference returns unknown id and versionId, no owner": {
+			accessRequest: &management.AccessRequest{},
+			wantID:        unknown,
+			wantVersionID: unknown,
+			wantOwner:     nil,
+		},
+		"product reference resolves id and owner, versionId stays unknown without a release reference": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{
+						References: []apiv1.Reference{metaRef(catalog.ProductGVK(), productGUID)},
+					},
+					Embedded: embeddedOwner(&apiv1.Owner{Type: apiv1.TeamOwner, ID: productOwnerID}),
+				},
+			},
+			wantID:        productGUID,
+			wantVersionID: unknown,
+			wantOwner:     &models.Owner{Type: "team", TeamGUID: productOwnerID},
+		},
+		"product and release references both resolve": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{
+						References: []apiv1.Reference{
+							metaRef(catalog.ProductGVK(), productGUID),
+							metaRef(catalog.ProductReleaseGVK(), releaseGUID),
+						},
+					},
+					Embedded: embeddedOwner(&apiv1.Owner{Type: apiv1.TeamOwner, ID: productOwnerID}),
+				},
+			},
+			wantID:        productGUID,
+			wantVersionID: releaseGUID,
+			wantOwner:     &models.Owner{Type: "team", TeamGUID: productOwnerID},
+		},
+		"product resolved without an embedded owner reference returns owner type none": {
+			accessRequest: &management.AccessRequest{
+				ResourceMeta: apiv1.ResourceMeta{
+					Metadata: apiv1.Metadata{
+						References: []apiv1.Reference{metaRef(catalog.ProductGVK(), productGUID)},
+					},
+				},
+			},
+			wantID:        productGUID,
+			wantVersionID: unknown,
+			wantOwner:     &models.Owner{Type: "none"},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &collector{logger: log.NewFieldLogger()}
+			ref := c.getProduct(tc.accessRequest)
+			require.NotNil(t, ref)
+			assert.Equal(t, tc.wantID, ref.ID)
+			assert.Equal(t, tc.wantVersionID, ref.VersionID)
+			assert.Equal(t, tc.wantOwner, ref.Owner)
 		})
 	}
 }

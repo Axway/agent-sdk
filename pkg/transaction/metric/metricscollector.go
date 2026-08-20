@@ -575,9 +575,10 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 
 	// get the managed application
 	// cached metrics will only have the catalog api id
-	managedApp := cacheManager.GetManagedApplicationByApplicationID(detail.AppDetails.ID)
+	appID := transutil.StripApplicationIDPrefix(detail.AppDetails.ID)
+	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
 	if managedApp == nil {
-		managedApp = cacheManager.GetManagedApplication(detail.AppDetails.ID)
+		managedApp = cacheManager.GetManagedApplication(appID)
 	}
 	if managedApp == nil {
 		managedApp = cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)

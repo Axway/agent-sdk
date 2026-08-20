@@ -141,6 +141,7 @@ func resolveAppOwnerFromCache(appID string) *models.Owner {
 	if cacheManager == nil {
 		return &models.Owner{Type: unknown}
 	}
+	appID = transutil.StripApplicationIDPrefix(appID)
 	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
 	if managedApp == nil {
 		managedApp = cacheManager.GetManagedApplication(appID)
