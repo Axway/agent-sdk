@@ -1628,10 +1628,6 @@ func TestGetAccessRequestAndManagedApp(t *testing.T) {
 	}
 }
 
-// quotaReference builds the raw references[] sub-resource entry getQuota reads to find a
-// quota's name for a given unit. Production access requests take this same map shape only
-// after a JSON round trip through ResourceInstance; the literal here reproduces that shape
-// directly since getQuota type-asserts each entry to map[string]interface{}.
 func quotaReference(unit, name string) map[string]interface{} {
 	return map[string]interface{}{
 		"kind": catalog.QuotaGVK().Kind,
