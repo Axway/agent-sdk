@@ -537,6 +537,12 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 			appID:    testAppEmptyGUID,
 			wantType: "unknown",
 		},
+		"remoteAppId_ prefix stripped before lookup": {
+			appRI:    makeAppRI("app-remote", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}),
+			appID:    transutil.SummaryEventApplicationIDPrefix + "app-remote",
+			wantType: "team",
+			wantGUID: testTeamGUID1,
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

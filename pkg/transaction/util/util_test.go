@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
+	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
 )
 
@@ -158,7 +159,49 @@ func TestStripSummaryEventPrefix(t *testing.T) {
 	}
 }
 
+func TestStripApplicationIDPrefix(t *testing.T) {
+	tests := map[string]struct {
+		appID    string
+		expected string
+	}{
+		"app-ID prefix stripped": {
+			appID:    SummaryEventApplicationIDPrefix + "dwight",
+			expected: "dwight",
+		},
+		"no prefix, returned as-is": {
+			appID:    "dwight",
+			expected: "dwight",
+		},
+		"empty string": {
+			appID:    "",
+			expected: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, StripApplicationIDPrefix(tc.appID))
+		})
+	}
+}
+
+func marketplaceAppRI(marketplaceName string, owner *v1.Owner) *v1.ResourceInstance {
+	app := management.NewManagedApplication("mp-app", "env1")
+	app.Marketplace = management.ManagedApplicationMarketplace{
+		Name:     marketplaceName,
+		Resource: management.ManagedApplicationMarketplaceResource{Owner: owner},
+	}
+	ri, _ := app.AsInstance()
+	return ri
+}
+
 func TestGetMarketplaceDetails(t *testing.T) {
+	const (
+		testMarketplaceGUID  = "marketplace-guid-1"
+		testConsumerOrgID    = "consumer-org-1"
+		testConsumerTeamGUID = "consumer-team-1"
+	)
+
 	// "marketplace" as a string instead of an object triggers a real parse failure.
 	malformedInstance := &v1.ResourceInstance{}
 	err := json.Unmarshal([]byte(`{"marketplace":"not-an-object"}`), malformedInstance)
@@ -179,6 +222,29 @@ func TestGetMarketplaceDetails(t *testing.T) {
 		"malformed instance returns unknown guid since marketplace context could not be determined": {
 			ri:       malformedInstance,
 			expected: &models.MarketplaceReference{GUID: unknown, ConsumerOrgID: none},
+		},
+		"resolved marketplace name and consumer org resolve to real values": {
+			ri: marketplaceAppRI(testMarketplaceGUID, &v1.Owner{
+				ID:           testConsumerTeamGUID,
+				Organization: v1.Organization{ID: testConsumerOrgID},
+			}),
+			expected: &models.MarketplaceReference{
+				GUID:           testMarketplaceGUID,
+				ConsumerOrgID:  testConsumerOrgID,
+				ConsumerTeamID: testConsumerTeamGUID,
+			},
+		},
+		"marketplace name resolved but owner absent leaves consumer org as none": {
+			ri:       marketplaceAppRI(testMarketplaceGUID, nil),
+			expected: &models.MarketplaceReference{GUID: testMarketplaceGUID, ConsumerOrgID: none},
+		},
+		"owner present without an organization id leaves consumer org as none": {
+			ri: marketplaceAppRI(testMarketplaceGUID, &v1.Owner{ID: testConsumerTeamGUID}),
+			expected: &models.MarketplaceReference{
+				GUID:           testMarketplaceGUID,
+				ConsumerOrgID:  none,
+				ConsumerTeamID: testConsumerTeamGUID,
+			},
 		},
 	}
 
