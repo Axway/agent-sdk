@@ -180,7 +180,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 					},
 					Name:         "api",
 					APIServiceID: "",
-					Owner:        &models.Owner{Type: "unknown"},
+					Owner:        &models.Owner{Type: "none"},
 				},
 				Product: &models.ProductResourceReference{
 					ResourceReference: models.ResourceReference{
@@ -193,7 +193,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 						ID: "app",
 					},
 					ConsumerOrgID: "org",
-					Owner:         &models.Owner{Type: "unknown"},
+					Owner:         &models.Owner{Type: "none"},
 				},
 				Subscription: &models.ResourceReference{
 					ID: "sub",
@@ -337,7 +337,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				APIServiceRevision: &models.ResourceReference{ID: "revision-id-1"},
 			},
 		},
-		"api owner demoted to unknown when cached APIService has empty team GUID": {
+		"api owner demoted to none when cached APIService has empty team GUID": {
 			setupCache: func() {
 				agent.GetCacheManager().AddAPIService(
 					makeAPIServiceRI(testAPIEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
@@ -373,11 +373,11 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				API: &models.APIResourceReference{
 					ResourceReference: models.ResourceReference{ID: testAPIEmptyGUID},
 					Name:              "api-svc",
-					Owner:             &models.Owner{Type: "unknown"},
+					Owner:             &models.Owner{Type: "none"},
 				},
 			},
 		},
-		"app owner demoted to unknown when cached ManagedApp has empty team GUID": {
+		"app owner demoted to none when cached ManagedApp has empty team GUID": {
 			setupCache: func() {
 				agent.GetCacheManager().AddManagedApplication(
 					makeAppRI(testAppEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
@@ -412,7 +412,7 @@ func TestCentralMetricFromAPIMetric(t *testing.T) {
 				},
 				App: &models.ApplicationResourceReference{
 					ResourceReference: models.ResourceReference{ID: testAppEmptyGUID},
-					Owner:             &models.Owner{Type: "unknown"},
+					Owner:             &models.Owner{Type: "none"},
 				},
 			},
 		},
@@ -516,10 +516,10 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 		wantType string
 		wantGUID string
 	}{
-		"app not found in cache returns unknown": {
+		"app not found in cache returns none": {
 			appRI:    nil,
 			appID:    "missing-app",
-			wantType: "unknown",
+			wantType: "none",
 		},
 		"app found with team owner returns team block": {
 			appRI:    makeAppRI("app-team", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}),
@@ -532,10 +532,10 @@ func TestResolveAppOwnerFromCache(t *testing.T) {
 			appID:    "app-no-owner",
 			wantType: "none",
 		},
-		"app with empty team GUID returns unknown": {
+		"app with empty team GUID returns none": {
 			appRI:    makeAppRI(testAppEmptyGUID, &v1.Owner{Type: v1.TeamOwner, ID: ""}),
 			appID:    testAppEmptyGUID,
-			wantType: "unknown",
+			wantType: "none",
 		},
 		"remoteAppId_ prefix stripped before lookup": {
 			appRI:    makeAppRI("app-remote", &v1.Owner{Type: v1.TeamOwner, ID: testTeamGUID1}),
@@ -586,11 +586,11 @@ func TestBuildAPIRef(t *testing.T) {
 			wantOwnGUID:  testTeamGUID1,
 			wantSvcID:    "svc-meta-api-2",
 		},
-		"api not found in cache returns unknown owner and empty apiServiceId": {
+		"api not found in cache returns none owner and empty apiServiceId": {
 			apiServiceRI: nil,
 			apiID:        transutil.SummaryEventProxyIDPrefix + "missing-api",
 			apiName:      "missing",
-			wantOwnType:  "unknown",
+			wantOwnType:  "none",
 			wantSvcID:    "",
 		},
 	}
