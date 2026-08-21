@@ -87,13 +87,16 @@ func (c *cacheManager) GetAccessRequestByAppAndAPIStageVersion(appName, remoteAP
 	defer c.ReleaseResourceReadLock()
 
 	secKey := arSecondaryKey(appName, remoteAPIID, remoteAPIStage, remoteAPIVersion)
+	c.logger.WithField("secKey", secKey).Trace("computed access request secondary key for lookup")
 
 	accessRequest, _ := c.accessRequestMap.GetBySecondaryKey(secKey)
 	if accessRequest != nil {
 		if ri, ok := accessRequest.(*v1.ResourceInstance); ok {
+			c.logger.WithField("secKey", secKey).Trace("access request found for secondary key")
 			return withComputedHashes(ri)
 		}
 	}
+	c.logger.WithField("secKey", secKey).Trace("no access request found for secondary key")
 	return nil
 }
 
