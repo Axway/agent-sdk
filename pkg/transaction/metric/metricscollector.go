@@ -709,6 +709,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 		return &models.ProductResourceReference{
 			ResourceReference: models.ResourceReference{ID: unknown},
 			VersionID:         unknown,
+			Owner:             &models.Owner{Type: none},
 		}
 	}
 
@@ -721,8 +722,9 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	}
 	if productRef.ID != "" {
 		ref.ID = productRef.ID
-		// owner only applies once the product itself is resolved
 		ref.Owner = transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK()))
+	} else {
+		ref.Owner = &models.Owner{Type: none}
 	}
 	if releaseRef.ID != "" {
 		ref.VersionID = releaseRef.ID

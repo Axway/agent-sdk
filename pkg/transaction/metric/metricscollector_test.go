@@ -1545,11 +1545,11 @@ func TestCreateAPIDetail(t *testing.T) {
 			wantOwnGUID:  testTeamGUID1,
 			wantSvcID:    "svc-meta-api-2",
 		},
-		"api not found in cache returns unknown owner and apiServiceId": {
+		"api not found in cache returns none owner and unknown apiServiceId": {
 			apiServiceRI: nil,
 			apiID:        transutil.SummaryEventProxyIDPrefix + "missing-api",
 			apiName:      "missing",
-			wantOwnType:  "unknown",
+			wantOwnType:  "none",
 			wantSvcID:    unknown,
 		},
 	}
@@ -1858,17 +1858,17 @@ func TestGetProduct(t *testing.T) {
 		wantVersionID string
 		wantOwner     *models.Owner
 	}{
-		"nil access request returns unknown id and versionId, no owner": {
+		"nil access request returns unknown id and versionId, owner none": {
 			accessRequest: nil,
 			wantID:        unknown,
 			wantVersionID: unknown,
-			wantOwner:     nil,
+			wantOwner:     &models.Owner{Type: "none"},
 		},
-		"no product or release reference returns unknown id and versionId, no owner": {
+		"no product or release reference returns unknown id and versionId, owner none": {
 			accessRequest: &management.AccessRequest{},
 			wantID:        unknown,
 			wantVersionID: unknown,
-			wantOwner:     nil,
+			wantOwner:     &models.Owner{Type: "none"},
 		},
 		"product reference resolves id and owner, versionId stays unknown without a release reference": {
 			accessRequest: &management.AccessRequest{
