@@ -14,14 +14,14 @@ var logger = log.NewFieldLogger().
 
 func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.Owner {
 	if cacheManager == nil {
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	apiID := StripSummaryEventPrefix(apiExternalID)
 	ri := cacheManager.GetAPIServiceWithAPIID(apiID)
 	if ri == nil {
 		logger.WithField("apiID", apiID).Trace("api service not found in cache, owner is unknown")
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	return ResolveAPIOwnerFromInstance(ri)
@@ -29,12 +29,12 @@ func ResolveAPIOwner(apiExternalID string, cacheManager cache.Manager) *models.O
 
 func ResolveAPIOwnerFromInstance(ri *v1.ResourceInstance) *models.Owner {
 	if ri == nil {
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	svc := &management.APIService{}
 	if err := svc.FromInstance(ri); err != nil {
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	if svc.Owner == nil {
@@ -44,7 +44,7 @@ func ResolveAPIOwnerFromInstance(ri *v1.ResourceInstance) *models.Owner {
 
 	if svc.Owner.Type == v1.TeamOwner {
 		if svc.Owner.ID == "" {
-			return &models.Owner{Type: "unknown"}
+			return &models.Owner{Type: "none"}
 		}
 		if svc.Owner.User != nil && svc.Owner.User.ID != "" {
 			logger.WithField("apiName", ri.Name).WithField("userGUID", svc.Owner.User.ID).Trace("resolved api owner as user (x-private team)")
@@ -54,7 +54,7 @@ func ResolveAPIOwnerFromInstance(ri *v1.ResourceInstance) *models.Owner {
 		return &models.Owner{Type: "team", TeamGUID: svc.Owner.ID}
 	}
 
-	return &models.Owner{Type: "unknown"}
+	return &models.Owner{Type: "none"}
 }
 
 func ResolveProductOwner(ref v1.EmbeddedReference) *models.Owner {
@@ -63,24 +63,24 @@ func ResolveProductOwner(ref v1.EmbeddedReference) *models.Owner {
 	}
 	if ref.Owner.Type == v1.TeamOwner {
 		if ref.Owner.ID == "" {
-			return &models.Owner{Type: "unknown"}
+			return &models.Owner{Type: "none"}
 		}
 		if ref.Owner.User != nil && ref.Owner.User.ID != "" {
 			return &models.Owner{Type: "user", TeamGUID: ref.Owner.ID, UserGUID: ref.Owner.User.ID}
 		}
 		return &models.Owner{Type: "team", TeamGUID: ref.Owner.ID}
 	}
-	return &models.Owner{Type: "unknown"}
+	return &models.Owner{Type: "none"}
 }
 
 func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.Owner {
 	if manApp == nil {
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	app := &management.ManagedApplication{}
 	if err := app.FromInstance(manApp); err != nil {
-		return &models.Owner{Type: "unknown"}
+		return &models.Owner{Type: "none"}
 	}
 
 	owner := app.Marketplace.Resource.Owner
@@ -91,7 +91,7 @@ func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.Owner {
 
 	if owner.Type == v1.TeamOwner {
 		if owner.ID == "" {
-			return &models.Owner{Type: "unknown"}
+			return &models.Owner{Type: "none"}
 		}
 		if owner.User != nil && owner.User.ID != "" {
 			logger.WithField("appName", manApp.Name).WithField("userGUID", owner.User.ID).Trace("resolved app owner as user (x-private team)")
@@ -101,5 +101,5 @@ func ResolveAppOwnerFromManagedApp(manApp *v1.ResourceInstance) *models.Owner {
 		return &models.Owner{Type: "team", TeamGUID: owner.ID}
 	}
 
-	return &models.Owner{Type: "unknown"}
+	return &models.Owner{Type: "none"}
 }
