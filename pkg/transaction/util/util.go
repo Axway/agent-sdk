@@ -34,6 +34,12 @@ func StripSummaryEventPrefix(apiID string) string {
 	return apiID
 }
 
+// StripApplicationIDPrefix removes the synthetic application-ID prefix ResolveIDWithPrefix produced,
+// leaving the bare value used as a cache lookup key.
+func StripApplicationIDPrefix(appID string) string {
+	return strings.TrimPrefix(appID, SummaryEventApplicationIDPrefix)
+}
+
 // GetAccessRequest -
 func GetAccessRequest(cacheManager cache.Manager, managedApp *v1.ResourceInstance, apiID, stage, version string) *management.AccessRequest {
 	if managedApp == nil {
