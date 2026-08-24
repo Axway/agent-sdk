@@ -72,6 +72,7 @@ func (c *cacheManager) GetTeamByID(id string) *defs.PlatformTeam {
 // SetAccessControlList saves the Access Control List to the cache
 func (c *cacheManager) SetAccessControlList(acl *v1.ResourceInstance) {
 	defer c.setCacheUpdated(true)
+	acl = withComputedHashes(acl)
 	c.teams.Set(accessControlList, acl)
 }
 
@@ -89,7 +90,7 @@ func (c *cacheManager) GetAccessControlList() *v1.ResourceInstance {
 	if item != nil {
 		instance, ok := item.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(instance)
+			return instance
 		}
 	}
 	return nil

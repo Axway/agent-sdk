@@ -58,20 +58,48 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 	return arh
 }
 
+func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
+		return true
+	}
+	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
+		return false
+	}
+	return true
+}
+
+// GetAPIServerFields returns the fields needed to process the given event. A subresource update
+// only needs a restricted fetch if the resource is already cached, so Handle can merge the
+// updated subresource onto it; otherwise the full resource is needed to populate the cache from
+// scratch, so no restriction is returned.
+func (h *accessRequestHandler) GetAPIServerFields(ctx context.Context, event *proto.Event) []string {
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
+		if existing := h.cache.GetAccessRequest(event.Payload.Metadata.Id); existing == nil {
+			return nil
+		}
+		return []string{"name", "metadata.id", "spec.managedApplication", event.Metadata.GetSubresource()}
+	}
+	return nil
+}
+
 // Handle processes grpc events triggered for AccessRequests
 func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta, resource *apiv1.ResourceInstance) error {
 	action := GetActionFromContext(ctx)
-	if resource.Kind != management.AccessRequestGVK().Kind {
-		return nil
-	}
-
-	if action == proto.Event_SUBRESOURCEUPDATED && meta.Subresource == defs.XAgentDetails {
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XAgentDetails {
 		// update the cache with the new x-agent-details subresource
-		h.cache.AddAccessRequest(resource)
-		return nil
-	}
-
-	if h.prov == nil || h.shouldIgnoreSubResourceUpdate(action, meta) {
+		existing := h.cache.GetAccessRequest(resource.Metadata.ID)
+		if existing == nil {
+			// GetAPIServerFields didn't restrict fields in this case, so resource is already the
+			// full fetch - cache it directly.
+			h.cache.AddAccessRequest(resource)
+			return nil
+		}
+		if newDetails := util.GetAgentDetails(resource); newDetails != nil {
+			util.SetAgentDetails(existing, newDetails)
+		}
+		h.cache.AddAccessRequest(existing)
 		return nil
 	}
 
@@ -153,6 +181,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
 		err = fmt.Errorf("error can't handle access request when application is not yet successful")
+		log.WithError(err).Error("error processing access request")
 		h.onError(ctx, ar, err)
 		return ar
 	}

@@ -175,7 +175,7 @@ func TestEventSync(t *testing.T) {
 
 				svcHandler := &mockHandler{kind: management.APIServiceGVK().Kind}
 				wt := &management.WatchTopic{Spec: management.WatchTopicSpec{Filters: tc.wtFilters}}
-				dc := newDiscoveryCache(cfg, tc.makeClient(), []handler.Handler{svcHandler}, wt)
+				dc := newDiscoveryCache(cfg, tc.makeClient(), map[string][]handler.Handler{management.APIServiceGVK().Kind: {svcHandler}}, wt)
 
 				es := &EventSync{
 					watchTopic:     wt,
@@ -186,7 +186,8 @@ func TestEventSync(t *testing.T) {
 
 				err := es.initCache(tc.failedFilters...)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.expectedCount, svcHandler.count)
+				assert.Equal(t, tc.expectedCount, svcHandler.cacheCount)
+				assert.Equal(t, tc.expectedCount, svcHandler.handleCount)
 
 				if tc.verify != nil {
 					tc.verify(t)

@@ -264,6 +264,11 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 	defer c.lock.Unlock()
 	c.batchLock.Lock()
 	defer c.batchLock.Unlock()
+	c.addMetric(bytes)
+}
+
+// addMetric - updates start time, usage, and volume. Caller must hold c.lock/c.batchLock.
+func (c *collector) addMetric(bytes int64) {
 	c.updateStartTime()
 	c.updateUsage(1)
 	c.updateVolume(bytes)
@@ -271,7 +276,12 @@ func (c *collector) AddMetric(apiDetails models.APIDetails, statusCode string, d
 
 // AddMetricDetail - add metric for API transaction and consumer subscription to collection
 func (c *collector) AddMetricDetail(metricDetail Detail) {
-	c.AddMetric(metricDetail.APIDetails, metricDetail.StatusCode, metricDetail.Duration, metricDetail.Bytes, metricDetail.APIDetails.Name)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
+	c.addMetric(metricDetail.Bytes)
 	c.createOrUpdateAPICounter(metricDetail)
 }
 
@@ -282,11 +292,12 @@ func (c *collector) AddAPIMetricDetail(detail MetricDetail) {
 	}
 
 	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
 	c.updateStartTime()
 	c.updateUsage(detail.Count)
-	c.batchLock.Unlock()
-	c.lock.Unlock()
 
 	c.createOrUpdateAPICounterStats(Detail{
 		APIDetails: detail.APIDetails,
@@ -575,9 +586,10 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 
 	// get the managed application
 	// cached metrics will only have the catalog api id
-	managedApp := cacheManager.GetManagedApplicationByApplicationID(detail.AppDetails.ID)
+	appID := transutil.StripApplicationIDPrefix(detail.AppDetails.ID)
+	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
 	if managedApp == nil {
-		managedApp = cacheManager.GetManagedApplication(detail.AppDetails.ID)
+		managedApp = cacheManager.GetManagedApplication(appID)
 	}
 	if managedApp == nil {
 		managedApp = cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
@@ -708,6 +720,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 		return &models.ProductResourceReference{
 			ResourceReference: models.ResourceReference{ID: unknown},
 			VersionID:         unknown,
+			Owner:             &models.Owner{Type: none},
 		}
 	}
 
@@ -720,8 +733,9 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	}
 	if productRef.ID != "" {
 		ref.ID = productRef.ID
-		// owner only applies once the product itself is resolved
 		ref.Owner = transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK()))
+	} else {
+		ref.Owner = &models.Owner{Type: none}
 	}
 	if releaseRef.ID != "" {
 		ref.VersionID = releaseRef.ID

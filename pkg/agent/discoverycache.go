@@ -19,7 +19,7 @@ type discoveryCache struct {
 	centralURL               string
 	migrator                 migrate.Migrator
 	logger                   log.FieldLogger
-	handlers                 []handler.Handler
+	handlersByKind           map[string][]handler.Handler
 	client                   resourceClient
 	additionalDiscoveryFuncs []discoverFunc
 	watchTopic               *management.WatchTopic
@@ -59,7 +59,7 @@ func preMarketplaceSetup(f func() error) discoveryOpt {
 func newDiscoveryCache(
 	cfg config.CentralConfig,
 	client resourceClient,
-	handlers []handler.Handler,
+	handlersByKind map[string][]handler.Handler,
 	watchTopic *management.WatchTopic,
 	opts ...discoveryOpt,
 ) *discoveryCache {
@@ -69,7 +69,7 @@ func newDiscoveryCache(
 
 	dc := &discoveryCache{
 		logger:                   logger,
-		handlers:                 handlers,
+		handlersByKind:           handlersByKind,
 		centralURL:               cfg.GetURL(),
 		client:                   client,
 		additionalDiscoveryFuncs: make([]discoverFunc, 0),
@@ -160,6 +160,11 @@ func (dc *discoveryCache) buildDiscoveryFuncsForFilters(filters []management.Wat
 
 	for _, filter := range filters {
 		kind := filter.Kind
+		// skip fetching environment for building cache. Environment already fetched during agent initialization
+		// and event handler will be registered to receive any updates on the environment
+		if filter.Kind == management.EnvironmentGVK().Kind {
+			continue
+		}
 		scope := ""
 		if filter.Scope != nil && filter.Scope.Name != "" {
 			scope = filter.Scope.Name
@@ -290,8 +295,7 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 			}
 		}
 
-		action := getAction(ri.Metadata.State)
-		if err := dc.handleResource(ri, action); err != nil {
+		if err := dc.handleResource(ri); err != nil {
 			logger.
 				WithError(err).
 				Error("failed to handle resource")
@@ -301,19 +305,30 @@ func (dc *discoveryCache) handleResourcesList(list []*apiv1.ResourceInstance) er
 	return nil
 }
 
-func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance, action proto.Event_Type) error {
-	ctx := handler.NewEventContext(action, nil, ri.Name, ri.Kind)
-	for _, h := range dc.handlers {
-		err := h.Handle(ctx, nil, ri)
-		if err != nil {
-			return err
+func (dc *discoveryCache) handleResource(ri *apiv1.ResourceInstance) error {
+	action := getAction(ri.Metadata.State, ri.Kind)
+	ctx := handler.NewEventContext(action, nil, ri.Kind, ri.Name)
+	event := handler.NewEventFromResource(action, nil, ri)
+	logger := log.NewLoggerFromContext(ctx)
+	for _, h := range dc.handlersByKind[ri.Kind] {
+		if ch, ok := h.(handler.CacheHandler); ok {
+			if err := ch.HandleCache(ri); err != nil {
+				logger.WithError(err).Error("failed to handle discovery cache resource")
+			}
+		}
+		if !h.ShouldHandle(ctx, event) {
+			continue
+		}
+		if err := h.Handle(ctx, nil, ri); err != nil {
+			logger.WithError(err).Error("failed to handle discovery cache resource")
 		}
 	}
 	return nil
 }
 
-func getAction(state string) proto.Event_Type {
-	if state == apiv1.ResourceDeleting {
+func getAction(state, kind string) proto.Event_Type {
+	// MPResource Handlers(non-cache ones) don't react anymore to a Event_CREATED.
+	if state == apiv1.ResourceDeleting || isMPResource(kind) {
 		return proto.Event_UPDATED
 	}
 	return proto.Event_CREATED

@@ -18,6 +18,7 @@ func (c *cacheManager) AddManagedApplication(resource *v1.ResourceInstance) {
 	if resource == nil {
 		return
 	}
+	resource = withComputedHashes(resource)
 	manApp := management.ManagedApplication{}
 	err := manApp.FromInstance(resource)
 	if err != nil {
@@ -36,7 +37,7 @@ func (c *cacheManager) GetManagedApplication(id string) *v1.ResourceInstance {
 	if managedApp != nil {
 		ri, ok := managedApp.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil
@@ -64,7 +65,7 @@ func (c *cacheManager) GetManagedApplicationByName(name string) *v1.ResourceInst
 	if managedApp != nil {
 		ri, ok := managedApp.(*v1.ResourceInstance)
 		if ok {
-			return withComputedHashes(ri)
+			return ri
 		}
 	}
 	return nil

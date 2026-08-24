@@ -133,7 +133,7 @@ func TestContractMetricV3(t *testing.T) {
 				assert.Equal(t, "team-ctr-2", cm.API.Owner.TeamGUID)
 			},
 		},
-		"api owner falls back to unknown on cache miss": {
+		"api owner falls back to none on cache miss": {
 			setup: func() {
 				agent.InitializeForTest(nil, agent.TestWithCentralConfig(&config.CentralConfiguration{AgentName: contractAgentName}))
 			},
@@ -150,7 +150,7 @@ func TestContractMetricV3(t *testing.T) {
 			check: func(t *testing.T, cm *centralMetric, raw string) {
 				require.NotNil(t, cm.API)
 				require.NotNil(t, cm.API.Owner)
-				assert.Equal(t, "unknown", cm.API.Owner.Type)
+				assert.Equal(t, "none", cm.API.Owner.Type)
 			},
 		},
 		"application owner populated from cache": {

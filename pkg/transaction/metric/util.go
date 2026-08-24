@@ -139,8 +139,9 @@ func buildAppRef(app models.AppDetails) *models.ApplicationResourceReference {
 func resolveAppOwnerFromCache(appID string) *models.Owner {
 	cacheManager := agent.GetCacheManager()
 	if cacheManager == nil {
-		return &models.Owner{Type: unknown}
+		return &models.Owner{Type: none}
 	}
+	appID = transutil.StripApplicationIDPrefix(appID)
 	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
 	if managedApp == nil {
 		managedApp = cacheManager.GetManagedApplication(appID)
@@ -148,7 +149,7 @@ func resolveAppOwnerFromCache(appID string) *models.Owner {
 	if managedApp != nil {
 		return transutil.ResolveAppOwnerFromManagedApp(managedApp)
 	}
-	return &models.Owner{Type: unknown}
+	return &models.Owner{Type: none}
 }
 
 func buildAPIRef(api models.APIDetails) *models.APIResourceReference {
