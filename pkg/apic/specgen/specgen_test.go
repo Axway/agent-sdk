@@ -8,17 +8,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenerateMCPSpec(t *testing.T) {
+func TestMCPSpecBuilder(t *testing.T) {
 	inputSchemaA := json.RawMessage(`{"type":"object","properties":{"x":{"type":"string"}}}`)
 	inputSchemaB := json.RawMessage(`{"type":"object","properties":{"y":{"type":"integer"}}}`)
 
 	tests := map[string]struct {
-		in          Input
+		serverName  string
+		endpointURL string
+		tools       []Tool
 		wantToolLen int
 		assertSpec  func(t *testing.T, spec *MCPSpec)
 	}{
 		"top-level shape": {
-			in:          Input{Name: "x-mcpvw2", EndpointURL: "https://example.dev/"},
+			serverName:  "x-mcpvw2",
+			endpointURL: "https://example.dev/",
 			wantToolLen: 0,
 			assertSpec: func(t *testing.T, spec *MCPSpec) {
 				buf, err := json.Marshal(spec)
@@ -33,26 +36,25 @@ func TestGenerateMCPSpec(t *testing.T) {
 			},
 		},
 
-		"details populated from input": {
-			in:          Input{Name: "my-gateway", EndpointURL: "https://example.dev/"},
+		"details defaulted and populated from the builder": {
+			serverName:  "my-gateway",
+			endpointURL: "https://example.dev/",
 			wantToolLen: 0,
 			assertSpec: func(t *testing.T, spec *MCPSpec) {
-				assert.Equal(t, mcpProtocolVersion, spec.Details.ProtocolVersion)
+				assert.Equal(t, defaultProtocolVersion, spec.Details.ProtocolVersion)
 				assert.False(t, spec.Details.Capabilities.Tools.ListChanged)
 				assert.Equal(t, "my-gateway", spec.Details.ServerInfo.Name)
 				assert.Equal(t, "1.0.0", spec.Details.ServerInfo.Version)
 			},
 		},
 
-		"tools array reflects the input tools": {
-			in: Input{
-				Name:        "gw",
-				EndpointURL: "https://example.dev/",
-				Tools: []Tool{
-					{Name: "tool_a", Description: "desc A", InputSchema: inputSchemaA},
-					{Name: "tool_b", Description: "desc B", InputSchema: inputSchemaB},
-					{Name: "tool_c", Description: "desc C"},
-				},
+		"tools array reflects the tools set": {
+			serverName:  "gw",
+			endpointURL: "https://example.dev/",
+			tools: []Tool{
+				{Name: "tool_a", Description: "desc A", InputSchema: inputSchemaA},
+				{Name: "tool_b", Description: "desc B", InputSchema: inputSchemaB},
+				{Name: "tool_c", Description: "desc C"},
 			},
 			wantToolLen: 3,
 			assertSpec: func(t *testing.T, spec *MCPSpec) {
@@ -67,7 +69,8 @@ func TestGenerateMCPSpec(t *testing.T) {
 		},
 
 		"no tools (runtime MCP) renders tools as []": {
-			in: Input{Name: "gw", EndpointURL: "https://example.dev/"},
+			serverName:  "gw",
+			endpointURL: "https://example.dev/",
 			assertSpec: func(t *testing.T, spec *MCPSpec) {
 				assert.NotNil(t, spec.Tools, "tools must be non-nil so JSON renders as [] not null")
 				buf, err := json.Marshal(spec)
@@ -81,7 +84,8 @@ func TestGenerateMCPSpec(t *testing.T) {
 		},
 
 		"transports carry embedded OAS3 with endpoint URL": {
-			in: Input{Name: "gw", EndpointURL: "https://ssmogos-design.dev.10-129-144-202.nip.io:4443/"},
+			serverName:  "gw",
+			endpointURL: "https://ssmogos-design.dev.10-129-144-202.nip.io:4443/",
 			assertSpec: func(t *testing.T, spec *MCPSpec) {
 				require.NotNil(t, spec.Transports.HTTPStream)
 				var oas3 map[string]interface{}
@@ -99,7 +103,11 @@ func TestGenerateMCPSpec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			spec := GenerateMCPSpec(tc.in)
+			spec := NewMCPSpecBuilder().
+				SetName(tc.serverName).
+				SetEndpointURL(tc.endpointURL).
+				SetTools(tc.tools).
+				Build()
 			require.NotNil(t, spec)
 			assert.Len(t, spec.Tools, tc.wantToolLen)
 			if tc.assertSpec != nil {
@@ -109,19 +117,81 @@ func TestGenerateMCPSpec(t *testing.T) {
 	}
 }
 
-func TestGenerateA2AAgentCard(t *testing.T) {
-	card := GenerateA2AAgentCard(Input{
-		Name:        "my-agent",
-		Description: "does things",
-		EndpointURL: "https://example.dev/mcp",
-	})
+func TestMCPSpecBuilderOverrides(t *testing.T) {
+	spec := NewMCPSpecBuilder().
+		SetName("gw").
+		SetVersion("2.3.4").
+		SetEndpointURL("https://example.dev/").
+		SetProtocolVersion("2026-01-01").
+		SetCapabilities(MCPCapabilities{Tools: MCPToolsCapability{ListChanged: true}}).
+		Build()
+
+	assert.Equal(t, "2026-01-01", spec.Details.ProtocolVersion)
+	assert.True(t, spec.Details.Capabilities.Tools.ListChanged)
+	assert.Equal(t, "2.3.4", spec.Details.ServerInfo.Version)
+	// The spec format version is not caller-settable.
+	assert.Equal(t, mcpVersion, spec.MCP)
+}
+
+// An empty value must not wipe a default, so callers can pass through an
+// optional field without having to check it first.
+func TestMCPSpecBuilderEmptyOverridesKeepDefaults(t *testing.T) {
+	spec := NewMCPSpecBuilder().
+		SetVersion("").
+		SetProtocolVersion("").
+		Build()
+
+	assert.Equal(t, defaultVersion, spec.Details.ServerInfo.Version)
+	assert.Equal(t, defaultProtocolVersion, spec.Details.ProtocolVersion)
+}
+
+func TestAgentCardBuilder(t *testing.T) {
+	card := NewAgentCardBuilder().
+		SetName("my-agent").
+		SetDescription("does things").
+		SetEndpointURL("https://example.dev/mcp").
+		Build()
+
 	assert.Equal(t, "my-agent", card.Name)
 	assert.Equal(t, "does things", card.Description)
 	assert.Equal(t, "https://example.dev/mcp", card.URL)
 	assert.Equal(t, "1.0.0", card.Version)
 	assert.Equal(t, []string{"text"}, card.DefaultInputModes)
+	assert.Equal(t, []string{"text"}, card.DefaultOutputModes)
+	assert.False(t, card.Capabilities.Streaming)
 	assert.NotNil(t, card.Skills, "skills must render as [] not null")
 	assert.Empty(t, card.Skills)
+}
+
+func TestAgentCardBuilderOverrides(t *testing.T) {
+	skills := []AgentCardSkill{{ID: "echo", Name: "Echo", Description: "repeats", Tags: []string{"demo"}}}
+
+	card := NewAgentCardBuilder().
+		SetName("agent").
+		SetVersion("9.9.9").
+		SetCapabilities(AgentCardCapabilities{Streaming: true}).
+		SetDefaultInputModes([]string{"text/plain"}).
+		SetDefaultOutputModes([]string{"application/json"}).
+		SetSkills(skills).
+		Build()
+
+	assert.Equal(t, "9.9.9", card.Version)
+	assert.True(t, card.Capabilities.Streaming)
+	assert.Equal(t, []string{"text/plain"}, card.DefaultInputModes)
+	assert.Equal(t, []string{"application/json"}, card.DefaultOutputModes)
+	assert.Equal(t, skills, card.Skills)
+}
+
+func TestAgentCardBuilderEmptyOverridesKeepDefaults(t *testing.T) {
+	card := NewAgentCardBuilder().
+		SetVersion("").
+		SetDefaultInputModes(nil).
+		SetDefaultOutputModes([]string{}).
+		Build()
+
+	assert.Equal(t, defaultVersion, card.Version)
+	assert.Equal(t, []string{"text"}, card.DefaultInputModes)
+	assert.Equal(t, []string{"text"}, card.DefaultOutputModes)
 }
 
 func TestGenerateOAS3Spec(t *testing.T) {
@@ -148,7 +218,7 @@ func TestGenerateOAS3Spec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			raw := GenerateOAS3Spec(tc.url)
+			raw := generateOAS3Spec(tc.url)
 
 			var oas3 map[string]interface{}
 			require.NoError(t, json.Unmarshal(raw, &oas3), "output must remain valid JSON")
