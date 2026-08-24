@@ -181,6 +181,7 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
 		err = fmt.Errorf("error can't handle access request when application is not yet successful")
+		log.WithError(err).Error("error processing access request")
 		h.onError(ctx, ar, err)
 		return ar
 	}

@@ -71,7 +71,6 @@ type EventListener struct {
 type handlerData struct {
 	event            *proto.Event
 	ctx              context.Context
-	ri               *apiv1.ResourceInstance
 	handler          handler.Handler
 	logger           log.FieldLogger
 	apiServerFields  []string
