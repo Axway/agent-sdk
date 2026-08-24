@@ -308,6 +308,7 @@ func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.
 
 	if app.Status.Level != prov.Success.String() {
 		err = fmt.Errorf("cannot handle credential when application is not yet successful")
+		logger.WithError(err).Error("error processing credential")
 		h.onError(ctx, cred, err)
 		return nil, nil, true
 	}

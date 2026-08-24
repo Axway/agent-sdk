@@ -56,7 +56,6 @@ func TestEventListener_start(t *testing.T) {
 	tests := []struct {
 		name        string
 		kind        string
-		alreadySeen bool // pre-seed seenManagedApps for the managed app before dispatching
 		closeSource bool
 		cancelCtx   bool
 		wantDone    bool
@@ -69,15 +68,11 @@ func TestEventListener_start(t *testing.T) {
 			wantLane: "kind",
 		},
 		{
-			name:     "dispatches the first event for a managed app to its own kind lane",
+			// ManagedApplication events are always keyed by their own name, so they land on the
+			// app's provisioning shard alongside its access requests, rather than the kind lane
+			name:     "dispatches a ManagedApplication event to its managed app's shard",
 			kind:     lowKind,
-			wantLane: "kind",
-		},
-		{
-			name:        "a later ManagedApplication event for an already-seen app still uses its own kind lane",
-			kind:        lowKind,
-			alreadySeen: true,
-			wantLane:    "kind",
+			wantLane: "demoted",
 		},
 		{
 			name: "drops an event for a kind with no registered lane instead of blocking",
@@ -110,9 +105,6 @@ func TestEventListener_start(t *testing.T) {
 				event = newTestEvent(1)
 				event.Payload.Kind = tc.kind
 				event.Payload.Name = "app-1"
-				if tc.alreadySeen {
-					em.seenManagedApps["app-1"] = struct{}{}
-				}
 				em.source <- event
 			}
 
@@ -327,10 +319,11 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 	}, time.Second, 10*time.Millisecond, "sequence should advance once Handle completes")
 }
 
-// TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
-// lifecycle through handleEvent: the first event for an app uses its kind lane, later events
-// for the same app are demoted to that app's assigned shard, and deleting the ManagedApplication
-// resets it so the next related event is treated as first-seen again.
+// TestEventListener_handleEvent_managedAppDemotion exercises the managed-app provisioning lifecycle
+// through handleEvent: ManagedApplication events always dispatch to their own app's provisioning
+// shard, AccessRequest/Credential events do the same when they carry a reference to that app (and
+// otherwise fall back to their kind lane), and deleting the ManagedApplication clears its shard
+// assignment.
 func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
@@ -338,15 +331,11 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	maKind := management.ManagedApplicationGVK().Kind
 	arKind := management.AccessRequestGVK().Kind
 
-	client := &mockAPIClient{ri: &apiv1.ResourceInstance{
-		Spec: map[string]interface{}{"managedApplication": "app-1"},
-	}}
-
 	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(
 		ctx, cancel,
 		make(chan *proto.Event),
-		client,
+		&mockAPIClient{},
 		"https://apicentral.example.com",
 		sequenceManager,
 		map[string][]handler.Handler{
@@ -363,45 +352,96 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	maEvent.Payload.Name = "app-1"
 	assert.NoError(t, listener.handleEvent(maEvent))
 	select {
-	case <-listener.kindJobs[maKind][0]:
+	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the first ManagedApplication event to use its kind lane")
+		t.Fatal("expected the ManagedApplication event to use its app's provisioning shard")
 	}
 
-	arEvent := newTestEvent(2)
-	arEvent.Payload.Kind = arKind
-	assert.NoError(t, listener.handleEvent(arEvent))
+	arEventNoRef := newTestEvent(2)
+	arEventNoRef.Payload.Kind = arKind
+	assert.NoError(t, listener.handleEvent(arEventNoRef))
+	select {
+	case <-listener.kindJobs[arKind][0]:
+	default:
+		t.Fatal("expected an AccessRequest without a ManagedApplication reference to fall back to its kind lane")
+	}
+
+	arEventWithRef := newTestEvent(3)
+	arEventWithRef.Payload.Kind = arKind
+	arEventWithRef.Payload.Metadata.References = []*proto.Reference{{Kind: maKind, Name: "app-1"}}
+	assert.NoError(t, listener.handleEvent(arEventWithRef))
 	select {
 	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the AccessRequest for an already-seen app to use its demoted shard")
+		t.Fatal("expected an AccessRequest referencing the ManagedApplication to use the app's provisioning shard")
 	}
 
-	deleteEvent := newTestEvent(3)
+	deleteEvent := newTestEvent(4)
 	deleteEvent.Payload.Kind = maKind
 	deleteEvent.Payload.Name = "app-1"
 	deleteEvent.Type = proto.Event_DELETED
 	assert.NoError(t, listener.handleEvent(deleteEvent))
 	select {
-	case <-listener.kindJobs[maKind][0]:
+	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the ManagedApplication delete to still use its own kind lane - only AccessRequest/Credential get demoted")
-	}
-	if _, stillSeen := listener.seenManagedApps["app-1"]; stillSeen {
-		t.Fatal("expected the delete to clear the seen entry")
+		t.Fatal("expected the ManagedApplication delete to use the app's provisioning shard")
 	}
 	if _, stillAssigned := listener.provisioningLaneAssignment["app-1"]; stillAssigned {
 		t.Fatal("expected the delete to clear the shard assignment")
 	}
+}
 
-	arEvent2 := newTestEvent(4)
-	arEvent2.Payload.Kind = arKind
-	assert.NoError(t, listener.handleEvent(arEvent2))
-	select {
-	case <-listener.kindJobs[arKind][0]:
-	default:
-		t.Fatal("expected the AccessRequest after the app was deleted to use the kind lane again")
+// TestEventListener_dispatchLane_appSharesLaneWithItsAccessRequests proves the ordering guarantee
+// the app status guard in accessRequestHandler.onPending relies on: a managed app's own events and
+// the events of the AccessRequests/Credentials referencing it resolve to the same shard. A shard has
+// exactly one worker, so the app's provisioning - and the status write marking it Success - completes
+// before an access request reads that status. When these were split across lanes, the access request
+// could observe a not-yet-successful app and fail permanently.
+func TestEventListener_dispatchLane_appSharesLaneWithItsAccessRequests(t *testing.T) {
+	maKind := management.ManagedApplicationGVK().Kind
+	arKind := management.AccessRequestGVK().Kind
+	credKind := management.CredentialGVK().Kind
+
+	em := &EventListener{
+		provisioningJobs:           make([]chan handlerData, 8),
+		provisioningLaneAssignment: make(map[string]int),
 	}
+	for i := range em.provisioningJobs {
+		em.provisioningJobs[i] = make(chan handlerData, 1)
+	}
+
+	maEvent := newTestEvent(1)
+	maEvent.Payload.Kind = maKind
+	maEvent.Payload.Name = "app-1"
+	appLane, appLabel := em.dispatchLane(maEvent)
+
+	for _, kind := range []string{arKind, credKind} {
+		event := newTestEvent(2)
+		event.Payload.Kind = kind
+		event.Payload.Name = "resource-for-app-1"
+		event.Payload.Metadata.References = []*proto.Reference{{Kind: maKind, Name: "app-1"}}
+
+		lane, label := em.dispatchLane(event)
+		assert.True(t, appLane == lane, "%s must share the managed app's shard", kind)
+		assert.Equal(t, appLabel, label)
+	}
+
+	// other apps still spread across shards - sharing is per app, not global
+	spread := false
+	for i := 2; i < 27; i++ {
+		name := fmt.Sprintf("app-%d", i)
+
+		otherEvent := newTestEvent(int64(i))
+		otherEvent.Payload.Kind = maKind
+		otherEvent.Payload.Name = name
+
+		lane, _ := em.dispatchLane(otherEvent)
+		if lane != appLane {
+			spread = true
+			break
+		}
+	}
+	assert.True(t, spread, "expected other managed apps to land on other shards")
 }
 
 // TestEventListener_provisioningLane proves the two properties the shard-by-key design depends on:
@@ -451,6 +491,9 @@ func TestEventListener_provisioningShards_runConcurrently(t *testing.T) {
 			ctx:     context.Background(),
 			handler: slow,
 			logger:  log.NewFieldLogger(),
+			getEventResource: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
+				return &apiv1.ResourceInstance{}, nil
+			},
 		}
 	}
 
