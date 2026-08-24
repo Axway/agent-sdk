@@ -54,15 +54,15 @@ func TestResolveAPIOwner(t *testing.T) {
 		cache    agentcache.Manager
 		expected *models.Owner
 	}{
-		"nil cache manager returns unknown": {
+		"nil cache manager returns none": {
 			apiID:    "api-1",
 			cache:    nil,
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
-		"cache miss returns unknown": {
+		"cache miss returns none": {
 			apiID:    "not-in-cache",
 			cache:    newCacheWithAPIService("api-1", &v1.Owner{Type: v1.TeamOwner, ID: "team-1"}),
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"api service with nil owner": {
 			apiID:    "api-2",
@@ -77,7 +77,7 @@ func TestResolveAPIOwner(t *testing.T) {
 		"api service team owner with empty GUID": {
 			apiID:    "api-4",
 			cache:    newCacheWithAPIService("api-4", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"prefix stripped before lookup": {
 			apiID:    SummaryEventProxyIDPrefix + "api-5",
@@ -108,9 +108,9 @@ func TestResolveAPIOwnerFromInstance(t *testing.T) {
 		ri       *v1.ResourceInstance
 		expected *models.Owner
 	}{
-		"nil resource instance returns unknown": {
+		"nil resource instance returns none": {
 			ri:       nil,
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"api service with nil owner returns none": {
 			ri:       apiServiceRI("api-1", nil),
@@ -122,7 +122,7 @@ func TestResolveAPIOwnerFromInstance(t *testing.T) {
 		},
 		"api service team owner with empty GUID": {
 			ri:       apiServiceRI("api-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"api service x-private owner": {
 			ri:       apiServiceRI("api-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID1, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
@@ -153,7 +153,7 @@ func TestResolveProductOwner(t *testing.T) {
 		},
 		"product ref team owner with empty GUID": {
 			ref:      v1.EmbeddedReference{Owner: &v1.Owner{Type: v1.TeamOwner, ID: ""}},
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"reference with name but no owner returns none": {
 			ref:      v1.EmbeddedReference{Kind: "PublishedProduct", Name: "product-1"},
@@ -176,9 +176,9 @@ func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 		manApp   *v1.ResourceInstance
 		expected *models.Owner
 	}{
-		"nil resource instance returns unknown": {
+		"nil resource instance returns none": {
 			manApp:   nil,
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"managed app with nil owner": {
 			manApp:   managedAppRI("app-1", nil),
@@ -190,7 +190,7 @@ func TestResolveAppOwnerFromManagedApp(t *testing.T) {
 		},
 		"managed app team owner with empty GUID": {
 			manApp:   managedAppRI("app-3", &v1.Owner{Type: v1.TeamOwner, ID: ""}),
-			expected: &models.Owner{Type: "unknown"},
+			expected: &models.Owner{Type: "none"},
 		},
 		"managed app x-private owner": {
 			manApp:   managedAppRI("app-4", &v1.Owner{Type: v1.TeamOwner, ID: testOwnerTeamGUID2, User: &v1.OwnerUser{ID: testOwnerUserGUID}}),
