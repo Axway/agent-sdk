@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -256,6 +257,92 @@ func Test_sequenceTracker(t *testing.T) {
 	}
 }
 
+// TestEventResourceWrapper_get proves the sync.Once memoization: however many times get is called,
+// fetch only runs once and every caller observes the same cached result - whether that's a resource
+// or an error - the property that lets handleEvent hand the same eventResourceWrapper to every
+// handler dispatched for one event instead of each handler fetching the resource itself.
+func TestEventResourceWrapper_get(t *testing.T) {
+	tests := []struct {
+		name    string
+		ri      *apiv1.ResourceInstance
+		err     error
+		wantMsg string
+	}{
+		{
+			name:    "caches a successful fetch",
+			ri:      &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{Name: "cached"}},
+			wantMsg: "fetch must run at most once, regardless of how many times get is called",
+		},
+		{
+			name:    "caches a failed fetch",
+			err:     fmt.Errorf("boom"),
+			wantMsg: "an error result must also be cached, not retried on every call",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			wrapper := &eventResourceWrapper{
+				fetch: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
+					calls++
+					return tc.ri, tc.err
+				},
+			}
+
+			for i := 0; i < 5; i++ {
+				ri, err := wrapper.get(nil, nil)
+				assert.Same(t, tc.ri, ri)
+				assert.Equal(t, tc.err, err)
+			}
+			assert.Equal(t, 1, calls, tc.wantMsg)
+		})
+	}
+}
+
+// TestEventListener_handleEvent_sharesEventResourceAcrossHandlers proves handleEvent builds one
+// eventResourceWrapper per event and hands it to every handler dispatched for that event, so the
+// underlying resource is only fetched once even when several handlers are registered for the same
+// kind (e.g. two RegisterResourceEventHandler calls for the same kind - see
+// agent.newHandlers/GetHandlers).
+func TestEventListener_handleEvent_sharesEventResourceAcrossHandlers(t *testing.T) {
+	const kind = "SharedKind"
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+
+	client := &countingAPIClient{ri: &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{Name: "name"}}}
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	listener := NewEventListener(
+		ctx, cancel,
+		make(chan *proto.Event),
+		client,
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {&mockHandler{}, &mockHandler{}}},
+	)
+	ch := make(chan handlerData, 2)
+	listener.kindJobs[kind] = []chan handlerData{ch}
+
+	event := newTestEvent(1)
+	event.Payload.Kind = kind
+
+	assert.NoError(t, listener.handleEvent(event))
+	assert.Len(t, ch, 2, "both handlers registered for the kind should be dispatched")
+
+	first := <-ch
+	second := <-ch
+	assert.Same(t, first.eventResource, second.eventResource,
+		"handlers dispatched for the same event must share one eventResourceWrapper")
+
+	_, err := first.eventResource.get(event, nil)
+	assert.NoError(t, err)
+	_, err = second.eventResource.get(event, nil)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, client.calls.Load(),
+		"the underlying resource must be fetched only once, even though two handlers need it")
+}
+
 type blockingHandler struct {
 	release chan struct{}
 }
@@ -491,8 +578,10 @@ func TestEventListener_provisioningShards_runConcurrently(t *testing.T) {
 			ctx:     context.Background(),
 			handler: slow,
 			logger:  log.NewFieldLogger(),
-			getEventResource: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
-				return &apiv1.ResourceInstance{}, nil
+			eventResource: &eventResourceWrapper{
+				fetch: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
+					return &apiv1.ResourceInstance{}, nil
+				},
 			},
 		}
 	}
@@ -624,6 +713,35 @@ func TestEventListener_kindLanePreservesPerResourceOrder(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("handlers did not finish in time")
 	}
+}
+
+// countingAPIClient counts ExecuteAPI calls, using a pointer-friendly atomic counter so the count
+// is observable regardless of how the client is passed around - used to prove a resource is
+// fetched only once even when shared across multiple dispatched handlers.
+type countingAPIClient struct {
+	ri    *apiv1.ResourceInstance
+	calls atomic.Int32
+}
+
+func (c *countingAPIClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
+	c.calls.Add(1)
+	return json.Marshal(c.ri)
+}
+
+func (c *countingAPIClient) GetResource(_ string) (*apiv1.ResourceInstance, error) {
+	return c.ri, nil
+}
+
+func (c *countingAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	return c.ri, nil
+}
+
+func (c *countingAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
+	return nil
+}
+
+func (c *countingAPIClient) GetAPIV1ResourceInstances(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+	return nil, nil
 }
 
 type mockHandler struct {
