@@ -579,6 +579,30 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 	assert.Nil(t, agent.apicClient)
 }
 
+// TestNewHandlers_multipleProxyHandlersForSameKind proves that registering more than one resource
+// event handler for the same kind (e.g. multiple RegisterResourceEventHandler calls, as happens
+// when more than one dataplane feature targets the same kind) dispatches all of them, rather than
+// silently keeping only the last one registered.
+func TestNewHandlers_multipleProxyHandlersForSameKind(t *testing.T) {
+	cfg := createCentralCfg("http://test", "v7")
+	resetResources()
+	err := Initialize(cfg)
+	assert.NoError(t, err)
+	defer resetResources()
+
+	const kind = "CustomTestKind"
+	h1 := &mockHandler{}
+	h2 := &mockHandler{}
+	RegisterResourceEventHandler(kind, h1)
+	RegisterResourceEventHandler(kind, h2)
+	defer UnregisterResourceEventHandler(kind)
+
+	got := newHandlers()[kind]
+	assert.Len(t, got, 2, "both handlers registered for the same kind must be dispatched, not just the last one")
+	assert.Same(t, h1, got[0])
+	assert.Same(t, h2, got[1])
+}
+
 func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {
 	assert.Equal(t, expectedRes.Group, res.Group)
 	assert.Equal(t, expectedRes.Kind, res.Kind)
