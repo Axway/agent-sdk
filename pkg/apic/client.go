@@ -77,8 +77,6 @@ type Client interface {
 	PublishService(serviceBody *ServiceBody) (*management.APIService, error)
 	DeleteAPIServiceInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetUserEmailAddress(ID string) (string, error)
-	GetUserName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
 	GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error)
@@ -90,8 +88,6 @@ type Client interface {
 	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByName(name string) (*management.APIServiceRevision, error)
 	GetEnvironment() (*management.Environment, error)
-	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
-	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
 	GetAccessControlList(aclName string) (*management.AccessControlList, error)
 	UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
 	CreateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
@@ -110,6 +106,8 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 
+	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
+	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
 	GetEntitlements() (map[string]interface{}, error)
 }
 
@@ -371,61 +369,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 		responseErr := readResponseErrors(response.Code, response.Body)
 		return nil, errors.Wrap(ErrRequestQuery, responseErr)
 	}
-}
-
-// GetPlatformUserInfo - request the platform user info
-func (c *ServiceClient) getPlatformUserInfo(id string) (*defs.PlatformUserInfo, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
-	c.logger.Tracef("Platform URL being used to get user information %s", platformURL)
-
-	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
-	if reqErr != nil {
-		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
-			return nil, ErrNoAddressFound.FormatError(id)
-		}
-		return nil, reqErr
-	}
-
-	var platformUserInfo defs.PlatformUserInfo
-	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return &platformUserInfo, nil
-}
-
-// GetUserEmailAddress - request the user email
-func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
-
-	platformUserInfo, err := c.getPlatformUserInfo(id)
-	if err != nil {
-		return "", err
-	}
-
-	email := platformUserInfo.Result.Email
-	c.logger.Tracef("Platform user email %s", email)
-
-	return email, nil
-}
-
-// GetUserName - request the user name
-func (c *ServiceClient) GetUserName(id string) (string, error) {
-	platformUserInfo, err := c.getPlatformUserInfo(id)
-	if err != nil {
-		return "", err
-	}
-
-	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
-
-	c.logger.Tracef("Platform user %s", userName)
-
-	return userName, nil
 }
 
 // GetCentralTeamByName - returns the team based on team name

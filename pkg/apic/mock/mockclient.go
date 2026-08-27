@@ -16,8 +16,6 @@ type Client struct {
 	PublishServiceMock                        func(serviceBody *apic.ServiceBody) (*management.APIService, error)
 	DeleteAPIServiceInstanceMock              func(name string) error
 	DeleteServiceByNameMock                   func(name string) error
-	GetUserEmailAddressMock                   func(ID string) (string, error)
-	GetUserNameMock                           func(ID string) (string, error)
 	ExecuteAPIMock                            func(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	HealthcheckMock                           func(name string) *hc.Status
 	GetAPIServicesMock                        func(queryParams map[string]string, url string) ([]*management.APIService, error)
@@ -174,22 +172,6 @@ func (m *Client) DeleteAPIServiceInstance(instanceName string) error {
 		return m.DeleteAPIServiceInstanceMock(instanceName)
 	}
 	return nil
-}
-
-// GetUserName -
-func (m *Client) GetUserName(ID string) (string, error) {
-	if m.GetUserNameMock != nil {
-		return m.GetUserNameMock(ID)
-	}
-	return "", nil
-}
-
-// GetUserEmailAddress -
-func (m *Client) GetUserEmailAddress(ID string) (string, error) {
-	if m.GetUserEmailAddressMock != nil {
-		return m.GetUserEmailAddressMock(ID)
-	}
-	return "", nil
 }
 
 // Healthcheck -

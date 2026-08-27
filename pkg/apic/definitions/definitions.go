@@ -1,17 +1,9 @@
 package definitions
 
-// PlatformUserInfo - Represents user resource from platform
-type PlatformUserInfo struct {
-	Success bool `json:"success"`
-	Result  struct {
-		ID        string `json:"_id"`
-		GUID      string `json:"guid"`
-		UserID    int64  `json:"user_id"`
-		Firstname string `json:"firstname"`
-		Lastname  string `json:"lastname"`
-		Active    bool   `json:"active"`
-		Email     string `json:"email"`
-	} `json:"result"`
+// PlatformAPIResponse
+type PlatformAPIResponse struct {
+	Success bool   `json:"success"`
+	Result  []byte `json:"result"`
 }
 
 // PlatformTeam - represents team from Central Client registry
