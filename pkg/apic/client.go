@@ -424,15 +424,24 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 		return nil, reqErr
 	}
 
-	var orgEntitlements definitions.OrgEntitlementsResponse
-	err = json.Unmarshal(response, &orgEntitlements)
+	var apiRes definitions.PlatformResponse
+	err = json.Unmarshal(response, &apiRes)
 	if err != nil {
 		return nil, err
 	}
 
+	if !apiRes.Success {
+		return nil, fmt.Errorf("call to get entitlements was not successful")
+	}
+
+	orgEntitlements, ok := apiRes.Result.(definitions.OrgEntitlements)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type in entitlements response")
+	}
+
 	entitlements := make(map[string]interface{})
-	for key := range orgEntitlements.Result.Entitlements {
-		value := orgEntitlements.Result.Entitlements[key]
+	for key := range orgEntitlements.Entitlements {
+		value := orgEntitlements.Entitlements[key]
 		if v, ok := value.(bool); ok && !v {
 			// Skip any entitlements that are false
 			continue

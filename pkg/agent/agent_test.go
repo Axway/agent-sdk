@@ -263,7 +263,7 @@ func TestAgentEntitlements(t *testing.T) {
 	const daName = "discovery"
 
 	teams := []definitions.PlatformTeam{}
-	entitlements := definitions.OrgEntitlementsResponse{
+	entitlements := definitions.PlatformResponse{
 		Success: true,
 		Result: definitions.OrgEntitlements{
 			Entitlements: map[string]interface{}{

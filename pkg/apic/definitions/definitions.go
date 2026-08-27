@@ -1,18 +1,5 @@
 package definitions
 
-// PlatformAPIResponse
-type PlatformAPIResponse struct {
-	Success bool   `json:"success"`
-	Result  []byte `json:"result"`
-}
-
-// PlatformTeam - represents team from Central Client registry
-type PlatformTeam struct {
-	ID      string `json:"guid"`
-	Name    string `json:"name"`
-	Default bool   `json:"default"`
-}
-
 // Constants for attributes
 const (
 	XAgentDetails                    = "x-agent-details"
