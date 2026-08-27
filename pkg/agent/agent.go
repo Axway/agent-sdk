@@ -437,9 +437,9 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	cfg.GetCredentialConfig().SetExpirationDays(int(env.Policies.Credentials.Expiry.Period))
 
 	if cfg.GetTeamID() == "" {
-		team, err := client.GetCentralTeamByName(cfg.GetTeamName())
-		if err != nil {
-			return err
+		team := agent.cacheManager.GetTeamByName(cfg.GetTeamName())
+		if team == nil {
+			return fmt.Errorf("could not get team with name: %s", cfg.GetTeamName())
 		}
 
 		cfg.SetTeamID(team.ID)

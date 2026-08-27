@@ -27,7 +27,7 @@ type agentCache interface {
 }
 
 type apicClient interface {
-	GetTeam(map[string]string) ([]definitions.PlatformTeam, error)
+	GetTeams() ([]definitions.PlatformTeam, error)
 	CreateSubResource(rm v1.ResourceMeta, subs map[string]interface{}) error
 }
 
@@ -275,7 +275,7 @@ func (h *agentResourceHandler) handleEndpointsSampling(endpoints []management.Tr
 }
 
 func RefreshTeamCache(apicClient apicClient, cache agentCache) {
-	platformTeams, err := apicClient.GetTeam(map[string]string{})
+	platformTeams, err := apicClient.GetTeams()
 	if err != nil || len(platformTeams) == 0 {
 		return
 	}

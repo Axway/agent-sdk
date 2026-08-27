@@ -732,8 +732,11 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
-			buf, _ := json.Marshal(teams)
+		if strings.Contains(req.RequestURI, "/api/v1/team") {
+			buf, _ := json.Marshal(map[string]interface{}{
+				"success": true,
+				"result":  teams,
+			})
 			resp.Write(buf)
 			return
 		}
@@ -967,8 +970,11 @@ func newTestServer() *httptest.Server {
 			return
 		}
 
-		if strings.Contains(req.RequestURI, "/api/v1/platformTeams") {
-			buf, _ := json.Marshal(teams)
+		if strings.Contains(req.RequestURI, "/api/v1/team") {
+			buf, _ := json.Marshal(map[string]interface{}{
+				"success": true,
+				"result":  teams,
+			})
 			resp.Write(buf)
 			return
 		}

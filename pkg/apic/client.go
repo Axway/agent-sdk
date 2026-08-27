@@ -106,8 +106,8 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 
-	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
-	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
+	GetTeam(id string) (*defs.PlatformTeam, error)
+	GetTeams() ([]defs.PlatformTeam, error)
 	GetEntitlements() (map[string]interface{}, error)
 }
 
@@ -305,7 +305,7 @@ func (c *ServiceClient) checkPlatformHealth() error {
 
 func (c *ServiceClient) setTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
-	platformTeams, err := c.GetTeam(make(map[string]string))
+	platformTeams, err := c.GetTeams()
 	if err != nil {
 		return err
 	}
@@ -371,41 +371,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 	}
 }
 
-// GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(name string) (*defs.PlatformTeam, error) {
-	// Query for the default, if no teamName is given
-	queryParams := map[string]string{}
-
-	if name != "" {
-		queryParams = map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", name),
-		}
-	}
-
-	platformTeams, err := c.GetTeam(queryParams)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(platformTeams) == 0 {
-		return nil, ErrTeamNotFound.FormatError(name)
-	}
-
-	team := platformTeams[0]
-	if name == "" {
-		// Loop through to find the default team
-		for i, platformTeam := range platformTeams {
-			if platformTeam.Default {
-				// Found the default, set as the team var and break
-				team = platformTeams[i]
-				break
-			}
-		}
-	}
-
-	return &team, nil
-}
-
 // GetEntitlements - returns the entitlements for the organization
 func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 	headers, err := c.createHeader()
@@ -456,29 +421,74 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 	return entitlements, nil
 }
 
-// GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
+// getTeam - call the platform team api for a list of teams or a single team
+func (c *ServiceClient) getTeam(id string) (any, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the teams using Client registry service instead of from platform.
-	// Platform teams API require access and DOSA account will not have the access
-	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
+	// set the fields we want from the team api
+	headers["fields"] = "guid,name,tags,default"
 
-	response, reqErr := c.sendServerRequest(platformURL, headers, query)
+	// get all teams, if id is supplied get single team
+	url := fmt.Sprintf("%s/api/v1/team", c.cfg.GetPlatformURL())
+	if id != "" {
+		url = fmt.Sprintf("%s/api/v1/team/%s", c.cfg.GetPlatformURL(), id)
+	}
+
+	response, reqErr := c.sendServerRequest(url, headers, map[string]string{})
 	if reqErr != nil {
 		return nil, reqErr
 	}
 
-	var platformTeams []defs.PlatformTeam
-	err = json.Unmarshal(response, &platformTeams)
+	var apiRes defs.PlatformResponse
+	err = json.Unmarshal(response, &apiRes)
 	if err != nil {
 		return nil, err
 	}
 
-	return platformTeams, nil
+	teams, ok := apiRes.Result.([]defs.PlatformTeam)
+	if ok {
+		return teams, nil
+	}
+
+	team, ok := apiRes.Result.(defs.PlatformTeam)
+	if ok {
+		return team, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
+}
+
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeams() ([]defs.PlatformTeam, error) {
+	res, err := c.getTeam("")
+	if err != nil {
+		return nil, err
+	}
+
+	teams, ok := res.([]defs.PlatformTeam)
+	if ok {
+		return teams, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
+}
+
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeam(id string) (*defs.PlatformTeam, error) {
+	res, err := c.getTeam(id)
+	if err != nil {
+		return nil, err
+	}
+
+	team, ok := res.(defs.PlatformTeam)
+	if ok {
+		return &team, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
 }
 
 // GetAccessControlList -

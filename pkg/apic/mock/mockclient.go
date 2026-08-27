@@ -29,8 +29,8 @@ type Client struct {
 	GetAPIServiceInstanceByNameMock           func(serviceInstanceName string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByNameMock                  func(serviceRevisionName string) (*management.APIServiceRevision, error)
 	GetEnvironmentMock                        func() (*management.Environment, error)
-	GetCentralTeamByNameMock                  func(teamName string) (*definitions.PlatformTeam, error)
-	GetTeamMock                               func(queryParams map[string]string) ([]definitions.PlatformTeam, error)
+	GetTeamMock                               func(id string) (*definitions.PlatformTeam, error)
+	GetTeamsMock                              func() ([]definitions.PlatformTeam, error)
 	GetAccessControlListMock                  func(aclName string) (*management.AccessControlList, error)
 	UpdateAccessControlListMock               func(acl *management.AccessControlList) (*management.AccessControlList, error)
 	CreateAccessControlListMock               func(acl *management.AccessControlList) (*management.AccessControlList, error)
@@ -52,14 +52,6 @@ type Client struct {
 func (m *Client) GetEnvironment() (*management.Environment, error) {
 	if m.GetEnvironmentMock != nil {
 		return m.GetEnvironmentMock()
-	}
-	return nil, nil
-}
-
-// GetCentralTeamByName -
-func (m *Client) GetCentralTeamByName(teamName string) (*definitions.PlatformTeam, error) {
-	if m.GetCentralTeamByNameMock != nil {
-		return m.GetCentralTeamByNameMock(teamName)
 	}
 	return nil, nil
 }
@@ -198,9 +190,17 @@ func (m *Client) SetConfig(cfg corecfg.CentralConfig) {
 }
 
 // GetTeam -
-func (m *Client) GetTeam(queryParams map[string]string) ([]definitions.PlatformTeam, error) {
+func (m *Client) GetTeam(id string) (*definitions.PlatformTeam, error) {
 	if m.GetTeamMock != nil {
-		return m.GetTeamMock(queryParams)
+		return m.GetTeamMock(id)
+	}
+	return nil, nil
+}
+
+// GetTeams -
+func (m *Client) GetTeams() ([]definitions.PlatformTeam, error) {
+	if m.GetTeamMock != nil {
+		return m.GetTeamsMock()
 	}
 	return nil, nil
 }
