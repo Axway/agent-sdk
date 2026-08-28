@@ -436,15 +436,6 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	cfg.GetCredentialConfig().SetShouldDeprovisionExpired(env.Policies.Credentials.Expiry.Action == "deprovision")
 	cfg.GetCredentialConfig().SetExpirationDays(int(env.Policies.Credentials.Expiry.Period))
 
-	if cfg.GetTeamID() == "" {
-		team := agent.cacheManager.GetTeamByName(cfg.GetTeamName())
-		if team == nil {
-			return fmt.Errorf("could not get team with name: %s", cfg.GetTeamName())
-		}
-
-		cfg.SetTeamID(team.ID)
-	}
-
 	return nil
 }
 
@@ -549,6 +540,17 @@ func startTeamACLCache() {
 		registerAccessControlListHandler()
 	}
 	handler.RefreshTeamCache(agent.apicClient, agent.cacheManager)
+
+	// setup the default team ID in the config after team cache has been processed
+	if agent.cfg.GetTeamID() == "" {
+		team := agent.cacheManager.GetTeamByName(agent.cfg.GetTeamName())
+		if team == nil {
+			log.Warnf("could not get team with name: %s", agent.cfg.GetTeamName())
+			return
+		}
+
+		agent.cfg.SetTeamID(team.ID)
+	}
 }
 
 func isRunningInDockerContainer() bool {

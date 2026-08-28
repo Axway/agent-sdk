@@ -429,7 +429,7 @@ func (c *ServiceClient) getTeam(id string) (any, error) {
 	}
 
 	// set the fields we want from the team api
-	headers["fields"] = "guid,name,tags,default"
+	queryParams := map[string]string{"fields[]": "guid,name,tags,default"}
 
 	// get all teams, if id is supplied get single team
 	url := fmt.Sprintf("%s/api/v1/team", c.cfg.GetPlatformURL())
@@ -437,7 +437,7 @@ func (c *ServiceClient) getTeam(id string) (any, error) {
 		url = fmt.Sprintf("%s/api/v1/team/%s", c.cfg.GetPlatformURL(), id)
 	}
 
-	response, reqErr := c.sendServerRequest(url, headers, map[string]string{})
+	response, reqErr := c.sendServerRequest(url, headers, queryParams)
 	if reqErr != nil {
 		return nil, reqErr
 	}

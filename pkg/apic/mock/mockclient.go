@@ -199,7 +199,7 @@ func (m *Client) GetTeam(id string) (*definitions.PlatformTeam, error) {
 
 // GetTeams -
 func (m *Client) GetTeams() ([]definitions.PlatformTeam, error) {
-	if m.GetTeamMock != nil {
+	if m.GetTeamsMock != nil {
 		return m.GetTeamsMock()
 	}
 	return nil, nil
