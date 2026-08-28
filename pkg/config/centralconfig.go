@@ -51,51 +51,46 @@ func (r Region) ToString() string {
 }
 
 type regionalSettings struct {
-	SingleURL            string
-	CentralURL           string
-	AuthURL              string
-	PlatformURL          string
-	TraceabilityHost     string
-	TraceabilityProtocol string
-	Deployment           string
+	SingleURL        string
+	CentralURL       string
+	AuthURL          string
+	PlatformURL      string
+	TraceabilityHost string
+	Deployment       string
 }
 
 var regionalSettingsMap = map[Region]regionalSettings{
 	US: {
-		SingleURL:            "https://ingestion.platform.axway.com",
-		CentralURL:           "https://apicentral.axway.com",
-		AuthURL:              "https://login.axway.com/auth",
-		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "phoenix.datasearch.axway.com:443",
-		TraceabilityProtocol: "https",
-		Deployment:           "prod",
+		SingleURL:        "https://ingestion.platform.axway.com",
+		CentralURL:       "https://apicentral.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "phoenix.datasearch.axway.com:443",
+		Deployment:       "prod",
 	},
 	EU: {
-		SingleURL:            "https://ingestion-eu.platform.axway.com",
-		CentralURL:           "https://central.eu-fr.axway.com",
-		AuthURL:              "https://login.axway.com/auth",
-		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "phoenix.visibility.eu-fr.axway.com:443",
-		TraceabilityProtocol: "https",
-		Deployment:           "prod-eu",
+		SingleURL:        "https://ingestion-eu.platform.axway.com",
+		CentralURL:       "https://central.eu-fr.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "phoenix.visibility.eu-fr.axway.com:443",
+		Deployment:       "prod-eu",
 	},
 	AP: {
-		SingleURL:            "https://ingestion-ap-sg.platform.axway.com",
-		CentralURL:           "https://central.ap-sg.axway.com",
-		AuthURL:              "https://login.axway.com/auth",
-		PlatformURL:          "https://platform.axway.com",
-		TraceabilityHost:     "phoenix.visibility.ap-sg.axway.com:443",
-		TraceabilityProtocol: "https",
-		Deployment:           "prod-ap",
+		SingleURL:        "https://ingestion-ap-sg.platform.axway.com",
+		CentralURL:       "https://central.ap-sg.axway.com",
+		AuthURL:          "https://login.axway.com/auth",
+		PlatformURL:      "https://platform.axway.com",
+		TraceabilityHost: "phoenix.visibility.ap-sg.axway.com:443",
+		Deployment:       "prod-ap",
 	},
 	EU2: {
-		SingleURL:            "https://entry.eu-fr.axway.com",
-		CentralURL:           "https://engage.eu-fr.axway.com",
-		AuthURL:              "https://login.eu-fr.axway.com/auth",
-		PlatformURL:          "https://platform.eu-fr.axway.com",
-		TraceabilityHost:     "phoenix.eu-fr.axway.com:443",
-		TraceabilityProtocol: "https",
-		Deployment:           "prod-eu-regional",
+		SingleURL:        "https://entry.eu-fr.axway.com",
+		CentralURL:       "https://engage.eu-fr.axway.com",
+		AuthURL:          "https://login.eu-fr.axway.com/auth",
+		PlatformURL:      "https://platform.eu-fr.axway.com",
+		TraceabilityHost: "phoenix.eu-fr.axway.com:443",
+		Deployment:       "prod-eu-regional",
 	},
 }
 
@@ -458,18 +453,7 @@ func (c *CentralConfiguration) GetTraceabilityHost() string {
 
 // GetTraceabilityProtocol - Returns the central traceability protocol
 func (c *CentralConfiguration) GetTraceabilityProtocol() string {
-	if c.isRegionSet {
-		return c.RegionSettings.TraceabilityProtocol
-	}
-	if c.SingleURL != "" {
-		// Using single URL and not region, find the expected protocol
-		for _, region := range regionalSettingsMap {
-			if region.SingleURL == c.SingleURL {
-				return region.TraceabilityProtocol
-			}
-		}
-		// unrecognized single entry URL (e.g. a customer's own static IP/proxy) - traceability
-		// ingestion is https-only, so default to that rather than leaving it unset
+	if c.isRegionSet || c.SingleURL != "" {
 		return "https"
 	}
 	return ""

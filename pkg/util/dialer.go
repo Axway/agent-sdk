@@ -22,10 +22,6 @@ const (
 	DefaultKeepAliveTimeout = 10 * time.Second
 )
 
-var dialerLogger = log.NewFieldLogger().
-	WithPackage("sdk.util").
-	WithComponent("dialer")
-
 // Dialer - interface for http dialer for proxy and single entry point
 type Dialer interface {
 	// Dial - interface used by libbeat for tcp network dial
@@ -42,12 +38,16 @@ type dialer struct {
 	proxyAddress       string
 	userName           string
 	password           string
+	logger             log.FieldLogger
 }
 
 // NewDialer - creates a new dialer
 func NewDialer(proxyURL *url.URL, singleEntryHostMap map[string]string) Dialer {
 	dialer := &dialer{
 		singleEntryHostMap: singleEntryHostMap,
+		logger: log.NewFieldLogger().
+			WithPackage("sdk.util").
+			WithComponent("dialer"),
 	}
 	if proxyURL != nil {
 		dialer.proxyScheme = proxyURL.Scheme
@@ -76,7 +76,7 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 	if ok {
 		addr = singleEntryHost
 	}
-	dialerLogger.
+	d.logger.
 		WithField("addr", originalAddr).
 		WithField("singleEntryMatch", ok).
 		WithField("singleEntryHost", singleEntryHost).
@@ -110,7 +110,7 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 		}
 	}
 	if originalAddr != addr {
-		dialerLogger.
+		d.logger.
 			WithField("addr", originalAddr).
 			WithField("routedVia", addr).
 			Trace("routing the traffic")
@@ -151,7 +151,7 @@ func (d *dialer) httpConnect(ctx context.Context, conn net.Conn, targetAddr, sni
 	if sniHost != "" {
 		connectTarget = sniHost
 	}
-	dialerLogger.WithField("connectTarget", connectTarget).Trace("sending CONNECT to proxy")
+	d.logger.WithField("connectTarget", connectTarget).Trace("sending CONNECT to proxy")
 	if err := req.Write(conn); err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (d *dialer) httpConnect(ctx context.Context, conn net.Conn, targetAddr, sni
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to connect proxy, status : %s", resp.Status)
 	}
-	dialerLogger.WithField("connectTarget", connectTarget).Trace("proxy CONNECT succeeded")
+	d.logger.WithField("connectTarget", connectTarget).Trace("proxy CONNECT succeeded")
 	return nil
 }
 

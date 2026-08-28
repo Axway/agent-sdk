@@ -318,14 +318,13 @@ func cleanupFiles(fileName string) {
 
 func TestRegionalTraceabilityDefaults(t *testing.T) {
 	tests := map[string]struct {
-		region      Region
-		expectHost  string
-		expectProto string
+		region     Region
+		expectHost string
 	}{
-		"US":  {region: US, expectHost: "phoenix.datasearch.axway.com:443", expectProto: "https"},
-		"EU":  {region: EU, expectHost: "phoenix.visibility.eu-fr.axway.com:443", expectProto: "https"},
-		"AP":  {region: AP, expectHost: "phoenix.visibility.ap-sg.axway.com:443", expectProto: "https"},
-		"EU2": {region: EU2, expectHost: "phoenix.eu-fr.axway.com:443", expectProto: "https"},
+		"US":  {region: US, expectHost: "phoenix.datasearch.axway.com:443"},
+		"EU":  {region: EU, expectHost: "phoenix.visibility.eu-fr.axway.com:443"},
+		"AP":  {region: AP, expectHost: "phoenix.visibility.ap-sg.axway.com:443"},
+		"EU2": {region: EU2, expectHost: "phoenix.eu-fr.axway.com:443"},
 	}
 
 	for name, tc := range tests {
@@ -333,7 +332,6 @@ func TestRegionalTraceabilityDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			settings := regionalSettingsMap[tc.region]
 			assert.Equal(t, tc.expectHost, settings.TraceabilityHost)
-			assert.Equal(t, tc.expectProto, settings.TraceabilityProtocol)
 		})
 	}
 }
