@@ -163,7 +163,6 @@ func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	if err != nil {
 		c.logger.Error(err)
 	}
-
 }
 
 // SetTokenGetter - sets the token getter
@@ -429,7 +428,7 @@ func (c *ServiceClient) getTeam(id string) (any, error) {
 	}
 
 	// set the fields we want from the team api
-	queryParams := map[string]string{"fields[]": "guid,name,tags,default"}
+	queryParams := map[string]string{"fields": "guid,name,tags,default"}
 
 	// get all teams, if id is supplied get single team
 	url := fmt.Sprintf("%s/api/v1/team", c.cfg.GetPlatformURL())
