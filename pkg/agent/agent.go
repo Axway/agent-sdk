@@ -539,7 +539,6 @@ func startTeamACLCache() {
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		registerAccessControlListHandler()
 	}
-	handler.RefreshTeamCache(agent.apicClient, agent.cacheManager)
 
 	// setup the default team ID in the config after team cache has been processed
 	if agent.cfg.GetTeamID() == "" {
