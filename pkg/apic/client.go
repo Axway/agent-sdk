@@ -33,11 +33,6 @@ const (
 	Basic       = "http-basic"
 )
 
-// other consts
-const (
-	TeamMapKey = "TeamMap"
-)
-
 // constants for patch request
 const (
 	PatchOpAdd             = "add"
@@ -159,7 +154,7 @@ func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
 		coreapi.WithTimeout(cfg.GetClientTimeout()), coreapi.WithSingleURL())
 
-	err := c.setTeamCache()
+	err := c.setupTeamCache()
 	if err != nil {
 		c.logger.Error(err)
 	}
@@ -302,18 +297,28 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) setTeamCache() error {
+func (c *ServiceClient) setupTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
 	platformTeams, err := c.GetTeams()
 	if err != nil {
 		return err
 	}
 
-	teamMap := make(map[string]string)
 	for _, team := range platformTeams {
-		teamMap[team.Name] = team.ID
+		c.caches.AddTeam(&team)
 	}
-	return cache.GetCache().Set(TeamMapKey, teamMap)
+
+	// setup the default team ID in the config after team cache has been processed
+	if c.cfg.GetTeamID() == "" {
+		team := c.caches.GetTeamByName(c.cfg.GetTeamName())
+		if team == nil {
+			c.logger.WithField("configuredTeamName", c.cfg.GetTeamName()).Warn("could not get team by name")
+			return nil
+		}
+		c.cfg.SetTeamID(team.ID)
+	}
+
+	return nil
 }
 
 // GetEnvironment get an environment

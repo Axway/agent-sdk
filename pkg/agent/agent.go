@@ -539,17 +539,6 @@ func startTeamACLCache() {
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		registerAccessControlListHandler()
 	}
-
-	// setup the default team ID in the config after team cache has been processed
-	if agent.cfg.GetTeamID() == "" {
-		team := agent.cacheManager.GetTeamByName(agent.cfg.GetTeamName())
-		if team == nil {
-			log.Warnf("could not get team with name: %s", agent.cfg.GetTeamName())
-			return
-		}
-
-		agent.cfg.SetTeamID(team.ID)
-	}
 }
 
 func isRunningInDockerContainer() bool {
