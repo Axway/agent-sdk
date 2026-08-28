@@ -468,6 +468,9 @@ func (c *CentralConfiguration) GetTraceabilityProtocol() string {
 				return region.TraceabilityProtocol
 			}
 		}
+		// unrecognized single entry URL (e.g. a customer's own static IP/proxy) - traceability
+		// ingestion is https-only, so default to that rather than leaving it unset
+		return "https"
 	}
 	return ""
 }

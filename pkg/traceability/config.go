@@ -147,7 +147,7 @@ func AddConfigProperties(props properties.Properties) {
 	props.AddStringSliceProperty(pathSSLCipherSuites, []string{}, "Cipher suites allowed for the traceability client")
 	props.AddStringProperty(pathProxyURL, def.Proxy.URL, "SOCKS5 proxy URL for the traceability client")
 	props.AddBoolProperty(pathProxyLocalResolve, def.Proxy.LocalResolve, "Resolve names locally instead of on the SOCKS proxy server")
-	props.AddDurationProperty(pathBackoffInit, def.Backoff.Init, "Initial backoff duration for a failed traceability request", properties.WithLowerLimit(0))
+	props.AddDurationProperty(pathBackoffInit, def.Backoff.Init, "Initial backoff duration for a failed traceability request", properties.WithLowerLimit(1))
 	props.AddDurationProperty(pathBackoffMax, def.Backoff.Max, "Maximum backoff duration for a failed traceability request")
 	props.AddBoolProperty(pathEscapeHTML, def.EscapeHTML, "Escapes HTML characters in traceability events")
 	props.AddStringSliceProperty(pathExceptionList, def.APIExceptionsList, "APIs excluded from traceability logging")

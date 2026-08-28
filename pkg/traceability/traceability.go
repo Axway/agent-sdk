@@ -189,8 +189,12 @@ func NewClient(cfg *Config) ([]*Client, error) {
 func validateProtocolPort() {
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 	if isSingleEntry {
-		// get the expected protocol for single entry host
-		traceCfg.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
+		// only override with the expected protocol for a recognized single entry host. An
+		// unrecognized (e.g. customer-configured) single entry URL has no known protocol, so
+		// leave whatever was already configured alone rather than clobbering it with empty
+		if protocol := agent.GetCentralConfig().GetTraceabilityProtocol(); protocol != "" {
+			traceCfg.Protocol = protocol
+		}
 	}
 }
 

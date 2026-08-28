@@ -22,6 +22,10 @@ const (
 	DefaultKeepAliveTimeout = 10 * time.Second
 )
 
+var dialerLogger = log.NewFieldLogger().
+	WithPackage("sdk.util").
+	WithComponent("dialer")
+
 // Dialer - interface for http dialer for proxy and single entry point
 type Dialer interface {
 	// Dial - interface used by libbeat for tcp network dial
@@ -72,6 +76,12 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 	if ok {
 		addr = singleEntryHost
 	}
+	dialerLogger.
+		WithField("addr", originalAddr).
+		WithField("singleEntryMatch", ok).
+		WithField("singleEntryHost", singleEntryHost).
+		WithField("proxy", d.proxyAddress).
+		Trace("dialing")
 	if d.proxyAddress != "" {
 		switch d.proxyScheme {
 		case "socks5", "socks5h":
@@ -100,7 +110,10 @@ func (d *dialer) DialContext(ctx context.Context, network string, addr string) (
 		}
 	}
 	if originalAddr != addr {
-		log.Tracef("routing the traffic for %s via %s", originalAddr, addr)
+		dialerLogger.
+			WithField("addr", originalAddr).
+			WithField("routedVia", addr).
+			Trace("routing the traffic")
 	}
 	return conn, nil
 }
@@ -134,6 +147,11 @@ func (d *dialer) socksConnect(network, addr, singleEntryHost string) (net.Conn, 
 
 func (d *dialer) httpConnect(ctx context.Context, conn net.Conn, targetAddr, sniHost string) error {
 	req := d.createConnectRequest(ctx, targetAddr, sniHost)
+	connectTarget := targetAddr
+	if sniHost != "" {
+		connectTarget = sniHost
+	}
+	dialerLogger.WithField("connectTarget", connectTarget).Trace("sending CONNECT to proxy")
 	if err := req.Write(conn); err != nil {
 		return err
 	}
@@ -147,6 +165,7 @@ func (d *dialer) httpConnect(ctx context.Context, conn net.Conn, targetAddr, sni
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to connect proxy, status : %s", resp.Status)
 	}
+	dialerLogger.WithField("connectTarget", connectTarget).Trace("proxy CONNECT succeeded")
 	return nil
 }
 

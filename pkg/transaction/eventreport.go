@@ -86,8 +86,8 @@ func (e *eventReport) GetMetadata() event.MapStr {
 }
 
 func (e *eventReport) GetFields() event.MapStr {
-	if e.metadata == nil {
-		e.metadata = event.MapStr{}
+	if e.fields == nil {
+		e.fields = event.MapStr{}
 	}
 	return e.fields
 }
