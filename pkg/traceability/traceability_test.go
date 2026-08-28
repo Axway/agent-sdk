@@ -24,6 +24,8 @@ import (
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 )
 
+const testCentralURL = "http://localhost:8888"
+
 func createCentralCfg(url, env string) *config.CentralConfiguration {
 	cfg := config.NewCentralConfig(config.DiscoveryAgent).(*config.CentralConfiguration)
 	cfg.URL = url
@@ -169,7 +171,7 @@ func TestParseConfig(t *testing.T) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
-	agent.Initialize(createCentralCfg("http://localhost:8888", "v7"))
+	agent.Initialize(createCentralCfg(testCentralURL, "v7"))
 
 	tests := map[string]struct {
 		envVars map[string]string
@@ -243,7 +245,7 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestCreateHTTPClient(t *testing.T) {
-	cfg := createCentralCfg("http://localhost:8888", "v7")
+	cfg := createCentralCfg(testCentralURL, "v7")
 	agent.Initialize(cfg)
 
 	tests := map[string]struct {
@@ -496,4 +498,45 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.Nil(t, publishedMessages)
 
 	SetOutputEventProcessor(nil)
+}
+
+// TestValidateProtocolPortUnrecognizedSingleURL guards against a regression where an
+// unrecognized (e.g. customer-configured) single entry URL had its unresolved, empty protocol
+// assigned unconditionally, clobbering an explicitly configured protocol with "".
+func TestValidateProtocolPortUnrecognizedSingleURL(t *testing.T) {
+	tests := map[string]struct {
+		singleURL        string
+		configuredProto  string
+		expectedProtocol string
+	}{
+		"unrecognized single entry URL leaves the configured protocol alone": {
+			singleURL:        "https://sl1rd15app0514.pcloud.axway.int:28080",
+			configuredProto:  "https",
+			expectedProtocol: "https",
+		},
+		"recognized single entry URL overrides the configured protocol": {
+			singleURL:        "https://ingestion.platform.axway.com",
+			configuredProto:  "tcp",
+			expectedProtocol: "https",
+		},
+		"no single entry URL leaves the configured protocol alone": {
+			singleURL:        "",
+			configuredProto:  "https",
+			expectedProtocol: "https",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			cfg := createCentralCfg(testCentralURL, "v7")
+			cfg.SingleURL = tc.singleURL
+			agent.Initialize(cfg)
+
+			traceCfg = &Config{Protocol: tc.configuredProto}
+			validateProtocolPort()
+
+			assert.Equal(t, tc.expectedProtocol, traceCfg.Protocol)
+		})
+	}
 }

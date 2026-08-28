@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testUSSingleURL = "https://ingestion.platform.axway.com"
+
 func TestDiscoveryAgentConfig(t *testing.T) {
 	cfg := NewCentralConfig(DiscoveryAgent)
 	centralConfig := cfg.(*CentralConfiguration)
@@ -58,7 +60,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.APIServerVersion = ""
 	err = cfgValidator.ValidateCfg()
@@ -148,7 +150,7 @@ func TestComplianceAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
@@ -233,7 +235,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
@@ -332,6 +334,37 @@ func TestRegionalTraceabilityDefaults(t *testing.T) {
 			settings := regionalSettingsMap[tc.region]
 			assert.Equal(t, tc.expectHost, settings.TraceabilityHost)
 			assert.Equal(t, tc.expectProto, settings.TraceabilityProtocol)
+		})
+	}
+}
+
+// TestGetTraceabilityProtocolUnrecognizedSingleURL guards against a regression where an
+// unrecognized single entry URL (e.g. a customer's own static IP/proxy) returned an empty
+// protocol instead of defaulting to https, the only protocol traceability ingestion supports.
+func TestGetTraceabilityProtocolUnrecognizedSingleURL(t *testing.T) {
+	tests := map[string]struct {
+		singleURL    string
+		expectedProt string
+	}{
+		"unrecognized single entry URL defaults to https": {
+			singleURL:    "https://sl1rd15app0514.pcloud.axway.int:28080",
+			expectedProt: "https",
+		},
+		"recognized single entry URL returns its region's protocol": {
+			singleURL:    testUSSingleURL,
+			expectedProt: "https",
+		},
+		"no single entry URL configured returns empty": {
+			singleURL:    "",
+			expectedProt: "",
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			cfg := &CentralConfiguration{SingleURL: tc.singleURL}
+			assert.Equal(t, tc.expectedProt, cfg.GetTraceabilityProtocol())
 		})
 	}
 }
