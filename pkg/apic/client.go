@@ -85,7 +85,6 @@ type Client interface {
 	GetAPIServiceRevisions(query map[string]string, URL, stage string) ([]*management.APIServiceRevision, error)
 	GetAPIServiceInstances(query map[string]string, URL string) ([]*management.APIServiceInstance, error)
 	GetAPIV1ResourceInstances(query map[string]string, URL string) ([]*apiv1.ResourceInstance, error)
-	GetAPIV1ResourceInstancesWithPageSize(query map[string]string, URL string, pageSize int) ([]*apiv1.ResourceInstance, error)
 	GetAPIV1ResourceCount(URL string) (int, error)
 	GetAPIServiceByName(name string) (*management.APIService, error)
 	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
@@ -117,9 +116,10 @@ type Client interface {
 // New creates a new Client
 func New(cfg corecfg.CentralConfig, tokenRequester auth.PlatformTokenGetter, caches cache2.Manager) Client {
 	serviceClient := &ServiceClient{
-		caches:        caches,
-		pageSizes:     map[string]int{},
-		pageSizeMutex: &sync.Mutex{},
+		caches:           caches,
+		pageSizes:        map[string]int{},
+		pageSizeMutex:    &sync.Mutex{},
+		apiClientWorkers: cfg.GetAPIClientWorkers(),
 	}
 	serviceClient.logger = log.NewFieldLogger().
 		WithComponent("serviceClient").

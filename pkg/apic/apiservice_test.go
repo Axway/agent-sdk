@@ -25,7 +25,14 @@ const (
 	testRevisionListFile = "./testdata/servicerevisionlist.json"
 	testEmptyListFile    = "./testdata/empty-list.json"
 	testPetstoreSpec     = "./testdata/petstore-swagger2.json"
-	testRevisionNameAlt  = "daleapi"
+	testRevisionNameAlt  = "daleapi-1"
+	// testRevisionNameAltJSON is a revision list entry (with a scope so it is treated as an
+	// existing resource, not a new one) used to verify the getExistingRevisionByService fallback
+	// (specHashes / originalSpecHash lookup) resolves to the expected revision name.
+	testRevisionNameAltJSON = `[{"name": "%s","tags": ["tag1","tag2"],"metadata": {"scope": {"name": "v7envandcat"}}}]`
+	// testRevisionNameAltObjJSON is the same revision, as a single object, used to mock the
+	// server's response to the PUT of that revision (the server confirms back the same name).
+	testRevisionNameAltObjJSON = `{"name": "%s","tags": ["tag1","tag2"],"metadata": {"scope": {"name": "v7envandcat"}}}`
 )
 
 var serviceBody = ServiceBody{
@@ -51,73 +58,161 @@ func TestIsValidAuthPolicy(t *testing.T) {
 }
 
 func TestCreateService(t *testing.T) {
+	client, httpClient := GetTestServiceClient()
+	serviceBody.AuthPolicy = "pass-through"
+
+	// this should be a full go right path
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: testAPIServiceFile, // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		emptyRevisionListResponse, // GET serviceRevisions (getExistingRevision)
+		{
+			FileName: testRevisionFile, // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision information subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision x-agent-details subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testInstanceFile, // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testAgentDetailsFile, // instance x-agent-details subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAgentDetailsFile, // final service x-agent-details subresource update (spec hashes)
+			RespCode: http.StatusOK,
+		},
+	})
+
+	// Test oas2 object
 	oas2Bytes, err := os.ReadFile(testPetstoreSpec)
 	assert.Nil(t, err)
+	cloneServiceBody := serviceBody
+	cloneServiceBody.SpecDefinition = oas2Bytes
 
-	tests := map[string]struct {
-		responses      []api.MockResponse
-		specDefinition []byte
-		expectError    bool
-	}{
-		"successful create": {
-			specDefinition: oas2Bytes,
-			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
-				emptyRevisionListResponse,                                    // GET serviceRevisions
-				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST serviceRevision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
-				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST serviceInstance
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service subresource
-			},
-		},
-		"failed apiservices POST": {
-			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusRequestTimeout},
-			},
-			expectError: true,
-		},
-		"failed apiservicerevision POST": {
-			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusOK},           // POST service
-				emptyRevisionListResponse,                                         // GET serviceRevisions
-				{FileName: testRevisionFile, RespCode: http.StatusRequestTimeout}, // POST serviceRevision
-				{FileName: testEmptyListFile, RespCode: http.StatusOK},            // rollback apiservice
-			},
-			expectError: true,
-		},
-		"failed apiserviceinstance POST": {
-			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},      // POST service
-				emptyRevisionListResponse,                                         // GET serviceRevisions
-				{FileName: testRevisionFile, RespCode: http.StatusCreated},        // POST serviceRevision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},         // service subresource
-				{FileName: testInstanceFile, RespCode: http.StatusRequestTimeout}, // POST serviceInstance
-				{FileName: testEmptyListFile, RespCode: http.StatusOK},            // rollback apiservice
-			},
-			expectError: true,
-		},
-	}
+	apiSvc, err := client.PublishService(&cloneServiceBody)
+	assert.Nil(t, err)
+	assert.NotNil(t, apiSvc)
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			client, httpClient := GetTestServiceClient()
-			httpClient.SetResponses(tc.responses)
+	// this should fail - POST apiservices times out. Use a fresh client so the
+	// service created above is not found in cache (which would turn this into an update).
+	client, httpClient = GetTestServiceClient()
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: testAPIServiceFile, // this for call to create the service
+			RespCode: http.StatusRequestTimeout,
+		},
+	})
 
-			body := serviceBody
-			body.AuthPolicy = "pass-through"
-			body.SpecDefinition = tc.specDefinition
+	apiSvc, err = client.PublishService(&serviceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, apiSvc)
 
-			apiSvc, err := client.PublishService(&body)
-			if tc.expectError {
-				assert.NotNil(t, err)
-				assert.Nil(t, apiSvc)
-			} else {
-				assert.Nil(t, err)
-				assert.NotNil(t, apiSvc)
-			}
-		})
-	}
+	// this should fail - POST apiservicerevisions times out, apiservice gets rolled back
+	client, httpClient = GetTestServiceClient()
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: testAPIServiceFile, // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		emptyRevisionListResponse, // GET serviceRevisions (getExistingRevision)
+		{
+			FileName: testRevisionFile, // this for call to create the serviceRevision
+			RespCode: http.StatusRequestTimeout,
+		},
+		{
+			FileName: testEmptyListFile, // this for call to rollback apiservice
+			RespCode: http.StatusOK,
+		},
+	})
+
+	apiSvc, err = client.PublishService(&serviceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, apiSvc)
+
+	// this should fail - POST apiserviceinstances times out, apiservice gets rolled back
+	client, httpClient = GetTestServiceClient()
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: testAPIServiceFile, // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		emptyRevisionListResponse, // GET serviceRevisions (getExistingRevision)
+		{
+			FileName: testRevisionFile, // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision information subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision x-agent-details subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testInstanceFile, // this for call to create the serviceInstance
+			RespCode: http.StatusRequestTimeout,
+		},
+		{
+			FileName: testEmptyListFile, // this for call to rollback apiservice
+			RespCode: http.StatusOK,
+		},
+	})
+
+	apiSvc, err = client.PublishService(&serviceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, apiSvc)
+
+	// this should fail - instance created but its x-agent-details subresource update
+	// (issued internally by CreateOrUpdateResource right after the POST) times out,
+	// apiservice gets rolled back
+	client, httpClient = GetTestServiceClient()
+	httpClient.SetResponses([]api.MockResponse{
+		{
+			FileName: testAPIServiceFile, // this for call to create the service
+			RespCode: http.StatusCreated,
+		},
+		emptyRevisionListResponse, // GET serviceRevisions (getExistingRevision)
+		{
+			FileName: testRevisionFile, // this for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision information subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testAgentDetailsFile, // revision x-agent-details subresource
+			RespCode: http.StatusOK,
+		},
+		{
+			FileName: testInstanceFile, // this for call to create the serviceInstance
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testInstanceFile, // instance x-agent-details subresource update times out
+			RespCode: http.StatusRequestTimeout,
+		},
+		{
+			FileName: testEmptyListFile, // this for call to rollback apiservice
+			RespCode: http.StatusOK,
+		},
+	})
+
+	apiSvc, err = client.PublishService(&serviceBody)
+	assert.NotNil(t, err)
+	assert.Nil(t, apiSvc)
 }
 
 func TestPublishServiceRevisionOnly(t *testing.T) {
@@ -134,15 +229,16 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			responses: []api.MockResponse{
 				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
-				emptyRevisionListResponse,                                    // GET revisions
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				emptyRevisionListResponse,                                   // GET revisions (getExistingRevision)
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision information subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision x-agent-details subresource
 				{FileName: testInstanceFile, RespCode: http.StatusCreated},   // POST instance
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // spec hashes update
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance x-agent-details subresource (internal to CreateOrUpdateResource)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // instance x-agent-details subresource (forced by source update)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // final service x-agent-details subresource
 			},
 		},
 		"new service: revision-only creates service and revision, skips instance": {
@@ -150,35 +246,35 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			responses: []api.MockResponse{
 				{FileName: testAPIServiceFile, RespCode: http.StatusCreated}, // POST service
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service status subresource
-				emptyRevisionListResponse,                                    // GET revisions
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // service x-agent-details subresource
+				emptyRevisionListResponse,                                   // GET revisions (getExistingRevision)
 				{FileName: testRevisionFile, RespCode: http.StatusCreated},   // POST revision
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision information subresource
 				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // revision x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},    // final service x-agent-details subresource
 			},
 		},
 		"existing service: full publish updates service, revision, and instance": {
 			revisionOnly: false,
 			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
 			responses: []api.MockResponse{
-				{FileName: testAPIServiceFile, RespCode: http.StatusOK},   // PUT service
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // service status source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // service x-agent-details subresource
+				{FileName: testAPIServiceFile, RespCode: http.StatusCreated},                    // POST service (cached fixture has no scope, so it is treated as new)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // service source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // service x-agent-details subresource
 				{
-					RespData: `[{"name": "daleapi","tags": ["tags1"], "metadata": {"scope": {"name": "v7envandcat"}}}]`,
-					RespCode: http.StatusOK,
-					RespHeaders: map[string][]string{
-						"X-Axway-Total-Count": {"1"},
-					},
-				}, // GET revision list (updateAPI path)
-				{FileName: testRevisionFile, RespCode: http.StatusOK},      // PUT revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision information subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
-				{FileName: testInstanceFile, RespCode: http.StatusOK},      // GET instance
-				{FileName: testInstanceFile, RespCode: http.StatusCreated}, // POST instance
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // instance x-agent-details subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // instance source subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // service x-agent-details subresource
+					FileName:    testRevisionListFile, // GET revision list (getExistingRevision)
+					RespCode:    http.StatusOK,
+					RespHeaders: map[string][]string{"X-Axway-Total-Count": {"1"}},
+				},
+				{FileName: testRevisionFile, RespCode: http.StatusOK},                           // PUT revision (reusing found revision)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // revision information subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // revision x-agent-details subresource
+				{FileName: "./testdata/existingserviceinstances.json", RespCode: http.StatusOK}, // GET instance (updateAPI path, no name match so falls back to create)
+				{FileName: testInstanceFile, RespCode: http.StatusCreated},                      // POST instance
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // instance x-agent-details subresource (internal to CreateOrUpdateResource)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // instance source subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // instance x-agent-details subresource (forced by source update)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},                       // final service x-agent-details subresource
 			},
 		},
 		"existing service: revision-only skips service update and instance, creates revision only": {
@@ -186,16 +282,14 @@ func TestPublishServiceRevisionOnly(t *testing.T) {
 			existingSvc:  createAPIService(serviceBody.APIName, serviceBody.RestAPIID, "", "", false),
 			responses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": ["tags1"],"metadata": {"scope": {"name": "v7envandcat"}}}]`,
-					RespCode: http.StatusOK,
-					RespHeaders: map[string][]string{
-						"X-Axway-Total-Count": {"1"},
-					},
-				}, // GET revision list (updateAPI path)
-				{FileName: testRevisionFile, RespCode: http.StatusCreated}, // PUT revision
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision information subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // revision x-agent-details subresource
-				{FileName: testAgentDetailsFile, RespCode: http.StatusOK},  // spec hashes update
+					FileName:    testRevisionListFile, // GET revision list (getExistingRevision)
+					RespCode:    http.StatusOK,
+					RespHeaders: map[string][]string{"X-Axway-Total-Count": {"1"}},
+				},
+				{FileName: testRevisionFile, RespCode: http.StatusOK}, // PUT revision (reusing found revision)
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // revision information subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // revision x-agent-details subresource
+				{FileName: testAgentDetailsFile, RespCode: http.StatusOK}, // final service x-agent-details subresource
 			},
 		},
 	}
@@ -293,34 +387,28 @@ func TestGetAPIServiceFromCache(t *testing.T) {
 
 func TestUpdateService(t *testing.T) {
 	client, httpClient := GetTestServiceClient()
-	// tests for updating existing revision
+	// tests for creating the service, revision, and instance the first time
 	httpClient.SetResponses([]api.MockResponse{
 		{
 			FileName: testAPIServiceFile, // for call to create the service
-			RespCode: http.StatusOK,
+			RespCode: http.StatusCreated,
 		},
-		{
-			RespData: `[{"name": "daleapi","tags": ["tags1"]}]`,
-			RespCode: http.StatusOK,
-			RespHeaders: map[string][]string{
-				"X-Axway-Total-Count": {"1"},
-			},
-		},
+		emptyRevisionListResponse, // for call to get the existing revision (getExistingRevision)
 		{
 			FileName: testRevisionFile, // for call to create the serviceRevision
+			RespCode: http.StatusCreated,
+		},
+		{
+			FileName: testAgentDetailsFile, // for call to update the serviceRevision information subresource
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testRevisionFile, // for call to update the serviceRevision information subresource
-			RespCode: http.StatusOK,
-		},
-		{
-			FileName: testRevisionFile, // for call to update the serviceRevision x-agent-details subresource
+			FileName: testAgentDetailsFile, // for call to update the serviceRevision x-agent-details subresource
 			RespCode: http.StatusOK,
 		},
 		{
 			FileName: testInstanceFile, // for call to create the serviceInstance
-			RespCode: http.StatusOK,
+			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: testInstanceFile, // for call to update the serviceInstance x-agent-details subresource
@@ -346,28 +434,29 @@ func TestUpdateService(t *testing.T) {
 	// tests for updating existing instance with same endpoint
 	httpClient.SetResponses([]api.MockResponse{
 		{
-			FileName: testRevisionListFile, // for call to get the serviceRevision count based on name
-			RespCode: http.StatusOK,
+			FileName:    testRevisionListFile, // for call to get the existing revision (getExistingRevision)
+			RespCode:    http.StatusOK,
+			RespHeaders: map[string][]string{"X-Axway-Total-Count": {"1"}},
 		},
 		{
 			FileName: testRevisionFile, // for call to update the serviceRevision
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testRevisionFile, // for call to update the serviceRevision information subresource
+			FileName: testAgentDetailsFile, // for call to update the serviceRevision information subresource
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testRevisionFile, // for call to update the serviceRevision x-agent-details subresource
+			FileName: testAgentDetailsFile, // for call to update the serviceRevision x-agent-details subresource
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testInstanceFile, // for call to get the serviceinstance
+			FileName: "./testdata/existingserviceinstances.json", // for call to get the serviceinstance (expects an array)
 			RespCode: http.StatusOK,
 		},
 		{
-			FileName: testInstanceFile, // for call to update the serviceinstance
-			RespCode: http.StatusOK,
+			FileName: testInstanceFile, // for call to create the serviceinstance (no name match in the list above)
+			RespCode: http.StatusCreated,
 		},
 		{
 			FileName: testInstanceFile, // for call to update the serviceinstance x-agent-details subresource
@@ -408,21 +497,17 @@ func TestProcessRevision(t *testing.T) {
 	}{
 		"publish new revision": {
 			httpResponses: []api.MockResponse{
-				emptyRevisionListResponse,
+				emptyRevisionListResponse, // GET revisions (getExistingRevision, by hash - no match)
 				{
-					FileName: testRevisionFile, // for call to update the serviceRevision
+					FileName: testRevisionFile, // POST serviceRevision
+					RespCode: http.StatusCreated,
+				},
+				{
+					FileName: testAgentDetailsFile, // revision information subresource
 					RespCode: http.StatusOK,
 				},
 				{
-					FileName: testRevisionFile, // for call to update the serviceRevision x-agent-details
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: testRevisionFile, // for call to update the serviceRevision
-					RespCode: http.StatusOK,
-				},
-				{
-					FileName: testRevisionFile, // for call to update the serviceRevision x-agent-details
+					FileName: testAgentDetailsFile, // revision x-agent-details subresource
 					RespCode: http.StatusOK,
 				},
 			},
@@ -439,12 +524,14 @@ func TestProcessRevision(t *testing.T) {
 		"skip publish when no changes": {
 			httpResponses: []api.MockResponse{
 				{
-					RespData: `[{"name": "daleapi","tags": []}]`,
+					RespData: `[{"name": "daleapi","tags": [], "information": {"hash": "abc123"}}]`,
 					RespCode: http.StatusOK,
 					RespHeaders: map[string][]string{
 						"X-Axway-Total-Count": {"1"},
 					},
 				},
+				// no further calls: a revision was found by hash with information already
+				// recorded and no tag changes, so createOrUpdateRevision short-circuits
 			},
 			serviceBody: ServiceBody{
 				APIName:          "daleapi",
@@ -465,12 +552,27 @@ func TestProcessRevision(t *testing.T) {
 		},
 		"publish updated revision when previous revision found with tag changed": {
 			httpResponses: []api.MockResponse{
+				emptyRevisionListResponse, // GET revisions (getExistingRevision, by hash - no match)
 				{
-					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
+					// GET revisions (getExistingRevisionByService fallback, matched via specHashes)
+					RespData: fmt.Sprintf(testRevisionNameAltJSON, testRevisionNameAlt),
 					RespCode: http.StatusOK,
 					RespHeaders: map[string][]string{
 						"X-Axway-Total-Count": {"1"},
 					},
+				},
+				{
+					// PUT serviceRevision (tags changed): server confirms back the same revision name
+					RespData: fmt.Sprintf(testRevisionNameAltObjJSON, testRevisionNameAlt),
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAgentDetailsFile, // revision information subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAgentDetailsFile, // revision x-agent-details subresource
+					RespCode: http.StatusOK,
 				},
 			},
 			serviceBody: ServiceBody{
@@ -492,12 +594,27 @@ func TestProcessRevision(t *testing.T) {
 		},
 		"find revision match using original spec hash": {
 			httpResponses: []api.MockResponse{
+				emptyRevisionListResponse, // GET revisions (getExistingRevision, by hash - no match)
 				{
-					RespData: `[{"name": "daleapi","tags": ["tag1","tag2"]}]`,
+					// GET revisions (getExistingRevisionByService fallback, matched via originalSpecHash)
+					RespData: fmt.Sprintf(testRevisionNameAltJSON, testRevisionNameAlt),
 					RespCode: http.StatusOK,
 					RespHeaders: map[string][]string{
 						"X-Axway-Total-Count": {"1"},
 					},
+				},
+				{
+					// PUT serviceRevision (tags changed): server confirms back the same revision name
+					RespData: fmt.Sprintf(testRevisionNameAltObjJSON, testRevisionNameAlt),
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAgentDetailsFile, // revision information subresource
+					RespCode: http.StatusOK,
+				},
+				{
+					FileName: testAgentDetailsFile, // revision x-agent-details subresource
+					RespCode: http.StatusOK,
 				},
 			},
 			serviceBody: ServiceBody{
@@ -736,11 +853,6 @@ func createAPIService(name, id string, refSvc string, dpType string, isDesign bo
 					"specHashes": map[string]string{
 						"10422419514905716117": "revision1",
 					},
-				},
-			},
-			Metadata: apiv1.Metadata{
-				Scope: apiv1.MetadataScope{
-					Name: "v7envandcat",
 				},
 			},
 		},

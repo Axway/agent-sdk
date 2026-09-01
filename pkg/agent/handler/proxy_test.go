@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
@@ -18,88 +17,52 @@ func (c *customHandler) Handle(_ context.Context, _ *proto.EventMeta, _ *v1.Reso
 	return c.err
 }
 
-func TestProxyHandler(t *testing.T) {
+func (c *customHandler) ShouldHandle(_ context.Context, _ *proto.Event) bool {
+	return true
+}
+
+// GetAPIServerFields makes customHandler implement RequiredFieldsHandler, so tests can prove the
+// proxy no longer consults it.
+func (c *customHandler) GetAPIServerFields(_ context.Context, _ *proto.Event) []string {
+	return []string{"field"}
+}
+
+func TestStreamWatchProxyHandler_RegisterTargetHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		handlers []Handler
-		event    proto.Event_Type
-		hasError bool
+		handlers []*customHandler
 	}{
 		{
-			name:     "should not register any handlers, and return nil when Handle is called",
-			event:    proto.Event_UPDATED,
+			name:     "no handlers registered for a name",
 			handlers: nil,
-			hasError: false,
 		},
 		{
-			name:  "should register a handler and return nil when Handle is called",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{},
+			name: "a single handler registered for a name",
+			handlers: []*customHandler{
+				{},
 			},
-			hasError: false,
 		},
 		{
-			name:  "should register two handlers and return nil when Handle is called",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{},
-				&customHandler{},
+			name: "multiple handlers registered for the same name are appended, not overwritten",
+			handlers: []*customHandler{
+				{},
+				{},
+				{},
 			},
-			hasError: false,
-		},
-		{
-			name:  "should register a handler and return an error when Handle is called",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{err: fmt.Errorf("error")},
-			},
-			hasError: true,
-		},
-		{
-			name:  "should register two handlers and return an error when Handle is called",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{},
-				&customHandler{err: fmt.Errorf("error")},
-			},
-			hasError: true,
-		},
-		{
-			name:  "should register two handlers and return an error when calling the first registered handler",
-			event: proto.Event_CREATED,
-			handlers: []Handler{
-				&customHandler{err: fmt.Errorf("error")},
-				&customHandler{},
-			},
-			hasError: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ri := &v1.ResourceInstance{
-				ResourceMeta: v1.ResourceMeta{
-					Name:  "name",
-					Title: "title",
-				},
-			}
-
 			proxy := NewStreamWatchProxyHandler()
+			for _, h := range tc.handlers {
+				proxy.RegisterTargetHandler("Kind", h)
+			}
 
+			got := proxy.GetHandlers()["Kind"]
+			assert.Len(t, got, len(tc.handlers))
 			for i, h := range tc.handlers {
-				proxy.RegisterTargetHandler(fmt.Sprintf("%d", i), h)
-			}
-
-			err := proxy.Handle(NewEventContext(tc.event, nil, ri.Kind, ri.Name), nil, ri)
-			if tc.hasError {
-				assert.Error(t, err)
-			} else {
-				assert.Nil(t, err)
-			}
-
-			for i := range tc.handlers {
-				proxy.UnregisterTargetHandler(fmt.Sprintf("%d", i))
+				assert.Same(t, h, got[i], "handlers must be returned in registration order")
 			}
 		})
 	}
