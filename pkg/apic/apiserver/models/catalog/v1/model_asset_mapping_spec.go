@@ -11,7 +11,5 @@ package catalog
 
 // AssetMappingSpec  (catalog.v1.AssetMapping)
 type AssetMappingSpec struct {
-	// Reference to the executed AssetMappingTemplate.
-	AssetMappingTemplate string                 `json:"assetMappingTemplate,omitempty"`
-	Inputs               AssetMappingSpecInputs `json:"inputs"`
+	Inputs AssetMappingSpecInputs `json:"inputs"`
 }

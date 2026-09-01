@@ -20,6 +20,8 @@ type DataplaneSpecAzure struct {
 	SubscriptionId string `json:"subscriptionId"`
 	// The name of the azure API management
 	ApimServiceName string `json:"apimServiceName,omitempty"`
+	// The name of the Azure APIM workspace
+	WorkspaceName string `json:"workspaceName,omitempty"`
 	// The event hub processes and stores events, data, or telemetry produced by distributed software or devices
 	EventHubName string `json:"eventHubName,omitempty"`
 	// The event hub namespace is a management container for event hubs or topics
