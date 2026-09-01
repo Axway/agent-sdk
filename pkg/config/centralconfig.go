@@ -450,15 +450,6 @@ func (c *CentralConfiguration) GetTraceabilityHost() string {
 	return ""
 }
 
-// traceabilityProtocol - returns the traceability ingestion protocol. https-only for a region or
-// a configured single URL, not part of the CentralConfig interface since it's never anything else
-func (c *CentralConfiguration) traceabilityProtocol() string {
-	if c.isRegionSet || c.SingleURL != "" {
-		return "https"
-	}
-	return ""
-}
-
 // GetProxyURL - Returns the central Proxy URL
 func (c *CentralConfiguration) GetProxyURL() string {
 	return c.ProxyURL
@@ -1118,13 +1109,12 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 func (c *CentralConfiguration) setRegionBasedEnvironmentVars() {
 	// Set the environment variables for the agent
 	envGetters := map[string]func() string{
-		"CENTRAL_SINGLEURL":     c.GetSingleURL,
-		"CENTRAL_URL":           c.GetURL,
-		"CENTRAL_AUTH_URL":      c.GetAuthConfig().GetTokenURL,
-		"TRACEABILITY_HOST":     c.GetTraceabilityHost,
-		"TRACEABILITY_PROTOCOL": c.traceabilityProtocol,
-		"CENTRAL_PLATFORMURL":   c.GetPlatformURL,
-		"CENTRAL_DEPLOYMENT":    c.GetAPICDeployment,
+		"CENTRAL_SINGLEURL":   c.GetSingleURL,
+		"CENTRAL_URL":         c.GetURL,
+		"CENTRAL_AUTH_URL":    c.GetAuthConfig().GetTokenURL,
+		"TRACEABILITY_HOST":   c.GetTraceabilityHost,
+		"CENTRAL_PLATFORMURL": c.GetPlatformURL,
+		"CENTRAL_DEPLOYMENT":  c.GetAPICDeployment,
 	}
 	for envVar, getter := range envGetters {
 		if _, set := os.LookupEnv(envVar); getter() != "" && !set {
