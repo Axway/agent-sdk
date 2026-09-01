@@ -27,7 +27,6 @@ var removedIngestionHostPrefixes = []string{"ingestion.", "ingestion-http.", "in
 // using the same env vars agents already use, e.g. pathHost -> TRACEABILITY_HOST.
 const (
 	pathHost              = "traceability.host"
-	pathProtocol          = "traceability.protocol"
 	pathPort              = "traceability.port" // deprecated, presence-only check
 	pathLoadBalance       = "traceability.loadbalance"
 	pathSlowStart         = "traceability.slowstart"
@@ -133,7 +132,6 @@ func AddConfigProperties(props properties.Properties) {
 	def := DefaultConfig()
 
 	props.AddStringSliceProperty(pathHost, def.Hosts, "Comma separated list of traceability hosts to publish to")
-	props.AddStringProperty(pathProtocol, def.Protocol, "Protocol used to publish traceability events")
 	props.AddStringProperty(pathPort, "", "Deprecated, use "+pathHost)
 	props.AddBoolProperty(pathLoadBalance, def.LoadBalance, "Enables round robin load balancing across traceability hosts")
 	props.AddBoolProperty(pathSlowStart, def.SlowStart, "Enables slow start for the traceability client")
@@ -172,7 +170,6 @@ func ParseConfig(props properties.Properties) (*Config, error) {
 	}
 
 	cfg.Hosts = props.StringSlicePropertyValue(pathHost)
-	cfg.Protocol = props.StringPropertyValue(pathProtocol)
 	cfg.LoadBalance = props.BoolPropertyValue(pathLoadBalance)
 	cfg.SlowStart = props.BoolPropertyValue(pathSlowStart)
 	cfg.BulkMaxSize = props.IntPropertyValue(pathBulkMaxSize)
@@ -221,8 +218,6 @@ func FinishConfig(cfg *Config) (*Config, error) {
 	outputConfig = cfg
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
-		// traceability ingestion is https-only
-		outputConfig.Protocol = "https"
 		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
 	}
 

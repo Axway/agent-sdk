@@ -197,7 +197,6 @@ func TestParseConfig(t *testing.T) {
 		"valid full config round trip": {
 			envVars: map[string]string{
 				"TRACEABILITY_HOST":                 testHost,
-				"TRACEABILITY_PROTOCOL":             "https",
 				"TRACEABILITY_COMPRESSIONLEVEL":     "5",
 				"TRACEABILITY_BULKMAXSIZE":          "256",
 				"TRACEABILITY_MAXRETRIES":           "5",
@@ -498,44 +497,4 @@ func TestHTTPTransportRetries(t *testing.T) {
 	assert.Nil(t, publishedMessages)
 
 	SetOutputEventProcessor(nil)
-}
-
-// TestValidateProtocolPort verifies traceability ingestion protocol is forced to https whenever a
-// single entry URL is configured (recognized or not), and left alone otherwise.
-func TestValidateProtocolPort(t *testing.T) {
-	tests := map[string]struct {
-		singleURL        string
-		configuredProto  string
-		expectedProtocol string
-	}{
-		"unrecognized single entry URL overrides the configured protocol": {
-			singleURL:        "https://sl1rd15app0514.pcloud.axway.int:28080",
-			configuredProto:  "http",
-			expectedProtocol: "https",
-		},
-		"recognized single entry URL overrides the configured protocol": {
-			singleURL:        "https://ingestion.platform.axway.com",
-			configuredProto:  "http",
-			expectedProtocol: "https",
-		},
-		"no single entry URL leaves the configured protocol alone": {
-			singleURL:        "",
-			configuredProto:  "http",
-			expectedProtocol: "http",
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			cfg := createCentralCfg(testCentralURL, "v7")
-			cfg.SingleURL = tc.singleURL
-			agent.Initialize(cfg)
-
-			traceCfg = &Config{Protocol: tc.configuredProto}
-			validateProtocolPort()
-
-			assert.Equal(t, tc.expectedProtocol, traceCfg.Protocol)
-		})
-	}
 }

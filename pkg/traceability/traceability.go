@@ -153,7 +153,6 @@ func NewClient(cfg *Config) ([]*Client, error) {
 		return nil, err
 	}
 
-	validateProtocolPort()
 	logger = logger.WithField("config", cfg).WithField("hosts", cfg.Hosts)
 	logger.Tracef("initializing traceability client")
 
@@ -183,14 +182,6 @@ func NewClient(cfg *Config) ([]*Client, error) {
 	}
 
 	return clients, nil
-}
-
-// validateProtocolPort - sets the protocol for single entry point hosts
-func validateProtocolPort() {
-	if agent.GetCentralConfig().GetSingleURL() != "" {
-		// traceability ingestion is https-only
-		traceCfg.Protocol = "https"
-	}
 }
 
 // makeHTTPClient replaces libbeat's outputs.SuccessNet/outputs.NewFailoverClient/
