@@ -335,34 +335,3 @@ func TestRegionalTraceabilityDefaults(t *testing.T) {
 		})
 	}
 }
-
-// TestGetTraceabilityProtocolUnrecognizedSingleURL guards against a regression where an
-// unrecognized single entry URL (e.g. a customer's own static IP/proxy) returned an empty
-// protocol instead of defaulting to https, the only protocol traceability ingestion supports.
-func TestGetTraceabilityProtocolUnrecognizedSingleURL(t *testing.T) {
-	tests := map[string]struct {
-		singleURL    string
-		expectedProt string
-	}{
-		"unrecognized single entry URL defaults to https": {
-			singleURL:    "https://sl1rd15app0514.pcloud.axway.int:28080",
-			expectedProt: "https",
-		},
-		"recognized single entry URL returns its region's protocol": {
-			singleURL:    testUSSingleURL,
-			expectedProt: "https",
-		},
-		"no single entry URL configured returns empty": {
-			singleURL:    "",
-			expectedProt: "",
-		},
-	}
-
-	for name, tc := range tests {
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			cfg := &CentralConfiguration{SingleURL: tc.singleURL}
-			assert.Equal(t, tc.expectedProt, cfg.GetTraceabilityProtocol())
-		})
-	}
-}

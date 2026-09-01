@@ -1,6 +1,7 @@
 package traceability
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -12,6 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 
 	"github.com/Axway/agent-sdk/pkg/agent"
+	"github.com/Axway/agent-sdk/pkg/api"
 	"github.com/Axway/agent-sdk/pkg/cmd/properties"
 	"github.com/Axway/agent-sdk/pkg/traceability/redaction"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
@@ -219,9 +221,21 @@ func FinishConfig(cfg *Config) (*Config, error) {
 	outputConfig = cfg
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
-		outputConfig.Protocol = agent.GetCentralConfig().GetTraceabilityProtocol()
+		// traceability ingestion is https-only
+		outputConfig.Protocol = "https"
 		outputConfig.Hosts = []string{agent.GetCentralConfig().GetTraceabilityHost()}
 	}
+
+	singleEntryFilter := make([]string, 0)
+	for _, host := range cfg.Hosts {
+		singleEntryFilter = append(singleEntryFilter, fmt.Sprintf("https://%s", host))
+	}
+
+	api.SetConfigAgent(
+		agent.GetUserAgent(),
+		agent.GetCentralConfig().GetSingleURL(),
+		singleEntryFilter,
+	)
 
 	// Setup the redaction regular expressions
 	redaction.SetupGlobalRedaction(outputConfig.Redaction)

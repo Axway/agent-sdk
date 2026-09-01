@@ -182,7 +182,6 @@ type CentralConfig interface {
 	SetTeamID(teamID string)
 	GetURL() string
 	GetTraceabilityHost() string
-	GetTraceabilityProtocol() string
 	GetPlatformURL() string
 	GetAPIServerVersionURL() string
 	GetAPIServerURL() string
@@ -451,8 +450,9 @@ func (c *CentralConfiguration) GetTraceabilityHost() string {
 	return ""
 }
 
-// GetTraceabilityProtocol - Returns the central traceability protocol
-func (c *CentralConfiguration) GetTraceabilityProtocol() string {
+// traceabilityProtocol - returns the traceability ingestion protocol. https-only for a region or
+// a configured single URL, not part of the CentralConfig interface since it's never anything else
+func (c *CentralConfiguration) traceabilityProtocol() string {
 	if c.isRegionSet || c.SingleURL != "" {
 		return "https"
 	}
@@ -1122,7 +1122,7 @@ func (c *CentralConfiguration) setRegionBasedEnvironmentVars() {
 		"CENTRAL_URL":           c.GetURL,
 		"CENTRAL_AUTH_URL":      c.GetAuthConfig().GetTokenURL,
 		"TRACEABILITY_HOST":     c.GetTraceabilityHost,
-		"TRACEABILITY_PROTOCOL": c.GetTraceabilityProtocol,
+		"TRACEABILITY_PROTOCOL": c.traceabilityProtocol,
 		"CENTRAL_PLATFORMURL":   c.GetPlatformURL,
 		"CENTRAL_DEPLOYMENT":    c.GetAPICDeployment,
 	}

@@ -500,18 +500,17 @@ func TestHTTPTransportRetries(t *testing.T) {
 	SetOutputEventProcessor(nil)
 }
 
-// TestValidateProtocolPortUnrecognizedSingleURL guards against a regression where an
-// unrecognized (e.g. customer-configured) single entry URL had its unresolved, empty protocol
-// assigned unconditionally, clobbering an explicitly configured protocol with "".
-func TestValidateProtocolPortUnrecognizedSingleURL(t *testing.T) {
+// TestValidateProtocolPort verifies traceability ingestion protocol is forced to https whenever a
+// single entry URL is configured (recognized or not), and left alone otherwise.
+func TestValidateProtocolPort(t *testing.T) {
 	tests := map[string]struct {
 		singleURL        string
 		configuredProto  string
 		expectedProtocol string
 	}{
-		"unrecognized single entry URL leaves the configured protocol alone": {
+		"unrecognized single entry URL overrides the configured protocol": {
 			singleURL:        "https://sl1rd15app0514.pcloud.axway.int:28080",
-			configuredProto:  "https",
+			configuredProto:  "tcp",
 			expectedProtocol: "https",
 		},
 		"recognized single entry URL overrides the configured protocol": {
@@ -521,8 +520,8 @@ func TestValidateProtocolPortUnrecognizedSingleURL(t *testing.T) {
 		},
 		"no single entry URL leaves the configured protocol alone": {
 			singleURL:        "",
-			configuredProto:  "https",
-			expectedProtocol: "https",
+			configuredProto:  "tcp",
+			expectedProtocol: "tcp",
 		},
 	}
 
