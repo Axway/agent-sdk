@@ -33,11 +33,6 @@ const (
 	Basic       = "http-basic"
 )
 
-// other consts
-const (
-	TeamMapKey = "TeamMap"
-)
-
 // constants for patch request
 const (
 	PatchOpAdd             = "add"
@@ -77,8 +72,6 @@ type Client interface {
 	PublishService(serviceBody *ServiceBody) (*management.APIService, error)
 	DeleteAPIServiceInstance(name string) error
 	DeleteServiceByName(name string) error
-	GetUserEmailAddress(ID string) (string, error)
-	GetUserName(ID string) (string, error)
 	ExecuteAPI(method, url string, queryParam map[string]string, buffer []byte) ([]byte, error)
 	Healthcheck(name string) *hc.Status
 	GetAPIRevisions(query map[string]string, stage string) ([]*management.APIServiceRevision, error)
@@ -90,8 +83,6 @@ type Client interface {
 	GetAPIServiceInstanceByName(name string) (*management.APIServiceInstance, error)
 	GetAPIRevisionByName(name string) (*management.APIServiceRevision, error)
 	GetEnvironment() (*management.Environment, error)
-	GetCentralTeamByName(name string) (*defs.PlatformTeam, error)
-	GetTeam(query map[string]string) ([]defs.PlatformTeam, error)
 	GetAccessControlList(aclName string) (*management.AccessControlList, error)
 	UpdateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
 	CreateAccessControlList(acl *management.AccessControlList) (*management.AccessControlList, error)
@@ -110,6 +101,8 @@ type Client interface {
 	CreateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 	UpdateResource(url string, bts []byte) (*apiv1.ResourceInstance, error)
 
+	GetTeam(id string) (*defs.PlatformTeam, error)
+	GetTeams() ([]defs.PlatformTeam, error)
 	GetEntitlements() (map[string]interface{}, error)
 }
 
@@ -161,11 +154,10 @@ func (c *ServiceClient) initClient(cfg corecfg.CentralConfig) {
 	c.apiClient = coreapi.NewClient(cfg.GetTLSConfig(), cfg.GetProxyURL(),
 		coreapi.WithTimeout(cfg.GetClientTimeout()), coreapi.WithSingleURL())
 
-	err := c.setTeamCache()
+	err := c.setupTeamCache()
 	if err != nil {
 		c.logger.Error(err)
 	}
-
 }
 
 // SetTokenGetter - sets the token getter
@@ -305,18 +297,28 @@ func (c *ServiceClient) checkPlatformHealth() error {
 	return nil
 }
 
-func (c *ServiceClient) setTeamCache() error {
+func (c *ServiceClient) setupTeamCache() error {
 	// passing nil to getTeam will return the full list of teams
-	platformTeams, err := c.GetTeam(make(map[string]string))
+	platformTeams, err := c.GetTeams()
 	if err != nil {
 		return err
 	}
 
-	teamMap := make(map[string]string)
 	for _, team := range platformTeams {
-		teamMap[team.Name] = team.ID
+		c.caches.AddTeam(&team)
 	}
-	return cache.GetCache().Set(TeamMapKey, teamMap)
+
+	// setup the default team ID in the config after team cache has been processed
+	if c.cfg.GetTeamID() == "" {
+		team := c.caches.GetTeamByName(c.cfg.GetTeamName())
+		if team == nil {
+			c.logger.WithField("configuredTeamName", c.cfg.GetTeamName()).Warn("could not get team by name")
+			return nil
+		}
+		c.cfg.SetTeamID(team.ID)
+	}
+
+	return nil
 }
 
 // GetEnvironment get an environment
@@ -373,96 +375,6 @@ func (c *ServiceClient) sendServerRequest(url string, headers, query map[string]
 	}
 }
 
-// GetPlatformUserInfo - request the platform user info
-func (c *ServiceClient) getPlatformUserInfo(id string) (*defs.PlatformUserInfo, error) {
-	headers, err := c.createHeader()
-	if err != nil {
-		return nil, err
-	}
-
-	platformURL := fmt.Sprintf("%s/api/v1/user/%s", c.cfg.GetPlatformURL(), id)
-	c.logger.Tracef("Platform URL being used to get user information %s", platformURL)
-
-	platformUserBytes, reqErr := c.sendServerRequest(platformURL, headers, make(map[string]string, 0))
-	if reqErr != nil {
-		if reqErr.(*errors.AgentError).GetErrorCode() == ErrRequestQuery.GetErrorCode() {
-			return nil, ErrNoAddressFound.FormatError(id)
-		}
-		return nil, reqErr
-	}
-
-	var platformUserInfo defs.PlatformUserInfo
-	err = json.Unmarshal(platformUserBytes, &platformUserInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return &platformUserInfo, nil
-}
-
-// GetUserEmailAddress - request the user email
-func (c *ServiceClient) GetUserEmailAddress(id string) (string, error) {
-
-	platformUserInfo, err := c.getPlatformUserInfo(id)
-	if err != nil {
-		return "", err
-	}
-
-	email := platformUserInfo.Result.Email
-	c.logger.Tracef("Platform user email %s", email)
-
-	return email, nil
-}
-
-// GetUserName - request the user name
-func (c *ServiceClient) GetUserName(id string) (string, error) {
-	platformUserInfo, err := c.getPlatformUserInfo(id)
-	if err != nil {
-		return "", err
-	}
-
-	userName := fmt.Sprintf("%s %s", platformUserInfo.Result.Firstname, platformUserInfo.Result.Lastname)
-
-	c.logger.Tracef("Platform user %s", userName)
-
-	return userName, nil
-}
-
-// GetCentralTeamByName - returns the team based on team name
-func (c *ServiceClient) GetCentralTeamByName(name string) (*defs.PlatformTeam, error) {
-	// Query for the default, if no teamName is given
-	queryParams := map[string]string{}
-
-	if name != "" {
-		queryParams = map[string]string{
-			"query": fmt.Sprintf("name==\"%s\"", name),
-		}
-	}
-
-	platformTeams, err := c.GetTeam(queryParams)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(platformTeams) == 0 {
-		return nil, ErrTeamNotFound.FormatError(name)
-	}
-
-	team := platformTeams[0]
-	if name == "" {
-		// Loop through to find the default team
-		for i, platformTeam := range platformTeams {
-			if platformTeam.Default {
-				// Found the default, set as the team var and break
-				team = platformTeams[i]
-				break
-			}
-		}
-	}
-
-	return &team, nil
-}
-
 // GetEntitlements - returns the entitlements for the organization
 func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 	headers, err := c.createHeader()
@@ -481,15 +393,24 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 		return nil, reqErr
 	}
 
-	var orgEntitlements definitions.OrgEntitlementsResponse
-	err = json.Unmarshal(response, &orgEntitlements)
+	var apiRes definitions.PlatformResponse
+	err = json.Unmarshal(response, &apiRes)
 	if err != nil {
 		return nil, err
 	}
 
+	if !apiRes.Success {
+		return nil, fmt.Errorf("call to get entitlements was not successful")
+	}
+
+	orgEntitlements, ok := apiRes.Result.(definitions.OrgEntitlements)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type in entitlements response")
+	}
+
 	entitlements := make(map[string]interface{})
-	for key := range orgEntitlements.Result.Entitlements {
-		value := orgEntitlements.Result.Entitlements[key]
+	for key := range orgEntitlements.Entitlements {
+		value := orgEntitlements.Entitlements[key]
 		if v, ok := value.(bool); ok && !v {
 			// Skip any entitlements that are false
 			continue
@@ -504,29 +425,74 @@ func (c *ServiceClient) GetEntitlements() (map[string]interface{}, error) {
 	return entitlements, nil
 }
 
-// GetTeam - returns the team ID based on filter
-func (c *ServiceClient) GetTeam(query map[string]string) ([]defs.PlatformTeam, error) {
+// getTeam - call the platform team api for a list of teams or a single team
+func (c *ServiceClient) getTeam(id string) (any, error) {
 	headers, err := c.createHeader()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the teams using Client registry service instead of from platform.
-	// Platform teams API require access and DOSA account will not have the access
-	platformURL := fmt.Sprintf("%s/api/v1/platformTeams", c.cfg.GetURL())
+	// set the fields we want from the team api
+	queryParams := map[string]string{"fields": "guid,name,tags,default"}
 
-	response, reqErr := c.sendServerRequest(platformURL, headers, query)
+	// get all teams, if id is supplied get single team
+	url := fmt.Sprintf("%s/api/v1/team", c.cfg.GetPlatformURL())
+	if id != "" {
+		url = fmt.Sprintf("%s/api/v1/team/%s", c.cfg.GetPlatformURL(), id)
+	}
+
+	response, reqErr := c.sendServerRequest(url, headers, queryParams)
 	if reqErr != nil {
 		return nil, reqErr
 	}
 
-	var platformTeams []defs.PlatformTeam
-	err = json.Unmarshal(response, &platformTeams)
+	var apiRes defs.PlatformResponse
+	err = json.Unmarshal(response, &apiRes)
 	if err != nil {
 		return nil, err
 	}
 
-	return platformTeams, nil
+	teams, ok := apiRes.Result.([]defs.PlatformTeam)
+	if ok {
+		return teams, nil
+	}
+
+	team, ok := apiRes.Result.(defs.PlatformTeam)
+	if ok {
+		return team, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
+}
+
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeams() ([]defs.PlatformTeam, error) {
+	res, err := c.getTeam("")
+	if err != nil {
+		return nil, err
+	}
+
+	teams, ok := res.([]defs.PlatformTeam)
+	if ok {
+		return teams, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
+}
+
+// GetTeam - returns the team ID based on filter
+func (c *ServiceClient) GetTeam(id string) (*defs.PlatformTeam, error) {
+	res, err := c.getTeam(id)
+	if err != nil {
+		return nil, err
+	}
+
+	team, ok := res.(defs.PlatformTeam)
+	if ok {
+		return &team, nil
+	}
+
+	return nil, fmt.Errorf("unexpected result type in team response")
 }
 
 // GetAccessControlList -

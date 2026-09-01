@@ -102,8 +102,12 @@ type mockApicClient struct {
 	triggerValue bool
 }
 
-func (m *mockApicClient) GetTeam(_ map[string]string) ([]definitions.PlatformTeam, error) {
+func (m *mockApicClient) GetTeams() ([]definitions.PlatformTeam, error) {
 	return m.teams, nil
+}
+
+func (m *mockApicClient) GetTeam(id string) (*definitions.PlatformTeam, error) {
+	return nil, nil
 }
 
 func (m *mockApicClient) CreateSubResource(_ v1.ResourceMeta, sub map[string]interface{}) error {
