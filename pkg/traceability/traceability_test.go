@@ -510,18 +510,18 @@ func TestValidateProtocolPort(t *testing.T) {
 	}{
 		"unrecognized single entry URL overrides the configured protocol": {
 			singleURL:        "https://sl1rd15app0514.pcloud.axway.int:28080",
-			configuredProto:  "tcp",
+			configuredProto:  "http",
 			expectedProtocol: "https",
 		},
 		"recognized single entry URL overrides the configured protocol": {
 			singleURL:        "https://ingestion.platform.axway.com",
-			configuredProto:  "tcp",
+			configuredProto:  "http",
 			expectedProtocol: "https",
 		},
 		"no single entry URL leaves the configured protocol alone": {
 			singleURL:        "",
-			configuredProto:  "tcp",
-			expectedProtocol: "tcp",
+			configuredProto:  "http",
+			expectedProtocol: "http",
 		},
 	}
 
