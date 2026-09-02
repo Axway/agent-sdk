@@ -436,15 +436,6 @@ func initEnvResources(cfg config.CentralConfig, client apic.Client) error {
 	cfg.GetCredentialConfig().SetShouldDeprovisionExpired(env.Policies.Credentials.Expiry.Action == "deprovision")
 	cfg.GetCredentialConfig().SetExpirationDays(int(env.Policies.Credentials.Expiry.Period))
 
-	if cfg.GetTeamID() == "" {
-		team, err := client.GetCentralTeamByName(cfg.GetTeamName())
-		if err != nil {
-			return err
-		}
-
-		cfg.SetTeamID(team.ID)
-	}
-
 	return nil
 }
 
@@ -548,7 +539,6 @@ func startTeamACLCache() {
 	if agent.cfg.GetAgentType() == config.DiscoveryAgent {
 		registerAccessControlListHandler()
 	}
-	handler.RefreshTeamCache(agent.apicClient, agent.cacheManager)
 }
 
 func isRunningInDockerContainer() bool {
@@ -861,8 +851,8 @@ func newHandlers() map[string][]handler.Handler {
 	handlers[management.DiscoveryAgentGVK().Kind] = append(handlers[management.DiscoveryAgentGVK().Kind], agentResHandler)
 	handlers[management.TraceabilityAgentGVK().Kind] = append(handlers[management.TraceabilityAgentGVK().Kind], agentResHandler)
 	handlers[management.ComplianceAgentGVK().Kind] = append(handlers[management.ComplianceAgentGVK().Kind], agentResHandler)
-	for kind, proxyHandler := range agent.proxyResourceHandler.GetHandlers() {
-		handlers[kind] = append(handlers[kind], proxyHandler)
+	for kind, proxyHandlers := range agent.proxyResourceHandler.GetHandlers() {
+		handlers[kind] = append(handlers[kind], proxyHandlers...)
 	}
 
 	return handlers

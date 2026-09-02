@@ -68,14 +68,28 @@ type EventListener struct {
 	seqTracker                 *sequenceTracker
 }
 
+type eventResourceWrapper struct {
+	once  sync.Once
+	ri    *apiv1.ResourceInstance
+	fetch func(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error)
+	err   error
+}
+
+func (r *eventResourceWrapper) get(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error) {
+	r.once.Do(func() {
+		r.ri, r.err = r.fetch(event, apiServerFields)
+	})
+	return r.ri, r.err
+}
+
 type handlerData struct {
-	event            *proto.Event
-	ctx              context.Context
-	handler          handler.Handler
-	logger           log.FieldLogger
-	apiServerFields  []string
-	getEventResource func(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error)
-	onComplete       func()
+	event           *proto.Event
+	ctx             context.Context
+	handler         handler.Handler
+	logger          log.FieldLogger
+	apiServerFields []string
+	eventResource   *eventResourceWrapper
+	onComplete      func()
 }
 
 // sequenceTracker tracks, per dispatched event, how many handlerData items are still outstanding,
@@ -273,7 +287,7 @@ func worker(jobs <-chan handlerData) {
 }
 
 func workerProcess(handlerData handlerData) {
-	ri, err := handlerData.getEventResource(handlerData.event, handlerData.apiServerFields)
+	ri, err := handlerData.eventResource.get(handlerData.event, handlerData.apiServerFields)
 	if err != nil {
 		handlerData.logger.WithError(err).Error("failed to get event resource")
 		return
@@ -323,15 +337,20 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		em.advanceSequence(watermark)
 	}
 
+	// shared across every handler dispatched below
+	eventResource := &eventResourceWrapper{
+		fetch: em.getEventResource,
+	}
+
 	for _, h := range toDispatch {
 		select {
 		case jobs <- handlerData{
-			event:            event,
-			ctx:              ctx,
-			handler:          h,
-			apiServerFields:  apiServerFields,
-			getEventResource: em.getEventResource,
-			logger:           logger,
+			event:           event,
+			ctx:             ctx,
+			handler:         h,
+			apiServerFields: apiServerFields,
+			eventResource:   eventResource,
+			logger:          logger,
 			onComplete: func() {
 				if watermark, advanced := em.seqTracker.complete(seq); advanced {
 					em.advanceSequence(watermark)

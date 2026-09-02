@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Axway/agent-sdk/pkg/agent/cache"
 	"github.com/Axway/agent-sdk/pkg/apic"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
@@ -22,8 +23,16 @@ const (
 	testAuthTokenResponse    = `{"access_token":"somevalue","expires_in": 12235677}`
 	testEnvironmentsV7URL    = "/apis/management/v1/environments/v7"
 	testDiscoveryAgentsV7URL = testEnvironmentsV7URL + "/discoveryagents/"
-	testPlatformTeamsURL     = "/api/v1/platformTeams"
+	testPlatformTeamsURL     = "/api/v1/team"
 )
+
+func marshalPlatformTeamsResponse(teams []definitions.PlatformTeam) []byte {
+	buf, _ := json.Marshal(map[string]interface{}{
+		"success": true,
+		"result":  teams,
+	})
+	return buf
+}
 
 func resetResources() {
 	agent.agentResourceManager = nil
@@ -185,8 +194,7 @@ func TestAgentInitialize(t *testing.T) {
 		}
 
 		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
-			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
+			resp.Write(marshalPlatformTeamsResponse(teams))
 			return
 		}
 	}))
@@ -263,7 +271,7 @@ func TestAgentEntitlements(t *testing.T) {
 	const daName = "discovery"
 
 	teams := []definitions.PlatformTeam{}
-	entitlements := definitions.OrgEntitlementsResponse{
+	entitlements := definitions.PlatformResponse{
 		Success: true,
 		Result: definitions.OrgEntitlements{
 			Entitlements: map[string]interface{}{
@@ -305,8 +313,7 @@ func TestAgentEntitlements(t *testing.T) {
 		}
 
 		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
-			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
+			resp.Write(marshalPlatformTeamsResponse(teams))
 			return
 		}
 
@@ -371,8 +378,7 @@ func TestInitEnvironment(t *testing.T) {
 		}
 
 		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
-			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
+			resp.Write(marshalPlatformTeamsResponse(teams))
 			return
 		}
 	}))
@@ -381,7 +387,10 @@ func TestInitEnvironment(t *testing.T) {
 
 	cfg := createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.GenericService
+	cfg.TeamName = teams[0].Name
 	agent.cfg = cfg
+	agent.cacheManager = cache.NewAgentCacheManager(cfg, false)
+	agent.cacheManager.AddTeam(&teams[0])
 	initializeTokenRequester(agent.cfg)
 	apiClient := apic.New(agent.cfg, agent.tokenRequester, agent.cacheManager)
 	// Test with no agent name - config to be validate successfully as no calls made to get agent and dataplane resource
@@ -392,12 +401,14 @@ func TestInitEnvironment(t *testing.T) {
 
 	cfg = createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.DiscoveryAgent
+	cfg.TeamName = teams[0].Name
 	agent.cfg = cfg
 	err = initEnvResources(agent.cfg, apiClient)
 	assert.Nil(t, err)
 
 	cfg = createCentralCfg(s.URL, "v7")
 	cfg.AgentType = config.TraceabilityAgent
+	cfg.TeamName = teams[0].Name
 	agent.cfg = cfg
 	err = initEnvResources(agent.cfg, apiClient)
 	assert.Nil(t, err)
@@ -456,7 +467,7 @@ func TestInitEnvResourcesUnmanagedEnvironment(t *testing.T) {
 					return
 				}
 				if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
-					resp.Write([]byte("[]"))
+					resp.Write(marshalPlatformTeamsResponse(nil))
 					return
 				}
 			}))
@@ -525,8 +536,7 @@ func TestAgentConfigOverride(t *testing.T) {
 		}
 
 		if strings.Contains(req.RequestURI, testPlatformTeamsURL) {
-			buf, _ := json.Marshal(teams)
-			resp.Write(buf)
+			resp.Write(marshalPlatformTeamsResponse(teams))
 			return
 		}
 	}))
@@ -577,6 +587,30 @@ func TestAgentAgentFeaturesDisabled(t *testing.T) {
 
 	// Assert no api client
 	assert.Nil(t, agent.apicClient)
+}
+
+// TestNewHandlers_multipleProxyHandlersForSameKind proves that registering more than one resource
+// event handler for the same kind (e.g. multiple RegisterResourceEventHandler calls, as happens
+// when more than one dataplane feature targets the same kind) dispatches all of them, rather than
+// silently keeping only the last one registered.
+func TestNewHandlers_multipleProxyHandlersForSameKind(t *testing.T) {
+	cfg := createCentralCfg("http://test", "v7")
+	resetResources()
+	err := Initialize(cfg)
+	assert.NoError(t, err)
+	defer resetResources()
+
+	const kind = "CustomTestKind"
+	h1 := &mockHandler{}
+	h2 := &mockHandler{}
+	RegisterResourceEventHandler(kind, h1)
+	RegisterResourceEventHandler(kind, h2)
+	defer UnregisterResourceEventHandler(kind)
+
+	got := newHandlers()[kind]
+	assert.Len(t, got, 2, "both handlers registered for the same kind must be dispatched, not just the last one")
+	assert.Same(t, h1, got[0])
+	assert.Same(t, h2, got[1])
 }
 
 func assertResource(t *testing.T, res, expectedRes *v1.ResourceInstance) {

@@ -66,70 +66,6 @@ func TestMapTagsToArray(t *testing.T) {
 	assert.True(t, arrContains(result, "bar"))
 }
 
-func TestGetUserEmailAddress(t *testing.T) {
-	svcClient, mockHTTPClient := GetTestServiceClient()
-
-	cfg := GetTestServiceClientCentralConfiguration(svcClient)
-	cfg.Environment = "Environment"
-	cfg.PlatformURL = "http://foo.bar:4080"
-
-	// Test DiscoveryAgent, PublishToEnvironment
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/userinfo.json",
-			RespCode: http.StatusOK,
-		},
-	})
-
-	addr, err := svcClient.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99f")
-	assert.Nil(t, err)
-	assert.Equal(t, "joe@axway.com", addr)
-
-	// test a failure
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{FileName: "./testdata/userinfoerror.json",
-			RespCode:  http.StatusNotFound,
-			ErrString: "Resource Not Found",
-		},
-	})
-
-	addr, err = svcClient.GetUserEmailAddress("b0433b7f-ac38-4d29-8a64-cf645c99b99g")
-	assert.NotNil(t, err)
-	assert.Equal(t, "", addr)
-}
-
-func TestGetUserName(t *testing.T) {
-	svcClient, mockHTTPClient := GetTestServiceClient()
-
-	cfg := GetTestServiceClientCentralConfiguration(svcClient)
-	cfg.Environment = "Environment"
-	cfg.PlatformURL = "http://foo.bar:4080"
-
-	// Test DiscoveryAgent, PublishToEnvironment
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{
-			FileName: "./testdata/userinfo.json",
-			RespCode: http.StatusOK,
-		},
-	})
-
-	userName, err := svcClient.GetUserName("b0433b7f-ac38-4d29-8a64-cf645c99b99f")
-	assert.Nil(t, err)
-	assert.Equal(t, "Dale Feldick", userName)
-
-	// test a failure
-	mockHTTPClient.SetResponses([]api.MockResponse{
-		{FileName: "./testdata/userinfoerror.json",
-			RespCode:  http.StatusNotFound,
-			ErrString: "Resource Not Found",
-		},
-	})
-
-	userName, err = svcClient.GetUserName("b0433b7f-ac38-4d29-8a64-cf645c99b99g")
-	assert.NotNil(t, err)
-	assert.Equal(t, "", userName)
-}
-
 func TestHealthCheck(t *testing.T) {
 	svcClient, mockHTTPClient := GetTestServiceClient()
 	requester := svcClient.tokenRequester
@@ -465,6 +401,113 @@ func TestPatchRequest(t *testing.T) {
 					assert.True(t, buildObjectTreePatchFound)
 				}
 			}
+		})
+	}
+}
+
+func TestGetTeams(t *testing.T) {
+	tests := []struct {
+		name        string
+		respData    string
+		respCode    int
+		expectErr   bool
+		expectTeams []defs.PlatformTeam
+	}{
+		{
+			name:     "returns the list of teams",
+			respCode: http.StatusOK,
+			respData: `{
+				"success": true,
+				"result": [
+					{"guid": "1", "name": "team1", "tags": ["a"], "default": true},
+					{"guid": "2", "name": "team2", "tags": [], "default": false}
+				]
+			}`,
+			expectTeams: []defs.PlatformTeam{
+				{ID: "1", Name: "team1", Tags: []string{"a"}, Default: true},
+				{ID: "2", Name: "team2", Tags: []string{}, Default: false},
+			},
+		},
+		{
+			name:      "returns an error when the result is not an array of teams",
+			respCode:  http.StatusOK,
+			respData:  `{"success": true, "result": {"guid": "1", "name": "team1", "tags": [], "default": true}}`,
+			expectErr: true,
+		},
+		{
+			name:      "returns an error on a non-200 response",
+			respCode:  http.StatusInternalServerError,
+			respData:  `{"success": false}`,
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			svcClient, mockHTTPClient := GetTestServiceClient()
+			mockHTTPClient.SetResponses([]api.MockResponse{
+				{RespData: tc.respData, RespCode: tc.respCode},
+			})
+
+			teams, err := svcClient.GetTeams()
+			if tc.expectErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectTeams, teams)
+		})
+	}
+}
+
+func TestGetTeam(t *testing.T) {
+	tests := []struct {
+		name       string
+		id         string
+		respData   string
+		respCode   int
+		expectErr  bool
+		expectTeam *defs.PlatformTeam
+	}{
+		{
+			name:     "returns a single team",
+			id:       "1",
+			respCode: http.StatusOK,
+			respData: `{"success": true, "result": {"guid": "1", "name": "team1", "tags": ["a"], "default": true}}`,
+			expectTeam: &defs.PlatformTeam{
+				ID: "1", Name: "team1", Tags: []string{"a"}, Default: true,
+			},
+		},
+		{
+			name:      "returns an error when the result is not a single team",
+			id:        "1",
+			respCode:  http.StatusOK,
+			respData:  `{"success": true, "result": [{"guid": "1", "name": "team1", "tags": [], "default": true}]}`,
+			expectErr: true,
+		},
+		{
+			name:      "returns an error on a non-200 response",
+			id:        "1",
+			respCode:  http.StatusNotFound,
+			respData:  `{"success": false}`,
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			svcClient, mockHTTPClient := GetTestServiceClient()
+			mockHTTPClient.SetResponses([]api.MockResponse{
+				{RespData: tc.respData, RespCode: tc.respCode},
+			})
+
+			team, err := svcClient.GetTeam(tc.id)
+			if tc.expectErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectTeam, team)
 		})
 	}
 }
