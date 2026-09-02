@@ -18,6 +18,7 @@ import (
 // MockHTTPClient so the caller can use it directly if needed, as it is not available directly from ServiceClient in other packages
 func GetTestServiceClient() (*ServiceClient, *api.MockHTTPClient) {
 	webhook := &corecfg.WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "http://foo.bar",
 		Headers: "Header=contentType,Value=application/json",
 		Secret:  "",

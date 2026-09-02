@@ -7,11 +7,14 @@ import (
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/provisioningwebhook"
+	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
@@ -27,11 +30,13 @@ type teamFetcher interface {
 type managedApplication struct {
 	idpRegistry oauth.IdPRegistry
 	marketplaceHandler
-	prov       prov.ApplicationProvisioner
-	cache      agentcache.Manager
-	client     client
-	teamClient teamFetcher
-	retryCount int
+	prov          prov.ApplicationProvisioner
+	cache         agentcache.Manager
+	client        client
+	teamClient    teamFetcher
+	retryCount    int
+	webhookCfg    config.ProvisioningWebhookEndpointConfig
+	webhookClient api.Client
 }
 
 func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
@@ -43,6 +48,15 @@ func WithManagedAppRetryCount(rc int) func(c *managedApplication) {
 func WithManagedAppIDPRegistry(registry oauth.IdPRegistry) func(c *managedApplication) {
 	return func(c *managedApplication) {
 		c.idpRegistry = registry
+	}
+}
+
+// WithManagedAppProvisioningWebhook configures the webhook the handler calls instead of its own
+// registered Provisioning implementation, when cfg.IsConfigured()
+func WithManagedAppProvisioningWebhook(cfg config.ProvisioningWebhookEndpointConfig, client api.Client) func(c *managedApplication) {
+	return func(c *managedApplication) {
+		c.webhookCfg = cfg
+		c.webhookClient = client
 	}
 }
 
@@ -63,6 +77,9 @@ func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentc
 
 func (h *managedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
+		return true
+	}
 	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
 	}
@@ -79,6 +96,14 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 	err := app.FromInstance(resource)
 	if err != nil {
 		log.WithError(err).Error("could not handle application request")
+		return nil
+	}
+
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
+		if mirrorWebhookDetails(app) {
+			return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		}
 		return nil
 	}
 
@@ -114,6 +139,16 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
 	log := getLoggerFromContext(ctx)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		if webhookDispatchedFor(app, webhookOperationProvision) {
+			return nil
+		}
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationProvision, pma))
+		markWebhookDispatched(app, webhookOperationProvision)
+		return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+	}
+
 	status := h.provision(pma)
 	app.Status = prov.NewStatusReason(status)
 
@@ -171,12 +206,25 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(app, webhookOperationDeprovision) {
+		return
+	}
+
 	if err := cleanupManagedApplicationIDPClients(ctx, log, h.idpRegistry, app); err != nil {
 		log.WithError(err).Error("error cleaning up managed application IDP clients")
 		h.onError(app, err)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 		return
 	}
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationDeprovision, pma))
+		markWebhookDispatched(app, webhookOperationDeprovision)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		return
+	}
+
 	status := h.prov.ApplicationRequestDeprovision(pma)
 	if status.GetStatus() == prov.Success {
 		ri, _ := app.AsInstance()

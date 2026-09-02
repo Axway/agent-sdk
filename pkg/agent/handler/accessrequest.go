@@ -7,10 +7,13 @@ import (
 	"time"
 
 	agentcache "github.com/Axway/agent-sdk/pkg/agent/cache"
+	"github.com/Axway/agent-sdk/pkg/agent/provisioningwebhook"
+	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -35,11 +38,22 @@ type accessRequestHandler struct {
 	encryptSchema     encryptSchemaFunc
 	customUnitHandler customUnitHandler
 	retryCount        int
+	webhookCfg        config.ProvisioningWebhookEndpointConfig
+	webhookClient     api.Client
 }
 
 func WithAccessRequestRetryCount(rc int) func(c *accessRequestHandler) {
 	return func(c *accessRequestHandler) {
 		c.retryCount = rc
+	}
+}
+
+// WithAccessRequestProvisioningWebhook configures the webhook the handler calls instead of its own
+// registered Provisioning implementation, when cfg.IsConfigured()
+func WithAccessRequestProvisioningWebhook(cfg config.ProvisioningWebhookEndpointConfig, client api.Client) func(c *accessRequestHandler) {
+	return func(c *accessRequestHandler) {
+		c.webhookCfg = cfg
+		c.webhookClient = client
 	}
 }
 
@@ -61,6 +75,9 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XAgentDetails {
+		return true
+	}
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
 		return true
 	}
 	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
@@ -100,6 +117,17 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 			util.SetAgentDetails(existing, newDetails)
 		}
 		h.cache.AddAccessRequest(existing)
+		return nil
+	}
+
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
+		ar := &management.AccessRequest{}
+		if err := ar.FromInstance(resource); err != nil {
+			return nil
+		}
+		if mirrorWebhookDetails(ar) {
+			return h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+		}
 		return nil
 	}
 
@@ -171,6 +199,11 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 
 func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
 	log := getLoggerFromContext(ctx)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationProvision) {
+		return ar
+	}
+
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
@@ -200,6 +233,12 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	}
 
 	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationProvision, *req))
+		markWebhookDispatched(ar, webhookOperationProvision)
+		return ar
+	}
 
 	data := map[string]interface{}{}
 	status, accessData := h.provision(req)
@@ -292,6 +331,10 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessR
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
 	log := getLoggerFromContext(ctx)
 
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationDeprovision) {
+		return
+	}
+
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
@@ -309,8 +352,14 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 		return
 	}
 
-	status := h.prov.AccessRequestDeprovision(req)
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationDeprovision, *req))
+		markWebhookDispatched(ar, webhookOperationDeprovision)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+		return
+	}
 
+	status := h.prov.AccessRequestDeprovision(req)
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
 		h.cache.DeleteAccessRequest(ri.Metadata.ID)

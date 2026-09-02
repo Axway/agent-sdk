@@ -8,12 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Axway/agent-sdk/pkg/agent/provisioningwebhook"
+	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning/idp"
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -38,11 +41,22 @@ type credentials struct {
 	encryptSchema       encryptSchemaFunc
 	idpProviderRegistry oauth.IdPRegistry
 	retryCount          int
+	webhookCfg          config.ProvisioningWebhookEndpointConfig
+	webhookClient       api.Client
 }
 
 func WithCredentialRetryCount(rc int) func(c *credentials) {
 	return func(c *credentials) {
 		c.retryCount = rc
+	}
+}
+
+// WithCredentialProvisioningWebhook configures the webhook the handler calls instead of its own
+// registered Provisioning implementation, when cfg.IsConfigured()
+func WithCredentialProvisioningWebhook(cfg config.ProvisioningWebhookEndpointConfig, client api.Client) func(c *credentials) {
+	return func(c *credentials) {
+		c.webhookCfg = cfg
+		c.webhookClient = client
 	}
 }
 
@@ -66,6 +80,9 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 
 func (h *credentials) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
+		return true
+	}
 	if action == proto.Event_DELETED || h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
 	}
@@ -81,6 +98,14 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	err := cr.FromInstance(resource)
 	if err != nil {
 		logger.WithError(err).Error("could not handle credential request")
+		return nil
+	}
+
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
+		if mirrorWebhookDetails(cr) {
+			return h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
+		}
 		return nil
 	}
 
@@ -199,6 +224,11 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationDeprovision) {
+		return
+	}
+
 	crd, err := h.getCRD(ctx, cred)
 	if err != nil {
 		logger.WithError(err).Error("error getting credential request definition")
@@ -216,6 +246,13 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 	if err != nil {
 		logger.WithError(err).Error("error preparing credential request")
 		h.onError(ctx, cred, err)
+		return
+	}
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationDeprovision, provCreds))
+		markWebhookDispatched(cred, webhookOperationDeprovision)
+		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
 		return
 	}
 
@@ -272,6 +309,11 @@ func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCred
 func (h *credentials) onPending(ctx context.Context, cred *management.Credential) *management.Credential {
 	// check the application status
 	logger := getLoggerFromContext(ctx)
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationProvision) {
+		return cred
+	}
+
 	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
 	if shouldReturn {
 		return cred
@@ -287,6 +329,12 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	if err := h.registerIDPClient(cred, provCreds, app, logger); err != nil {
 		logger.WithError(err).Error("error registering IDP client")
 		h.onError(ctx, cred, err)
+		return cred
+	}
+
+	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationProvision, provCreds))
+		markWebhookDispatched(cred, webhookOperationProvision)
 		return cred
 	}
 
