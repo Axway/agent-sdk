@@ -168,7 +168,8 @@ func ParseConfig(props properties.Properties) (*Config, error) {
 	if props.StringPropertyValue(pathPort) != "" {
 		log.Warn("output.traceability.port is no longer supported; use output.traceability.hosts")
 	}
-
+	// Only TA other than v7 will be calling this, parsing should be without alias key prefix
+	properties.SetAliasKeyPrefix("")
 	cfg.Hosts = props.StringSlicePropertyValue(pathHost)
 	cfg.LoadBalance = props.BoolPropertyValue(pathLoadBalance)
 	cfg.SlowStart = props.BoolPropertyValue(pathSlowStart)
