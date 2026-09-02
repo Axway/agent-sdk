@@ -232,6 +232,7 @@ type CentralConfig interface {
 	SetManagedEnvironments([]string)
 	GetManagedEnvironments() []string
 	GetProvisioningRetryCount() int
+	GetProvisioningWebhookConfig() ProvisioningWebhookConfig
 	IsInstanceValidationEnabled() bool
 	GetRootTagsToStrip() []string
 	GetRegularEventWorkerCount() int
@@ -245,41 +246,42 @@ type CentralConfiguration struct {
 	IConfigValidator
 	AgentType                 AgentType
 	RegionSettings            regionalSettings
-	Region                    Region                `config:"region"`
-	TenantID                  string                `config:"organizationID"`
-	TeamName                  string                `config:"team"`
-	APICDeployment            string                `config:"deployment"`
-	Environment               string                `config:"environment"`
-	EnvironmentID             string                `config:"environmentID"`
-	AgentName                 string                `config:"agentName"`
-	URL                       string                `config:"url"`
-	SingleURL                 string                `config:"platformSingleURL"`
-	PlatformURL               string                `config:"platformURL"`
-	APIServerVersion          string                `config:"apiServerVersion"`
-	TagsToPublish             string                `config:"additionalTags"`
-	AppendEnvironmentToTitle  bool                  `config:"appendEnvironmentToTitle"`
-	MigrationSettings         MigrationConfig       `config:"migration"`
-	Auth                      AuthConfig            `config:"auth"`
-	TLS                       TLSConfig             `config:"ssl"`
-	PollInterval              time.Duration         `config:"pollInterval"`
-	ReportActivityFrequency   time.Duration         `config:"reportActivityFrequency"`
-	ClientTimeout             time.Duration         `config:"clientTimeout"`
-	PageSize                  int                   `config:"pageSize"`
-	APIClientWorkers          int                   `config:"apiClientWorkers"`
-	APIValidationCronSchedule string                `config:"apiValidationCronSchedule"`
-	APIServiceRevisionPattern string                `config:"apiServiceRevisionPattern"`
-	ProxyURL                  string                `config:"proxyUrl"`
-	UsageReporting            UsageReportingConfig  `config:"usageReporting"`
-	MetricReporting           MetricReportingConfig `config:"metricReporting"`
-	ErrorSamplingEnabled      bool                  `config:"errorSamplingEnabled"`
-	GRPCCfg                   GRPCConfig            `config:"grpc"`
-	CacheStoragePath          string                `config:"cacheStoragePath"`
-	CacheStorageInterval      time.Duration         `config:"cacheStorageInterval"`
-	CredentialConfig          CredentialConfig      `config:"credential"`
-	ProvisioningRetryCount    int                   `config:"provisioningRetryCount"`
-	InstanceValidatorEnabled  bool                  `config:"instanceValidatorEnabled"`
-	JobExecutionTimeout       time.Duration         `config:"jobTimeout"`
-	RootTagsToStrip           []string              `config:"rootTagsToStrip"`
+	Region                    Region                    `config:"region"`
+	TenantID                  string                    `config:"organizationID"`
+	TeamName                  string                    `config:"team"`
+	APICDeployment            string                    `config:"deployment"`
+	Environment               string                    `config:"environment"`
+	EnvironmentID             string                    `config:"environmentID"`
+	AgentName                 string                    `config:"agentName"`
+	URL                       string                    `config:"url"`
+	SingleURL                 string                    `config:"platformSingleURL"`
+	PlatformURL               string                    `config:"platformURL"`
+	APIServerVersion          string                    `config:"apiServerVersion"`
+	TagsToPublish             string                    `config:"additionalTags"`
+	AppendEnvironmentToTitle  bool                      `config:"appendEnvironmentToTitle"`
+	MigrationSettings         MigrationConfig           `config:"migration"`
+	Auth                      AuthConfig                `config:"auth"`
+	TLS                       TLSConfig                 `config:"ssl"`
+	PollInterval              time.Duration             `config:"pollInterval"`
+	ReportActivityFrequency   time.Duration             `config:"reportActivityFrequency"`
+	ClientTimeout             time.Duration             `config:"clientTimeout"`
+	PageSize                  int                       `config:"pageSize"`
+	APIClientWorkers          int                       `config:"apiClientWorkers"`
+	APIValidationCronSchedule string                    `config:"apiValidationCronSchedule"`
+	APIServiceRevisionPattern string                    `config:"apiServiceRevisionPattern"`
+	ProxyURL                  string                    `config:"proxyUrl"`
+	UsageReporting            UsageReportingConfig      `config:"usageReporting"`
+	MetricReporting           MetricReportingConfig     `config:"metricReporting"`
+	ErrorSamplingEnabled      bool                      `config:"errorSamplingEnabled"`
+	GRPCCfg                   GRPCConfig                `config:"grpc"`
+	CacheStoragePath          string                    `config:"cacheStoragePath"`
+	CacheStorageInterval      time.Duration             `config:"cacheStorageInterval"`
+	CredentialConfig          CredentialConfig          `config:"credential"`
+	ProvisioningRetryCount    int                       `config:"provisioningRetryCount"`
+	ProvisioningWebhook       ProvisioningWebhookConfig `config:"provisioningWebhook"`
+	InstanceValidatorEnabled  bool                      `config:"instanceValidatorEnabled"`
+	JobExecutionTimeout       time.Duration             `config:"jobTimeout"`
+	RootTagsToStrip           []string                  `config:"rootTagsToStrip"`
 
 	RegularEventWorkerCount      int `config:"regularEventWorkerCount"`
 	ProvisioningEventWorkerCount int `config:"provisioningEventWorkerCount"`
@@ -331,8 +333,9 @@ func NewCentralConfig(agentType AgentType) CentralConfig {
 		GRPCCfg: GRPCConfig{
 			Enabled: true,
 		},
-		MigrationSettings: newMigrationConfig(),
-		CredentialConfig:  newCredentialConfig(),
+		MigrationSettings:   newMigrationConfig(),
+		CredentialConfig:    newCredentialConfig(),
+		ProvisioningWebhook: newProvisioningWebhookConfig(),
 	}
 }
 
@@ -730,6 +733,11 @@ func (c *CentralConfiguration) GetProvisioningRetryCount() int {
 	return c.ProvisioningRetryCount
 }
 
+// GetProvisioningWebhookConfig - Returns the on-prem provisioning webhook config
+func (c *CentralConfiguration) GetProvisioningWebhookConfig() ProvisioningWebhookConfig {
+	return c.ProvisioningWebhook
+}
+
 func (c *CentralConfiguration) IsInstanceValidationEnabled() bool {
 	return c.InstanceValidatorEnabled
 }
@@ -814,6 +822,12 @@ func (c *CentralConfiguration) ValidateCfg() (err error) {
 			}
 			c.validateConfig()
 			c.Auth.validate()
+
+			if c.ProvisioningWebhook != nil {
+				if err := c.ProvisioningWebhook.ValidateConfig(); err != nil {
+					exception.Throw(err)
+				}
+			}
 
 			// Check that platform service account is used with market place provisioning
 			if strings.HasPrefix(c.Auth.GetClientID(), "DOSA_") {
@@ -1002,6 +1016,7 @@ func AddCentralConfigProperties(props properties.Properties, agentType AgentType
 		props.AddStringProperty(pathAdditionalTags, "", "Additional Tags to Add to discovered APIs when publishing to Amplify Central")
 		props.AddBoolProperty(pathAppendEnvironmentToTitle, true, "When true API titles and descriptions will be appended with environment name")
 		props.AddIntProperty(pathProvisioningRetryCount, 0, "The number of retries, in case it fails, for any provisioning event", properties.WithUpperLimitInt(3))
+		addProvisioningWebhookConfigProperties(props)
 		AddMigrationConfigProperties(props)
 	}
 }
@@ -1039,6 +1054,7 @@ func ParseCentralConfig(props properties.Properties, agentType AgentType) (Centr
 		TeamName:                  props.StringPropertyValue(pathTeam),
 		AgentName:                 props.StringPropertyValue(pathAgentName),
 		ProvisioningRetryCount:    props.IntPropertyValue(pathProvisioningRetryCount),
+		ProvisioningWebhook:       parseProvisioningWebhookConfig(props),
 		InstanceValidatorEnabled:  props.BoolPropertyValue(pathInstanceValidatorEnabled),
 		Auth: &AuthConfiguration{
 			RegionSettings: regSet,

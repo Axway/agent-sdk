@@ -2,6 +2,7 @@ package agent
 
 import (
 	"github.com/Axway/agent-sdk/pkg/agent/handler"
+	"github.com/Axway/agent-sdk/pkg/api"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/provisioning"
@@ -9,6 +10,12 @@ import (
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
+
+// provisioningWebhookClient - creates the HTTP client used to call configured provisioning webhooks,
+// respecting the agent's TLS/proxy/timeout settings
+func provisioningWebhookClient() api.Client {
+	return api.NewClient(agent.cfg.GetTLSConfig(), agent.cfg.GetProxyURL(), api.WithTimeout(agent.cfg.GetClientTimeout()))
+}
 
 var supportedIDPGrantTypes = map[string]bool{
 	oauth.GrantTypeClientCredentials: true,
@@ -609,7 +616,8 @@ func registerApplicationProvisioner(provisioner interface{}) {
 			management.ManagedApplicationGVK().Kind,
 			handler.NewManagedApplicationHandler(appProv, agent.cacheManager, agent.apicClient,
 				handler.WithManagedAppRetryCount(agent.cfg.GetProvisioningRetryCount()),
-				handler.WithManagedAppIDPRegistry(registry)),
+				handler.WithManagedAppIDPRegistry(registry),
+				handler.WithManagedAppProvisioningWebhook(agent.cfg.GetProvisioningWebhookConfig().GetManagedApplicationWebhook(), provisioningWebhookClient())),
 		)
 	}
 }
@@ -630,7 +638,8 @@ func registerAccessProvisioner(provisioner interface{}) {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			management.AccessRequestGVK().Kind,
 			handler.NewAccessRequestHandler(arProv, agent.cacheManager, agent.apicClient, agent.customUnitHandler,
-				handler.WithAccessRequestRetryCount(agent.cfg.GetProvisioningRetryCount())),
+				handler.WithAccessRequestRetryCount(agent.cfg.GetProvisioningRetryCount()),
+				handler.WithAccessRequestProvisioningWebhook(agent.cfg.GetProvisioningWebhookConfig().GetAccessRequestWebhook(), provisioningWebhookClient())),
 		)
 	}
 }
@@ -642,7 +651,8 @@ func registerCredentialProvisioner(provisioner interface{}) {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			management.CredentialGVK().Kind,
 			handler.NewCredentialHandler(credProv, agent.apicClient, registry,
-				handler.WithCredentialRetryCount(agent.cfg.GetProvisioningRetryCount())),
+				handler.WithCredentialRetryCount(agent.cfg.GetProvisioningRetryCount()),
+				handler.WithCredentialProvisioningWebhook(agent.cfg.GetProvisioningWebhookConfig().GetCredentialWebhook(), provisioningWebhookClient())),
 		)
 	}
 }
