@@ -4,24 +4,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/outputs"
-	beatPub "github.com/elastic/beats/v7/libbeat/publisher"
 )
 
 type MockClient struct {
-	outputs.NetworkClient
-
 	retry          int
 	pubCount       int
 	eventsAcked    int
-	capturedEvents []beatPub.Event
+	capturedEvents []event.Event
 }
 
 func (m *MockClient) Close() error   { return nil }
 func (m *MockClient) Connect() error { return nil }
-func (m *MockClient) Publish(_ context.Context, batch beatPub.Batch) error {
+func (m *MockClient) Publish(_ context.Context, batch event.Batch) error {
 	m.pubCount++
 	switch {
 	case m.retry >= m.pubCount:
@@ -39,7 +36,7 @@ func (m *MockClient) String() string {
 	return ""
 }
 
-func setupMockClient(retries int) outputs.Client {
+func setupMockClient(retries int) traceability.NetworkClient {
 	testClient := &MockClient{
 		pubCount:    0,
 		retry:       retries,

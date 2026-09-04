@@ -165,8 +165,8 @@ func InitializeWithAgentFeatures(centralCfg config.CentralConfig, agentFeaturesC
 		centralCfg.GetAuthConfig().GetTokenURL(),
 		centralCfg.GetUsageReportingConfig().GetURL(),
 	}
-	if centralCfg.GetTraceabilityProtocol() == "https" {
-		// add the traceability host to the single entry filter for https only
+	if centralCfg.GetSingleURL() != "" {
+		// add the traceability host to the single entry filter. Ingestion is https-only
 		singleEntryFilter = append(singleEntryFilter, fmt.Sprintf("https://%s", centralCfg.GetTraceabilityHost()))
 	}
 	api.SetConfigAgent(

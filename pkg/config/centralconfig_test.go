@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testUSSingleURL = "https://ingestion.platform.axway.com"
+
 func TestDiscoveryAgentConfig(t *testing.T) {
 	cfg := NewCentralConfig(DiscoveryAgent)
 	centralConfig := cfg.(*CentralConfiguration)
@@ -58,7 +60,7 @@ func TestDiscoveryAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.APIServerVersion = ""
 	err = cfgValidator.ValidateCfg()
@@ -148,7 +150,7 @@ func TestComplianceAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
@@ -233,7 +235,7 @@ func TestTraceabilityAgentConfig(t *testing.T) {
 	err = cfgValidator.ValidateCfg()
 	assert.NotNil(t, err)
 	assert.Equal(t, "[Error Code 1401] - error with config central.singleURL, please set and/or check its value", err.Error())
-	centralConfig.SingleURL = "https://ingestion.platform.axway.com"
+	centralConfig.SingleURL = testUSSingleURL
 
 	centralConfig.ReportActivityFrequency = 0
 	err = cfgValidator.ValidateCfg()
@@ -312,4 +314,24 @@ func TestTeamConfig(t *testing.T) {
 func cleanupFiles(fileName string) {
 	// cleanup files
 	os.Remove("./" + fileName)
+}
+
+func TestRegionalTraceabilityDefaults(t *testing.T) {
+	tests := map[string]struct {
+		region     Region
+		expectHost string
+	}{
+		"US":  {region: US, expectHost: "phoenix.datasearch.axway.com:443"},
+		"EU":  {region: EU, expectHost: "phoenix.visibility.eu-fr.axway.com:443"},
+		"AP":  {region: AP, expectHost: "phoenix.visibility.ap-sg.axway.com:443"},
+		"EU2": {region: EU2, expectHost: "phoenix.eu-fr.axway.com:443"},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			settings := regionalSettingsMap[tc.region]
+			assert.Equal(t, tc.expectHost, settings.TraceabilityHost)
+		})
+	}
 }

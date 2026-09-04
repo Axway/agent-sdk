@@ -1141,7 +1141,7 @@ func TestMetricEventsReportedWithOwnGenerationStartTime(t *testing.T) {
 	// each event carries its own generation's start time, not a single shared publish-cycle start time
 	starts := map[int64]bool{}
 	for _, event := range mock.capturedEvents {
-		raw, ok := event.Content.Fields[messageKey].(string)
+		raw, ok := event.Fields[messageKey].(string)
 		if !ok {
 			continue
 		}

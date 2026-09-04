@@ -31,6 +31,98 @@ import (
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
 )
 
+// central config property keys, flag names, descriptions and defaults. These are hared by the
+// Discovery/Compliance/Traceability asserted in TestRootCmdFlags.
+const (
+	pathCentralDeployment    = "central.deployment"
+	flagCentralDeployment    = "centralDeployment"
+	descCentralDeployment    = "Amplify Central"
+	pathCentralSSLMaxVersion = "central.ssl.maxVersion"
+	flagCentralSSLMaxVersion = "centralSslMaxVersion"
+	descCentralSSLMaxVersion = "Maximum acceptable SSL/TLS protocol version"
+	defaultSSLMaxVersion     = "0"
+
+	pathCentralURL                   = "central.url"
+	pathCentralPlatformURL           = "central.platformURL"
+	pathCentralSingleURL             = "central.singleURL"
+	pathCentralOrganizationID        = "central.organizationID"
+	pathCentralAuthPrivateKey        = "central.auth.privateKey"
+	pathCentralAuthPublicKey         = "central.auth.publicKey"
+	pathCentralAuthKeyPassword       = "central.auth.keyPassword"
+	pathCentralAuthURL               = "central.auth.url"
+	pathCentralAuthRealm             = "central.auth.realm"
+	pathCentralAuthClientID          = "central.auth.clientId"
+	pathCentralAuthTimeout           = "central.auth.timeout"
+	pathCentralSSLNextProtos         = "central.ssl.nextProtos"
+	pathCentralSSLInsecureSkipVerify = "central.ssl.insecureSkipVerify"
+	pathCentralSSLCipherSuites       = "central.ssl.cipherSuites"
+	pathCentralSSLMinVersion         = "central.ssl.minVersion"
+
+	flagCentralURL                   = "centralUrl"
+	flagCentralPlatformURL           = "centralPlatformURL"
+	flagCentralSingleURL             = "centralSingleURL"
+	flagCentralOrganizationID        = "centralOrganizationID"
+	flagCentralAuthPrivateKey        = "centralAuthPrivateKey"
+	flagCentralAuthPublicKey         = "centralAuthPublicKey"
+	flagCentralAuthKeyPassword       = "centralAuthKeyPassword"
+	flagCentralAuthURL               = "centralAuthUrl"
+	flagCentralAuthRealm             = "centralAuthRealm"
+	flagCentralAuthClientID          = "centralAuthClientId"
+	flagCentralAuthTimeout           = "centralAuthTimeout"
+	flagCentralSSLNextProtos         = "centralSslNextProtos"
+	flagCentralSSLInsecureSkipVerify = "centralSslInsecureSkipVerify"
+	flagCentralSSLCipherSuites       = "centralSslCipherSuites"
+	flagCentralSSLMinVersion         = "centralSslMinVersion"
+
+	descCentralURL                   = "URL of Amplify Central"
+	descCentralPlatformURL           = "URL of the platform"
+	descCentralSingleURL             = "Alternate Connection for Agent if using static IP"
+	descCentralOrganizationID        = "Tenant ID for the owner of the environment"
+	descCentralAuthPrivateKey        = "Path to the private key for Amplify Central Authentication"
+	descCentralAuthPublicKey         = "Path to the public key for Amplify Central Authentication"
+	descCentralAuthKeyPassword       = "Path to the password file required by the private key for Amplify Central Authentication"
+	descCentralAuthURL               = "Amplify Central authentication URL"
+	descCentralAuthRealm             = "Amplify Central authentication Realm"
+	descCentralAuthClientID          = "Client ID for the service account"
+	descCentralAuthTimeout           = "Timeout waiting for AxwayID response"
+	descCentralSSLNextProtos         = "List of supported application level protocols, comma separated"
+	descCentralSSLInsecureSkipVerify = "Controls whether a client verifies the server's certificate chain and host name"
+	descCentralSSLCipherSuites       = "List of supported cipher suites, comma separated"
+	descCentralSSLMinVersion         = "Minimum acceptable SSL/TLS protocol version"
+
+	defaultAuthPrivateKeyPath = "/etc/private_key.pem"
+	defaultAuthPublicKeyPath  = "/etc/public_key"
+
+	errStringPropNotSet       = "agentConfig: String prop not set"
+	errOrganizationIDUnset    = "Error central.organizationID not set in config"
+	errIncorrectErrorReturned = "Incorrect error returned: %s"
+
+	testDataPath = "./testdata"
+
+	pathAgentBool        = "agent.bool"
+	pathAgentDuration    = "agent.duration"
+	pathAgentInt         = "agent.int"
+	pathAgentString      = "agent.string"
+	pathAgentStringSlice = "agent.stringSlice"
+	pathAgentObjectSlice = "agent.objectSlice"
+
+	descAgentBoolProperty         = "Agent Bool Property"
+	descAgentDurationProperty     = "Agent Duration Property"
+	descAgentDurationInvalidUpper = "Agent Duration Property - invalid upper limit"
+	descAgentIntProperty          = "Agent Int Property"
+	descAgentStringProperty       = "Agent String Property"
+	descAgentStringSliceProperty  = "Agent String Slice Property"
+
+	testPrivateKeyPath = "../transaction/testdata/private_key.pem"
+	testPublicKeyPath  = "../transaction/testdata/public_key"
+	testLogPath        = "./tmplogs/test_with_non_defaults.log"
+
+	secretInvalidCachedKey = "@Secret.invalidSecret.cachedSecretKey"
+	secretAgentKey         = "@Secret.agentSecret.secretKey"
+
+	testAuthToken = "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+)
+
 func getPFlag(cmd AgentRootCmd, flagName string) *flag.Flag {
 	return cmd.RootCmd().Flags().Lookup(flagName)
 }
@@ -76,7 +168,7 @@ type agentConfig struct {
 func (a *agentConfig) ValidateCfg() error {
 	a.agentValidationCalled = true
 	if a.sProp == "" {
-		return errors.New("agentConfig: String prop not set")
+		return errors.New(errStringPropNotSet)
 	}
 	return nil
 }
@@ -109,65 +201,65 @@ type configWithNoValidation struct {
 func TestRootCmdFlags(t *testing.T) {
 	// Discovery Agent
 	rootCmd := NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.DiscoveryAgent)
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
-	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
+	assertStringCmdFlag(t, rootCmd, pathCentralURL, flagCentralURL, "", descCentralURL)                         // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralPlatformURL, flagCentralPlatformURL, "", descCentralPlatformURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralSingleURL, flagCentralSingleURL, "", descCentralSingleURL)
+	assertStringCmdFlag(t, rootCmd, pathCentralOrganizationID, flagCentralOrganizationID, "", descCentralOrganizationID)
 	assertStringCmdFlag(t, rootCmd, "central.team", "centralTeam", "", "Team name for creating catalog")
 	assertStringCmdFlag(t, rootCmd, "central.environment", "centralEnvironment", "", "The Environment that the APIs will be associated with in Amplify Central")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.word", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPrivateKey, flagCentralAuthPrivateKey, defaultAuthPrivateKeyPath, descCentralAuthPrivateKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPublicKey, flagCentralAuthPublicKey, defaultAuthPublicKeyPath, descCentralAuthPublicKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthKeyPassword, flagCentralAuthKeyPassword, "", descCentralAuthKeyPassword)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthURL, flagCentralAuthURL, "", descCentralAuthURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthRealm, flagCentralAuthRealm, "Broker", descCentralAuthRealm)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthClientID, flagCentralAuthClientID, "", descCentralAuthClientID)
+	assertDurationCmdFlag(t, rootCmd, pathCentralAuthTimeout, flagCentralAuthTimeout, 10*time.Second, descCentralAuthTimeout)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLNextProtos, flagCentralSSLNextProtos, []string{}, descCentralSSLNextProtos)
+	assertBooleanCmdFlag(t, rootCmd, pathCentralSSLInsecureSkipVerify, flagCentralSSLInsecureSkipVerify, false, descCentralSSLInsecureSkipVerify)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLCipherSuites, flagCentralSSLCipherSuites, corecfg.TLSDefaultCipherSuitesStringSlice(), descCentralSSLCipherSuites)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMinVersion, flagCentralSSLMinVersion, corecfg.TLSDefaultMinVersionString(), descCentralSSLMinVersion)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMaxVersion, flagCentralSSLMaxVersion, defaultSSLMaxVersion, descCentralSSLMaxVersion)
 	assertBooleanCmdFlag(t, rootCmd, "central.migration.cleanInstances", "centralMigrationCleanInstances", false, "Set this to clean all but latest instance, per stage, within an API Service")
 
 	// Compliance Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.ComplianceAgent)
-	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "", "Amplify Central")       // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
-	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, pathCentralDeployment, flagCentralDeployment, "", descCentralDeployment)    // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralURL, flagCentralURL, "", descCentralURL)                         // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralPlatformURL, flagCentralPlatformURL, "", descCentralPlatformURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralSingleURL, flagCentralSingleURL, "", descCentralSingleURL)
+	assertStringCmdFlag(t, rootCmd, pathCentralOrganizationID, flagCentralOrganizationID, "", descCentralOrganizationID)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPrivateKey, flagCentralAuthPrivateKey, defaultAuthPrivateKeyPath, descCentralAuthPrivateKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPublicKey, flagCentralAuthPublicKey, defaultAuthPublicKeyPath, descCentralAuthPublicKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthKeyPassword, flagCentralAuthKeyPassword, "", descCentralAuthKeyPassword)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthURL, flagCentralAuthURL, "", descCentralAuthURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthRealm, flagCentralAuthRealm, "Broker", descCentralAuthRealm)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthClientID, flagCentralAuthClientID, "", descCentralAuthClientID)
+	assertDurationCmdFlag(t, rootCmd, pathCentralAuthTimeout, flagCentralAuthTimeout, 10*time.Second, descCentralAuthTimeout)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLNextProtos, flagCentralSSLNextProtos, []string{}, descCentralSSLNextProtos)
+	assertBooleanCmdFlag(t, rootCmd, pathCentralSSLInsecureSkipVerify, flagCentralSSLInsecureSkipVerify, false, descCentralSSLInsecureSkipVerify)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLCipherSuites, flagCentralSSLCipherSuites, corecfg.TLSDefaultCipherSuitesStringSlice(), descCentralSSLCipherSuites)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMinVersion, flagCentralSSLMinVersion, corecfg.TLSDefaultMinVersionString(), descCentralSSLMinVersion)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMaxVersion, flagCentralSSLMaxVersion, defaultSSLMaxVersion, descCentralSSLMaxVersion)
 
 	// Traceability Agent
 	rootCmd = NewRootCmd("Test", "TestRootCmd", nil, nil, corecfg.TraceabilityAgent)
-	assertStringCmdFlag(t, rootCmd, "central.deployment", "centralDeployment", "", "Amplify Central")       // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.url", "centralUrl", "", "URL of Amplify Central")              // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.platformURL", "centralPlatformURL", "", "URL of the platform") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.singleURL", "centralSingleURL", "", "Alternate Connection for Agent if using static IP")
-	assertStringCmdFlag(t, rootCmd, "central.organizationID", "centralOrganizationID", "", "Tenant ID for the owner of the environment")
-	assertStringCmdFlag(t, rootCmd, "central.auth.privateKey", "centralAuthPrivateKey", "/etc/private_key.pem", "Path to the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.publicKey", "centralAuthPublicKey", "/etc/public_key", "Path to the public key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.keyPassword", "centralAuthKeyPassword", "", "Path to the password file required by the private key for Amplify Central Authentication")
-	assertStringCmdFlag(t, rootCmd, "central.auth.url", "centralAuthUrl", "", "Amplify Central authentication URL") // assert to empty "" - set by region settings
-	assertStringCmdFlag(t, rootCmd, "central.auth.realm", "centralAuthRealm", "Broker", "Amplify Central authentication Realm")
-	assertStringCmdFlag(t, rootCmd, "central.auth.clientId", "centralAuthClientId", "", "Client ID for the service account")
-	assertDurationCmdFlag(t, rootCmd, "central.auth.timeout", "centralAuthTimeout", 10*time.Second, "Timeout waiting for AxwayID response")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.nextProtos", "centralSslNextProtos", []string{}, "List of supported application level protocols, comma separated")
-	assertBooleanCmdFlag(t, rootCmd, "central.ssl.insecureSkipVerify", "centralSslInsecureSkipVerify", false, "Controls whether a client verifies the server's certificate chain and host name")
-	assertStringSliceCmdFlag(t, rootCmd, "central.ssl.cipherSuites", "centralSslCipherSuites", corecfg.TLSDefaultCipherSuitesStringSlice(), "List of supported cipher suites, comma separated")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.minVersion", "centralSslMinVersion", corecfg.TLSDefaultMinVersionString(), "Minimum acceptable SSL/TLS protocol version")
-	assertStringCmdFlag(t, rootCmd, "central.ssl.maxVersion", "centralSslMaxVersion", "0", "Maximum acceptable SSL/TLS protocol version")
+	assertStringCmdFlag(t, rootCmd, pathCentralDeployment, flagCentralDeployment, "", descCentralDeployment)    // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralURL, flagCentralURL, "", descCentralURL)                         // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralPlatformURL, flagCentralPlatformURL, "", descCentralPlatformURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralSingleURL, flagCentralSingleURL, "", descCentralSingleURL)
+	assertStringCmdFlag(t, rootCmd, pathCentralOrganizationID, flagCentralOrganizationID, "", descCentralOrganizationID)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPrivateKey, flagCentralAuthPrivateKey, defaultAuthPrivateKeyPath, descCentralAuthPrivateKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthPublicKey, flagCentralAuthPublicKey, defaultAuthPublicKeyPath, descCentralAuthPublicKey)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthKeyPassword, flagCentralAuthKeyPassword, "", descCentralAuthKeyPassword)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthURL, flagCentralAuthURL, "", descCentralAuthURL) // assert to empty "" - set by region settings
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthRealm, flagCentralAuthRealm, "Broker", descCentralAuthRealm)
+	assertStringCmdFlag(t, rootCmd, pathCentralAuthClientID, flagCentralAuthClientID, "", descCentralAuthClientID)
+	assertDurationCmdFlag(t, rootCmd, pathCentralAuthTimeout, flagCentralAuthTimeout, 10*time.Second, descCentralAuthTimeout)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLNextProtos, flagCentralSSLNextProtos, []string{}, descCentralSSLNextProtos)
+	assertBooleanCmdFlag(t, rootCmd, pathCentralSSLInsecureSkipVerify, flagCentralSSLInsecureSkipVerify, false, descCentralSSLInsecureSkipVerify)
+	assertStringSliceCmdFlag(t, rootCmd, pathCentralSSLCipherSuites, flagCentralSSLCipherSuites, corecfg.TLSDefaultCipherSuitesStringSlice(), descCentralSSLCipherSuites)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMinVersion, flagCentralSSLMinVersion, corecfg.TLSDefaultMinVersionString(), descCentralSSLMinVersion)
+	assertStringCmdFlag(t, rootCmd, pathCentralSSLMaxVersion, flagCentralSSLMaxVersion, defaultSSLMaxVersion, descCentralSSLMaxVersion)
 
 	// Log yaml properties and command flags
 	assertStringCmdFlag(t, rootCmd, "log.level", "logLevel", "info", "Log level (trace, debug, info, warn, error)")
@@ -182,28 +274,29 @@ func TestRootCmdConfigFileLoad(t *testing.T) {
 
 	err := rootCmd.Execute()
 
-	// should be FileNotFound error
+	// a missing config file is now ok. The resulting error, if any, comes from downstream
+	// config validation (nothing is set here), not from ConfigFileNotFoundError
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.True(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", nil, nil, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
 
-	assert.Contains(t, "Error central.organizationID not set in config", errBuf.String())
+	assert.Contains(t, errOrganizationIDUnset, errBuf.String())
 }
 
 func TestRootCmdConfigDefault(t *testing.T) {
@@ -214,8 +307,8 @@ func TestRootCmdConfigDefault(t *testing.T) {
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
 		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
 		assert.Equal(t, "Broker", centralConfig.GetAuthConfig().GetRealm())
-		assert.Equal(t, "/etc/private_key.pem", centralConfig.GetAuthConfig().GetPrivateKey())
-		assert.Equal(t, "/etc/public_key", centralConfig.GetAuthConfig().GetPublicKey())
+		assert.Equal(t, defaultAuthPrivateKeyPath, centralConfig.GetAuthConfig().GetPrivateKey())
+		assert.Equal(t, defaultAuthPublicKeyPath, centralConfig.GetAuthConfig().GetPublicKey())
 		assert.Equal(t, "", centralConfig.GetAuthConfig().GetKeyPassword())
 		assert.Equal(t, 10*time.Second, centralConfig.GetAuthConfig().GetTimeout())
 		return centralConfig, errors.New("Test return error from init config handler")
@@ -227,8 +320,8 @@ func TestRootCmdConfigDefault(t *testing.T) {
 		assert.Equal(t, "https://login.axway.com/auth/realms/Broker/protocol/openid-connect/token", centralConfig.GetAuthConfig().GetTokenURL())
 		assert.Equal(t, "cccc", centralConfig.GetAuthConfig().GetClientID())
 		assert.Equal(t, "Broker", centralConfig.GetAuthConfig().GetRealm())
-		assert.Equal(t, "/etc/private_key.pem", centralConfig.GetAuthConfig().GetPrivateKey())
-		assert.Equal(t, "/etc/public_key", centralConfig.GetAuthConfig().GetPublicKey())
+		assert.Equal(t, defaultAuthPrivateKeyPath, centralConfig.GetAuthConfig().GetPrivateKey())
+		assert.Equal(t, defaultAuthPublicKeyPath, centralConfig.GetAuthConfig().GetPublicKey())
 		assert.Equal(t, "", centralConfig.GetAuthConfig().GetKeyPassword())
 		assert.Equal(t, 10*time.Second, centralConfig.GetAuthConfig().GetTimeout())
 		return centralConfig, errors.New("Test return error from init config handler")
@@ -236,14 +329,14 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Discovery
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", discoveryInitConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	err := rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf := new(bytes.Buffer)
@@ -252,14 +345,14 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Compliance
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.ComplianceAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf = new(bytes.Buffer)
@@ -268,14 +361,14 @@ func TestRootCmdConfigDefault(t *testing.T) {
 
 	// Traceability
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", traceabilityInitConfigHandler, nil, corecfg.TraceabilityAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf = new(bytes.Buffer)
@@ -295,18 +388,18 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue(pathAgentBool),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue(pathAgentDuration),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue(pathAgentInt),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue(pathAgentString),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue(pathAgentStringSlice),
 			},
 		}
 		return cfg, nil
 	}
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
@@ -314,13 +407,13 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	os.Setenv("CENTRAL_PLATFORMURL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
-	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddBoolProperty(pathAgentBool, false, descAgentBoolProperty)
+	rootCmd.GetProperties().AddDurationProperty(pathAgentDuration, 10*time.Second, descAgentDurationProperty, properties.WithLowerLimit(10*time.Second))
+	rootCmd.GetProperties().AddIntProperty(pathAgentInt, 0, descAgentIntProperty)
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
 
 	err := rootCmd.Execute()
 
@@ -328,7 +421,7 @@ func TestRootCmdAgentConfigValidation(t *testing.T) {
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf := new(bytes.Buffer)
@@ -350,31 +443,31 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue(pathAgentBool),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue(pathAgentDuration),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue(pathAgentInt),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue(pathAgentString),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue(pathAgentStringSlice),
 			},
 		}
 		return cfg, nil
 	}
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
-	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
+	rootCmd.GetProperties().AddBoolProperty(pathAgentBool, false, descAgentBoolProperty)
+	rootCmd.GetProperties().AddDurationProperty(pathAgentDuration, 10*time.Second, descAgentDurationProperty, properties.WithLowerLimit(10*time.Second))
+	rootCmd.GetProperties().AddIntProperty(pathAgentInt, 0, descAgentIntProperty)
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
 
 	err := rootCmd.Execute()
 
@@ -382,12 +475,12 @@ func TestRootCmdAgentConfigChildValidation(t *testing.T) {
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf := new(bytes.Buffer)
 	rootCmd.RootCmd().SetErr(errBuf)
-	assert.Contains(t, "agentConfig: String prop not set", errBuf.String())
+	assert.Contains(t, errStringPropNotSet, errBuf.String())
 	assert.Equal(t, false, cfg.configValidationCalled)
 	assert.Equal(t, true, cfg.AgentCfg.(*agentConfig).agentValidationCalled)
 }
@@ -403,8 +496,8 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 		return nil
 	}
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
@@ -413,22 +506,20 @@ func TestRootCmdHandlersWithError(t *testing.T) {
 	rootCmd := NewRootCmd("Test", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
 	err := rootCmd.Execute()
 
-	// should be FileNotFound error
-	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.True(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	rootCmd = NewRootCmd("test_no_overide", "test_no_overide", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	err = rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.NotNil(t, err, err.Error())
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 }
 
@@ -444,12 +535,12 @@ func TestRootCmdHandlers(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				bProp:                 rootCmd.GetProperties().BoolPropertyValue("agent.bool"),
-				dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
-				iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
-				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
-				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue("agent.stringSlice"),
-				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue("agent.objectSlice"),
+				bProp:                 rootCmd.GetProperties().BoolPropertyValue(pathAgentBool),
+				dProp:                 rootCmd.GetProperties().DurationPropertyValue(pathAgentDuration),
+				iProp:                 rootCmd.GetProperties().IntPropertyValue(pathAgentInt),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue(pathAgentString),
+				ssProp:                rootCmd.GetProperties().StringSlicePropertyValue(pathAgentStringSlice),
+				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue(pathAgentObjectSlice),
 			},
 		}
 		return cfg, nil
@@ -460,8 +551,8 @@ func TestRootCmdHandlers(t *testing.T) {
 		return nil
 	}
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
@@ -480,21 +571,21 @@ func TestRootCmdHandlers(t *testing.T) {
 	os.Setenv("AGENT_OBJECTSLICE_NAMETITLE_3", "osp3_title")
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddBoolProperty("agent.bool", false, "Agent Bool Property")
-	rootCmd.GetProperties().AddDurationProperty("agent.duration", 10*time.Second, "Agent Duration Property", properties.WithLowerLimit(10*time.Second))
-	rootCmd.GetProperties().AddIntProperty("agent.int", 0, "Agent Int Property")
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"index", "name", "namevalue", "nametitle"})
+	rootCmd.GetProperties().AddBoolProperty(pathAgentBool, false, descAgentBoolProperty)
+	rootCmd.GetProperties().AddDurationProperty(pathAgentDuration, 10*time.Second, descAgentDurationProperty, properties.WithLowerLimit(10*time.Second))
+	rootCmd.GetProperties().AddIntProperty(pathAgentInt, 0, descAgentIntProperty)
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"index", "name", "namevalue", "nametitle"})
 	err := rootCmd.Execute()
 
 	// should NOT be FileNotFound error
 	assert.Nil(t, err, "An unexpected error returned")
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	errBuf := new(bytes.Buffer)
@@ -530,15 +621,15 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	initConfigHandler := noOpInitConfigHandler
 	cmdHandler := noOpCmdHandler
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -550,7 +641,7 @@ func TestRootCommandLoggerStdout(t *testing.T) {
 	assert.Nil(t, err, "An unexpected error was received")
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
-		assert.False(t, ok, "Incorrect error returned: %s", err.Error())
+		assert.False(t, ok, errIncorrectErrorReturned, err.Error())
 	}
 
 	w.Close()
@@ -590,15 +681,15 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	config.AgentVersion = "1.2.3-abc123"
 	SDKBuildVersion = "1.0.0"
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"file",
@@ -609,14 +700,14 @@ func TestRootCommandLoggerFile(t *testing.T) {
 	},
 	)
 	// Make sure to delete file
-	os.RemoveAll("./tmplogs/test_with_non_defaults.log")
+	os.RemoveAll(testLogPath)
 
 	fExecute := func() {
 		rootCmd.Execute()
 	}
 	assert.NotPanics(t, fExecute)
 
-	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
+	dat, err := ioutil.ReadFile(testLogPath)
 	assert.Nil(t, err, "failed to read file")
 	scanner := bufio.NewScanner(bytes.NewReader(dat))
 
@@ -646,15 +737,15 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	s := newTestServer()
 	defer s.Close()
 
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 
 	rootCmd := NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	rootCmd.RootCmd().SetArgs([]string{
 		"--logOutput",
 		"both",
@@ -672,7 +763,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 		rootCmd.Execute()
 	}
 	// Make sure to delete file
-	os.Remove("./tmplogs/test_with_non_defaults.log")
+	os.Remove(testLogPath)
 	assert.NotPanics(t, fExecute)
 	w.Close()
 	out, _ := ioutil.ReadAll(r)
@@ -680,7 +771,7 @@ func TestRootCommandLoggerStdoutAndFile(t *testing.T) {
 	var logData map[string]string
 	json.Unmarshal([]byte(out), &logData)
 
-	dat, err := ioutil.ReadFile("./tmplogs/test_with_non_defaults.log")
+	dat, err := ioutil.ReadFile(testLogPath)
 	assert.Nil(t, err)
 	assert.Equal(t, out, dat)
 }
@@ -715,7 +806,7 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthToken
 			resp.Write([]byte(token))
 			return
 		}
@@ -751,9 +842,9 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 			CentralCfg:             centralConfig,
 			AgentCfg: &agentConfig{
 				agentValidationCalled: false,
-				sProp:                 rootCmd.GetProperties().StringPropertyValue("agent.string"),
+				sProp:                 rootCmd.GetProperties().StringPropertyValue(pathAgentString),
 				sPropExt:              rootCmd.GetProperties().StringPropertyValue("agent.stringExt"),
-				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue("agent.objectSlice"),
+				osProp:                rootCmd.GetProperties().ObjectSlicePropertyValue(pathAgentObjectSlice),
 			},
 		}
 		return cfg, nil
@@ -766,18 +857,18 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 
 	os.Setenv("CENTRAL_AUTH_URL", s.URL+"/auth")
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 	os.Setenv("CENTRAL_ENVIRONMENT", "test")
 
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"prop1", "prop2", "prop3"})
 
 	// Case 1 : No secret resolution - use the value in config
 	os.Setenv("AGENT_STRING", "testValue")
@@ -798,23 +889,23 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	// Case 2 : Invalid secret resolution - secret ref with invalid secret name,
 	// config value will be set to empty string
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"prop1", "prop2", "prop3"})
 
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 	os.Setenv("AGENT_STRING", "@Secret.invalidSecret.secretKey")
-	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
+	os.Setenv("AGENT_STRINGEXT", secretInvalidCachedKey)
 	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.invalidSecret.secretKey")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.invalidSecret.cachedSecretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", secretInvalidCachedKey)
 
 	err = rootCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "agentConfig: String prop not set", err.Error())
+	assert.Equal(t, errStringPropNotSet, err.Error())
 	agentCfg = cfg.AgentCfg.(*agentConfig)
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "", agentCfg.sProp)
@@ -826,23 +917,23 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	// Case 3 : Invalid secret resolution - secret ref with invalid key in secret
 	// config value will be set to empty string
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"prop1", "prop2", "prop3"})
 
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 
 	os.Setenv("AGENT_STRING", "@Secret.agentSecret.invalidKey")
-	os.Setenv("AGENT_STRINGEXT", "@Secret.invalidSecret.cachedSecretKey")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.agentSecret.secretKey")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.invalidSecret.cachedSecretKey")
+	os.Setenv("AGENT_STRINGEXT", secretInvalidCachedKey)
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", secretAgentKey)
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", secretInvalidCachedKey)
 	err = rootCmd.Execute()
 	assert.NotNil(t, err)
-	assert.Equal(t, "agentConfig: String prop not set", err.Error())
+	assert.Equal(t, errStringPropNotSet, err.Error())
 	agentCfg = cfg.AgentCfg.(*agentConfig)
 	assert.Equal(t, true, agentCfg.agentValidationCalled)
 	assert.Equal(t, "", agentCfg.sProp)
@@ -855,18 +946,18 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	// Case 4 : Successful secret resolution - use value in secret key
 	// config value will be set to specified key in secret
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"prop1", "prop2", "prop3"})
 	cfg = nil
 	agentCfg.agentValidationCalled = false
 	cmdHandlerInvoked = false
 
-	os.Setenv("AGENT_STRING", "@Secret.agentSecret.secretKey")
+	os.Setenv("AGENT_STRING", secretAgentKey)
 	os.Setenv("AGENT_STRINGEXT", "@Secret.agentSecret.cachedSecretKey")
-	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", "@Secret.agentSecret.secretKey")
+	os.Setenv("AGENT_OBJECTSLICE_PROP1_1", secretAgentKey)
 	os.Setenv("AGENT_OBJECTSLICE_PROP1_2", "@Secret.agentSecret.cachedSecretKey")
 	err = rootCmd.Execute()
 	assert.Nil(t, err)
@@ -882,11 +973,11 @@ func TestRootCmdHandlerWithSecretRefProperties(t *testing.T) {
 	// Case 5 : Successful secret resolution with key separate with dots(.) - use value in secret key
 	// config value will be set to specified key in secret
 	rootCmd = NewRootCmd("test_with_agent_cfg", "test_with_agent_cfg", initConfigHandler, cmdHandler, corecfg.DiscoveryAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 
-	rootCmd.GetProperties().AddStringProperty("agent.string", "", "Agent String Property")
-	rootCmd.GetProperties().AddStringSliceProperty("agent.stringSlice", nil, "Agent String Slice Property")
-	rootCmd.GetProperties().AddObjectSliceProperty("agent.objectSlice", []string{"prop1", "prop2", "prop3"})
+	rootCmd.GetProperties().AddStringProperty(pathAgentString, "", descAgentStringProperty)
+	rootCmd.GetProperties().AddStringSliceProperty(pathAgentStringSlice, nil, descAgentStringSliceProperty)
+	rootCmd.GetProperties().AddObjectSliceProperty(pathAgentObjectSlice, []string{"prop1", "prop2", "prop3"})
 
 	cfg = nil
 	agentCfg.agentValidationCalled = false
@@ -943,7 +1034,7 @@ func newTestServer() *httptest.Server {
 
 	s := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.RequestURI, "/auth") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthToken
 			resp.Write([]byte(token))
 			return
 		}
@@ -954,7 +1045,7 @@ func newTestServer() *httptest.Server {
 		}
 
 		if strings.Contains(req.RequestURI, "/realms/Broker/protocol/openid-connect/token") {
-			token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
+			token := testAuthToken
 			resp.Write([]byte(token))
 			return
 		}
@@ -996,7 +1087,7 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 		{
 			// valid range
 			name:             "Agent Duration Property - valid range",
-			durationProperty: "agent.duration",
+			durationProperty: pathAgentDuration,
 			defaultDuration:  25 * time.Second,
 			description:      "Agent Duration Property - valid range",
 			lowerLimit:       20 * time.Second,
@@ -1009,7 +1100,7 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 				{"level":"warning","message":"config agentDuration has been set to the the default value of 25s.","time":"2022-07-26T14:42:54-07:00"}
 			*/
 			name:             "Agent Duration Property - invalid lower limit",
-			durationProperty: "agent.duration",
+			durationProperty: pathAgentDuration,
 			defaultDuration:  40 * time.Second,
 			description:      "Agent Duration Property - invalid lower limit",
 			lowerLimit:       40 * time.Second,
@@ -1017,10 +1108,10 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 		},
 		{
 			// default lower than lower limit
-			name:             "Agent Duration Property - invalid upper limit",
-			durationProperty: "agent.duration",
+			name:             descAgentDurationInvalidUpper,
+			durationProperty: pathAgentDuration,
 			defaultDuration:  5 * time.Second,
-			description:      "Agent Duration Property - invalid upper limit",
+			description:      descAgentDurationInvalidUpper,
 			lowerLimit:       10 * time.Second,
 			upperLimit:       20 * time.Second,
 			expectPanic:      true,
@@ -1031,29 +1122,29 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 				{"level":"warning","message":"value 30s is higher than the supported higher limit (20s) for configuration agentDuration","time":"2022-07-26T14:42:54-07:00"}
 				{"level":"warning","message":"config agentDuration has been set to the the default value of 30s.","time":"2022-07-26T14:42:54-07:00"}
 			*/
-			name:             "Agent Duration Property - invalid upper limit",
-			durationProperty: "agent.duration",
+			name:             descAgentDurationInvalidUpper,
+			durationProperty: pathAgentDuration,
 			defaultDuration:  20 * time.Second,
-			description:      "Agent Duration Property - invalid upper limit",
+			description:      descAgentDurationInvalidUpper,
 			lowerLimit:       10 * time.Second,
 			upperLimit:       20 * time.Second,
 		},
 		{
 			// default higher than upper limit
-			name:             "Agent Duration Property - invalid upper limit",
-			durationProperty: "agent.duration",
+			name:             descAgentDurationInvalidUpper,
+			durationProperty: pathAgentDuration,
 			defaultDuration:  40 * time.Second,
-			description:      "Agent Duration Property - invalid upper limit",
+			description:      descAgentDurationInvalidUpper,
 			lowerLimit:       10 * time.Second,
 			upperLimit:       20 * time.Second,
 			expectPanic:      true,
 		},
 		{
 			// upper lower than lower limit
-			name:             "Agent Duration Property - invalid upper limit",
-			durationProperty: "agent.duration",
+			name:             descAgentDurationInvalidUpper,
+			durationProperty: pathAgentDuration,
 			defaultDuration:  15 * time.Second,
-			description:      "Agent Duration Property - invalid upper limit",
+			description:      descAgentDurationInvalidUpper,
 			lowerLimit:       10 * time.Second,
 			upperLimit:       5 * time.Second,
 			expectPanic:      true,
@@ -1073,14 +1164,14 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 					CentralCfg:             centralConfig,
 					AgentCfg: &agentConfig{
 						agentValidationCalled: false,
-						dProp:                 rootCmd.GetProperties().DurationPropertyValue("agent.duration"),
+						dProp:                 rootCmd.GetProperties().DurationPropertyValue(pathAgentDuration),
 					},
 				}
 				return cfg, nil
 			}
 
-			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-			os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+			os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 			os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 			os.Setenv("CENTRAL_AUTH_URL", s.URL)
 			os.Setenv("CENTRAL_URL", s.URL)
@@ -1088,7 +1179,7 @@ func TestLowerAndUpperLimitDurations(t *testing.T) {
 			os.Setenv("AGENT_DURATION", "30s")
 
 			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-			viper.AddConfigPath("./testdata")
+			viper.AddConfigPath(testDataPath)
 			fExecute := func() {
 				rootCmd.GetProperties().AddDurationProperty(test.durationProperty, test.defaultDuration, test.description, properties.WithLowerLimit(test.lowerLimit), properties.WithUpperLimit(test.upperLimit))
 			}
@@ -1158,14 +1249,14 @@ func TestIntLowerAndUpperLimits(t *testing.T) {
 					CentralCfg:             centralConfig,
 					AgentCfg: &agentConfig{
 						agentValidationCalled: false,
-						iProp:                 rootCmd.GetProperties().IntPropertyValue("agent.int"),
+						iProp:                 rootCmd.GetProperties().IntPropertyValue(pathAgentInt),
 					},
 				}
 				return cfg, nil
 			}
 
-			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-			os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+			os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+			os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 			os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
 			os.Setenv("CENTRAL_AUTH_URL", s.URL)
 			os.Setenv("CENTRAL_URL", s.URL)
@@ -1173,9 +1264,9 @@ func TestIntLowerAndUpperLimits(t *testing.T) {
 			os.Setenv("AGENT_INT", tc.intProp)
 
 			rootCmd = NewRootCmd("test_with_non_defaults", "test_with_non_defaults", initConfigHandler, nil, corecfg.DiscoveryAgent)
-			viper.AddConfigPath("./testdata")
+			viper.AddConfigPath(testDataPath)
 			fExecute := func() {
-				rootCmd.GetProperties().AddIntProperty("agent.int", tc.defaultInt, "", properties.WithLowerLimitInt(tc.lowerLimit), properties.WithUpperLimitInt(tc.upperLimit))
+				rootCmd.GetProperties().AddIntProperty(pathAgentInt, tc.defaultInt, "", properties.WithLowerLimitInt(tc.lowerLimit), properties.WithUpperLimitInt(tc.upperLimit))
 			}
 			if tc.expectPanic {
 				assert.Panics(t, fExecute)
@@ -1209,13 +1300,13 @@ func TestNewCmd(t *testing.T) {
 		return nil
 	}
 	newCmd := NewCmd(rootCmd, "traceability", "TestRootCmd", initConfigHandler, cmdHandler, corecfg.TraceabilityAgent)
-	viper.AddConfigPath("./testdata")
+	viper.AddConfigPath(testDataPath)
 	assert.NotNil(t, newCmd)
 
 	os.Setenv("CENTRAL_AUTH_URL", s.URL)
 	os.Setenv("CENTRAL_AUTH_CLIENTID", "serviceaccount_1234")
-	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", "../transaction/testdata/private_key.pem")
-	os.Setenv("CENTRAL_AUTH_PUBLICKEY", "../transaction/testdata/public_key")
+	os.Setenv("CENTRAL_AUTH_PRIVATEKEY", testPrivateKeyPath)
+	os.Setenv("CENTRAL_AUTH_PUBLICKEY", testPublicKeyPath)
 	os.Setenv("CENTRAL_URL", s.URL)
 	os.Setenv("CENTRAL_SINGLEURL", s.URL)
 	os.Setenv("CENTRAL_ORGANIZATIONID", " orgid")
@@ -1231,5 +1322,5 @@ func TestNewCmd(t *testing.T) {
 	errBuf := new(bytes.Buffer)
 	rootCmd.SetErr(errBuf)
 
-	assert.Contains(t, "Error central.organizationID not set in config", errBuf.String())
+	assert.Contains(t, errOrganizationIDUnset, errBuf.String())
 }

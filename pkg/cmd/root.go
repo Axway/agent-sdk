@@ -15,6 +15,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/cmd/properties/resolver"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/jobs"
+	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/errors"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
@@ -134,6 +135,11 @@ func NewRootCmd(exeName, desc string, initConfigHandler InitConfigHandler, comma
 	}
 
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
+	if agentType == config.TraceabilityAgent || agentType == config.ComplianceAgent {
+		properties.SetAliasKeyPrefix(c.agentName)
+	} else {
+		properties.SetAliasKeyPrefix("")
+	}
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
 	config.AddMetricLogConfigProperties(c.props, agentType)
@@ -179,6 +185,8 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 	c.props = properties.NewPropertiesWithSecretResolver(c.rootCmd, c.secretResolver)
 	if agentType == config.TraceabilityAgent || agentType == config.ComplianceAgent {
 		properties.SetAliasKeyPrefix(c.agentName)
+	} else {
+		properties.SetAliasKeyPrefix("")
 	}
 
 	c.addBaseProps(agentType)
@@ -243,6 +251,14 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 		_, beatsConfigFilePath = c.props.StringFlagValue(beatsPathConfigFlag)
 	}
 
+	// Most agents never set --pathConfig (it defaults to "."), so fall back to "./data"
+	// Instead of dumping files in the working directory, default pkg/agent/cache already uses.
+	dataDirPath := agentConfigFilePath
+	if dataDirPath == "" || dataDirPath == "." {
+		dataDirPath = "./data"
+	}
+	traceability.SetDataDirPath(dataDirPath)
+
 	viper.SetConfigName(c.agentName)
 	// viper.SetConfigType("yaml")  //Comment out since yaml, yml is a support extension already.  We need an updated story to take into account the other supported extensions
 
@@ -255,9 +271,9 @@ func (c *agentRootCommand) initialize(cmd *cobra.Command, args []string) error {
 	viper.AutomaticEnv()
 	err = viper.ReadInConfig()
 	if err != nil {
-		if envFile == "" {
-			return err
-		} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// Config can be read entirely from env vars.
+		// Any other error (e.g. malformed YAML) still fails startup.
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		}
 	}
@@ -418,14 +434,6 @@ func (c *agentRootCommand) run(cmd *cobra.Command, args []string) (err error) {
 			WithField("sdkVersion", SDKBuildVersion).
 			Infof("Starting %s", c.rootCmd.Short)
 		if c.commandHandler != nil {
-			// Setup logp to use beats logger.
-			// Setting up late here as log entries for agent/command initialization are not logged
-			// as the beats logger is initialized only when the beat instance is created.
-			if c.agentType == config.TraceabilityAgent || c.agentType == config.ComplianceAgent {
-				properties.SetAliasKeyPrefix(c.agentName)
-				log.SetIsLogP()
-			}
-
 			c.healthCheckTicker()
 
 			if util.IsNotTest() && c.agentFeaturesCfg.AgentStatusUpdatesEnabled() && !c.centralCfg.GetUsageReportingConfig().IsOfflineMode() {

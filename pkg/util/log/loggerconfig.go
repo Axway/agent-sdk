@@ -111,7 +111,7 @@ func (b *LoggerConfig) Apply() error {
 		logrus.SetOutput(writer)
 	}
 
-	if !b.initialized || isLogP {
+	if !b.initialized {
 		// Add the rotate file hook for log and logrus
 		if b.output == File || b.output == Both {
 			if b.path != "" {

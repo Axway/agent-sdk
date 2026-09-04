@@ -22,11 +22,7 @@ func NewInstanceHandler(agentCacheManager agentcache.Manager, envName string) Ha
 }
 
 func (h *instanceHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Metadata.Scope.Name != h.envName {
-		return false
-	}
-
-	return true
+	return shouldHandleAPIService(event, h.envName)
 }
 
 // HandleCache adds the API Service Instance to the cache during discoveryCache's bulk rebuild.

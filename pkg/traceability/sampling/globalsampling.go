@@ -13,11 +13,11 @@ import (
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/apic/definitions"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/jobs"
 	transactionUtil "github.com/Axway/agent-sdk/pkg/transaction/util"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/shopspring/decimal"
 )
 
@@ -250,7 +250,7 @@ func IsSamplingEnabled() (bool, error) {
 }
 
 // FilterEvents - returns an array of events that are part of the sample
-func FilterEvents(events []publisher.Event) ([]publisher.Event, error) {
+func FilterEvents(events []event.Event) ([]event.Event, error) {
 	if agentSamples == nil {
 		return events, ErrGlobalSamplingCfg
 	}
