@@ -3,11 +3,14 @@ package handler
 import (
 	"context"
 
+	"github.com/Axway/agent-sdk/pkg/agent/provisioningwebhook"
+	"github.com/Axway/agent-sdk/pkg/api"
 	apiv1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/api/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	prov "github.com/Axway/agent-sdk/pkg/apic/provisioning"
+	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
 	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
@@ -24,24 +27,43 @@ type managedApplicationProfileCache interface {
 
 type managedApplicationProfile struct {
 	marketplaceHandler
-	logger log.FieldLogger
-	prov   prov.ApplicationProfileProvisioner
-	cache  managedApplicationProfileCache
-	client client
+	logger        log.FieldLogger
+	prov          prov.ApplicationProfileProvisioner
+	cache         managedApplicationProfileCache
+	client        client
+	webhookCfg    config.ProvisioningWebhookEndpointConfig
+	webhookClient api.Client
+}
+
+// WithManagedApplicationProfileProvisioningWebhook configures the webhook the handler calls instead of
+// its own registered Provisioning implementation, when cfg.IsConfigured()
+func WithManagedApplicationProfileProvisioningWebhook(cfg config.ProvisioningWebhookEndpointConfig, client api.Client) func(c *managedApplicationProfile) {
+	return func(c *managedApplicationProfile) {
+		c.webhookCfg = cfg
+		c.webhookClient = client
+	}
 }
 
 // NewManagedApplicationProfileHandler creates a Handler for Credentials
-func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner, cache managedApplicationProfileCache, client client) Handler {
-	return &managedApplicationProfile{
-		logger: log.NewFieldLogger().WithComponent("managedApplicationProfile").WithPackage("agent.handler"),
-		prov:   prov,
-		cache:  cache,
-		client: client,
+func NewManagedApplicationProfileHandler(prov prov.ApplicationProfileProvisioner, cache managedApplicationProfileCache, client client, opts ...func(c *managedApplicationProfile)) Handler {
+	p := &managedApplicationProfile{
+		logger:     log.NewFieldLogger().WithComponent("managedApplicationProfile").WithPackage("agent.handler"),
+		prov:       prov,
+		cache:      cache,
+		client:     client,
+		webhookCfg: config.NewProvisioningWebhookEndpointConfig("provisioningWebhook.managedApplicationProfile"),
 	}
+	for _, o := range opts {
+		o(p)
+	}
+	return p
 }
 
 func (h *managedApplicationProfile) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
+		return h.webhookCfg.IsConfigured()
+	}
 	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
 	}
@@ -62,6 +84,14 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 		return nil
 	}
 
+	action := GetActionFromContext(ctx)
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
+		if mirrorWebhookDetails(profile) {
+			return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+		}
+		return nil
+	}
+
 	if ok := isStatusFound(profile.Status); !ok {
 		log.Debug("could not handle application request as it did not have a status subresource")
 		return nil
@@ -78,18 +108,15 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 func (h *managedApplicationProfile) onPending(ctx context.Context, profile *management.ManagedApplicationProfile) error {
 	log := getLoggerFromContext(ctx)
 
-	defer func() {
-		statusErr := h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
-		if statusErr != nil {
-			log.WithError(statusErr).Error("error creating status subresources")
-		}
-	}()
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(profile, webhookOperationProvision) {
+		return nil
+	}
 
 	app, err := h.getManagedApp(ctx, profile)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
 		h.onError(ctx, profile, err)
-		return err
+		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
 	}
 
 	h.checkForEnumValueMap(ctx, profile.Spec.Data, profile.Spec.ApplicationProfileDefinition)
@@ -103,6 +130,23 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 		consumerOrgID:     getConsumerOrgID(app),
 		id:                app.Metadata.ID,
 	}
+
+	if h.webhookCfg.IsConfigured() {
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationProfileRequest(webhookOperationProvision, pma)); err != nil {
+			log.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, profile, err)
+			return h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
+		}
+		markWebhookDispatched(profile, webhookOperationProvision)
+		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+	}
+
+	defer func() {
+		statusErr := h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
+		if statusErr != nil {
+			log.WithError(statusErr).Error("error creating status subresources")
+		}
+	}()
 
 	status := h.prov.ApplicationProfileRequestProvision(pma)
 

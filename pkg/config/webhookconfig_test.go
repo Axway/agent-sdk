@@ -7,7 +7,7 @@ import (
 )
 
 func TestWebookConfig(t *testing.T) {
-	cfg := NewWebhookConfig()
+	cfg := NewWebhookConfig("subscriptions.approvalWebhook")
 	assert.False(t, cfg.IsConfigured())
 
 	err := cfg.ValidateConfig()
@@ -15,6 +15,7 @@ func TestWebookConfig(t *testing.T) {
 
 	// this one should be all good
 	cfg = &WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "https://foo.bar:4567",
 		Headers: "Header=contentType,Value=application/json",
 		Secret:  "1234",
@@ -31,6 +32,7 @@ func TestWebookConfig(t *testing.T) {
 
 	// this one should be all good with no headers
 	cfg = &WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "https://foo.bar:4567",
 		Headers: "",
 		Secret:  "1234",
@@ -41,6 +43,7 @@ func TestWebookConfig(t *testing.T) {
 
 	// this one should be all good with no secret
 	cfg = &WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "https://foo.bar:4567",
 		Headers: "Header=contentType,Value=application/json",
 		Secret:  "",
@@ -51,16 +54,18 @@ func TestWebookConfig(t *testing.T) {
 
 	// this one should be bad url
 	cfg = &WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "xxxf",
 		Headers: "Header=contentType,Value=application/json",
 		Secret:  "1234",
 	}
 	err = cfg.ValidateConfig()
 	assert.NotNil(t, err)
-	assert.Equal(t, "central.subscriptions.approvalWebhook.URL is not a valid URL", err.Error())
+	assert.Equal(t, "central.subscriptions.approvalWebhook.url is not a valid URL", err.Error())
 
 	// this one should be bad header
 	cfg = &WebhookConfiguration{
+		Type:    "subscriptions.approvalWebhook",
 		URL:     "https://foo.bar:4567",
 		Headers: "Header=contentType,Vue=application/json",
 		Secret:  "1234",

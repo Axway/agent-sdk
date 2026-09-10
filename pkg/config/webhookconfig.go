@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -20,15 +20,19 @@ type WebhookConfig interface {
 // WebhookConfiguration - do NOT make this an IConfigValidator, as it is validated as part of subscriptionConfig
 type WebhookConfiguration struct {
 	WebhookConfig
+	// Type identifies which webhook config this is (e.g. "subscriptions.approvalWebhook", "provisioningWebhook"),
+	// used only to make ValidateConfig error messages point at the right config section.
+	Type           string
 	URL            string `config:"url"`
 	Headers        string `config:"headers"`
 	Secret         string `config:"secret"`
 	webhookHeaders map[string]string
 }
 
-// NewWebhookConfig -
-func NewWebhookConfig() WebhookConfig {
-	return &WebhookConfiguration{}
+// NewWebhookConfig - Creates a webhook config identified by name (used to disambiguate error messages
+// when more than one webhook config section exists, e.g. "subscriptions.approvalWebhook", "provisioningWebhook")
+func NewWebhookConfig(name string) WebhookConfig {
+	return &WebhookConfiguration{Type: name}
 }
 
 // GetURL - Returns the URL
@@ -57,7 +61,7 @@ func (c *WebhookConfiguration) ValidateConfig() error {
 	if c.IsConfigured() {
 		webhookURL := c.GetURL()
 		if _, err := url.ParseRequestURI(webhookURL); err != nil {
-			return errors.New("central.subscriptions.approvalWebhook.URL is not a valid URL")
+			return fmt.Errorf("central.%s.url is not a valid URL", c.Type)
 		}
 
 		// headers are allowed to be empty, so only validate if there is a configured value
@@ -69,13 +73,13 @@ func (c *WebhookConfiguration) ValidateConfig() error {
 			for _, headerValue := range headersValues {
 				hvArray := strings.Split(headerValue, ",Value=")
 				if len(hvArray) != 2 {
-					return errors.New("could not parse value of central.subscriptions.approvalWebhook.headers")
+					return fmt.Errorf("could not parse value of central.%s.headers", c.Type)
 				}
 				hvArray[0] = strings.TrimPrefix(hvArray[0], "Header=") // handle the first header in the list
 				c.webhookHeaders[hvArray[0]] = hvArray[1]
 			}
 		}
-		log.Trace("Subscription approval webhook configuration set")
+		log.Tracef("%s webhook configuration set", c.Type)
 	}
 
 	return nil
