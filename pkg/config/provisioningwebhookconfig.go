@@ -78,6 +78,14 @@ type ProvisioningWebhookEndpointConfig interface {
 	GetPassword() string
 	GetAPIKeyHeader() string
 	GetAPIKeyValue() string
+	GetRetryCount() int
+}
+
+// NewProvisioningWebhookEndpointConfig - Creates an unconfigured provisioning webhook endpoint config
+// (IsConfigured() returns false) identified by name, safe to use as a handler default so callers never
+// need to nil-check before calling IsConfigured()/ValidateConfig().
+func NewProvisioningWebhookEndpointConfig(name string) ProvisioningWebhookEndpointConfig {
+	return &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: name}}
 }
 
 // ProvisioningWebhookEndpointConfiguration - config for a single provisioning webhook, built on WebhookConfiguration
@@ -88,6 +96,7 @@ type ProvisioningWebhookEndpointConfiguration struct {
 	Password     string `config:"password"`
 	APIKeyHeader string `config:"apiKeyHeader"`
 	APIKeyValue  string `config:"apiKeyValue"`
+	RetryCount   int    `config:"retryCount"`
 }
 
 // GetAuthType - Returns the authentication method configured for this webhook
@@ -113,6 +122,11 @@ func (c *ProvisioningWebhookEndpointConfiguration) GetAPIKeyHeader() string {
 // GetAPIKeyValue - Returns the API key value
 func (c *ProvisioningWebhookEndpointConfiguration) GetAPIKeyValue() string {
 	return c.APIKeyValue
+}
+
+// GetRetryCount - Returns the number of additional attempts Dispatch should make if the webhook call fails
+func (c *ProvisioningWebhookEndpointConfiguration) GetRetryCount() int {
+	return c.RetryCount
 }
 
 // ValidateConfig - Validates the base webhook config (URL/headers), then the fields required by the configured auth type
@@ -166,6 +180,7 @@ func addSingleProvisioningWebhookProperties(props properties.Properties, path, r
 	props.AddStringProperty(path+".password", "", "Password for "+resourceType+" provisioning webhook basic auth")
 	props.AddStringProperty(path+".apiKeyHeader", "", "Header name used to send the "+resourceType+" provisioning webhook API key")
 	props.AddStringProperty(path+".apiKeyValue", "", "API key value for the "+resourceType+" provisioning webhook")
+	props.AddIntProperty(path+".retryCount", 0, "Number of additional attempts to make if the "+resourceType+" provisioning webhook call fails")
 }
 
 func parseProvisioningWebhookConfig(props properties.Properties) ProvisioningWebhookConfig {
@@ -189,5 +204,6 @@ func parseSingleProvisioningWebhookConfig(props properties.Properties, path, nam
 		Password:     props.StringPropertyValue(path + ".password"),
 		APIKeyHeader: props.StringPropertyValue(path + ".apiKeyHeader"),
 		APIKeyValue:  props.StringPropertyValue(path + ".apiKeyValue"),
+		RetryCount:   props.IntPropertyValue(path + ".retryCount"),
 	}
 }

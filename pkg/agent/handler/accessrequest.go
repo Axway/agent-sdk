@@ -65,6 +65,7 @@ func NewAccessRequestHandler(prov prov.AccessProvisioner, cache agentcache.Manag
 		client:            client,
 		encryptSchema:     encryptSchema,
 		customUnitHandler: customUnitHandler,
+		webhookCfg:        config.NewProvisioningWebhookEndpointConfig("provisioningWebhook.accessRequest"),
 	}
 	for _, o := range opts {
 		o(arh)
@@ -78,7 +79,7 @@ func (h *accessRequestHandler) ShouldHandle(ctx context.Context, event *proto.Ev
 		return true
 	}
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
-		return true
+		return h.webhookCfg.IsConfigured()
 	}
 	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
@@ -200,7 +201,7 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationProvision) {
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationProvision) {
 		return ar
 	}
 
@@ -234,8 +235,12 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 
 	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationProvision, *req))
+	if h.webhookCfg.IsConfigured() {
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationProvision, *req)); err != nil {
+			log.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, ar, err)
+			return ar
+		}
 		markWebhookDispatched(ar, webhookOperationProvision)
 		return ar
 	}
@@ -331,7 +336,7 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessR
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationDeprovision) {
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationDeprovision) {
 		return
 	}
 
@@ -352,8 +357,13 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 		return
 	}
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationDeprovision, *req))
+	if h.webhookCfg.IsConfigured() {
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationDeprovision, *req)); err != nil {
+			log.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, ar, err)
+			h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+			return
+		}
 		markWebhookDispatched(ar, webhookOperationDeprovision)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return

@@ -70,6 +70,7 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 		client:              client,
 		encryptSchema:       encryptSchema,
 		idpProviderRegistry: providerRegistry,
+		webhookCfg:          config.NewProvisioningWebhookEndpointConfig("provisioningWebhook.credential"),
 	}
 
 	for _, o := range opts {
@@ -81,7 +82,7 @@ func NewCredentialHandler(prov credProv, client client, providerRegistry oauth.I
 func (h *credentials) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
-		return true
+		return h.webhookCfg.IsConfigured()
 	}
 	if action == proto.Event_DELETED || h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
@@ -225,7 +226,7 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationDeprovision) {
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationDeprovision) {
 		return
 	}
 
@@ -249,8 +250,13 @@ func (h *credentials) onDeleting(ctx context.Context, cred *management.Credentia
 		return
 	}
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationDeprovision, provCreds))
+	if h.webhookCfg.IsConfigured() {
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationDeprovision, provCreds)); err != nil {
+			logger.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, cred, err)
+			h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+			return
+		}
 		markWebhookDispatched(cred, webhookOperationDeprovision)
 		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
 		return
@@ -310,7 +316,7 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	// check the application status
 	logger := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationProvision) {
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationProvision) {
 		return cred
 	}
 
@@ -332,8 +338,16 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationProvision, provCreds))
+	if h.webhookCfg.IsConfigured() {
+		// normal (non-webhook) provisioning always sets this so agents-controller can schedule credential
+		// expiry off the status subresource; set it here too, before dispatch, so it's already present in
+		// x-agent-details by the time mirrorWebhookDetails runs.
+		util.SetAgentDetailsKey(cred, prov.HandleCredentialExpiry, "true")
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationProvision, provCreds)); err != nil {
+			logger.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, cred, err)
+			return cred
+		}
 		markWebhookDispatched(cred, webhookOperationProvision)
 		return cred
 	}

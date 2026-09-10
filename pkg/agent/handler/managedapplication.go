@@ -62,9 +62,10 @@ func WithManagedAppProvisioningWebhook(cfg config.ProvisioningWebhookEndpointCon
 
 func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentcache.Manager, client client, opts ...func(c *managedApplication)) Handler {
 	ma := &managedApplication{
-		prov:   prov,
-		cache:  cache,
-		client: client,
+		prov:       prov,
+		cache:      cache,
+		client:     client,
+		webhookCfg: config.NewProvisioningWebhookEndpointConfig("provisioningWebhook.managedApplication"),
 	}
 	if tc, ok := client.(teamFetcher); ok {
 		ma.teamClient = tc
@@ -78,7 +79,7 @@ func NewManagedApplicationHandler(prov prov.ApplicationProvisioner, cache agentc
 func (h *managedApplication) ShouldHandle(ctx context.Context, event *proto.Event) bool {
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && event.Metadata.GetSubresource() == defs.XWebhookDetails {
-		return true
+		return h.webhookCfg.IsConfigured()
 	}
 	if h.prov == nil || h.shouldIgnore(action, event.Metadata) {
 		return false
@@ -140,11 +141,15 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
+	if h.webhookCfg.IsConfigured() {
 		if webhookDispatchedFor(app, webhookOperationProvision) {
 			return nil
 		}
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationProvision, pma))
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationProvision, pma)); err != nil {
+			log.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(app, err)
+			return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		}
 		markWebhookDispatched(app, webhookOperationProvision)
 		return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	}
@@ -207,7 +212,7 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() && webhookDispatchedFor(app, webhookOperationDeprovision) {
+	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(app, webhookOperationDeprovision) {
 		return
 	}
 
@@ -218,8 +223,13 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *management.Man
 		return
 	}
 
-	if h.webhookCfg != nil && h.webhookCfg.IsConfigured() {
-		provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationDeprovision, pma))
+	if h.webhookCfg.IsConfigured() {
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationDeprovision, pma)); err != nil {
+			log.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(app, err)
+			h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+			return
+		}
 		markWebhookDispatched(app, webhookOperationDeprovision)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 		return
