@@ -627,7 +627,8 @@ func registerApplicationProfileProvisioner(provisioner interface{}) {
 	if appProfileProv, ok := provisioner.(provisioning.ApplicationProfileProvisioner); ok {
 		agent.proxyResourceHandler.RegisterTargetHandler(
 			management.ApplicationProfileDefinitionGVK().Kind,
-			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient),
+			handler.NewManagedApplicationProfileHandler(appProfileProv, agent.cacheManager, agent.apicClient,
+				handler.WithManagedApplicationProfileProvisioningWebhook(agent.cfg.GetProvisioningWebhookConfig().GetManagedApplicationProfileWebhook(), provisioningWebhookClient())),
 		)
 	}
 }

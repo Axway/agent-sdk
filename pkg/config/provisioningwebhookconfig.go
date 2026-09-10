@@ -23,6 +23,7 @@ const (
 // ProvisioningWebhookConfig - Interface for the on-prem provisioning webhook config, one webhook per resource type
 type ProvisioningWebhookConfig interface {
 	GetManagedApplicationWebhook() ProvisioningWebhookEndpointConfig
+	GetManagedApplicationProfileWebhook() ProvisioningWebhookEndpointConfig
 	GetAccessRequestWebhook() ProvisioningWebhookEndpointConfig
 	GetCredentialWebhook() ProvisioningWebhookEndpointConfig
 	ValidateConfig() error
@@ -31,22 +32,29 @@ type ProvisioningWebhookConfig interface {
 // ProvisioningWebhookConfiguration - holds the provisioning webhook config for each resource type
 type ProvisioningWebhookConfiguration struct {
 	ProvisioningWebhookConfig
-	ManagedApplication ProvisioningWebhookEndpointConfig `config:"managedApplication"`
-	AccessRequest      ProvisioningWebhookEndpointConfig `config:"accessRequest"`
-	Credential         ProvisioningWebhookEndpointConfig `config:"credential"`
+	ManagedApplication        ProvisioningWebhookEndpointConfig `config:"managedApplication"`
+	ManagedApplicationProfile ProvisioningWebhookEndpointConfig `config:"managedApplicationProfile"`
+	AccessRequest             ProvisioningWebhookEndpointConfig `config:"accessRequest"`
+	Credential                ProvisioningWebhookEndpointConfig `config:"credential"`
 }
 
 func newProvisioningWebhookConfig() ProvisioningWebhookConfig {
 	return &ProvisioningWebhookConfiguration{
-		ManagedApplication: &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplication"}},
-		AccessRequest:      &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.accessRequest"}},
-		Credential:         &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.credential"}},
+		ManagedApplication:        &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplication"}},
+		ManagedApplicationProfile: &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplicationProfile"}},
+		AccessRequest:             &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.accessRequest"}},
+		Credential:                &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.credential"}},
 	}
 }
 
 // GetManagedApplicationWebhook - Returns the webhook config used for ManagedApplication provisioning
 func (c *ProvisioningWebhookConfiguration) GetManagedApplicationWebhook() ProvisioningWebhookEndpointConfig {
 	return c.ManagedApplication
+}
+
+// GetManagedApplicationProfileWebhook - Returns the webhook config used for ManagedApplicationProfile provisioning
+func (c *ProvisioningWebhookConfiguration) GetManagedApplicationProfileWebhook() ProvisioningWebhookEndpointConfig {
+	return c.ManagedApplicationProfile
 }
 
 // GetAccessRequestWebhook - Returns the webhook config used for AccessRequest provisioning
@@ -61,7 +69,7 @@ func (c *ProvisioningWebhookConfiguration) GetCredentialWebhook() ProvisioningWe
 
 // ValidateConfig - Validates each configured webhook
 func (c *ProvisioningWebhookConfiguration) ValidateConfig() error {
-	for _, webhook := range []ProvisioningWebhookEndpointConfig{c.ManagedApplication, c.AccessRequest, c.Credential} {
+	for _, webhook := range []ProvisioningWebhookEndpointConfig{c.ManagedApplication, c.ManagedApplicationProfile, c.AccessRequest, c.Credential} {
 		if err := webhook.ValidateConfig(); err != nil {
 			return err
 		}
@@ -160,13 +168,15 @@ func (c *ProvisioningWebhookEndpointConfiguration) ValidateConfig() error {
 }
 
 const (
-	pathProvisioningWebhookManagedApplication = "central.provisioningWebhook.managedApplication"
-	pathProvisioningWebhookAccessRequest      = "central.provisioningWebhook.accessRequest"
-	pathProvisioningWebhookCredential         = "central.provisioningWebhook.credential"
+	pathProvisioningWebhookManagedApplication        = "central.provisioningWebhook.managedApplication"
+	pathProvisioningWebhookManagedApplicationProfile = "central.provisioningWebhook.managedApplicationProfile"
+	pathProvisioningWebhookAccessRequest             = "central.provisioningWebhook.accessRequest"
+	pathProvisioningWebhookCredential                = "central.provisioningWebhook.credential"
 )
 
 func addProvisioningWebhookConfigProperties(props properties.Properties) {
 	addSingleProvisioningWebhookProperties(props, pathProvisioningWebhookManagedApplication, "ManagedApplication")
+	addSingleProvisioningWebhookProperties(props, pathProvisioningWebhookManagedApplicationProfile, "ManagedApplicationProfile")
 	addSingleProvisioningWebhookProperties(props, pathProvisioningWebhookAccessRequest, "AccessRequest")
 	addSingleProvisioningWebhookProperties(props, pathProvisioningWebhookCredential, "Credential")
 }
@@ -185,9 +195,10 @@ func addSingleProvisioningWebhookProperties(props properties.Properties, path, r
 
 func parseProvisioningWebhookConfig(props properties.Properties) ProvisioningWebhookConfig {
 	return &ProvisioningWebhookConfiguration{
-		ManagedApplication: parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookManagedApplication, "provisioningWebhook.managedApplication"),
-		AccessRequest:      parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookAccessRequest, "provisioningWebhook.accessRequest"),
-		Credential:         parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookCredential, "provisioningWebhook.credential"),
+		ManagedApplication:        parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookManagedApplication, "provisioningWebhook.managedApplication"),
+		ManagedApplicationProfile: parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookManagedApplicationProfile, "provisioningWebhook.managedApplicationProfile"),
+		AccessRequest:             parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookAccessRequest, "provisioningWebhook.accessRequest"),
+		Credential:                parseSingleProvisioningWebhookConfig(props, pathProvisioningWebhookCredential, "provisioningWebhook.credential"),
 	}
 }
 

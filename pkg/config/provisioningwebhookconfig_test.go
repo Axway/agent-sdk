@@ -9,6 +9,7 @@ import (
 func TestProvisioningWebhookConfigNotConfigured(t *testing.T) {
 	cfg := newProvisioningWebhookConfig()
 	assert.False(t, cfg.GetManagedApplicationWebhook().IsConfigured())
+	assert.False(t, cfg.GetManagedApplicationProfileWebhook().IsConfigured())
 	assert.False(t, cfg.GetAccessRequestWebhook().IsConfigured())
 	assert.False(t, cfg.GetCredentialWebhook().IsConfigured())
 	assert.Nil(t, cfg.ValidateConfig())
@@ -110,8 +111,9 @@ func TestProvisioningWebhookConfigAuthTypes(t *testing.T) {
 
 func TestProvisioningWebhookConfigOnlyOneConfigured(t *testing.T) {
 	cfg := &ProvisioningWebhookConfiguration{
-		ManagedApplication: &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplication"}},
-		AccessRequest:      &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.accessRequest"}},
+		ManagedApplication:        &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplication"}},
+		ManagedApplicationProfile: &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.managedApplicationProfile"}},
+		AccessRequest:             &ProvisioningWebhookEndpointConfiguration{WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.accessRequest"}},
 		Credential: &ProvisioningWebhookEndpointConfiguration{
 			WebhookConfiguration: &WebhookConfiguration{Type: "provisioningWebhook.credential", URL: "https://foo.bar", Secret: "token"},
 			AuthType:             string(ProvisioningWebhookAuthBearer),
@@ -119,6 +121,7 @@ func TestProvisioningWebhookConfigOnlyOneConfigured(t *testing.T) {
 	}
 
 	assert.False(t, cfg.GetManagedApplicationWebhook().IsConfigured())
+	assert.False(t, cfg.GetManagedApplicationProfileWebhook().IsConfigured())
 	assert.False(t, cfg.GetAccessRequestWebhook().IsConfigured())
 	assert.True(t, cfg.GetCredentialWebhook().IsConfigured())
 	assert.Nil(t, cfg.ValidateConfig())

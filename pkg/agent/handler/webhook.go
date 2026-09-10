@@ -83,6 +83,31 @@ func newWebhookApplicationRequest(operation string, a provManagedApp) webhookApp
 	}
 }
 
+// webhookApplicationProfileRequest is the payload sent to the configured provisioning webhook for a ManagedApplicationProfile event
+type webhookApplicationProfileRequest struct {
+	Operation                    string                 `json:"operation"`
+	ID                           string                 `json:"id"`
+	ManagedApplicationName       string                 `json:"managedApplicationName"`
+	ApplicationProfileDefinition string                 `json:"applicationProfileDefinition"`
+	TeamName                     string                 `json:"teamName"`
+	ConsumerOrgID                string                 `json:"consumerOrgId,omitempty"`
+	Attributes                   map[string]interface{} `json:"attributes,omitempty"`
+	ApplicationDetails           map[string]interface{} `json:"applicationDetails,omitempty"`
+}
+
+func newWebhookApplicationProfileRequest(operation string, p provManagedAppProfile) webhookApplicationProfileRequest {
+	return webhookApplicationProfileRequest{
+		Operation:                    operation,
+		ID:                           p.id,
+		ManagedApplicationName:       p.managedAppName,
+		ApplicationProfileDefinition: p.profileDefinition,
+		TeamName:                     p.teamName,
+		ConsumerOrgID:                p.consumerOrgID,
+		Attributes:                   p.attributes,
+		ApplicationDetails:           p.data,
+	}
+}
+
 // webhookQuota mirrors the fields of prov.Quota needed by the webhook contract
 type webhookQuota struct {
 	Limit    int64  `json:"limit"`
