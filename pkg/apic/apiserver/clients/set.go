@@ -42,7 +42,6 @@ type Set struct {
 	ComplianceRuntimeResultManagementV1      *management_v1.UnscopedComplianceRuntimeResultClient
 	LLMConnectionManagementV1                *management_v1.UnscopedLLMConnectionClient
 	GuardrailManagementV1                    *management_v1.UnscopedGuardrailClient
-	AssetMappingManagementV1                 *management_v1.UnscopedAssetMappingClient
 	WebhookManagementV1                      *management_v1.UnscopedWebhookClient
 	BatchJobManagementV1                     *management_v1.UnscopedBatchJobClient
 	SecretManagementV1                       *management_v1.UnscopedSecretClient
@@ -220,10 +219,6 @@ func New(b cAPIV1.Base) *Set {
 	s.GuardrailManagementV1, err = management_v1.NewGuardrailClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.Guardrail: %s", err))
-	}
-	s.AssetMappingManagementV1, err = management_v1.NewAssetMappingClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.AssetMapping: %s", err))
 	}
 	s.WebhookManagementV1, err = management_v1.NewWebhookClient(b)
 	if err != nil {

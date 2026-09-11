@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -36,6 +37,7 @@ const (
 	metricStr         = "metric"
 	volumeStr         = "volume"
 	countStr          = "count"
+	defaultUnit       = "transactions"
 )
 
 var exitMetricInit = false
@@ -380,7 +382,30 @@ func (c *collector) AddAPIMetric(apiMetric *APIMetric) {
 	if metric == nil {
 		return
 	}
-	addMetric(metric * centralMetric)
+	if metric.EventID == "" {
+		metric.EventID = uuid.NewString()
+	}
+
+	// the incoming metric already carries fully resolved subscription/app/product context,
+	// so mark it resolved to keep resolveMetricContext from overwriting it from the cache later
+	metric.ctx = transactionContext{AppDetails: apiMetric.App}
+	metric.resolved = true
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.batchLock.Lock()
+	defer c.batchLock.Unlock()
+
+	c.updateStartTime()
+
+	if apiMetric.Unit != nil {
+		c.updateCachedCustomUnitMetric(apiMetric, metric)
+		return
+	}
+
+	apiCtr := c.getOrRegisterGroupedAPICounter(metric.getKey())
+	apiCtr.UpdateWithStats(apiMetric.Count, apiMetric.Response.Min, apiMetric.Response.Max, apiMetric.Response.Avg)
+	c.updateMetricWithCachedMetric(metric, apiCtr)
 }
 
 // AddLLMMetric - add an llm usage metric for an api/app/model combo
@@ -448,36 +473,28 @@ func (c *collector) flushMetricsQueue() {
 	c.metricsQueueLock.Unlock()
 
 	for _, metric := range queued {
-		c.addMetric(metric)
+		c.addMetricFromQueue(metric)
 	}
 }
 
-// addMetric - add central metric event
-func (c *collector) addMetric(metric *centralMetric) {
+// addMetricFromQueue - add central metric event
+func (c *collector) addMetricFromQueue(metric *centralMetric) {
 	if metric.EventID == "" {
 		metric.EventID = uuid.NewString()
 	}
 
-	// the incoming metric already carries fully resolved subscription/app/product context,
-	// so mark it resolved to keep resolveMetricContext from overwriting it from the cache later
-	metric.ctx = transactionContext{AppDetails: apiMetric.App}
-	metric.resolved = true
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.batchLock.Lock()
-	defer c.batchLock.Unlock()
-
-	c.updateStartTime()
-
-	if apiMetric.Unit != nil {
-		c.updateCachedCustomUnitMetric(apiMetric, metric)
+	v4Event := c.createV4Event(metric.Observation.Start, metric)
+	metricData, _ := json.Marshal(v4Event)
+	pubEvent, err := (&CondorMetricEvent{
+		Message:   string(metricData),
+		Fields:    make(map[string]interface{}),
+		Timestamp: v4Event.Data.GetStartTime(),
+		ID:        v4Event.ID,
+	}).CreateEvent()
+	if err != nil {
 		return
 	}
-
-	apiCtr := c.getOrRegisterGroupedAPICounter(metric.getKey())
-	apiCtr.UpdateWithStats(apiMetric.Count, apiMetric.Response.Min, apiMetric.Response.Max, apiMetric.Response.Avg)
-	c.updateMetricWithCachedMetric(metric, apiCtr)
+	c.metricBatch.AddEventWithoutHistogram(pubEvent)
 }
 
 // updateCachedCustomUnitMetric merges a custom-unit APIMetric into any cached metric already tracked for its key
@@ -485,7 +502,7 @@ func (c *collector) updateCachedCustomUnitMetric(apiMetric *APIMetric, metric *c
 	if m := c.getExistingMetric(metric); m != nil {
 		metric = m
 	}
-	metric.Units.CustomUnits[apiMetric.Unit.Name].Count += apiMetric.Count
+	metric.Units.Units[apiMetric.Unit.Name].Count += apiMetric.Count
 
 	counter := c.getOrRegisterGroupedCounter(metric.getKey())
 	counter.Inc(apiMetric.Count)
@@ -518,39 +535,17 @@ func (c *collector) createMetric(detail transactionContext) *centralMetric {
 	apicDeployment, _, runtimeType := centralConfigFields()
 
 	me := &centralMetric{
-		Version:            metricDataVersion,
-		APICDeployment:     apicDeployment,
-		Environment:        &EnvironmentInfo{RuntimeType: runtimeType},
-		Marketplace:        transutil.GetMarketplaceDetails(managedApp),
-		Subscription:       c.createSubscriptionDetail(accessRequest),
-		App:                c.createAppDetail(managedApp),
-		Product:            c.getProduct(accessRequest),
-		API:                c.createAPIDetail(detail.APIDetails),
-		LLM:                c.createLLMDetail(detail.LLMModel, detail.APIDetails.ID),
-		AssetResource:      c.getAssetResource(accessRequest),
-		APIServiceRevision: c.getAPIServiceRevision(accessRequest),
-		ProductPlan:        c.getProductPlan(accessRequest),
-		Units:              c.getUnits(detail, accessRequest),
+		Version:        metricDataVersion,
+		APICDeployment: apicDeployment,
+		Environment:    &EnvironmentInfo{RuntimeType: runtimeType},
+		API:            c.createAPIDetail(detail.APIDetails),
+		LLM:            c.createLLMDetail(detail.LLMModel, detail.APIDetails.ID),
+		Units:          c.getUnits(detail),
 		Observation: &models.ObservationDetails{
 			Start: now().Unix(),
 		},
 		EventID: uuid.NewString(),
 		ctx:     detail,
-	}
-
-	// transactions
-	if detail.Status != "" {
-		me.Units = &Units{
-			Transactions: &Transactions{
-				Status: GetStatusText(detail.Status),
-			},
-		}
-	} else if detail.UnitName != "" {
-		me.Units = &Units{
-			CustomUnits: map[string]*UnitCount{
-				detail.UnitName: {},
-			},
-		}
 	}
 
 	return me
@@ -576,7 +571,7 @@ func (c *collector) resolveMetricContext(metric *centralMetric) {
 		if metric.Units.Transactions != nil {
 			metric.Units.Transactions.Quota = c.getQuota(accessRequest, defaultUnit)
 		}
-		for name, unitCount := range metric.Units.CustomUnits {
+		for name, unitCount := range metric.Units.Units {
 			unitCount.Quota = c.getQuota(accessRequest, name)
 		}
 	}
@@ -844,13 +839,11 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	return ref
 }
 
-func (c *collector) getUnits(detail transactionContext, accessRequest *management.AccessRequest) *Units {
+func (c *collector) getUnits(detail transactionContext) *Units {
 	if detail.UnitName != "" {
 		return &Units{
 			Units: map[string]*UnitCount{
-				detail.UnitName: {
-					Quota: c.getQuota(accessRequest, detail.UnitName),
-				},
+				detail.UnitName: {},
 			},
 		}
 	}
@@ -861,7 +854,6 @@ func (c *collector) getUnits(detail transactionContext, accessRequest *managemen
 			unitName := unit.String()
 			customUnits[unitName] = &UnitCount{
 				Count: count,
-				Quota: c.getQuota(accessRequest, unitName),
 			}
 		}
 		return &Units{Units: customUnits}
@@ -870,9 +862,6 @@ func (c *collector) getUnits(detail transactionContext, accessRequest *managemen
 	// transactions
 	return &Units{
 		Transactions: &Transactions{
-			UnitCount: UnitCount{
-				Quota: c.getQuota(accessRequest, TransactionUnit.String()),
-			},
 			Status: GetStatusText(detail.Status),
 		},
 	}
@@ -966,7 +955,9 @@ func (c *collector) generateEvents() {
 	c.metricStartTime = time.Time{}
 
 	c.metricBatch = NewEventBatch(c)
-	c.registry.Each(c.processRegistry)
+	c.registry.Each(func(name string, metric interface{}) {
+		c.processRegistry(name, metric, publishStartTime)
+	})
 	c.flushMetricsQueue()
 
 	if len(c.metricBatch.events) == 0 && !c.usageConfig.IsOfflineMode() {
