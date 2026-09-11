@@ -121,17 +121,6 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return nil
 	}
 
-	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
-		ar := &management.AccessRequest{}
-		if err := ar.FromInstance(resource); err != nil {
-			return nil
-		}
-		if mirrorWebhookDetails(ar) {
-			return h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
-		}
-		return nil
-	}
-
 	log := getLoggerFromContext(ctx).WithComponent("accessRequestHandler")
 	defer log.Trace("finished processing request")
 	ctx = setLoggerInContext(ctx, log)
@@ -140,6 +129,16 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	err := ar.FromInstance(resource)
 	if err != nil {
 		log.WithError(err).Error("could not handle access request")
+		return nil
+	}
+
+	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
+		if webhookDispatchedFor(ar, webhookOperationProvision) {
+			return h.postWebhookProvisionProcess(log, ar)
+		}
+		if webhookDispatchedFor(ar, webhookOperationDeprovision) {
+			h.postWebhookDeprovisionProcess(log, ar)
+		}
 		return nil
 	}
 
@@ -155,6 +154,13 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	}
 
 	if h.shouldSkipAccessRequest(log, ar) {
+		return nil
+	}
+
+	if ok := h.shouldProvisionWebhook(ar.Status, ar.Metadata.State, h.webhookCfg); ok {
+		log.Trace("processing resource in pending status via provisioning webhook")
+		mar := h.getMigratingAccessRequest(ar)
+		h.onWebhookProvision(ctx, log, ar, mar)
 		return nil
 	}
 
@@ -190,6 +196,12 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 		return err
 	}
 
+	if ok := h.shouldDeprovisionWebhook(ar.Status, ar.Metadata.State, ar.Finalizers, h.webhookCfg); ok {
+		log.Trace("processing resource in deleting state via provisioning webhook")
+		h.onWebhookDeprovision(ctx, log, ar)
+		return nil
+	}
+
 	if ok := h.shouldProcessDeleting(ar.Status, ar.Metadata.State, ar.Finalizers); ok {
 		log.Trace("processing resource in deleting state")
 		h.onDeleting(ctx, ar)
@@ -198,50 +210,43 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 	return nil
 }
 
-func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
-	log := getLoggerFromContext(ctx)
-
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationProvision) {
-		return ar
-	}
-
+// buildAccessRequest fetches the managed app and access request definition, then builds the full
+// provisioning request - shared by the classic and webhook-dispatch paths, which only differ in how they
+// report a failure here. app/ard are also returned since callers need them beyond just building req
+// (quota enforcement, secret data encryption).
+func (h *accessRequestHandler) buildAccessRequest(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) (*management.ManagedApplication, *management.AccessRequestDefinition, *provAccReq, error) {
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
-		log.WithError(err).Error("error getting managed app")
-		h.onError(ctx, ar, err)
-		return ar
+		return nil, nil, nil, fmt.Errorf("error getting managed app: %w", err)
 	}
 
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
-		err = fmt.Errorf("error can't handle access request when application is not yet successful")
-		h.onError(ctx, ar, err)
-		return ar
+		return nil, nil, nil, fmt.Errorf("error can't handle access request when application is not yet successful")
 	}
 
 	ard, err := h.getARD(ctx, ar)
 	if err != nil {
-		log.WithError(err).Errorf("error getting access request definition")
-		h.onError(ctx, ar, err)
-		return ar
+		return nil, nil, nil, fmt.Errorf("error getting access request definition: %w", err)
 	}
 
 	req, err := h.newReq(ctx, ar, mar, util.GetAgentDetails(app))
 	if err != nil {
-		log.WithError(err).Error("error getting resource details")
-		h.onError(ctx, ar, err)
-		return ar
+		return nil, nil, nil, fmt.Errorf("error getting resource details: %w", err)
 	}
 
 	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
 
-	if h.webhookCfg.IsConfigured() {
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationProvision, *req)); err != nil {
-			log.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(ctx, ar, err)
-			return ar
-		}
-		markWebhookDispatched(ar, webhookOperationProvision)
+	return app, ard, req, nil
+}
+
+func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
+	log := getLoggerFromContext(ctx)
+
+	app, ard, req, err := h.buildAccessRequest(ctx, ar, mar)
+	if err != nil {
+		log.WithError(err).Error("error building access request")
+		h.onError(ctx, ar, err)
 		return ar
 	}
 
@@ -301,6 +306,82 @@ func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.Acc
 	return ar
 }
 
+// onWebhookProvision dispatches the provision request to the configured webhook instead of calling this
+// agent's own registered Provisioning implementation. Self-contained (builds its own request, persists its
+// own result) since it's called directly from Handle, before onPending's classic-only path.
+func (h *accessRequestHandler) onWebhookProvision(ctx context.Context, log log.FieldLogger, ar *management.AccessRequest, mar *apiv1.ResourceInstance) {
+	if webhookDispatchedFor(ar, webhookOperationProvision) {
+		return
+	}
+
+	_, _, req, err := h.buildAccessRequest(ctx, ar, mar)
+	if err != nil {
+		log.WithError(err).Error("error building access request")
+		return
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationProvision, *req)); err != nil {
+		log.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(ctx, ar, err)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+		return
+	}
+	markWebhookDispatched(ar, webhookOperationProvision)
+	h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+}
+
+// postWebhookProvisionProcess mirrors the webhook's x-webhook-details into x-agent-details, and adds the
+// finalizer once status reflects success - status is the webhook's own responsibility (see
+// docs/discovery/provisioning-webhook.md), so ar.Status already reflects the outcome by the time this
+// runs. On success, also completes any pending AccessRequest migration/transfer: getMigratingAccessRequest
+// is a stateless lookup keyed off ar.Spec.AccessRequest, so it's safe to resolve fresh here rather than
+// needing whatever mar onWebhookProvision saw at dispatch time. ar is dropped from cache after that (not
+// re-added) since the x-agent-details write below lets the already-decoupled accessRequestCacheHandler
+// pick it back up fresh. Only called when the dispatched operation was a provision - see Handle.
+func (h *accessRequestHandler) postWebhookProvisionProcess(log log.FieldLogger, ar *management.AccessRequest) error {
+	if ar.Status.Level == prov.Success.String() {
+		if !hasFinalizer(ar.Finalizers, arFinalizer) {
+			// only add finalizer on success
+			ri, _ := ar.AsInstance()
+			h.client.UpdateResourceFinalizer(ri, arFinalizer, "", true)
+		}
+
+		if mar := h.getMigratingAccessRequest(ar); mar != nil {
+			h.client.UpdateResourceFinalizer(mar, arFinalizer, "", false)
+			if err := h.client.DeleteResourceInstance(mar); err != nil {
+				log.WithError(err).Error("failed to delete migrating access request")
+			}
+			h.cache.DeleteAccessRequest(ar.Metadata.ID)
+		}
+	}
+	if mirrorWebhookDetails(ar) {
+		return h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+	}
+	return nil
+}
+
+// postWebhookDeprovisionProcess removes the finalizer (if still present) and drops the access request
+// from cache once the webhook reports it successfully completed a deprovision. ar.Status can't be used
+// for this - it's whatever it already was when shouldDeprovisionWebhook let the event through, not a
+// signal from the webhook - so success/failure is read from the reserved "status" (and, on failure,
+// "message") keys the webhook writes inside x-webhook-details itself. Status itself is the webhook's own
+// responsibility (see docs/discovery/provisioning-webhook.md), so on failure this only logs - it doesn't
+// write anything. No mirroring here - deprovision typically has no data to report. Only called when the
+// dispatched operation was a deprovision - see Handle.
+func (h *accessRequestHandler) postWebhookDeprovisionProcess(log log.FieldLogger, ar *management.AccessRequest) {
+	if webhookDetailsValue(ar, webhookStatusKey) != webhookStatusSuccess {
+		message := webhookDetailsValue(ar, webhookMessageKey)
+		log.WithField("message", message).Error("provisioning webhook reported deprovision failure")
+		return
+	}
+
+	if hasFinalizer(ar.Finalizers, arFinalizer) {
+		ri, _ := ar.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
+	}
+	h.cache.DeleteAccessRequest(ar.Metadata.ID)
+}
+
 func (h *accessRequestHandler) provision(par *provAccReq) (prov.RequestStatus, prov.AccessData) {
 	status, accessData := h.prov.AccessRequestProvision(par)
 	if status.GetStatus() == prov.Success {
@@ -336,10 +417,6 @@ func (h *accessRequestHandler) onError(_ context.Context, ar *management.AccessR
 func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.AccessRequest) {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(ar, webhookOperationDeprovision) {
-		return
-	}
-
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
@@ -357,18 +434,6 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 		return
 	}
 
-	if h.webhookCfg.IsConfigured() {
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationDeprovision, *req)); err != nil {
-			log.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(ctx, ar, err)
-			h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
-			return
-		}
-		markWebhookDispatched(ar, webhookOperationDeprovision)
-		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
-		return
-	}
-
 	status := h.prov.AccessRequestDeprovision(req)
 	if status.GetStatus() == prov.Success {
 		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
@@ -379,6 +444,39 @@ func (h *accessRequestHandler) onDeleting(ctx context.Context, ar *management.Ac
 		h.onError(ctx, ar, err)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 	}
+}
+
+// onWebhookDeprovision dispatches the deprovision request to the configured webhook instead of calling
+// this agent's own registered Provisioning implementation. Self-contained (builds its own request,
+// persists its own result) since it's called directly from Handle, before onDeleting's classic-only path.
+func (h *accessRequestHandler) onWebhookDeprovision(ctx context.Context, log log.FieldLogger, ar *management.AccessRequest) {
+	if webhookDispatchedFor(ar, webhookOperationDeprovision) {
+		return
+	}
+
+	app, err := h.getManagedApp(ctx, ar)
+	if err != nil {
+		log.WithError(err).Error("error getting managed app")
+		return
+	}
+
+	req, err := h.newReq(ctx, ar, nil, util.GetAgentDetails(app))
+	if err != nil {
+		log.WithError(err).Debug("removing finalizers on the access request")
+		ri, _ := ar.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, arFinalizer, "", false)
+		h.cache.DeleteAccessRequest(ri.Metadata.ID)
+		return
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookAccessRequest(webhookOperationDeprovision, *req)); err != nil {
+		log.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(ctx, ar, err)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
+		return
+	}
+	markWebhookDispatched(ar, webhookOperationDeprovision)
+	h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 }
 
 func (h *accessRequestHandler) getManagedApp(_ context.Context, ar *management.AccessRequest) (*management.ManagedApplication, error) {
