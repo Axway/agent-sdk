@@ -191,6 +191,8 @@ func NewCmd(rootCmd *cobra.Command, exeName, desc string, initConfigHandler Init
 
 	c.addBaseProps(agentType)
 	config.AddLogConfigProperties(c.props, fmt.Sprintf("%s.log", exeName))
+	config.AddMetricLogConfigProperties(c.props, agentType)
+	config.AddUsageConfigProperties(c.props, agentType)
 	agentsync.AddSyncConfigProperties(c.props)
 	config.AddCentralConfigProperties(c.props, agentType)
 	config.AddStatusConfigProperties(c.props)

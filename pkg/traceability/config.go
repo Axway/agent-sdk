@@ -65,8 +65,33 @@ const (
 	envRedactionJMSPropertiesSanitize  = "TRACEABILITY_REDACTION_JMSPROPERTIES_SANITIZE"
 )
 
-// Config -
-type Config struct {
+// Config is the traceability output config, backed by *Configuration. Callers get one from
+// ParseConfig/DefaultConfig and read it through these getters rather than touching fields
+// directly, matching the interface+getter shape every other config type in the codebase uses
+// (CentralConfig, StatusConfig, etc.)
+type Config interface {
+	GetLoadBalance() bool
+	GetBulkMaxSize() int
+	GetSlowStart() bool
+	GetTimeout() time.Duration
+	GetTTL() time.Duration
+	GetPipelining() int
+	GetCompressionLevel() int
+	GetMaxRetries() int
+	GetTLS() TLSConfig
+	GetProxy() ProxyConfig
+	GetBackoff() Backoff
+	GetEscapeHTML() bool
+	GetProtocol() string
+	GetHosts() []string
+	GetRedaction() redaction.Config
+	GetSampling() sampling.Sampling
+	GetAPIExceptionsList() []string
+	ValidateCfg() error
+}
+
+// Configuration -
+type Configuration struct {
 	LoadBalance       bool
 	BulkMaxSize       int
 	SlowStart         bool
@@ -86,6 +111,57 @@ type Config struct {
 	APIExceptionsList []string
 }
 
+// GetLoadBalance - Returns whether round robin load balancing is enabled
+func (c *Configuration) GetLoadBalance() bool { return c.LoadBalance }
+
+// GetBulkMaxSize - Returns the maximum number of events published in a single request
+func (c *Configuration) GetBulkMaxSize() int { return c.BulkMaxSize }
+
+// GetSlowStart - Returns whether slow start is enabled
+func (c *Configuration) GetSlowStart() bool { return c.SlowStart }
+
+// GetTimeout - Returns the client timeout
+func (c *Configuration) GetTimeout() time.Duration { return c.Timeout }
+
+// GetTTL - Returns the client connection TTL
+func (c *Configuration) GetTTL() time.Duration { return c.TTL }
+
+// GetPipelining - Returns the client pipelining setting
+func (c *Configuration) GetPipelining() int { return c.Pipelining }
+
+// GetCompressionLevel - Returns the client compression level
+func (c *Configuration) GetCompressionLevel() int { return c.CompressionLevel }
+
+// GetMaxRetries - Returns the maximum number of retries for a failed request
+func (c *Configuration) GetMaxRetries() int { return c.MaxRetries }
+
+// GetTLS - Returns the TLS config
+func (c *Configuration) GetTLS() TLSConfig { return c.TLS }
+
+// GetProxy - Returns the proxy config
+func (c *Configuration) GetProxy() ProxyConfig { return c.Proxy }
+
+// GetBackoff - Returns the backoff config
+func (c *Configuration) GetBackoff() Backoff { return c.Backoff }
+
+// GetEscapeHTML - Returns whether HTML characters are escaped in events
+func (c *Configuration) GetEscapeHTML() bool { return c.EscapeHTML }
+
+// GetProtocol - Returns the output protocol
+func (c *Configuration) GetProtocol() string { return c.Protocol }
+
+// GetHosts - Returns the traceability hosts
+func (c *Configuration) GetHosts() []string { return c.Hosts }
+
+// GetRedaction - Returns the redaction config
+func (c *Configuration) GetRedaction() redaction.Config { return c.Redaction }
+
+// GetSampling - Returns the sampling config
+func (c *Configuration) GetSampling() sampling.Sampling { return c.Sampling }
+
+// GetAPIExceptionsList - Returns the API exception list
+func (c *Configuration) GetAPIExceptionsList() []string { return c.APIExceptionsList }
+
 // ProxyConfig holds the configuration information required to proxy
 // connections through a SOCKS5 proxy server.
 type ProxyConfig struct {
@@ -103,11 +179,17 @@ type Backoff struct {
 	Max  time.Duration
 }
 
-var outputConfig *Config
+var outputConfig *Configuration
 
 // DefaultConfig -
-func DefaultConfig() *Config {
-	return &Config{
+func DefaultConfig() Config {
+	return defaultConfiguration()
+}
+
+// defaultConfiguration returns the concrete type, for internal callers (AddConfigProperties,
+// ParseConfig) that need to build on top of the defaults field by field.
+func defaultConfiguration() *Configuration {
+	return &Configuration{
 		LoadBalance:      false,
 		Pipelining:       0,
 		BulkMaxSize:      512,
@@ -129,7 +211,7 @@ func DefaultConfig() *Config {
 
 // AddConfigProperties sets up all the traceability env vars. Call this once before ParseConfig. It's not automatic, since discovery-only agents don't need it.
 func AddConfigProperties(props properties.Properties) {
-	def := DefaultConfig()
+	def := defaultConfiguration()
 
 	props.AddStringSliceProperty(pathHost, def.Hosts, "Comma separated list of traceability hosts to publish to")
 	props.AddStringProperty(pathPort, "", "Deprecated, use "+pathHost)
@@ -162,8 +244,8 @@ func AddConfigProperties(props properties.Properties) {
 }
 
 // ParseConfig reads traceability config from env vars. AddConfigProperties must be called first.
-func ParseConfig(props properties.Properties) (*Config, error) {
-	cfg := DefaultConfig()
+func ParseConfig(props properties.Properties) (Config, error) {
+	cfg := defaultConfiguration()
 
 	if props.StringPropertyValue(pathPort) != "" {
 		log.Warn("output.traceability.port is no longer supported; use output.traceability.hosts")
@@ -215,7 +297,7 @@ func ParseConfig(props properties.Properties) (*Config, error) {
 // FinishConfig runs the setup shared by every Config, regardless of source - host/protocol
 // fallback, redaction, sampling, proxy check, exception list. So v7_traceability_agent (still
 // on YAML/go-ucfg) can reuse it instead of duplicating it.
-func FinishConfig(cfg *Config) (*Config, error) {
+func FinishConfig(cfg *Configuration) (Config, error) {
 	outputConfig = cfg
 
 	if agent.GetCentralConfig().GetTraceabilityHost() != "" && len(outputConfig.Hosts) == 0 {
@@ -326,7 +408,7 @@ func GetMaxRetries() int {
 }
 
 // ValidateCfg - validates the config does not use the removed tcp/lumberjack transport
-func (c *Config) ValidateCfg() error {
+func (c *Configuration) ValidateCfg() error {
 	if c.Protocol == "tcp" {
 		return ErrTCPProtocolRemoved
 	}

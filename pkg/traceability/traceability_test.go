@@ -43,7 +43,7 @@ func createCentralCfg(url, env string) *config.CentralConfiguration {
 	return cfg
 }
 
-func createTransport(cfg *Config) ([]*Client, error) {
+func createTransport(cfg Config) ([]*Client, error) {
 	return NewClient(cfg)
 }
 
@@ -175,23 +175,23 @@ func TestParseConfig(t *testing.T) {
 
 	tests := map[string]struct {
 		envVars map[string]string
-		assert  func(t *testing.T, cfg *Config)
+		assert  func(t *testing.T, cfg Config)
 	}{
 		"defaults with no env vars set": {
 			envVars: map[string]string{},
-			assert: func(t *testing.T, cfg *Config) {
-				assert.Equal(t, 3, cfg.CompressionLevel)
-				assert.Equal(t, 512, cfg.BulkMaxSize)
-				assert.Equal(t, "https", cfg.Protocol)
-				assert.Empty(t, cfg.Hosts)
+			assert: func(t *testing.T, cfg Config) {
+				assert.Equal(t, 3, cfg.GetCompressionLevel())
+				assert.Equal(t, 512, cfg.GetBulkMaxSize())
+				assert.Equal(t, "https", cfg.GetProtocol())
+				assert.Empty(t, cfg.GetHosts())
 			},
 		},
 		"compression level out of bounds falls back to the default": {
 			envVars: map[string]string{
 				"TRACEABILITY_COMPRESSIONLEVEL": "20",
 			},
-			assert: func(t *testing.T, cfg *Config) {
-				assert.Equal(t, 3, cfg.CompressionLevel)
+			assert: func(t *testing.T, cfg Config) {
+				assert.Equal(t, 3, cfg.GetCompressionLevel())
 			},
 		},
 		"valid full config round trip": {
@@ -204,23 +204,23 @@ func TestParseConfig(t *testing.T) {
 				"TRACEABILITY_SSL_VERIFICATIONMODE": "full",
 				"TRACEABILITY_SSL_CIPHERSUITES":     "ECDHE-RSA-AES-128-GCM-SHA256",
 			},
-			assert: func(t *testing.T, cfg *Config) {
-				assert.Equal(t, []string{testHost}, cfg.Hosts)
-				assert.Equal(t, "https", cfg.Protocol)
-				assert.Equal(t, 5, cfg.CompressionLevel)
-				assert.Equal(t, 256, cfg.BulkMaxSize)
-				assert.Equal(t, 5, cfg.MaxRetries)
-				assert.True(t, cfg.LoadBalance)
-				assert.Equal(t, "full", cfg.TLS.VerificationMode)
-				assert.Equal(t, []string{"ECDHE-RSA-AES-128-GCM-SHA256"}, cfg.TLS.CipherSuites)
+			assert: func(t *testing.T, cfg Config) {
+				assert.Equal(t, []string{testHost}, cfg.GetHosts())
+				assert.Equal(t, "https", cfg.GetProtocol())
+				assert.Equal(t, 5, cfg.GetCompressionLevel())
+				assert.Equal(t, 256, cfg.GetBulkMaxSize())
+				assert.Equal(t, 5, cfg.GetMaxRetries())
+				assert.True(t, cfg.GetLoadBalance())
+				assert.Equal(t, "full", cfg.GetTLS().VerificationMode)
+				assert.Equal(t, []string{"ECDHE-RSA-AES-128-GCM-SHA256"}, cfg.GetTLS().CipherSuites)
 			},
 		},
 		"redaction show list matches mulesoft-agents' no-space-after-colon format": {
 			envVars: map[string]string{
 				"TRACEABILITY_REDACTION_PATH_SHOW": `[{keyMatch:".*"}]`,
 			},
-			assert: func(t *testing.T, cfg *Config) {
-				assert.Equal(t, []redaction.Show{{KeyMatch: ".*"}}, cfg.Redaction.Path.Allowed)
+			assert: func(t *testing.T, cfg Config) {
+				assert.Equal(t, []redaction.Show{{KeyMatch: ".*"}}, cfg.GetRedaction().Path.Allowed)
 			},
 		},
 	}
@@ -273,7 +273,7 @@ func TestCreateHTTPClient(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			testConfig := DefaultConfig()
+			testConfig := defaultConfiguration()
 			testConfig.Hosts = tc.hosts
 			testConfig.Proxy = tc.proxy
 
@@ -297,31 +297,31 @@ func TestCreateHTTPClient(t *testing.T) {
 
 func TestValidateCfgRemovedProtocolPortHost(t *testing.T) {
 	tests := map[string]struct {
-		cfg     *Config
+		cfg     *Configuration
 		wantErr error
 	}{
 		"tcp protocol removed": {
-			cfg:     &Config{Protocol: "tcp"},
+			cfg:     &Configuration{Protocol: "tcp"},
 			wantErr: ErrTCPProtocolRemoved,
 		},
 		"lumberjack port 5044 removed": {
-			cfg:     &Config{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:5044"}},
+			cfg:     &Configuration{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:5044"}},
 			wantErr: ErrPort5044Removed.FormatError("phoenix.datasearch.axway.com:5044"),
 		},
 		"ingestion host removed": {
-			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion.datasearch.axway.com:443"}},
+			cfg:     &Configuration{Protocol: "https", Hosts: []string{"ingestion.datasearch.axway.com:443"}},
 			wantErr: ErrIngestionHostRemoved.FormatError("ingestion.datasearch.axway.com:443"),
 		},
 		"ingestion-http host removed": {
-			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion-http.datasearch.axway.com:443"}},
+			cfg:     &Configuration{Protocol: "https", Hosts: []string{"ingestion-http.datasearch.axway.com:443"}},
 			wantErr: ErrIngestionHostRemoved.FormatError("ingestion-http.datasearch.axway.com:443"),
 		},
 		"ingestion-lumberjack host removed": {
-			cfg:     &Config{Protocol: "https", Hosts: []string{"ingestion-lumberjack.datasearch.axway.com:443"}},
+			cfg:     &Configuration{Protocol: "https", Hosts: []string{"ingestion-lumberjack.datasearch.axway.com:443"}},
 			wantErr: ErrIngestionHostRemoved.FormatError("ingestion-lumberjack.datasearch.axway.com:443"),
 		},
 		"valid phoenix https host passes": {
-			cfg: &Config{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:443"}},
+			cfg: &Configuration{Protocol: "https", Hosts: []string{"phoenix.datasearch.axway.com:443"}},
 		},
 	}
 
@@ -350,7 +350,7 @@ func TestHTTPTransportWithJSONEncoding(t *testing.T) {
 	agent.Initialize(cfg)
 
 	url, _ := url.Parse(s.server.URL)
-	testConfig := DefaultConfig()
+	testConfig := defaultConfiguration()
 	testConfig.Protocol = "http"
 	testConfig.CompressionLevel = 0
 	testConfig.Hosts = []string{url.Hostname() + ":" + url.Port()}
@@ -385,7 +385,7 @@ func TestHTTPTransportWithOutputProcessor(t *testing.T) {
 	agent.Initialize(cfg)
 
 	url, _ := url.Parse(s.server.URL)
-	testConfig := DefaultConfig()
+	testConfig := defaultConfiguration()
 	testConfig.Protocol = "http"
 	testConfig.CompressionLevel = 0
 	testConfig.Hosts = []string{
@@ -424,7 +424,7 @@ func TestHTTPTransportWithGzipEncoding(t *testing.T) {
 	agent.Initialize(cfg)
 
 	url, _ := url.Parse(s.server.URL)
-	testConfig := DefaultConfig()
+	testConfig := defaultConfiguration()
 	testConfig.Protocol = "http"
 	testConfig.CompressionLevel = 3
 	testConfig.Hosts = []string{
@@ -461,7 +461,7 @@ func TestHTTPTransportRetries(t *testing.T) {
 	agent.Initialize(cfg)
 
 	url, _ := url.Parse(s.server.URL)
-	testConfig := DefaultConfig()
+	testConfig := defaultConfiguration()
 	testConfig.Protocol = "http"
 	testConfig.CompressionLevel = 0
 	testConfig.Hosts = []string{

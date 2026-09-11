@@ -44,7 +44,7 @@ const (
 
 var traceabilityClients []*Client
 var clientMutex *sync.Mutex
-var traceCfg *Config
+var traceCfg Config
 
 // GetClient - returns a random client from the clients array
 var GetClient = getClient
@@ -139,13 +139,15 @@ func GetReportsDirPath() string {
 
 // NewClient replaces the libbeat outputs.RegisterType("traceability", makeTraceabilityAgent)
 // factory-registration mechanism.
-func NewClient(cfg *Config) ([]*Client, error) {
+func NewClient(cfg Config) ([]*Client, error) {
 	logger := log.NewFieldLogger().
 		WithPackage("sdk.traceability").
 		WithComponent("NewClient")
 
 	traceCfg = cfg
-	outputConfig = cfg
+	if c, ok := cfg.(*Configuration); ok {
+		outputConfig = c
+	}
 
 	if err := cfg.ValidateCfg(); err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
@@ -153,12 +155,12 @@ func NewClient(cfg *Config) ([]*Client, error) {
 		return nil, err
 	}
 
-	logger = logger.WithField("config", cfg).WithField("hosts", cfg.Hosts)
+	logger = logger.WithField("config", cfg).WithField("hosts", cfg.GetHosts())
 	logger.Tracef("initializing traceability client")
 
 	isSingleEntry := agent.GetCentralConfig().GetSingleURL() != ""
 
-	networkClients, err := makeHTTPClient(cfg, cfg.Hosts, agent.GetUserAgent(), isSingleEntry)
+	networkClients, err := makeHTTPClient(cfg, cfg.GetHosts(), agent.GetUserAgent(), isSingleEntry)
 	if err != nil {
 		agent.UpdateStatusWithPrevious(agent.AgentFailed, agent.AgentRunning, err.Error())
 		logger.WithError(err).Error("creating traceability client")
@@ -186,16 +188,16 @@ func NewClient(cfg *Config) ([]*Client, error) {
 
 // makeHTTPClient replaces libbeat's outputs.SuccessNet/outputs.NewFailoverClient/
 // outputs.WithBackoff wrapping.
-func makeHTTPClient(cfg *Config, hosts []string, userAgent string, isSingleEntry bool) ([]NetworkClient, error) {
-	tlsCfg := cfg.TLS.toTLSConfiguration()
+func makeHTTPClient(cfg Config, hosts []string, userAgent string, isSingleEntry bool) ([]NetworkClient, error) {
+	tlsCfg := cfg.GetTLS().toTLSConfiguration()
 
 	clients := make([]NetworkClient, len(hosts))
 	for i, host := range hosts {
-		hostURL, err := buildURL(cfg.Protocol, host)
+		hostURL, err := buildURL(cfg.GetProtocol(), host)
 		if err != nil {
 			return nil, err
 		}
-		proxyURL, err := url.Parse(cfg.Proxy.URL)
+		proxyURL, err := url.Parse(cfg.GetProxy().URL)
 		if err != nil {
 			return nil, err
 		}
@@ -203,18 +205,18 @@ func makeHTTPClient(cfg *Config, hosts []string, userAgent string, isSingleEntry
 			URL:              hostURL,
 			Proxy:            proxyURL,
 			TLS:              tlsCfg,
-			Timeout:          cfg.Timeout,
-			CompressionLevel: cfg.CompressionLevel,
+			Timeout:          cfg.GetTimeout(),
+			CompressionLevel: cfg.GetCompressionLevel(),
 			UserAgent:        userAgent,
 			IsSingleEntry:    isSingleEntry,
 		})
 		if err != nil {
 			return nil, err
 		}
-		clients[i] = withBackoff(client, cfg.Backoff.Init, cfg.Backoff.Max)
+		clients[i] = withBackoff(client, cfg.GetBackoff().Init, cfg.GetBackoff().Max)
 	}
 
-	if !cfg.LoadBalance {
+	if !cfg.GetLoadBalance() {
 		return []NetworkClient{newFailoverClient(clients)}, nil
 	}
 	return clients, nil
@@ -316,10 +318,10 @@ func (client *Client) String() string {
 	return traceabilityStr
 }
 
-func registerHealthCheckers(config *Config) error {
+func registerHealthCheckers(cfg Config) error {
 	hcJob := newTraceabilityHealthCheckJob()
 
-	_, err := jobs.RegisterIntervalJobWithName(hcJob, config.Timeout, "Traceability Health Check")
+	_, err := jobs.RegisterIntervalJobWithName(hcJob, cfg.GetTimeout(), "Traceability Health Check")
 	if err != nil {
 		return err
 	}
