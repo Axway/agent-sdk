@@ -215,24 +215,31 @@ func (h *accessRequestHandler) Handle(ctx context.Context, meta *proto.EventMeta
 // report a failure here. app/ard are also returned since callers need them beyond just building req
 // (quota enforcement, secret data encryption).
 func (h *accessRequestHandler) buildAccessRequest(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) (*management.ManagedApplication, *management.AccessRequestDefinition, *provAccReq, error) {
+	log := getLoggerFromContext(ctx)
+
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error getting managed app: %w", err)
+		log.WithError(err).Error("error getting managed app")
+		return nil, nil, nil, err
 	}
 
 	// check the application status
 	if app.Status.Level != prov.Success.String() {
-		return nil, nil, nil, fmt.Errorf("error can't handle access request when application is not yet successful")
+		err := errors.New("error can't handle access request when application is not yet successful")
+		log.WithError(err).Error("error checking application status")
+		return nil, nil, nil, err
 	}
 
 	ard, err := h.getARD(ctx, ar)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error getting access request definition: %w", err)
+		log.WithError(err).Error("error getting access request definition")
+		return nil, nil, nil, err
 	}
 
 	req, err := h.newReq(ctx, ar, mar, util.GetAgentDetails(app))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error getting resource details: %w", err)
+		log.WithError(err).Error("error getting resource details")
+		return nil, nil, nil, err
 	}
 
 	updateDataFromEnumMap(ar.Spec.Data, ard.Spec.Schema)
@@ -241,11 +248,8 @@ func (h *accessRequestHandler) buildAccessRequest(ctx context.Context, ar *manag
 }
 
 func (h *accessRequestHandler) onPending(ctx context.Context, ar *management.AccessRequest, mar *apiv1.ResourceInstance) *management.AccessRequest {
-	log := getLoggerFromContext(ctx)
-
 	app, ard, req, err := h.buildAccessRequest(ctx, ar, mar)
 	if err != nil {
-		log.WithError(err).Error("error building access request")
 		h.onError(ctx, ar, err)
 		return ar
 	}
@@ -316,7 +320,6 @@ func (h *accessRequestHandler) onWebhookProvision(ctx context.Context, log log.F
 
 	_, _, req, err := h.buildAccessRequest(ctx, ar, mar)
 	if err != nil {
-		log.WithError(err).Error("error building access request")
 		h.onError(ctx, ar, err)
 		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return
