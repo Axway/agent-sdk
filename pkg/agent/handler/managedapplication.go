@@ -16,6 +16,7 @@ import (
 	"github.com/Axway/agent-sdk/pkg/authz/oauth"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/Axway/agent-sdk/pkg/util"
+	"github.com/Axway/agent-sdk/pkg/util/log"
 	"github.com/Axway/agent-sdk/pkg/watchmanager/proto"
 )
 
@@ -102,8 +103,11 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
-		if mirrorWebhookDetails(app) {
-			return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		if webhookDispatchedFor(app, webhookOperationProvision) {
+			return h.postWebhookProvisionProcess(app)
+		}
+		if webhookDispatchedFor(app, webhookOperationDeprovision) {
+			h.postWebhookDeprovisionProcess(log, app)
 		}
 		return nil
 	}
@@ -125,9 +129,20 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 		id:             app.Metadata.ID,
 	}
 
+	if ok := h.shouldProvisionWebhook(app.Status, app.Metadata.State, h.webhookCfg); ok {
+		log.Trace("processing resource in pending status via provisioning webhook")
+		return h.onWebhookProvision(log, app, ma)
+	}
+
 	if ok := h.shouldProcessPending(app.Status, app.Metadata.State); ok {
 		log.Trace("processing resource in pending status")
 		return h.onPending(ctx, app, ma)
+	}
+
+	if ok := h.shouldDeprovisionWebhook(app.Status, app.Metadata.State, app.Finalizers, h.webhookCfg); ok {
+		log.Trace("processing resource in deleting state via deprovisioning webhook")
+		h.onWebhookDeprovision(ctx, log, app, ma)
+		return nil
 	}
 
 	if ok := h.shouldProcessDeleting(app.Status, app.Metadata.State, app.Finalizers); ok {
@@ -138,21 +153,46 @@ func (h *managedApplication) Handle(ctx context.Context, meta *proto.EventMeta, 
 	return nil
 }
 
-func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
-	log := getLoggerFromContext(ctx)
-
-	if h.webhookCfg.IsConfigured() {
-		if webhookDispatchedFor(app, webhookOperationProvision) {
-			return nil
-		}
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationProvision, pma)); err != nil {
-			log.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(app, err)
-			return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
-		}
-		markWebhookDispatched(app, webhookOperationProvision)
+// postWebhookProvisionProcess mirrors the webhook's x-webhook-details into x-agent-details, and adds the
+// finalizer once status reflects success - status is the webhook's own responsibility (see
+// docs/discovery/provisioning-webhook.md), so app.Status already reflects the outcome by the time this
+// runs. Only called when the dispatched operation was a provision - see Handle.
+func (h *managedApplication) postWebhookProvisionProcess(app *management.ManagedApplication) error {
+	if app.Status.Level == prov.Success.String() && !hasFinalizer(app.Finalizers, maFinalizer) {
+		// only add finalizer on success
+		ri, _ := app.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", true)
+	}
+	if mirrorWebhookDetails(app) {
 		return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	}
+	return nil
+}
+
+// postWebhookDeprovisionProcess removes the finalizer (if still present) and drops the application from
+// cache once the webhook reports it successfully completed a deprovision. app.Status can't be used for
+// this - it's whatever it already was when shouldDeprovisionWebhook let the event through, not a signal
+// from the webhook - so success/failure is read from the reserved "status" (and, on failure, "message")
+// keys the webhook writes inside x-webhook-details itself. Status itself is the webhook's own
+// responsibility (see docs/discovery/provisioning-webhook.md), so on failure this only logs - it doesn't
+// write anything. No mirroring here - deprovision typically has no data to report. Only called when the
+// dispatched operation was a deprovision - see Handle.
+func (h *managedApplication) postWebhookDeprovisionProcess(log log.FieldLogger, app *management.ManagedApplication) {
+	if webhookDetailsValue(app, webhookStatusKey) != webhookStatusSuccess {
+		message := webhookDetailsValue(app, webhookMessageKey)
+		log.WithField("message", message).Error("provisioning webhook reported deprovision failure")
+		return
+	}
+
+	if hasFinalizer(app.Finalizers, maFinalizer) {
+		ri, _ := app.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, maFinalizer, "", false)
+	}
+	h.cache.DeleteManagedApplication(app.Metadata.ID)
+}
+
+func (h *managedApplication) onPending(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) error {
+	log := getLoggerFromContext(ctx)
 
 	status := h.provision(pma)
 	app.Status = prov.NewStatusReason(status)
@@ -186,6 +226,21 @@ func (h *managedApplication) onPending(ctx context.Context, app *management.Mana
 	return err
 }
 
+// onWebhookProvision dispatches the provision request to the configured webhook instead of calling this
+// agent's own registered Provisioning implementation
+func (h *managedApplication) onWebhookProvision(log log.FieldLogger, app *management.ManagedApplication, pma provManagedApp) error {
+	if webhookDispatchedFor(app, webhookOperationProvision) {
+		return nil
+	}
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationProvision, pma)); err != nil {
+		log.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(app, err)
+		return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+	}
+	markWebhookDispatched(app, webhookOperationProvision)
+	return h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+}
+
 func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 	status := h.prov.ApplicationRequestProvision(pma)
 	resourceStatus := prov.NewStatusReason(status)
@@ -212,25 +267,9 @@ func (h *managedApplication) provision(pma provManagedApp) prov.RequestStatus {
 func (h *managedApplication) onDeleting(ctx context.Context, app *management.ManagedApplication, pma provManagedApp) {
 	log := getLoggerFromContext(ctx)
 
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(app, webhookOperationDeprovision) {
-		return
-	}
-
 	if err := cleanupManagedApplicationIDPClients(ctx, log, h.idpRegistry, app); err != nil {
 		log.WithError(err).Error("error cleaning up managed application IDP clients")
 		h.onError(app, err)
-		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
-		return
-	}
-
-	if h.webhookCfg.IsConfigured() {
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationDeprovision, pma)); err != nil {
-			log.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(app, err)
-			h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
-			return
-		}
-		markWebhookDispatched(app, webhookOperationDeprovision)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 		return
 	}
@@ -246,6 +285,30 @@ func (h *managedApplication) onDeleting(ctx context.Context, app *management.Man
 		h.onError(app, err)
 		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 	}
+}
+
+// onWebhookDeprovision dispatches the deprovision request to the configured webhook instead of calling
+// this agent's own registered Provisioning implementation
+func (h *managedApplication) onWebhookDeprovision(ctx context.Context, log log.FieldLogger, app *management.ManagedApplication, pma provManagedApp) {
+	if webhookDispatchedFor(app, webhookOperationDeprovision) {
+		return
+	}
+
+	if err := cleanupManagedApplicationIDPClients(ctx, log, h.idpRegistry, app); err != nil {
+		log.WithError(err).Error("error cleaning up managed application IDP clients")
+		h.onError(app, err)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		return
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationRequest(webhookOperationDeprovision, pma)); err != nil {
+		log.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(app, err)
+		h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
+		return
+	}
+	markWebhookDispatched(app, webhookOperationDeprovision)
+	h.client.CreateSubResource(app.ResourceMeta, app.SubResources)
 }
 
 // onError updates the managed app with an error status
@@ -327,4 +390,14 @@ func getConsumerOrgID(app *management.ManagedApplication) string {
 		consumerOrgID = app.Marketplace.Resource.Owner.Organization.ID
 	}
 	return consumerOrgID
+}
+
+// hasFinalizer returns true if name is already present in finalizers
+func hasFinalizer(finalizers []apiv1.Finalizer, name string) bool {
+	for _, f := range finalizers {
+		if f.Name == name {
+			return true
+		}
+	}
+	return false
 }

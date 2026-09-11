@@ -15,6 +15,16 @@ const webhookDispatchDetailKey = "provisioningWebhookDispatched"
 const (
 	webhookOperationProvision   = "provision"
 	webhookOperationDeprovision = "deprovision"
+
+	// webhookStatusKey/webhookMessageKey are reserved keys the webhook writes inside x-webhook-details
+	// itself (not business data) to report whether its processing succeeded, since dispatch never waits
+	// for a response and the webhook is scoped away from writing the resource's own status subresource
+	// directly.
+	webhookStatusKey  = "status"
+	webhookMessageKey = "message"
+
+	webhookStatusSuccess = "success"
+	webhookStatusFailed  = "failed"
 )
 
 // subResourceCarrier is satisfied by any apiserver resource instance type (ManagedApplication, AccessRequest,
@@ -29,8 +39,16 @@ type subResourceCarrier interface {
 // dispatched to the provisioning webhook - used to avoid re-dispatching on event redelivery (Central may
 // redeliver an event for a resource for reasons unrelated to anything this handler wrote).
 func webhookDispatchedFor(h subResourceCarrier, operation string) bool {
+	return webhookDispatchedOperation(h) == operation
+}
+
+// webhookDispatchedOperation returns which operation ("provision"/"deprovision") was last dispatched to
+// the provisioning webhook for this resource, or "" if none was. Since dispatch never waits for the
+// webhook to actually finish, the x-webhook-details SUBRESOURCEUPDATED event is the only signal that
+// processing is done - at that point, this tells the handler which operation just completed.
+func webhookDispatchedOperation(h subResourceCarrier) string {
 	v, _ := util.GetAgentDetailsValue(h, webhookDispatchDetailKey)
-	return v == operation
+	return v
 }
 
 // markWebhookDispatched records, in the resource's x-agent-details, that operation was just dispatched to
@@ -39,6 +57,18 @@ func webhookDispatchedFor(h subResourceCarrier, operation string) bool {
 // docs/discovery/provisioning-webhook.md.
 func markWebhookDispatched(h subResourceCarrier, operation string) {
 	_ = util.SetAgentDetailsKey(h, webhookDispatchDetailKey, operation)
+}
+
+// webhookDetailsValue returns the string value of key from the resource's x-webhook-details subresource
+// directly (not from x-agent-details, which may not have been mirrored into yet) - used to read the
+// webhook's own reserved status/message keys.
+func webhookDetailsValue(h subResourceCarrier, key string) string {
+	details, ok := h.GetSubResource(defs.XWebhookDetails).(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	v, _ := details[key].(string)
+	return v
 }
 
 // mirrorWebhookDetails copies the resource's x-webhook-details subresource into its x-agent-details, so
