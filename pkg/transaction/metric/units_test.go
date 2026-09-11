@@ -14,10 +14,10 @@ func TestUnitTypeString(t *testing.T) {
 		TransactionUnit:      "transactions",
 		CostUSDUnit:          "cost-usd",
 		LLMRequests:          "llm-requests",
-		LLMInputTokens:       "llm-inputtokens",
-		LLMOutputTokens:      "llm-outputtokens",
-		LLMCachedInputTokens: "llm-cachedinputtokens",
-		LLMTotalTokens:       "llm-totaltokens",
+		LLMInputTokens:       "llm-input-tokens",
+		LLMOutputTokens:      "llm-output-tokens",
+		LLMCachedInputTokens: "llm-cached-input-tokens",
+		LLMTotalTokens:       "llm-total-tokens",
 	}
 	for unit, want := range cases {
 		assert.Equal(t, want, unit.String())
