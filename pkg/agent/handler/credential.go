@@ -104,8 +104,11 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
-		if mirrorWebhookDetails(cr) {
-			return h.client.CreateSubResource(cr.ResourceMeta, cr.SubResources)
+		if webhookDispatchedFor(cr, webhookOperationProvision) || webhookDispatchedFor(cr, update) {
+			return h.postWebhookProvisionProcess(cr)
+		}
+		if webhookDispatchedFor(cr, webhookOperationDeprovision) {
+			h.postWebhookDeprovisionProcess(logger, cr)
 		}
 		return nil
 	}
@@ -113,6 +116,11 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 	if ok := isStatusFound(cr.Status); !ok {
 		logger.Debug("could not handle credential request as it did not have a status subresource")
 		return nil
+	}
+
+	if ok := h.shouldDeprovisionWebhook(cr); ok {
+		logger.Trace("processing resource in deleting state via provisioning webhook")
+		return h.onWebhookDeprovision(ctx, cr)
 	}
 
 	if ok := h.shouldProcessDeleting(cr); ok {
@@ -129,6 +137,16 @@ func (h *credentials) Handle(ctx context.Context, meta *proto.EventMeta, resourc
 				return nil
 			}
 		}
+	}
+
+	if ok := h.shouldProvisionWebhook(cr); ok {
+		logger.Trace("processing resource in pending status via provisioning webhook")
+		return h.onWebhookProvision(ctx, cr)
+	}
+
+	if actions := h.shouldUpdateWebhook(cr); len(actions) != 0 {
+		logger.Trace("processing resource in updating status via provisioning webhook")
+		return h.onWebhookUpdate(ctx, cr, actions)
 	}
 
 	var credential *management.Credential
@@ -180,6 +198,13 @@ func (h *credentials) shouldProcessDeleting(cr *management.Credential) bool {
 	return false
 }
 
+// shouldDeprovisionWebhook returns true when the credential is deleting and a provisioning webhook is
+// configured - i.e. this event should be dispatched to the webhook instead of the agent's own registered
+// Provisioning implementation.
+func (h *credentials) shouldDeprovisionWebhook(cr *management.Credential) bool {
+	return h.shouldProcessDeleting(cr) && h.webhookCfg.IsConfigured()
+}
+
 // shouldProvision
 // Status.Level = Pending and
 // Metadata.State = !Deleting and
@@ -191,6 +216,23 @@ func (h *credentials) shouldProcessPending(cr *management.Credential) bool {
 		return cr.Spec.State.Name == v1.Active && !cr.Spec.State.Rotate && !hasAgentCredentialFinalizer(cr.Finalizers)
 	}
 	return false
+}
+
+// shouldProvisionWebhook returns true when the credential is pending and a provisioning webhook is
+// configured - i.e. this event should be dispatched to the webhook instead of the agent's own registered
+// Provisioning implementation.
+func (h *credentials) shouldProvisionWebhook(cr *management.Credential) bool {
+	return h.shouldProcessPending(cr) && h.webhookCfg.IsConfigured()
+}
+
+// shouldUpdateWebhook returns the pending credential update actions when a provisioning webhook is
+// configured - i.e. this event should be dispatched to the webhook instead of the agent's own registered
+// Provisioning implementation.
+func (h *credentials) shouldUpdateWebhook(cr *management.Credential) []prov.CredentialAction {
+	if !h.webhookCfg.IsConfigured() {
+		return nil
+	}
+	return h.shouldProcessUpdating(cr)
 }
 
 // shouldProcessUpdating
@@ -226,45 +268,84 @@ func (h *credentials) shouldProcessUpdating(cr *management.Credential) []prov.Cr
 func (h *credentials) onDeleting(ctx context.Context, cred *management.Credential) {
 	logger := getLoggerFromContext(ctx)
 
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationDeprovision) {
-		return
-	}
-
-	crd, err := h.getCRD(ctx, cred)
+	app, provCreds, err := h.buildDeprovisionCreds(ctx, cred)
 	if err != nil {
-		logger.WithError(err).Error("error getting credential request definition")
 		h.onError(ctx, cred, err)
-		return
-	}
-	app, err := h.getManagedApp(ctx, cred)
-	if err != nil {
-		logger.WithError(err).Error("error getting managed app")
-		h.onError(ctx, cred, err)
-		return
-	}
-
-	provCreds, err := h.newProvCreds(cred, app, 0, crd)
-	if err != nil {
-		logger.WithError(err).Error("error preparing credential request")
-		h.onError(ctx, cred, err)
-		return
-	}
-
-	if h.webhookCfg.IsConfigured() {
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationDeprovision, provCreds)); err != nil {
-			logger.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(ctx, cred, err)
-			h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
-			return
-		}
-		markWebhookDispatched(cred, webhookOperationDeprovision)
-		h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
 		return
 	}
 
 	status := h.prov.CredentialDeprovision(provCreds)
 
 	h.deprovisionPostProcess(status, provCreds, logger, ctx, cred, app)
+}
+
+// buildDeprovisionCreds fetches the credential request definition and managed app, and builds the
+// deprovisioning request - shared by the classic and webhook-dispatch paths, which only differ in how they
+// report a failure here (classic reports via onError, webhook logs only since setting credential status is
+// the webhook's responsibility).
+func (h *credentials) buildDeprovisionCreds(ctx context.Context, cred *management.Credential) (*management.ManagedApplication, *provCreds, error) {
+	logger := getLoggerFromContext(ctx)
+
+	crd, err := h.getCRD(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting credential request definition")
+		return nil, nil, err
+	}
+	app, err := h.getManagedApp(ctx, cred)
+	if err != nil {
+		logger.WithError(err).Error("error getting managed app")
+		return nil, nil, err
+	}
+	provCreds, err := h.newProvCreds(cred, app, 0, crd)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		return nil, nil, err
+	}
+	return app, provCreds, nil
+}
+
+// onWebhookDeprovision dispatches the deprovision request to the configured webhook instead of calling this
+// agent's own registered Provisioning implementation.
+func (h *credentials) onWebhookDeprovision(ctx context.Context, cred *management.Credential) error {
+	logger := getLoggerFromContext(ctx)
+
+	if webhookDispatchedFor(cred, webhookOperationDeprovision) {
+		return nil
+	}
+
+	_, provCreds, err := h.buildDeprovisionCreds(ctx, cred)
+	if err != nil {
+		h.onError(ctx, cred, err)
+		return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationDeprovision, provCreds)); err != nil {
+		logger.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(ctx, cred, err)
+		return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+	}
+	markWebhookDispatched(cred, webhookOperationDeprovision)
+	return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+}
+
+// postWebhookDeprovisionProcess removes the finalizer once the webhook reports it successfully completed a
+// deprovision. cred.Status can't be used for this - it's whatever it already was when
+// shouldDeprovisionWebhook let the event through, not a signal from the webhook - so success/failure is read
+// from the reserved "status" (and, on failure, "message") keys the webhook writes inside x-webhook-details
+// itself. Status itself is the webhook's own responsibility (see docs/discovery/provisioning-webhook.md), so
+// on failure this only logs - it doesn't write anything. Only called when the dispatched operation was a
+// deprovision - see Handle.
+func (h *credentials) postWebhookDeprovisionProcess(log log.FieldLogger, cred *management.Credential) {
+	if webhookDetailsValue(cred, webhookStatusKey) != webhookStatusSuccess {
+		message := webhookDetailsValue(cred, webhookMessageKey)
+		log.WithField("message", message).Error("provisioning webhook reported deprovision failure")
+		return
+	}
+
+	if hasAgentCredentialFinalizer(cred.Finalizers) {
+		ri, _ := cred.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", false)
+	}
 }
 
 func (h *credentials) deprovisionPostProcess(status prov.RequestStatus, provCreds *provCreds, logger log.FieldLogger,
@@ -316,10 +397,6 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 	// check the application status
 	logger := getLoggerFromContext(ctx)
 
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(cred, webhookOperationProvision) {
-		return cred
-	}
-
 	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
 	if shouldReturn {
 		return cred
@@ -338,25 +415,62 @@ func (h *credentials) onPending(ctx context.Context, cred *management.Credential
 		return cred
 	}
 
-	if h.webhookCfg.IsConfigured() {
-		// normal (non-webhook) provisioning always sets this so agents-controller can schedule credential
-		// expiry off the status subresource; set it here too, before dispatch, so it's already present in
-		// x-agent-details by the time mirrorWebhookDetails runs.
-		util.SetAgentDetailsKey(cred, prov.HandleCredentialExpiry, "true")
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationProvision, provCreds)); err != nil {
-			logger.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(ctx, cred, err)
-			return cred
-		}
-		markWebhookDispatched(cred, webhookOperationProvision)
-		return cred
-	}
-
 	status, credentialData := h.provision(provCreds)
 
 	h.provisionPostProcess(status, credentialData, app, crd, provCreds, cred)
 
 	return cred
+}
+
+// onWebhookProvision dispatches the provision request to the configured webhook instead of calling this
+// agent's own registered Provisioning implementation. Unlike onPending, it does not call registerIDPClient -
+// IDP client registration is the webhook's own responsibility in webhook mode.
+func (h *credentials) onWebhookProvision(ctx context.Context, cred *management.Credential) error {
+	logger := getLoggerFromContext(ctx)
+
+	if webhookDispatchedFor(cred, webhookOperationProvision) {
+		return nil
+	}
+
+	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
+	if shouldReturn {
+		return nil
+	}
+
+	provCreds, err := h.newProvCreds(cred, app, 0, crd)
+	if err != nil {
+		logger.WithError(err).Error("error preparing credential request")
+		h.onError(ctx, cred, err)
+		return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(webhookOperationProvision, provCreds)); err != nil {
+		logger.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(ctx, cred, err)
+		return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+	}
+	markWebhookDispatched(cred, webhookOperationProvision)
+	return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+}
+
+// postWebhookProvisionProcess mirrors the webhook's x-webhook-details into x-agent-details, and adds the
+// finalizer once status reflects success - status is the webhook's own responsibility (see
+// docs/discovery/provisioning-webhook.md), so cred.Status already reflects the outcome by the time this
+// runs. Only called when the dispatched operation was a provision - see Handle.
+func (h *credentials) postWebhookProvisionProcess(cred *management.Credential) error {
+	// normal (non-webhook) provisioning always sets this so agents-controller can schedule credential
+	// expiry off the status subresource
+	util.SetAgentDetailsKey(cred, prov.HandleCredentialExpiry, "true")
+
+	if cred.Status.Level == prov.Success.String() && !hasAgentCredentialFinalizer(cred.Finalizers) {
+		// only add finalizer on success
+		ri, _ := cred.AsInstance()
+		h.client.UpdateResourceFinalizer(ri, crFinalizer, "", true)
+	}
+	if mirrorWebhookDetails(cred) {
+		return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+	}
+	return nil
 }
 
 func (h *credentials) provisionPreProcess(ctx context.Context, cred *management.Credential) (*management.ManagedApplication, *management.CredentialRequestDefinition, bool) {
@@ -540,6 +654,41 @@ func (h *credentials) onUpdates(ctx context.Context, cred *management.Credential
 	}
 
 	return cred
+}
+
+// onWebhookUpdate dispatches pending credential update actions (suspend/rotate/enable) to the configured
+// webhook instead of calling this agent's own registered Provisioning implementation. Unlike onUpdates, it
+// does not call registerIDPClient on rotate - IDP client registration is the webhook's own responsibility
+// in webhook mode.
+func (h *credentials) onWebhookUpdate(ctx context.Context, cred *management.Credential, actions []prov.CredentialAction) error {
+	logger := getLoggerFromContext(ctx)
+
+	if webhookDispatchedFor(cred, update) {
+		return nil
+	}
+
+	app, crd, shouldReturn := h.provisionPreProcess(ctx, cred)
+	if shouldReturn {
+		return nil
+	}
+
+	for _, action := range actions {
+		provCreds, err := h.newProvCreds(cred, app, action, crd)
+		if err != nil {
+			logger.WithError(err).Error("error preparing credential request")
+			h.onError(ctx, cred, err)
+			return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+		}
+
+		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookCredentialRequest(update, provCreds)); err != nil {
+			logger.WithError(err).Error("provisioning webhook dispatch failed")
+			h.onError(ctx, cred, err)
+			return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
+		}
+	}
+
+	markWebhookDispatched(cred, update)
+	return h.client.CreateSubResource(cred.ResourceMeta, cred.SubResources)
 }
 
 // isExternalCredential - when mode is CredProvisionModeExternal the client was registered outside the SDK; skip RegisterClient.

@@ -317,6 +317,8 @@ func (h *accessRequestHandler) onWebhookProvision(ctx context.Context, log log.F
 	_, _, req, err := h.buildAccessRequest(ctx, ar, mar)
 	if err != nil {
 		log.WithError(err).Error("error building access request")
+		h.onError(ctx, ar, err)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return
 	}
 
@@ -457,6 +459,8 @@ func (h *accessRequestHandler) onWebhookDeprovision(ctx context.Context, log log
 	app, err := h.getManagedApp(ctx, ar)
 	if err != nil {
 		log.WithError(err).Error("error getting managed app")
+		h.onError(ctx, ar, err)
+		h.client.CreateSubResource(ar.ResourceMeta, ar.SubResources)
 		return
 	}
 
