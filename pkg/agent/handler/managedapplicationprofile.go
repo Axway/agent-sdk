@@ -86,8 +86,8 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 
 	action := GetActionFromContext(ctx)
 	if action == proto.Event_SUBRESOURCEUPDATED && meta.GetSubresource() == defs.XWebhookDetails {
-		if mirrorWebhookDetails(profile) {
-			return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+		if webhookDispatchedFor(profile, webhookOperationProvision) {
+			return h.postWebhookProvisionProcess(profile)
 		}
 		return nil
 	}
@@ -95,6 +95,11 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 	if ok := isStatusFound(profile.Status); !ok {
 		log.Debug("could not handle application request as it did not have a status subresource")
 		return nil
+	}
+
+	if ok := h.shouldProvisionWebhook(profile.Status, profile.Metadata.State, h.webhookCfg); ok {
+		log.Trace("processing resource in pending status via provisioning webhook")
+		return h.onWebhookProvision(ctx, log, profile)
 	}
 
 	if ok := h.shouldProcessPending(profile.Status, profile.Metadata.State); ok {
@@ -105,23 +110,28 @@ func (h *managedApplicationProfile) Handle(ctx context.Context, meta *proto.Even
 	return nil
 }
 
-func (h *managedApplicationProfile) onPending(ctx context.Context, profile *management.ManagedApplicationProfile) error {
-	log := getLoggerFromContext(ctx)
-
-	if h.webhookCfg.IsConfigured() && webhookDispatchedFor(profile, webhookOperationProvision) {
-		return nil
+// postWebhookProvisionProcess mirrors the webhook's x-webhook-details into x-agent-details - status is the
+// webhook's own responsibility (see docs/discovery/provisioning-webhook-responsibilities.md). Only called
+// when the dispatched operation was a provision - see Handle. ManagedApplicationProfile has no finalizer or
+// deprovisioning concept, so there's nothing else to reclaim here.
+func (h *managedApplicationProfile) postWebhookProvisionProcess(profile *management.ManagedApplicationProfile) error {
+	if mirrorWebhookDetails(profile) {
+		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
 	}
+	return nil
+}
 
+// buildProvManagedAppProfile fetches the managed app and builds the profile provisioning request - shared
+// by the classic and webhook-dispatch paths, which only differ in how they report a failure here.
+func (h *managedApplicationProfile) buildProvManagedAppProfile(ctx context.Context, profile *management.ManagedApplicationProfile) (provManagedAppProfile, error) {
 	app, err := h.getManagedApp(ctx, profile)
 	if err != nil {
-		log.WithError(err).Error("error getting managed app")
-		h.onError(ctx, profile, err)
-		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+		return provManagedAppProfile{}, err
 	}
 
 	h.checkForEnumValueMap(ctx, profile.Spec.Data, profile.Spec.ApplicationProfileDefinition)
 
-	pma := provManagedAppProfile{
+	return provManagedAppProfile{
 		attributes:        profile.Spec.Data,
 		profileDefinition: profile.Spec.ApplicationProfileDefinition,
 		managedAppName:    app.Name,
@@ -129,15 +139,40 @@ func (h *managedApplicationProfile) onPending(ctx context.Context, profile *mana
 		data:              util.GetAgentDetails(app),
 		consumerOrgID:     getConsumerOrgID(app),
 		id:                app.Metadata.ID,
+	}, nil
+}
+
+// onWebhookProvision dispatches the provision request to the configured webhook instead of calling this
+// agent's own registered Provisioning implementation. Self-contained (builds its own request, persists its
+// own result) since it's called directly from Handle, before onPending's classic-only path.
+func (h *managedApplicationProfile) onWebhookProvision(ctx context.Context, log log.FieldLogger, profile *management.ManagedApplicationProfile) error {
+	if webhookDispatchedFor(profile, webhookOperationProvision) {
+		return nil
 	}
 
-	if h.webhookCfg.IsConfigured() {
-		if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationProfileRequest(webhookOperationProvision, pma)); err != nil {
-			log.WithError(err).Error("provisioning webhook dispatch failed")
-			h.onError(ctx, profile, err)
-			return h.client.CreateSubResource(profile.ResourceMeta, map[string]interface{}{"status": profile.Status})
-		}
-		markWebhookDispatched(profile, webhookOperationProvision)
+	pma, err := h.buildProvManagedAppProfile(ctx, profile)
+	if err != nil {
+		log.WithError(err).Error("error getting managed app")
+		h.onError(ctx, profile, err)
+		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+	}
+
+	if err := provisioningwebhook.Dispatch(h.webhookClient, h.webhookCfg, newWebhookApplicationProfileRequest(webhookOperationProvision, pma)); err != nil {
+		log.WithError(err).Error("provisioning webhook dispatch failed")
+		h.onError(ctx, profile, err)
+		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+	}
+	markWebhookDispatched(profile, webhookOperationProvision)
+	return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
+}
+
+func (h *managedApplicationProfile) onPending(ctx context.Context, profile *management.ManagedApplicationProfile) error {
+	log := getLoggerFromContext(ctx)
+
+	pma, err := h.buildProvManagedAppProfile(ctx, profile)
+	if err != nil {
+		log.WithError(err).Error("error getting managed app")
+		h.onError(ctx, profile, err)
 		return h.client.CreateSubResource(profile.ResourceMeta, profile.SubResources)
 	}
 
