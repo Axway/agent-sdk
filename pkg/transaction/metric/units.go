@@ -56,21 +56,21 @@ func (u UnitType) String() string {
 		TransactionUnit:      "transactions",
 		CostUSDUnit:          "cost-usd",
 		LLMRequests:          "llm-requests",
-		LLMInputTokens:       "llm-inputtokens",
-		LLMOutputTokens:      "llm-outputtokens",
-		LLMCachedInputTokens: "llm-cachedinputtokens",
-		LLMTotalTokens:       "llm-totaltokens",
+		LLMInputTokens:       "llm-input-tokens",
+		LLMOutputTokens:      "llm-output-tokens",
+		LLMCachedInputTokens: "llm-cached-input-tokens",
+		LLMTotalTokens:       "llm-total-tokens",
 	}[u]
 }
 
 func StringToUnitType(in string) UnitType {
 	return map[string]UnitType{
-		"transactions":          TransactionUnit,
-		"cost-usd":              CostUSDUnit,
-		"llm-requests":          LLMRequests,
-		"llm-inputtokens":       LLMInputTokens,
-		"llm-outputtokens":      LLMOutputTokens,
-		"llm-cachedinputtokens": LLMCachedInputTokens,
-		"llm-totaltokens":       LLMTotalTokens,
+		"transactions":            TransactionUnit,
+		"cost-usd":                CostUSDUnit,
+		"llm-requests":            LLMRequests,
+		"llm-input-tokens":        LLMInputTokens,
+		"llm-output-tokens":       LLMOutputTokens,
+		"llm-cached-input-tokens": LLMCachedInputTokens,
+		"llm-total-tokens":        LLMTotalTokens,
 	}[in]
 }
