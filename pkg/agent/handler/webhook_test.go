@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"slices"
 	"testing"
 
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
@@ -52,123 +53,243 @@ func TestWebhookDispatchedFor(t *testing.T) {
 }
 
 func TestWebhookDispatchedOperation(t *testing.T) {
-	h := newMockSubResourceCarrier()
-	assert.Equal(t, "", webhookDispatchedOperation(h))
+	tests := []struct {
+		name     string
+		marks    []string
+		expected string
+	}{
+		{name: "nothing dispatched yet", marks: nil, expected: ""},
+		{name: "single dispatch recorded", marks: []string{webhookOperationProvision}, expected: webhookOperationProvision},
+		{name: "later dispatch overwrites earlier one", marks: []string{webhookOperationProvision, webhookOperationDeprovision}, expected: webhookOperationDeprovision},
+	}
 
-	markWebhookDispatched(h, webhookOperationProvision)
-	assert.Equal(t, webhookOperationProvision, webhookDispatchedOperation(h))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newMockSubResourceCarrier()
+			for _, op := range tc.marks {
+				markWebhookDispatched(h, op)
+			}
 
-	markWebhookDispatched(h, webhookOperationDeprovision)
-	assert.Equal(t, webhookOperationDeprovision, webhookDispatchedOperation(h))
-}
+			assert.Equal(t, tc.expected, webhookDispatchedOperation(h))
 
-func TestMarkWebhookDispatched(t *testing.T) {
-	h := newMockSubResourceCarrier()
-	markWebhookDispatched(h, webhookOperationProvision)
-
-	details, ok := h.GetSubResource(defs.XAgentDetails).(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, webhookOperationProvision, details[webhookDispatchDetailKey])
+			details, ok := h.GetSubResource(defs.XAgentDetails).(map[string]interface{})
+			if tc.expected == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+				assert.Equal(t, tc.expected, details[webhookDispatchDetailKey])
+			}
+		})
+	}
 }
 
 func TestWebhookDetailsValue(t *testing.T) {
-	h := newMockSubResourceCarrier()
-	assert.Equal(t, "", webhookDetailsValue(h, webhookStatusKey))
+	tests := []struct {
+		name           string
+		webhookDetails map[string]interface{}
+		key            string
+		expected       string
+	}{
+		{name: "no webhook details subresource", key: webhookStatusKey, expected: ""},
+		{
+			name:           "reads status",
+			webhookDetails: map[string]interface{}{webhookStatusKey: webhookStatusSuccess, webhookMessageKey: "all good"},
+			key:            webhookStatusKey,
+			expected:       webhookStatusSuccess,
+		},
+		{
+			name:           "reads message",
+			webhookDetails: map[string]interface{}{webhookStatusKey: webhookStatusSuccess, webhookMessageKey: "all good"},
+			key:            webhookMessageKey,
+			expected:       "all good",
+		},
+		{
+			name:           "missing key",
+			webhookDetails: map[string]interface{}{webhookStatusKey: webhookStatusSuccess},
+			key:            "missing-key",
+			expected:       "",
+		},
+		{
+			name:           "non-string value is ignored",
+			webhookDetails: map[string]interface{}{webhookStatusKey: 1},
+			key:            webhookStatusKey,
+			expected:       "",
+		},
+	}
 
-	h.SetSubResource(defs.XWebhookDetails, map[string]interface{}{
-		webhookStatusKey:  webhookStatusSuccess,
-		webhookMessageKey: "all good",
-	})
-	assert.Equal(t, webhookStatusSuccess, webhookDetailsValue(h, webhookStatusKey))
-	assert.Equal(t, "all good", webhookDetailsValue(h, webhookMessageKey))
-	assert.Equal(t, "", webhookDetailsValue(h, "missing-key"))
-
-	// non-string values are ignored
-	h.SetSubResource(defs.XWebhookDetails, map[string]interface{}{webhookStatusKey: 1})
-	assert.Equal(t, "", webhookDetailsValue(h, webhookStatusKey))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newMockSubResourceCarrier()
+			if tc.webhookDetails != nil {
+				h.SetSubResource(defs.XWebhookDetails, tc.webhookDetails)
+			}
+			assert.Equal(t, tc.expected, webhookDetailsValue(h, tc.key))
+		})
+	}
 }
 
 func TestMirrorWebhookDetails(t *testing.T) {
-	t.Run("no webhook details to mirror", func(t *testing.T) {
-		h := newMockSubResourceCarrier()
-		assert.False(t, mirrorWebhookDetails(h))
-	})
+	tests := []struct {
+		name                 string
+		existingAgentDetails map[string]interface{}
+		hasWebhookDetails    bool
+		webhookDetails       map[string]interface{}
+		expectedReturn       bool
+		expectedAgentDetails map[string]interface{}
+	}{
+		{
+			name:              "no webhook details to mirror",
+			hasWebhookDetails: false,
+			expectedReturn:    false,
+		},
+		{
+			name:              "empty webhook details map",
+			hasWebhookDetails: true,
+			webhookDetails:    map[string]interface{}{},
+			expectedReturn:    false,
+		},
+		{
+			name:                 "mirrors into new agent details",
+			hasWebhookDetails:    true,
+			webhookDetails:       map[string]interface{}{"clientId": "abc123"},
+			expectedReturn:       true,
+			expectedAgentDetails: map[string]interface{}{"clientId": "abc123"},
+		},
+		{
+			name:                 "merges into existing agent details without dropping other keys",
+			existingAgentDetails: map[string]interface{}{"existing": "value"},
+			hasWebhookDetails:    true,
+			webhookDetails:       map[string]interface{}{"clientId": "abc123"},
+			expectedReturn:       true,
+			expectedAgentDetails: map[string]interface{}{"existing": "value", "clientId": "abc123"},
+		},
+		{
+			name:                 "does not let a webhook payload clobber the agent's reserved keys",
+			existingAgentDetails: map[string]interface{}{webhookDispatchDetailKey: "update"},
+			hasWebhookDetails:    true,
+			webhookDetails: map[string]interface{}{
+				webhookStatusKey:         webhookStatusSuccess,
+				webhookMessageKey:        "all good",
+				webhookDispatchDetailKey: "provision",
+				"clientId":               "abc123",
+			},
+			expectedReturn: true,
+			expectedAgentDetails: map[string]interface{}{
+				webhookDispatchDetailKey: "update",
+				"clientId":               "abc123",
+			},
+		},
+	}
 
-	t.Run("empty webhook details map", func(t *testing.T) {
-		h := newMockSubResourceCarrier()
-		h.SetSubResource(defs.XWebhookDetails, map[string]interface{}{})
-		assert.False(t, mirrorWebhookDetails(h))
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newMockSubResourceCarrier()
+			if tc.existingAgentDetails != nil {
+				h.SetSubResource(defs.XAgentDetails, tc.existingAgentDetails)
+			}
+			if tc.hasWebhookDetails {
+				h.SetSubResource(defs.XWebhookDetails, tc.webhookDetails)
+			}
 
-	t.Run("mirrors into new agent details", func(t *testing.T) {
-		h := newMockSubResourceCarrier()
-		h.SetSubResource(defs.XWebhookDetails, map[string]interface{}{
-			webhookStatusKey: webhookStatusSuccess,
+			assert.Equal(t, tc.expectedReturn, mirrorWebhookDetails(h))
+
+			if tc.expectedAgentDetails != nil {
+				agentDetails, ok := h.GetSubResource(defs.XAgentDetails).(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, tc.expectedAgentDetails, agentDetails)
+			}
 		})
+	}
+}
 
-		assert.True(t, mirrorWebhookDetails(h))
+func TestWebhookReservedDetailKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		reserved bool
+	}{
+		{name: "dispatch detail key is reserved", key: webhookDispatchDetailKey, reserved: true},
+		{name: "status key is reserved", key: webhookStatusKey, reserved: true},
+		{name: "message key is reserved", key: webhookMessageKey, reserved: true},
+		{name: "business data key is not reserved", key: "clientId", reserved: false},
+		{name: "similarly named key is not reserved", key: "status_details", reserved: false},
+	}
 
-		agentDetails, ok := h.GetSubResource(defs.XAgentDetails).(map[string]interface{})
-		assert.True(t, ok)
-		assert.Equal(t, webhookStatusSuccess, agentDetails[webhookStatusKey])
-	})
-
-	t.Run("merges into existing agent details without dropping other keys", func(t *testing.T) {
-		h := newMockSubResourceCarrier()
-		h.SetSubResource(defs.XAgentDetails, map[string]interface{}{"existing": "value"})
-		h.SetSubResource(defs.XWebhookDetails, map[string]interface{}{
-			webhookStatusKey: webhookStatusFailed,
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.reserved, slices.Contains(webhookReservedDetailKey, tc.key))
 		})
-
-		assert.True(t, mirrorWebhookDetails(h))
-
-		agentDetails, ok := h.GetSubResource(defs.XAgentDetails).(map[string]interface{})
-		assert.True(t, ok)
-		assert.Equal(t, "value", agentDetails["existing"])
-		assert.Equal(t, webhookStatusFailed, agentDetails[webhookStatusKey])
-	})
+	}
 }
 
 func TestNewWebhookApplicationRequest(t *testing.T) {
-	app := provManagedApp{
-		id:             "app-id",
-		managedAppName: "my-app",
-		teamName:       "my-team",
-		consumerOrgID:  "org-id",
-		data:           map[string]interface{}{"foo": "bar"},
+	tests := []struct {
+		name     string
+		app      provManagedApp
+		expected webhookApplicationRequest
+	}{
+		{
+			name: "builds request from managed app",
+			app: provManagedApp{
+				id:             "app-id",
+				managedAppName: "my-app",
+				teamName:       "my-team",
+				consumerOrgID:  "org-id",
+				data:           map[string]interface{}{"foo": "bar"},
+			},
+			expected: webhookApplicationRequest{
+				Operation:              webhookOperationProvision,
+				ID:                     "app-id",
+				ManagedApplicationName: "my-app",
+				TeamName:               "my-team",
+				ConsumerOrgID:          "org-id",
+				AgentDetails:           map[string]interface{}{"foo": "bar"},
+			},
+		},
 	}
 
-	req := newWebhookApplicationRequest(webhookOperationProvision, app)
-
-	assert.Equal(t, webhookOperationProvision, req.Operation)
-	assert.Equal(t, "app-id", req.ID)
-	assert.Equal(t, "my-app", req.ManagedApplicationName)
-	assert.Equal(t, "my-team", req.TeamName)
-	assert.Equal(t, "org-id", req.ConsumerOrgID)
-	assert.Equal(t, app.data, req.AgentDetails)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, newWebhookApplicationRequest(webhookOperationProvision, tc.app))
+		})
+	}
 }
 
 func TestNewWebhookApplicationProfileRequest(t *testing.T) {
-	profile := provManagedAppProfile{
-		id:                "profile-id",
-		managedAppName:    "my-app",
-		profileDefinition: "my-profile-def",
-		teamName:          "my-team",
-		consumerOrgID:     "org-id",
-		attributes:        map[string]interface{}{"attr": "val"},
-		data:              map[string]interface{}{"foo": "bar"},
+	tests := []struct {
+		name     string
+		profile  provManagedAppProfile
+		expected webhookApplicationProfileRequest
+	}{
+		{
+			name: "builds request from managed app profile",
+			profile: provManagedAppProfile{
+				id:                "profile-id",
+				managedAppName:    "my-app",
+				profileDefinition: "my-profile-def",
+				teamName:          "my-team",
+				consumerOrgID:     "org-id",
+				attributes:        map[string]interface{}{"attr": "val"},
+				data:              map[string]interface{}{"foo": "bar"},
+			},
+			expected: webhookApplicationProfileRequest{
+				Operation:                    webhookOperationDeprovision,
+				ID:                           "profile-id",
+				ManagedApplicationName:       "my-app",
+				ApplicationProfileDefinition: "my-profile-def",
+				TeamName:                     "my-team",
+				ConsumerOrgID:                "org-id",
+				Attributes:                   map[string]interface{}{"attr": "val"},
+				ApplicationDetails:           map[string]interface{}{"foo": "bar"},
+			},
+		},
 	}
 
-	req := newWebhookApplicationProfileRequest(webhookOperationDeprovision, profile)
-
-	assert.Equal(t, webhookOperationDeprovision, req.Operation)
-	assert.Equal(t, "profile-id", req.ID)
-	assert.Equal(t, "my-app", req.ManagedApplicationName)
-	assert.Equal(t, "my-profile-def", req.ApplicationProfileDefinition)
-	assert.Equal(t, "my-team", req.TeamName)
-	assert.Equal(t, "org-id", req.ConsumerOrgID)
-	assert.Equal(t, profile.attributes, req.Attributes)
-	assert.Equal(t, profile.data, req.ApplicationDetails)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, newWebhookApplicationProfileRequest(webhookOperationDeprovision, tc.profile))
+		})
+	}
 }
 
 // mockQuota is a minimal provisioning.Quota implementation for testing.
@@ -183,52 +304,61 @@ func (q *mockQuota) GetLimit() int64                         { return q.limit }
 func (q *mockQuota) GetPlanName() string                     { return "" }
 
 func TestNewWebhookAccessRequest(t *testing.T) {
-	t.Run("without quota, not transferring", func(t *testing.T) {
-		r := provAccReq{
-			id:               "ar-id",
-			managedApp:       "my-app",
-			requestData:      map[string]interface{}{"req": "data"},
-			provData:         "prov-data",
-			accessDetails:    map[string]interface{}{"access": "details"},
-			refAccessDetails: map[string]interface{}{"ref": "details"},
-			appDetails:       map[string]interface{}{"app": "details"},
-			instanceDetails:  map[string]interface{}{"instance": "details"},
-		}
+	tests := []struct {
+		name     string
+		request  provAccReq
+		expected webhookAccessRequest
+	}{
+		{
+			name: "without quota, not transferring",
+			request: provAccReq{
+				id:               "ar-id",
+				managedApp:       "my-app",
+				requestData:      map[string]interface{}{"req": "data"},
+				provData:         "prov-data",
+				accessDetails:    map[string]interface{}{"access": "details"},
+				refAccessDetails: map[string]interface{}{"ref": "details"},
+				appDetails:       map[string]interface{}{"app": "details"},
+				instanceDetails:  map[string]interface{}{"instance": "details"},
+			},
+			expected: webhookAccessRequest{
+				Operation:               webhookOperationProvision,
+				ID:                      "ar-id",
+				ManagedApplicationName:  "my-app",
+				RequestData:             map[string]interface{}{"req": "data"},
+				ProvisioningData:        "prov-data",
+				AccessDetails:           map[string]interface{}{"access": "details"},
+				ReferencedAccessDetails: map[string]interface{}{"ref": "details"},
+				ApplicationDetails:      map[string]interface{}{"app": "details"},
+				InstanceDetails:         map[string]interface{}{"instance": "details"},
+			},
+		},
+		{
+			name:    "transferring when refID set",
+			request: provAccReq{id: "ar-id", refID: "ref-id"},
+			expected: webhookAccessRequest{
+				Operation:      webhookOperationProvision,
+				ID:             "ar-id",
+				ReferencedID:   "ref-id",
+				IsTransferring: true,
+			},
+		},
+		{
+			name:    "with quota",
+			request: provAccReq{id: "ar-id", quota: &mockQuota{limit: 100, interval: "daily"}},
+			expected: webhookAccessRequest{
+				Operation: webhookOperationProvision,
+				ID:        "ar-id",
+				Quota:     &webhookQuota{Limit: 100, Interval: "daily"},
+			},
+		},
+	}
 
-		req := newWebhookAccessRequest(webhookOperationProvision, r)
-
-		assert.Equal(t, webhookOperationProvision, req.Operation)
-		assert.Equal(t, "ar-id", req.ID)
-		assert.Equal(t, "", req.ReferencedID)
-		assert.Equal(t, "my-app", req.ManagedApplicationName)
-		assert.False(t, req.IsTransferring)
-		assert.Equal(t, r.requestData, req.RequestData)
-		assert.Equal(t, r.provData, req.ProvisioningData)
-		assert.Equal(t, r.accessDetails, req.AccessDetails)
-		assert.Equal(t, r.refAccessDetails, req.ReferencedAccessDetails)
-		assert.Equal(t, r.appDetails, req.ApplicationDetails)
-		assert.Equal(t, r.instanceDetails, req.InstanceDetails)
-		assert.Nil(t, req.Quota)
-	})
-
-	t.Run("transferring when refID set", func(t *testing.T) {
-		r := provAccReq{id: "ar-id", refID: "ref-id"}
-		req := newWebhookAccessRequest(webhookOperationProvision, r)
-		assert.Equal(t, "ref-id", req.ReferencedID)
-		assert.True(t, req.IsTransferring)
-	})
-
-	t.Run("with quota", func(t *testing.T) {
-		r := provAccReq{
-			id:    "ar-id",
-			quota: &mockQuota{limit: 100, interval: "daily"},
-		}
-		req := newWebhookAccessRequest(webhookOperationProvision, r)
-		if assert.NotNil(t, req.Quota) {
-			assert.Equal(t, int64(100), req.Quota.Limit)
-			assert.Equal(t, "daily", req.Quota.Interval)
-		}
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, newWebhookAccessRequest(webhookOperationProvision, tc.request))
+		})
+	}
 }
 
 // mockIDPCredentialData is a minimal provisioning.IDPCredentialData implementation for testing.
@@ -296,57 +426,71 @@ func (m *mockIDPProvisioner) GetAgentDetails() (map[string]string, error) { retu
 func (m *mockIDPProvisioner) Validate() error                             { return nil }
 
 func TestNewWebhookCredentialRequest(t *testing.T) {
-	t.Run("non-IDP credential", func(t *testing.T) {
-		c := &provCreds{
-			id:                "cred-id",
-			name:              "cred-name",
-			managedApp:        "my-app",
-			credType:          "cred-type",
-			credAction:        1,
-			credData:          map[string]interface{}{"a": "b"},
-			credDetails:       map[string]interface{}{"c": "d"},
-			appDetails:        map[string]interface{}{"e": "f"},
-			credSchema:        map[string]interface{}{"g": "h"},
-			credProvSchema:    map[string]interface{}{"i": "j"},
-			credSchemaDetails: map[string]interface{}{"k": "l"},
-			provisionMode:     "mode",
-			days:              30,
-			idpProvisioner:    &mockIDPProvisioner{isIDPCredential: false},
-		}
-
-		req := newWebhookCredentialRequest(webhookOperationProvision, c)
-
-		assert.Equal(t, webhookOperationProvision, req.Operation)
-		assert.Equal(t, "cred-id", req.ID)
-		assert.Equal(t, "cred-name", req.Name)
-		assert.Equal(t, "my-app", req.ManagedApplicationName)
-		assert.Equal(t, "cred-type", req.CredentialType)
-		assert.Equal(t, 1, req.CredentialAction)
-		assert.Equal(t, c.credData, req.CredentialData)
-		assert.Equal(t, c.credDetails, req.CredentialDetails)
-		assert.Equal(t, c.appDetails, req.ApplicationDetails)
-		assert.Equal(t, c.credSchema, req.CredentialSchema)
-		assert.Equal(t, c.credProvSchema, req.CredentialProvisionSchema)
-		assert.Equal(t, c.credSchemaDetails, req.CredentialSchemaDetails)
-		assert.Equal(t, "mode", req.ProvisionMode)
-		assert.Equal(t, 30, req.ExpirationDays)
-		assert.Equal(t, "", req.IDPClientID)
-		assert.Equal(t, "", req.IDPTokenEndpoint)
-	})
-
-	t.Run("IDP credential", func(t *testing.T) {
-		c := &provCreds{
-			id: "cred-id",
-			idpProvisioner: &mockIDPProvisioner{
-				isIDPCredential: true,
-				provider:        &mockOauthProvider{tokenEndpoint: "https://idp/token"},
-				credentialData:  &mockIDPCredentialData{clientID: "client-id"},
+	tests := []struct {
+		name      string
+		operation string
+		creds     *provCreds
+		expected  webhookCredentialRequest
+	}{
+		{
+			name:      "non-IDP credential",
+			operation: webhookOperationProvision,
+			creds: &provCreds{
+				id:                "cred-id",
+				name:              "cred-name",
+				managedApp:        "my-app",
+				credType:          "cred-type",
+				credAction:        1,
+				credData:          map[string]interface{}{"a": "b"},
+				credDetails:       map[string]interface{}{"c": "d"},
+				appDetails:        map[string]interface{}{"e": "f"},
+				credSchema:        map[string]interface{}{"g": "h"},
+				credProvSchema:    map[string]interface{}{"i": "j"},
+				credSchemaDetails: map[string]interface{}{"k": "l"},
+				provisionMode:     "mode",
+				days:              30,
+				idpProvisioner:    &mockIDPProvisioner{isIDPCredential: false},
 			},
-		}
+			expected: webhookCredentialRequest{
+				Operation:                 webhookOperationProvision,
+				ID:                        "cred-id",
+				Name:                      "cred-name",
+				ManagedApplicationName:    "my-app",
+				CredentialType:            "cred-type",
+				CredentialAction:          1,
+				CredentialData:            map[string]interface{}{"a": "b"},
+				CredentialDetails:         map[string]interface{}{"c": "d"},
+				ApplicationDetails:        map[string]interface{}{"e": "f"},
+				CredentialSchema:          map[string]interface{}{"g": "h"},
+				CredentialProvisionSchema: map[string]interface{}{"i": "j"},
+				CredentialSchemaDetails:   map[string]interface{}{"k": "l"},
+				ProvisionMode:             "mode",
+				ExpirationDays:            30,
+			},
+		},
+		{
+			name:      "IDP credential",
+			operation: webhookOperationDeprovision,
+			creds: &provCreds{
+				id: "cred-id",
+				idpProvisioner: &mockIDPProvisioner{
+					isIDPCredential: true,
+					provider:        &mockOauthProvider{tokenEndpoint: "https://idp/token"},
+					credentialData:  &mockIDPCredentialData{clientID: "client-id"},
+				},
+			},
+			expected: webhookCredentialRequest{
+				Operation:        webhookOperationDeprovision,
+				ID:               "cred-id",
+				IDPClientID:      "client-id",
+				IDPTokenEndpoint: "https://idp/token",
+			},
+		},
+	}
 
-		req := newWebhookCredentialRequest(webhookOperationDeprovision, c)
-
-		assert.Equal(t, "client-id", req.IDPClientID)
-		assert.Equal(t, "https://idp/token", req.IDPTokenEndpoint)
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, newWebhookCredentialRequest(tc.operation, tc.creds))
+		})
+	}
 }
