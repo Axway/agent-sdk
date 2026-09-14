@@ -150,6 +150,13 @@ func TestSpecDiscovery(t *testing.T) {
 			stripExtensions: true,
 		},
 		{
+			name:            "OAS3.2 Spec with strip extensions",
+			inputFile:       "./testdata/petstore-openapi3.2.yaml",
+			expectedType:    Oas3,
+			inputType:       Oas3,
+			stripExtensions: true,
+		},
+		{
 			name:            "OAS2 Spec with strip extensions",
 			inputFile:       "./testdata/petstore-swagger2.json",
 			expectedType:    Oas2,
