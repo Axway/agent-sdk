@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"slices"
+
 	defs "github.com/Axway/agent-sdk/pkg/apic/definitions"
 	"github.com/Axway/agent-sdk/pkg/util"
 )
@@ -26,6 +28,8 @@ const (
 	webhookStatusSuccess = "success"
 	webhookStatusFailed  = "failed"
 )
+
+var webhookReservedDetailKey = []string{webhookDispatchDetailKey, webhookStatusKey, webhookMessageKey}
 
 // subResourceCarrier is satisfied by any apiserver resource instance type (ManagedApplication, AccessRequest,
 // Credential, ...) - matches the generic GetSubResource/SetSubResource pair they all get from ResourceMeta,
@@ -74,7 +78,8 @@ func webhookDetailsValue(h subResourceCarrier, key string) string {
 // mirrorWebhookDetails copies the resource's x-webhook-details subresource into its x-agent-details, so
 // existing code (traceability lookups, etc.) that only knows how to read x-agent-details keeps working once
 // a provisioning webhook is configured - the webhook itself is scoped to write only x-webhook-details, not
-// x-agent-details directly. Returns false if there is nothing to mirror.
+// x-agent-details directly. Reserved keys (see webhookReservedDetailKey) are never copied over. Returns
+// false if there is nothing to mirror.
 func mirrorWebhookDetails(h subResourceCarrier) bool {
 	webhookDetails, ok := h.GetSubResource(defs.XWebhookDetails).(map[string]interface{})
 	if !ok || len(webhookDetails) == 0 {
@@ -86,6 +91,9 @@ func mirrorWebhookDetails(h subResourceCarrier) bool {
 		agentDetails = map[string]interface{}{}
 	}
 	for k, v := range webhookDetails {
+		if slices.Contains(webhookReservedDetailKey, k) {
+			continue
+		}
 		agentDetails[k] = v
 	}
 	util.SetAgentDetails(h, agentDetails)
