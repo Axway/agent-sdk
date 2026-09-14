@@ -190,7 +190,7 @@ func addSingleProvisioningWebhookProperties(props properties.Properties, path, r
 	props.AddStringProperty(path+".password", "", "Password for "+resourceType+" provisioning webhook basic auth")
 	props.AddStringProperty(path+".apiKeyHeader", "", "Header name used to send the "+resourceType+" provisioning webhook API key")
 	props.AddStringProperty(path+".apiKeyValue", "", "API key value for the "+resourceType+" provisioning webhook")
-	props.AddIntProperty(path+".retryCount", 0, "Number of additional attempts to make if the "+resourceType+" provisioning webhook call fails")
+	props.AddIntProperty(path+".retryCount", 0, "Number of additional attempts to make if the "+resourceType+" provisioning webhook call fails", properties.WithLowerLimitInt(0), properties.WithUpperLimitInt(5))
 }
 
 func parseProvisioningWebhookConfig(props properties.Properties) ProvisioningWebhookConfig {

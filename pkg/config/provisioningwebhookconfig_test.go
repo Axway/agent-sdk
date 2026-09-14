@@ -3,6 +3,8 @@ package config
 import (
 	"testing"
 
+	"github.com/Axway/agent-sdk/pkg/cmd/properties"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,6 +107,36 @@ func TestProvisioningWebhookConfigAuthTypes(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.Equal(t, tt.wantErr, err.Error())
 			}
+		})
+	}
+}
+
+func TestProvisioningWebhookConfigRetryCountLimits(t *testing.T) {
+	// retryCount is registered with WithLowerLimitInt(0)/WithUpperLimitInt(5); values outside that
+	// range fall back to the default (0) rather than clamping to the nearest limit.
+	tests := []struct {
+		name     string
+		value    string
+		expected int
+	}{
+		{name: "below lower limit falls back to default", value: "-1", expected: 0},
+		{name: "at lower limit", value: "0", expected: 0},
+		{name: "within range", value: "3", expected: 3},
+		{name: "at upper limit", value: "5", expected: 5},
+		{name: "above upper limit falls back to default", value: "6", expected: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rootCmd := &cobra.Command{Use: "test"}
+			props := properties.NewProperties(rootCmd)
+			addProvisioningWebhookConfigProperties(props)
+
+			err := rootCmd.Flags().Set("centralProvisioningWebhookCredentialRetryCount", tt.value)
+			assert.Nil(t, err)
+
+			cfg := parseProvisioningWebhookConfig(props)
+			assert.Equal(t, tt.expected, cfg.GetCredentialWebhook().GetRetryCount())
 		})
 	}
 }
