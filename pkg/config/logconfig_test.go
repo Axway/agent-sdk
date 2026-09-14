@@ -257,3 +257,67 @@ func TestLogConfigValidations(t *testing.T) {
 		})
 	}
 }
+
+func TestLogConfigOverrides(t *testing.T) {
+	tests := map[string]struct {
+		cfg           *LogConfiguration
+		wantOverrides map[string]interface{} // subset of override Config expected to match
+	}{
+		"info level": {
+			cfg:           &LogConfiguration{Level: "info", Format: "json", Output: "stdout"},
+			wantOverrides: map[string]interface{}{logLevelYAMLPath: "info"},
+		},
+		"warn level": {
+			cfg:           &LogConfiguration{Level: "warn"},
+			wantOverrides: map[string]interface{}{logLevelYAMLPath: "warn"},
+		},
+		"error level": {
+			cfg:           &LogConfiguration{Level: "error"},
+			wantOverrides: map[string]interface{}{logLevelYAMLPath: "error"},
+		},
+		"debug level overrides to debug": {
+			cfg:           &LogConfiguration{Level: "debug"},
+			wantOverrides: map[string]interface{}{logLevelYAMLPath: "debug"},
+		},
+		"trace level overrides to debug": {
+			cfg:           &LogConfiguration{Level: "trace"},
+			wantOverrides: map[string]interface{}{logLevelYAMLPath: "debug"},
+		},
+		"json format": {
+			cfg:           &LogConfiguration{Format: "json"},
+			wantOverrides: map[string]interface{}{logJSONYAMLPath: true},
+		},
+		"stdout output": {
+			cfg:           &LogConfiguration{Output: "stdout"},
+			wantOverrides: map[string]interface{}{logSTDERRYAMLPath: true, logFileYAMLPath: false},
+		},
+		"file output": {
+			cfg:           &LogConfiguration{Output: "file"},
+			wantOverrides: map[string]interface{}{logFileYAMLPath: true, logSTDERRYAMLPath: false, logFilePermissionsPath: "0600"},
+		},
+		"both output collapses to file output with a warning": {
+			cfg:           &LogConfiguration{Output: "both"},
+			wantOverrides: map[string]interface{}{logFileYAMLPath: true, logSTDERRYAMLPath: false, logFilePermissionsPath: "0600"},
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			overrides := LogConfigOverrides()
+
+			matched := false
+			for _, override := range overrides {
+				if !override.Check(tc.cfg) {
+					continue
+				}
+				for k, v := range tc.wantOverrides {
+					if override.Config[k] == v {
+						matched = true
+					}
+				}
+			}
+			assert.True(t, matched, "expected at least one override to match and apply the expected config values")
+		})
+	}
+}

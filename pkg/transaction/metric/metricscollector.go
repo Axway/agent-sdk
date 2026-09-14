@@ -586,9 +586,10 @@ func (c *collector) getAccessRequestAndManagedApp(cacheManager cache.Manager, de
 
 	// get the managed application
 	// cached metrics will only have the catalog api id
-	managedApp := cacheManager.GetManagedApplicationByApplicationID(detail.AppDetails.ID)
+	appID := transutil.StripApplicationIDPrefix(detail.AppDetails.ID)
+	managedApp := cacheManager.GetManagedApplicationByApplicationID(appID)
 	if managedApp == nil {
-		managedApp = cacheManager.GetManagedApplication(detail.AppDetails.ID)
+		managedApp = cacheManager.GetManagedApplication(appID)
 	}
 	if managedApp == nil {
 		managedApp = cacheManager.GetManagedApplicationByName(detail.AppDetails.Name)
@@ -719,6 +720,7 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 		return &models.ProductResourceReference{
 			ResourceReference: models.ResourceReference{ID: unknown},
 			VersionID:         unknown,
+			Owner:             &models.Owner{Type: none},
 		}
 	}
 
@@ -731,8 +733,9 @@ func (c *collector) getProduct(accessRequest *management.AccessRequest) *models.
 	}
 	if productRef.ID != "" {
 		ref.ID = productRef.ID
-		// owner only applies once the product itself is resolved
 		ref.Owner = transutil.ResolveProductOwner(accessRequest.GetEmbeddedReferenceByGVK(catalog.PublishedProductGVK()))
+	} else {
+		ref.Owner = &models.Owner{Type: none}
 	}
 	if releaseRef.ID != "" {
 		ref.VersionID = releaseRef.ID

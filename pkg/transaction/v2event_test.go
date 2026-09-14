@@ -417,8 +417,8 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				assert.Equal(t, testTeamGUID, data.ConsumerDetails.Application.Owner.TeamGUID)
 			},
 		},
-		// nil OwnerInfo falls through to "unknown" when cacheManager is nil
-		"summary nil OwnerInfo with nil cache produces unknown owner": {
+		// nil OwnerInfo falls through to "none" when cacheManager is nil
+		"summary nil OwnerInfo with nil cache produces none owner": {
 			logEvent: LogEvent{
 				Type:          TypeTransactionSummary,
 				TransactionID: testTxnOwner3,
@@ -434,7 +434,7 @@ func TestBuildTransactionV2Data(t *testing.T) {
 				require.True(t, ok)
 				require.NotNil(t, data.API)
 				require.NotNil(t, data.API.Owner)
-				assert.Equal(t, "unknown", data.API.Owner.Type)
+				assert.Equal(t, "none", data.API.Owner.Type)
 			},
 		},
 		// nil AppOwnerInfo produces no owner on consumerDetails application

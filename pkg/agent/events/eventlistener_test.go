@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -56,7 +57,6 @@ func TestEventListener_start(t *testing.T) {
 	tests := []struct {
 		name        string
 		kind        string
-		alreadySeen bool // pre-seed seenManagedApps for the managed app before dispatching
 		closeSource bool
 		cancelCtx   bool
 		wantDone    bool
@@ -69,15 +69,11 @@ func TestEventListener_start(t *testing.T) {
 			wantLane: "kind",
 		},
 		{
-			name:     "dispatches the first event for a managed app to its own kind lane",
+			// ManagedApplication events are always keyed by their own name, so they land on the
+			// app's provisioning shard alongside its access requests, rather than the kind lane
+			name:     "dispatches a ManagedApplication event to its managed app's shard",
 			kind:     lowKind,
-			wantLane: "kind",
-		},
-		{
-			name:        "a later ManagedApplication event for an already-seen app still uses its own kind lane",
-			kind:        lowKind,
-			alreadySeen: true,
-			wantLane:    "kind",
+			wantLane: "demoted",
 		},
 		{
 			name: "drops an event for a kind with no registered lane instead of blocking",
@@ -110,9 +106,6 @@ func TestEventListener_start(t *testing.T) {
 				event = newTestEvent(1)
 				event.Payload.Kind = tc.kind
 				event.Payload.Name = "app-1"
-				if tc.alreadySeen {
-					em.seenManagedApps["app-1"] = struct{}{}
-				}
 				em.source <- event
 			}
 
@@ -264,6 +257,92 @@ func Test_sequenceTracker(t *testing.T) {
 	}
 }
 
+// TestEventResourceWrapper_get proves the sync.Once memoization: however many times get is called,
+// fetch only runs once and every caller observes the same cached result - whether that's a resource
+// or an error - the property that lets handleEvent hand the same eventResourceWrapper to every
+// handler dispatched for one event instead of each handler fetching the resource itself.
+func TestEventResourceWrapper_get(t *testing.T) {
+	tests := []struct {
+		name    string
+		ri      *apiv1.ResourceInstance
+		err     error
+		wantMsg string
+	}{
+		{
+			name:    "caches a successful fetch",
+			ri:      &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{Name: "cached"}},
+			wantMsg: "fetch must run at most once, regardless of how many times get is called",
+		},
+		{
+			name:    "caches a failed fetch",
+			err:     fmt.Errorf("boom"),
+			wantMsg: "an error result must also be cached, not retried on every call",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			wrapper := &eventResourceWrapper{
+				fetch: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
+					calls++
+					return tc.ri, tc.err
+				},
+			}
+
+			for i := 0; i < 5; i++ {
+				ri, err := wrapper.get(nil, nil)
+				assert.Same(t, tc.ri, ri)
+				assert.Equal(t, tc.err, err)
+			}
+			assert.Equal(t, 1, calls, tc.wantMsg)
+		})
+	}
+}
+
+// TestEventListener_handleEvent_sharesEventResourceAcrossHandlers proves handleEvent builds one
+// eventResourceWrapper per event and hands it to every handler dispatched for that event, so the
+// underlying resource is only fetched once even when several handlers are registered for the same
+// kind (e.g. two RegisterResourceEventHandler calls for the same kind - see
+// agent.newHandlers/GetHandlers).
+func TestEventListener_handleEvent_sharesEventResourceAcrossHandlers(t *testing.T) {
+	const kind = "SharedKind"
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
+
+	client := &countingAPIClient{ri: &apiv1.ResourceInstance{ResourceMeta: apiv1.ResourceMeta{Name: "name"}}}
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	listener := NewEventListener(
+		ctx, cancel,
+		make(chan *proto.Event),
+		client,
+		"https://apicentral.example.com",
+		sequenceManager,
+		map[string][]handler.Handler{kind: {&mockHandler{}, &mockHandler{}}},
+	)
+	ch := make(chan handlerData, 2)
+	listener.kindJobs[kind] = []chan handlerData{ch}
+
+	event := newTestEvent(1)
+	event.Payload.Kind = kind
+
+	assert.NoError(t, listener.handleEvent(event))
+	assert.Len(t, ch, 2, "both handlers registered for the kind should be dispatched")
+
+	first := <-ch
+	second := <-ch
+	assert.Same(t, first.eventResource, second.eventResource,
+		"handlers dispatched for the same event must share one eventResourceWrapper")
+
+	_, err := first.eventResource.get(event, nil)
+	assert.NoError(t, err)
+	_, err = second.eventResource.get(event, nil)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, client.calls.Load(),
+		"the underlying resource must be fetched only once, even though two handlers need it")
+}
+
 type blockingHandler struct {
 	release chan struct{}
 }
@@ -327,10 +406,11 @@ func TestEventListener_handleEvent_sequenceWaitsForHandleCompletion(t *testing.T
 	}, time.Second, 10*time.Millisecond, "sequence should advance once Handle completes")
 }
 
-// TestEventListener_handleEvent_managedAppDemotion exercises the full managed-app demotion
-// lifecycle through handleEvent: the first event for an app uses its kind lane, later events
-// for the same app are demoted to that app's assigned shard, and deleting the ManagedApplication
-// resets it so the next related event is treated as first-seen again.
+// TestEventListener_handleEvent_managedAppDemotion exercises the managed-app provisioning lifecycle
+// through handleEvent: ManagedApplication events always dispatch to their own app's provisioning
+// shard, AccessRequest/Credential events do the same when they carry a reference to that app (and
+// otherwise fall back to their kind lane), and deleting the ManagedApplication clears its shard
+// assignment.
 func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
 	sequenceManager := NewSequenceProvider(cacheManager, "testWatch")
@@ -338,15 +418,11 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	maKind := management.ManagedApplicationGVK().Kind
 	arKind := management.AccessRequestGVK().Kind
 
-	client := &mockAPIClient{ri: &apiv1.ResourceInstance{
-		Spec: map[string]interface{}{"managedApplication": "app-1"},
-	}}
-
 	ctx, cancel := context.WithCancelCause(context.Background())
 	listener := NewEventListener(
 		ctx, cancel,
 		make(chan *proto.Event),
-		client,
+		&mockAPIClient{},
 		"https://apicentral.example.com",
 		sequenceManager,
 		map[string][]handler.Handler{
@@ -363,45 +439,96 @@ func TestEventListener_handleEvent_managedAppDemotion(t *testing.T) {
 	maEvent.Payload.Name = "app-1"
 	assert.NoError(t, listener.handleEvent(maEvent))
 	select {
-	case <-listener.kindJobs[maKind][0]:
+	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the first ManagedApplication event to use its kind lane")
+		t.Fatal("expected the ManagedApplication event to use its app's provisioning shard")
 	}
 
-	arEvent := newTestEvent(2)
-	arEvent.Payload.Kind = arKind
-	assert.NoError(t, listener.handleEvent(arEvent))
+	arEventNoRef := newTestEvent(2)
+	arEventNoRef.Payload.Kind = arKind
+	assert.NoError(t, listener.handleEvent(arEventNoRef))
+	select {
+	case <-listener.kindJobs[arKind][0]:
+	default:
+		t.Fatal("expected an AccessRequest without a ManagedApplication reference to fall back to its kind lane")
+	}
+
+	arEventWithRef := newTestEvent(3)
+	arEventWithRef.Payload.Kind = arKind
+	arEventWithRef.Payload.Metadata.References = []*proto.Reference{{Kind: maKind, Name: "app-1"}}
+	assert.NoError(t, listener.handleEvent(arEventWithRef))
 	select {
 	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the AccessRequest for an already-seen app to use its demoted shard")
+		t.Fatal("expected an AccessRequest referencing the ManagedApplication to use the app's provisioning shard")
 	}
 
-	deleteEvent := newTestEvent(3)
+	deleteEvent := newTestEvent(4)
 	deleteEvent.Payload.Kind = maKind
 	deleteEvent.Payload.Name = "app-1"
 	deleteEvent.Type = proto.Event_DELETED
 	assert.NoError(t, listener.handleEvent(deleteEvent))
 	select {
-	case <-listener.kindJobs[maKind][0]:
+	case <-listener.provisioningJobs[0]:
 	default:
-		t.Fatal("expected the ManagedApplication delete to still use its own kind lane - only AccessRequest/Credential get demoted")
-	}
-	if _, stillSeen := listener.seenManagedApps["app-1"]; stillSeen {
-		t.Fatal("expected the delete to clear the seen entry")
+		t.Fatal("expected the ManagedApplication delete to use the app's provisioning shard")
 	}
 	if _, stillAssigned := listener.provisioningLaneAssignment["app-1"]; stillAssigned {
 		t.Fatal("expected the delete to clear the shard assignment")
 	}
+}
 
-	arEvent2 := newTestEvent(4)
-	arEvent2.Payload.Kind = arKind
-	assert.NoError(t, listener.handleEvent(arEvent2))
-	select {
-	case <-listener.kindJobs[arKind][0]:
-	default:
-		t.Fatal("expected the AccessRequest after the app was deleted to use the kind lane again")
+// TestEventListener_dispatchLane_appSharesLaneWithItsAccessRequests proves the ordering guarantee
+// the app status guard in accessRequestHandler.onPending relies on: a managed app's own events and
+// the events of the AccessRequests/Credentials referencing it resolve to the same shard. A shard has
+// exactly one worker, so the app's provisioning - and the status write marking it Success - completes
+// before an access request reads that status. When these were split across lanes, the access request
+// could observe a not-yet-successful app and fail permanently.
+func TestEventListener_dispatchLane_appSharesLaneWithItsAccessRequests(t *testing.T) {
+	maKind := management.ManagedApplicationGVK().Kind
+	arKind := management.AccessRequestGVK().Kind
+	credKind := management.CredentialGVK().Kind
+
+	em := &EventListener{
+		provisioningJobs:           make([]chan handlerData, 8),
+		provisioningLaneAssignment: make(map[string]int),
 	}
+	for i := range em.provisioningJobs {
+		em.provisioningJobs[i] = make(chan handlerData, 1)
+	}
+
+	maEvent := newTestEvent(1)
+	maEvent.Payload.Kind = maKind
+	maEvent.Payload.Name = "app-1"
+	appLane, appLabel := em.dispatchLane(maEvent)
+
+	for _, kind := range []string{arKind, credKind} {
+		event := newTestEvent(2)
+		event.Payload.Kind = kind
+		event.Payload.Name = "resource-for-app-1"
+		event.Payload.Metadata.References = []*proto.Reference{{Kind: maKind, Name: "app-1"}}
+
+		lane, label := em.dispatchLane(event)
+		assert.True(t, appLane == lane, "%s must share the managed app's shard", kind)
+		assert.Equal(t, appLabel, label)
+	}
+
+	// other apps still spread across shards - sharing is per app, not global
+	spread := false
+	for i := 2; i < 27; i++ {
+		name := fmt.Sprintf("app-%d", i)
+
+		otherEvent := newTestEvent(int64(i))
+		otherEvent.Payload.Kind = maKind
+		otherEvent.Payload.Name = name
+
+		lane, _ := em.dispatchLane(otherEvent)
+		if lane != appLane {
+			spread = true
+			break
+		}
+	}
+	assert.True(t, spread, "expected other managed apps to land on other shards")
 }
 
 // TestEventListener_provisioningLane proves the two properties the shard-by-key design depends on:
@@ -451,6 +578,11 @@ func TestEventListener_provisioningShards_runConcurrently(t *testing.T) {
 			ctx:     context.Background(),
 			handler: slow,
 			logger:  log.NewFieldLogger(),
+			eventResource: &eventResourceWrapper{
+				fetch: func(_ *proto.Event, _ []string) (*apiv1.ResourceInstance, error) {
+					return &apiv1.ResourceInstance{}, nil
+				},
+			},
 		}
 	}
 
@@ -581,6 +713,35 @@ func TestEventListener_kindLanePreservesPerResourceOrder(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("handlers did not finish in time")
 	}
+}
+
+// countingAPIClient counts ExecuteAPI calls, using a pointer-friendly atomic counter so the count
+// is observable regardless of how the client is passed around - used to prove a resource is
+// fetched only once even when shared across multiple dispatched handlers.
+type countingAPIClient struct {
+	ri    *apiv1.ResourceInstance
+	calls atomic.Int32
+}
+
+func (c *countingAPIClient) ExecuteAPI(_, _ string, _ map[string]string, _ []byte) ([]byte, error) {
+	c.calls.Add(1)
+	return json.Marshal(c.ri)
+}
+
+func (c *countingAPIClient) GetResource(_ string) (*apiv1.ResourceInstance, error) {
+	return c.ri, nil
+}
+
+func (c *countingAPIClient) CreateResourceInstance(_ apiv1.Interface) (*apiv1.ResourceInstance, error) {
+	return c.ri, nil
+}
+
+func (c *countingAPIClient) DeleteResourceInstance(_ apiv1.Interface) error {
+	return nil
+}
+
+func (c *countingAPIClient) GetAPIV1ResourceInstances(_ map[string]string, _ string) ([]*apiv1.ResourceInstance, error) {
+	return nil, nil
 }
 
 type mockHandler struct {

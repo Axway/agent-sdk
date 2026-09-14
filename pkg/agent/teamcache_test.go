@@ -112,8 +112,11 @@ func TestTeamCache(t *testing.T) {
 				case strings.Contains(req.RequestURI, "/auth"):
 					token := "{\"access_token\":\"somevalue\",\"expires_in\": 12235677}"
 					resp.Write([]byte(token))
-				case strings.Contains(req.RequestURI, "platformTeams"):
-					data, _ := json.Marshal(test.teams)
+				case strings.Contains(req.RequestURI, "/api/v1/team"):
+					data, _ := json.Marshal(map[string]interface{}{
+						"success": true,
+						"result":  test.teams,
+					})
 					resp.Write(data)
 				}
 			}))

@@ -7,8 +7,8 @@ import (
 
 	"github.com/Axway/agent-sdk/pkg/agent"
 	"github.com/Axway/agent-sdk/pkg/apic"
+	"github.com/Axway/agent-sdk/pkg/event"
 	hc "github.com/Axway/agent-sdk/pkg/util/healthcheck"
-	"github.com/elastic/beats/v7/libbeat/publisher"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +20,7 @@ func (m mockTransportClient) Close() error {
 	return nil
 }
 
-func (m mockTransportClient) Publish(context.Context, publisher.Batch) error {
+func (m mockTransportClient) Publish(context.Context, event.Batch) error {
 	return nil
 }
 

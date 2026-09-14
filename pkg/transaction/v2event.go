@@ -202,7 +202,7 @@ var eventTypeMap = map[string]string{
 }
 
 // BuildTransactionV2Data constructs an InsightsEvent from a LogEvent for the ground agent path.
-// cacheManager may be nil in tests. Owner resolution will return "unknown" in that case.
+// cacheManager may be nil in tests. Owner resolution will return "none" in that case.
 func BuildTransactionV2Data(
 	logger log.FieldLogger,
 	logEvent LogEvent,
@@ -488,7 +488,7 @@ func formatLegID(s string) string {
 func resolveAPIDetailFromCache(apiID string, cacheManager cache.Manager) *insightsAPIDetail {
 	detail := &insightsAPIDetail{
 		ID:    apiID,
-		Owner: &models.Owner{Type: "unknown"},
+		Owner: &models.Owner{Type: "none"},
 	}
 	if cacheManager == nil || apiID == "" {
 		return detail

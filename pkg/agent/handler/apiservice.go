@@ -25,10 +25,13 @@ func NewAPISvcHandler(agentCacheManager agentcache.Manager, envName string) Hand
 }
 
 func (h *apiSvcHandler) ShouldHandle(ctx context.Context, event *proto.Event) bool {
-	if event.Payload.Metadata.Scope.Name != h.envName || event.Payload.Metadata.Scope.Kind != management.EnvironmentGVK().Kind {
-		return false
-	}
-	return true
+	return shouldHandleAPIService(event, h.envName)
+}
+
+func shouldHandleAPIService(event *proto.Event, envName string) bool {
+	return event.Payload.Metadata.Scope != nil &&
+		event.Payload.Metadata.Scope.Name == envName &&
+		event.Payload.Metadata.Scope.Kind == management.EnvironmentGVK().Kind
 }
 
 // HandleCache adds the API Service to the cache during discoveryCache's bulk rebuild.

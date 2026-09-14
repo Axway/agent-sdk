@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,6 +16,7 @@ import (
 	catalog "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/catalog/v1"
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	corecfg "github.com/Axway/agent-sdk/pkg/config"
+	"github.com/Axway/agent-sdk/pkg/event"
 	"github.com/Axway/agent-sdk/pkg/traceability"
 	"github.com/Axway/agent-sdk/pkg/traceability/sampling"
 	"github.com/Axway/agent-sdk/pkg/transaction/models"
@@ -93,7 +93,7 @@ func TestCreateEventWithValidTokenRequest(t *testing.T) {
 			Status: "Pass",
 		},
 	}
-	eventFields := make(common.MapStr)
+	eventFields := make(event.MapStr)
 	eventFields["someKey.1"] = "someVal.1"
 	eventFields["someKey.2"] = "someVal.2"
 	eventFields["message"] = "existingMessage"

@@ -62,20 +62,34 @@ type EventListener struct {
 	kindJobs                   map[string][]chan handlerData // regularWorkerCount shards per kind, one worker each, sharded by resource ID - see kindLane
 	provisioningJobs           []chan handlerData            // provisioningLaneCount shards, one worker each, sharded by managed application key
 	provisioningLaneAssignment map[string]int                // managed application key -> shard index in provisioningJobs, assigned on first demotion
-	seenManagedApps            map[string]struct{}           // managed application names already dispatched to their kind's lane at least once
 	regularWorkerCount         int
 	provisioningWorkerCount    int
 	workerBuffer               int
 	seqTracker                 *sequenceTracker
 }
 
+type eventResourceWrapper struct {
+	once  sync.Once
+	ri    *apiv1.ResourceInstance
+	fetch func(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error)
+	err   error
+}
+
+func (r *eventResourceWrapper) get(event *proto.Event, apiServerFields []string) (*apiv1.ResourceInstance, error) {
+	r.once.Do(func() {
+		r.ri, r.err = r.fetch(event, apiServerFields)
+	})
+	return r.ri, r.err
+}
+
 type handlerData struct {
-	event      *proto.Event
-	ctx        context.Context
-	ri         *apiv1.ResourceInstance
-	handler    handler.Handler
-	logger     log.FieldLogger
-	onComplete func()
+	event           *proto.Event
+	ctx             context.Context
+	handler         handler.Handler
+	logger          log.FieldLogger
+	apiServerFields []string
+	eventResource   *eventResourceWrapper
+	onComplete      func()
 }
 
 // sequenceTracker tracks, per dispatched event, how many handlerData items are still outstanding,
@@ -176,7 +190,6 @@ func NewEventListener(ctx context.Context, cancel context.CancelCauseFunc, sourc
 		source:                     source,
 		kindJobs:                   make(map[string][]chan handlerData),
 		provisioningLaneAssignment: make(map[string]int),
-		seenManagedApps:            make(map[string]struct{}),
 		seqTracker:                 newSequenceTracker(),
 		regularWorkerCount:         workerCount,
 		provisioningWorkerCount:    provisioningWorkerCount,
@@ -266,12 +279,22 @@ func (em *EventListener) start() (done bool, err error) {
 
 func worker(jobs <-chan handlerData) {
 	for handlerData := range jobs {
-		if err := handlerData.handler.Handle(handlerData.ctx, handlerData.event.GetMetadata(), handlerData.ri); err != nil {
-			handlerData.logger.WithError(err).Error("failed to handle event data")
-		}
+		workerProcess(handlerData)
 		if handlerData.onComplete != nil {
 			handlerData.onComplete()
 		}
+	}
+}
+
+func workerProcess(handlerData handlerData) {
+	ri, err := handlerData.eventResource.get(handlerData.event, handlerData.apiServerFields)
+	if err != nil {
+		handlerData.logger.WithError(err).Error("failed to get event resource")
+		return
+	}
+
+	if err := handlerData.handler.Handle(handlerData.ctx, handlerData.event.GetMetadata(), ri); err != nil {
+		handlerData.logger.WithError(err).Error("failed to handle event data")
 	}
 }
 
@@ -287,8 +310,6 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 
 	logger.Debug("processing watch event")
 
-	var ri *apiv1.ResourceInstance
-	var err error
 	queueType := ""
 	msg := "skipped handling event"
 	apiServerFields := requiredAPIServerFields(ctx, event, em.handlersByKind[event.Payload.Kind])
@@ -302,20 +323,13 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		if !h.ShouldHandle(ctx, event) {
 			continue
 		}
-		if ri == nil {
-			ri, err = em.getEventResource(event, apiServerFields)
-			if err != nil {
-				logger.WithError(err).Error("failed to get event resource")
-				break
-			}
-		}
 		toDispatch = append(toDispatch, h)
 	}
 
 	var jobs chan handlerData
 	if len(toDispatch) > 0 {
 		msg = "passed event to handlers"
-		jobs, queueType = em.dispatchLane(event, ri)
+		jobs, queueType = em.dispatchLane(event)
 	}
 
 	seq := event.Metadata.SequenceID
@@ -323,14 +337,20 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 		em.advanceSequence(watermark)
 	}
 
+	// shared across every handler dispatched below
+	eventResource := &eventResourceWrapper{
+		fetch: em.getEventResource,
+	}
+
 	for _, h := range toDispatch {
 		select {
 		case jobs <- handlerData{
-			event:   event,
-			ctx:     ctx,
-			ri:      ri,
-			handler: h,
-			logger:  logger,
+			event:           event,
+			ctx:             ctx,
+			handler:         h,
+			apiServerFields: apiServerFields,
+			eventResource:   eventResource,
+			logger:          logger,
 			onComplete: func() {
 				if watermark, advanced := em.seqTracker.complete(seq); advanced {
 					em.advanceSequence(watermark)
@@ -347,7 +367,6 @@ func (em *EventListener) handleEvent(event *proto.Event) error {
 	// for ManagedApp/AccessRequest/Credential. maybe simplest way to fix this is to have a separate goroutine that
 	// checks in the cache(every 10 mins, let's say) for the existing managedAppNames and removes them if not found
 	if event.Payload.Kind == management.ManagedApplicationGVK().Kind && event.Type == proto.Event_DELETED {
-		delete(em.seenManagedApps, event.Payload.Name)
 		delete(em.provisioningLaneAssignment, event.Payload.Name)
 	}
 
@@ -362,23 +381,18 @@ func (em *EventListener) advanceSequence(sequenceID int64) {
 
 // For AccessRequest/Credential, the first event seen for a given ManagedApplication name uses that kind's lane;
 // every later event tied to the same name goes to that managed app's demoted shard (see provisioningLane).
-func (em *EventListener) dispatchLane(event *proto.Event, ri *apiv1.ResourceInstance) (chan handlerData, string) {
+func (em *EventListener) dispatchLane(event *proto.Event) (chan handlerData, string) {
 	kind := event.Payload.Kind
 	resourceID := event.Payload.Metadata.Id
 	if !provisioningHandlers[kind] {
 		return em.kindLane(kind, resourceID), regularQueue
 	}
 
-	key, ok := managedApplicationKey(event, ri)
-	if !ok {
+	key, ok := managedApplicationKey(event)
+	if ok {
 		return em.provisioningLane(key)
 	}
 
-	// We add the keys, but we don't put the ManagedApplication in the demoted lane.
-	if _, seen := em.seenManagedApps[key]; seen && kind != management.ManagedApplicationGVK().Kind {
-		return em.provisioningLane(key)
-	}
-	em.seenManagedApps[key] = struct{}{}
 	return em.kindLane(kind, resourceID), regularQueue
 }
 
@@ -409,22 +423,18 @@ func (em *EventListener) provisioningLane(key string) (chan handlerData, string)
 	return em.provisioningJobs[idx], fmt.Sprintf("provisioningQueue-%d", idx)
 }
 
-func managedApplicationKey(event *proto.Event, ri *apiv1.ResourceInstance) (key string, ok bool) {
+func managedApplicationKey(event *proto.Event) (key string, ok bool) {
 	switch event.Payload.Kind {
 	case management.ManagedApplicationGVK().Kind:
 		return event.Payload.Name, true
 	case management.AccessRequestGVK().Kind, management.CredentialGVK().Kind:
-		if ri == nil || ri.Spec == nil {
-			return "", false
+		for _, ref := range event.Payload.Metadata.References {
+			if ref.Kind == management.ManagedApplicationGVK().Kind {
+				return ref.Name, true
+			}
 		}
-		key, ok = ri.Spec["managedApplication"].(string)
-		if !ok || key == "" {
-			return "", false
-		}
-		return key, true
-	default:
-		return "", false
 	}
+	return "", false
 }
 
 // Joins the APIServerFields if multiple handlers implement the interface. In case either does not
@@ -461,6 +471,9 @@ func (em *EventListener) getEventResource(event *proto.Event, apiServerFields []
 	queryParams := map[string]string{}
 	if len(apiServerFields) > 0 {
 		queryParams["fields"] = strings.Join(apiServerFields, ",")
+	}
+	if event.Payload.Kind == management.AccessRequestGVK().Kind {
+		queryParams = map[string]string{"embed": "metadata.references"}
 	}
 
 	url := fmt.Sprintf("%s/apis%s", em.baseURL, event.Payload.Metadata.SelfLink)

@@ -130,3 +130,47 @@ func TestNewAPISvcHandler(t *testing.T) {
 	}
 
 }
+
+func TestAPISvcHandlerShouldHandle(t *testing.T) {
+	tests := []struct {
+		name     string
+		scope    *proto.Metadata_ScopeKind
+		expected bool
+	}{
+		{
+			name:     "should handle an event scoped to the agent's environment",
+			scope:    &proto.Metadata_ScopeKind{Kind: management.EnvironmentGVK().Kind, Name: "test-env"},
+			expected: true,
+		},
+		{
+			name:     "should not handle an event scoped to another environment",
+			scope:    &proto.Metadata_ScopeKind{Kind: management.EnvironmentGVK().Kind, Name: "other-env"},
+			expected: false,
+		},
+		{
+			name:     "should not handle an event with no scope",
+			scope:    nil,
+			expected: false,
+		},
+	}
+
+	cacheManager := agentcache.NewAgentCacheManager(&config.CentralConfiguration{}, false)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewAPISvcHandler(cacheManager, "test-env")
+
+			ctx := NewEventContext(proto.Event_CREATED, nil, management.APIServiceGVK().Kind, "svc")
+			event := &proto.Event{
+				Type: proto.Event_CREATED,
+				Payload: &proto.ResourceInstance{
+					Kind:     management.APIServiceGVK().Kind,
+					Name:     "svc",
+					Metadata: &proto.Metadata{Scope: tc.scope},
+				},
+			}
+
+			assert.Equal(t, tc.expected, handler.ShouldHandle(ctx, event))
+		})
+	}
+}

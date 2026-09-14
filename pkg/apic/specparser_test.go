@@ -1,7 +1,6 @@
 package apic
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -146,6 +145,13 @@ func TestSpecDiscovery(t *testing.T) {
 		{
 			name:            "OAS3 Spec with strip extensions",
 			inputFile:       "./testdata/petstore-openapi3.json",
+			expectedType:    Oas3,
+			inputType:       Oas3,
+			stripExtensions: true,
+		},
+		{
+			name:            "OAS3.2 Spec with strip extensions",
+			inputFile:       "./testdata/petstore-openapi3.2.yaml",
 			expectedType:    Oas3,
 			inputType:       Oas3,
 			stripExtensions: true,
@@ -319,7 +325,7 @@ func ValidateOAS3Processors(t *testing.T, specParser SpecResourceParser, stripAu
 		assert.True(t, possibleEndpoint.Found, "Did not find an endpoint with Host(%s), Port(%d), and Protocol(%s) in the returned endpoint array", possibleEndpoint.Host, possibleEndpoint.Port, possibleEndpoint.Protocol)
 	}
 
-	processor.AddSecuritySchemes(map[string]interface{}{fmt.Sprintf("OAuth"): &openapi3.SecurityScheme{}})
+	processor.AddSecuritySchemes(map[string]interface{}{"OAuth": &openapi3.SecurityScheme{}})
 	assert.NotEmpty(t, processor.spec.Components)
 	assert.NotEmpty(t, processor.spec.Components.SecuritySchemes)
 

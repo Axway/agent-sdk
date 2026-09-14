@@ -11,7 +11,6 @@ import (
 	catalog_v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1"
 	definitions_v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/definitions/v1"
 	management_v1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1"
-	management_v1alpha1 "github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1"
 )
 
 type Set struct {
@@ -40,15 +39,14 @@ type Set struct {
 	ApplicationProfileDefinitionManagementV1 *management_v1.UnscopedApplicationProfileDefinitionClient
 	ManagedApplicationProfileManagementV1    *management_v1.UnscopedManagedApplicationProfileClient
 	ComplianceRuntimeResultManagementV1      *management_v1.UnscopedComplianceRuntimeResultClient
-	AssetMappingManagementV1                 *management_v1.UnscopedAssetMappingClient
 	WebhookManagementV1                      *management_v1.UnscopedWebhookClient
 	BatchJobManagementV1                     *management_v1.UnscopedBatchJobClient
 	SecretManagementV1                       *management_v1.UnscopedSecretClient
 	AccessControlListManagementV1            *management_v1.UnscopedAccessControlListClient
-	AssetMappingTemplateManagementV1alpha1   *management_v1alpha1.UnscopedAssetMappingTemplateClient
 	StageCatalogV1                           *catalog_v1.StageClient
 	AssetCatalogV1                           *catalog_v1.AssetClient
 	AssetReleaseCatalogV1                    *catalog_v1.AssetReleaseClient
+	AssetMappingCatalogV1                    *catalog_v1.UnscopedAssetMappingClient
 	CategoryCatalogV1                        *catalog_v1.CategoryClient
 	AuthorizationProfileCatalogV1            *catalog_v1.AuthorizationProfileClient
 	ApplicationCatalogV1                     *catalog_v1.ApplicationClient
@@ -84,7 +82,6 @@ type Set struct {
 	ProductPlanJobCatalogV1                  *catalog_v1.UnscopedProductPlanJobClient
 	QuotaCatalogV1                           *catalog_v1.UnscopedQuotaClient
 	ProductReviewCatalogV1                   *catalog_v1.UnscopedProductReviewClient
-	AssetMappingCatalogV1                    *catalog_v1.UnscopedAssetMappingClient
 	AssetResourceCatalogV1                   *catalog_v1.UnscopedAssetResourceClient
 	AssetRequestDefinitionCatalogV1          *catalog_v1.UnscopedAssetRequestDefinitionClient
 	AssetRequestCatalogV1                    *catalog_v1.UnscopedAssetRequestClient
@@ -208,10 +205,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.ComplianceRuntimeResult: %s", err))
 	}
-	s.AssetMappingManagementV1, err = management_v1.NewAssetMappingClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.AssetMapping: %s", err))
-	}
 	s.WebhookManagementV1, err = management_v1.NewWebhookClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.Webhook: %s", err))
@@ -228,10 +221,6 @@ func New(b cAPIV1.Base) *Set {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1.AccessControlList: %s", err))
 	}
-	s.AssetMappingTemplateManagementV1alpha1, err = management_v1alpha1.NewAssetMappingTemplateClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/management/v1alpha1.AssetMappingTemplate: %s", err))
-	}
 	s.StageCatalogV1, err = catalog_v1.NewStageClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.Stage: %s", err))
@@ -243,6 +232,10 @@ func New(b cAPIV1.Base) *Set {
 	s.AssetReleaseCatalogV1, err = catalog_v1.NewAssetReleaseClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.AssetRelease: %s", err))
+	}
+	s.AssetMappingCatalogV1, err = catalog_v1.NewAssetMappingClient(b)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.AssetMapping: %s", err))
 	}
 	s.CategoryCatalogV1, err = catalog_v1.NewCategoryClient(b)
 	if err != nil {
@@ -383,10 +376,6 @@ func New(b cAPIV1.Base) *Set {
 	s.ProductReviewCatalogV1, err = catalog_v1.NewProductReviewClient(b)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.ProductReview: %s", err))
-	}
-	s.AssetMappingCatalogV1, err = catalog_v1.NewAssetMappingClient(b)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create client for github.com/Axway/agent-sdk/pkg/apic/apiserver/clients/catalog/v1.AssetMapping: %s", err))
 	}
 	s.AssetResourceCatalogV1, err = catalog_v1.NewAssetResourceClient(b)
 	if err != nil {

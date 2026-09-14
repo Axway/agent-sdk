@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -16,7 +17,6 @@ import (
 	management "github.com/Axway/agent-sdk/pkg/apic/apiserver/models/management/v1"
 	"github.com/Axway/agent-sdk/pkg/config"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func createDiscoveryAgentRes(id, name, dataplane, teamID string) *v1.ResourceInstance {
