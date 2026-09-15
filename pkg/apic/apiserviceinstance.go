@@ -264,7 +264,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 
 func (c *ServiceClient) getInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	queryParams := map[string]string{
-		"query": "metadata.references.name==" + serviceBody.serviceContext.revisionName,
+		"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 	}
 	instances, err := c.GetAPIServiceInstances(queryParams, url)
 	if err != nil {
