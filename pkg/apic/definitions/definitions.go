@@ -2,7 +2,11 @@ package definitions
 
 // Constants for attributes
 const (
-	XAgentDetails                    = "x-agent-details"
+	XAgentDetails = "x-agent-details"
+	// XWebhookDetails is the subresource an on-prem provisioning webhook is scoped to write directly
+	// (see docs/discovery/provisioning-webhook.md). agent-sdk mirrors it into XAgentDetails whenever it
+	// changes, so existing traceability code (which only reads XAgentDetails) needs no changes.
+	XWebhookDetails                  = "x-webhook-details"
 	XSubResourceHashes               = "x-subresource-hashes"
 	AttrPreviousAPIServiceRevisionID = "prevAPIServiceRevisionID"
 	AttrPreviousAPIServiceInstanceID = "prevAPIServiceInstanceID"
