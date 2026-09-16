@@ -9,8 +9,9 @@
 
 package management
 
-// LlmProviderSpec  (management.v1.LLMProvider)
-type LlmProviderSpec struct {
-	Dataplane string `json:"dataplane,omitempty"`
-	Type      string `json:"type"`
+// LlmAttributeSpec  (management.v1.LLMAttribute)
+type LlmAttributeSpec struct {
+	// Attribute Type
+	Type        string `json:"type,omitempty"`
+	LlmProvider string `json:"llmProvider,omitempty"`
 }

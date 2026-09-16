@@ -18,6 +18,7 @@ type ApiServiceInstanceSpec struct {
 	Endpoint []ApiServiceInstanceSpecEndpoint `json:"endpoint,omitempty"`
 	// GENERATE: The following code has been modified after code generation
 	//
-	//	Mock     ApiServiceInstanceSpecMock       `json:"mock,omitempty"`
-	Mock *ApiServiceInstanceSpecMock `json:"mock,omitempty"`
+	//	Mock        ApiServiceInstanceSpecMock       `json:"mock,omitempty"`
+	Mock        *ApiServiceInstanceSpecMock `json:"mock,omitempty"`
+	LlmProvider string                      `json:"llmProvider,omitempty"`
 }

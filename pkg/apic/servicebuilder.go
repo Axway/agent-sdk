@@ -67,6 +67,7 @@ type ServiceBuilder interface {
 	SetServiceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetInstanceAgentDetails(attr map[string]interface{}) ServiceBuilder
 	SetRevisionAgentDetails(attr map[string]interface{}) ServiceBuilder
+	SetLLMProvider(llmProvider string) ServiceBuilder
 
 	SetSourceDataplaneType(dataplaneType DataplaneType, isDesign bool) ServiceBuilder
 	SetReferenceServiceName(serviceName, envName string) ServiceBuilder
@@ -261,6 +262,11 @@ func (b *serviceBodyBuilder) SetRevisionAgentDetails(attr map[string]interface{}
 
 func (b *serviceBodyBuilder) SetServiceEndpoints(endpoints []EndpointDefinition) ServiceBuilder {
 	b.serviceBody.Endpoints = endpoints
+	return b
+}
+
+func (b *serviceBodyBuilder) SetLLMProvider(llmProvider string) ServiceBuilder {
+	b.serviceBody.LLMProvider = llmProvider
 	return b
 }
 

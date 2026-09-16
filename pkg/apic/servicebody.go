@@ -47,6 +47,7 @@ type ServiceBody struct {
 	ServiceAgentDetails          map[string]interface{}
 	InstanceAgentDetails         map[string]interface{}
 	RevisionAgentDetails         map[string]interface{}
+	LLMProvider                  string
 	serviceContext               serviceContext
 	Endpoints                    []EndpointDefinition
 	UnstructuredProps            *UnstructuredProperties

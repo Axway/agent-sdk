@@ -20,12 +20,16 @@ func buildAPIServiceInstanceMarketplaceSpec(
 	endpoints []management.ApiServiceInstanceSpecEndpoint,
 	knownCRDs []string,
 ) management.ApiServiceInstanceSpec {
-	return management.ApiServiceInstanceSpec{
+	spec := management.ApiServiceInstanceSpec{
 		ApiServiceRevision:           serviceBody.serviceContext.revisionName,
 		Endpoint:                     endpoints,
 		CredentialRequestDefinitions: knownCRDs,
 		AccessRequestDefinition:      serviceBody.ardName,
 	}
+	if serviceBody.LLMProvider != "" {
+		spec.LlmProvider = serviceBody.LLMProvider
+	}
+	return spec
 }
 
 func (c *ServiceClient) checkCredentialRequestDefinitions(serviceBody *ServiceBody) []string {
