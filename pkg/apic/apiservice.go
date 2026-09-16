@@ -40,7 +40,7 @@ func (c *ServiceClient) buildAPIService(serviceBody *ServiceBody) *management.AP
 			GroupVersionKind: management.APIServiceGVK(),
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.ServiceAttributes),
-			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish(), []string{}),
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Kind: management.EnvironmentGVK().Kind,
@@ -97,7 +97,7 @@ func (c *ServiceClient) updateAPIService(serviceBody *ServiceBody, svc *manageme
 	svc.GroupVersionKind = management.APIServiceGVK()
 	svc.Metadata.ResourceVersion = ""
 	svc.Title = serviceBody.NameToPush
-	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	svc.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish(), svc.Tags)
 	svc.Spec.Description = serviceBody.Description
 	svc.Owner = owner
 	svc.Attributes = util.CheckEmptyMapStringString(serviceBody.ServiceAttributes)

@@ -85,7 +85,7 @@ func (c *ServiceClient) buildAPIServiceInstance(
 			Name:             name,
 			Title:            serviceBody.NameToPush,
 			Attributes:       util.CheckEmptyMapStringString(serviceBody.InstanceAttributes),
-			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish()),
+			Tags:             mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish(), []string{}),
 			Metadata: apiv1.Metadata{
 				Scope: apiv1.MetadataScope{
 					Kind: management.EnvironmentGVK().Kind,
@@ -116,7 +116,7 @@ func (c *ServiceClient) updateAPIServiceInstance(
 	instance.Metadata.ResourceVersion = ""
 	instance.Title = serviceBody.NameToPush
 	instance.Attributes = util.CheckEmptyMapStringString(serviceBody.InstanceAttributes)
-	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	instance.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish(), instance.Tags)
 
 	c.checkAccessRequestDefinition(serviceBody)
 	instance.Spec = buildAPIServiceInstanceMarketplaceSpec(serviceBody, endpoints, c.checkCredentialRequestDefinitions(serviceBody))
@@ -264,7 +264,7 @@ func createInstanceEndpoint(endpoints []EndpointDefinition) ([]management.ApiSer
 
 func (c *ServiceClient) getInstance(serviceBody *ServiceBody, url string) (*management.APIServiceInstance, error) {
 	queryParams := map[string]string{
-		"query": "metadata.references.name==" + serviceBody.serviceContext.revisionName,
+		"query": "metadata.references.name==" + serviceBody.serviceContext.serviceName,
 	}
 	instances, err := c.GetAPIServiceInstances(queryParams, url)
 	if err != nil {

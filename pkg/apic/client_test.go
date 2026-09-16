@@ -51,15 +51,19 @@ func TestMapTagsToArray(t *testing.T) {
 	svcClient, _ := GetTestServiceClient()
 	tag4Value := "value4"
 	tags := map[string]interface{}{"tag1": "value1", "tag2": "", "tag3": "value3", "tag4": &tag4Value}
-	result := mapToTagsArray(tags, svcClient.cfg.GetTagsToPublish())
-	assert.Equal(t, 4, len(result))
+	result := mapToTagsArray(tags, svcClient.cfg.GetTagsToPublish(), []string{"test1", "test2", "x-test1", "x-test2"})
+	assert.Equal(t, 6, len(result))
 	assert.True(t, arrContains(result, "tag1_value1"))
 	assert.True(t, arrContains(result, "tag2"))
 	assert.False(t, arrContains(result, "bar"))
+	assert.False(t, arrContains(result, "test1"))
+	assert.False(t, arrContains(result, "test2"))
+	assert.True(t, arrContains(result, "x-test1"))
+	assert.True(t, arrContains(result, "x-test2"))
 
 	cfg := GetTestServiceClientCentralConfiguration(svcClient)
 	cfg.TagsToPublish = "bar"
-	result = mapToTagsArray(tags, cfg.GetTagsToPublish())
+	result = mapToTagsArray(tags, cfg.GetTagsToPublish(), []string{})
 	assert.Equal(t, 5, len(result))
 	assert.True(t, arrContains(result, "tag1_value1"))
 	assert.True(t, arrContains(result, "tag2"))

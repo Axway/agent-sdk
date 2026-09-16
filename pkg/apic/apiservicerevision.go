@@ -55,7 +55,7 @@ func (c *ServiceClient) buildAPIServiceRevision(serviceBody *ServiceBody) *manag
 	newRev := management.NewAPIServiceRevision("", c.cfg.GetEnvironmentName())
 	newRev.Title = c.updateAPIServiceRevisionTitle(serviceBody)
 	newRev.Attributes = util.CheckEmptyMapStringString(serviceBody.RevisionAttributes)
-	newRev.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish())
+	newRev.Tags = mapToTagsArray(serviceBody.Tags, c.cfg.GetTagsToPublish(), []string{})
 	newRev.Spec = buildAPIServiceRevisionSpec(serviceBody)
 	newRev.Owner, _ = c.getOwnerObject(serviceBody, false)
 
@@ -221,7 +221,7 @@ func (c *ServiceClient) getExistingRevisionByService(serviceBody *ServiceBody) (
 // different, return the updated tags
 func (c *ServiceClient) getUpdatedTagKeys(serviceBodyTags map[string]interface{}, revisionTags []string) []string {
 	// Extract values from map and convert to []string
-	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish())
+	tags := mapToTagsArray(serviceBodyTags, c.cfg.GetTagsToPublish(), revisionTags)
 
 	// Compare
 	if util.StringSlicesEqualUnordered(tags, revisionTags) {

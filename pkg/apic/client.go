@@ -173,7 +173,7 @@ func (c *ServiceClient) SetConfig(cfg corecfg.CentralConfig) {
 }
 
 // mapToTagsArray -
-func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
+func mapToTagsArray(m map[string]interface{}, additionalTags string, existingTags []string) []string {
 	strArr := []string{}
 
 	for key, val := range m {
@@ -195,6 +195,13 @@ func mapToTagsArray(m map[string]interface{}, additionalTags string) []string {
 
 		for _, tag := range additionalTagsArray {
 			strArr = append(strArr, strings.TrimSpace(tag))
+		}
+	}
+
+	// copy over any existingTags that start with "x-"
+	for _, t := range existingTags {
+		if strings.HasPrefix(t, "x-") {
+			strArr = append(strArr, t)
 		}
 	}
 
